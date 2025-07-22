@@ -1,0 +1,321 @@
+from django.db import models
+from django.contrib.auth.models import AbstractUser
+
+
+
+
+
+
+
+#--------------------------- MASTER---------------------------------
+
+class Company(models.Model):
+    name = models.CharField(max_length=255)
+    address = models.TextField()
+    location = models.CharField(max_length=255)
+    email = models.EmailField(unique=True)
+    phone_number = models.CharField(max_length=20)
+    logo = models.ImageField(upload_to='company_logos/', blank=True, null=True)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return self.name
+
+
+class UserRegister(AbstractUser):
+    ROLE_CHOICES = [
+        ('master', 'Master'),
+        ('admin', 'Admin'),
+        ('employee', 'Employee'),
+    ]
+    role = models.CharField(max_length=50, choices=ROLE_CHOICES)
+    company = models.ForeignKey(Company,on_delete=models.CASCADE,related_name='users',null=True,blank=True)
+
+    def __str__(self):
+        return self.username
+
+
+#---------------------------ADMIN---------------------------------
+
+class Department(models.Model):
+    company = models.ForeignKey(Company, on_delete=models.CASCADE)
+    department_name = models.CharField(max_length=100)
+    creation_date = models.DateField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.department_name} ({self.company.name})"
+    
+class Level(models.Model):
+    company = models.ForeignKey(Company, on_delete=models.CASCADE)
+    level_name = models.CharField(max_length=100)
+    description = models.CharField(max_length=255, blank=True)
+
+    class Meta:
+        verbose_name = "Employee Level"
+        verbose_name_plural = "Employee Levels"
+        ordering = ['level_name']
+
+    def __str__(self):
+        return f"{self.level_name} ({self.company.name})"
+
+class Designation(models.Model):
+    company = models.ForeignKey(Company, on_delete=models.CASCADE)
+    department = models.ForeignKey(Department, on_delete=models.CASCADE)
+    level = models.ForeignKey(Level, on_delete=models.CASCADE, related_name='designations')
+    designation_name = models.CharField(max_length=100)
+
+    def __str__(self):
+        return f"{self.designation_name} ({self.company.name})"
+
+
+class Employee(models.Model):
+    user = models.OneToOneField(UserRegister, on_delete=models.CASCADE, null=True, blank=True)
+     # Company linkage
+    company = models.ForeignKey(Company, on_delete=models.CASCADE, related_name='employees')
+    department = models.ForeignKey(Department, on_delete=models.SET_NULL, null=True, blank=True, related_name='employees')
+    designation = models.ForeignKey(Designation, on_delete=models.SET_NULL, null=True, blank=True, related_name='employees')
+    level = models.ForeignKey(Level, on_delete=models.SET_NULL, null=True, blank=True, related_name='employees')
+
+    # Reporting manager — can report to another Employee
+    reporting_manager = models.ForeignKey(
+        'self',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='reportees'
+    )
+
+    employee_id = models.CharField(max_length=10, unique=True, null=True)
+
+    # Basic info
+    first_name = models.CharField(max_length=100, null=True)
+    middle_name = models.CharField(max_length=100, null=True, blank=True)
+    last_name = models.CharField(max_length=100, null=True)
+
+    GENDER_CHOICES = (
+        ('male', 'Male'),
+        ('female', 'Female'),
+        ('other', 'Other'),
+    )
+    gender = models.CharField(max_length=50, choices=GENDER_CHOICES, null=True)
+    email = models.CharField(max_length=50, null=True)
+    date_of_birth = models.DateField(null=True)
+    mobile = models.CharField(max_length=11, null=True)
+    temporary_address = models.CharField(max_length=255, null=True, blank=True)
+    permanent_address = models.CharField(max_length=255, null=True, blank=True)
+    photo = models.ImageField(upload_to='photos', null=True, blank=True)
+
+    # ID proofs
+    aadhar_no = models.CharField(max_length=100, null=True, blank=True)
+    aadhar_card = models.ImageField(upload_to='documents', null=True, blank=True)
+    pan_no = models.CharField(max_length=100, null=True, blank=True)
+    pan_card = models.ImageField(upload_to='documents', null=True, blank=True)
+
+    # Family & emergency
+    guardian_name = models.CharField(max_length=100, null=True, blank=True)
+    guardian_mobile = models.CharField(max_length=100, null=True, blank=True)
+    category = models.CharField(max_length=100, null=True, blank=True)
+
+   
+    # Job details
+    date_of_joining = models.DateField(null=True, blank=True)
+    previous_employer = models.CharField(max_length=100, null=True, blank=True)
+    date_of_releaving = models.DateField(null=True, blank=True)
+    previous_designation_name = models.CharField(max_length=100, null=True, blank=True)
+    previous_salary = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True, default=0.0)
+    ctc = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True, default=0.0)
+    gross_salary = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True, default=0.0)
+
+    # EPF
+    EPF_STATUS_CHOICES = (
+        ('yes', 'Yes'),
+        ('no', 'No'),
+    )
+    epf_status = models.CharField(max_length=50, choices=EPF_STATUS_CHOICES, null=True, blank=True)
+    uan = models.CharField(max_length=50, null=True, blank=True)
+
+    # Referral source
+    SOURCE_CHOICES = (
+        ('internalreference', 'Internal Reference'),
+        ('linkedin', 'LinkedIn'),
+        ('walkin', 'Walk In'),
+        ('socialmedia', 'Social Media'),
+    )
+    source_of_employment = models.CharField(max_length=50, choices=SOURCE_CHOICES, null=True, blank=True)
+    who_referred = models.ForeignKey(
+        'self',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='employees_referred_by_me'
+    )
+
+    # Assets
+    asset_details = models.ManyToManyField('AssetInventory', through='EmployeeAssetDetails', blank=True)
+
+    # Bank & payment
+    PAYMENT_CHOICES = (
+        ('cash', 'Cash'),
+        ('bank', 'Bank'),
+    )
+    payment_method = models.CharField(max_length=50, choices=PAYMENT_CHOICES, null=True, blank=True)
+    account_no = models.CharField(max_length=20, null=True, blank=True)
+    ifsc_code = models.CharField(max_length=20, null=True, blank=True)
+    bank_name = models.CharField(max_length=50, null=True, blank=True)
+
+    # ESIC
+    ESIC_STATUS = (
+        ('yes', 'Yes'),
+        ('no', 'No'),
+    )
+    esic_status = models.CharField(max_length=50, choices=ESIC_STATUS, null=True, blank=True)
+    esic_no = models.CharField(max_length=50, null=True, blank=True)
+
+    @property
+    def is_reporting_manager(self):
+        return self.employees_reporting_to_me.exists()
+
+    def __str__(self):
+        return f"{self.first_name} {self.last_name}"
+    
+    
+class AssetInventory(models.Model):
+    company = models.ForeignKey(Company, on_delete=models.CASCADE, related_name='assets')
+    name = models.CharField(max_length=50)
+    description = models.TextField(null=True, blank=True)
+    quantity = models.IntegerField(default=0)
+    icon_image = models.ImageField(upload_to='company/assets/', null=True, blank=True)
+
+    def __str__(self):
+        return self.name
+
+
+class EmployeeAssetDetails(models.Model):
+    employee = models.ForeignKey(Employee, on_delete=models.CASCADE, related_name='asset_assignments')
+    assetinventory = models.ForeignKey(AssetInventory, on_delete=models.CASCADE, related_name='assigned_employees')
+
+    def __str__(self):
+        return f"{self.assetinventory.name} → {self.employee.first_name}"
+
+
+class Recruitment(models.Model):
+    STATUS_CHOICES = [
+        ('waiting', 'Waiting'),
+        ('selected', 'Selected'),
+        ('rejected', 'Rejected'),
+    ]
+
+    reference_id = models.CharField(max_length=50, unique=True, null=True, blank=True)
+    name = models.CharField(max_length=255)
+    email = models.EmailField()
+    address = models.CharField(max_length=255, null=True, blank=True)
+    job_title = models.CharField(max_length=100)
+    salary = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    application_date = models.DateField(null=True, blank=True)
+    interview_date = models.DateField(null=True, blank=True)
+    appointment_date = models.DateField(null=True, blank=True)
+    guardian_name = models.CharField(max_length=100, null=True, blank=True)
+
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='waiting')
+
+    def __str__(self):
+        return f"{self.reference_id} - {self.name} ({self.status})"
+
+
+
+class Leave(models.Model):
+    company = models.ForeignKey(Company,on_delete=models.CASCADE,null=True,blank=True,related_name='leaves')
+    leave_name = models.CharField(max_length=50, null=True)
+    count = models.PositiveIntegerField(default=0)
+    is_paid = models.BooleanField(default=True)
+
+    def __str__(self):
+        return f"{self.leave_name} ({'Paid' if self.is_paid else 'Unpaid'})"
+
+
+class LearningCorner(models.Model):
+    title = models.CharField(max_length=255, null=True)
+    description = models.TextField(null=True)
+    image = models.ImageField(upload_to='learning_corner/images', null=True, blank=True)
+    document = models.FileField(upload_to='learning_corner/documents', null=True, blank=True)
+    video = models.FileField(upload_to='learning_corner/videos', null=True, blank=True)
+
+    company = models.ForeignKey('Company', on_delete=models.CASCADE, null=True, blank=True)
+
+    def __str__(self):
+        return self.title or "Untitled"
+
+
+class Notification(models.Model):  
+    title = models.CharField(max_length=255, null=True)
+    description = models.TextField(null=True, blank=True)
+    date = models.DateField(null=True)
+    company = models.ForeignKey('Company', on_delete=models.CASCADE, null=True, blank=True)
+
+    def __str__(self):
+        return self.title or "Untitled"
+
+class ShiftPolicy(models.Model):
+    company = models.ForeignKey('Company', on_delete=models.CASCADE, null=True, blank=True)
+    shift_type = models.CharField(max_length=20, null=True)
+    checkin = models.TimeField()
+    checkout = models.TimeField()
+    grace_period = models.DurationField(null=True, blank=True)
+    half_day = models.DurationField(null=True, blank=True)
+    full_day = models.DurationField(null=True, blank=True)
+
+    def __str__(self):
+        return f"{self.shift_type} Shift ({self.checkin} - {self.checkout})"
+
+    def full_day_hours(self):
+        return round(self.full_day.total_seconds() / 3600, 2) if self.full_day else 8.0
+
+    def half_day_hours(self):
+        return round(self.half_day.total_seconds() / 3600, 2) if self.half_day else 4.0
+
+    def grace(self):
+        return self.grace_period if self.grace_period else timedelta(minutes=0)
+
+
+class DepartmentWiseWorkingDays(models.Model):
+    DAYS_OF_WEEK = [
+        ('monday', 'Monday'),
+        ('tuesday', 'Tuesday'),
+        ('wednesday', 'Wednesday'),
+        ('thursday', 'Thursday'),
+        ('friday', 'Friday'),
+        ('saturday', 'Saturday'),
+        ('sunday', 'Sunday'),
+    ]
+
+    department = models.ForeignKey('Department', on_delete=models.CASCADE)
+    shift = models.ForeignKey('ShiftPolicy', on_delete=models.CASCADE, null=True, blank=True)
+
+    working_days_count = models.PositiveSmallIntegerField(help_text="Number of working days in a week (1-7)")
+    week_start_day = models.CharField(max_length=10, choices=DAYS_OF_WEEK)
+    week_end_day = models.CharField(max_length=10, choices=DAYS_OF_WEEK)
+    company = models.ForeignKey('Company', on_delete=models.CASCADE, null=True, blank=True)
+
+    def __str__(self):
+        return f"{self.department} - {self.shift or 'All'} ({self.week_start_day} to {self.week_end_day})"
+
+    class Meta:
+        unique_together = ('department', 'shift')
+
+
+class CalendarEvent(models.Model):
+    company = models.ForeignKey('Company', on_delete=models.CASCADE, null=True, blank=True)
+    name = models.CharField(max_length=100)
+    date = models.DateField()
+    description = models.TextField(blank=True)
+    is_holiday = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"{self.name} ({self.date})"
+
+    class Meta:
+        ordering = ['date']
