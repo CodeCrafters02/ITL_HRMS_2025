@@ -1,4 +1,6 @@
 from django.db import models
+from datetime import timedelta
+from django.utils import timezone
 from django.contrib.auth.models import AbstractUser
 
 
@@ -172,6 +174,9 @@ class Employee(models.Model):
     )
     esic_status = models.CharField(max_length=50, choices=ESIC_STATUS, null=True, blank=True)
     esic_no = models.CharField(max_length=50, null=True, blank=True)
+    
+    is_active = models.BooleanField(default=True)
+
 
     @property
     def is_reporting_manager(self):
@@ -180,7 +185,14 @@ class Employee(models.Model):
     def __str__(self):
         return f"{self.first_name} {self.last_name}"
     
-    
+class RelievedEmployee(models.Model):
+    employee = models.OneToOneField(Employee, on_delete=models.CASCADE, related_name='relieved_info')
+    relieving_date = models.DateField()
+    remarks = models.TextField(null=True, blank=True)
+
+    def __str__(self):
+        return f"Relieved: {self.employee}"
+      
 class AssetInventory(models.Model):
     company = models.ForeignKey(Company, on_delete=models.CASCADE, related_name='assets')
     name = models.CharField(max_length=50)
@@ -319,3 +331,146 @@ class CalendarEvent(models.Model):
 
     class Meta:
         ordering = ['date']
+        
+        
+class SalaryStructure(models.Model):
+    company = models.ForeignKey(Company, on_delete=models.CASCADE, related_name='salary_structures')
+    name = models.CharField(max_length=100, null=True, blank=True)  # optional descriptive name
+    basic_percent = models.DecimalField(max_digits=5, decimal_places=2)
+    hra_percent = models.DecimalField(max_digits=5, decimal_places=2)
+    conveyance_percent = models.DecimalField(max_digits=5, decimal_places=2)
+    medical_percent = models.DecimalField(max_digits=5, decimal_places=2)
+    special_percent = models.DecimalField(max_digits=5, decimal_places=2)
+    service_charge_percent = models.DecimalField(max_digits=5, decimal_places=2)
+    total_working_days = models.PositiveIntegerField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.company.name} - {self.name or 'Structure'}"
+
+
+class DeductionPolicy(models.Model):
+    salary_structure = models.ForeignKey(SalaryStructure, on_delete=models.CASCADE, related_name='deductions')
+    name = models.CharField(max_length=100)
+    amount = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+
+    def __str__(self):
+        return f"{self.name} ({self.amount})"
+
+
+class AllowanceType(models.Model):
+    salary_structure = models.ForeignKey(SalaryStructure, on_delete=models.CASCADE, related_name='allowances')
+    name = models.CharField(max_length=100)
+    amount = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+
+    def __str__(self):
+        return f"{self.name} ({self.amount})"
+
+
+class PayrollBatch(models.Model):
+    company = models.ForeignKey(Company, on_delete=models.CASCADE, related_name='payroll_batches')
+    month = models.IntegerField()
+    year = models.IntegerField()
+    status = models.CharField(max_length=10, choices=[('Draft', 'Draft'), ('Locked', 'Locked')])
+
+    def __str__(self):
+        return f"{self.company.name} - {self.month}/{self.year} ({self.status})"
+
+
+class Payroll(models.Model):
+    batch = models.ForeignKey(PayrollBatch, on_delete=models.CASCADE, related_name='payrolls')
+    company = models.ForeignKey(Company, on_delete=models.CASCADE, related_name='payrolls')
+    employee = models.ForeignKey(Employee, on_delete=models.CASCADE)
+    salary_structure = models.ForeignKey(SalaryStructure, on_delete=models.SET_NULL, null=True)
+
+    gross_salary = models.DecimalField(max_digits=10, decimal_places=2)
+    basic_salary = models.DecimalField(max_digits=10, decimal_places=2)
+    hra = models.DecimalField(max_digits=10, decimal_places=2)
+    conveyance = models.DecimalField(max_digits=10, decimal_places=2)
+    medical = models.DecimalField(max_digits=10, decimal_places=2)
+    special_allowance = models.DecimalField(max_digits=10, decimal_places=2)
+    service_charges = models.DecimalField(max_digits=10, decimal_places=2)
+    pf = models.DecimalField(max_digits=10, decimal_places=2)
+    income_tax = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    net_pay = models.DecimalField(max_digits=10, decimal_places=2)
+
+    payroll_date = models.DateField(auto_now_add=True)
+    total_working_days = models.PositiveIntegerField(null=True, blank=True)
+    days_paid = models.PositiveIntegerField(null=True, blank=True)
+    loss_of_pay_days = models.PositiveIntegerField(null=True, blank=True)
+
+    # Optional: JSON for extra items
+    other_allowances = models.JSONField(null=True, blank=True)
+    other_deductions = models.JSONField(null=True, blank=True)
+
+    def __str__(self):
+        return f"{self.employee} - {self.batch}"
+
+
+class IncomeTaxConfig(models.Model):
+    company = models.ForeignKey(Company, on_delete=models.CASCADE, related_name='tax_configs')
+    name = models.CharField(max_length=100)
+    salary_from = models.DecimalField(max_digits=10, decimal_places=2)
+    salary_to = models.DecimalField(max_digits=10, decimal_places=2)
+    tax_percent = models.DecimalField(max_digits=5, decimal_places=2)
+
+    def __str__(self):
+        return f"{self.name}: {self.salary_from}-{self.salary_to} @ {self.tax_percent}%"
+
+
+class Attendance(models.Model):
+    employee = models.ForeignKey('Employee', on_delete=models.CASCADE, related_name='attendances')
+    company = models.ForeignKey('Company', on_delete=models.CASCADE, related_name='attendances')
+    shift = models.ForeignKey('ShiftPolicy', on_delete=models.SET_NULL, null=True, blank=True)
+    date = models.DateField(default=timezone.now)
+
+    check_in = models.DateTimeField(null=True, blank=True)
+    check_out = models.DateTimeField(null=True, blank=True)
+
+    total_work_duration = models.DurationField(null=True, blank=True)
+    overtime_duration = models.DurationField(null=True, blank=True)
+
+    is_present = models.BooleanField(default=True)
+    leave = models.ForeignKey('Leave', on_delete=models.SET_NULL, null=True, blank=True)
+    remarks = models.TextField(null=True, blank=True)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def calculate_work_duration(self):
+        if self.check_in and self.check_out:
+            total_breaks = sum(
+                (b.end - b.start for b in self.breaks.all() if b.end and b.start),
+                timezone.timedelta()
+            )
+            work_time = (self.check_out - self.check_in) - total_breaks
+            self.total_work_duration = work_time
+
+            if self.shift:
+                standard = timezone.timedelta(hours=self.shift.full_day_hours())
+                if work_time > standard:
+                    self.overtime_duration = work_time - standard
+                else:
+                    self.overtime_duration = timezone.timedelta()
+            else:
+                self.overtime_duration = timezone.timedelta()
+            self.save()
+
+class BreakLog(models.Model):
+    attendance = models.ForeignKey(Attendance, on_delete=models.CASCADE, related_name='breaks')
+    start = models.DateTimeField(null=True, blank=True)
+    end = models.DateTimeField(null=True, blank=True)
+    
+    
+class CompanyPolicies(models.Model):
+    company = models.ForeignKey(Company, on_delete=models.CASCADE, related_name='policies')
+    name = models.CharField(max_length=200)
+    description = models.TextField(blank=True)
+    document = models.FileField(upload_to='policies/')  
+    is_active = models.BooleanField(default=True)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"{self.company.name} - {self.name}"

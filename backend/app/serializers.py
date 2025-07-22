@@ -3,6 +3,8 @@ from datetime import date, timedelta
 from django.core.mail import send_mail
 from django.conf import settings
 from django.utils.crypto import get_random_string
+from django.contrib.auth.password_validation import validate_password
+from employee.models import EmpLeave
 from .models import *
 
 
@@ -87,7 +89,22 @@ class CompanyWithAdminSerializer(serializers.ModelSerializer):
 
         return company
     
-    
+class PasswordChangeSerializer(serializers.Serializer):
+    old_password = serializers.CharField(required=True)
+    new_password = serializers.CharField(required=True)
+    confirm_password = serializers.CharField(required=True)
+
+    def validate_old_password(self, value):
+        user = self.context['request'].user
+        if not user.check_password(value):
+            raise serializers.ValidationError("Old password is not correct.")
+        return value
+
+    def validate(self, data):
+        if data['new_password'] != data['confirm_password']:
+            raise serializers.ValidationError("New password and confirm password do not match.")
+        validate_password(data['new_password'], user=self.context['request'].user)
+        return data   
 
 class DepartmentSerializer(serializers.ModelSerializer):
     class Meta:
@@ -264,3 +281,119 @@ class CalendarEventSerializer(serializers.ModelSerializer):
     class Meta:
         model = CalendarEvent
         fields = '__all__'
+        
+        
+class RelievedEmployeeSerializer(serializers.ModelSerializer):
+    employee = serializers.PrimaryKeyRelatedField(queryset=Employee.objects.filter(is_active=True))
+
+    class Meta:
+        model = RelievedEmployee
+        fields = ['id', 'employee', 'relieving_date',  'remarks']
+
+    def create(self, validated_data):
+        employee = validated_data['employee']
+        # Mark the employee as inactive
+        employee.is_active = False
+        employee.save()
+        return super().create(validated_data)
+    
+    
+    
+class AllowanceTypeSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = AllowanceType
+        fields = ['id', 'name', 'amount']
+
+class DeductionPolicySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = DeductionPolicy
+        fields = ['id', 'name', 'amount']
+
+class SalaryStructureSerializer(serializers.ModelSerializer):
+    allowances = AllowanceTypeSerializer(many=True, required=False)
+    deductions = DeductionPolicySerializer(many=True, required=False)
+
+    class Meta:
+        model = SalaryStructure
+        fields = [
+            'id', 'company', 'name',
+            'basic_percent', 'hra_percent', 'conveyance_percent',
+            'medical_percent', 'special_percent', 'service_charge_percent',
+            'total_working_days', 'created_at',
+            'allowances', 'deductions'
+        ]
+
+    def create(self, validated_data):
+        allowances = validated_data.pop('allowances', [])
+        deductions = validated_data.pop('deductions', [])
+        salary_structure = SalaryStructure.objects.create(**validated_data)
+
+        for allowance in allowances:
+            AllowanceType.objects.create(salary_structure=salary_structure, **allowance)
+
+        for deduction in deductions:
+            DeductionPolicy.objects.create(salary_structure=salary_structure, **deduction)
+
+        return salary_structure
+
+    def update(self, instance, validated_data):
+        allowances = validated_data.pop('allowances', [])
+        deductions = validated_data.pop('deductions', [])
+
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+        instance.save()
+
+        instance.allowances.all().delete()
+        instance.deductions.all().delete()
+
+        for allowance in allowances:
+            AllowanceType.objects.create(salary_structure=instance, **allowance)
+
+        for deduction in deductions:
+            DeductionPolicy.objects.create(salary_structure=instance, **deduction)
+
+        return instance
+
+class PayrollBatchSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = PayrollBatch
+        fields = ['id', 'company', 'month', 'year', 'status']
+
+class PayrollSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Payroll
+        fields = '__all__'
+
+class IncomeTaxConfigSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = IncomeTaxConfig
+        fields = '__all__'        
+        
+        
+class AttendanceSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Attendance
+        fields = '__all__'
+        
+        
+class PolicyConfigurationSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = CompanyPolicies
+        fields = '__all__'
+ 
+ 
+class LeaveLogSerializer(serializers.ModelSerializer):
+    employee_name = serializers.CharField(source='employee.username', read_only=True)
+    manager_name = serializers.CharField(source='reporting_manager.username', read_only=True)
+
+    class Meta:
+        model = EmpLeave
+        fields = ['id','employee_name','manager_name','leave_type','status','reason','from_date','to_date']       
+        
+class UserLogSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = UserRegister
+        fields = ['id', 'username', 'role']
+        
+        
