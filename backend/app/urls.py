@@ -29,13 +29,15 @@ router.register(r'policies', CompanyPoliciesViewSet, basename='company-policies'
 
 urlpatterns = [
     path('', include(router.urls)),
+    path('login/', LoginAPIView.as_view(), name='login'),
     path('change-password/', PasswordChangeView.as_view(), name='change-password'),
     path('users/', UserLogListView.as_view(), name='user_log_api'),
+    path('master-dashboard/', MasterDashboardView.as_view(), name='master_dashboard'),
+    path('company-logo/', CompanyLogoAPIView.as_view(), name='company_logo_get_by_admin'),
     path('users/<int:pk>/', UserLogDeleteView.as_view(), name='delete_user_api'),
-    path('leaves/approved/', ApprovedLeaveLogView.as_view(), name='approved_leave_log'),
-    path('leaves/rejected/', RejectedLeaveLogView.as_view(), name='rejected_leave_log'),
-
-
-
+    path('approved-leaves/', ApprovedLeaveLogView.as_view(), name='approved_leave_log'),
+    path('rejected-leaves/', RejectedLeaveLogView.as_view(), name='rejected_leave_log'),
+    path('attendance-logs/', AttendanceLogView.as_view(), name='attendance_log'),
+     path('generate-payroll/', GeneratePayrollView.as_view(), name='generate-payroll'),
 
 ]

@@ -1,10 +1,10 @@
 from rest_framework import serializers
-from datetime import date, timedelta
+from datetime import datetime, timedelta
 from django.core.mail import send_mail
 from django.conf import settings
 from django.utils.crypto import get_random_string
 from django.contrib.auth.password_validation import validate_password
-from employee.models import EmpLeave
+
 from .models import *
 
 
@@ -47,13 +47,63 @@ class AdminRegisterSerializer(serializers.ModelSerializer):
         )
         return user
 
+class MasterDashboardSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = UserRegister
+        fields = ['username', 'email']
 
 class CompanyWithAdminSerializer(serializers.ModelSerializer):
-    admin = serializers.IntegerField(write_only=True)
+    admin = serializers.IntegerField(write_only=True, required=False)
+    admin_username = serializers.SerializerMethodField(read_only=True)
+    admin_email = serializers.SerializerMethodField(read_only=True)
+    logo_url = serializers.SerializerMethodField()
 
     class Meta:
         model = Company
-        fields = ['id', 'name', 'address', 'location','email', 'phone_number', 'logo', 'admin']
+        fields = [
+            'id', 'name', 'address', 'location', 'email', 'phone_number',
+            'logo', 'logo_url', 'admin', 'admin_username', 'admin_email'
+        ]
+        extra_kwargs = {
+            'admin': {'write_only': True}
+        }
+
+    def get_admin_username(self, obj):
+        admin_user = UserRegister.objects.filter(company=obj, role='admin').first()
+        return admin_user.username if admin_user else None
+
+    def get_admin_email(self, obj):
+        admin_user = UserRegister.objects.filter(company=obj, role='admin').first()
+        return admin_user.email if admin_user else None
+    
+    def get_logo_url(self, obj):
+        request = self.context.get('request')
+        if request and obj.logo:
+            return request.build_absolute_uri(obj.logo.url)
+        elif obj.logo:
+            return obj.logo.url  # fallback to relative path
+        return None
+    
+    def update(self, instance, validated_data):
+        admin_id = validated_data.pop('admin', None)
+
+        # Update basic fields
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+        instance.save()
+
+        # If admin ID provided, assign company and role
+        if admin_id is not None:
+            try:
+                admin_user = UserRegister.objects.get(pk=admin_id)
+                admin_user.company = instance
+                admin_user.role = 'admin'
+                admin_user.save()
+            except UserRegister.DoesNotExist:
+                raise serializers.ValidationError({"admin": "Admin user not found."})
+        
+        return instance
+
 
     def create(self, validated_data):
         admin_id = validated_data.pop('admin')
@@ -114,8 +164,8 @@ class DepartmentSerializer(serializers.ModelSerializer):
 class LevelSerializer(serializers.ModelSerializer):
     class Meta:
         model = Level
-        fields = ['id', 'level_name', 'description']
-
+        fields = ['id', 'level_name', 'description', 'company']
+        read_only_fields = ['company']
 
 class DesignationSerializer(serializers.ModelSerializer):
     class Meta:
@@ -124,28 +174,88 @@ class DesignationSerializer(serializers.ModelSerializer):
         
         
 class EmployeeSerializer(serializers.ModelSerializer):
-    asset_details = serializers.PrimaryKeyRelatedField(
-        queryset=AssetInventory.objects.all(),
-        many=True,
-        required=False
-    )
+  
     department = serializers.PrimaryKeyRelatedField(queryset=Department.objects.all())
     designation = serializers.PrimaryKeyRelatedField(queryset=Designation.objects.all())
     level = serializers.PrimaryKeyRelatedField(queryset=Level.objects.all(), required=False)
     reporting_manager = serializers.PrimaryKeyRelatedField(
-        queryset=Employee.objects.all(),
-        required=False,
-        allow_null=True
+        queryset=Employee.objects.all(), required=False, allow_null=True
     )
+    asset_details = serializers.PrimaryKeyRelatedField(
+        queryset=AssetInventory.objects.all(), many=True, required=False, allow_null=True
+    )
+
+    department_name = serializers.SerializerMethodField()
+    designation_name = serializers.SerializerMethodField()
+    level_name = serializers.SerializerMethodField()
+    reporting_manager_name = serializers.SerializerMethodField()
+    asset_names = serializers.SerializerMethodField()
+    source_choices = serializers.SerializerMethodField()
 
     class Meta:
         model = Employee
-        fields = ['id', 'employee_id', 'first_name', 'middle_name', 'last_name','gender', 'email', 'date_of_birth', 'mobile',
-            'temporary_address', 'permanent_address', 'photo','aadhar_no', 'aadhar_card', 'pan_no', 'pan_card',
-            'guardian_name', 'guardian_mobile', 'category','department', 'designation', 'level', 'reporting_manager',
-            'payment_method', 'account_no', 'ifsc_code', 'bank_name','source_of_employment', 'who_referred',
-            'date_of_joining', 'previous_employer','date_of_releaving', 'previous_designation_name','previous_salary', 'ctc', 'gross_salary',
-            'epf_status', 'uan', 'asset_details','esic_status', 'esic_no']
+        fields = [
+            'id', 'employee_id', 'first_name', 'middle_name', 'last_name', 'gender',
+            'email', 'date_of_birth', 'mobile', 'temporary_address', 'permanent_address', 'photo',
+            'aadhar_no', 'aadhar_card', 'pan_no', 'pan_card', 'guardian_name', 'guardian_mobile',
+            'category', 'department', 'department_name', 'designation', 'designation_name',
+            'level', 'level_name', 'reporting_manager', 'reporting_manager_name',
+            'payment_method', 'account_no', 'ifsc_code', 'bank_name', 'source_of_employment',
+            'who_referred', 'date_of_joining', 'previous_employer', 'date_of_releaving',
+            'previous_designation_name', 'previous_salary', 'ctc', 'gross_salary',
+            'epf_status', 'uan', 'asset_details', 'asset_names', 'esic_status', 'esic_no',
+            'source_choices'
+        ]
+
+    def get_department_name(self, obj):
+        return obj.department.department_name if obj.department else None
+
+    def get_designation_name(self, obj):
+        return obj.designation.designation_name if obj.designation else None
+
+    def get_level_name(self, obj):
+        # Fetch level from designation (since level is not directly stored in Employee)
+        if obj.designation and obj.designation.level:
+            return obj.designation.level.level_name
+        return None
+
+    def get_reporting_manager_name(self, obj):
+       
+
+        if obj.level:
+            level = obj.level
+           
+            designations = Designation.objects.filter(level=level)
+           
+            for des in designations:
+                print(f"  Designation: {des.id} - {des.designation_name}")
+            employees = Employee.objects.filter(designation__in=designations)
+           
+            for emp in employees:
+                print(f"  Employee: {emp.id} - {emp.first_name} {emp.middle_name or ''} {emp.last_name}")
+            # Exclude self
+            employees = employees.exclude(id=obj.id)
+            # Return list of dicts with id and name
+            return [
+                {"id": emp.id, "name": f"{emp.first_name} {emp.middle_name or ''} {emp.last_name}".strip()}
+                for emp in employees
+            ]
+        return []
+
+    def get_asset_names(self, obj):
+        asset_names = [asset.name for asset in obj.asset_details.all()]
+       
+        return asset_names
+    
+    def get_source_choices(self, obj):
+        return [{'value': key, 'label': label} for key, label in Employee.SOURCE_CHOICES]
+
+    def validate(self, data):
+        source = data.get('source_of_employment')
+        ref = data.get('who_referred')
+        if source != 'internalreference' and ref:
+            raise serializers.ValidationError("who_referred should only be set if source_of_employment is 'internalreference'")
+        return data
 
     def create(self, validated_data):
         assets = validated_data.pop('asset_details', [])
@@ -172,6 +282,11 @@ class EmployeeSerializer(serializers.ModelSerializer):
         validated_data['company'] = admin_user.company
         validated_data['user'] = user
         validated_data['employee_id'] = employee_id
+
+        # Always set employee.level to match designation.level
+        designation = validated_data.get('designation')
+        if designation and hasattr(designation, 'level'):
+            validated_data['level'] = designation.level
 
         employee = Employee.objects.create(**validated_data)
 
@@ -246,6 +361,7 @@ class RecruitmentSerializer(serializers.ModelSerializer):
     class Meta:
         model = Recruitment
         fields = '__all__'
+        read_only_fields = ['reference_id']
         
         
 class LeaveSerializer(serializers.ModelSerializer):
@@ -272,9 +388,16 @@ class ShiftPolicySerializer(serializers.ModelSerializer):
 
 
 class DepartmentWiseWorkingDaysSerializer(serializers.ModelSerializer):
+    shifts = serializers.PrimaryKeyRelatedField(
+        queryset=ShiftPolicy.objects.all(), many=True, required=False
+    )
+
     class Meta:
         model = DepartmentWiseWorkingDays
-        fields = '__all__'
+        fields = [
+            'id', 'department', 'shifts', 'working_days_count',
+            'week_start_day', 'week_end_day', 'company'
+        ]
 
 
 class CalendarEventSerializer(serializers.ModelSerializer):
@@ -312,7 +435,7 @@ class DeductionPolicySerializer(serializers.ModelSerializer):
 class SalaryStructureSerializer(serializers.ModelSerializer):
     allowances = AllowanceTypeSerializer(many=True, required=False)
     deductions = DeductionPolicySerializer(many=True, required=False)
-
+   
     class Meta:
         model = SalaryStructure
         fields = [
@@ -322,6 +445,7 @@ class SalaryStructureSerializer(serializers.ModelSerializer):
             'total_working_days', 'created_at',
             'allowances', 'deductions'
         ]
+        read_only_fields = ['company', 'created_at']
 
     def create(self, validated_data):
         allowances = validated_data.pop('allowances', [])
@@ -361,9 +485,23 @@ class PayrollBatchSerializer(serializers.ModelSerializer):
         fields = ['id', 'company', 'month', 'year', 'status']
 
 class PayrollSerializer(serializers.ModelSerializer):
+    employee_id = serializers.CharField(source='employee.employee_id', read_only=True)
+    employee_name = serializers.SerializerMethodField()
+    payroll_date = serializers.DateField(format="%Y-%m-%d", read_only=True)
+
+    def get_employee_name(self, obj):
+        return f"{obj.employee.first_name} {obj.employee.last_name}"
+
     class Meta:
         model = Payroll
-        fields = '__all__'
+        fields = [
+            'id', 'employee_id', 'employee_name', 'payroll_date',
+            'gross_salary', 'basic_salary', 'hra', 'conveyance', 'medical',
+            'special_allowance', 'service_charges', 'pf', 'income_tax', 'net_pay',
+            'total_working_days', 'days_paid', 'loss_of_pay_days',
+            'other_allowances', 'other_deductions','payroll_date'
+        ]
+        read_only_fields = ['payroll_date']
 
 class IncomeTaxConfigSerializer(serializers.ModelSerializer):
     class Meta:
@@ -372,24 +510,82 @@ class IncomeTaxConfigSerializer(serializers.ModelSerializer):
         
         
 class AttendanceSerializer(serializers.ModelSerializer):
+    employee_id = serializers.SerializerMethodField()
+    employee_name = serializers.SerializerMethodField()
+    is_late = serializers.SerializerMethodField()
+
+
     class Meta:
         model = Attendance
-        fields = '__all__'
-        
+        fields = [
+            'id',
+            'employee_id',
+            'employee_name',
+            'check_in',
+            'check_out',
+            'total_work_duration',
+            'total_break_time',
+            'overtime_duration',
+            'is_present',
+            'leave',
+            'remarks',
+            'date',
+            'is_late',
+        ]
+
+    def get_employee_id(self, obj):
+        return obj.employee.employee_id if obj.employee else None
+
+    def get_employee_name(self, obj):
+        return f"{obj.employee.first_name} {obj.employee.last_name}" if obj.employee else ""
+
+    def get_is_late(self, obj):
+        check_in = obj.check_in
+        shift = obj.shift
+
+        if not (check_in and shift and shift.checkin and shift.grace_period):
+            return False
+
+        # Convert check-in to local time
+        check_in = timezone.localtime(check_in)
+
+        # Construct shift start datetime in local timezone
+        shift_start_dt = datetime.combine(check_in.date(), shift.checkin)
+        shift_start_dt = timezone.make_aware(shift_start_dt, timezone.get_current_timezone())
+
+        # Add grace period
+        allowed_latest_checkin = shift_start_dt + shift.grace_period
+
+        return check_in > allowed_latest_checkin
+
         
 class PolicyConfigurationSerializer(serializers.ModelSerializer):
     class Meta:
         model = CompanyPolicies
-        fields = '__all__'
+        fields = [
+            'id', 'company', 'name', 'document',
+            'is_active', 'created_at'
+        ]
+        read_only_fields = ['company', 'created_at']
+
  
  
 class LeaveLogSerializer(serializers.ModelSerializer):
-    employee_name = serializers.CharField(source='employee.username', read_only=True)
-    manager_name = serializers.CharField(source='reporting_manager.username', read_only=True)
-
+    employee_name = serializers.SerializerMethodField()
+    manager_name = serializers.SerializerMethodField()
+    leave_type = serializers.SerializerMethodField()
     class Meta:
         model = EmpLeave
-        fields = ['id','employee_name','manager_name','leave_type','status','reason','from_date','to_date']       
+        fields = ['id', 'employee_name', 'manager_name', 'from_date', 'to_date', 'status','reason','leave_type']
+
+    def get_employee_name(self, obj):
+        return str(obj.employee)
+
+    def get_manager_name(self, obj):
+        return str(obj.reporting_manager) if obj.reporting_manager else ''
+    
+    def get_leave_type(self, obj):
+        return obj.leave_type.leave_name if obj.leave_type else ''
         
 class UserLogSerializer(serializers.ModelSerializer):
     class Meta:
@@ -397,3 +593,7 @@ class UserLogSerializer(serializers.ModelSerializer):
         fields = ['id', 'username', 'role']
         
         
+class BreakConfigSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = BreakConfig
+        fields = ['id', 'company', 'break_type', 'duration_minutes']

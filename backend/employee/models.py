@@ -1,21 +1,98 @@
 from django.db import models
 from django.conf import settings
-from django.utils import timezone
-from app.models import Company, Employee, Leave
 
-class EmpLeave(models.Model):
-    company = models.ForeignKey(Company, on_delete=models.CASCADE)
-    employee = models.ForeignKey(Employee, on_delete=models.CASCADE)
-    reporting_manager = models.ForeignKey(Employee, on_delete=models.SET_NULL, null=True, blank=True, related_name='leave_approvals')
-    leave_type = models.ForeignKey(Leave, on_delete=models.SET_NULL, null=True, blank=True)
 
-    STATUS_CHOICES = [
-        ('Pending', 'Pending'),
-        ('Approved', 'Approved'),
-        ('Rejected', 'Rejected'),
-    ]
-    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='Pending')
-    reason = models.TextField(blank=True, null=True)
-    from_date = models.DateField()
-    to_date = models.DateField()
+class PersonalCalendar(models.Model):
+    name = models.CharField(max_length=100)
+    date = models.DateField()
+    description = models.TextField(blank=True)
+    created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+
     created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"{self.name} ({self.created_by.username})"
+
+
+class Task(models.Model):
+   
+    PRIORITY = [
+        ('low', 'Low'),
+        ('medium', 'Medium'),
+        ('high', 'High'),
+    ]
+
+    STATUS = [
+        ('todo', 'To Do'),
+        ('inprogress', 'In Progress'),
+        ('inreview', 'In Review'),
+        ('done', 'Done'),
+    ]
+
+    title = models.CharField(max_length=255)
+    description = models.TextField(blank=True)
+    created_by = models.ForeignKey('app.Employee',on_delete=models.CASCADE,related_name='tasks_created')
+    created_at = models.DateTimeField(auto_now_add=True)
+    deadline = models.DateField()
+
+    priority = models.CharField(max_length=10, choices=PRIORITY)
+    status = models.CharField(max_length=20, choices=STATUS, default='todo')
+
+    parent_task = models.ForeignKey(
+        'self',
+        null=True, blank=True,
+        related_name='subtasks',
+        on_delete=models.CASCADE
+    )
+
+    def __str__(self):
+        return self.title
+
+    def done_subtasks_count(self):
+        
+        return self.subtasks.filter(status='done').count()
+
+    def progress(self):
+       
+        total = self.subtasks.count()
+        if total == 0:
+            return 0
+        done = self.done_subtasks_count()
+        return int((done / total) * 100)
+
+    def compute_status_from_assignments(self):
+        
+        statuses = self.assignments.values_list('status', flat=True)
+        if not statuses:
+            return self.status
+        if all(s == 'done' for s in statuses):
+            return 'done'
+        elif any(s == 'inprogress' for s in statuses):
+            return 'inprogress'
+        elif all(s == 'todo' for s in statuses):
+            return 'todo'
+        else:
+            return 'inreview'
+
+class TaskAssignment(models.Model):
+   
+    ROLE = [
+        ('owner', 'Owner'),
+        ('contributor', 'Contributor'),
+    ]
+
+    STATUS = Task.STATUS  # Reuse Task choices
+
+    task = models.ForeignKey(
+        Task,
+        on_delete=models.CASCADE,
+        related_name='assignments'
+    )
+    employee = models.ForeignKey('app.Employee', on_delete=models.CASCADE, related_name='task_assignments')
+    role = models.CharField(max_length=20, choices=ROLE, default='contributor')
+    status = models.CharField(max_length=20, choices=STATUS, default='todo')
+    is_seen = models.BooleanField(default=False)
+
+    def __str__(self):
+        return f"{self.employee} - {self.task.title} ({self.role})"

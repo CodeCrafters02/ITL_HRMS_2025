@@ -14,17 +14,15 @@ from django.contrib.auth.models import AbstractUser
 class Company(models.Model):
     name = models.CharField(max_length=255)
     address = models.TextField()
-    location = models.CharField(max_length=255)
+    location = models.CharField(max_length=100, blank=True, null=True)
     email = models.EmailField(unique=True)
     phone_number = models.CharField(max_length=20)
     logo = models.ImageField(upload_to='company_logos/', blank=True, null=True)
-
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):
         return self.name
-
 
 class UserRegister(AbstractUser):
     ROLE_CHOICES = [
@@ -33,7 +31,19 @@ class UserRegister(AbstractUser):
         ('employee', 'Employee'),
     ]
     role = models.CharField(max_length=50, choices=ROLE_CHOICES)
-    company = models.ForeignKey(Company,on_delete=models.CASCADE,related_name='users',null=True,blank=True)
+    company = models.ForeignKey(Company, on_delete=models.CASCADE, related_name='users', null=True, blank=True)
+
+    @property
+    def employee_profile(self):
+        try:
+            return Employee.objects.get(user=self)
+        except Employee.DoesNotExist:
+            return None
+
+    @property
+    def is_reporting_manager(self):
+        emp = self.employee_profile
+        return emp and emp.reportees.exists()
 
     def __str__(self):
         return self.username
@@ -182,6 +192,10 @@ class Employee(models.Model):
     def is_reporting_manager(self):
         return self.employees_reporting_to_me.exists()
 
+    @property
+    def full_name(self):
+        return f"{self.first_name} {self.last_name}"
+    
     def __str__(self):
         return f"{self.first_name} {self.last_name}"
     
@@ -232,9 +246,12 @@ class Recruitment(models.Model):
 
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='waiting')
 
-    def __str__(self):
-        return f"{self.reference_id} - {self.name} ({self.status})"
-
+    def save(self, *args, **kwargs):
+        if not self.reference_id:
+            last = Recruitment.objects.order_by('-id').first()
+            last_id = last.id if last else 0
+            self.reference_id = f"REF{1000 + last_id + 1}"
+        super().save(*args, **kwargs)
 
 
 class Leave(models.Model):
@@ -245,6 +262,31 @@ class Leave(models.Model):
 
     def __str__(self):
         return f"{self.leave_name} ({'Paid' if self.is_paid else 'Unpaid'})"
+
+class EmpLeave(models.Model):
+    company = models.ForeignKey(Company, on_delete=models.CASCADE)
+    employee = models.ForeignKey(Employee, on_delete=models.CASCADE)
+    reporting_manager = models.ForeignKey(
+        Employee,
+        on_delete=models.SET_NULL,
+        null=True, blank=True,
+        related_name='leave_approvals'
+    )
+    leave_type = models.ForeignKey(Leave, on_delete=models.SET_NULL, null=True, blank=True)
+
+    STATUS_CHOICES = [
+        ('Pending', 'Pending'),
+        ('Approved', 'Approved'),
+        ('Rejected', 'Rejected'),
+    ]
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='Pending')
+    reason = models.TextField(blank=True, null=True)
+    from_date = models.DateField()
+    to_date = models.DateField()
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.employee} Leave: {self.leave_type} ({self.status})"
 
 
 class LearningCorner(models.Model):
@@ -292,31 +334,20 @@ class ShiftPolicy(models.Model):
 
 
 class DepartmentWiseWorkingDays(models.Model):
-    DAYS_OF_WEEK = [
-        ('monday', 'Monday'),
-        ('tuesday', 'Tuesday'),
-        ('wednesday', 'Wednesday'),
-        ('thursday', 'Thursday'),
-        ('friday', 'Friday'),
-        ('saturday', 'Saturday'),
-        ('sunday', 'Sunday'),
-    ]
-
-    department = models.ForeignKey('Department', on_delete=models.CASCADE)
-    shift = models.ForeignKey('ShiftPolicy', on_delete=models.CASCADE, null=True, blank=True)
-
-    working_days_count = models.PositiveSmallIntegerField(help_text="Number of working days in a week (1-7)")
-    week_start_day = models.CharField(max_length=10, choices=DAYS_OF_WEEK)
-    week_end_day = models.CharField(max_length=10, choices=DAYS_OF_WEEK)
-    company = models.ForeignKey('Company', on_delete=models.CASCADE, null=True, blank=True)
+    department = models.ForeignKey(Department, on_delete=models.CASCADE)
+    shifts = models.ManyToManyField(ShiftPolicy, blank=True)
+    working_days_count = models.PositiveSmallIntegerField()
+    week_start_day = models.CharField(max_length=10)
+    week_end_day = models.CharField(max_length=10)
+    company = models.ForeignKey(Company, on_delete=models.CASCADE,null=True,blank=True)
 
     def __str__(self):
-        return f"{self.department} - {self.shift or 'All'} ({self.week_start_day} to {self.week_end_day})"
+        shifts_display = ", ".join(str(s) for s in self.shifts.all()) if self.shifts.exists() else "All"
+        return f"{self.department} - {shifts_display} ({self.week_start_day} to {self.week_end_day})"
 
     class Meta:
-        unique_together = ('department', 'shift')
-
-
+        verbose_name_plural = "Department Wise Working Days"
+        
 class CalendarEvent(models.Model):
     company = models.ForeignKey('Company', on_delete=models.CASCADE, null=True, blank=True)
     name = models.CharField(max_length=100)
@@ -338,10 +369,10 @@ class SalaryStructure(models.Model):
     name = models.CharField(max_length=100, null=True, blank=True)  # optional descriptive name
     basic_percent = models.DecimalField(max_digits=5, decimal_places=2)
     hra_percent = models.DecimalField(max_digits=5, decimal_places=2)
-    conveyance_percent = models.DecimalField(max_digits=5, decimal_places=2)
-    medical_percent = models.DecimalField(max_digits=5, decimal_places=2)
-    special_percent = models.DecimalField(max_digits=5, decimal_places=2)
-    service_charge_percent = models.DecimalField(max_digits=5, decimal_places=2)
+    conveyance_percent = models.DecimalField(max_digits=5, decimal_places=2,null=True, blank=True)
+    medical_percent = models.DecimalField(max_digits=5, decimal_places=2,null=True, blank=True)
+    special_percent = models.DecimalField(max_digits=5, decimal_places=2,null=True, blank=True)
+    service_charge_percent = models.DecimalField(max_digits=5, decimal_places=2,null=True, blank=True)
     total_working_days = models.PositiveIntegerField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
@@ -403,6 +434,8 @@ class Payroll(models.Model):
     other_allowances = models.JSONField(null=True, blank=True)
     other_deductions = models.JSONField(null=True, blank=True)
 
+    payroll_date = models.DateField(default=timezone.now)
+    
     def __str__(self):
         return f"{self.employee} - {self.batch}"
 
@@ -423,49 +456,60 @@ class Attendance(models.Model):
     company = models.ForeignKey('Company', on_delete=models.CASCADE, related_name='attendances')
     shift = models.ForeignKey('ShiftPolicy', on_delete=models.SET_NULL, null=True, blank=True)
     date = models.DateField(default=timezone.now)
-
     check_in = models.DateTimeField(null=True, blank=True)
     check_out = models.DateTimeField(null=True, blank=True)
-
     total_work_duration = models.DurationField(null=True, blank=True)
+    total_break_time = models.TimeField(null=True)
     overtime_duration = models.DurationField(null=True, blank=True)
-
     is_present = models.BooleanField(default=True)
-    leave = models.ForeignKey('Leave', on_delete=models.SET_NULL, null=True, blank=True)
+    leave = models.ForeignKey('EmpLeave', on_delete=models.SET_NULL, null=True, blank=True)
     remarks = models.TextField(null=True, blank=True)
-
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
     def calculate_work_duration(self):
         if self.check_in and self.check_out:
-            total_breaks = sum(
-                (b.end - b.start for b in self.breaks.all() if b.end and b.start),
-                timezone.timedelta()
-            )
+         
+            if hasattr(self, 'break_logs'):  
+                total_breaks = sum(
+                    (break_log.end - break_log.start for break_log in self.break_logs.all() if break_log.end and break_log.start),
+                    timezone.timedelta()
+                )
+            else:
+                total_breaks = timezone.timedelta()  # Default to zero if no breaks
+            
             work_time = (self.check_out - self.check_in) - total_breaks
             self.total_work_duration = work_time
 
             if self.shift:
                 standard = timezone.timedelta(hours=self.shift.full_day_hours())
-                if work_time > standard:
-                    self.overtime_duration = work_time - standard
-                else:
-                    self.overtime_duration = timezone.timedelta()
+                self.overtime_duration = max(work_time - standard, timezone.timedelta())
             else:
                 self.overtime_duration = timezone.timedelta()
             self.save()
 
+class BreakConfig(models.Model):
+    company = models.ForeignKey(Company, on_delete=models.CASCADE)
+    break_type = models.CharField(max_length=50, null=True, blank=True)  
+    duration_minutes = models.PositiveIntegerField()
+
+    def __str__(self):
+        return f"{self.break_type} - {self.duration_minutes} min"
 class BreakLog(models.Model):
-    attendance = models.ForeignKey(Attendance, on_delete=models.CASCADE, related_name='breaks')
+    employee = models.ForeignKey(Employee, on_delete=models.CASCADE, related_name='breaks', null=True, blank=True)
+    attendance = models.ForeignKey('Attendance', on_delete=models.CASCADE, null=True, related_name='break_logs')
+    break_policy = models.ForeignKey(BreakConfig, on_delete=models.SET_NULL, null=True, blank=True)
     start = models.DateTimeField(null=True, blank=True)
     end = models.DateTimeField(null=True, blank=True)
-    
+    duration_minutes = models.PositiveIntegerField(null=True, blank=True)
+
+    def __str__(self):
+        return f"{self.employee} - {self.break_policy} ({self.start} - {self.end})"
+
     
 class CompanyPolicies(models.Model):
     company = models.ForeignKey(Company, on_delete=models.CASCADE, related_name='policies')
     name = models.CharField(max_length=200)
-    description = models.TextField(blank=True)
     document = models.FileField(upload_to='policies/')  
     is_active = models.BooleanField(default=True)
 
