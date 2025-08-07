@@ -1,5 +1,6 @@
 // src/components/auth/api.ts
-import axios from "axios";
+import axios, { InternalAxiosRequestConfig } from "axios";
+import { jwtDecode } from "jwt-decode";
 
 export const axiosInstance = axios.create({
   baseURL: "http://127.0.0.1:8000/app/",
@@ -8,14 +9,39 @@ export const axiosInstance = axios.create({
   },
 });
 
-// Add token to all requests automatically
+function isTokenExpired(token: string): boolean {
+  try {
+    const decoded: { exp?: number } = jwtDecode(token);
+    if (!decoded.exp) return true;
+    const now = Math.floor(Date.now() / 1000);
+    return decoded.exp < now;
+  } catch {
+    return true;
+  }
+}
+
+// Add token to all requests automatically, refresh if expired
 axiosInstance.interceptors.request.use(
-  (config) => {
-    const token = localStorage.getItem("access_token");
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
+  async (config: InternalAxiosRequestConfig) => {
+    let token = localStorage.getItem("access_token");
+    const refreshToken = localStorage.getItem("refresh_token");
+    if (token && isTokenExpired(token) && refreshToken) {
+      try {
+        const response = await axios.post("http://127.0.0.1:8000/api/token/refresh/", {
+          refresh: refreshToken,
+        });
+        token = response.data.access;
+        if (token) {
+          localStorage.setItem("access_token", token);
+        }
+      } catch {
+        // Optionally handle refresh failure (e.g., logout)
+      }
+    }
+    if (token && config.headers) {
+      config.headers["Authorization"] = `Bearer ${token}`;
     }
     return config;
   },
-  (error) => Promise.reject(error)
+  (error: unknown) => Promise.reject(error)
 );

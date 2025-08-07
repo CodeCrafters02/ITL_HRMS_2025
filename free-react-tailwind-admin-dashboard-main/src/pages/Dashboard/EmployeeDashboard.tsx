@@ -1,10 +1,12 @@
 import React from "react";
 import PageMeta from "../../components/common/PageMeta";
-import { FaSyncAlt, FaCalendarAlt, FaMoneyBillWave, FaCoffee, FaChartLine, FaPlay, FaPause, FaUser, FaClock } from 'react-icons/fa';
+import { FaSyncAlt, FaCalendarAlt, FaMoneyBillWave, FaCoffee, FaChartLine, FaPause, FaUser, FaClock } from 'react-icons/fa';
 import { axiosInstance } from "../Employee/api";
 import NewComponentCard from "../../components/common/NewComponentCard";
 import Button from "../../components/ui/button/Button";
 import Alert from "../../components/ui/alert/Alert";
+import BreakIcons from "../UiElements/Break";
+import { AxiosError } from 'axios';
 
 // Enhanced TypeScript interfaces
 interface OvertimeData {
@@ -30,6 +32,8 @@ interface ActiveBreakData {
 }
 
 interface DashboardData {
+  employee_name: string | null;
+  employee_photo?: string | null;
   checkin_time: string | null;
   checkout_time: string | null;
   is_late: boolean;
@@ -60,6 +64,15 @@ export default function EmployeeDashboard(): React.JSX.Element {
   const [attendanceScore, setAttendanceScore] = React.useState<number>(100);
   const timerRef = React.useRef<ReturnType<typeof setInterval> | null>(null);
 
+  // Helper to get initials from employee name
+  const getInitials = (name: string | null) => {
+    if (!name || typeof name !== 'string') return '';
+    const parts = name.trim().split(' ').filter(Boolean);
+    if (parts.length === 0) return '';
+    if (parts.length === 1) return parts[0][0]?.toUpperCase() || '';
+    return ((parts[0][0] || '') + (parts[parts.length - 1][0] || '')).toUpperCase();
+  };
+
   // Calculate weekly hours dynamically
   const calculateWeeklyHours = React.useCallback((data: DashboardData): void => {
     if (data.total_worked) {
@@ -84,26 +97,36 @@ export default function EmployeeDashboard(): React.JSX.Element {
     setTimeout(() => setNotification(null), 5000);
   }, []);
 
-  // Fetch dashboard data
+  // Fetch dashboard data with enhanced error handling
   const fetchDashboardData = React.useCallback(async () => {
     try {
-      const response = await axiosInstance.get("/dashboard/");
-      if (response.status === 200) {
-        setDashboardData(response.data.dashboard_data);
-        // Calculate dynamic values
-        calculateWeeklyHours(response.data.dashboard_data);
-        calculateAttendanceScore(response.data.dashboard_data);
+      const response = await axiosInstance.get("dashboard/");
+      
+      if (response.status === 200 && response.data.dashboard_data) {
+        const dashboardData = response.data.dashboard_data;
+        console.log('🎯 Dashboard Data Structure:', dashboardData);
         
-        // Show payment notification if there's a new payroll
-        if (response.data.dashboard_data.latest_payroll) {
-          showNotification(
-            `Latest payroll: ₹${response.data.dashboard_data.latest_payroll.amount}`,
-            'success'
-          );
-        }
+        setDashboardData(dashboardData);
+        // Calculate dynamic values
+        calculateWeeklyHours(dashboardData);
+        calculateAttendanceScore(dashboardData);
+        
+        // Do not show payment notification on dashboard refresh
+      } else {
+        showNotification('Dashboard data has unexpected format', 'error');
       }
-    } catch (error) {
-      console.error("Failed to fetch dashboard data:", error);
+    } catch (error: unknown) {
+      const axiosError = error as AxiosError<{detail?: string}>;
+      
+      // Show user-friendly error message
+      const errorMessage = axiosError.response?.data?.detail || 
+                          axiosError.message || 
+                          'Unknown error occurred';
+      
+      showNotification(
+        `Failed to load dashboard: ${errorMessage}`,
+        'error'
+      );
     }
   }, [calculateWeeklyHours, calculateAttendanceScore, showNotification]);
 
@@ -113,16 +136,43 @@ export default function EmployeeDashboard(): React.JSX.Element {
 
   // Local timer for real-time updates
   React.useEffect(() => {
-    if (dashboardData?.checkin_time && !dashboardData?.checkout_time) {
-      const checkinTime = new Date(dashboardData.checkin_time).getTime();
+    const shouldBeRunning = dashboardData?.checkin_time && !dashboardData?.checkout_time;
+
+    if (shouldBeRunning && dashboardData?.checkin_time) {
+      // Try different date parsing methods
+      let checkinTime: number;
+
+      // First try: Direct parsing
+      checkinTime = new Date(dashboardData.checkin_time).getTime();
+
+      // If invalid, try with manual formatting
+      if (isNaN(checkinTime)) {
+        // Assume format like "HH:MM:SS" and use today's date
+        const today = new Date();
+        const timeParts = dashboardData.checkin_time.split(":");
+        const hours = parseInt(timeParts[0]) || 0;
+        const minutes = parseInt(timeParts[1]) || 0;
+        const seconds = parseInt(timeParts[2]) || 0;
+        today.setHours(hours, minutes, seconds, 0);
+        checkinTime = today.getTime();
+      }
+
       const now = Date.now();
-      const elapsed = Math.floor((now - checkinTime) / 1000);
+      const elapsed = Math.max(0, Math.floor((now - checkinTime) / 1000));
+
       setLocalTimer(elapsed);
-      
+
+      // Clear any existing timer
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+      }
+
+      // Start live timer
       timerRef.current = setInterval(() => {
         setLocalTimer(prev => prev + 1);
       }, 1000);
     } else {
+      // When not checked in, clear timer and set to 0
       if (timerRef.current) {
         clearInterval(timerRef.current);
         timerRef.current = null;
@@ -133,14 +183,21 @@ export default function EmployeeDashboard(): React.JSX.Element {
     return () => {
       if (timerRef.current) {
         clearInterval(timerRef.current);
+        timerRef.current = null;
       }
     };
   }, [dashboardData?.checkin_time, dashboardData?.checkout_time]);
 
   const formatTime = (seconds: number) => {
+    // Safety check for invalid values (but allow 0 as a valid value)
+    if (typeof seconds !== 'number' || isNaN(seconds) || seconds < 0) {
+      return '00:00:00';
+    }
+    
     const hours = Math.floor(seconds / 3600);
     const minutes = Math.floor((seconds % 3600) / 60);
-    const secs = seconds % 60;
+    const secs = Math.floor(seconds % 60);
+    
     return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   };
 
@@ -155,29 +212,18 @@ export default function EmployeeDashboard(): React.JSX.Element {
     return now.toLocaleDateString('en-US', options);
   };
 
-  const getCurrentTime = () => {
-    const now = new Date();
-    return now.toLocaleTimeString('en-US', {
-      hour12: false,
-      hour: '2-digit',
-      minute: '2-digit',
-      second: '2-digit',
-    });
-  };
-
   const handleCheckinClick = async () => {
     setLoading(true);
     try {
       const endpoint = dashboardData?.checkin_time && !dashboardData?.checkout_time ? "checkout/" : "checkin/";
       const res = await axiosInstance.post(endpoint);
-      
       if (res.status === 200) {
         await fetchDashboardData();
       } else {
-        alert(res.data.detail || "Operation failed");
+        showNotification(res.data.detail || "Operation failed", "error");
       }
     } catch {
-      alert("Network error occurred");
+      showNotification("Network error occurred", "error");
     }
     setLoading(false);
   };
@@ -188,12 +234,12 @@ export default function EmployeeDashboard(): React.JSX.Element {
       const res = await axiosInstance.post("break/", { action });
       if (res.status === 200) {
         await fetchDashboardData();
-        alert(res.data.detail);
+        showNotification(res.data.detail, "success");
       } else {
-        alert(res.data.detail || "Break action failed");
+        showNotification(res.data.detail || "Break action failed", "error");
       }
     } catch {
-      alert("Network error occurred");
+      showNotification("Network error occurred", "error");
     }
     setBreakLoading(false);
   };
@@ -208,9 +254,9 @@ export default function EmployeeDashboard(): React.JSX.Element {
         description="Employee dashboard overview"
       />
       
-      {/* Enhanced Toast Notification using Alert component */}
+      {/* Toast Notification at the bottom of the frontpage */}
       {notification && (
-        <div className="fixed top-4 right-4 z-50 max-w-md">
+        <div className="fixed bottom-4 left-1/2 transform -translate-x-1/2 z-50 max-w-md w-full flex justify-center">
           <Alert
             variant={notification.type}
             title={notification.type === 'success' ? 'Success' : notification.type === 'error' ? 'Error' : 'Information'}
@@ -223,26 +269,30 @@ export default function EmployeeDashboard(): React.JSX.Element {
       <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-gray-900 dark:to-gray-800">
         <div className="max-w-6xl mx-auto p-6">
           {/* MetaCard container with enhanced styling */}
-          <div className="border border-slate-200 rounded-2xl bg-white dark:bg-gray-900 dark:border-gray-700 p-6 shadow-xl backdrop-blur-sm">
+          <div className="border border-slate-200 rounded-2xl bg-white dark:bg-gray-900 dark:border-gray-700 p-4 sm:p-6 shadow-xl backdrop-blur-sm">
             {/* Enhanced Profile Card with Break Buttons */}
             <NewComponentCard title=" " className="mb-6 bg-gradient-to-r from-indigo-50 to-blue-50 dark:from-gray-800 dark:to-gray-700 border-indigo-200 dark:border-gray-600">
-              <div className="flex items-center justify-between gap-4">
+              <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
                 <div className="flex items-center gap-6">
-                  <div className="relative">
-                    <img
-                      src="https://ui-avatars.com/api/?name=Priya+Ammu+Reji&background=4F46E5&color=fff&size=80"
-                      alt="Avatar"
-                      className="rounded-full w-20 h-20 shadow-lg ring-4 ring-indigo-100 dark:ring-indigo-900"
-                    />
+                  <div className="relative mb-4 sm:mb-0">
+                    {dashboardData?.employee_photo ? (
+                      <img
+                        src={dashboardData.employee_photo}
+                        alt="Employee Photo"
+                        className="rounded-full w-20 h-20 shadow-lg ring-4 ring-indigo-100 dark:ring-indigo-900 object-cover"
+                      />
+                    ) : (
+                      <div className="rounded-full w-20 h-20 shadow-lg ring-4 ring-indigo-100 dark:ring-indigo-900 bg-indigo-600 flex items-center justify-center text-white text-3xl font-bold">
+                        {getInitials(dashboardData?.employee_name ?? null)}
+                      </div>
+                    )}
                     <div className={`absolute -bottom-1 -right-1 w-6 h-6 rounded-full border-2 border-white ${
                       isCheckedIn ? 'bg-emerald-500' : 'bg-gray-400'
                     }`}></div>
                   </div>
                   <div className="flex flex-col items-start">
-                    <div className="font-bold text-xl text-gray-800 dark:text-white mb-1">Hello Priya Ammu Reji</div>
-                    <div className="text-sm text-gray-600 dark:text-gray-300">
-                      {dashboardData?.shift_name || 'No shift assigned'}
-                    </div>
+                    <div className="font-bold text-xl text-gray-800 dark:text-white mb-1">Hello {dashboardData?.employee_name}</div>
+                    
                     
                     {/* Break Buttons in Profile */}
                     {isCheckedIn && (
@@ -257,38 +307,25 @@ export default function EmployeeDashboard(): React.JSX.Element {
                             End {hasActiveBreak.type} Break
                           </button>
                         ) : (
-                          <>
-                            <button
-                              className="px-3 py-1 bg-blue-600 text-white rounded-full text-xs hover:bg-blue-700 transition-colors flex items-center gap-1"
-                              onClick={() => handleBreakAction('shortbreak')}
-                              disabled={breakLoading}
-                            >
-                              <FaCoffee className="text-xs" />
-                              Short Break
-                            </button>
-                            <button
-                              className="px-3 py-1 bg-amber-600 text-white rounded-full text-xs hover:bg-amber-700 transition-colors flex items-center gap-1"
-                              onClick={() => handleBreakAction('meal')}
-                              disabled={breakLoading}
-                            >
-                              <FaCoffee className="text-xs" />
-                              Meal Break
-                            </button>
-                          </>
+                          <BreakIcons 
+                            onBreakClick={handleBreakAction}
+                            disabled={breakLoading}
+                            activeBreak={dashboardData?.active_break?.type || null}
+                          />
                         )}
                       </div>
                     )}
                   </div>
                 </div>
                 
-                <div className="flex items-center gap-4">
+                <div className="flex flex-col sm:flex-row items-center gap-2 sm:gap-4 w-full sm:w-auto mt-4 sm:mt-0">
                   {/* Live Timer Display */}
                   <div className="text-center">
-                    <div className="text-2xl font-bold text-indigo-600 dark:text-indigo-400 font-mono">
-                      {isCheckedIn ? formatTime(localTimer) : getCurrentTime()}
+                    <div className="text-sm font-bold text-gray-400 dark:text-gray-400 font-mono">
+                      {formatTime(localTimer)}
                     </div>
                     <div className="text-xs text-gray-500 dark:text-gray-400">
-                      {isCheckedIn ? 'Working Time' : 'Current Time'}
+                      {isCheckedIn ? 'Working Time' : 'Ready to Start'}
                     </div>
                   </div>
                   
@@ -302,7 +339,7 @@ export default function EmployeeDashboard(): React.JSX.Element {
                     </button>
                     
                     <Button
-                      className={`px-6 py-3 rounded-xl font-semibold transition-all shadow-lg ${
+                      className={`px-3 py-1 rounded-lg text-sm font-semibold transition-all shadow-lg ${
                         isCheckedIn
                           ? '!bg-gradient-to-r !from-red-500 !to-red-600 hover:!from-red-600 hover:!to-red-700 !text-white'
                           : '!bg-gradient-to-r !from-emerald-500 !to-emerald-600 hover:!from-emerald-600 hover:!to-emerald-700 !text-white'
@@ -328,15 +365,15 @@ export default function EmployeeDashboard(): React.JSX.Element {
               </div>
             </NewComponentCard>
             {/* Enhanced Main Content Cards */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
               {/* Today's Status - Large Card with enhanced styling */}
               <div className="lg:col-span-2">
                 <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-slate-200 dark:border-gray-700 overflow-hidden">
-                  <div className="bg-gradient-to-r from-blue-500 to-indigo-600 p-4">
+                  <div className="bg-gradient-to-r from-white-500 to-white-600 p-4">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-3">
                         <FaCalendarAlt className="text-white text-xl" />
-                        <h2 className="text-xl font-bold text-white">Today's Status</h2>
+                        <h2 className="text-xl font-bold text-blue">Today's Status</h2>
                       </div>
                       <span className={`px-4 py-2 rounded-full text-sm font-semibold ${
                         isCheckedIn 
@@ -417,19 +454,7 @@ export default function EmployeeDashboard(): React.JSX.Element {
                           </div>
                         </div>
                         
-                        {/* Enhanced Live Timer */}
-                        <div className="mt-6 p-6 bg-gradient-to-br from-indigo-50 to-blue-50 dark:from-gray-800 dark:to-gray-700 rounded-xl border-2 border-indigo-200 dark:border-gray-600">
-                          <h4 className="font-bold text-indigo-900 dark:text-indigo-200 mb-3 flex items-center gap-2">
-                            <FaPlay className="text-indigo-600" />
-                            Live Timer
-                          </h4>
-                          <div className="text-4xl font-bold text-indigo-600 dark:text-indigo-400 font-mono text-center">
-                            {isCheckedIn ? formatTime(localTimer) : '00:00:00'}
-                          </div>
-                          <div className="text-center text-sm text-indigo-600 dark:text-indigo-400 mt-2 font-medium">
-                            {isCheckedIn ? '🟢 Currently working' : '⭕ Not checked in'}
-                          </div>
-                        </div>
+                       
                       </div>
                     </div>
                   </div>
@@ -438,10 +463,10 @@ export default function EmployeeDashboard(): React.JSX.Element {
               
               {/* Enhanced Performance Card */}
               <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-slate-200 dark:border-gray-700 overflow-hidden">
-                <div className="bg-gradient-to-r from-purple-500 to-pink-600 p-4">
+                <div className="bg-gradient-to-r from-white-500 to-white-600 p-4">
                   <div className="flex items-center gap-3">
-                    <FaChartLine className="text-white text-xl" />
-                    <h2 className="text-xl font-bold text-white">Performance</h2>
+                    <FaChartLine className="text-blue text-xl" />
+                    <h2 className="text-xl font-bold text-black">Performance</h2>
                   </div>
                 </div>
                 
@@ -488,71 +513,14 @@ export default function EmployeeDashboard(): React.JSX.Element {
             </div>
             
             {/* Enhanced Bottom Row */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
-              {/* Enhanced Break Status */}
-              <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-slate-200 dark:border-gray-700 overflow-hidden">
-                <div className="bg-gradient-to-r from-orange-500 to-amber-600 p-4">
-                  <div className="flex items-center gap-3">
-                    <FaCoffee className="text-white text-xl" />
-                    <h2 className="text-xl font-bold text-white">Break Status</h2>
-                  </div>
-                </div>
-                
-                <div className="p-6">
-                  {hasActiveBreak ? (
-                    <div className="p-6 bg-gradient-to-r from-orange-50 to-amber-50 dark:from-orange-900/20 dark:to-amber-900/20 border-2 border-orange-200 dark:border-orange-800 rounded-xl">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <div className="font-bold text-orange-800 dark:text-orange-200 text-lg capitalize flex items-center gap-2">
-                            <FaPause className="text-orange-600" />
-                            {hasActiveBreak.type} Break Active
-                          </div>
-                          <div className="text-sm text-orange-600 dark:text-orange-300 mt-1">
-                            Started at {hasActiveBreak.start_time}
-                          </div>
-                        </div>
-                        <Button
-                          className="px-4 py-2 !bg-gradient-to-r !from-orange-600 !to-amber-600 !text-white rounded-xl font-semibold hover:!from-orange-700 hover:!to-amber-700 transition-all shadow-lg hover:shadow-xl"
-                          onClick={() => handleBreakAction(hasActiveBreak.type === 'short' ? 'shortbreak' : 'meal')}
-                          disabled={breakLoading}
-                        >
-                          End Break
-                        </Button>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="text-center py-8">
-                      <FaCoffee className="mx-auto text-gray-400 text-3xl mb-4" />
-                      <p className="text-gray-600 dark:text-gray-400 mb-6 font-medium">No active break</p>
-                      {isCheckedIn && (
-                        <div className="flex gap-3">
-                          <Button
-                            className="flex-1 px-4 py-3 !bg-gradient-to-r !from-blue-500 !to-indigo-600 !text-white rounded-xl hover:!from-blue-600 hover:!to-indigo-700 transition-all shadow-lg hover:shadow-xl font-semibold"
-                            onClick={() => handleBreakAction('shortbreak')}
-                            disabled={breakLoading}
-                          >
-                            Short Break
-                          </Button>
-                          <Button
-                            className="flex-1 px-4 py-3 !bg-gradient-to-r !from-amber-500 !to-orange-600 !text-white rounded-xl hover:!from-amber-600 hover:!to-orange-700 transition-all shadow-lg hover:shadow-xl font-semibold"
-                            onClick={() => handleBreakAction('meal')}
-                            disabled={breakLoading}
-                          >
-                            Meal Break
-                          </Button>
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </div>
-              </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6 mt-6">
               
               {/* Enhanced Recent Activity */}
               <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-slate-200 dark:border-gray-700 overflow-hidden">
-                <div className="bg-gradient-to-r from-indigo-500 to-purple-600 p-4">
+                <div className="bg-gradient-to-r from-white-500 to-white-600 p-4">
                   <div className="flex items-center gap-3">
-                    <FaSyncAlt className="text-white text-xl" />
-                    <h2 className="text-xl font-bold text-white">Recent Activity</h2>
+                    <FaSyncAlt className="text-black text-xl" />
+                    <h2 className="text-xl font-bold text-black">Recent Activity</h2>
                   </div>
                 </div>
                 

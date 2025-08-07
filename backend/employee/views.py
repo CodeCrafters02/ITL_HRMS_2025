@@ -219,6 +219,7 @@ class DashboardAPIView(APIView):
             punch_in = attendance.check_in if attendance else None
             punch_out = attendance.check_out if attendance else None
 
+            # Break minutes calculation
             break_minutes = 0
             if attendance:
                 breaks = BreakLog.objects.filter(attendance=attendance, end__isnull=False)
@@ -227,20 +228,33 @@ class DashboardAPIView(APIView):
                     for b in breaks
                 )
 
+            # Late check-in logic
             is_late = False
             if attendance and punch_in and attendance.shift:
                 grace = attendance.shift.grace_period or timedelta(minutes=15)
                 shift_start = datetime.combine(today, attendance.shift.checkin)
-                shift_start_aware = timezone.make_aware(shift_start, tz)
+                shift_start_aware = tz.localize(shift_start)
+
                 if punch_in > (shift_start_aware + grace):
                     is_late = True
 
+            # Overtime calculation
             overtime = None
             if attendance and punch_out and attendance.shift:
-                shift_end = datetime.combine(today, attendance.shift.checkout)
-                shift_end = timezone.make_aware(shift_end, tz)
-                if punch_out > shift_end:
-                    overtime_delta = punch_out - shift_end
+                shift_start_time = attendance.shift.checkin
+                shift_end_time = attendance.shift.checkout
+
+                shift_start_dt = datetime.combine(today, shift_start_time)
+                shift_end_dt = datetime.combine(today, shift_end_time)
+
+                # If overnight shift (e.g., 9 PM to 6 AM)
+                if shift_start_time > shift_end_time:
+                    shift_end_dt += timedelta(days=1)
+
+                shift_end_aware = tz.localize(shift_end_dt)
+
+                if punch_out > shift_end_aware:
+                    overtime_delta = punch_out - shift_end_aware
                     overtime_minutes = overtime_delta.total_seconds() // 60
                     overtime = {
                         'hours': int(overtime_minutes // 60),
@@ -248,6 +262,7 @@ class DashboardAPIView(APIView):
                         'total': round(overtime_minutes / 60, 2)
                     }
 
+            # Latest payroll
             latest_payroll = Payroll.objects.filter(employee=employee).order_by('-payroll_date').first()
             latest_payroll_data = {
                 'amount': latest_payroll.net_pay,
@@ -256,6 +271,7 @@ class DashboardAPIView(APIView):
 
             dashboard_data = {
                 'employee_name': f"{employee.first_name} {employee.last_name}",
+                'employee_photo': request.build_absolute_uri(employee.photo.url) if employee.photo else None,
 
                 'checkin_time': timezone.localtime(punch_in, tz).strftime('%H:%M:%S') if punch_in else None,
                 'checkout_time': timezone.localtime(punch_out, tz).strftime('%H:%M:%S') if punch_out else None,

@@ -88,12 +88,7 @@ const EmployeeSidebar: React.FC = () => {
                 )}
               </span>
               {(isExpanded || isHovered || isMobileOpen) && (
-                <div className="flex items-center justify-between flex-1">
-                  <span className="menu-item-text">{nav.name}</span>
-                  {nav.name === "Notifications" && unreadCount > 0 && (
-                    <NotificationBadge count={unreadCount} className="relative top-0 right-0 transform-none ml-2" />
-                  )}
-                </div>
+                <span className="menu-item-text">{nav.name}</span>
               )}
             </Link>
           </li>

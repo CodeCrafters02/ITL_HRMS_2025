@@ -1,6 +1,7 @@
 import { axiosInstance } from "../../pages/Dashboard/api";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
+import { useNotifications } from "../../context/NotificationContext";
 // Assume these icons are imported from an icon library
 import {
   BoxCubeIcon,
@@ -130,6 +131,11 @@ const AdminSidebar: React.FC = () => {
   const [companyLogo, setCompanyLogo] = useState<string>("");
   const [companyName, setCompanyName] = useState<string>("");
 
+  // Notification badge from context
+  // Only one badge should be shown, overlapped on sidebar icon
+  // Use unreadCount from NotificationContext
+  const { unreadCount } = useNotifications();
+
   useEffect(() => {
     // Fetch company logo and name for admin
    axiosInstance.get("company-logo/")
@@ -224,11 +230,10 @@ const AdminSidebar: React.FC = () => {
                 }`}
               >
                 {nav.icon}
-                {/* Notification badge only for Notifications icon */}
-                {nav.name === "Notifications" && (
+                {/* Only one notification badge, overlapped on sidebar icon */}
+                {nav.name === "Notifications" && unreadCount > 0 && (
                   <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-white text-xs font-bold shadow-lg z-10">
-                    {/* You can show a count here if needed, e.g. 1 */}
-                    1
+                    {unreadCount}
                   </span>
                 )}
               </span>
