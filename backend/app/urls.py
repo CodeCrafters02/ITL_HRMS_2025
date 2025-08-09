@@ -25,6 +25,7 @@ router.register(r'payrolls', PayrollViewSet, basename='payrolls')
 router.register(r'income-tax-configs', IncomeTaxConfigViewSet, basename='income-tax-configs')
 router.register(r'attendance', AttendanceViewSet, basename='attendance')
 router.register(r'policies', CompanyPoliciesViewSet, basename='company-policies')
+router.register(r'usermanagement', UserManagementViewSet, basename='usermanagement')
 
 
 urlpatterns = [

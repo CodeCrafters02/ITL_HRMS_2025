@@ -8,6 +8,10 @@ import {
   GridIcon,
   HorizontaLDots,
   UserCircleIcon,
+  FileIcon,
+  GroupIcon,
+  ListIcon,
+  TaskIcon
 } from "../../icons";
 import { useSidebar } from "../../context/SidebarContext";
 
@@ -31,11 +35,41 @@ const navItems: NavItem[] = [
     path: "master/admin",
   },
   {
-   
     icon: <CalenderIcon />,
     name: "Company",
     path: "master/company",
   },
+  {
+    icon: <FileIcon />,
+    name: "Services",
+    path: "master/services",
+  },
+  {
+    icon: <FileIcon />,
+    name: "Sub Services",
+    path: "master/subservices",
+  },
+  {
+    icon: <ListIcon />,
+    name: "Products",
+    path: "master/products",
+  },
+  {
+    icon: <GroupIcon />,
+    name: "User Management",
+    path: "master/usermanagement",
+  },
+  {
+    icon: <TaskIcon />,
+    name: "Demo Requests",
+    path: "master/demorequest",
+  },
+  {
+    icon: <TaskIcon />,
+    name: "Contact Requests",
+    path: "master/contactrequest",
+  },
+  
 ];
 
 const MasterSidebar: React.FC = () => {

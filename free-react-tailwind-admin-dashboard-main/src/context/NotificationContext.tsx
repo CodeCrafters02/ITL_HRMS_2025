@@ -47,70 +47,70 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
     localStorage.setItem('readNotificationIds', JSON.stringify(ids));
   };
 
-  const fetchNotifications = useCallback(async () => {
-    try {
-      setLoading(true);
-      const response = await axiosInstance.get("/employee-notifications/");
-      setNotifications(response.data);
-      const readIds = getReadIds();
-      // Only count notifications not marked as read in localStorage
-      const unread = response.data.filter((n: Notification) => !readIds.includes(n.id)).length;
-      setUnreadCount(unread);
-      setError(null);
-    } catch (err: unknown) {
-      const errorMessage = err instanceof Error 
-        ? err.message 
-        : typeof err === 'object' && err !== null && 'response' in err
-          ? (err as { response?: { data?: { message?: string } } }).response?.data?.message || "Failed to fetch notifications"
-          : "Failed to fetch notifications";
-      setError(errorMessage);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  // const fetchNotifications = useCallback(async () => {
+  //   try {
+  //     setLoading(true);
+  //     const response = await axiosInstance.get("/employee-notifications/");
+  //     setNotifications(response.data);
+  //     const readIds = getReadIds();
+  //     // Only count notifications not marked as read in localStorage
+  //     const unread = response.data.filter((n: Notification) => !readIds.includes(n.id)).length;
+  //     setUnreadCount(unread);
+  //     setError(null);
+  //   } catch (err: unknown) {
+  //     const errorMessage = err instanceof Error 
+  //       ? err.message 
+  //       : typeof err === 'object' && err !== null && 'response' in err
+  //         ? (err as { response?: { data?: { message?: string } } }).response?.data?.message || "Failed to fetch notifications"
+  //         : "Failed to fetch notifications";
+  //     setError(errorMessage);
+  //   } finally {
+  //     setLoading(false);
+  //   }
+  // }, []);
 
-  const markAsRead = (id: number) => {
-    // Mark a single notification as read in localStorage
-    const readIds = getReadIds();
-    if (!readIds.includes(id)) {
-      setReadIds([...readIds, id]);
-      fetchNotifications();
-    }
-  };
+  // const markAsRead = (id: number) => {
+  //   // Mark a single notification as read in localStorage
+  //   const readIds = getReadIds();
+  //   if (!readIds.includes(id)) {
+  //     setReadIds([...readIds, id]);
+  //     fetchNotifications();
+  //   }
+  // };
 
-  const markAllAsRead = () => {
-    // Mark all notifications as read in localStorage
-    const allIds = notifications.map(n => n.id);
-    setReadIds(allIds);
-    setUnreadCount(0);
-  };
+  // const markAllAsRead = () => {
+  //   // Mark all notifications as read in localStorage
+  //   const allIds = notifications.map(n => n.id);
+  //   setReadIds(allIds);
+  //   setUnreadCount(0);
+  // };
 
-  // Fetch notifications on mount
-  useEffect(() => {
-    fetchNotifications();
-  }, [fetchNotifications]);
+  // // Fetch notifications on mount
+  // useEffect(() => {
+  //   fetchNotifications();
+  // }, [fetchNotifications]);
 
-  // Poll for new notifications every 5 minutes
-  useEffect(() => {
-    const interval = setInterval(() => {
-      fetchNotifications();
-    }, 5 * 60 * 1000); // 5 minutes
+  // // Poll for new notifications every 5 minutes
+  // useEffect(() => {
+  //   const interval = setInterval(() => {
+  //     fetchNotifications();
+  //   }, 5 * 60 * 1000); // 5 minutes
 
-    return () => clearInterval(interval);
-  }, [fetchNotifications]);
+  //   return () => clearInterval(interval);
+  // }, [fetchNotifications]);
 
-  const value: NotificationContextType = {
-    notifications,
-    unreadCount,
-    loading,
-    error,
-    fetchNotifications,
-    markAsRead,
-    markAllAsRead,
-  };
+  // const value: NotificationContextType = {
+  //   notifications,
+  //   unreadCount,
+  //   loading,
+  //   error,
+  //   fetchNotifications,
+  //   markAsRead,
+  //   markAllAsRead,
+  // };
 
   return (
-    <NotificationContext.Provider value={value}>
+    <NotificationContext.Provider value={2}>
       {children}
     </NotificationContext.Provider>
   );

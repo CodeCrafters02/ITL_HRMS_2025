@@ -45,6 +45,7 @@ INSTALLED_APPS = [
     'corsheaders',
     'app',
     'employee',
+    'website'
 ]
 
 
@@ -132,7 +133,7 @@ DATABASES = {
         'ENGINE': 'django.db.backends.postgresql',
         'NAME': 'innovyx_hrms_pr',
         'USER': 'postgres',
-        'PASSWORD': '1234',
+        'PASSWORD': '86604@Ga',
         'HOST': 'localhost',
         'PORT': '5432',
     }

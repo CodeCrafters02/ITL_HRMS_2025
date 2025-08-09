@@ -32,6 +32,8 @@ class UserRegister(AbstractUser):
     ]
     role = models.CharField(max_length=50, choices=ROLE_CHOICES)
     company = models.ForeignKey(Company, on_delete=models.CASCADE, related_name='users', null=True, blank=True)
+    created_by = models.ForeignKey('self', null=True,blank=True,related_name='created_userregister',on_delete=models.SET_NULL)
+
 
     @property
     def employee_profile(self):

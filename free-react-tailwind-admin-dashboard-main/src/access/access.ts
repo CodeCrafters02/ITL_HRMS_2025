@@ -32,7 +32,7 @@ const createApiUrl = (path: string): string => {
   return url;
 };
 
-const getAuthHeaders = async (): Promise<AuthHeaders> => {
+const getAuthHeaders = async                              (): Promise<AuthHeaders> => {
   let access_token: string | null = localStorage.getItem('access');
   let refresh_token: string | null = localStorage.getItem('refresh');
 

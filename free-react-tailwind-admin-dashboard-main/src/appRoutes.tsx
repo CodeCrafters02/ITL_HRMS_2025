@@ -65,19 +65,44 @@ import PersonalCalendar from "./pages/Employee/Personalcalendar";
 import Notifications from "./pages/Employee/Notifications";
 import LearningCorner from "./pages/Employee/EmployeeLearningCorner";
 
+import UserManagementPage from "./pages/UserManagement/index"
+import ProductPage from "./pages/Products/index"
+import ServicePage from "./pages/Services/index"
+import SubServicePage from "./pages/SubService/index"
+import DemoRequestPage from "./pages/DemoRequests/index"
+import ContactRequestPage from "./pages/ContactRequests/index"
+
+import MainPage from "./Website/Pages/Home"
+import Service from "./Website/Pages/Service"
+import Services from "./Website/Pages/Services"
+import Team from "./Website/Pages/Team"
+import Contact from "./Website/Pages/Contact"
+import AboutUs from "./Website/Pages/AboutUs"
+import Products from "./Website/Pages/Products"
+import DigitalMarketing from "./Website/Pages/DigitalMarketing"
+import SoftwareSolutions from "./Website/Pages/SoftwareSolutions"
+import AnalyticsSolution from "./Website/Pages/AnalyticsSolution"
+import BookDemo from "./Website/Pages/BookDemo"
+
 
 export function appRoutes() {
   return (
     <Routes>
           {/* Dashboard Layout */}
           <Route element={<MasterLayout />}>
-            <Route index path="/" element={<Home />} />
+            <Route index path="/home" element={<Home />} />
 
             <Route path="/master-dashboard" element={<MasterDashboard />} />
             <Route path="/master/admin" element={<AdminPage />} />
             <Route path="/master/admin/create" element={<CreateAdmin />} />
             <Route path="/master/company" element={<CompanyList />} />
             <Route path="/master/company/create" element={<CreateCompany />} />
+            <Route path="/master/products" element={<ProductPage />} />
+            <Route path="/master/services" element={<ServicePage />} />
+            <Route path="/master/subservices" element={<SubServicePage />} />
+            <Route path="/master/usermanagement" element={<UserManagementPage />} />
+            <Route path="/master/demorequest" element={<DemoRequestPage />} />
+            <Route path="/master/contactrequest" element={<ContactRequestPage />} />
 
             {/* Others Page */}
             <Route path="/profile" element={<UserProfiles />} />
@@ -184,6 +209,18 @@ export function appRoutes() {
             {/* Auth Routes */}
             <Route path="/signin" element={<SignIn />} />
             <Route path="/signup" element={<SignUp />} />
+            <Route path="/" element={<MainPage />} />
+            <Route path="/service" element={<Service />} />
+            <Route path="/contact" element={<Contact />} />
+            <Route path="/about" element={<AboutUs />} />
+            <Route path="/service" element={<Service />} />
+            <Route path="/services" element={<Services />} />
+            <Route path="/team" element={<Team />} />
+            <Route path="/products" element={<Products />} />
+            <Route path="/digitalmarketing" element={<DigitalMarketing />} />
+            <Route path="/softwaresolution" element={<SoftwareSolutions />} />
+            <Route path="/analyticssolution" element={<AnalyticsSolution />} />
+            <Route path="/bookdemo" element={<BookDemo/>} />  
 
             {/* Employee Routes */}
             <Route path="/employee" element={<EmployeeLayout />}>

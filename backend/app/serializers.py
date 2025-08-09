@@ -4,6 +4,7 @@ from django.core.mail import send_mail
 from django.conf import settings
 from django.utils.crypto import get_random_string
 from django.contrib.auth.password_validation import validate_password
+from django.core.exceptions import ObjectDoesNotExist
 
 from .models import *
 
@@ -29,6 +30,41 @@ class UserRegisterSerializer(serializers.ModelSerializer):
         )
         return user
 
+ class UserSerializer(serializers.ModelSerializer):
+    password = serializers.CharField(write_only=True,required=False)
+
+    class Meta:
+        model = UserRegister
+        fields = ['id', 'username', 'email', 'password', 'role','is_active','first_name','last_name']
+        read_only_fields = ['created_by'] 
+
+    def validate_role(self, value):
+        if value not in ['master', 'admin', 'employee']:
+            raise serializers.ValidationError("Role must be master, admin, or employee.")
+        return value
+
+    def create(self, validated_data):
+        created_by_id = self.initial_data.pop('created_by', None)
+        first_name = self.initial_data.get('first_name', '')
+        last_name = self.initial_data.get('last_name', '')
+
+        user = UserRegister.objects.create_user(
+            username=validated_data['username'],
+            email=validated_data['email'],
+            password=validated_data['password'],
+            role=validated_data['role'],
+        )
+        user.first_name = first_name
+        user.last_name = last_name
+
+        if created_by_id:
+            try:
+                created_by_user = UserRegister.objects.get(id=created_by_id)
+                user.created_by = created_by_user
+                user.save()
+            except ObjectDoesNotExist:
+                print(f"UserRegister with id={created_by_id} does not exist")
+        return user
 
 class AdminRegisterSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True)

@@ -34,7 +34,25 @@ class MasterRegisterViewSet(viewsets.ModelViewSet):
             return Response({"error": "Role must be 'master'"}, status=status.HTTP_400_BAD_REQUEST)
         self.perform_create(serializer)
         return Response(serializer.data, status=status.HTTP_201_CREATED)
+    
+ class UserManagementViewSet(viewsets.ModelViewSet):
+    serializer_class = UserSerializer
+    # permission_classes = [permissions.IsAuthenticated, IsMaster]
+    permission_classes = [permissions.AllowAny]
 
+    def get_queryset(self):
+        queryset = UserRegister.objects.all()
+        created_by = self.request.query_params.get('created_by')
+        if created_by:
+            queryset = queryset.filter(created_by=created_by)
+        return queryset
+
+    def perform_create(self, serializer):
+        user = self.request.user
+        if user.is_authenticated:
+            serializer.save(created_by=user)
+        else:
+            serializer.save()
 class AdminRegisterViewSet(viewsets.ViewSet):
     def update(self, request, pk=None):
         try:
