@@ -371,16 +371,53 @@ class RecruitmentSerializer(serializers.ModelSerializer):
         
         
 class LeaveSerializer(serializers.ModelSerializer):
+    
     class Meta:
         model = Leave
         fields = ['id', 'leave_name', 'count', 'is_paid']
 
 class LearningCornerSerializer(serializers.ModelSerializer):
+    image_url = serializers.SerializerMethodField()
+    video_url = serializers.SerializerMethodField()
+    document_url = serializers.SerializerMethodField()
+
     class Meta:
         model = LearningCorner
-        fields = '__all__'
+        fields = [
+            'id', 'title', 'description',
+            'image', 'video', 'document',
+            'image_url', 'video_url', 'document_url'
+        ]
+        read_only_fields = ['id', 'image_url', 'video_url', 'document_url']
+        extra_kwargs = {
+            'image': {'required': False, 'allow_null': True},
+            'video': {'required': False, 'allow_null': True},
+            'document': {'required': False, 'allow_null': True},
+        }
 
+    def get_image_url(self, obj):
+        request = self.context.get('request')
+        return request.build_absolute_uri(obj.image.url) if obj.image else None
 
+    def get_video_url(self, obj):
+        request = self.context.get('request')
+        return request.build_absolute_uri(obj.video.url) if obj.video else None
+
+    def get_document_url(self, obj):
+        request = self.context.get('request')
+        return request.build_absolute_uri(obj.document.url) if obj.document else None
+
+    def update(self, instance, validated_data):
+        # Only update fields that are present in validated_data
+        for attr, value in validated_data.items():
+            if attr in ['image', 'video', 'document']:
+                if value is not None:
+                    setattr(instance, attr, value)
+                # If value is None, do not overwrite existing file
+            else:
+                setattr(instance, attr, value)
+        instance.save()
+        return instance
 class NotificationSerializer(serializers.ModelSerializer):
     class Meta:
         model = Notification

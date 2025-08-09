@@ -30,6 +30,7 @@ import CreateAdmin from "./pages/Forms/CreateAdmin";
 import CreateCompany from "./pages/Forms/CreateCompany";
 import Designation from "./pages/Admin/Designation";
 import AssetsInventory from "./pages/Admin/Assets&Inventory";
+import LearningCornerPage from "./pages/Admin/LearningCorner";
 import ShiftPolicyList from "./pages/Admin/Shift";
 import LeaveCountPage from "./pages/Admin/LeaveCount";
 import EmployeeRegister from "./pages/Admin/EmployeeRegister";
@@ -48,6 +49,7 @@ import ShiftConfigForm from "./pages/Forms/ShiftConfigForm";
 import DepartmentWorkingForm from "./pages/Forms/DepartmentWorkingForm";
 import RecruitmentForm from "./pages/Forms/RecruitmentForm";
 import EmployeeRegisterForm from "./pages/Forms/EmployeeRegisterForm";
+import LearningCornerForm from "./pages/Forms/LearningCornerForm";
 import ApprovedLeave from "./pages/Admin/ApprovedLeaves";
 import RejectedLeave from "./pages/Admin/RejectedLeaves";
 import Attendance from "./pages/Admin/AttendanceDetails";
@@ -61,6 +63,7 @@ import LeaveApply from "./pages/Employee/LeaveApply";
 import AttendanceHistory from "./pages/Employee/AttendanceHistory";
 import PersonalCalendar from "./pages/Employee/Personalcalendar";
 import Notifications from "./pages/Employee/Notifications";
+import LearningCorner from "./pages/Employee/EmployeeLearningCorner";
 
 
 export function appRoutes() {
@@ -113,6 +116,7 @@ export function appRoutes() {
             <Route path="payroll-batches" element={<PayrollBatches />} />
             <Route path="generate-payroll" element={<GeneratePayroll />} />
             <Route path="assets-inventory" element={<AssetsInventory />} />
+            <Route path="learning-corner" element={<LearningCornerPage />} />
             <Route path="configuration/shift" element={<ShiftPolicyList />} />
             <Route path="configuration/leave-count" element={<LeaveCountPage />} />
             <Route path="configuration/department-wise-working-days" element={<DepartmentWorkingDays />} />
@@ -126,12 +130,14 @@ export function appRoutes() {
             <Route path="attendance-details" element={<Attendance />} />
             <Route path="admin-notifications" element={<AdminNotifications />} />
 
+
             {/* Admin Forms */}
             <Route path="form-department" element={<DepartmentForm />} />
             <Route path="form-level" element={<LevelForm />} />
             <Route path="form-designation" element={<DesignationForm />} />
             <Route path="form-salary-structure" element={<SalaryStructureForm />} />
             <Route path="form-income-tax" element={<IncomeTaxForm />} />
+            <Route path="form-learning-corner" element={<LearningCornerForm />} />
             <Route path="form-assets-inventory" element={<AssetsInventoryForm />} />
             <Route path="form-shift-config" element={<ShiftConfigForm />} />
             <Route path="form-department-working" element={<DepartmentWorkingForm />} />
@@ -186,6 +192,7 @@ export function appRoutes() {
                 <Route path="/employee/attendance-history" element={<AttendanceHistory />} />
                 <Route path="/employee/personal-calendar" element={<PersonalCalendar />} />
                 <Route path="/employee/notifications" element={<Notifications />} />
+                <Route path="/employee/learning-corner" element={<LearningCorner />} />
             </Route>
 
             {/* Fallback Route */}

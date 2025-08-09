@@ -1,7 +1,11 @@
 from rest_framework import serializers
-from app.models import Notification, BreakLog,Attendance, ShiftPolicy, Employee,EmpLeave,Leave
+from app.models import Notification,LearningCorner, BreakLog,Attendance, ShiftPolicy, Employee,EmpLeave,Leave
 from .models import *
 
+class ReportingManagerSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Employee
+        fields = ['id', 'full_name']  # Assuming `full_name` property exists in your model
 
 class ShiftSerializer(serializers.ModelSerializer):
     class Meta:
@@ -139,3 +143,25 @@ class LeaveSerializer(serializers.ModelSerializer):
     def get_remaining_count(self, obj):
         used = self.get_used_count(obj)
         return max(obj.count - used, 0)
+    
+    
+class EmpLearningCornerSerializer(serializers.ModelSerializer):
+    image = serializers.SerializerMethodField()
+    video = serializers.SerializerMethodField()
+    document = serializers.SerializerMethodField()
+
+    class Meta:
+        model = LearningCorner
+        fields = ['id', 'title', 'description', 'image', 'video', 'document']
+
+    def get_image(self, obj):
+        request = self.context.get('request')
+        return request.build_absolute_uri(obj.image.url) if obj.image else None
+
+    def get_video(self, obj):
+        request = self.context.get('request')
+        return request.build_absolute_uri(obj.video.url) if obj.video else None
+
+    def get_document(self, obj):
+        request = self.context.get('request')
+        return request.build_absolute_uri(obj.document.url) if obj.document else None

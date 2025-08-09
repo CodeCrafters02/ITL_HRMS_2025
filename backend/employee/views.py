@@ -12,12 +12,41 @@ from django.db.models import Q
 from rest_framework.views import APIView
 from calendar import month_name
 from .utils import calculate_worked_time, calculate_effective_time
-from app.models import Attendance,Notification, ShiftPolicy, Employee, BreakLog,Payroll,CalendarEvent,EmpLeave
+
+from app.models import Attendance,Notification,LearningCorner, ShiftPolicy, Employee, BreakLog,Payroll,CalendarEvent,EmpLeave
 from .models import *
 from .serializers import *
 
+class EmployeeIdAPIView(APIView):
+    permission_classes = [IsAuthenticated]
 
+    def get(self, request):
+        user = request.user
+        try:
+            employee = Employee.objects.get(user=user)
+        except Employee.DoesNotExist:
+            return Response({'detail': 'Employee profile not found.'}, status=404)
+        serializer = ReportingManagerSerializer(employee)
+        return Response(serializer.data)
+    
+class ReportingManagerAPIView(APIView):
+    permission_classes = [IsAuthenticated]
 
+    def get(self, request):
+        manager_id = request.query_params.get('manager_id')
+        # All reporting managers (who have at least one reportee)
+        managers = Employee.objects.filter(reportees__isnull=False).distinct()
+        managers_data = ReportingManagerSerializer(managers, many=True).data
+
+        reportees_data = []
+        if manager_id:
+            reportees = Employee.objects.filter(reporting_manager_id=manager_id)
+            reportees_data = ReportingManagerSerializer(reportees, many=True).data
+
+        return Response({
+            'reporting_managers': managers_data,
+            'reportees': reportees_data
+        })
 
 
 class CheckInAPIView(APIView):
@@ -737,3 +766,16 @@ class RejectEmpLeaveAPIView(APIView):
             leave.save()
             return Response({'detail': 'Leave rejected.'})
         return Response({'detail': 'Already rejected.'})
+
+
+class EmpLearningCornerAPIView(generics.ListAPIView):
+    serializer_class = EmpLearningCornerSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        user = self.request.user
+        employee_profile = getattr(user, "employee_profile", None)
+        if employee_profile:
+            return LearningCorner.objects.filter(company=employee_profile.company)
+        return LearningCorner.objects.none()
+

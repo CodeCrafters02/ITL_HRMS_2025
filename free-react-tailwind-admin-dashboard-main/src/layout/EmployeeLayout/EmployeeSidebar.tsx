@@ -1,18 +1,19 @@
-import { useCallback } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Link, useLocation } from "react-router";
 
 import {
   CalenderIcon,
   GridIcon,
   HorizontaLDots,
+  TaskIcon,
+  FileIcon,
   ListIcon,
-  PageIcon,
   PieChartIcon,
   TableIcon,
 } from "../../icons";
 import { useSidebar } from "../../context/SidebarContext";
-import { useNotifications } from "../../context/NotificationContext";
 import NotificationBadge from "../../components/ui/NotificationBadge";
+import { axiosInstance } from "../../pages/Employee/api";
 
 type NavItem = {
   name: string;
@@ -28,7 +29,7 @@ const navItems: NavItem[] = [
     path: "/employee",
   },
   {
-    icon: <ListIcon />,
+    icon: <TaskIcon />,
     name: "My Tasks",
     path: "/employee/form-elements",
   },
@@ -43,9 +44,14 @@ const navItems: NavItem[] = [
     path: "/employee/attendance-history",
   },
   {
-    icon: <PageIcon />,
+    icon: <ListIcon />,
     name: "Notifications",
     path: "/employee/notifications",
+  },
+  {
+    icon: <FileIcon />,
+    name: "Learning Corner",
+    path: "/employee/learning-corner",
   },
   {
     icon: <CalenderIcon />,
@@ -54,19 +60,35 @@ const navItems: NavItem[] = [
   },
 ];
 
-
 const EmployeeSidebar: React.FC = () => {
   const { isExpanded, isMobileOpen, isHovered, setIsHovered } = useSidebar();
-  const { unreadCount } = useNotifications();
   const location = useLocation();
   const isActive = useCallback(
     (path: string) => location.pathname === path,
     [location.pathname]
   );
 
+  // Learning Corner badge logic
+  const [lcCount, setLcCount] = useState(0);
+  const [lcBadge, setLcBadge] = useState(0);
+
+  useEffect(() => {
+    axiosInstance.get("emp-learning-corner/").then((res) => {
+      const currentCount = Array.isArray(res.data) ? res.data.length : 0;
+      setLcCount(currentCount);
+      const lastSeen = Number(localStorage.getItem("lc_last_seen_count") || 0);
+      setLcBadge(currentCount > lastSeen ? currentCount - lastSeen : 0);
+    });
+  }, []);
+
+  const handleLearningCornerClick = () => {
+    localStorage.setItem("lc_last_seen_count", String(lcCount));
+    setLcBadge(0);
+  };
+
   const renderMenuItems = (items: NavItem[]) => (
     <ul className="flex flex-col gap-4">
-      {items.map((nav) => (
+      {items.map((nav) =>
         nav.path ? (
           <li key={nav.name}>
             <Link
@@ -74,6 +96,7 @@ const EmployeeSidebar: React.FC = () => {
               className={`menu-item group ${
                 isActive(nav.path) ? "menu-item-active" : "menu-item-inactive"
               }`}
+              onClick={nav.name === "Learning Corner" ? handleLearningCornerClick : undefined}
             >
               <span
                 className={`menu-item-icon-size relative ${
@@ -83,8 +106,8 @@ const EmployeeSidebar: React.FC = () => {
                 }`}
               >
                 {nav.icon}
-                {nav.name === "Notifications" && unreadCount > 0 && (
-                  <NotificationBadge count={unreadCount} />
+                {nav.name === "Learning Corner" && lcBadge > 0 && (
+                  <NotificationBadge count={lcBadge} className="bg-red-600 absolute -top-2 -right-2" />
                 )}
               </span>
               {(isExpanded || isHovered || isMobileOpen) && (
@@ -93,9 +116,49 @@ const EmployeeSidebar: React.FC = () => {
             </Link>
           </li>
         ) : null
-      ))}
+      )}
     </ul>
   );
+
+  const [isReportingManager, setIsReportingManager] = useState(false);
+  const [employeeId, setEmployeeId] = useState<string | null>(null);
+
+  useEffect(() => {
+    // Fetch employee id from new endpoint and set in localStorage
+    axiosInstance.get("employee-id/").then((res) => {
+      const id = res.data?.employee_id ?? res.data?.id;
+           if (id) {
+        localStorage.setItem('employee_id', String(id));
+        setEmployeeId(String(id));
+      }
+    });
+  }, []);
+
+  useEffect(() => {
+    // Use employeeId from state (set by employee-id/ endpoint)
+    if (!employeeId) return;
+    axiosInstance.get("reporting-managers/").then((res) => {
+      const managers = res.data.reporting_managers || [];
+          const isManager = managers.some((mgr: {id: string|number, full_name?: string}) => String(mgr.id) === String(employeeId));
+            setIsReportingManager(isManager);
+    });
+  }, [employeeId]);
+
+  // Add Assign Task nav item if reporting manager
+  const navItemsWithManager = isReportingManager
+    ? (() => {
+              return [
+          ...navItems,
+          {
+            icon: <TaskIcon />, 
+            name: 'Assign Task',
+            path: '/employee/assign-task',
+          },
+        ];
+      })()
+    : (() => {
+              return navItems;
+      })();
 
   return (
     <aside
@@ -161,10 +224,9 @@ const EmployeeSidebar: React.FC = () => {
                 <HorizontaLDots className="size-6" />
               )}
             </h2>
-            {renderMenuItems(navItems)}
+            {renderMenuItems(navItemsWithManager)}
           </div>
         </nav>
-        
       </div>
     </aside>
   );
