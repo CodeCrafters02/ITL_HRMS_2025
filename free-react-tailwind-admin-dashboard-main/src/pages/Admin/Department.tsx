@@ -75,7 +75,7 @@ export default function Department() {
             <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Departments</h1>
           </div>
           <button
-            onClick={() => navigate("/form-department")}
+           onClick={() => navigate("/admin/form-department")}
             className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-lg shadow-lg transition-colors duration-200"
           >
             <FaPlus className="w-4 h-4" />

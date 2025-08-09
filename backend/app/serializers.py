@@ -172,23 +172,28 @@ class DesignationSerializer(serializers.ModelSerializer):
         model = Designation
         fields = ['id', 'designation_name', 'department', 'level']
         
-        
+
+
+       
 class EmployeeSerializer(serializers.ModelSerializer):
-  
     department = serializers.PrimaryKeyRelatedField(queryset=Department.objects.all())
     designation = serializers.PrimaryKeyRelatedField(queryset=Designation.objects.all())
     level = serializers.PrimaryKeyRelatedField(queryset=Level.objects.all(), required=False)
+
+    reporting_level = serializers.PrimaryKeyRelatedField(
+        queryset=Level.objects.all(), write_only=True, required=False, allow_null=True
+    )
     reporting_manager = serializers.PrimaryKeyRelatedField(
         queryset=Employee.objects.all(), required=False, allow_null=True
     )
+    reporting_manager_name = serializers.SerializerMethodField()
+    reporting_level_name = serializers.SerializerMethodField()
     asset_details = serializers.PrimaryKeyRelatedField(
         queryset=AssetInventory.objects.all(), many=True, required=False, allow_null=True
     )
 
     department_name = serializers.SerializerMethodField()
     designation_name = serializers.SerializerMethodField()
-    level_name = serializers.SerializerMethodField()
-    reporting_manager_name = serializers.SerializerMethodField()
     asset_names = serializers.SerializerMethodField()
     source_choices = serializers.SerializerMethodField()
 
@@ -199,7 +204,7 @@ class EmployeeSerializer(serializers.ModelSerializer):
             'email', 'date_of_birth', 'mobile', 'temporary_address', 'permanent_address', 'photo',
             'aadhar_no', 'aadhar_card', 'pan_no', 'pan_card', 'guardian_name', 'guardian_mobile',
             'category', 'department', 'department_name', 'designation', 'designation_name',
-            'level', 'level_name', 'reporting_manager', 'reporting_manager_name',
+            'level', 'reporting_manager', 'reporting_level', 'reporting_level_name', 'reporting_manager_name',
             'payment_method', 'account_no', 'ifsc_code', 'bank_name', 'source_of_employment',
             'who_referred', 'date_of_joining', 'previous_employer', 'date_of_releaving',
             'previous_designation_name', 'previous_salary', 'ctc', 'gross_salary',
@@ -213,63 +218,66 @@ class EmployeeSerializer(serializers.ModelSerializer):
     def get_designation_name(self, obj):
         return obj.designation.designation_name if obj.designation else None
 
-    def get_level_name(self, obj):
-        # Fetch level from designation (since level is not directly stored in Employee)
-        if obj.designation and obj.designation.level:
-            return obj.designation.level.level_name
-        return None
-
-    def get_reporting_manager_name(self, obj):
-       
-
-        if obj.level:
-            level = obj.level
-           
-            designations = Designation.objects.filter(level=level)
-           
-            for des in designations:
-                print(f"  Designation: {des.id} - {des.designation_name}")
-            employees = Employee.objects.filter(designation__in=designations)
-           
-            for emp in employees:
-                print(f"  Employee: {emp.id} - {emp.first_name} {emp.middle_name or ''} {emp.last_name}")
-            # Exclude self
-            employees = employees.exclude(id=obj.id)
-            # Return list of dicts with id and name
-            return [
-                {"id": emp.id, "name": f"{emp.first_name} {emp.middle_name or ''} {emp.last_name}".strip()}
-                for emp in employees
-            ]
-        return []
-
     def get_asset_names(self, obj):
-        asset_names = [asset.name for asset in obj.asset_details.all()]
-       
-        return asset_names
-    
+        return [asset.name for asset in obj.asset_details.all()]
+
     def get_source_choices(self, obj):
         return [{'value': key, 'label': label} for key, label in Employee.SOURCE_CHOICES]
 
+    def get_reporting_manager_name(self, obj):
+        """Return full name of reporting manager."""
+        if obj.reporting_manager:
+            return f"{obj.reporting_manager.first_name} {obj.reporting_manager.last_name}".strip()
+        return None
+    
+    def get_reporting_level_name(self, obj):
+        return obj.reporting_level.level_name if obj.reporting_level else None
+
     def validate(self, data):
+        email = data.get('email')
         source = data.get('source_of_employment')
         ref = data.get('who_referred')
+        reporting_level = data.get('reporting_level')
+        reporting_manager = data.get('reporting_manager')
+
+        request = self.context.get('request')
+        if not request:
+            raise serializers.ValidationError("Request context is required.")
+
+        company = request.user.company
+        
+        if self.instance is None:  # Means create, not update
+            if Employee.objects.filter(email=email, company=company).exists():
+                raise serializers.ValidationError({"email": "This email is already registered for this company."})
+
+
         if source != 'internalreference' and ref:
-            raise serializers.ValidationError("who_referred should only be set if source_of_employment is 'internalreference'")
+            raise serializers.ValidationError(
+                "who_referred should only be set if source_of_employment is 'internalreference'"
+            )
+
+        if reporting_level and reporting_level.company_id != company.id:
+            raise serializers.ValidationError("Selected reporting level is not part of your company.")
+
+        if reporting_manager:
+            if reporting_manager.company_id != company.id:
+                raise serializers.ValidationError("Selected reporting manager is not from your company.")
+
+            if reporting_level and reporting_manager.level_id != reporting_level.id:
+                raise serializers.ValidationError("Reporting manager is not assigned to the selected reporting level.")
+
         return data
 
     def create(self, validated_data):
+        reporting_level = validated_data.pop('reporting_level', None)
         assets = validated_data.pop('asset_details', [])
         request = self.context['request']
         admin_user = request.user
 
-        # Auto generate unique Employee ID
         employee_id = self.generate_employee_id()
-
-        # Generate random username & password
         username = f'emp_{get_random_string(6)}'
         password = get_random_string(8)
 
-        # Create UserRegister for this employee
         user = UserRegister.objects.create_user(
             username=username,
             email=validated_data['email'],
@@ -278,19 +286,16 @@ class EmployeeSerializer(serializers.ModelSerializer):
             company=admin_user.company
         )
 
-        # Link user + company + employee_id
         validated_data['company'] = admin_user.company
         validated_data['user'] = user
         validated_data['employee_id'] = employee_id
 
-        # Always set employee.level to match designation.level
         designation = validated_data.get('designation')
-        if designation and hasattr(designation, 'level'):
+        if designation and designation.level:
             validated_data['level'] = designation.level
 
         employee = Employee.objects.create(**validated_data)
 
-        # Reduce asset quantities
         for asset in assets:
             if asset.quantity <= 0:
                 raise serializers.ValidationError(f"Asset '{asset.name}' is out of stock.")
@@ -298,10 +303,11 @@ class EmployeeSerializer(serializers.ModelSerializer):
             asset.save()
             EmployeeAssetDetails.objects.create(employee=employee, assetinventory=asset)
 
-        # Send welcome email
         self.send_welcome_email(user, password)
 
         return employee
+
+
 
     def generate_employee_id(self):
         last_employee = Employee.objects.order_by('id').last()

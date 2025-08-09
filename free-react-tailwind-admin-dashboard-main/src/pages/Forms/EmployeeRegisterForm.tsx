@@ -2,8 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { axiosInstance } from '../Dashboard/api';
 import ComponentCard from "../../components/common/ComponentCard";
-import PageMeta from "../../components/common/PageMeta";
-import PageBreadCrumb from "../../components/common/PageBreadCrumb";
 import Label from "../../components/form/Label";
 import Input from "../../components/form/input/InputField";
 import Select from "../../components/form/Select";
@@ -119,86 +117,48 @@ const EmployeeRegisterForm: React.FC = () => {
   // const [employees, setEmployees] = useState<{ id: string; name: string; level?: number | string }[]>([]); // kept for future use if needed
   const [reportingManagers, setReportingManagers] = useState<{ id: number | string; name: string }[]>([]);
   // Store the full employee API response for reporting_manager_name lookup
-  interface EmployeeApi {
-    id: string;
-    first_name: string;
-    middle_name?: string;
-    last_name: string;
-    level?: number | string;
-    reporting_level?: number | string;
-    level_id?: number | string;
-    reporting_manager_name?: { id: number | string; name: string }[];
-    [key: string]: unknown;
-  }
-  const [employeeApiData, setEmployeeApiData] = useState<EmployeeApi[]>([]);
+// Removed unused EmployeeApi and employeeApiData
   const navigate = useNavigate();
 
   // Fetch dropdown options
   useEffect(() => {
     const fetchOptions = async () => {
       try {
-        const [deptRes, desigRes, levelRes, empRes, assetRes] = await Promise.all([
+        const [deptRes, desigRes, assetRes] = await Promise.all([
           axiosInstance.get('/departments/'),
           axiosInstance.get('/designations/'),
-          axiosInstance.get('/levels/'),
-          axiosInstance.get('/employee/'),
           axiosInstance.get('/assets/'),
         ]);
         setDepartments(
-          deptRes.data.map((dept: { [key: string]: any }) => ({
-            id: dept.id || dept.department_id || dept._id,
-            name: dept.name || dept.department_name || dept.dept_name || dept.title
+          deptRes.data.map((dept: { id?: string | number; department_id?: string | number; _id?: string | number; name?: string; department_name?: string; dept_name?: string; title?: string }) => ({
+            id: String(dept.id ?? dept.department_id ?? dept._id),
+            name: String(dept.name ?? dept.department_name ?? dept.dept_name ?? dept.title)
           }))
         );
         setDesignations(
-          desigRes.data.map((desig: { [key: string]: any }) => ({
-            id: desig.id || desig.designation_id || desig._id,
-            name: desig.name || desig.designation_name || desig.title,
-            department: desig.department || desig.department_id || ''
+          desigRes.data.map((desig: { id?: string | number; designation_id?: string | number; _id?: string | number; name?: string; designation_name?: string; title?: string; department?: string | number; department_id?: string | number }) => ({
+            id: String(desig.id ?? desig.designation_id ?? desig._id),
+            name: String(desig.name ?? desig.designation_name ?? desig.title),
+            department: String(desig.department ?? desig.department_id ?? '')
           }))
         );
-        setLevels(
-          levelRes.data.map((level: { [key: string]: any }) => ({
-            id: level.id || level.level_id || level._id,
-            name: level.name || level.level_name || level.title,
-            department: level.department_id || level.department || ''
-          }))
-        );
-        // For reporting manager dropdown, store all employees and reporting manager options from serializer
-        setEmployeeApiData(empRes.data as EmployeeApi[]);
-        // setEmployees(empRes.data.map((emp: EmployeeApi) => ({
-        //   id: emp.id,
-        //   name: [emp.first_name, emp.middle_name, emp.last_name].filter(Boolean).join(' '),
-        //   level: emp.level || emp.reporting_level || emp.level_id || ''
-        // })));
-        // Set initial reportingManagers based on current form.level (if any), else from first employee
-        let initialManagers: { id: number | string; name: string }[] = [];
-        if (empRes.data.length > 0) {
-          if (form.level) {
-            const empWithLevel = (empRes.data as EmployeeApi[]).find((emp) => String(emp.level || emp.reporting_level || emp.level_id || '') === String(form.level));
-            if (empWithLevel && Array.isArray(empWithLevel.reporting_manager_name)) {
-              initialManagers = empWithLevel.reporting_manager_name;
-            }
-          }
-          if (initialManagers.length === 0 && Array.isArray(empRes.data[0].reporting_manager_name)) {
-            initialManagers = empRes.data[0].reporting_manager_name;
-          }
-        }
-        setReportingManagers(initialManagers);
-
-        // Set asset options as array of {id, name}
         setAssetOptions(
-          assetRes.data.map((asset: { [key: string]: any }) => ({
-            id: asset.id || asset.asset_id || asset._id,
-            name: asset.name || asset.asset_name || asset.title
+          assetRes.data.map((asset: { id?: number; asset_id?: number; _id?: number; name?: string; asset_name?: string; title?: string }) => ({
+            id: Number(asset.id ?? asset.asset_id ?? asset._id),
+            name: String(asset.name ?? asset.asset_name ?? asset.title)
           }))
         );
-      } catch (err) {
+        // Fetch initial level choices and reporting managers for default level
+        const url = form.level ? `/employee/get-reporting-manager-choices/?reporting_level_id=${form.level}` : '/employee/get-reporting-manager-choices/';
+        const res = await axiosInstance.get(url);
+        setLevels((Array.isArray(res.data.level_choices) ? res.data.level_choices : []).map((lvl: { id: number | string; name: string }) => ({ id: String(lvl.id), name: lvl.name })));
+        setReportingManagers((Array.isArray(res.data.reporting_managers) ? res.data.reporting_managers : []).map((mgr: { id: number | string; name: string }) => ({ id: mgr.id, name: mgr.name })));
+      } catch {
         // Optionally handle error
       }
     };
     fetchOptions();
-  }, []);
+  }, [form.level]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
@@ -207,15 +167,13 @@ const EmployeeRegisterForm: React.FC = () => {
     if (pkFields.includes(name)) {
       setForm(prevForm => {
         const updatedForm = { ...prevForm, [name]: value === '' ? '' : Number(value) };
-        // If level changes, update reportingManagers from employeeApiData
+        // If level changes, fetch reporting managers and levels from backend endpoint
         if (name === 'level') {
-          let newManagers: { id: number | string; name: string }[] = [];
-          const empWithLevel = employeeApiData.find((emp) => String(emp.level || emp.reporting_level || emp.level_id || '') === String(value));
-          if (empWithLevel && Array.isArray(empWithLevel.reporting_manager_name)) {
-            newManagers = empWithLevel.reporting_manager_name;
-          }
-          setReportingManagers(newManagers);
-          // Also clear reporting_manager selection if level changes
+          const url = `/employee/get-reporting-manager-choices/?reporting_level_id=${value}`;
+          axiosInstance.get(url).then(res => {
+            setReportingManagers((Array.isArray(res.data.reporting_managers) ? res.data.reporting_managers : []).map((mgr: { id: number | string; name: string }) => ({ id: mgr.id, name: mgr.name })));
+            setLevels((Array.isArray(res.data.level_choices) ? res.data.level_choices : []).map((lvl: { id: number | string; name: string }) => ({ id: String(lvl.id), name: lvl.name })));
+          });
           updatedForm.reporting_manager = '';
         }
         return updatedForm;
@@ -659,11 +617,15 @@ const EmployeeRegisterForm: React.FC = () => {
                     <div>
                       <Label>Reporting Level</Label>
                       <Select
-                        options={levels
-                          .filter(level => String(level.department) === String(form.department))
-                          .map(level => ({ value: level.id, label: level.name }))}
+                        options={levels.map(level => ({ value: level.id, label: level.name }))}
                         placeholder="Select level"
-                        onChange={handleSelectChange('level')}
+                        onChange={value => {
+                          handleSelectChange('level')(value);
+                          // Update reporting managers for selected level
+                         
+                          
+                          setForm(prev => ({ ...prev, reporting_manager: '' }));
+                        }}
                         defaultValue={form.level}
                       />
                     </div>

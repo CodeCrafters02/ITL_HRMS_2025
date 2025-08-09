@@ -158,15 +158,15 @@ const LeaveCountPage: React.FC = () => {
                 </TableCell>
                 <TableCell className="px-4 py-2 flex gap-2 justify-center">
                   <button
-                    className="text-green-600 hover:text-green-800"
+                    className="flex items-center gap-1 bg-green-100 text-green-700 hover:bg-green-200 px-3 py-2 rounded-lg font-medium text-sm transition-colors"
                     title="Save"
                     onClick={addLeave}
                     disabled={loading}
                   >
-                    <FaEdit />
+                    Save
                   </button>
                   <button
-                    className="text-gray-500 hover:text-gray-700"
+                    className="flex items-center gap-1 bg-gray-100 text-gray-700 hover:bg-gray-200 px-3 py-2 rounded-lg font-medium text-sm transition-colors"
                     title="Cancel"
                     onClick={() => { setEditId(null); setEditLeave({}); }}
                     disabled={loading}
@@ -219,15 +219,15 @@ const LeaveCountPage: React.FC = () => {
                       </TableCell>
                       <TableCell className="px-4 py-2 flex gap-2 justify-center">
                         <button
-                          className="text-green-600 hover:text-green-800"
+                          className="flex items-center gap-1 bg-green-100 text-green-700 hover:bg-green-200 px-3 py-2 rounded-lg font-medium text-sm transition-colors"
                           title="Save"
                           onClick={() => updateLeave(leave.id)}
                           disabled={loading}
                         >
-                          <FaEdit />
+                          Save
                         </button>
                         <button
-                          className="text-gray-500 hover:text-gray-700"
+                          className="flex items-center gap-1 bg-gray-100 text-gray-700 hover:bg-gray-200 px-3 py-2 rounded-lg font-medium text-sm transition-colors"
                           title="Cancel"
                           onClick={() => { setEditId(null); setEditLeave({}); }}
                           disabled={loading}
@@ -244,20 +244,22 @@ const LeaveCountPage: React.FC = () => {
                       <TableCell className="px-4 py-2">{leave.is_paid ? "Yes" : "No"}</TableCell>
                       <TableCell className="px-4 py-2 flex gap-2 justify-center">
                         <button
-                          className="text-blue-600 hover:text-blue-800"
-                          title="Edit"
+                          className="flex items-center gap-1 bg-blue-100 text-blue-700 hover:bg-blue-200 px-3 py-2 rounded-lg font-medium text-sm transition-colors"
+                          title="Edit Leave"
                           onClick={() => startEdit(leave)}
                           disabled={loading}
                         >
-                          <FaEdit />
+                          <FaEdit className="w-3 h-3" />
+                          Edit
                         </button>
                         <button
-                          className="text-red-600 hover:text-red-800"
-                          title="Delete"
+                          className="flex items-center gap-1 bg-red-100 text-red-700 hover:bg-red-200 px-3 py-2 rounded-lg font-medium text-sm transition-colors"
+                          title="Delete Leave"
                           onClick={() => handleDelete(leave.id)}
                           disabled={loading}
                         >
-                          <FaTrash />
+                          <FaTrash className="w-3 h-3" />
+                          Delete
                         </button>
                       </TableCell>
                     </>

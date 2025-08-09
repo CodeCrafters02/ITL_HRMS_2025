@@ -58,7 +58,7 @@ const SalaryStructureList: React.FC = () => {
       <h2 className="text-3xl font-bold mb-8">Salary Structures</h2>
       <div className="flex justify-end mb-6">
         <button
-          onClick={() => navigate("/form-salary-structure")}
+          onClick={() => navigate("/admin/form-salary-structure")}
           className="bg-blue-600 text-white px-6 py-3 rounded-lg text-lg font-semibold shadow hover:bg-blue-700"
         >
           Add Salary Structure

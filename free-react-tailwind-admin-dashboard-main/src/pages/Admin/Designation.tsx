@@ -113,7 +113,7 @@ export default function Designation() {
             <p className="text-gray-600 dark:text-gray-400 mt-2">Manage designations across departments and levels</p>
           </div>
           <button
-            onClick={() => navigate("/form-designation")}
+            onClick={() => navigate("/admin/form-designation")}
             className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-lg shadow-lg transition-colors duration-200"
           >
             <FaPlus className="w-4 h-4" />

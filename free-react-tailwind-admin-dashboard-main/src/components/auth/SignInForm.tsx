@@ -2,10 +2,11 @@ import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import axios from "axios";
 
-import { ChevronLeftIcon, EyeCloseIcon, EyeIcon } from "../../icons";
+import { EyeCloseIcon, EyeIcon } from "../../icons";
 import Label from "../form/Label";
 import Input from "../form/input/InputField";
 import Checkbox from "../form/input/Checkbox";
+import Toast from "../ui/alert/Alert";
 
 export default function SignInForm() {
   const [showPassword, setShowPassword] = useState(false);
@@ -14,6 +15,7 @@ export default function SignInForm() {
     username: "",
     password: "",
   });
+  const [toast, setToast] = useState<string | null>(null);
 
   const navigate = useNavigate();
 
@@ -41,9 +43,9 @@ export default function SignInForm() {
       // Optionally set default header for other requests
       axios.defaults.headers.common["Authorization"] = `Bearer ${access}`;
 
-      alert("Login successful!");
+      setToast("SignIn successfully");
+      setTimeout(() => setToast(null), 3000);
 
-      
       if (role === "master") {
         navigate("/master-dashboard");
       } else if (role === "admin") {
@@ -51,25 +53,25 @@ export default function SignInForm() {
       } else if (role === "employee") {
         navigate("/employee");
       } else {
-        alert("Unknown role. Cannot redirect.");
+        setToast("Unknown role. Cannot redirect.");
+        setTimeout(() => setToast(null), 3000);
       }
     } catch (err) {
       console.error("Login failed:", err);
-      alert("Login failed. Check credentials.");
+      setToast("Login failed. Check credentials.");
+      setTimeout(() => setToast(null), 3000);
     }
   };
 
   return (
     <div className="flex flex-col flex-1">
-      <div className="w-full max-w-md pt-10 mx-auto">
-        <Link
-          to="/"
-          className="inline-flex items-center text-sm text-gray-500 transition-colors hover:text-gray-700"
-        >
-          <ChevronLeftIcon className="size-5" />
-          Back to dashboard
-        </Link>
-      </div>
+      {toast && (
+        <div className="fixed bottom-4 left-1/2 transform -translate-x-1/2 z-50 max-w-md w-full flex justify-center">
+          <Toast variant="success" title="Success" message={toast} showLink={false} />
+        </div>
+      )}
+
+      
 
       <div className="flex flex-col justify-center flex-1 w-full max-w-md mx-auto">
         <h1 className="mb-2 font-semibold text-gray-800 text-title-sm sm:text-title-md">

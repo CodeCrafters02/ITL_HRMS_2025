@@ -198,12 +198,50 @@ class DesignationViewSet(viewsets.ModelViewSet):
 class EmployeeViewSet(viewsets.ModelViewSet):
     queryset = Employee.objects.all()
     serializer_class = EmployeeSerializer
-    permission_classes = [IsAuthenticated,IsAdminUser]
+    permission_classes = [IsAuthenticated, IsAdminUser]
 
     def get_queryset(self):
         user = self.request.user
         return Employee.objects.filter(company=user.company)
-    
+
+    @action(detail=False, methods=['get'], url_path='get-reporting-manager-choices')
+    def get_reporting_manager_choices(self, request):
+        company = getattr(request.user, 'company', None)
+        if not company:
+            return Response({"error": "User has no company"}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Always return all levels linked to this company
+        level_choices = [
+            {"id": lvl.id, "name": lvl.level_name}
+            for lvl in Level.objects.filter(company=company)
+        ]
+
+        reporting_level_id = request.query_params.get('reporting_level_id')
+
+        if reporting_level_id:
+            try:
+                reporting_level_id = int(reporting_level_id)
+            except ValueError:
+                return Response({"error": "Invalid reporting_level_id"}, status=status.HTTP_400_BAD_REQUEST)
+
+            # Employees from the given level in the same company
+            employees = Employee.objects.filter(company=company, level_id=reporting_level_id)
+
+            reporting_managers = [
+                {"id": emp.id, "name": emp.full_name or emp.user.first_name or emp.user.username}
+                for emp in employees
+            ]
+
+            return Response({
+                "reporting_managers": reporting_managers,
+                "level_choices": level_choices
+            })
+
+        # If no reporting_level_id param, only send levels
+        return Response({
+            "level_choices": level_choices
+        })
+
     
 class AssetInventoryViewSet(viewsets.ModelViewSet):
     serializer_class = AssetInventorySerializer

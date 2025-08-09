@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { axiosInstance } from "../Dashboard/api"; // adjust path as needed
 
@@ -37,7 +37,7 @@ const IncomeTax = () => {
         <h2 className="text-xl font-bold">Income Tax Configuration</h2>
         <button
           className="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-4 py-2 rounded shadow"
-          onClick={() => navigate("/form-income-tax")}
+          onClick={() => navigate("/admin/form-income-tax")}
         >
           + Add Income Tax
         </button>

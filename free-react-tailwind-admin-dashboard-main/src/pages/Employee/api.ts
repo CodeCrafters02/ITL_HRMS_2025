@@ -1,4 +1,3 @@
-// src/components/auth/api.ts
 import axios, { InternalAxiosRequestConfig } from "axios";
 import { jwtDecode } from "jwt-decode";
 
@@ -28,7 +27,7 @@ axiosInstance.interceptors.request.use(
     if (token && isTokenExpired(token) && refreshToken) {
       try {
         const response = await axios.post(
-          "http://127.0.0.1:8000/employee/token/refresh/",
+          "http://127.0.0.1:8000/api/token/refresh/",
           {
             refresh: refreshToken,
           }
@@ -38,7 +37,11 @@ axiosInstance.interceptors.request.use(
           localStorage.setItem("access_token", token);
         }
       } catch {
-        // Optionally handle refresh failure (e.g., logout)
+        // Automatic logout on refresh failure
+        localStorage.removeItem("access_token");
+        localStorage.removeItem("refresh_token");
+        window.location.href = "/signin";
+        return Promise.reject(new Error(" Please sign in again."));
       }
     }
     if (token && config.headers) {

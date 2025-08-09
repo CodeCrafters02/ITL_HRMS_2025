@@ -560,7 +560,7 @@ const AttendanceLog: React.FC = () => {
             </div>
             <div className="flex items-center gap-3">
               <div className="w-6 h-6 bg-orange-500 rounded-full text-white text-xs flex items-center justify-center font-medium">H</div>
-              <span className="text-sm text-gray-700">Holiday</span>
+              <span className="text-sm text-gray-700">Half day</span>
             </div>
             <div className="flex items-center gap-3">
               <div className="w-6 h-6 bg-gray-400 rounded-full text-white text-xs flex items-center justify-center font-medium">-</div>

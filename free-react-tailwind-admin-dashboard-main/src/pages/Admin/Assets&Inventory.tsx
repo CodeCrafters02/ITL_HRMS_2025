@@ -6,13 +6,6 @@ import { axiosInstance } from "../Dashboard/api";
 import { FaTrash, FaPlus, FaEdit } from "react-icons/fa";
 import { useNavigate } from "react-router-dom";
 import Badge from "../../components/ui/badge/Badge";
-import {
-  Table,
-  TableHeader,
-  TableBody,
-  TableRow,
-  TableCell
-} from "../../components/ui/table";
 
 // Asset type definition
 interface Asset {
@@ -89,59 +82,52 @@ const AssetsInventory: React.FC = () => {
           <div className="flex items-center justify-between mb-6">
             <button
               className="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-4 py-2 rounded flex items-center gap-2 shadow"
-              onClick={() => navigate("/form-assets-inventory")}
+              onClick={() => navigate("/admin/form-assets-inventory")}
             >
               <FaPlus /> Add Asset
             </button>
           </div>
-          <Table className="min-w-full rounded-lg overflow-hidden">
-            <TableHeader>
-              <TableRow className="bg-gray-100">
-                <TableCell isHeader className="px-4 py-2 text-center">S.no</TableCell>
-                <TableCell isHeader className="px-4 py-2 text-left">Name</TableCell>
-                <TableCell isHeader className="px-4 py-2 text-left">Description</TableCell>
-                <TableCell isHeader className="px-4 py-2 text-center">Quantity</TableCell>
-                <TableCell isHeader className="px-4 py-2 text-center">Icon</TableCell>
-                <TableCell isHeader className="px-4 py-2 text-center">Actions</TableCell>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {assets.length === 0 ? (
-                <TableRow>
-                  <td colSpan={6} className="text-center py-4 text-gray-500">No assets found.</td>
-                </TableRow>
-              ) : (
-                assets.map((asset, idx) => (
-                  <TableRow key={asset.id} className="hover:bg-gray-50">
+          {loading && <div className="text-center mt-4">Loading...</div>}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {assets.length === 0 ? (
+              <div className="shadow-lg bg-yellow-50 rounded-xl border border-yellow-200 flex flex-col items-center justify-center py-12">
+                <div className="text-6xl mb-4">📦</div>
+                <p className="text-lg font-medium mb-2">No assets found</p>
+                <p className="text-sm">Get started by adding your first asset</p>
+              </div>
+            ) : (
+              assets.map((asset, idx) => (
+                <div key={asset.id} className="shadow-lg rounded-xl border border-gray-200 hover:shadow-2xl transition-shadow duration-200 bg-gradient-to-br from-green-50 via-indigo-100 to-purple-100 dark:from-gray-800 dark:via-gray-900 dark:to-gray-700">
+                  <div className="p-6 space-y-3">
                     {editId === asset.id ? (
                       <>
-                        <TableCell className="px-4 py-2 text-center align-middle">{idx + 1}</TableCell>
-                        <TableCell className="px-4 py-2 align-middle">
+                        <div className="flex items-center gap-3 mb-2">
+                          <span className="inline-flex items-center justify-center w-8 h-8 bg-blue-100 text-blue-600 rounded-full font-semibold text-sm dark:bg-blue-900/30 dark:text-blue-400">
+                            {idx + 1}
+                          </span>
                           <input
                             type="text"
                             value={editAsset.name || ""}
                             onChange={e => handleEditChange("name", e.target.value)}
                             className="border rounded px-2 py-1 w-full"
+                            placeholder="Asset Name"
                           />
-                        </TableCell>
-                        <TableCell className="px-4 py-2 align-middle">
-                          <input
-                            type="text"
-                            value={editAsset.description || ""}
-                            onChange={e => handleEditChange("description", e.target.value)}
-                            className="border rounded px-2 py-1 w-full"
-                          />
-                        </TableCell>
-                        <TableCell className="px-4 py-2 text-center align-middle">
-                          <input
-                            type="number"
-                            value={editAsset.quantity || 0}
-                            onChange={e => handleEditChange("quantity", Number(e.target.value))}
-                            className="border rounded px-2 py-1 w-20 text-center"
-                          />
-                        </TableCell>
-                        <TableCell className="px-4 py-2 text-center align-middle">
-                          {/* Optionally add image upload/edit here */}
+                        </div>
+                        <input
+                          type="text"
+                          value={editAsset.description || ""}
+                          onChange={e => handleEditChange("description", e.target.value)}
+                          className="border rounded px-2 py-1 w-full mb-2"
+                          placeholder="Description"
+                        />
+                        <input
+                          type="number"
+                          value={editAsset.quantity || 0}
+                          onChange={e => handleEditChange("quantity", Number(e.target.value))}
+                          className="border rounded px-2 py-1 w-20 text-center mb-2"
+                          placeholder="Quantity"
+                        />
+                        <div className="mb-2 text-center">
                           {asset.icon_image && (
                             <img
                               src={asset.icon_image}
@@ -149,33 +135,31 @@ const AssetsInventory: React.FC = () => {
                               className="w-10 h-10 object-cover rounded border mx-auto"
                             />
                           )}
-                        </TableCell>
-                        <TableCell className="px-4 py-2 flex gap-2 justify-center align-middle">
-                          <button
-                            className="btn btn-sm btn-success flex items-center gap-1"
-                            title="Save"
-                            onClick={() => updateAsset(asset.id)}
-                          >
+                        </div>
+                        <div className="flex gap-2 justify-end">
+                          <button className="text-green-600 hover:text-green-800" title="Save" onClick={() => updateAsset(asset.id)}>
                             <FaEdit />
                           </button>
-                          <button
-                            className="btn btn-sm btn-secondary flex items-center gap-1"
-                            title="Cancel"
-                            onClick={() => { setEditId(null); setEditAsset({}); }}
-                          >
+                          <button className="text-gray-500 hover:text-gray-700" title="Cancel" onClick={() => { setEditId(null); setEditAsset({}); }}>
                             Cancel
                           </button>
-                        </TableCell>
+                        </div>
                       </>
                     ) : (
                       <>
-                        <TableCell className="px-4 py-2 text-center align-middle">{idx + 1}</TableCell>
-                        <TableCell className="px-4 py-2 align-middle">{asset.name}</TableCell>
-                        <TableCell className="px-4 py-2 align-middle">{asset.description}</TableCell>
-                        <TableCell className="px-4 py-2 text-center align-middle">
-                          <Badge color="info" variant="light">{asset.quantity}</Badge>
-                        </TableCell>
-                        <TableCell className="px-4 py-2 text-center align-middle">
+                        <div className="flex items-center gap-3 mb-2">
+                          <span className="inline-flex items-center justify-center w-8 h-8 bg-blue-100 text-blue-600 rounded-full font-semibold text-sm dark:bg-blue-900/30 dark:text-blue-400">
+                            {idx + 1}
+                          </span>
+                          <span className="text-lg font-medium text-gray-900 dark:text-white truncate">
+                            {asset.name}
+                          </span>
+                        </div>
+                        <div className="mb-2 text-gray-700 dark:text-gray-400">
+                          {asset.description}
+                        </div>
+                        <Badge variant="light">Quantity: {asset.quantity}</Badge>
+                        <div className="mb-2 text-center">
                           {asset.icon_image && (
                             <img
                               src={asset.icon_image}
@@ -183,31 +167,22 @@ const AssetsInventory: React.FC = () => {
                               className="w-10 h-10 object-cover rounded border mx-auto"
                             />
                           )}
-                        </TableCell>
-                        <TableCell className="px-4 py-2 flex gap-2 justify-center align-middle">
-                          <button
-                            className="btn btn-sm btn-primary flex items-center gap-1"
-                            title="Edit"
-                            onClick={() => startEdit(asset)}
-                          >
+                        </div>
+                        <div className="flex gap-2 justify-end mt-2">
+                          <button className="text-blue-600 hover:text-blue-800" title="Edit" onClick={() => startEdit(asset)}>
                             <FaEdit />
                           </button>
-                          <button
-                            className="btn btn-sm btn-error flex items-center gap-1"
-                            title="Delete"
-                            onClick={() => handleDelete(asset.id)}
-                          >
+                          <button className="text-red-600 hover:text-red-800" title="Delete" onClick={() => handleDelete(asset.id)}>
                             <FaTrash />
                           </button>
-                        </TableCell>
+                        </div>
                       </>
                     )}
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
-          {loading && <div className="text-center mt-4">Loading...</div>}
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
         </ComponentCard>
       </div>
     </>

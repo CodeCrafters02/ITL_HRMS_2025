@@ -79,7 +79,7 @@ export default function Level() {
             <p className="text-gray-600 dark:text-gray-400 mt-2">Manage your organization's reporting levels</p>
           </div>
           <button
-            onClick={() => navigate("/form-level")}
+            onClick={() => navigate("/admin/form-level")}
             className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-lg shadow-lg transition-colors duration-200"
           >
             <FaPlus className="w-4 h-4" />

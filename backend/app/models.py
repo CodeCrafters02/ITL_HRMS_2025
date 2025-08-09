@@ -98,7 +98,8 @@ class Employee(models.Model):
         blank=True,
         related_name='reportees'
     )
-
+    reporting_level = models.ForeignKey(Level,on_delete=models.SET_NULL,null=True,blank=True,related_name='reporting_level')
+    
     employee_id = models.CharField(max_length=10, unique=True, null=True)
 
     # Basic info

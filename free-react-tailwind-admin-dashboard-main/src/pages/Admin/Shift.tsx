@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { axiosInstance } from "../Dashboard/api";
 import { useNavigate } from "react-router-dom";
 import { FaEdit, FaTrash } from "react-icons/fa";
@@ -102,7 +102,7 @@ const ShiftPolicyList = () => {
         </h2>
         <button
           className="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-4 py-2 rounded flex items-center gap-2 shadow"
-          onClick={() => navigate("/form-shift-config")}
+          onClick={() => navigate("/admin/form-shift-config")}
         >
           + Add Shift Policy
         </button>
@@ -113,127 +113,104 @@ const ShiftPolicyList = () => {
       ) : shifts.length === 0 ? (
         <div className="text-gray-500">No shift policies available.</div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {shifts.map((shift) => (
-            <div key={shift.id} className="shadow-md hover:shadow-lg transition bg-white rounded-lg">
-              <div className="p-4 space-y-2">
-                <div className="flex items-center justify-between">
-                  {editId === shift.id ? (
+            <div key={shift.id} className="shadow-lg rounded-xl border border-gray-200 hover:shadow-2xl transition-shadow duration-200 bg-white">
+              <div className="p-6 space-y-3">
+                {editId === shift.id ? (
+                  <>
                     <input
                       type="text"
                       value={editShift.shift_type || ""}
                       onChange={e => handleEditChange("shift_type", e.target.value)}
-                      className="text-xl font-semibold border rounded px-2 py-1 w-1/2"
+                      className="text-xl font-semibold border rounded px-2 py-1 w-full mb-2"
+                      placeholder="Shift Type"
                     />
-                  ) : (
-                    <h3 className="text-xl font-semibold">{shift.shift_type} Shift</h3>
-                  )}
-                  <div className="flex gap-2">
-                    {editId === shift.id ? (
-                      <>
-                        <button
-                          className="text-green-600 hover:text-green-800"
-                          title="Save"
-                          onClick={() => updateShift(shift.id)}
-                        >
-                          <FaEdit />
-                        </button>
-                        <button
-                          className="text-gray-500 hover:text-gray-700"
-                          title="Cancel"
-                          onClick={() => { setEditId(null); setEditShift({}); }}
-                        >
-                          Cancel
-                        </button>
-                      </>
-                    ) : (
-                      <>
-                        <button
-                          className="text-blue-600 hover:text-blue-800"
-                          title="Edit"
-                          onClick={() => startEdit(shift)}
-                        >
-                          <FaEdit />
-                        </button>
-                        <button
-                          className="text-red-600 hover:text-red-800"
-                          title="Delete"
-                          onClick={() => handleDelete(shift.id)}
-                        >
-                          <FaTrash />
-                        </button>
-                      </>
-                    )}
-                  </div>
-                </div>
-                {editId === shift.id ? (
-                  <>
-                    <p className="text-gray-600">
-                      ⏰ <strong>Check-in:</strong>
+                    <div className="mb-2">
+                      <label className="block text-sm font-medium mb-1">Check-in</label>
                       <input
                         type="time"
                         value={editShift.checkin || ""}
                         onChange={e => handleEditChange("checkin", e.target.value)}
-                        className="border rounded px-2 py-1 ml-2"
+                        className="border rounded px-2 py-1 w-full"
                       />
-                    </p>
-                    <p className="text-gray-600">
-                      ⏳ <strong>Check-out:</strong>
+                    </div>
+                    <div className="mb-2">
+                      <label className="block text-sm font-medium mb-1">Check-out</label>
                       <input
                         type="time"
                         value={editShift.checkout || ""}
                         onChange={e => handleEditChange("checkout", e.target.value)}
-                        className="border rounded px-2 py-1 ml-2"
+                        className="border rounded px-2 py-1 w-full"
                       />
-                    </p>
-                    <p className="text-gray-600">
-                      🕒 <strong>Grace Period:</strong>
+                    </div>
+                    <div className="mb-2">
+                      <label className="block text-sm font-medium mb-1">Grace Period</label>
                       <input
                         type="time"
                         step="1"
                         value={formatTimeString(editShift.grace_period || "00:00:00")}
                         onChange={e => handleEditChange("grace_period", parseTimeString(e.target.value))}
-                        className="border rounded px-2 py-1 ml-2 w-28"
+                        className="border rounded px-2 py-1 w-full"
                       />
-                    </p>
-                    <p className="text-gray-600">
-                      📉 <strong>Half Day:</strong>
+                    </div>
+                    <div className="mb-2">
+                      <label className="block text-sm font-medium mb-1">Half Day</label>
                       <input
                         type="time"
                         step="1"
                         value={formatTimeString(editShift.half_day || "00:00:00")}
                         onChange={e => handleEditChange("half_day", parseTimeString(e.target.value))}
-                        className="border rounded px-2 py-1 ml-2 w-28"
+                        className="border rounded px-2 py-1 w-full"
                       />
-                    </p>
-                    <p className="text-gray-600">
-                      📈 <strong>Full Day:</strong>
+                    </div>
+                    <div className="mb-2">
+                      <label className="block text-sm font-medium mb-1">Full Day</label>
                       <input
                         type="time"
                         step="1"
                         value={formatTimeString(editShift.full_day || "00:00:00")}
                         onChange={e => handleEditChange("full_day", parseTimeString(e.target.value))}
-                        className="border rounded px-2 py-1 ml-2 w-28"
+                        className="border rounded px-2 py-1 w-full"
                       />
-                    </p>
+                    </div>
+                    <div className="flex gap-2 justify-end mt-2">
+                      <button className="text-green-600 hover:text-green-800" title="Save" onClick={() => updateShift(shift.id)}>
+                        <FaEdit />
+                      </button>
+                      <button className="text-gray-500 hover:text-gray-700" title="Cancel" onClick={() => { setEditId(null); setEditShift({}); }}>
+                        Cancel
+                      </button>
+                    </div>
                   </>
                 ) : (
                   <>
-                    <p className="text-gray-600">
-                      ⏰ <strong>Check-in:</strong> {shift.checkin}
-                    </p>
-                    <p className="text-gray-600">
-                      ⏳ <strong>Check-out:</strong> {shift.checkout}
-                    </p>
-                    <p className="text-gray-600">
-                      🕒 <strong>Grace Period:</strong> {formatTimeString(shift.grace_period) || "00:00:00"}
-                    </p>
-                    <p className="text-gray-600">
-                      📉 <strong>Half Day:</strong> {formatTimeString(shift.half_day) || "04:00:00"}
-                    </p>
-                    <p className="text-gray-600">
-                      📈 <strong>Full Day:</strong> {formatTimeString(shift.full_day) || "08:00:00"}
-                    </p>
+                    <div className="flex items-center justify-between mb-2">
+                      <h3 className="text-xl font-bold text-blue-900 flex-1 truncate">{shift.shift_type} Shift</h3>
+                    </div>
+                    <div className="mb-2">
+                      <span className="font-semibold text-gray-700">Check-in:</span> {shift.checkin}
+                    </div>
+                    <div className="mb-2">
+                      <span className="font-semibold text-gray-700">Check-out:</span> {shift.checkout}
+                    </div>
+                    <div className="mb-2">
+                      <span className="font-semibold text-gray-700">Grace Period:</span> {formatTimeString(shift.grace_period) || "00:00:00"}
+                    </div>
+                    <div className="mb-2">
+                      <span className="font-semibold text-gray-700">Half Day:</span> {formatTimeString(shift.half_day) || "04:00:00"}
+                    </div>
+                    <div className="mb-2">
+                      <span className="font-semibold text-gray-700">Full Day:</span> {formatTimeString(shift.full_day) || "08:00:00"}
+                    </div>
+                    <div className="flex gap-2 justify-end mt-2">
+                      <button className="text-blue-600 hover:text-blue-800" title="Edit" onClick={() => startEdit(shift)}>
+                        <FaEdit />
+                      </button>
+                      <button className="text-red-600 hover:text-red-800" title="Delete" onClick={() => handleDelete(shift.id)}>
+                        <FaTrash />
+                      </button>
+                    </div>
                   </>
                 )}
               </div>

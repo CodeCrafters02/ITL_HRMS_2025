@@ -46,7 +46,7 @@ export interface Employee {
   designation: number;
   designation_name?: string;
   level?: number;
-  level_name?: string;
+  level_choices?: string | { id: number; name: string } | Array<{ id: number; name: string }>;
   reporting_manager?: { id: number; first_name: string; last_name: string };
   reporting_manager_name?: string | { id: number; first_name: string; last_name: string } | Array<{ id: number; first_name: string; last_name: string }>;
   who_referred?: string | { id: number; first_name: string; last_name: string } | Array<{ id: number; first_name: string; last_name: string }>;
@@ -71,6 +71,8 @@ const EmployeeRegister: React.FC = () => {
   const [departments, setDepartments] = useState<{ id: number; name: string }[]>([]);
   const [designations, setDesignations] = useState<{ id: number; name: string; department: number }[]>([]);
   const [employeesList, setEmployeesList] = useState<{ id: number; name: string }[]>([]);
+  const [levelChoices, setLevelChoices] = useState<{ id: number; name: string }[]>([]);
+  const [reportingManagerChoices, setReportingManagerChoices] = useState<{ id: number; first_name: string; last_name: string }[]>([]);
   
   const genderOptions = [
     { value: 'male', label: 'Male' },
@@ -103,7 +105,6 @@ const EmployeeRegister: React.FC = () => {
           axiosInstance.get('/departments/'),
           axiosInstance.get('/designations/'),
         ]);
-        
         setEmployees(Array.isArray(empRes.data) ? empRes.data : []);
         setDepartments(
           deptRes.data.map((d: any) => ({
@@ -133,6 +134,37 @@ const EmployeeRegister: React.FC = () => {
     };
     fetchAll();
   }, []);
+
+  // Fetch reporting level and manager choices when editing an employee
+  useEffect(() => {
+    if (editRowId !== null && editForm.level) {
+      const fetchChoices = async () => {
+        try {
+          const res = await axiosInstance.get(`/employee/get-reporting-manager-choices/?reporting_level_id=${editForm.level}`);
+          setLevelChoices(Array.isArray(res.data.level_choices) ? res.data.level_choices : []);
+          // Use reporting_managers for dropdown, fallback to reporting_manager_choices for legacy
+          if (Array.isArray(res.data.reporting_managers)) {
+            setReportingManagerChoices(res.data.reporting_managers.map((mgr: { id: number | string; name: string }) => {
+              // If backend provides name as string, split to first/last name
+              const [first_name, ...rest] = mgr.name.split(' ');
+              return { id: mgr.id, first_name, last_name: rest.join(' ') };
+            }));
+          } else if (Array.isArray(res.data.reporting_manager_choices)) {
+            setReportingManagerChoices(res.data.reporting_manager_choices);
+          } else {
+            setReportingManagerChoices([]);
+          }
+        } catch {
+          setLevelChoices([]);
+          setReportingManagerChoices([]);
+        }
+      };
+      fetchChoices();
+    } else {
+      setLevelChoices([]);
+      setReportingManagerChoices([]);
+    }
+  }, [editRowId, editForm.level]);
 
   const handleEditChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value, type } = e.target;
@@ -207,16 +239,19 @@ const EmployeeRegister: React.FC = () => {
 
   const saveEdit = async (id: number) => {
     try {
-      const payload: Partial<Employee> = { ...editForm };
-      if ('reporting_manager_id' in editForm) {
-        (payload as any).reporting_manager = editForm.reporting_manager_id;
-        delete (payload as any).reporting_manager_id;
-      }
-      if ('who_referred_id' in editForm) {
-        (payload as any).who_referred = editForm.who_referred_id;
-        delete (payload as any).who_referred_id;
-      }
-      
+      // Build payload: only send fields that are not undefined/null/empty string
+      const payload: Record<string, unknown> = {};
+      Object.entries(editForm).forEach(([key, value]) => {
+        if (value !== undefined && value !== null && value !== '') {
+          if (key === 'reporting_manager_id') {
+            payload['reporting_manager'] = value;
+          } else if (key === 'who_referred_id') {
+            payload['who_referred'] = value;
+          } else {
+            payload[key] = value;
+          }
+        }
+      });
       await axiosInstance.patch(`/employee/${id}/`, payload);
       setEmployees((prev) => prev.map(emp => emp.id === id ? { ...emp, ...payload } : emp));
       setEditRowId(null);
@@ -680,14 +715,19 @@ const EmployeeRegister: React.FC = () => {
                     {/* Reporting Level */}
                     <TableCell className="border border-gray-200 dark:border-gray-700 p-4">
                       {editRowId === emp.id ? (
-                        <input 
-                          name="level_name" 
-                          value={editForm.level_name || ''} 
-                          onChange={handleEditChange} 
-                          className="w-full px-3 py-2 border border-gray-300 rounded text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500" 
-                        />
+                        <select
+                          name="level"
+                          value={editForm.level || ''}
+                          onChange={handleEditChange}
+                          className="w-full px-3 py-2 border border-gray-300 rounded text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        >
+                          <option value="">Select Level</option>
+                          {levelChoices.map((lvl) => (
+                            <option key={lvl.id} value={lvl.id}>{lvl.name}</option>
+                          ))}
+                        </select>
                       ) : (
-                        <span className="text-sm text-gray-900 dark:text-gray-100">{emp.level_name || '-'}</span>
+                        <span className="text-sm text-gray-900 dark:text-gray-100">{emp.reporting_level_name || '-'}</span>
                       )}
                     </TableCell>
                     
@@ -701,23 +741,26 @@ const EmployeeRegister: React.FC = () => {
                           className="w-full px-3 py-2 border border-gray-300 rounded text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                         >
                           <option value="">Select Manager</option>
-                          {employeesList
-                            .filter(e => e.id !== emp.id)
-                            .map((manager) => (
-                              <option key={manager.id} value={manager.id}>{manager.name}</option>
+                          {reportingManagerChoices
+                            .filter((mgr) => mgr.id !== emp.id)
+                            .map((mgr) => (
+                              <option key={mgr.id} value={mgr.id}>{[mgr.first_name, mgr.last_name].filter(Boolean).join(' ')}</option>
                             ))}
                         </select>
                       ) : (
                         <span className="text-sm text-gray-900 dark:text-gray-100">
-                          {Array.isArray(emp.reporting_manager_name)
+                          {/* Robust reporting manager name display: handle array, object, string, fallback to '-' */}
+                          {Array.isArray(emp.reporting_manager_name) && emp.reporting_manager_name.length > 0
                             ? emp.reporting_manager_name.map((mgr) => [mgr.first_name, mgr.last_name].filter(Boolean).join(' ')).join(', ')
-                            : typeof emp.reporting_manager_name === 'object' && emp.reporting_manager_name !== null
-                              ? [emp.reporting_manager_name.first_name, emp.reporting_manager_name.last_name].filter(Boolean).join(' ')
-                              : typeof emp.reporting_manager_name === 'string' && emp.reporting_manager_name
-                                ? emp.reporting_manager_name
-                                : emp.reporting_manager && (emp.reporting_manager.first_name || emp.reporting_manager.last_name)
-                                  ? [emp.reporting_manager.first_name, emp.reporting_manager.last_name].filter(Boolean).join(' ')
-                                  : '-'}
+                            : emp.reporting_manager && typeof emp.reporting_manager === 'object' && emp.reporting_manager.first_name
+                              ? [emp.reporting_manager.first_name, emp.reporting_manager.last_name].filter(Boolean).join(' ')
+                              : emp.reporting_manager_name && typeof emp.reporting_manager_name === 'object' && 'first_name' in emp.reporting_manager_name
+                                ? [emp.reporting_manager_name.first_name, emp.reporting_manager_name.last_name].filter(Boolean).join(' ')
+                                : typeof emp.reporting_manager_name === 'string' && emp.reporting_manager_name
+                                  ? emp.reporting_manager_name
+                                  : typeof emp.reporting_manager === 'string' && emp.reporting_manager
+                                    ? emp.reporting_manager
+                                    : '-'}
                         </span>
                       )}
                     </TableCell>

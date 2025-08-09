@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { axiosInstance } from "../Dashboard/api";
 import Badge from "../../components/ui/badge/Badge";
 import { FaEdit, FaTrash, FaPlus } from "react-icons/fa";
@@ -102,7 +102,7 @@ const DepartmentWorkingDays = () => {
   };
 
   const handleAdd = () => {
-    navigate("/form-department-working");
+    navigate("/admin/form-department-working");
   };
 
   const addItem = async () => {
