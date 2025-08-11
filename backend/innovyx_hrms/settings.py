@@ -133,7 +133,7 @@ DATABASES = {
         'ENGINE': 'django.db.backends.postgresql',
         'NAME': 'innovyx_hrms_pr',
         'USER': 'postgres',
-        'PASSWORD': '86604@Ga',
+        'PASSWORD': '1234',
         'HOST': 'localhost',
         'PORT': '5432',
     }

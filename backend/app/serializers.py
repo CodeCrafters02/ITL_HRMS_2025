@@ -30,7 +30,7 @@ class UserRegisterSerializer(serializers.ModelSerializer):
         )
         return user
 
- class UserSerializer(serializers.ModelSerializer):
+class UserSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True,required=False)
 
     class Meta:

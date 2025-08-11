@@ -35,7 +35,7 @@ class MasterRegisterViewSet(viewsets.ModelViewSet):
         self.perform_create(serializer)
         return Response(serializer.data, status=status.HTTP_201_CREATED)
     
- class UserManagementViewSet(viewsets.ModelViewSet):
+class UserManagementViewSet(viewsets.ModelViewSet):
     serializer_class = UserSerializer
     # permission_classes = [permissions.IsAuthenticated, IsMaster]
     permission_classes = [permissions.AllowAny]
