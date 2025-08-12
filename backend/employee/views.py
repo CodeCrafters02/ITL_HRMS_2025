@@ -1,5 +1,6 @@
 from rest_framework import viewsets, generics,permissions, status
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.exceptions import PermissionDenied
 from rest_framework.response import Response
 from django.shortcuts import get_object_or_404
 from rest_framework.decorators import action
@@ -8,7 +9,7 @@ from datetime import datetime, timedelta
 import pytz
 import calendar
 from datetime import date
-from django.db.models import Q
+from django.db.models import Q,Prefetch
 from rest_framework.views import APIView
 from calendar import month_name
 from .utils import calculate_worked_time, calculate_effective_time
@@ -34,19 +35,21 @@ class ReportingManagerAPIView(APIView):
 
     def get(self, request):
         manager_id = request.query_params.get('manager_id')
-        # All reporting managers (who have at least one reportee)
-        managers = Employee.objects.filter(reportees__isnull=False).distinct()
-        managers_data = ReportingManagerSerializer(managers, many=True).data
 
-        reportees_data = []
         if manager_id:
-            reportees = Employee.objects.filter(reporting_manager_id=manager_id)
-            reportees_data = ReportingManagerSerializer(reportees, many=True).data
+            # Fetch reportees for given manager
+            employees = Employee.objects.filter(reporting_manager_id=manager_id)
+        else:
+            # Fetch distinct reporting managers
+            manager_ids = (
+                Employee.objects.exclude(reporting_manager__isnull=True)
+                .values_list('reporting_manager_id', flat=True)
+                .distinct()
+            )
+            employees = Employee.objects.filter(id__in=manager_ids)
 
-        return Response({
-            'reporting_managers': managers_data,
-            'reportees': reportees_data
-        })
+        serializer = ReportingManagerSerializer(employees, many=True)
+        return Response(serializer.data)
 
 
 class CheckInAPIView(APIView):
@@ -588,22 +591,32 @@ class TaskListCreateAPIView(generics.ListCreateAPIView):
     def get_queryset(self):
         user = self.request.user
         if not user.is_authenticated:
-            return Task.objects.none()  # Return empty queryset for docs
-        
-        manager = user.employee_profile
-        
-        if user.role != 'manager':
-            return Task.objects.none()  # Or raise PermissionDenied
-        
+            return Task.objects.none()
+
+        # Ensure the logged-in user is linked to an employee profile
+        try:
+            manager = user.employee_profile
+        except Employee.DoesNotExist:
+            return Task.objects.none()
+
+        # Allow listing only if they have reporting employees (manager role check)
+        if not Employee.objects.filter(reporting_manager=manager).exists():
+            return Task.objects.none()
+
         return Task.objects.filter(created_by=manager, parent_task__isnull=True)
-        
+
     def perform_create(self, serializer):
         user = self.request.user
-        if not user.is_authenticated or user.role != 'manager':
-            raise PermissionDenied("Only managers can create tasks.")
-            
+        if not user.is_authenticated:
+            raise PermissionDenied("You must be logged in.")
+
         manager = user.employee_profile
-        serializer.save(created_by=manager)
+
+        if not Employee.objects.filter(reporting_manager=manager).exists():
+            raise PermissionDenied("Only reporting managers can create tasks.")
+
+        serializer.save(created_by=manager, request_user=user)
+
 
 class TaskDetailAPIView(generics.RetrieveUpdateDestroyAPIView):
     permission_classes = [IsAuthenticated]
@@ -613,9 +626,81 @@ class TaskDetailAPIView(generics.RetrieveUpdateDestroyAPIView):
         user = self.request.user
         if not user.is_authenticated:
             return Task.objects.none()
-            
+
         manager = user.employee_profile
+        # Return all tasks (including subtasks) created by this manager
         return Task.objects.filter(created_by=manager)
+
+    def update(self, request, *args, **kwargs):
+        partial = kwargs.pop('partial', False)
+        instance = self.get_object()
+
+        serializer = self.get_serializer(instance, data=request.data, partial=partial)
+        serializer.is_valid(raise_exception=True)
+        self.perform_update(serializer)
+
+        # Update subtasks status if provided
+        subtasks_data = request.data.get('subtasks', None)
+        if subtasks_data:
+            for subtask_data in subtasks_data:
+                subtask_id = subtask_data.get('id', None)
+                if subtask_id:
+                    try:
+                        subtask = Task.objects.get(id=subtask_id, parent_task=instance)
+                        new_status = subtask_data.get('status', subtask.status)
+                        if new_status != subtask.status:
+                            subtask.status = new_status
+                            subtask.save()
+                    except Task.DoesNotExist:
+                        # You can log or handle this case if needed
+                        pass
+
+        return Response(serializer.data)
+class UpdateStatusByManagerAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    permission_classes = [IsAuthenticated]
+
+    def patch(self, request, pk):
+        user_employee = getattr(request.user, "employee_profile", None)
+
+        try:
+            parent_task = Task.objects.get(pk=pk)
+        except Task.DoesNotExist:
+            return Response({"detail": "Parent task not found."}, status=status.HTTP_404_NOT_FOUND)
+
+        # Permission: Only creator (manager) can update
+        if parent_task.created_by != user_employee:
+            return Response({"detail": "Permission denied on parent task."}, status=status.HTTP_403_FORBIDDEN)
+
+        # Update parent task status if provided
+        parent_status = request.data.get('status')
+        if parent_status:
+            parent_task.status = parent_status
+            parent_task.save()
+
+        # Update subtasks statuses if provided
+        subtasks_data = request.data.get('subtasks', [])
+        for subtask_data in subtasks_data:
+            subtask_id = subtask_data.get('id')
+            subtask_status = subtask_data.get('status')
+            if not (subtask_id and subtask_status):
+                continue
+
+            try:
+                subtask = Task.objects.get(id=subtask_id, parent_task=parent_task)
+            except Task.DoesNotExist:
+                continue
+
+            # Permission: Only creator (manager) can update subtask
+            if subtask.created_by != user_employee:
+                continue  # Skip subtasks not created by manager
+
+            subtask.status = subtask_status
+            subtask.save()
+
+        serializer = TaskSerializer(parent_task, context={'request': request})
+        return Response(serializer.data)
 
 class TaskAssignAPIView(generics.GenericAPIView):
     permission_classes = [IsAuthenticated]
@@ -623,25 +708,42 @@ class TaskAssignAPIView(generics.GenericAPIView):
 
     def post(self, request, pk):
         user = request.user
-        manager = user.employee_profile
+
+        try:
+            manager = user.employee_profile
+        except Employee.DoesNotExist:
+            return Response(
+                {"detail": "You are not linked to an employee profile."},
+                status=status.HTTP_403_FORBIDDEN
+            )
+
+        # Ensure the manager created the task
         task = get_object_or_404(Task, id=pk, created_by=manager)
 
         owner_id = request.data.get('owner')
         employee_ids = request.data.get('employees', [])
-        
-        if user.role != 'manager':
-           return Response({"detail": "Only managers can assign tasks."}, status=403)
 
-        if str(owner_id) not in employee_ids:
+        if str(owner_id) not in [str(eid) for eid in employee_ids]:
             return Response({"detail": "Owner must be in employees."}, status=status.HTTP_400_BAD_REQUEST)
 
+        # Remove old assignments
         TaskAssignment.objects.filter(task=task).delete()
+
+        # Create new assignments
+        assignments = []
         for emp_id in employee_ids:
             emp = get_object_or_404(Employee, id=emp_id, reporting_manager=manager)
             role = 'owner' if str(emp_id) == str(owner_id) else 'contributor'
-            TaskAssignment.objects.create(task=task, employee=emp, role=role)
+            assignment = TaskAssignment.objects.create(task=task, employee=emp, role=role)
+            assignments.append(assignment)
 
-        return Response({"detail": "Assignments updated successfully."})
+        # Serialize with request context to get full avatar URL
+        serializer = self.get_serializer(assignments, many=True, context={'request': request})
+
+        return Response({
+            "detail": "Assignments updated successfully.",
+            "assigned_employees": serializer.data
+        }, status=status.HTTP_200_OK)
 
 
 class SubTaskAssignAPIView(APIView):
@@ -649,59 +751,134 @@ class SubTaskAssignAPIView(APIView):
 
     def post(self, request, pk):
         user = request.user
+
+        # Ensure the logged-in user is linked to an Employee profile
         manager = getattr(user, 'employee_profile', None)
+        if not manager:
+            return Response({"detail": "You are not linked to an employee profile."}, status=status.HTTP_403_FORBIDDEN)
+
+        # Ensure this subtask is created by the logged-in manager
         subtask = get_object_or_404(Task, id=pk, created_by=manager)
 
         owner_id = request.data.get('owner')
         contributor_ids = request.data.get('contributors', [])
 
-        if user.role != 'manager':
-            return Response({"detail": "Only managers can assign tasks."}, status=403)
-
         if not owner_id or not contributor_ids:
             return Response({"detail": "Owner and contributors are required."}, status=status.HTTP_400_BAD_REQUEST)
 
-        if str(owner_id) not in contributor_ids:
+        if str(owner_id) not in [str(cid) for cid in contributor_ids]:
             return Response({"detail": "Owner must be a contributor."}, status=status.HTTP_400_BAD_REQUEST)
 
+        # Delete existing assignments for this subtask
         TaskAssignment.objects.filter(task=subtask).delete()
+
+        # Create assignments
         for emp_id in contributor_ids:
             emp = get_object_or_404(Employee, id=emp_id, reporting_manager=manager)
             role = 'owner' if str(emp_id) == str(owner_id) else 'contributor'
             TaskAssignment.objects.create(task=subtask, employee=emp, role=role)
 
-        return Response({"detail": "Subtask assignments updated."})
+        return Response({"detail": "Subtask assignments updated successfully."})
+    
+    def patch(self, request, pk):
+            user = request.user
+            manager = getattr(user, 'employee_profile', None)
+            if not manager:
+                return Response({"detail": "You are not linked to an employee profile."}, status=status.HTTP_403_FORBIDDEN)
+
+            subtask = get_object_or_404(Task, id=pk, created_by=manager)
+            owner_id = request.data.get('owner')
+            contributor_ids = request.data.get('contributors', [])
+
+            if not owner_id or not contributor_ids:
+                return Response({"detail": "Owner and contributors are required."}, status=status.HTTP_400_BAD_REQUEST)
+
+            if str(owner_id) not in [str(cid) for cid in contributor_ids]:
+                return Response({"detail": "Owner must be a contributor."}, status=status.HTTP_400_BAD_REQUEST)
+
+            TaskAssignment.objects.filter(task=subtask).delete()
+            for emp_id in contributor_ids:
+                emp = get_object_or_404(Employee, id=emp_id, reporting_manager=manager)
+                role = 'owner' if str(emp_id) == str(owner_id) else 'contributor'
+                TaskAssignment.objects.create(task=subtask, employee=emp, role=role)
+
+            return Response({"detail": "Subtask assignments updated successfully."})
 
 
 class MyTasksAPIView(generics.ListAPIView):
     permission_classes = [IsAuthenticated]
-    serializer_class = TaskAssignmentSerializer
+    serializer_class = MyTaskSerializer
 
     def get_queryset(self):
         user = self.request.user
         emp = user.employee_profile
-        return emp.task_assignments.select_related('task').all()
+
+        # Filter subtasks assigned to this employee
+        employee_subtasks = (
+            Task.objects.filter(
+                parent_task__isnull=False,
+                assignments__employee=emp
+            )
+            .select_related('parent_task')
+            .prefetch_related(
+                Prefetch('assignments', queryset=TaskAssignment.objects.select_related('employee'))
+            )
+        )
+
+        # Main tasks assigned to this employee OR having assigned subtasks
+        queryset = (
+            Task.objects.filter(
+                Q(assignments__employee=emp) |
+                Q(subtasks__assignments__employee=emp)
+            )
+            .filter(parent_task__isnull=True)  # Only main tasks
+            .prefetch_related(
+                Prefetch(
+                    'subtasks',
+                    queryset=employee_subtasks.distinct(),
+                    to_attr='employee_subtasks'
+                ),
+                Prefetch('assignments', queryset=TaskAssignment.objects.select_related('employee'))
+            )
+            .select_related('created_by')
+            .distinct()
+        )
+
+        return queryset
 
 
 class UpdateAssignmentStatusAPIView(generics.UpdateAPIView):
     permission_classes = [IsAuthenticated]
-    serializer_class = TaskAssignmentSerializer
+    serializer_class = TaskAssignmentStatusUpdateSerializer
     queryset = TaskAssignment.objects.all()
 
     def update(self, request, *args, **kwargs):
         instance = self.get_object()
-        if instance.employee != request.user.employee_profile:
+        task = instance.task
+        user_employee = getattr(request.user, "employee_profile", None)
+
+        # --- Permission checks ---
+        is_assigned_person = instance.employee == user_employee
+        is_manager = task.created_by == user_employee
+        is_owner_or_contributor = TaskAssignment.objects.filter(
+            task=task, employee=user_employee
+        ).exists()
+
+        if not (is_assigned_person or is_manager or is_owner_or_contributor):
             return Response({"detail": "Permission denied."}, status=status.HTTP_403_FORBIDDEN)
 
-        new_status = request.data.get('status')
-        instance.status = new_status
-        instance.save()
+        # --- Update status ---
+        serializer = self.get_serializer(instance, data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
 
-        new_task_status = instance.task.compute_status_from_assignments()
-        instance.task.status = new_task_status
-        instance.task.save()
+        # --- Recalculate task status ---
+        new_task_status = task.compute_status_from_assignments()
+        task.status = new_task_status
+        task.save()
 
         return Response({"detail": "Assignment status updated."})
+
 
 class EmpLeaveListCreateAPIView(generics.ListCreateAPIView):
     serializer_class = EmpLeaveSerializer

@@ -64,6 +64,12 @@ import AttendanceHistory from "./pages/Employee/AttendanceHistory";
 import PersonalCalendar from "./pages/Employee/Personalcalendar";
 import Notifications from "./pages/Employee/Notifications";
 import LearningCorner from "./pages/Employee/EmployeeLearningCorner";
+import MyTask from "./pages/Employee/MyTask";
+import AssignTask from "./pages/Employee/AssignTask";
+import CreateTask from "./pages/Forms/CreateTask";
+import UpdateTaskForm from "./pages/Forms/UpdateTaskForm";
+
+
 
 import UserManagementPage from "./pages/UserManagement/index"
 import ProductPage from "./pages/Products/index"
@@ -170,14 +176,13 @@ export function appRoutes() {
             <Route path="form-employee-register" element={<EmployeeRegisterForm />} />
             <Route path="form-company-policy" element={<CompanyPolicyForm />} />
             <Route path="form-company-policy/:id" element={<CompanyPolicyForm />} />
-
-            {/* Other Admin Pages */}
+                {/* Other Admin Pages */}
             <Route path="profile" element={<UserProfiles />} />
             <Route path="calendar" element={<Calendar />} />
             <Route path="blank" element={<Blank />} />
             <Route path="form-elements" element={<FormElements />} />
         </Route>
-
+         <Route path="/update-form/:id" element={<UpdateTaskForm />} />
         {/* Direct Admin Dashboard Route with AdminLayout */}
         <Route path="/admin-dashboard" element={<AdminLayout />}>
             <Route index element={<AdminDashboard />} />
@@ -230,6 +235,9 @@ export function appRoutes() {
                 <Route path="/employee/personal-calendar" element={<PersonalCalendar />} />
                 <Route path="/employee/notifications" element={<Notifications />} />
                 <Route path="/employee/learning-corner" element={<LearningCorner />} />
+                <Route path="/employee/my-tasks" element={<MyTask />} />
+                <Route path="/employee/assign-task" element={<AssignTask />} />
+                <Route path="/employee/create-tasks" element={<CreateTask />} />
             </Route>
 
             {/* Fallback Route */}

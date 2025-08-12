@@ -12,6 +12,7 @@ import {
   TableIcon,
 } from "../../icons";
 import { useSidebar } from "../../context/SidebarContext";
+import { useNotifications } from "../../context/NotificationContext";
 import NotificationBadge from "../../components/ui/NotificationBadge";
 import { axiosInstance } from "../../pages/Employee/api";
 
@@ -31,7 +32,7 @@ const navItems: NavItem[] = [
   {
     icon: <TaskIcon />,
     name: "My Tasks",
-    path: "/employee/form-elements",
+    path: "/employee/my-tasks",
   },
   {
     icon: <TableIcon />,
@@ -61,6 +62,8 @@ const navItems: NavItem[] = [
 ];
 
 const EmployeeSidebar: React.FC = () => {
+  // Get unread notification count from context
+  const { unreadCount } = useNotifications();
   const { isExpanded, isMobileOpen, isHovered, setIsHovered } = useSidebar();
   const location = useLocation();
   const isActive = useCallback(
@@ -73,17 +76,28 @@ const EmployeeSidebar: React.FC = () => {
   const [lcBadge, setLcBadge] = useState(0);
 
   useEffect(() => {
+    // Fetch learning corner items and update badge
     axiosInstance.get("emp-learning-corner/").then((res) => {
       const currentCount = Array.isArray(res.data) ? res.data.length : 0;
       setLcCount(currentCount);
+      // Only update badge if lastSeen is less than currentCount
       const lastSeen = Number(localStorage.getItem("lc_last_seen_count") || 0);
       setLcBadge(currentCount > lastSeen ? currentCount - lastSeen : 0);
     });
-  }, []);
+    // Listen for changes to localStorage from other tabs/windows
+    const handleStorage = (e: StorageEvent) => {
+      if (e.key === "lc_last_seen_count") {
+        const lastSeen = Number(e.newValue || 0);
+        setLcBadge(lcCount > lastSeen ? lcCount - lastSeen : 0);
+      }
+    };
+    window.addEventListener("storage", handleStorage);
+    return () => window.removeEventListener("storage", handleStorage);
+  }, [lcCount]);
 
   const handleLearningCornerClick = () => {
-    localStorage.setItem("lc_last_seen_count", String(lcCount));
-    setLcBadge(0);
+  localStorage.setItem("lc_last_seen_count", String(lcCount));
+  setLcBadge(0);
   };
 
   const renderMenuItems = (items: NavItem[]) => (
@@ -138,9 +152,12 @@ const EmployeeSidebar: React.FC = () => {
     // Use employeeId from state (set by employee-id/ endpoint)
     if (!employeeId) return;
     axiosInstance.get("reporting-managers/").then((res) => {
-      const managers = res.data.reporting_managers || [];
-          const isManager = managers.some((mgr: {id: string|number, full_name?: string}) => String(mgr.id) === String(employeeId));
-            setIsReportingManager(isManager);
+      console.log('Reporting managers API response:', res.data);
+      const managers = Array.isArray(res.data) ? res.data : res.data.reporting_managers || [];
+      console.log('Managers used for check:', managers);
+      const isManager = managers.some((mgr: {id: string|number, full_name?: string}) => String(mgr.id) === String(employeeId));
+      console.log('Current employeeId:', employeeId, 'Is reporting manager:', isManager);
+      setIsReportingManager(isManager);
     });
   }, [employeeId]);
 

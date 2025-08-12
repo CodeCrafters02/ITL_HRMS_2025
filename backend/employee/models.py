@@ -50,16 +50,17 @@ class Task(models.Model):
         return self.title
 
     def done_subtasks_count(self):
-        
-        return self.subtasks.filter(status='done').count()
+        return self.subtasks.filter(assignments__status='done').count()
 
     def progress(self):
-       
-        total = self.subtasks.count()
-        if total == 0:
-            return 0
-        done = self.done_subtasks_count()
-        return int((done / total) * 100)
+        if self.subtasks.exists():
+            total = self.subtasks.count()
+            done = self.done_subtasks_count()
+        else:
+            total = self.assignments.count()
+            done = self.assignments.filter(status='done').count()
+
+        return 0 if total == 0 else int((done / total) * 100)
 
     def compute_status_from_assignments(self):
         
