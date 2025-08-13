@@ -301,10 +301,23 @@ class EmpLearningCornerSerializer(serializers.ModelSerializer):
         return request.build_absolute_uri(obj.document.url) if obj.document else None
 
 
+
 class EmployeeDetailSerializer(serializers.ModelSerializer):
+    department_name = serializers.CharField(source='department.name', read_only=True)
+    designation_name = serializers.CharField(source='designation.name', read_only=True)
+
     class Meta:
         model = Employee
         fields = '__all__'
+        # Add department_name and designation_name to the output
+        extra_fields = ['department_name', 'designation_name']
+
+    def to_representation(self, instance):
+        rep = super().to_representation(instance)
+        # Add department_name and designation_name to the output
+        rep['department_name'] = instance.department.department_name if instance.department else None
+        rep['designation_name'] = instance.designation.designation_name if instance.designation else None
+        return rep
 
 
 class EmployeeUpdateSerializer(serializers.ModelSerializer):

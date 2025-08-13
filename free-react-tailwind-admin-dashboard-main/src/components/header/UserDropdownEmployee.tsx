@@ -1,5 +1,6 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { axiosInstance } from "../../pages/Employee/api";
 import { DropdownItem } from "../ui/dropdown/DropdownItem";
 import { Dropdown } from "../ui/dropdown/Dropdown";
 import { Link } from "react-router";
@@ -16,16 +17,38 @@ export default function UserDropdownEmployee() {
     setIsAccountSettingsOpen(false);
   }
 
+
+  // Fetch employee profile for name, email, and photo
+  const [profile, setProfile] = useState<any>(null);
+  useEffect(() => {
+    axiosInstance.get("/employee-profile/").then(res => setProfile(res.data)).catch(() => {});
+  }, []);
+
+  function getInitials(firstName?: string, lastName?: string) {
+    const first = firstName ? firstName[0] : "";
+    const last = lastName ? lastName[0] : "";
+    return (first + last).toUpperCase();
+  }
+
+  const fullName = profile ? `${profile.first_name || ""} ${profile.last_name || ""}`.trim() : "";
+  const email = profile?.email || "";
+
   return (
     <div className="relative">
       <button
         onClick={toggleDropdown}
         className="flex items-center text-gray-700 dropdown-toggle dark:text-gray-400"
       >
-        <span className="mr-3 overflow-hidden rounded-full h-11 w-11">
-          <img src="/images/user/owner.jpg" alt="User" />
+        <span className="mr-3 overflow-hidden rounded-full h-11 w-11 flex items-center justify-center bg-gray-100 dark:bg-gray-800">
+          {profile && profile.photo ? (
+            <img src={profile.photo} alt="User" className="w-full h-full object-cover" />
+          ) : profile ? (
+            <span className="text-xl font-bold text-indigo-600">{getInitials(profile.first_name, profile.last_name)}</span>
+          ) : (
+            <span className="text-xl font-bold text-indigo-600">--</span>
+          )}
         </span>
-        <span className="block mr-1 font-medium text-theme-sm">Musharof</span>
+        <span className="block mr-1 font-medium text-theme-sm">{fullName || "-"}</span>
         <svg
           className={`stroke-gray-500 dark:stroke-gray-400 transition-transform duration-200 ${isOpen ? "rotate-180" : ""}`}
           width="18"
@@ -49,13 +72,24 @@ export default function UserDropdownEmployee() {
           onClose={closeDropdown}
           className="absolute right-0 mt-[17px] flex w-[260px] flex-col rounded-2xl border border-gray-200 bg-white p-3 shadow-theme-lg dark:border-gray-800 dark:bg-gray-dark"
         >
-          <div>
-            <span className="block font-medium text-gray-700 text-theme-sm dark:text-gray-400">
-              Musharof Chowdhury
+          <div className="flex items-center gap-3 mb-2">
+            <span className="overflow-hidden rounded-full h-11 w-11 flex items-center justify-center bg-gray-100 dark:bg-gray-800">
+              {profile && profile.photo ? (
+                <img src={profile.photo} alt="User" className="w-full h-full object-cover" />
+              ) : profile ? (
+                <span className="text-xl font-bold text-indigo-600">{getInitials(profile.first_name, profile.last_name)}</span>
+              ) : (
+                <span className="text-xl font-bold text-indigo-600">--</span>
+              )}
             </span>
-            <span className="mt-0.5 block text-theme-xs text-gray-500 dark:text-gray-400">
-              randomuser@pimjo.com
-            </span>
+            <div>
+              <span className="block font-medium text-gray-700 text-theme-sm dark:text-gray-400">
+                {fullName || "-"}
+              </span>
+              <span className="mt-0.5 block text-theme-xs text-gray-500 dark:text-gray-400">
+                {email || "-"}
+              </span>
+            </div>
           </div>
           <ul className="flex flex-col gap-1 pt-4 pb-3 border-b border-gray-200 dark:border-gray-800">
             <li className="relative">
@@ -108,7 +142,7 @@ export default function UserDropdownEmployee() {
                       <DropdownItem
                         onItemClick={closeDropdown}
                         tag="a"
-                        to="/change-password"
+                        to="/employee/change-password"
                         className="flex items-center gap-3 px-3 py-2 font-medium text-gray-700 rounded-lg group text-theme-sm hover:bg-gray-100 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-white/5 dark:hover:text-gray-300"
                       >
                         Change Password

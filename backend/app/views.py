@@ -21,6 +21,16 @@ from .serializers import *
 from .models import *
 
 
+class CustomPasswordChangeAPIView(generics.UpdateAPIView):
+    serializer_class = CustomPasswordChangeSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def update(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data, context={'request': request})
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response({"detail": "Password updated successfully."}, status=status.HTTP_200_OK)
+
 
 class MasterRegisterViewSet(viewsets.ModelViewSet):
     queryset = UserRegister.objects.filter(role='master')

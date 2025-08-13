@@ -70,6 +70,8 @@ const AssignTask = lazy(() => import("./pages/Employee/AssignTask"));
 const CreateTask = lazy(() => import("./pages/Forms/CreateTask"));
 const UpdateTaskForm = lazy(() => import("./pages/Forms/UpdateTaskForm"));
 const EmployeeProfiles = lazy(() => import("./pages/Employee/Profile"));
+const ChangePasswordForm = lazy(() => import("./pages/Forms/ChangePasswordForm"));
+
 
 const UserManagementPage = lazy(() => import("./pages/UserManagement/index"));
 const ProductPage = lazy(() => import("./pages/Products/index"));
@@ -199,6 +201,12 @@ export function appRoutes() {
             <Route path="blank" element={<Blank />} />
             <Route path="form-elements" element={<FormElements />} />
         </Route>
+        
+         {/* Admin Change Password */}
+         <Route path="/admin/change-password" element={<ChangePasswordForm apiEndpoint="/admin/change-password/" />} />
+         {/* Employee Change Password */}
+         <Route path="/employee/change-password" element={<ChangePasswordForm apiEndpoint="/employee/change-password/" />} />
+
          <Route path="/update-form/:id" element={<UpdateTaskForm />} />
         {/* Direct Admin Dashboard Route with AdminLayout */}
         <Route path="/admin-dashboard" element={<AdminLayout />}>

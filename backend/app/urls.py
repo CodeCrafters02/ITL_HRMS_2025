@@ -30,6 +30,7 @@ router.register(r'usermanagement', UserManagementViewSet, basename='usermanageme
 
 urlpatterns = [
     path('', include(router.urls)),
+    path('change-password/', CustomPasswordChangeAPIView.as_view(), name='custom-password-change'),
     path('login/', LoginAPIView.as_view(), name='login'),
     path('change-password/', PasswordChangeView.as_view(), name='change-password'),
     path('users/', UserLogListView.as_view(), name='user_log_api'),
