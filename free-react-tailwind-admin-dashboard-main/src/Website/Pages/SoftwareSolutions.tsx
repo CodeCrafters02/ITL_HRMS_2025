@@ -1,13 +1,185 @@
-import React, { useEffect, useState } from 'react';
+import React ,{useEffect,useState,useRef}from 'react';
 import { Link } from 'react-router-dom';
 import BaseLayout from './BaseLayout.js';
-import { getSubServiceList, SubServiceData } from './api'; // Adjust import path accordingly
+import { useNavigate } from 'react-router-dom';
+import { getSubServiceList, SubServiceData } from './api'; 
 
-const SoftwareSolutions = () => {
+const DigitalMarketing = () => {
   const [stylesLoaded, setStylesLoaded] = useState(false);
-  const [subServices, setSubServices] = useState<SubServiceData[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
+      const scriptsLoadedRef = useRef<boolean>(false);
+        const [subServices, setSubServices] = useState<SubServiceData[]>([]);
+        const [loading, setLoading] = useState(true);
+        const [error, setError] = useState("");
+        const [openIndex, setOpenIndex] = useState<number | null>(null);
+
+    useEffect(() => {
+        // Prevent multiple script loading
+        if (scriptsLoadedRef.current) return;
+        
+        const scriptUrls = [
+            '/src/Website/static/js/plugins/jquery.min.js',
+            '/src/Website/static/js/plugins/swup.min.js', // Load Swup but we'll disable it
+            '/src/Website/static/js/plugins/swiper.min.js',
+            '/src/Website/static/js/plugins/fancybox.min.js',
+            '/src/Website/static/js/plugins/gsap.min.js',
+            '/src/Website/static/js/plugins/smooth-scroll.js',
+            '/src/Website/static/js/plugins/ScrollTrigger.min.js',
+            '/src/Website/static/js/plugins/ScrollTo.min.js'
+            // Don't load main.js as it contains Swup initialization
+        ];
+
+        const loadedScripts: HTMLScriptElement[] = [];
+
+        // Clear any existing arrows before loading scripts
+        const clearExistingArrows = (): void => {
+            const arrowElements = document.querySelectorAll('.mil-arrow-place .mil-arrow');
+            arrowElements.forEach((arrow: Element) => arrow.remove());
+        };
+
+        const loadScript = (url: string): Promise<void> => {
+            return new Promise<void>((resolve, reject) => {
+                // Check if script already exists
+                if (document.querySelector(`script[src="${url}"]`)) {
+                    resolve();
+                    return;
+                }
+
+                const script = document.createElement('script');
+                script.src = url;
+                script.async = false;
+                script.onload = () => resolve();
+                script.onerror = () => reject(new Error(`Failed to load script: ${url}`));
+                document.body.appendChild(script);
+                loadedScripts.push(script);
+            });
+        };
+
+        // Load scripts sequentially and clear arrows first
+        const loadAllScripts = async (): Promise<void> => {
+            clearExistingArrows();
+            
+            for (const url of scriptUrls) {
+                try {
+                    await loadScript(url);
+                } catch (error) {
+                    console.warn(`Failed to load script: ${url}`, error);
+                }
+            }
+            
+            // Initialize animations after scripts load
+            setTimeout(() => {
+                initializeAnimations();
+            }, 100);
+            
+            scriptsLoadedRef.current = true;
+        };
+
+        // Initialize the essential animations manually (from main.js but without Swup)
+        const initializeAnimations = (): void => {
+            // Skip if jQuery isn't loaded
+            if (typeof window.jQuery === 'undefined') return;
+            
+            const $ = window.jQuery;
+            
+            // Arrow injection for mil-arrow-place elements
+            const injectArrows = (): void => {
+                $('.mil-arrow-place').each(function(this: HTMLElement) {
+                    if ($(this).find('.mil-arrow').length === 0) {
+                        const arrowSvg = $('.mil-hidden-elements .mil-arrow').clone();
+                        $(this).append(arrowSvg);
+                    }
+                });
+            };
+
+            // Line injection for mil-lines-place elements  
+            const injectLines = (): void => {
+                $('.mil-lines-place').each(function(this: HTMLElement) {
+                    if ($(this).find('.mil-lines').length === 0) {
+                        const linesSvg = $('.mil-hidden-elements .mil-lines').clone();
+                        $(this).append(linesSvg);
+                    }
+                });
+            };
+
+            // Dodecahedron injection for mil-animation elements
+            const injectDodecahedron = (): void => {
+                $('.mil-animation').each(function(this: HTMLElement) {
+                    if ($(this).find('.mil-dodecahedron').length === 0) {
+                        const dodecahedronElement = $('.mil-hidden-elements .mil-dodecahedron').clone();
+                        $(this).append(dodecahedronElement);
+                    }
+                });
+            };
+
+            // Initialize all injections
+            injectArrows();
+            injectLines();
+            injectDodecahedron();
+
+            // Menu functionality
+            $('.mil-menu-btn').on('click', function(this: HTMLElement) {
+                $(this).toggleClass('mil-active');
+                $('.mil-menu-frame').toggleClass('mil-active');
+                $('body').toggleClass('mil-menu-show');
+            });
+
+            // Dropdown menu functionality
+            $('.mil-has-children a').on('click', function(this: HTMLElement, e: any) {
+                e.preventDefault();
+                $('.mil-has-children ul').removeClass('mil-active');
+                $('.mil-has-children a').removeClass('mil-active');
+                $(this).toggleClass('mil-active');
+                $(this).next('ul').toggleClass('mil-active');
+            });
+
+            // Back to top functionality
+            $('.mil-back-to-top .mil-link').on('click', function(e: any) {
+                e.preventDefault();
+                $('html, body').animate({ scrollTop: 0 }, 800);
+            });
+
+            // Smooth scroll for anchor links
+            $('a[href^="#"]').on('click', function(this: HTMLElement, e: any) {
+                e.preventDefault();
+                const target = $(this.getAttribute('href'));
+                if (target.length) {
+                    $('html, body').animate({
+                        scrollTop: target.offset().top - 100
+                    }, 800);
+                }
+            });
+
+            // Initialize GSAP ScrollTrigger if available
+            if (typeof window.gsap !== 'undefined' && window.gsap.registerPlugin) {
+                // Ensure ScrollTrigger is registered
+                if (typeof window.ScrollTrigger !== 'undefined') {
+                    window.gsap.registerPlugin(window.ScrollTrigger);
+                    
+                    // Refresh ScrollTrigger after a delay
+                    setTimeout(() => {
+                        window.ScrollTrigger.refresh();
+                    }, 500);
+                }
+            }
+        };
+
+        loadAllScripts();
+
+        // Cleanup function
+        return () => {
+            // Clear arrows on unmount
+            clearExistingArrows();
+            
+            // Remove scripts if needed (optional - might cause issues if other components need them)
+            loadedScripts.forEach((script: HTMLScriptElement) => {
+                if (document.body.contains(script)) {
+                    document.body.removeChild(script);
+                }
+            });
+            
+            scriptsLoadedRef.current = false;
+        };
+    }, []); // Empty dependency array ensures this effect runs only once
 
   useEffect(() => {
     const styles = [
@@ -27,7 +199,7 @@ const SoftwareSolutions = () => {
       link.onload = () => {
         loadedCount++;
         if (loadedCount === styles.length) {
-          setStylesLoaded(true);
+          setStylesLoaded(true); // all styles loaded
         }
       };
 
@@ -40,157 +212,228 @@ const SoftwareSolutions = () => {
     };
   }, []);
 
-  // Fetch subservices on mount
-  useEffect(() => {
-    const fetchSubServices = async () => {
-      setLoading(true);
-      try {
-        const allSubServices = await getSubServiceList();
-        // Filter subservices where the related service's name is exactly "Software Solution"
-        const filtered = allSubServices.filter(
-          (sub) => sub.service_details?.name === "Software Solution"
-        );
-        setSubServices(filtered);
-      } catch {
-        setError("Failed to load software solutions.");
-      } finally {
-        setLoading(false);
-      }
-    };
 
-    fetchSubServices();
-  }, []);
+    useEffect(() => {
+      const fetchSubServices = async () => {
+        setLoading(true);
+        try {
+          const allSubServices = await getSubServiceList();
+          // Filter by service name = "Digital Marketing"
+          const filtered = allSubServices.filter(
+            (sub) => sub.service_details?.name === "Software Solution"
+          );
+          setSubServices(filtered);
+        } catch {
+          setError("Failed to load digital marketing services.");
+        } finally {
+          setLoading(false);
+        }
+      };
+  
+      fetchSubServices();
+    }, []);
+        const breadcrumbItems = [
+        { text: "Homepage", link: "/" },
+        { text: "SERVICES" ,link:"/services"},
+        { text: "Software Solutions"}
+    ];
 
   if (!stylesLoaded) {
-    return <div style={{ background: "#000", height: "100vh" }}></div>;
+    // Show blank or loader until styles are loaded
+    return <div style={{ background: "#000000ff", height: "100vh" }}></div>;
   }
 
-  const breadcrumbItems = [
-    { text: "Homepage", link: "/" },
-    { text: "Software Solutions" }
-  ];
-
   return (
-    <BaseLayout pageTitle="Our Software Solutions" breadcrumbItems={breadcrumbItems}>
-       <div style={{ position: 'relative', height: '400px' /* or your container height */ }}>
-      <Link
-        to="/bookdemo"
-        style={{
-          position: 'fixed',
-          top: '50px',
-          right: '0px',
-          backgroundColor: "rgb(255, 152, 0)",
-          color: "#fff",
-          padding: "8px 24px",
-          borderRadius: "30px",
-          fontWeight: "600",
-          boxShadow: "0 4px 12px rgba(136,136,136,0.5)", // this is shadow for the button itself, you can keep or remove
-          textDecoration: "none",
-          textAlign: "center",
-          textTransform: "uppercase",
-          fontSize: "12px",
-          letterSpacing: "1px",
-          whiteSpace: "nowrap",
-          cursor: "pointer",
-          transition: "background-color 0.3s ease",
-          userSelect: 'none',
-          display: 'inline-block',
-          marginLeft: 'auto',
-          marginRight: '180px',
-          outline: 'none',     // Remove focus outline
-        }}
-        onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "#555555")}
-        onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "rgb(255, 152, 0)")}
-      >
-        BOOK A DEMO
-      </Link>
-      </div>
-      
-      {/* Solutions Section */}
-      <section>
-        <div className="container mil-p-120-90">
-          <div className="row justify-content-center">
-            <div className="col-lg-8">
-              <h2 className="mil-center mil-up mil-mb-30">
-                Explore Our <span className="mil-thin">Software Solutions</span>
-              </h2>
-              <p className="mil-center mil-up mil-light-soft mil-mb-60">
-                Cutting-edge software services designed to empower your business in the digital era.
-              </p>
+    <BaseLayout   breadcrumbItems={breadcrumbItems}
+ >
+    <div className="mil-wrapper" id="top">
+
+
+        <div className="mil-content">
+            <div id="swupMain" className="mil-main-transition">
+                <div className="mil-inner-banner">
+                    <div className="mil-animation-frame">
+                        <div className="mil-animation mil-position-4 mil-dark mil-scale" data-value-1="6" data-value-2="1.4"></div>
+                    </div>
+                    {/* <div className="mil-banner-content mil-up">
+                        <div className="container">
+                            <ul className="mil-breadcrumbs mil-mb-60">
+                                <li><a href="/">Homepage</a></li>
+                                <li><a href="/services">Services</a></li>
+                                <li><a href="/">Software Solutions</a></li>
+                            </ul>
+                            <h1 className="mil-mb-60">Explore <span className="mil-thin">Our</span><br></br>Software Solutions<span className="mil-thin"> Services</span></h1>
+                        </div>
+                    </div> */}
+                </div>
+                <section id="service">
+                    <div className="container mil-p-120-90">
+                        <div className="row justify-content-between">
+                            <div className="col-lg-4 mil-relative mil-mb-90">
+                              <h4 className="mil-up mil-mb-30">
+                                Our <span className="mil-thin">Approach</span> <br /> to <span className="mil-thin">Software Solutions</span>
+                              </h4>
+                              <p className="mil-up mil-mb-30">
+                                At our company, we take an innovation-driven approach to software solutions. We focus on building robust, scalable, and user-friendly applications that streamline processes, solve real-world problems, and drive measurable business growth through modern technologies and best development practices.
+                              </p>
+                                <div className="mil-up">
+                                    <a href="/products" className="mil-link mil-dark mil-arrow-place">
+                                        <span>View works</span>
+                                    </a>
+                                </div>
+                            </div>
+
+                          <div className="col-lg-6">
+                        <div className="dm-accordion-container">
+                          {loading ? (
+                            <div className="dm-loading">Loading digital marketing services...</div>
+                          ) : error ? (
+                            <div className="dm-error">{error}</div>
+                          ) : subServices.length === 0 ? (
+                            <div className="dm-empty">No digital marketing services found.</div>
+                          ) : (
+                            subServices.map((subService, index) => {
+                              const isOpen = openIndex === index;
+                              return (
+                                <div
+                                  key={subService.id}
+                                  className={`dm-accordion-item ${isOpen ? "open" : ""}`}
+                                >
+                                  <div
+                                    className="dm-accordion-header"
+                                    onClick={() => setOpenIndex(isOpen ? null : index)}
+                                  >
+                                    <p className="dm-accordion-title">{subService.name}</p>
+                                    <div className="dm-accordion-symbol">
+                                      {isOpen ? "−" : "+"}
+                                    </div>
+                                  </div>
+
+                                  {isOpen && (
+                                    <div className="dm-accordion-content">
+                                      {subService.description || "No description available."}
+                                    </div>
+                                  )}
+                                </div>
+                              );
+                            })
+                          )}
+                        </div>
+                        </div>
+                        </div>
+                    </div>
+                </section>
+
+
+                {/* <div className="mil-hidden-elements">
+                    <div className="mil-dodecahedron">
+                        <div className="mil-pentagon">
+                            <div></div>
+                            <div></div>
+                            <div></div>
+                            <div></div>
+                            <div></div>
+                        </div>
+                        <div className="mil-pentagon">
+                            <div></div>
+                            <div></div>
+                            <div></div>
+                            <div></div>
+                            <div></div>
+                        </div>
+                        <div className="mil-pentagon">
+                            <div></div>
+                            <div></div>
+                            <div></div>
+                            <div></div>
+                            <div></div>
+                        </div>
+                        <div className="mil-pentagon">
+                            <div></div>
+                            <div></div>
+                            <div></div>
+                            <div></div>
+                            <div></div>
+                        </div>
+                        <div className="mil-pentagon">
+                            <div></div>
+                            <div></div>
+                            <div></div>
+                            <div></div>
+                            <div></div>
+                        </div>
+                        <div className="mil-pentagon">
+                            <div></div>
+                            <div></div>
+                            <div></div>
+                            <div></div>
+                            <div></div>
+                        </div>
+                        <div className="mil-pentagon">
+                            <div></div>
+                            <div></div>
+                            <div></div>
+                            <div></div>
+                            <div></div>
+                        </div>
+                        <div className="mil-pentagon">
+                            <div></div>
+                            <div></div>
+                            <div></div>
+                            <div></div>
+                            <div></div>
+                        </div>
+                        <div className="mil-pentagon">
+                            <div></div>
+                            <div></div>
+                            <div></div>
+                            <div></div>
+                            <div></div>
+                        </div>
+                        <div className="mil-pentagon">
+                            <div></div>
+                            <div></div>
+                            <div></div>
+                            <div></div>
+                            <div></div>
+                        </div>
+                        <div className="mil-pentagon">
+                            <div></div>
+                            <div></div>
+                            <div></div>
+                            <div></div>
+                            <div></div>
+                        </div>
+                        <div className="mil-pentagon">
+                            <div></div>
+                            <div></div>
+                            <div></div>
+                            <div></div>
+                            <div></div>
+                        </div>
+                    </div>
+
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" className="mil-arrow">
+                        <path d="M 14 5.3417969 C 13.744125 5.3417969 13.487969 5.4412187 13.292969 5.6367188 L 13.207031 5.7226562 C 12.816031 6.1136563 12.816031 6.7467188 13.207031 7.1367188 L 17.070312 11 L 4 11 C 3.448 11 3 11.448 3 12 C 3 12.552 3.448 13 4 13 L 17.070312 13 L 13.207031 16.863281 C 12.816031 17.254281 12.816031 17.887344 13.207031 18.277344 L 13.292969 18.363281 C 13.683969 18.754281 14.317031 18.754281 14.707031 18.363281 L 20.363281 12.707031 C 20.754281 12.316031 20.754281 11.682969 20.363281 11.292969 L 14.707031 5.6367188 C 14.511531 5.4412187 14.255875 5.3417969 14 5.3417969 z" />
+                    </svg>
+
+                    <svg width="250" viewBox="0 0 300 1404" fill="none" xmlns="http://www.w3.org/2000/svg" className="mil-lines">
+                        <path fillRule="evenodd" clipRule="evenodd" d="M1 892L1 941H299V892C299 809.71 232.29 743 150 743C67.7096 743 1 809.71 1 892ZM0 942H300V892C300 809.157 232.843 742 150 742C67.1573 742 0 809.157 0 892L0 942Z" className="mil-move" />
+                        <path fillRule="evenodd" clipRule="evenodd" d="M299 146V97L1 97V146C1 228.29 67.7096 295 150 295C232.29 295 299 228.29 299 146ZM300 96L0 96V146C0 228.843 67.1573 296 150 296C232.843 296 300 228.843 300 146V96Z" className="mil-move" />
+                        <path fillRule="evenodd" clipRule="evenodd" d="M299 1H1V1403H299V1ZM0 0V1404H300V0H0Z" />
+                        <path fillRule="evenodd" clipRule="evenodd" d="M150 -4.37115e-08L150 1404L149 1404L149 0L150 -4.37115e-08Z" />
+                        <path fillRule="evenodd" clipRule="evenodd" d="M150 1324C232.29 1324 299 1257.29 299 1175C299 1092.71 232.29 1026 150 1026C67.7096 1026 1 1092.71 1 1175C1 1257.29 67.7096 1324 150 1324ZM150 1325C232.843 1325 300 1257.84 300 1175C300 1092.16 232.843 1025 150 1025C67.1573 1025 0 1092.16 0 1175C0 1257.84 67.1573 1325 150 1325Z" className="mil-move" />
+                        <path fillRule="evenodd" clipRule="evenodd" d="M300 1175H0V1174H300V1175Z" className="mil-move" />
+                        <path fillRule="evenodd" clipRule="evenodd" d="M150 678C232.29 678 299 611.29 299 529C299 446.71 232.29 380 150 380C67.7096 380 1 446.71 1 529C1 611.29 67.7096 678 150 678ZM150 679C232.843 679 300 611.843 300 529C300 446.157 232.843 379 150 379C67.1573 379 0 446.157 0 529C0 611.843 67.1573 679 150 679Z" className="mil-move" />
+                        <path fillRule="evenodd" clipRule="evenodd" d="M299 380H1V678H299V380ZM0 379V679H300V379H0Z" className="mil-move" />
+                    </svg>
+                </div> */}
+
             </div>
-          </div>
-
-          <div className="row">
-            {loading ? (
-              <div>Loading software solutions...</div>
-            ) : error ? (
-              <div className="text-danger">{error}</div>
-            ) : subServices.length === 0 ? (
-              <div>No software solutions found.</div>
-            ) : (
-              subServices.map((subService, index) => (
-                <div key={subService.id} className="col-md-6 col-lg-4 mb-4">
-                  <Link
-                    to="#"
-                    className="d-block h-100 text-decoration-none"
-                    style={{
-                      background: '#f8f9fa',
-                      padding: '30px',
-                      borderRadius: '10px',
-                      height: '100%',
-                      color: '#222',
-                      border: '1px solid #e1e1e1',
-                      transition: '0.3s ease-in-out'
-                    }}
-                  >
-                    <h5 style={{ marginBottom: '20px', fontWeight: '600' }}>{subService.name}</h5>
-                    <p style={{ marginBottom: '20px', opacity: 1 }}>
-                      {subService.description || "No description available."}
-                    </p>
-                    <div
-                      className="mil-button mil-icon-button-sm mil-arrow-place"
-                      style={{
-                        transform: 'scale(1)',
-                        filter: 'grayscale(0)',
-                        opacity: 1
-                      }}
-                    />
-                  </Link>
-                </div>
-              ))
-            )}
-          </div>
         </div>
-      </section>
-
-      {/* CTA Section */}
-      <section className="mil-dark-bg">
-        <div className="mi-invert-fix">
-          <div className="container mil-p-120-90">
-            <div className="row justify-content-between align-items-center">
-              <div className="col-lg-7">
-                <h2 className="mil-muted mil-up mil-mb-30">Have a Unique Software Requirement?</h2>
-                <p className="mil-light-soft mil-up mil-mb-40">
-                  From idea to deployment, we can build custom solutions that meet your exact needs. Let’s turn your vision into reality.
-                </p>
-                <div className="mil-up">
-                  <Link to="/contact" className="mil-button mil-arrow-place">
-                    <span>Get a Free Consultation</span>
-                  </Link>
-                </div>
-              </div>
-              <div className="col-lg-4">
-                <div className="mil-up">
-                  <img src="/src/Website/static/img/photo/software.jpg" alt="Software Solutions" />
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
+    </div>
     </BaseLayout>
   );
 };
 
-export default SoftwareSolutions;
+export default DigitalMarketing; 

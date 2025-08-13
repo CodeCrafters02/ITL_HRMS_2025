@@ -18,6 +18,12 @@ class ProductViewSet(viewsets.ModelViewSet):
     queryset = Product.objects.all()
     serializer_class = ProductSerializer
 
+    def create(self, request, *args, **kwargs):
+        print("Request data:", request.data)  # log incoming data here
+
+        # Then call the parent method to proceed normally
+        return super().create(request, *args, **kwargs)
+
 class SubServiceViewSet(viewsets.ModelViewSet):
     permission_classes = [AllowAny]
     queryset = SubService.objects.all()
