@@ -89,6 +89,9 @@ import DigitalMarketing from "./Website/Pages/DigitalMarketing"
 import SoftwareSolutions from "./Website/Pages/SoftwareSolutions"
 import AnalyticsSolution from "./Website/Pages/AnalyticsSolution"
 import BookDemo from "./Website/Pages/BookDemo"
+import ProductDetailsPage  from "./Website/Pages/ProductDetailsPage"
+import PrivacyPolicy  from "./Website/Pages/PrivacyPolicy"
+import Terms  from "./Website/Pages/Terms"
 
 
 export function appRoutes() {
@@ -226,6 +229,10 @@ export function appRoutes() {
             <Route path="/softwaresolution" element={<SoftwareSolutions />} />
             <Route path="/analyticssolution" element={<AnalyticsSolution />} />
             <Route path="/bookdemo" element={<BookDemo/>} />  
+            <Route path="/product/:id" element={<ProductDetailsPage />} />
+            <Route path="/privacypolicy" element={<PrivacyPolicy/>} />  
+            <Route path="/terms" element={<Terms/>} />  
+
 
             {/* Employee Routes */}
             <Route path="/employee" element={<EmployeeLayout />}>
