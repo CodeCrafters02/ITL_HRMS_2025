@@ -18,6 +18,21 @@ from app.models import Attendance,Notification,LearningCorner, ShiftPolicy, Empl
 from .models import *
 from .serializers import *
 
+
+class EmployeeCompanyInfoAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        employee = getattr(request.user, "employee_profile", None)
+        if not employee or not employee.company:
+            return Response({"detail": "No company linked."}, status=404)
+        company = employee.company
+        return Response({
+            "company_id": company.id,
+            "company_name": company.name,
+            "company_logo_url": request.build_absolute_uri(company.logo.url) if company.logo else None
+        })
+
 class EmployeeIdAPIView(APIView):
     permission_classes = [IsAuthenticated]
 

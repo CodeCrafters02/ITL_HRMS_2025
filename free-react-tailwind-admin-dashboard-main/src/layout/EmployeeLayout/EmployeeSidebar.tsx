@@ -136,12 +136,21 @@ const EmployeeSidebar: React.FC = () => {
 
   const [isReportingManager, setIsReportingManager] = useState(false);
   const [employeeId, setEmployeeId] = useState<string | null>(null);
+  const [companyLogo, setCompanyLogo] = useState<string | null>(null);
+  const [companyName, setCompanyName] = useState<string | null>(null);
 
   useEffect(() => {
-    // Fetch employee id from new endpoint and set in localStorage
+    // Fetch company info for employee from new API endpoint
+    axiosInstance.get("employee/company-info/").then((res) => {
+      if (res.data) {
+        setCompanyLogo(res.data.company_logo_url || null);
+        setCompanyName(res.data.company_name || null);
+      }
+    });
+    // Optionally, fetch employee id for other logic
     axiosInstance.get("employee-id/").then((res) => {
       const id = res.data?.employee_id ?? res.data?.id;
-           if (id) {
+      if (id) {
         localStorage.setItem('employee_id', String(id));
         setEmployeeId(String(id));
       }
@@ -199,29 +208,50 @@ const EmployeeSidebar: React.FC = () => {
       >
         <Link to="/">
           {isExpanded || isHovered || isMobileOpen ? (
-            <>
-              <img
-                className="dark:hidden"
-                src="/images/logo/logo.svg"
-                alt="Logo"
-                width={150}
-                height={40}
-              />
-              <img
-                className="hidden dark:block"
-                src="/images/logo/logo-dark.svg"
-                alt="Logo"
-                width={150}
-                height={40}
-              />
-            </>
+            <div className="flex items-center p-0 m-0" style={{gap: 0, width: '100%'}}>
+              {companyLogo ? (
+                <img
+                  src={companyLogo}
+                  alt={companyName || "Company Logo"}
+                  width={40}
+                  height={40}
+                  style={{objectFit: 'contain', maxHeight: 40, marginRight: 0, paddingRight: 0, display: 'block'}}
+                />
+              ) : (
+                <img
+                  src="/images/logo/logo.svg"
+                  alt="Logo"
+                  width={40}
+                  height={40}
+                  style={{display: 'block'}}
+                />
+              )}
+              {companyName && (
+                <span
+                  className="font-bold text-lg text-gray-900 dark:text-white whitespace-normal break-words"
+                  style={{marginLeft: 0, paddingLeft: 0, maxWidth: 'calc(100% - 40px)', lineHeight: '1.1', wordBreak: 'break-word', display: 'block'}}
+                >
+                  {companyName}
+                </span>
+              )}
+            </div>
           ) : (
-            <img
-              src="/images/logo/logo-icon.svg"
-              alt="Logo"
-              width={32}
-              height={32}
-            />
+            companyLogo ? (
+              <img
+                src={companyLogo}
+                alt={companyName || "Company Logo"}
+                width={32}
+                height={32}
+                style={{objectFit: 'contain', maxHeight: 32}}
+              />
+            ) : (
+              <img
+                src="/images/logo/logo-icon.svg"
+                alt="Logo"
+                width={32}
+                height={32}
+              />
+            )
           )}
         </Link>
       </div>
