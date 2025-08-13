@@ -299,3 +299,21 @@ class EmpLearningCornerSerializer(serializers.ModelSerializer):
     def get_document(self, obj):
         request = self.context.get('request')
         return request.build_absolute_uri(obj.document.url) if obj.document else None
+
+
+class EmployeeDetailSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Employee
+        fields = '__all__'
+
+
+class EmployeeUpdateSerializer(serializers.ModelSerializer):
+       class Meta:
+        model = Employee
+        fields = [
+            'first_name', 'middle_name', 'last_name',
+            'mobile', 'temporary_address', 'permanent_address',
+            'photo', 'aadhar_card', 'pan_card',
+            'date_of_birth', 'previous_employer',
+            'date_of_releaving', 'previous_designation_name', 'previous_salary',
+        ]

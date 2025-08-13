@@ -68,6 +68,7 @@ import MyTask from "./pages/Employee/MyTask";
 import AssignTask from "./pages/Employee/AssignTask";
 import CreateTask from "./pages/Forms/CreateTask";
 import UpdateTaskForm from "./pages/Forms/UpdateTaskForm";
+import EmployeeProfiles from "./pages/Employee/Profile";
 
 
 
@@ -245,6 +246,7 @@ export function appRoutes() {
                 <Route path="/employee/my-tasks" element={<MyTask />} />
                 <Route path="/employee/assign-task" element={<AssignTask />} />
                 <Route path="/employee/create-tasks" element={<CreateTask />} />
+                <Route path="/employee/profile" element={<EmployeeProfiles />} />
             </Route>
 
             {/* Fallback Route */}

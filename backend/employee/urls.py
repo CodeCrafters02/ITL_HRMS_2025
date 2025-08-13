@@ -27,5 +27,5 @@ urlpatterns = [
     path('emp-leaves/<int:leave_id>/approve/', ApproveEmpLeaveAPIView.as_view(), name='emp_leave_approve'),
     path('emp-leaves/<int:leave_id>/reject/', RejectEmpLeaveAPIView.as_view(), name='emp_leave_reject'),
     path('emp-learning-corner/', EmpLearningCornerAPIView.as_view(), name='emp_learning_corner'),
-
+    path('employee-profile/', EmployeeProfileAPIView.as_view(), name='employee_profile'),
 ]

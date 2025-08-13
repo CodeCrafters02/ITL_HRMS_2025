@@ -971,3 +971,14 @@ class EmpLearningCornerAPIView(generics.ListAPIView):
             return LearningCorner.objects.filter(company=employee_profile.company)
         return LearningCorner.objects.none()
 
+class EmployeeProfileAPIView(generics.RetrieveUpdateAPIView):
+    queryset = Employee.objects.all()
+    permission_classes = [IsAuthenticated]
+
+    def get_serializer_class(self):
+        if self.request.method in ['PUT', 'PATCH']:
+            return EmployeeUpdateSerializer
+        return EmployeeDetailSerializer
+
+    def get_object(self):
+        return Employee.objects.get(user=self.request.user)
