@@ -68,14 +68,14 @@ export default function ProductsPage() {
       .then((data: ProductData[]) => {
         const mapped = data.map(p => ({
           id: p.id,
-          category: p.service_details?.name ?? "Uncategorized", 
+          category: p.service_details?.name ?? "Uncategorized",
           date: formatDate(p.updated_at),
           title: p.name,
           description: p.description ?? "",
-          img: p.image ?? "/default-image.jpg",
+          img: (p.images && p.images.length > 0) ? p.images[0].image : "/default-image.jpg",
           link: `/product/${p.id}`,
         }));
-        setProducts(mapped);
+        setProducts(mapped); 
       })
       .catch((err) => {
         console.error("Failed to fetch products:", err);
@@ -111,39 +111,6 @@ export default function ProductsPage() {
   return (
     <BaseLayout 
     >
-       <div style={{ position: 'relative', height: '400px' /* or your container height */ }}>
-      <Link
-        to="/bookdemo"
-        style={{
-          position: 'fixed',
-          top: '50px',
-          right: '0px',
-          backgroundColor: "rgb(255, 152, 0)",
-          color: "#fff",
-          padding: "8px 24px",
-          borderRadius: "30px",
-          fontWeight: "600",
-          boxShadow: "0 4px 12px rgba(136,136,136,0.5)", // this is shadow for the button itself, you can keep or remove
-          textDecoration: "none",
-          textAlign: "center",
-          textTransform: "uppercase",
-          fontSize: "12px",
-          letterSpacing: "1px",
-          whiteSpace: "nowrap",
-          cursor: "pointer",
-          transition: "background-color 0.3s ease",
-          userSelect: 'none',
-          display: 'inline-block',
-          marginLeft: 'auto',
-          marginRight: '180px',
-          outline: 'none',     // Remove focus outline
-        }}
-        onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "#555555")}
-        onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "rgb(255, 152, 0)")}
-      >
-        BOOK A DEMO
-      </Link>
-      </div>
     <div className="mil-wrapper" id="top">
       {/* Banner */}
       <section className="mil-inner-banner mil-p-0-120">
@@ -160,22 +127,18 @@ export default function ProductsPage() {
               <li>
                 <Link to="/">Homepage</Link>
               </li>
-              <li>Products</li>
+              <li>PRODUCTS</li>
             </ul>
             <h1 className="mil-mb-60">
               Explore <span className="mil-thin">Our</span> <br />
               <span className="mil-thin">Exclusive</span> Products
             </h1>
-            <a href="#products" className="mil-link mil-dark mil-arrow-place mil-down-arrow">
-              <span>Shop Now</span>
-            </a>
           </div>
         </div>
       </section>
 
-
       {/* Categories */}
-<section id="products">
+        <section id="products">
           <div className="container mil-p-120-120">
             <div className="row">
               {displayedProducts.map((product) => (
@@ -218,150 +181,7 @@ export default function ProductsPage() {
           </div>
         </section>
 
-      {/* Call to Action */}
-      <section className="mil-soft-bg">
-        <div className="container mil-p-120-120">
-          <div className="row">
-            <div className="col-lg-10">
-              <span className="mil-suptitle mil-suptitle-right mil-suptitle-dark mil-up">
-                Ready to upgrade? Discover products that fit your lifestyle perfectly.
-              </span>
-            </div>
-          </div>
-          <div className="mil-center">
-            <h2 className="mil-up mil-mb-60">
-              Stay informed <span className="mil-thin">with our</span> <br />
-              latest offers by <span className="mil-thin">subscribing</span> <br />
-              to our <span className="mil-thin">newsletter!</span>
-            </h2>
-            <div className="row justify-content-center mil-up">
-              <div className="col-lg-4">
-                <form className="mil-subscribe-form mil-subscribe-form-2 mil-up">
-                  <input type="email" placeholder="Enter your email" />
-                  <button type="submit" className="mil-button mil-icon-button-sm mil-arrow-place"></button>
-                </form>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
       {/* Footer */}
-      <footer className="mil-dark-bg">
-        <div className="mi-invert-fix">
-          <div className="container mil-p-120-60">
-            <div className="row justify-content-between">
-              <div className="col-md-4 col-lg-4 mil-mb-60">
-                <div className="mil-muted mil-logo mil-up mil-mb-30">Ashley.</div>
-                <p className="mil-light-soft mil-up mil-mb-30">Subscribe to our newsletter:</p>
-                <form className="mil-subscribe-form mil-up">
-                  <input type="email" placeholder="Enter your email" />
-                  <button type="submit" className="mil-button mil-icon-button-sm mil-arrow-place"></button>
-                </form>
-              </div>
-              <div className="col-md-7 col-lg-6">
-                <div className="row justify-content-end">
-                  <div className="col-md-6 col-lg-7">
-                    <nav className="mil-footer-menu mil-mb-60">
-                      <ul>
-                        <li className="mil-up mil-active">
-                          <Link to="/">Home</Link>
-                        </li>
-                        <li className="mil-up">
-                          <Link to="/portfolio">Portfolio</Link>
-                        </li>
-                        <li className="mil-up">
-                          <Link to="/services">Services</Link>
-                        </li>
-                        <li className="mil-up">
-                          <Link to="/contact">Contact</Link>
-                        </li>
-                        <li className="mil-up">
-                          <Link to="/products">Products</Link>
-                        </li>
-                      </ul>
-                    </nav>
-                  </div>
-                  <div className="col-md-6 col-lg-5">
-                    <ul className="mil-menu-list mil-up mil-mb-60">
-                      <li>
-                        <a href="#." className="mil-light-soft">
-                          Privacy Policy
-                        </a>
-                      </li>
-                      <li>
-                        <a href="#." className="mil-light-soft">
-                          Terms and conditions
-                        </a>
-                      </li>
-                      <li>
-                        <a href="#." className="mil-light-soft">
-                          Cookie Policy
-                        </a>
-                      </li>
-                      <li>
-                        <a href="#." className="mil-light-soft">
-                          Careers
-                        </a>
-                      </li>
-                    </ul>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div className="row justify-content-between flex-sm-row-reverse">
-              <div className="col-md-7 col-lg-6">
-                <div className="row justify-content-between">
-                  <div className="col-md-6 col-lg-5 mil-mb-60">
-                    <h6 className="mil-muted mil-up mil-mb-30">Canada</h6>
-                    <p className="mil-light-soft mil-up">
-                      71 South Los Carneros Road, California{" "}
-                      <span className="mil-no-wrap">+51 174 705 812</span>
-                    </p>
-                  </div>
-                  <div className="col-md-6 col-lg-5 mil-mb-60">
-                    <h6 className="mil-muted mil-up mil-mb-30">Germany</h6>
-                    <p className="mil-light-soft mil-up">
-                      Leehove 40, 2678 MC De Lier, Netherlands{" "}
-                      <span className="mil-no-wrap">+31 174 705 811</span>
-                    </p>
-                  </div>
-                </div>
-              </div>
-              <div className="col-md-4 col-lg-6 mil-mb-60">
-                <div className="mil-vert-between">
-                  <div className="mil-mb-30">
-                    <ul className="mil-social-icons mil-up">
-                      <li>
-                        <a href="#." target="_blank" rel="noreferrer" className="social-icon">
-                          <i className="fab fa-behance"></i>
-                        </a>
-                      </li>
-                      <li>
-                        <a href="#." target="_blank" rel="noreferrer" className="social-icon">
-                          <i className="fab fa-dribbble"></i>
-                        </a>
-                      </li>
-                      <li>
-                        <a href="#." target="_blank" rel="noreferrer" className="social-icon">
-                          <i className="fab fa-twitter"></i>
-                        </a>
-                      </li>
-                      <li>
-                        <a href="#." target="_blank" rel="noreferrer" className="social-icon">
-                          <i className="fab fa-github"></i>
-                        </a>
-                      </li>
-                    </ul>
-                  </div>
-                  <p className="mil-light-soft mil-up">© Copyright 2023 - Mil. All Rights Reserved.</p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </footer>
     </div>
     </BaseLayout>
   );

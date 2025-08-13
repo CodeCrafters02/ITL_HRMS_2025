@@ -15,12 +15,17 @@ interface ServiceDetails {
   created_at: string;
   updated_at: string;
 }
-
+export interface ProductImageData {
+  id: number;
+  image: string; // image URL
+}
 interface Product {
   id: number;
   name: string;
   description?: string | null;
+  client?:string;
   service_details?: ServiceDetails | null;
+  images?: ProductImageData[];  // array of image objects
   is_active: boolean;
   created_at: string;
   updated_at: string;
@@ -104,6 +109,7 @@ const ProductsPage: React.FC = () => {
                 <th className="px-5 py-3 text-left">Name</th>
                 <th className="px-5 py-3 text-left">Description</th>
                 <th className="px-5 py-3 text-left">Service</th>
+                <th className="px-5 py-3 text-left">Client</th>
                 <th className="px-5 py-3 text-left">Active</th>
                 <th className="px-5 py-3 text-left">Actions</th>
               </tr>
@@ -126,7 +132,8 @@ const ProductsPage: React.FC = () => {
                         ? `${product.service_details.name}` 
                         : "-"
                     }
-                    </td>                    
+                    </td>    
+                    <td className="px-5 py-4">{product.client}</td>
                     <td className="px-5 py-4">{product.is_active ? "Yes" : "No"}</td>
                     <td className="px-5 py-4 flex gap-3">
                       <button

@@ -99,49 +99,13 @@ const Contact: React.FC<ContactProps> = ({ hasPreloaderShown }) => {
     // Breadcrumb data
     const breadcrumbItems = [
         { text: "Homepage", link: "/" },
-        { text: "Contact" }
+        { text: "CONTACTS" }
     ];
-
-
     return (
         <BaseLayout 
             pageTitle="Get in touch!" 
             breadcrumbItems={breadcrumbItems}
-        >
-             <div style={{ position: 'relative', height: '400px' /* or your container height */ }}>
-            <Link
-              to="/bookdemo"
-              style={{
-                position: 'fixed',
-                top: '50px',
-                right: '0px',
-                backgroundColor: "rgb(255, 152, 0)",
-                color: "#fff",
-                padding: "8px 24px",
-                borderRadius: "30px",
-                fontWeight: "600",
-                boxShadow: "0 4px 12px rgba(136,136,136,0.5)", // this is shadow for the button itself, you can keep or remove
-                textDecoration: "none",
-                textAlign: "center",
-                textTransform: "uppercase",
-                fontSize: "12px",
-                letterSpacing: "1px",
-                whiteSpace: "nowrap",
-                cursor: "pointer",
-                transition: "background-color 0.3s ease",
-                userSelect: 'none',
-                display: 'inline-block',
-                marginLeft: 'auto',
-                marginRight: '180px',
-                outline: 'none',     // Remove focus outline
-              }}
-              onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "#555555")}
-              onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "rgb(255, 152, 0)")}
-            >
-              BOOK A DEMO
-            </Link>
-            </div>
-            
+        >          
             {/* Send Message Link */}
             <div className="mil-inner-banner-extra mil-center mil-up">
                 <div className="container">
@@ -154,7 +118,7 @@ const Contact: React.FC<ContactProps> = ({ hasPreloaderShown }) => {
             <div className="mil-map-frame mil-up">
                 <div className="mil-map">
                     <iframe 
-                        src="https://www.google.com/maps/embed?pb=!1m14!1m8!1m3!1d1396.5769090312324!2d-73.6519672!3d45.5673453!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x4cc91f8abc30e0ff%3A0xfc6d9cbb49022e9c!2sManoir%20Saint-Joseph!5e0!3m2!1sen!2sua!4v1685485811069!5m2!1sen!2sua" 
+                        src="https://maps.google.com/maps?width=100%25&amp;height=600&amp;hl=en&amp;q=1%20GraftInnovyx%20Tech%20Labs%20LLP.%2035%20K,%2042/5,%20Vittasandra%20Main%20Rd,%20Vittasandra,%20Bengaluru,%20Karnataka%20560100on%20Street,%20Dublin,%20Ireland+(My%20Business%20Name)&amp;t=&amp;z=14&amp;ie=UTF8&amp;iwloc=B&amp;output=embed"
                         style={{ border: 0 }} 
                         allowFullScreen 
                         loading="lazy" 
@@ -170,11 +134,11 @@ const Contact: React.FC<ContactProps> = ({ hasPreloaderShown }) => {
                         <div className="col-lg-4">
                             <div className="mil-mb-90">
                                 <h2 className="mil-up mil-mb-60">Let's <br />Start a <span className="mil-thin">Project</span></h2>
-                                <p className="mil-up mil-mb-30">Ready to bring your ideas to life? Let's collaborate and create something extraordinary together.</p>
+                                <p className="mil-up mil-mb-30"style={{ color: "#000" }}>Ready to bring your ideas to life? Let's collaborate and create something extraordinary together.</p>
                                 <div className="mil-up">
-                                    <Link to="/services" className="mil-button mil-arrow-place mil-mb-60">
-                                        <span>Our services</span>
-                                    </Link>
+                                        <Link to="/services" className="mil-custom-button">
+                                            <span>Our services</span>
+                                        </Link>
                                 </div>
                             </div>
                         </div>
@@ -183,7 +147,7 @@ const Contact: React.FC<ContactProps> = ({ hasPreloaderShown }) => {
                                 <div className="row">
                                     <div className="col-md-6">
                                         <div className="mil-up mil-mb-30">
-                                            <label htmlFor="name">Full Name *</label>
+                                            <label htmlFor="name" style={{ color: "#000" }}>Full Name *</label>
                                             <input 
                                                 type="text" 
                                                 id="name" 
@@ -196,7 +160,7 @@ const Contact: React.FC<ContactProps> = ({ hasPreloaderShown }) => {
                                     </div>
                                     <div className="col-md-6">
                                         <div className="mil-up mil-mb-30">
-                                            <label htmlFor="email">Email Address *</label>
+                                            <label htmlFor="email" style={{ color: "#000" }} >Email Address *</label>
                                             <input 
                                                 type="email" 
                                                 id="email" 
@@ -210,7 +174,7 @@ const Contact: React.FC<ContactProps> = ({ hasPreloaderShown }) => {
                                 </div>
                                 <div className="row">
                                         <div className="mil-up mil-mb-30">
-                                            <label htmlFor="name">Contact *</label>
+                                            <label htmlFor="name" style={{ color: "#000" }} >Contact *</label>
                                             <input 
                                                 type="text" 
                                                 id="contact" 
@@ -222,7 +186,7 @@ const Contact: React.FC<ContactProps> = ({ hasPreloaderShown }) => {
                                         </div>
                                 </div>
                                 <div className="mil-up mil-mb-30">
-                                    <label htmlFor="message">Message *</label>
+                                    <label htmlFor="message" style={{ color: "#000" }}>Message *</label>
                                     <textarea 
                                         id="message" 
                                         name="message" 
@@ -233,8 +197,8 @@ const Contact: React.FC<ContactProps> = ({ hasPreloaderShown }) => {
                                     ></textarea>
                                 </div>
                                 <div className="mil-up">
-                                    <button type="submit" className="mil-button mil-arrow-place">
-                                        <span>Send message</span>
+                                    <button type="submit" className="mil-custom-button">
+                                    <span>Send message</span>
                                     </button>
                                 </div>
                                 {formResponse && (
@@ -247,40 +211,6 @@ const Contact: React.FC<ContactProps> = ({ hasPreloaderShown }) => {
             </section>
 
             {/* Contact Information Section */}
-            <section className="mil-dark-bg">
-                <div className="mi-invert-fix">
-                    <div className="container mil-p-120-90">
-                        <div className="row justify-content-between">
-                            <div className="col-lg-4">
-                                <div className="mil-mb-90">
-                                    <h2 className="mil-up mil-mb-60">Contact <br />Information</h2>
-                                    <p className="mil-up mil-mb-30">Get in touch with us for any questions or inquiries.</p>
-                                </div>
-                            </div>
-                            <div className="col-lg-7">
-                                <div className="row">
-                                    <div className="col-md-6">
-                                        <div className="mil-contact-info mil-up mil-mb-60">
-                                            <h6 className="mil-muted mil-mb-30">Canada</h6>
-                                            <p className="mil-light-soft">71 South Los Carneros Road, California</p>
-                                            <p className="mil-light-soft">+51 174 705 812</p>
-                                            <p className="mil-light-soft">hello@ashley.com</p>
-                                        </div>
-                                    </div>
-                                    <div className="col-md-6">
-                                        <div className="mil-contact-info mil-up mil-mb-60">
-                                            <h6 className="mil-muted mil-mb-30">Germany</h6>
-                                            <p className="mil-light-soft">Leehove 40, 2678 MC De Lier, Netherlands</p>
-                                            <p className="mil-light-soft">+31 174 705 811</p>
-                                            <p className="mil-light-soft">hello@ashley.com</p>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </section>
         </BaseLayout>
     );
 }

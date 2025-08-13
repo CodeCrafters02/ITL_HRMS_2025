@@ -29,6 +29,7 @@ declare global {
 const BaseLayout: React.FC<BaseLayoutProps> = ({ children, pageTitle, breadcrumbItems = [] }) => {
   const { cursorRef, preloaderRef, progressRef } = useTemplateScripts();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [hover, setHover] = useState(false);
 
   const toggleMenu = () => {
     setIsMenuOpen(!isMenuOpen);
@@ -54,13 +55,34 @@ const BaseLayout: React.FC<BaseLayoutProps> = ({ children, pageTitle, breadcrumb
         links.forEach(link => document.head.removeChild(link));
       };
     }, []);
-  const navigate = useNavigate();
 
-  const handleNavigate = (path: string) => {
-    setIsMenuOpen(false);
-    navigate(path);
+
+  const baseStyle = {
+    backgroundColor: "rgb(255, 152, 0)",
+    color: "#fff",
+    padding: "14px 40px",
+    borderRadius: "40px",
+    fontWeight: "700",
+    boxShadow: "0 6px 16px rgba(136,136,136,0.5)",
+    textDecoration: "none",
+    textAlign: "center",
+    textTransform: "uppercase",
+    fontSize: "16px",
+    letterSpacing: "2px",
+    whiteSpace: "nowrap",
+    cursor: "pointer",
+    transition: "background-color 0.3s ease",
+    userSelect: "none",
+    display: "inline-block",
+    marginLeft: "auto",
+    marginRight: "100px",
+    outline: "none",
   };
 
+  const hoverStyle = {
+    backgroundColor: "gray",
+    color: "#fff"
+  };
   // Initialize animations for all pages (except home which has its own initialization)
   useEffect(() => {
     const loadScript = (src: string): Promise<void> => {
@@ -240,15 +262,8 @@ const BaseLayout: React.FC<BaseLayoutProps> = ({ children, pageTitle, breadcrumb
 
 
       {/* Preloader */}
-      <div className="mil-preloader" ref={preloaderRef}>
+      {/* <div className="mil-preloader" ref={preloaderRef}>
         <div className="mil-preloader-animation">
-          <div className="mil-pos-abs mil-animation-1">
-            <p className="mil-h3 mil-muted mil-thin">Pioneering</p>
-            <p className="mil-h3 mil-muted">Creative</p>
-            <p className="mil-h3 mil-muted mil-thin">Excellence</p>
-          </div>
-          <br></br>
-          <br></br>
           <div className="mil-pos-abs mil-animation-1">
             <p className="mil-h3 mil-muted">Innovyx</p>
             <p className="mil-h3 mil-muted">Tech</p>
@@ -261,7 +276,7 @@ const BaseLayout: React.FC<BaseLayoutProps> = ({ children, pageTitle, breadcrumb
             </div>
           </div>
         </div>
-      </div>
+      </div> */}
 
       {/* Progress Bar */}
       <div className="mil-progress-track">
@@ -288,13 +303,13 @@ const BaseLayout: React.FC<BaseLayoutProps> = ({ children, pageTitle, breadcrumb
 
       {/* Menu */}
       <div className={`mil-menu-frame ${isMenuOpen ? 'mil-active' : ''}`}>
-        <div className="mil-frame-top">
+        {/* <div className="mil-frame-top">
           <Link to="/" className="mil-logo" onClick={() => setIsMenuOpen(false)}>Af.</Link>
           <div className={`mil-menu-btn ${isMenuOpen ? 'mil-active' : ''}`} onClick={toggleMenu}>
             <span></span>
           </div>
 
-        </div>
+        </div> */}
         <div className="container">
           <div className="mil-menu-content">
             <div className="row">
@@ -303,7 +318,7 @@ const BaseLayout: React.FC<BaseLayoutProps> = ({ children, pageTitle, breadcrumb
                   <ul>
                     <li><Link to="/">Home</Link></li>
                     <li><Link to="/about">About us</Link></li>
-                    <li className="mil-has-children">  <Link to="#" onClick={(e) => e.preventDefault()}>Services</Link>
+                    {/* <li className="mil-has-children">  <Link to="#" onClick={(e) => e.preventDefault()}>Services</Link>
                         <ul>
                           <li>
                             <a
@@ -339,10 +354,11 @@ const BaseLayout: React.FC<BaseLayoutProps> = ({ children, pageTitle, breadcrumb
                             </a>
                           </li>
                         </ul>
-                    </li>
+                    </li> */}
+                    <li><Link to="/services">Services</Link></li>                    
                     <li><Link to="/products">Products</Link></li>
                     <li><Link to="/contact">Contact us</Link></li>
-                    <li><Link to="/team">Teams</Link></li>
+                    {/* <li><Link to="/team">Teams</Link></li> */}
                   </ul>
                 </nav>
               </div>
@@ -369,8 +385,8 @@ const BaseLayout: React.FC<BaseLayoutProps> = ({ children, pageTitle, breadcrumb
                       <div className="col-lg-4 mil-mb-60">
                         <h6 className="mil-muted mil-mb-30">Useful links</h6>
                         <ul className="mil-menu-list">
-                          <li><a href="#." className="mil-light-soft">Privacy Policy</a></li>
-                          <li><a href="#." className="mil-light-soft">Terms and conditions</a></li>
+                          <li><a href="/privacypolicy" className="mil-light-soft">Privacy Policy</a></li>
+                          <li><a href="/terms" className="mil-light-soft">Terms and conditions</a></li>
                           <li><a href="#." className="mil-light-soft">Cookie Policy</a></li>
                           <li><a href="#." className="mil-light-soft">Careers</a></li>
                           <li><a href="/signin" className="mil-light-soft">Login</a></li>
@@ -379,13 +395,19 @@ const BaseLayout: React.FC<BaseLayoutProps> = ({ children, pageTitle, breadcrumb
                     </div>
                     <div className="mil-divider mil-mb-60"></div>
                     <div className="row justify-content-between">
-                      <div className="col-lg-4 mil-mb-60">
-                        <h6 className="mil-muted mil-mb-30">Canada</h6>
-                        <p className="mil-light-soft mil-up">71 South Los Carneros Road, California <span className="mil-no-wrap">+51 174 705 812</span></p>
+                      <div className="col-md-6 col-lg-5 mil-mb-60">
+                        <h6 className="mil-muted mil-up mil-mb-30">Registered Address</h6>
+                        <p className="mil-light-soft mil-up">
+                          35 K, 42/5, Vittasandra Main Rd, Vittasandra,Bengaluru,{" "}
+                          <span className="mil-no-wrap"> Karnataka 560100</span>
+                        </p>
                       </div>
-                      <div className="col-lg-4 mil-mb-60">
-                        <h6 className="mil-muted mil-mb-30">Germany</h6>
-                        <p className="mil-light-soft">Leehove 40, 2678 MC De Lier, Netherlands <span className="mil-no-wrap">+31 174 705 811</span></p>
+                      <div className="col-md-6 col-lg-5 mil-mb-60">
+                        <h6 className="mil-muted mil-up mil-mb-30">Branch Address</h6>
+                        <p className="mil-light-soft mil-up">
+                          Saleem Building, ZC North Road, Calicut, Kozhikode,{" "}
+                          <span className="mil-no-wrap">Kerala 673002</span>
+                        </p>
                       </div>
                     </div>
                   </div>
@@ -399,7 +421,15 @@ const BaseLayout: React.FC<BaseLayoutProps> = ({ children, pageTitle, breadcrumb
       {/* Top Frame */}
       <div className="mil-frame">
         <div className="mil-frame-top">
-          <Link to="/" className="mil-logo">A.</Link>
+          <Link
+            to="/bookdemo"
+            className="mil-logo"
+            style={hover ? { ...baseStyle, ...hoverStyle } : baseStyle}
+            onMouseEnter={() => setHover(true)}
+            onMouseLeave={() => setHover(false)}
+          >
+            Book A Demo
+          </Link>
           <div className={`mil-menu-btn ${isMenuOpen ? 'mil-active' : ''}`} onClick={toggleMenu}>
             <span></span>
           </div>
@@ -447,15 +477,15 @@ const BaseLayout: React.FC<BaseLayoutProps> = ({ children, pageTitle, breadcrumb
           {/* Footer */}
           <footer className="mil-dark-bg">
             <div className="mi-invert-fix">
+                  <div className="mil-animation-frame">
+                    <div className="mil-animation mil-position-1 mil-scale" data-value-1="7" data-value-2="1.6"></div>
+                    <div className="mil-animation mil-position-2 mil-scale" data-value-1="4" data-value-2="1"></div>
+                    <div className="mil-animation mil-position-3 mil-scale" data-value-1="1.2" data-value-2=".1"></div>
+                </div>
               <div className="container mil-p-120-60">
                 <div className="row justify-content-between">
                   <div className="col-md-4 col-lg-4 mil-mb-60">
-                    <div className="mil-muted mil-logo mil-up mil-mb-30">Ashley.</div>
-                    <p className="mil-light-soft mil-up mil-mb-30">Subscribe our newsletter:</p>
-                    <form className="mil-subscribe-form mil-up">
-                      <input type="text" placeholder="Enter our email" />
-                      <button type="submit" className="mil-button mil-icon-button-sm mil-arrow-place"></button>
-                    </form>
+                    <div className="mil-muted mil-logo mil-up mil-mb-30">Innovyx Tech Labs.</div>
                   </div>
                   <div className="col-md-7 col-lg-6">
                     <div className="row justify-content-end">
@@ -463,17 +493,18 @@ const BaseLayout: React.FC<BaseLayoutProps> = ({ children, pageTitle, breadcrumb
                         <nav className="mil-footer-menu mil-mb-60">
                           <ul>
                             <li className="mil-up"><Link to="/">Home</Link></li>
-                            <li className="mil-up"><Link to="/portfolio-1">Portfolio</Link></li>
+                            <li className="mil-up"><Link to="/about">About</Link></li>
                             <li className="mil-up"><Link to="/services">Services</Link></li>
+                            <li className="mil-up"><Link to="/products">Products</Link></li>
                             <li className="mil-up"><Link to="/contact">Contact</Link></li>
-                            <li className="mil-up"><Link to="/team">Team</Link></li>
+                            {/* <li className="mil-up"><Link to="/team">Team</Link></li> */}
                           </ul>
                         </nav>
                       </div>
                       <div className="col-md-6 col-lg-5">
                         <ul className="mil-menu-list mil-up mil-mb-60">
-                          <li><a href="#." className="mil-light-soft">Privacy Policy</a></li>
-                          <li><a href="#." className="mil-light-soft">Terms and conditions</a></li>
+                          <li><a href="/privacypolicy" className="mil-light-soft">Privacy Policy</a></li>
+                          <li><a href="/terms" className="mil-light-soft">Terms and conditions</a></li>
                           <li><a href="#." className="mil-light-soft">Cookie Policy</a></li>
                           <li><a href="#." className="mil-light-soft">Careers</a></li>
                         </ul>
@@ -485,24 +516,46 @@ const BaseLayout: React.FC<BaseLayoutProps> = ({ children, pageTitle, breadcrumb
                   <div className="col-md-7 col-lg-6">
                     <div className="row justify-content-between">
                       <div className="col-md-6 col-lg-5 mil-mb-60">
-                        <h6 className="mil-muted mil-up mil-mb-30">Canada</h6>
-                        <p className="mil-light-soft mil-up">71 South Los Carneros Road, California <span className="mil-no-wrap">+51 174 705 812</span></p>
+                        <h6 className="mil-muted mil-up mil-mb-30">Registered Address</h6>
+                        <p className="mil-light-soft mil-up">
+                          35 K, 42/5, Vittasandra Main Rd, Vittasandra,Bengaluru, {" "}
+                          <span className="mil-no-wrap">Karnataka 560100</span>
+                        </p>
                       </div>
                       <div className="col-md-6 col-lg-5 mil-mb-60">
-                        <h6 className="mil-muted mil-up mil-mb-30">Germany</h6>
-                        <p className="mil-light-soft mil-up">Leehove 40, 2678 MC De Lier, Netherlands <span className="mil-no-wrap">+31 174 705 811</span></p>
+                        <h6 className="mil-muted mil-up mil-mb-30">Branch Address</h6>
+                        <p className="mil-light-soft mil-up">
+                          Saleem Building, ZC North Road, Calicut, Kozhikode,{" "}
+                          <span className="mil-no-wrap">Kerala 673002</span>
+                        </p>
                       </div>
                     </div>
                   </div>
                   <div className="col-md-4 col-lg-6 mil-mb-60">
                     <div className="mil-vert-between">
                       <div className="mil-mb-30">
-                        <ul className="mil-social-icons mil-up">
-                          <li><a href="#." target="_blank" className="social-icon"> <i className="fab fa-behance"></i></a></li>
-                          <li><a href="#." target="_blank" className="social-icon"> <i className="fab fa-dribbble"></i></a></li>
-                          <li><a href="#." target="_blank" className="social-icon"> <i className="fab fa-twitter"></i></a></li>
-                          <li><a href="#." target="_blank" className="social-icon"> <i className="fab fa-github"></i></a></li>
-                        </ul>
+                          <ul className="mil-social-icons mil-up">
+                            <li>
+                              <a href="https://www.linkedin.com/company/innovyx-tech-labs/" target="_blank" rel="noopener noreferrer" className="social-icon">
+                                <i className="fab fa-linkedin"></i>
+                              </a>
+                            </li>
+                            <li>
+                              <a href="https://www.facebook.com/innovyxtechlabs" target="_blank" rel="noopener noreferrer" className="social-icon">
+                                <i className="fab fa-facebook-f"></i>
+                              </a>
+                            </li>
+                            <li>
+                              <a href="https://www.instagram.com/innovyxtechlabs/" target="_blank" rel="noopener noreferrer" className="social-icon">
+                                <i className="fab fa-instagram"></i>
+                              </a>
+                            </li>
+                            <li>
+                              <a href="https://wa.me/9113263741" target="_blank" rel="noopener noreferrer" className="social-icon">
+                                <i className="fab fa-whatsapp"></i>
+                              </a>
+                            </li>
+                          </ul>
                       </div>
                       {/* <p className="mil-light-soft mil-up">©  2023 - Innovyx Tech Labs. All Rights Reserved.</p> */}
                     </div>
@@ -511,6 +564,61 @@ const BaseLayout: React.FC<BaseLayoutProps> = ({ children, pageTitle, breadcrumb
               </div>
             </div>
           </footer>
+          <div className="mil-hidden-elements">
+            <div className="mil-dodecahedron">
+                <div className="mil-pentagon">
+                    <div></div><div></div><div></div><div></div><div></div>
+                </div>
+                <div className="mil-pentagon">
+                    <div></div><div></div><div></div><div></div><div></div>
+                </div>
+                <div className="mil-pentagon">
+                    <div></div><div></div><div></div><div></div><div></div>
+                </div>
+                <div className="mil-pentagon">
+                    <div></div><div></div><div></div><div></div><div></div>
+                </div>
+                <div className="mil-pentagon">
+                    <div></div><div></div><div></div><div></div><div></div>
+                </div>
+                <div className="mil-pentagon">
+                    <div></div><div></div><div></div><div></div><div></div>
+                </div>
+                <div className="mil-pentagon">
+                    <div></div><div></div><div></div><div></div><div></div>
+                </div>
+                <div className="mil-pentagon">
+                    <div></div><div></div><div></div><div></div><div></div>
+                </div>
+                <div className="mil-pentagon">
+                    <div></div><div></div><div></div><div></div><div></div>
+                </div>
+                <div className="mil-pentagon">
+                    <div></div><div></div><div></div><div></div><div></div>
+                </div>
+                <div className="mil-pentagon">
+                    <div></div><div></div><div></div><div></div><div></div>
+                </div>
+                <div className="mil-pentagon">
+                    <div></div><div></div><div></div><div></div><div></div>
+                </div>
+            </div>
+
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" className="mil-arrow">
+                <path d="M 14 5.3417969 C 13.744125 5.3417969 13.487969 5.4412187 13.292969 5.6367188 L 13.207031 5.7226562 C 12.816031 6.1136563 12.816031 6.7467188 13.207031 7.1367188 L 17.070312 11 L 4 11 C 3.448 11 3 11.448 3 12 C 3 12.552 3.448 13 4 13 L 17.070312 13 L 13.207031 16.863281 C 12.816031 17.254281 12.816031 17.887344 13.207031 18.277344 L 13.292969 18.363281 C 13.683969 18.754281 14.317031 18.754281 14.707031 18.363281 L 20.363281 12.707031 C 20.754281 12.316031 20.754281 11.682969 20.363281 11.292969 L 14.707031 5.6367188 C 14.511531 5.4412187 14.255875 5.3417969 14 5.3417969 z" />
+            </svg>
+
+            <svg width="250" viewBox="0 0 300 1404" fill="none" xmlns="http://www.w3.org/2000/svg" className="mil-lines">
+                <path fillRule="evenodd" clipRule="evenodd" d="M1 892L1 941H299V892C299 809.71 232.29 743 150 743C67.7096 743 1 809.71 1 892ZM0 942H300V892C300 809.157 232.843 742 150 742C67.1573 742 0 809.157 0 892L0 942Z" className="mil-move" />
+                <path fillRule="evenodd" clipRule="evenodd" d="M299 146V97L1 97V146C1 228.29 67.7096 295 150 295C232.29 295 299 228.29 299 146ZM300 96L0 96V146C0 228.843 67.1573 296 150 296C232.843 296 300 228.843 300 146V96Z" className="mil-move" />
+                <path fillRule="evenodd" clipRule="evenodd" d="M299 1H1V1403H299V1ZM0 0V1404H300V0H0Z" />
+                <path fillRule="evenodd" clipRule="evenodd" d="M150 -4.37115e-08L150 1404L149 1404L149 0L150 -4.37115e-08Z" />
+                <path fillRule="evenodd" clipRule="evenodd" d="M150 1324C232.29 1324 299 1257.29 299 1175C299 1092.71 232.29 1026 150 1026C67.7096 1026 1 1092.71 1 1175C1 1257.29 67.7096 1324 150 1324ZM150 1325C232.843 1325 300 1257.84 300 1175C300 1092.16 232.843 1025 150 1025C67.1573 1025 0 1092.16 0 1175C0 1257.84 67.1573 1325 150 1325Z" className="mil-move" />
+                <path fillRule="evenodd" clipRule="evenodd" d="M300 1175H0V1174H300V1175Z" className="mil-move" />
+                <path fillRule="evenodd" clipRule="evenodd" d="M150 678C232.29 678 299 611.29 299 529C299 446.71 232.29 380 150 380C67.7096 380 1 446.71 1 529C1 611.29 67.7096 678 150 678ZM150 679C232.843 679 300 611.843 300 529C300 446.157 232.843 379 150 379C67.1573 379 0 446.157 0 529C0 611.843 67.1573 679 150 679Z" className="mil-move" />
+                <path fillRule="evenodd" clipRule="evenodd" d="M299 380H1V678H299V380ZM0 379V679H300V379H0Z" className="mil-move" />
+            </svg>
+        </div>
         </div>
       </div>
     </div>

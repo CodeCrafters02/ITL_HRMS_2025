@@ -54,39 +54,6 @@ const Service = () => {
       pageTitle="Service Details" 
       breadcrumbItems={breadcrumbItems}
     >
-       <div style={{ position: 'relative', height: '400px' /* or your container height */ }}>
-      <Link
-        to="/bookdemo"
-        style={{
-          position: 'fixed',
-          top: '50px',
-          right: '0px',
-          backgroundColor: "rgb(255, 152, 0)",
-          color: "#fff",
-          padding: "8px 24px",
-          borderRadius: "30px",
-          fontWeight: "600",
-          boxShadow: "0 4px 12px rgba(136,136,136,0.5)", // this is shadow for the button itself, you can keep or remove
-          textDecoration: "none",
-          textAlign: "center",
-          textTransform: "uppercase",
-          fontSize: "12px",
-          letterSpacing: "1px",
-          whiteSpace: "nowrap",
-          cursor: "pointer",
-          transition: "background-color 0.3s ease",
-          userSelect: 'none',
-          display: 'inline-block',
-          marginLeft: 'auto',
-          marginRight: '180px',
-          outline: 'none',     // Remove focus outline
-        }}
-        onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "#555555")}
-        onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "rgb(255, 152, 0)")}
-      >
-        BOOK A DEMO
-      </Link>
-      </div>
       {/* Service Hero */}
       <section>
         <div className="container mil-p-120-60">

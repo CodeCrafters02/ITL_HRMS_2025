@@ -19,13 +19,18 @@ class DemoRequest(models.Model):
     submitted_at = models.DateTimeField(auto_now_add=True)
 
 class Product(models.Model):
-    name = models.CharField(max_length=100, unique=True)
+    name = models.CharField(max_length=100)
     description = models.TextField(blank=True, null=True)
     service = models.ForeignKey('Service', on_delete=models.SET_NULL, null=True, related_name='service_product')
-    image = models.ImageField(upload_to='product_images/',blank=True,null=True)
+    client=models.CharField(max_length=10,blank=True, null=True)
     is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+
+class ProductImage(models.Model):
+    product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name='images_products')
+    image = models.ImageField(upload_to='product_images/')
+    uploaded_at = models.DateTimeField(auto_now_add=True)
 
 class SubService(models.Model):
     service = models.ForeignKey('Service', on_delete=models.SET_NULL, null=True, related_name='service_subservice')

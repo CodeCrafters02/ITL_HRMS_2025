@@ -5,6 +5,10 @@ import Input from "../../components/form/input/InputField";
 import Label from "../../components/form/Label";
 import { ServiceData } from "./api";
 
+interface ImageType {
+  id: number;
+  image: string; // image URL
+}
 interface EditProductModalProps {
   productId: number | null;
   isOpen: boolean;
@@ -25,12 +29,15 @@ const EditProduct: React.FC<EditProductModalProps> = ({
   const [formData, setFormData] = useState<ProductEditData>({
     name: "",
     description: "",
+    client:"",
     service: undefined,
-    image: null,
     is_active: true,
   });
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [existingImages, setExistingImages] = useState<ImageType[]>([]);
+  const [newImages, setNewImages] = useState<File[]>([]);
+  const [imagesToRemove, setImagesToRemove] = useState<number[]>([]);
 
   useEffect(() => {
     if (productId && isOpen) {
@@ -41,9 +48,12 @@ const EditProduct: React.FC<EditProductModalProps> = ({
             name: product.name,
             description: product.description || "",
             service: product.service_details?.id || "",
-            image: product.image, // leave empty, only update if changed
+            client: product.client, // leave empty, only update if changed
             is_active: product.is_active,
           });
+          setExistingImages(product.images || []); // <-- set existing images here
+          setNewImages([]); // reset new images
+          setImagesToRemove([]); // reset removals
         })
         .catch(() => {
           alert("Failed to load product");
@@ -60,7 +70,7 @@ const EditProduct: React.FC<EditProductModalProps> = ({
     const { name, value, type, checked, files } = e.target as HTMLInputElement;
 
     if (name === "image" && files) {
-      setFormData((prev) => ({ ...prev, image: files[0] }));
+      setNewImages((prev) => [...prev, ...Array.from(files)]);
     } else {
       setFormData((prev) => ({
         ...prev,
@@ -69,22 +79,38 @@ const EditProduct: React.FC<EditProductModalProps> = ({
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!formData.name.trim()) return;
+const handleSubmit = async (e: React.FormEvent) => {
+  e.preventDefault();
+  if (!formData.name.trim()) return;
 
-    setSaving(true);
-    try {
-      await updateProduct(productId!, formData);
-      alert("Product updated successfully!");
-      onUpdated();
-      onClose();
-    } catch {
-      alert("Failed to update product.");
-    } finally {
-      setSaving(false);
-    }
-  };
+  setSaving(true);
+  try {
+    const dataToSend = new FormData();
+
+    // Append text fields
+    dataToSend.append("name", formData.name);
+    if (formData.description) dataToSend.append("description", formData.description);
+    if (formData.client) dataToSend.append("client", formData.client);
+    if (formData.service) dataToSend.append("service", String(formData.service));
+    dataToSend.append("is_active", String(formData.is_active));
+
+    // Append new image files
+    newImages.forEach((file) => dataToSend.append("images", file));
+
+    // Append IDs of images to remove
+    imagesToRemove.forEach((id) => dataToSend.append("imagesToRemove", String(id)));
+
+    await updateProduct(productId!, dataToSend, true); // pass flag if you want to customize axios call
+    alert("Product updated successfully!");
+    onUpdated();
+    onClose();
+  } catch {
+    alert("Failed to update product.");
+  } finally {
+    setSaving(false);
+  }
+};
+
 
   return (
     <div className="fixed inset-0 bg-white/50 backdrop-blur-sm flex items-center justify-center z-50">
@@ -145,31 +171,79 @@ const EditProduct: React.FC<EditProductModalProps> = ({
                 ))}
             </select>
             </div>
-            {/* Image */}
+
             <div className="mb-4">
-            <Label htmlFor="image">Product Image</Label>
-
-            {/* Show existing image if present */}
-            {typeof formData.image === "string" && formData.image && (
-                <div className="mb-2">
-                <img
-                    src={formData.image}
-                    alt="Current product"
-                    className="w-32 h-32 object-cover rounded border"
-                />
-                </div>
-            )}
-
-            <input
-                id="image"
-                name="image"
-                type="file"
-                accept="image/*"
+              <Label htmlFor="name">Client</Label>
+              <Input
+                id="client"
+                name="client"
+                value={formData.client}
                 onChange={handleChange}
+                required
                 disabled={saving}
-            />
+              />
             </div>
 
+            {/* Image */}
+          <div className="mb-4">
+            <Label>Existing Images</Label>
+            <div className="flex gap-2 flex-wrap mb-2">
+              {existingImages.map((img) => (
+                <div key={img.id} className="relative">
+                  <img
+                    src={img.image}
+                    alt={`Product ${img.id}`}
+                    className="w-24 h-24 object-cover rounded border"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setImagesToRemove((prev) => [...prev, img.id]);
+                      setExistingImages((prev) => prev.filter((i) => i.id !== img.id));
+                    }}
+                    className="absolute top-0 right-0 bg-red-600 text-white rounded-full px-1"
+                  >
+                    ×
+                  </button>
+                </div>
+              ))}
+            </div>
+
+            <Label>New Images</Label>
+            <div className="flex gap-2 flex-wrap mb-2">
+              {newImages.map((file, index) => {
+                const url = URL.createObjectURL(file);
+                return (
+                  <div key={index} className="relative">
+                    <img
+                      src={url}
+                      alt={`New ${index}`}
+                      className="w-24 h-24 object-cover rounded border"
+                    />
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setNewImages((prev) => prev.filter((_, i) => i !== index))
+                      }
+                      className="absolute top-0 right-0 bg-red-600 text-white rounded-full px-1"
+                    >
+                      ×
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+
+            <input
+              id="image"
+              name="image"
+              type="file"
+              accept="image/*"
+              multiple
+              onChange={handleChange}
+              disabled={saving}
+            />
+          </div>
 
             {/* Active Checkbox */}
             <div className="mb-6 flex items-center gap-2">

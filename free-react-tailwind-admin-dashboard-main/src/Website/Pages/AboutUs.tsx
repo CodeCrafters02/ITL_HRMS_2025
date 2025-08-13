@@ -48,109 +48,166 @@ const About = () => {
   ];
   return (
     <BaseLayout pageTitle="About Us" breadcrumbItems={breadcrumbItems}>
-       <div style={{ position: 'relative', height: '400px' /* or your container height */ }}>
-      <Link
-        to="/bookdemo"
-        style={{
-          position: 'fixed',
-          top: '50px',
-          right: '0px',
-          backgroundColor: "rgb(255, 152, 0)",
-          color: "#fff",
-          padding: "8px 24px",
-          borderRadius: "30px",
-          fontWeight: "600",
-          boxShadow: "0 4px 12px rgba(136,136,136,0.5)", // this is shadow for the button itself, you can keep or remove
-          textDecoration: "none",
-          textAlign: "center",
-          textTransform: "uppercase",
-          fontSize: "12px",
-          letterSpacing: "1px",
-          whiteSpace: "nowrap",
-          cursor: "pointer",
-          transition: "background-color 0.3s ease",
-          userSelect: 'none',
-          display: 'inline-block',
-          marginLeft: 'auto',
-          marginRight: '180px',
-          outline: 'none',     // Remove focus outline
-        }}
-        onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "#555555")}
-        onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "rgb(255, 152, 0)")}
-      >
-        BOOK A DEMO
-      </Link>
-      </div>
-      
-      {/* ===== About Intro Section ===== */}
-      <section>
-        <div className="container mil-p-120-90">
-          <div className="row justify-content-between align-items-center">
-            <div className="col-lg-6">
-              <div className="mil-mb-60">
-                <h2 className="mil-up mil-mb-40">Who <span className="mil-thin">We Are</span></h2>
-                <p className="mil-up mil-mb-30">
-                  We’re a passionate team of designers, developers, and strategists dedicated to building impactful digital experiences. Our mission is to blend creativity with technology to help brands thrive in a dynamic world.
-                </p>
-                <p className="mil-up mil-mb-60">
-                  Since our founding, we’ve delivered innovative solutions for clients across industries—always with a focus on quality, collaboration, and long-term success.
-                </p>
-                <div className="mil-up">
-                  <Link to="/contact" className="mil-button mil-arrow-place">
-                    <span>Get in Touch</span>
-                  </Link>
-                </div>
-              </div>
-            </div>
-            <div className="col-lg-5">
-              <div className="mil-about-image mil-up">
-                <img src="/src/Website/static/img/photo/1.jpg" alt="About us" />
-              </div>
-            </div>
+<section className="mile-soft-bg">
+              <div className="mil-invert-fix">
+    
+  {/* <div className="mile-animation-frame">
+      <div className="mile-animation mile-position-1 mil-scale" data-value-1="7" data-value-2="1.6"></div>
+      <div className="mile-animation mile-position-2 mil-scale" data-value-1="4" data-value-2="1"></div>
+      <div className="mile-animation mile-position-3 mil-scale" data-value-1="1.2" data-value-2=".1"></div>
+  </div> */}
+
+  <div className="container mil-p-120-90">
+    <div className="row justify-content-between align-items-center">
+      <div className="col-lg-6">
+        <div className="mil-mb-60">
+          <h2 className="mil-up mil-mb-40">
+            Who <span className="mil-thin">We Are</span>
+          </h2>
+          <p
+            className="mil-up mil-mb-60"
+            style={{ color: "#0c0c0cff", fontWeight: "bold", marginTop: 10 }}
+          >
+            The innovation powerhouse where digital dreams take flight! 
+            <br></br>At Innovyx, we're more than just coders; we're architects of innovation, wizards of analytics, and pioneers of digital transformation. From custom software solutions to AI-driven marvels and digital marketing magic, we're here to turn your ideas into game-changing realities.
+          </p>
+
+          <div className="mil-up">
+            <Link to="/contact" className="mil-custom-button">
+              <span>Get in Touch</span>
+            </Link>
           </div>
         </div>
-      </section>
+      </div>
+      <div className="col-lg-5">
+        <div className="mil-about-image mil-up">
+          <img src="/src/Website/static/img/photo/1.jpg" alt="About us" />
+        </div>
+      </div>
+    </div>
+  </div>
+  </div>
+</section>
+
+
 
       {/* ===== Mission Section ===== */}
-      <section className="mil-dark-bg">
-        <div className="mi-invert-fix">
-          <div className="container mil-p-120-90">
-            <div className="row justify-content-center">
-              <div className="col-lg-8">
-                <h2 className="mil-muted mil-center mil-up mil-mb-60">Our <span className="mil-thin">Mission</span></h2>
-                <p className="mil-light-soft mil-center mil-up mil-mb-60">
-                  Our mission is simple: to craft meaningful, user-first solutions that leave a lasting impact. We strive to elevate brands with thoughtful design, powerful technology, and seamless user experiences.
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* ===== Call to Action Section ===== */}
-      <section>
+    <section className="mil-dark-bg">
+      <div className="mi-invert-fix">
+      <div className="mil-animation-frame">
+          <div className="mil-animation mil-position-1 mil-scale" data-value-1="7" data-value-2="1.6"></div>
+          <div className="mil-animation mil-position-2 mil-scale" data-value-1="4" data-value-2="1"></div>
+          <div className="mil-animation mil-position-3 mil-scale" data-value-1="1.2" data-value-2=".1"></div>
+      </div>
         <div className="container mil-p-120-90">
-          <div className="row justify-content-between align-items-center">
-            <div className="col-lg-7">
-              <h2 className="mil-up mil-mb-30">Let’s <span className="mil-thin">Create Something Great</span> Together</h2>
-              <p className="mil-up mil-mb-40">
-                Ready to bring your next idea to life? We’re here to help you every step of the way. Connect with our team and let’s get started.
+          <div className="row justify-content-center">
+            <div className="col-lg-8">
+              <h2 className="mil-muted mil-center mil-up mil-mb-60">
+                Our Mission 
+              </h2>
+              <p className="mil-light-soft mil-center mil-up mil-mb-60" style={{ fontWeight: "bold" }}>
+                At Innovyx Tech Labs, our mission is to craft innovative web applications, mobile apps, and digital services that transform your ideas into game-changing realities. 
+                We leverage cutting-edge technology, AI, and machine learning to deliver scalable, user-centric solutions that empower businesses to thrive in a digital-first world.
               </p>
-              <div className="mil-up">
-                <Link to="/contact" className="mil-button mil-arrow-place">
-                  <span>Start a Project</span>
-                </Link>
-              </div>
-            </div>
-            <div className="col-lg-4">
-              <div className="mil-up">
-                <img src="/static/img/photo/3.jpg" alt="Work with us" />
-              </div>
             </div>
           </div>
         </div>
-      </section>
+      </div>
+    </section>
 
+      <section>
+          <div className="container mil-p-120-30">
+              <div className="row justify-content-center align-items-center">
+                  <div className="col-lg-7 col-xl-5">
+                    <div className="mil-mb-90"  style={{ textAlign: "center" }}>
+                      <h3 className="mil-up mil-mb-60">
+                        Meet The Professionals <br />Behind Our Success
+                      </h3>
+                      <p className="mil-up mil-mb-30" style={{ fontWeight: "bold" }}>
+                        At Innovyx Tech Labs, our team of skilled professionals drives our success with expertise in cutting-edge technologies. Each member brings a unique blend of experience and innovation, ensuring top-notch solutions and exceptional results for our clients.
+                      </p>
+                      <p className="mil-up mil-mb-60">
+                      </p>
+                      <h4 className="mil-up invisible">
+                        <span className="mil-thin">Read</span> More
+                      </h4>
+                    </div>
+                  </div>
+                  {/* <div className="col-lg-6">
+                      <div className="mil-team-list">
+                          <div className="mil-lines-place"></div>
+                          <div className="row mil-mb-60">
+                              <div className="col-sm-6">
+                                  <div className="mil-team-card mil-up mil-mb-30">
+                                      <img src="/src/Website/static/img/faces/1.jpg" alt="Team member" />
+                                      <div className="mil-description">
+                                          <div className="mil-secrc-text">
+                                              <h5 className="mil-muted mil-mb-5"><a href="home-2.html">Anna Oldman</a></h5>
+                                              <p className="mil-link mil-light-soft mil-mb-10">Art Director</p>
+                                              <ul className="mil-social-icons mil-center">
+                                                  <li><a href="#." target="_blank" rel="noopener noreferrer" className="social-icon"> <i className="fab fa-behance"></i></a></li>
+                                                  <li><a href="#." target="_blank" rel="noopener noreferrer" className="social-icon"> <i className="fab fa-dribbble"></i></a></li>
+                                                  <li><a href="#." target="_blank" rel="noopener noreferrer" className="social-icon"> <i className="fab fa-twitter"></i></a></li>
+                                                  <li><a href="#." target="_blank" rel="noopener noreferrer" className="social-icon"> <i className="fab fa-github"></i></a></li>
+                                              </ul>
+                                          </div>
+                                      </div>
+                                  </div>
+                                  <div className="mil-team-card mil-up mil-mb-30">
+                                      <img src="/src/Website/static/img/faces/3.jpg" alt="Team member" />
+                                      <div className="mil-description">
+                                          <div className="mil-secrc-text">
+                                              <h5 className="mil-muted mil-mb-5"><a href="home-2.html">Oscar Freeman</a></h5>
+                                              <p className="mil-link mil-light-soft mil-mb-10">Frontend Dev</p>
+                                              <ul className="mil-social-icons mil-center">
+                                                  <li><a href="#." target="_blank" rel="noopener noreferrer" className="social-icon"> <i className="fab fa-behance"></i></a></li>
+                                                  <li><a href="#." target="_blank" rel="noopener noreferrer" className="social-icon"> <i className="fab fa-dribbble"></i></a></li>
+                                                  <li><a href="#." target="_blank" rel="noopener noreferrer" className="social-icon"> <i className="fab fa-twitter"></i></a></li>
+                                                  <li><a href="#." target="_blank" rel="noopener noreferrer" className="social-icon"> <i className="fab fa-github"></i></a></li>
+                                              </ul>
+                                          </div>
+                                      </div>
+                                  </div>
+                              </div>
+                              <div className="col-sm-6">
+                                  <p className="mil-mobile-hidden mil-text-sm mil-mb-30" style={{ height: '30px' }}><span className="mil-accent">*</span> The founders of our agency</p>
+                                  <div className="mil-team-card mil-up mil-mb-30">
+                                      <img src="/src/Website/static/img/faces/2.jpg" alt="Team member" />
+                                      <div className="mil-description">
+                                          <div className="mil-secrc-text">
+                                              <h5 className="mil-muted mil-mb-5"><a href="home-2.html">Emma Newman</a></h5>
+                                              <p className="mil-link mil-light-soft mil-mb-10">Founder</p>
+                                              <ul className="mil-social-icons mil-center">
+                                                  <li><a href="#." target="_blank" rel="noopener noreferrer" className="social-icon"> <i className="fab fa-behance"></i></a></li>
+                                                  <li><a href="#." target="_blank" rel="noopener noreferrer" className="social-icon"> <i className="fab fa-dribbble"></i></a></li>
+                                                  <li><a href="#." target="_blank" rel="noopener noreferrer" className="social-icon"> <i className="fab fa-twitter"></i></a></li>
+                                                  <li><a href="#." target="_blank" rel="noopener noreferrer" className="social-icon"> <i className="fab fa-github"></i></a></li>
+                                              </ul>
+                                          </div>
+                                      </div>
+                                  </div>
+                                  <div className="mil-team-card mil-up mil-mb-30">
+                                      <img src="/src/Website/static/img/faces/4.jpg" alt="Team member" />
+                                      <div className="mil-description">
+                                          <div className="mil-secrc-text">
+                                              <h5 className="mil-muted mil-mb-5"><a href="home-2.html">Lisa Trueman</a></h5>
+                                              <p className="mil-link mil-light-soft mil-mb-10">UI/UX Designer</p>
+                                              <ul className="mil-social-icons mil-center">
+                                                  <li><a href="#." target="_blank" rel="noopener noreferrer" className="social-icon"> <i className="fab fa-behance"></i></a></li>
+                                                  <li><a href="#." target="_blank" rel="noopener noreferrer" className="social-icon"> <i className="fab fa-dribbble"></i></a></li>
+                                                  <li><a href="#." target="_blank" rel="noopener noreferrer" className="social-icon"> <i className="fab fa-twitter"></i></a></li>
+                                                  <li><a href="#." target="_blank" rel="noopener noreferrer" className="social-icon"> <i className="fab fa-github"></i></a></li>
+                                              </ul>
+                                          </div>
+                                      </div>
+                                  </div>
+                              </div>
+                          </div>
+                      </div>
+                  </div> */}
+              </div>
+          </div>
+      </section>
     </BaseLayout>
   );
 };

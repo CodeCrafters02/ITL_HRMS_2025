@@ -19,6 +19,15 @@ interface HomeProps {
 
 const Home: React.FC<HomeProps> = ({ hasPreloaderShown }) => {
     const scriptsLoadedRef = useRef<boolean>(false);
+    const [activeIndex, setActiveIndex] = useState(0); 
+    const [activeFAQ, setActiveFAQ] = useState(null);
+    const [activeTestimonial, setActiveTestimonial] = useState(0);
+  const [faqExpanded, setFaqExpanded] = useState(false);
+
+  const toggleFAQ = (index) => {
+    setActiveFAQ(activeFAQ === index ? null : index);
+  };
+
 
     useEffect(() => {
         // Prevent multiple script loading
@@ -223,6 +232,76 @@ const Home: React.FC<HomeProps> = ({ hasPreloaderShown }) => {
         };
       }, []);
     
+
+const testimonials = [
+  {
+    text: `This product changed my life! Highly recommend to everyone looking to improve their workflow and productivity. 
+           The ease of use and the outstanding customer support made the experience seamless. 
+           I have seen tremendous results and will definitely continue using it.`,
+    name: "Alice Johnson",
+    company: "WonderCorp",
+    avatar: "/avatars/alice.jpg"
+  },
+  {
+    text: `Excellent service and support throughout the entire process. 
+           The team was knowledgeable, responsive, and truly cared about my needs. 
+           Their attention to detail and proactive communication exceeded my expectations, making the entire experience enjoyable.`,
+    name: "Bob Smith",
+    company: "TechSolutions",
+    avatar: "/avatars/bob.jpg"
+  },
+  {
+    text: `Reliable and fast, great experience all around. 
+           Every interaction was professional and efficient, helping me meet deadlines without hassle. 
+           The quality of the product combined with their quick turnaround makes them my go-to choice.`,
+    name: "Carol Lee",
+    company: "InnovateX",
+    avatar: "/avatars/carol.jpg"
+  },
+  {
+    text: `This creative agency stands out with their exceptional talent and expertise. 
+           Their ability to think outside the box and bring unique ideas to life is truly impressive. 
+           With meticulous attention to detail, they consistently deliver visually stunning and impactful work.`,
+    name: "Sarah Newman",
+    company: "ENVATO MARKET",
+    avatar: "/avatars/sarah.jpg"
+  }
+];
+const faqs = [
+  {
+    question: "What types of applications do you develop?",
+    answer: "We develop a wide range of custom applications, including web apps, mobile apps (iOS and Android), and enterprise solutions, tailored to meet your specific business requirements."
+  },
+  {
+    question: "How do you ensure the quality of the app?",
+    answer: "We follow a rigorous development process that includes detailed planning, regular testing, and quality assurance to ensure the app meets high standards of functionality and performance."
+  },
+  {
+    question: "Can you integrate third-party services into the app?",
+    answer: "Yes, we can integrate various third-party services and APIs based on your app’s needs."
+  },
+  {
+    question: "What digital marketing services do you offer?",
+    answer: "We offer a range of digital marketing services, including SEO, social media marketing, content marketing, email campaigns, and analytics to enhance your online presence and drive engagement."
+  },
+  {
+    question: "How can Web3 technology benefit my business?",
+    answer: "Web3 technology offers benefits such as enhanced security, transparency, and control over data. It also enables the creation of decentralized platforms and applications that can improve efficiency and trust."
+  },
+  {
+    question: "What types of AI and ML solutions do you offer?",
+    answer: "We offer AI and ML solutions such as predictive analytics, natural language processing, computer vision, and automation to help you leverage data for better decision-making and operational efficiency."
+  },
+  {
+    question: "How do you handle app updates and maintenance?",
+    answer: "We provide ongoing maintenance and updates as part of our service, including bug fixes, performance improvements, and feature enhancements."
+  },
+  {
+    question: "What platforms do you develop mobile apps for?",
+    answer: "We develop mobile apps for both iOS and Android platforms, ensuring compatibility and optimal performance across different devices."
+  },
+];
+
       if (!stylesLoaded) {
         // Show blank or loader until styles are loaded
         return <div style={{ background: "#000000ff", height: "100vh" }}></div>;
@@ -230,40 +309,6 @@ const Home: React.FC<HomeProps> = ({ hasPreloaderShown }) => {
 
     return (
         <HomeLayout hasPreloaderShown={hasPreloaderShown}>
-             <div style={{ position: 'relative', height: '400px' /* or your container height */ }}>
-            <Link
-              to="/bookdemo"
-              style={{
-                position: 'fixed',
-                top: '50px',
-                right: '0px',
-                backgroundColor: "rgb(255, 152, 0)",
-                color: "#fff",
-                padding: "8px 24px",
-                borderRadius: "30px",
-                fontWeight: "600",
-                boxShadow: "0 4px 12px rgba(136,136,136,0.5)", // this is shadow for the button itself, you can keep or remove
-                textDecoration: "none",
-                textAlign: "center",
-                textTransform: "uppercase",
-                fontSize: "12px",
-                letterSpacing: "1px",
-                whiteSpace: "nowrap",
-                cursor: "pointer",
-                transition: "background-color 0.3s ease",
-                userSelect: 'none',
-                display: 'inline-block',
-                marginLeft: 'auto',
-                marginRight: '180px',
-                outline: 'none',     // Remove focus outline
-              }}
-              onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "#555555")}
-              onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "rgb(255, 152, 0)")}
-            >
-              BOOK A DEMO
-            </Link>
-            </div>
-            {/* The following JSX is a direct and correct conversion of the body content from home-1.html. */}
             <div className="mil-wrapper" id="top">
 
                 <div className="mil-ball">
@@ -278,412 +323,284 @@ const Home: React.FC<HomeProps> = ({ hasPreloaderShown }) => {
 
                 <div className="mil-content">
                     <div id="swupMain" className="mil-main-transition">
-
-                        <section className="mil-banner mil-dark-bg">
-                            <div className="mi-invert-fix">
+                      <section className="mil-banner mil-dark-bg">
+                        <div className="mi-invert-fix">
+                          
                                 <div className="mil-animation-frame">
                                     <div className="mil-animation mil-position-1 mil-scale" data-value-1="7" data-value-2="1.6"></div>
                                     <div className="mil-animation mil-position-2 mil-scale" data-value-1="4" data-value-2="1"></div>
                                     <div className="mil-animation mil-position-3 mil-scale" data-value-1="1.2" data-value-2=".1"></div>
                                 </div>
-                                <div className="mil-gradient"></div>
-                                <div className="container">
-                                    <div className="mil-banner-content mil-up">
-                                        <h1 className="mil-muted mil-mb-60">Designing <span className="mil-thin">a Better</span><br /> World <span className="mil-thin">Today</span></h1>
-                                        <div className="row">
-                                            <div className="col-md-7 col-lg-5">
-                                                <p className="mil-light-soft mil-mb-60">Welcome to our world of endless imagination and boundless creativity. Together, let's embark on a remarkable journey where dreams become tangible realities.</p>
-                                            </div>
-                                        </div>
-                                        <Link to="/services" className="mil-button mil-arrow-place mil-btn-space">
-                                            <span>What we do</span>
-                                        </Link>
-                                        <a href="portfolio-1.html" className="mil-link mil-muted mil-arrow-place">
-                                            <span>View works</span>
-                                        </a>
-                                        <div className="mil-circle-text">
-                                            <svg version="1.1" xmlns="http://www.w3.org/2000/svg" xmlnsXlink="http://www.w3.org/1999/xlink" x="0px" y="0px" viewBox="0 0 300 300" enableBackground="new 0 0 300 300" xmlSpace="preserve" className="mil-ct-svg mil-rotate" data-value="360">
-                                                <defs>
-                                                    <path id="circlePath" d="M 150, 150 m -60, 0 a 60,60 0 0,1 120,0 a 60,60 0 0,1 -120,0 " />
-                                                </defs>
-                                                <circle cx="150" cy="100" r="75" fill="none" />
-                                                <g>
-                                                    <use xlinkHref="#circlePath" fill="none" />
-                                                    <text style={{ letterSpacing: '6.5px' }}>
-                                                        <textPath xlinkHref="#circlePath">Scroll down - Scroll down - </textPath>
-                                                    </text>
-                                                </g>
-                                            </svg>
-                                            <a href="#about" className="mil-button mil-arrow-place mil-icon-button mil-arrow-down"></a>
-                                        </div>
+                              <div className="mil-gradient"></div>
+
+                              <div className="container">
+                                <div className="mil-banner-content mil-up">
+                                  <h1 className="mil-muted mil-mb-60">
+                                    Transforming Ideas<br />
+                                    <span className="mil-thin">into Revolutionary Apps</span>
+                                  </h1>
+
+
+                                  <div className="row">
+                                    <div className="col-md-7 col-lg-5">
+                                      <p className="mil-light-soft mil-mb-60">
+                                        Innovation in every code, revolution in every app. Innovyx Tech Labs – where ideas become reality.
+                                      </p>
                                     </div>
+                                  </div>
+
+                                  <Link to="/about" className="mil-button mil-arrow-place mil-btn-space">
+                                    <span style={{ paddingRight: "25px" }}>Learn More</span>
+                                  </Link>
+
+                                  <Link to="/products" className="mil-link mil-muted mil-arrow-place">
+                                    <span>Our Projects</span>
+                                  </Link>
                                 </div>
+                              </div>
                             </div>
-                        </section>
+                          </section>
+
 
                         <section id="about">
-                            <div className="container mil-p-120-30">
-                                <div className="row justify-content-between align-items-center">
-                                    <div className="col-lg-6 col-xl-5">
-                                        <div className="mil-mb-90">
-                                            <h2 className="mil-up mil-mb-60">Discover <br />Our <span className="mil-thin">Studio</span></h2>
-                                            <p className="mil-up mil-mb-30">At our design studio, we are a collective of talented individuals ignited by our unwavering passion for transforming ideas into reality. With a harmonious blend of diverse backgrounds and a vast array of skill sets, we join forces to create compelling solutions for our esteemed clients.</p>
-                                            <p className="mil-up mil-mb-60">Collaboration is at the heart of what we do. Our team thrives on the synergy that arises when unique perspectives converge, fostering an environment of boundless creativity. By harnessing our collective expertise, we produce extraordinary results that consistently surpass expectations.</p>
-                                            <div className="mil-about-quote">
-                                                <div className="mil-avatar mil-up">
-                                                    <img src="/src/Website/static/img/faces/customers/2.jpg" alt="Founder" />
-                                                </div>
-                                                <h6 className="mil-quote mil-up">Passionately Creating <span className="mil-thin">Design Wonders:</span> Unleashing <span className="mil-thin">Boundless Creativity</span></h6>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div className="col-lg-5">
-                                        <div className="mil-about-photo mil-mb-90">
-                                            <div className="mil-lines-place"></div>
-                                            <div className="mil-up mil-img-frame" style={{ paddingBottom: '160%' }}>
-                                                <img src="/src/Website/static/img/photo/1.jpg" alt="img" className="mil-scale" data-value-1="1" data-value-2="1.2" />
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
+                          <div className="container mil-p-120-30">
+                              <div className="row justify-content-between align-items-center">
+                                  <div className="col-lg-6 col-xl-5">
+                                      <div className="mil-mb-90">
+                                          <h2 className="mil-up mil-mb-60">
+                                              About <span className="mil-thin">Innovyx</span>
+                                          </h2>
+                                          <p className="mil-up mil-mb-30"   style={{ color: "#0c0c0cff", marginTop: 10, marginBottom: 20,fontWeight: "bold" }}>
+                                              The innovation powerhouse where digital dreams take flight! At Innovyx, we're more than just coders; we're architects of innovation, wizards of analytics, and pioneers of digital transformation. 
+                                              From custom software solutions to AI-driven marvels and digital marketing magic, we're here to turn your ideas into game-changing realities.
+                                          </p>
+                                          <p className="mil-up mil-mb-60"   style={{ color: "#0c0c0cff", marginTop: 10, marginBottom: 20,fontWeight: "bold" }}>
+                                              Let's collaborate and redefine what's possible together. Ready to make waves? Join us on this exhilarating journey — powered by cutting-edge technology solutions, an experienced and skilled team, a comprehensive service offering, and a truly client-centric approach.
+                                          </p>
+                                      </div>
+                                  </div>
+                                  <div className="col-lg-5">
+                                      <div className="mil-about-photo mil-mb-90">
+                                          <div className="mil-lines-place"></div>
+                                          <div className="mil-up mil-img-frame" style={{ paddingBottom: '160%' }}>
+                                              <img 
+                                                  src="/src/Website/static/img/photo/1.jpg" 
+                                                  alt="Innovyx Team" 
+                                                  className="mil-scale" 
+                                                  data-value-1="1" 
+                                                  data-value-2="1.2" 
+                                                  style={{ maxWidth: "90%", height: "auto" }}
+                                              />
+                                          </div>
+                                      </div>
+                                  </div>
+                              </div>
+                          </div>
+                      </section>
+                      <section className="mil-dark-bg">
+                        <div className="mi-invert-fix">
+                            <div className="mil-animation-frame">
+                                <div 
+                                    className="mil-animation mil-position-1 mil-scale" 
+                                    data-value-1="2.4" 
+                                    data-value-2="1.4" 
+                                    style={{ top: '300px', right: '-100px' }}
+                                ></div>
+                                <div 
+                                    className="mil-animation mil-position-2 mil-scale" 
+                                    data-value-1="2" 
+                                    data-value-2="1" 
+                                    style={{ left: '150px' }}
+                                ></div>
                             </div>
-                        </section>
-
-                        <section className="mil-dark-bg">
-                            <div className="mi-invert-fix">
-                                <div className="mil-animation-frame">
-                                    <div className="mil-animation mil-position-1 mil-scale" data-value-1="2.4" data-value-2="1.4" style={{ top: '300px', right: '-100px' }}></div>
-                                    <div className="mil-animation mil-position-2 mil-scale" data-value-1="2" data-value-2="1" style={{ left: '150px' }}></div>
-                                </div>
-                                <div className="container mil-p-120-0">
-                                    <div className="mil-mb-120">
-                                        <div className="row">
-                                            <div className="col-lg-10">
-                                                <span className="mil-suptitle mil-light-soft mil-suptitle-right mil-up">Professionals focused on helping your brand<br /> grow and move forward.</span>
-                                            </div>
-                                        </div>
-                                        <div className="mil-complex-text justify-content-center mil-up mil-mb-15">
-                                            <span className="mil-text-image"><img src="/src/Website/static/img/photo/2.jpg" alt="team" /></span>
-                                            <h2 className="mil-h1 mil-muted mil-center">Unique <span className="mil-thin">Ideas</span></h2>
-                                        </div>
-                                        <div className="mil-complex-text justify-content-center mil-up">
-                                            <h2 className="mil-h1 mil-muted mil-center">For Your <span className="mil-thin">Business.</span></h2>
-                                            <Link to="/services" className="mil-services-button mil-button mil-arrow-place"><span>What we do</span></Link>
+                            <div className="container mil-p-120-0">
+                                <div className="mil-mb-120">
+                                    <div className="row">
+                                        <div className="col-lg-10">
+                                            <span className="mil-suptitle mil-light-soft mil-suptitle-right mil-up">
+                                                Driving innovation through technology, creativity, and strategic thinking.
+                                            </span>
                                         </div>
                                     </div>
-                                    <div className="row mil-services-grid m-0">
-                                        <div className="col-md-6 col-lg-3 mil-services-grid-item p-0">
-                                            <Link to="/service" className="mil-service-card-sm mil-up">
-                                                <h5 className="mil-muted mil-mb-30">Branding and <br />Identity Design</h5>
-                                                <p className="mil-light-soft mil-mb-30">Our creative agency is a team of professionals focused on helping your brand grow.</p>
-                                                <div className="mil-button mil-icon-button-sm mil-arrow-place"></div>
-                                            </Link>
-                                        </div>
-                                        <div className="col-md-6 col-lg-3 mil-services-grid-item p-0">
-                                            <Link to="/service" className="mil-service-card-sm mil-up">
-                                                <h5 className="mil-muted mil-mb-30">Website Design <br />and Development</h5>
-                                                <p className="mil-light-soft mil-mb-30">Our creative agency is a team of professionals focused on helping your brand grow.</p>
-                                                <div className="mil-button mil-icon-button-sm mil-arrow-place"></div>
-                                            </Link>
-                                        </div>
-                                        <div className="col-md-6 col-lg-3 mil-services-grid-item p-0">
-                                            <Link to="/service" className="mil-service-card-sm mil-up">
-                                                <h5 className="mil-muted mil-mb-30">Advertising and <br />Marketing Campaigns</h5>
-                                                <p className="mil-light-soft mil-mb-30">Our creative agency is a team of professionals focused on helping your brand grow.</p>
-                                                <div className="mil-button mil-icon-button-sm mil-arrow-place"></div>
-                                            </Link>
-                                        </div>
-                                        <div className="col-md-6 col-lg-3 mil-services-grid-item p-0">
-                                            <Link to="/service" className="mil-service-card-sm mil-up">
-                                                <h5 className="mil-muted mil-mb-30">Creative Consulting <br />and Development</h5>
-                                                <p className="mil-light-soft mil-mb-30">Our creative agency is a team of professionals focused on helping your brand grow.</p>
-                                                <div className="mil-button mil-icon-button-sm mil-arrow-place"></div>
-                                            </Link>
-                                        </div>
+                                    <div className="mil-complex-text justify-content-center mil-up mil-mb-15">
+                                        <span className="mil-text-image">
+                                            <img src="/src/Website/static/img/photo/2.jpg" alt="team" />
+                                        </span>
+                                        <h2 className="mil-h1 mil-muted mil-center">
+                                            Innovative <span className="mil-thin">Solutions</span>
+                                        </h2>
+                                    </div>
+                                    <div className="mil-complex-text justify-content-center mil-up">
+                                        <h2 className="mil-h1 mil-muted mil-center">
+                                            For Your <span className="mil-thin">Business</span>
+                                        </h2>
+                                        <Link to="/services" className="mil-services-button mil-button mil-arrow-place">
+                                            <span style={{ paddingRight: "25px" }}>Our Services</span>
+                                        </Link>
                                     </div>
                                 </div>
-                            </div>
-                        </section>
-
-                        <section>
-                            <div className="container mil-p-120-30">
-                                <div className="row justify-content-between align-items-center">
-                                    <div className="col-lg-5 col-xl-4">
-                                        <div className="mil-mb-90">
-                                            <h2 className="mil-up mil-mb-60">Meet <br />Our Team</h2>
-                                            <p className="mil-up mil-mb-30">We are talented individuals who are passionate about bringing ideas to life. With a diverse range of backgrounds and skill sets, we collaborate to produce effective solutions for our clients.</p>
-                                            <p className="mil-up mil-mb-60">Together, our creative team is committed to delivering impactful work that exceeds expectations.</p>
-                                            <div className="mil-up"><Link to="/team" className="mil-button mil-arrow-place mil-mb-60"><span>Read more</span></Link></div>
-                                            <h4 className="mil-up"><span className="mil-thin">We</span> delivering <br /><span className="mil-thin">exceptional</span> results.</h4>
-                                        </div>
+                                <div className="row mil-services-grid m-0">
+                                    <div className="col-md-6 col-lg-3 mil-services-grid-item p-0">
+                                        <Link to="/service" className="mil-service-card-sm mil-up">
+                                            <h5 className="mil-muted mil-mb-30">Web Crafting</h5>
+                                            <p className="mil-light-soft mil-mb-30">
+                                                Innovyx Tech Labs specializes in creating exceptional websites with custom design, responsive layouts, and robust functionality to enhance your brand and engage audiences.
+                                            </p>
+                                            <div className="mil-button mil-icon-button-sm mil-arrow-place"></div>
+                                        </Link>
                                     </div>
-                                    <div className="col-lg-6">
-                                        <div className="mil-team-list">
-                                            <div className="mil-lines-place"></div>
-                                            <div className="row mil-mb-60">
-                                                <div className="col-sm-6">
-                                                    <div className="mil-team-card mil-up mil-mb-30">
-                                                        <img src="/src/Website/static/img/faces/1.jpg" alt="Team member" />
-                                                        <div className="mil-description">
-                                                            <div className="mil-secrc-text">
-                                                                <h5 className="mil-muted mil-mb-5"><a href="home-2.html">Anna Oldman</a></h5>
-                                                                <p className="mil-link mil-light-soft mil-mb-10">Art Director</p>
-                                                                <ul className="mil-social-icons mil-center">
-                                                                    <li><a href="#." target="_blank" rel="noopener noreferrer" className="social-icon"> <i className="fab fa-behance"></i></a></li>
-                                                                    <li><a href="#." target="_blank" rel="noopener noreferrer" className="social-icon"> <i className="fab fa-dribbble"></i></a></li>
-                                                                    <li><a href="#." target="_blank" rel="noopener noreferrer" className="social-icon"> <i className="fab fa-twitter"></i></a></li>
-                                                                    <li><a href="#." target="_blank" rel="noopener noreferrer" className="social-icon"> <i className="fab fa-github"></i></a></li>
-                                                                </ul>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                    <div className="mil-team-card mil-up mil-mb-30">
-                                                        <img src="/src/Website/static/img/faces/3.jpg" alt="Team member" />
-                                                        <div className="mil-description">
-                                                            <div className="mil-secrc-text">
-                                                                <h5 className="mil-muted mil-mb-5"><a href="home-2.html">Oscar Freeman</a></h5>
-                                                                <p className="mil-link mil-light-soft mil-mb-10">Frontend Dev</p>
-                                                                <ul className="mil-social-icons mil-center">
-                                                                    <li><a href="#." target="_blank" rel="noopener noreferrer" className="social-icon"> <i className="fab fa-behance"></i></a></li>
-                                                                    <li><a href="#." target="_blank" rel="noopener noreferrer" className="social-icon"> <i className="fab fa-dribbble"></i></a></li>
-                                                                    <li><a href="#." target="_blank" rel="noopener noreferrer" className="social-icon"> <i className="fab fa-twitter"></i></a></li>
-                                                                    <li><a href="#." target="_blank" rel="noopener noreferrer" className="social-icon"> <i className="fab fa-github"></i></a></li>
-                                                                </ul>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                                <div className="col-sm-6">
-                                                    <p className="mil-mobile-hidden mil-text-sm mil-mb-30" style={{ height: '30px' }}><span className="mil-accent">*</span> The founders of our agency</p>
-                                                    <div className="mil-team-card mil-up mil-mb-30">
-                                                        <img src="/src/Website/static/img/faces/2.jpg" alt="Team member" />
-                                                        <div className="mil-description">
-                                                            <div className="mil-secrc-text">
-                                                                <h5 className="mil-muted mil-mb-5"><a href="home-2.html">Emma Newman</a></h5>
-                                                                <p className="mil-link mil-light-soft mil-mb-10">Founder</p>
-                                                                <ul className="mil-social-icons mil-center">
-                                                                    <li><a href="#." target="_blank" rel="noopener noreferrer" className="social-icon"> <i className="fab fa-behance"></i></a></li>
-                                                                    <li><a href="#." target="_blank" rel="noopener noreferrer" className="social-icon"> <i className="fab fa-dribbble"></i></a></li>
-                                                                    <li><a href="#." target="_blank" rel="noopener noreferrer" className="social-icon"> <i className="fab fa-twitter"></i></a></li>
-                                                                    <li><a href="#." target="_blank" rel="noopener noreferrer" className="social-icon"> <i className="fab fa-github"></i></a></li>
-                                                                </ul>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                    <div className="mil-team-card mil-up mil-mb-30">
-                                                        <img src="/src/Website/static/img/faces/4.jpg" alt="Team member" />
-                                                        <div className="mil-description">
-                                                            <div className="mil-secrc-text">
-                                                                <h5 className="mil-muted mil-mb-5"><a href="home-2.html">Lisa Trueman</a></h5>
-                                                                <p className="mil-link mil-light-soft mil-mb-10">UI/UX Designer</p>
-                                                                <ul className="mil-social-icons mil-center">
-                                                                    <li><a href="#." target="_blank" rel="noopener noreferrer" className="social-icon"> <i className="fab fa-behance"></i></a></li>
-                                                                    <li><a href="#." target="_blank" rel="noopener noreferrer" className="social-icon"> <i className="fab fa-dribbble"></i></a></li>
-                                                                    <li><a href="#." target="_blank" rel="noopener noreferrer" className="social-icon"> <i className="fab fa-twitter"></i></a></li>
-                                                                    <li><a href="#." target="_blank" rel="noopener noreferrer" className="social-icon"> <i className="fab fa-github"></i></a></li>
-                                                                </ul>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
+                                    <div className="col-md-6 col-lg-3 mil-services-grid-item p-0">
+                                        <Link to="/service" className="mil-service-card-sm mil-up">
+                                            <h5 className="mil-muted mil-mb-30">Custom App Development</h5>
+                                            <p className="mil-light-soft mil-mb-30">
+                                                Bespoke app solutions designed for scalability, innovation, and seamless user experiences that meet your unique business needs.
+                                            </p>
+                                            <div className="mil-button mil-icon-button-sm mil-arrow-place"></div>
+                                        </Link>
                                     </div>
-                                </div>
-                            </div>
-                        </section>
-
-                        <section className="mil-soft-bg">
-                            <div className="container mil-p-120-120">
-                                <div className="row">
-                                    <div className="col-lg-10">
-                                        <span className="mil-suptitle mil-suptitle-right mil-suptitle-dark mil-up">Customer reviews are a valuable source <br />of information for both businesses and consumers.</span>
+                                    <div className="col-md-6 col-lg-3 mil-services-grid-item p-0">
+                                        <Link to="/service" className="mil-service-card-sm mil-up">
+                                            <h5 className="mil-muted mil-mb-30">Digital Marketing</h5>
+                                            <p className="mil-light-soft mil-mb-30">
+                                                Comprehensive strategies using SEO, social media, content marketing, and analytics to drive growth and boost your online presence.
+                                            </p>
+                                            <div className="mil-button mil-icon-button-sm mil-arrow-place"></div>
+                                        </Link>
                                     </div>
-                                </div>
-                                <h2 className="mil-center mil-up mil-mb-60">Customer <span className="mil-thin">Voices:</span> <br />Hear What <span className="mil-thin">They Say!</span></h2>
-                                <div className="mil-revi-pagination mil-up mil-mb-60"></div>
-                                <div className="row mil-relative justify-content-center">
-                                    <div className="col-lg-8">
-                                        <div className="mil-slider-nav mil-soft mil-reviews-nav mil-up">
-                                            <div className="mil-slider-arrow mil-prev mil-revi-prev mil-arrow-place"></div>
-                                            <div className="mil-slider-arrow mil-revi-next mil-arrow-place"></div>
-                                        </div>
-                                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" className="mil-quote-icon mil-up">
-                                            <path d="M 13.5 10 A 8.5 8.5 0 0 0 13.5 27 A 8.5 8.5 0 0 0 18.291016 25.519531 C 17.422273 29.222843 15.877848 31.803343 14.357422 33.589844 C 12.068414 36.279429 9.9433594 37.107422 9.9433594 37.107422 A 1.50015 1.50015 0 1 0 11.056641 39.892578 C 11.056641 39.892578 13.931586 38.720571 16.642578 35.535156 C 19.35357 32.349741 22 27.072581 22 19 A 1.50015 1.50015 0 0 0 21.984375 18.78125 A 8.5 8.5 0 0 0 13.5 10 z M 34.5 10 A 8.5 8.5 0 0 0 34.5 27 A 8.5 8.5 0 0 0 39.291016 25.519531 C 38.422273 29.222843 36.877848 31.803343 35.357422 33.589844 C 33.068414 36.279429 30.943359 37.107422 30.943359 37.107422 A 1.50015 1.50015 0 1 0 32.056641 39.892578 C 32.056641 39.892578 34.931586 38.720571 37.642578 35.535156 C 40.35357 32.349741 43 27.072581 43 19 A 1.50015 1.50015 0 0 0 42.984375 18.78125 A 8.5 8.5 0 0 0 34.5 10 z" fill="#000000" />
-                                        </svg>
-                                        <div className="swiper-container mil-reviews-slider">
-                                            <div className="swiper-wrapper">
-                                                <div className="swiper-slide">
-                                                    <div className="mil-review-frame mil-center" data-swiper-parallax="-200" data-swiper-parallax-opacity="0">
-                                                        <h5 className="mil-up mil-mb-10">Sarah Newman</h5>
-                                                        <p className="mil-mb-5 mil-upper mil-up mil-mb-30">Envato market</p>
-                                                        <p className="mil-text-xl mil-up">This creative agency stands out with their exceptional talent and expertise. Their ability to think outside the box and bring unique ideas to life is truly impressive. With meticulous attention to detail, they consistently deliver visually stunning and impactful work.</p>
-                                                    </div>
-                                                </div>
-                                                <div className="swiper-slide">
-                                                    <div className="mil-review-frame mil-center" data-swiper-parallax="-200" data-swiper-parallax-opacity="0">
-                                                        <h5 className="mil-up mil-mb-10">Emma Trueman</h5>
-                                                        <p className="mil-mb-5 mil-upper mil-up mil-mb-30">Envato market</p>
-                                                        <p className="mil-text-xl mil-up">I had the pleasure of working with this creative agency, and I must say, they truly impressed me. They consistently think outside the box, resulting in impressive and impactful work. I highly recommend this agency for their consistent delivery of exceptional creative solutions.</p>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </section>
-
-                        <div className="mil-soft-bg">
-                            <div className="container mil-p-0-120">
-                                <div className="swiper-container mil-infinite-show mil-up">
-                                    <div className="swiper-wrapper">
-                                        <div className="swiper-slide">
-                                            <a href="#." className="mil-partner-frame" style={{ width: '60px' }}><img src="/src/Website/static/img/partners/1.svg" alt="logo" /></a>
-                                        </div>
-                                        <div className="swiper-slide">
-                                            <a href="#." className="mil-partner-frame" style={{ width: '100px' }}><img src="/src/Website/static/img/partners/2.svg" alt="logo" /></a>
-                                        </div>
-                                        <div className="swiper-slide">
-                                            <a href="#." className="mil-partner-frame" style={{ width: '60px' }}><img src="/src/Website/static/img/partners/1.svg" alt="logo" /></a>
-                                        </div>
-                                        <div className="swiper-slide">
-                                            <a href="#." className="mil-partner-frame" style={{ width: '100px' }}><img src="/src/Website/static/img/partners/2.svg" alt="logo" /></a>
-                                        </div>
+                                    <div className="col-md-6 col-lg-3 mil-services-grid-item p-0">
+                                        <Link to="/service" className="mil-service-card-sm mil-up">
+                                            <h5 className="mil-muted mil-mb-30">AI & ML Solutions</h5>
+                                            <p className="mil-light-soft mil-mb-30">
+                                                Custom algorithms and models to automate processes, analyze data, and deliver actionable, AI-powered insights for smarter decision-making.
+                                            </p>
+                                            <div className="mil-button mil-icon-button-sm mil-arrow-place"></div>
+                                        </Link>
                                     </div>
                                 </div>
                             </div>
                         </div>
+                      </section>
 
-                        <section>
-                            <div className="container mil-p-120-60">
-                                <div className="row align-items-center mil-mb-30">
-                                    <div className="col-lg-6 mil-mb-30">
-                                        <h3 className="mil-up">Popular Publications:</h3>
-                                    </div>
-                                    <div className="col-lg-6 mil-mb-30">
-                                        <div className="mil-adaptive-right mil-up">
-                                            <a href="blog.html" className="mil-link mil-dark mil-arrow-place">
-                                                <span>View all</span>
-                                            </a>
-                                        </div>
-                                    </div>
+                      <section className="testimonial-section">
+                            <div className="container">
+                              <h2 className="testimonial-title">
+                                <strong>Customer</strong> Voices: <br />
+                                <strong>Hear What</strong> They Say!
+                              </h2>
+
+                              {/* Testimonial content */}
+                              <div className="testimonial-content">
+                                {activeIndex > 0 && (
+                                  <button
+                                    className="arrow arrow-left"
+                                    onClick={() => setActiveIndex(activeIndex - 1)}
+                                    aria-label="Previous testimonial"
+                                  >
+                                    &#8592;
+                                  </button>
+                                )}
+
+                                <div className="testimonial-text">
+                                  <p>{testimonials[activeIndex].text}</p>
+                                  <h5>{testimonials[activeIndex].name}</h5>
+                                  <small>{testimonials[activeIndex].company}</small>
                                 </div>
-                                <div className="row">
-                                    <div className="col-lg-6">
-                                        <a href="publication.html" className="mil-blog-card mil-mb-60">
-                                            <div className="mil-cover-frame mil-up">
-                                                <img src="/src/Website/static/img/blog/1.jpg" alt="cover" />
-                                            </div>
-                                            <div className="mil-post-descr">
-                                                <div className="mil-labels mil-up mil-mb-30">
-                                                    <div className="mil-label mil-upper mil-accent">TECHNOLOGY</div>
-                                                    <div className="mil-label mil-upper">may 24 2023</div>
-                                                </div>
-                                                <h4 className="mil-up mil-mb-30">How to Become a Graphic Designer in 10 Simple Steps</h4>
-                                                <p className="mil-post-text mil-up mil-mb-30">Lorem ipsum dolor sit amet, consectetur adipisicing elit. Eius sequi commodi dignissimos optio, beatae, eos necessitatibus nisi. Nam cupiditate consectetur nostrum qui! Repellat natus nulla, nisi aliquid, asperiores impedit tempora sequi est reprehenderit cumque explicabo, dicta. Rem nihil ullam totam ea voluptas quibusdam repudiandae id ut at iure! Totam, a!</p>
-                                                <div className="mil-link mil-dark mil-arrow-place mil-up">
-                                                    <span>Read more</span>
-                                                </div>
-                                            </div>
-                                        </a>
-                                    </div>
-                                    <div className="col-lg-6">
-                                        <a href="publication.html" className="mil-blog-card mil-mb-60">
-                                            <div className="mil-cover-frame mil-up">
-                                                <img src="/src/Website/static/img/blog/2.jpg" alt="cover" />
-                                            </div>
-                                            <div className="mil-post-descr">
-                                                <div className="mil-labels mil-up mil-mb-30">
-                                                    <div className="mil-label mil-upper mil-accent">TECHNOLOGY</div>
-                                                    <div className="mil-label mil-upper">may 24 2023</div>
-                                                </div>
-                                                <h4 className="mil-up mil-mb-30">16 Best Graphic Design Online and Offline Courses</h4>
-                                                <p className="mil-post-text mil-up mil-mb-30">Lorem ipsum dolor sit amet, consectetur adipisicing elit. Eius sequi commodi dignissimos optio, beatae, eos necessitatibus nisi. Nam cupiditate consectetur nostrum qui! Repellat natus nulla, nisi aliquid, asperiores impedit tempora sequi est reprehenderit cumque explicabo, dicta. Rem nihil ullam totam ea voluptas quibusdam repudiandae id ut at iure! Totam, a!</p>
-                                                <div className="mil-link mil-dark mil-arrow-place mil-up">
-                                                    <span>Read more</span>
-                                                </div>
-                                            </div>
-                                        </a>
-                                    </div>
-                                </div>
+
+                                {activeIndex < testimonials.length - 1 && (
+                                  <button
+                                    className="arrow arrow-right"
+                                    onClick={() => setActiveIndex(activeIndex + 1)}
+                                    aria-label="Next testimonial"
+                                  >
+                                    &#8594;
+                                  </button>
+                                )}
+                              </div>
                             </div>
                         </section>
 
-                        {/* <footer className="mil-dark-bg">
-                            <div className="mi-invert-fix">
-                                <div className="container mil-p-120-60">
-                                    <div className="row justify-content-between">
-                                        <div className="col-md-4 col-lg-4 mil-mb-60">
-                                            <div className="mil-muted mil-logo mil-up mil-mb-30">Ashley.</div>
-                                            <p className="mil-light-soft mil-up mil-mb-30">Subscribe our newsletter:</p>
-                                            <form className="mil-subscribe-form mil-up">
-                                                <input type="text" placeholder="Enter our email" />
-                                                <button type="submit" className="mil-button mil-icon-button-sm mil-arrow-place"></button>
-                                            </form>
-                                        </div>
-                                        <div className="col-md-7 col-lg-6">
-                                            <div className="row justify-content-end">
-                                                <div className="col-md-6 col-lg-7">
-                                                    <nav className="mil-footer-menu mil-mb-60">
-                                                        <ul>
-                                                            <li className="mil-up mil-active"><a href="home-1.html">Home</a></li>
-                                                            <li className="mil-up"><a href="portfolio-1.html">Portfolio</a></li>
-                                                            <li className="mil-up"><Link to="/services">Services</Link></li>
-                                                            <li className="mil-up"><Link to="/contact">Contact</Link></li>
-                                                            <li className="mil-up"><a href="blog.html">Blog</a></li>
-                                                        </ul>
-                                                    </nav>
-                                                </div>
-                                                <div className="col-md-6 col-lg-5">
-                                                    <ul className="mil-menu-list mil-up mil-mb-60">
-                                                        <li><a href="#." className="mil-light-soft">Privacy Policy</a></li>
-                                                        <li><a href="#." className="mil-light-soft">Terms and conditions</a></li>
-                                                        <li><a href="#." className="mil-light-soft">Cookie Policy</a></li>
-                                                        <li><a href="#." className="mil-light-soft">Careers</a></li>
-                                                    </ul>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div className="row justify-content-between flex-sm-row-reverse">
-                                        <div className="col-md-7 col-lg-6">
-                                            <div className="row justify-content-between">
-                                                <div className="col-md-6 col-lg-5 mil-mb-60">
-                                                    <h6 className="mil-muted mil-up mil-mb-30">Canada</h6>
-                                                    <p className="mil-light-soft mil-up">71 South Los Carneros Road, California <span className="mil-no-wrap">+51 174 705 812</span></p>
-                                                </div>
-                                                <div className="col-md-6 col-lg-5 mil-mb-60">
-                                                    <h6 className="mil-muted mil-up mil-mb-30">Germany</h6>
-                                                    <p className="mil-light-soft mil-up">Leehove 40, 2678 MC De Lier, Netherlands <span className="mil-no-wrap">+31 174 705 811</span></p>
-                                                </div>
-                                            </div>
-                                        </div>
-                                        <div className="col-md-4 col-lg-6 mil-mb-60">
-                                            <div className="mil-vert-between">
-                                                <div className="mil-mb-30">
-                                                    <ul className="mil-social-icons mil-up">
-                                                        <li><a href="#." target="_blank" rel="noopener noreferrer" className="social-icon"> <i className="fab fa-behance"></i></a></li>
-                                                        <li><a href="#." target="_blank" rel="noopener noreferrer" className="social-icon"> <i className="fab fa-dribbble"></i></a></li>
-                                                        <li><a href="#." target="_blank" rel="noopener noreferrer" className="social-icon"> <i className="fab fa-twitter"></i></a></li>
-                                                        <li><a href="#." target="_blank" rel="noopener noreferrer" className="social-icon"> <i className="fab fa-github"></i></a></li>
-                                                    </ul>
-                                                </div>
-                                                <p className="mil-light-soft mil-up">© Copyright 2023 - Mil. All Rights Reserved.</p>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </footer> */}
+                      <section className="mil-dark-bg">
+                        <div className="mi-invert-fix">
+                          <div className="mil-animation-frame">
+                            <div className="mil-animation mil-position-1 mil-scale" data-value-1="7" data-value-2="1.6"></div>
+                            <div className="mil-animation mil-position-2 mil-scale" data-value-1="4" data-value-2="1"></div>
+                            <div className="mil-animation mil-position-3 mil-scale" data-value-1="1.2" data-value-2=".1"></div>
+                          </div>
+                          <div className="container mil-p-120-90">
+                            <div className="row justify-content-center">
+                              <div className="col-lg-8 text-center">
+                                <h2 className="mil-light mil-up mil-mb-30">
+                                  Why Partner with Us?
+                                </h2>
+                                <p
+                                  className="mil-light mil-up mil-mb-30"
+                                  style={{ fontWeight: "bold", fontSize: "1.2rem", color: "white" }}
+                                >
+                                  Empowering Your Business with Cutting-Edge AI & Tech Innovations
+                                </p>
+                                <p
+                                  className="mil-light mil-up mil-mb-60"
+                                  style={{ fontSize: "1rem", color: "white" }}
+                                >
+                                  We blend deep industry knowledge with the latest in AI and emerging technologies to create custom solutions that unlock your company’s full potential — driving growth, efficiency, and lasting competitive advantage.
+                                </p>
 
-                        {/* 
-                          FIX: The 'mil-hidden-elements' div is restored here.
-                          This div contains the SVG templates for arrows and other animations.
-                          The template's JavaScript searches for these elements by className,
-                          clones them, and injects them where needed (e.g., inside 'mil-arrow-place' divs).
-                          Without this section, the arrows and some animations will not appear.
-                        */}
+                                <div className="row mil-mb-60">
+                                  <div className="col-md-4">
+                                    <h4 className="mil-light mil-up">Customer-Centric Innovation</h4>
+                                  </div>
+                                  <div className="col-md-4">
+                                    <h4 className="mil-light mil-up">Agile & Scalable Solutions</h4>
+                                  </div>
+                                  <div className="col-md-4">
+                                    <h4 className="mil-light mil-up">Trusted Industry Experts</h4>
+                                  </div>
+                                </div>
+
+                                <div>
+                                  <h3
+                                    className="mil-light mil-up"
+                                    style={{ fontSize: "3rem", fontWeight: "bold", color: "white" }}
+                                  >
+                                    10,000+
+                                  </h3>
+                                  <p
+                                    className="mil-light mil-up"
+                                    style={{ fontSize: "1.2rem", marginTop: "-10px", color: "white" }}
+                                  >
+                                    Satisfied Clients Worldwide
+                                  </p>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </section>
+
+                      <section className="faq-section">
+                        <h2 className="faq-title">
+                          Frequently Asked Questions
+                        </h2>
+
+                        <div className="faq-list">
+                          {faqs.map((faq, i) => (
+                            <div
+                              key={i}
+                              className="faq-item"
+                              onClick={() => toggleFAQ(i)}
+                            >
+                              <h4 className="faq-question">
+                                {faq.question}
+                                <span className={`faq-question-icon ${activeFAQ === i ? 'open' : ''}`}>+</span>
+                              </h4>
+                              {activeFAQ === i && (
+                                <p className="faq-answer">{faq.answer}</p>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      </section>
+
                         <div className="mil-hidden-elements">
                             <div className="mil-dodecahedron">
                                 <div className="mil-pentagon">
@@ -739,7 +656,6 @@ const Home: React.FC<HomeProps> = ({ hasPreloaderShown }) => {
                                 <path fillRule="evenodd" clipRule="evenodd" d="M299 380H1V678H299V380ZM0 379V679H300V379H0Z" className="mil-move" />
                             </svg>
                         </div>
-
                     </div>
                 </div>
             </div>
