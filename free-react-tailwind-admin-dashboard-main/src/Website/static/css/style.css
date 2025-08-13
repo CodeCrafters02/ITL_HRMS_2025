@@ -4574,3 +4574,53 @@ dodecahedron
   width: 20px;
   height: 20px;
 }
+@media (max-width: 768px) {
+  .mil-frame-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between; /* space between logo and menu */
+  }
+
+  /* Left logo stays left */
+  .mil-frame-top .mil-logo:first-of-type {
+    order: 1;
+    margin-right: auto; /* push rest to right */
+  }
+
+  /* Book a Demo in middle */
+  .mil-frame-top a.mil-logo {
+    order: 2;
+    margin: 0 auto; /* center horizontally */
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+  }
+
+  /* Navigation menu button stays right */
+  .mil-frame-top .mil-menu-btn {
+    order: 3;
+    margin-left: auto;
+  }
+}
+
+/* Show desktop logo by default, hide mobile one */
+.mil-logo-desktop {
+  display: block;
+}
+.mil-logo-mobile {
+  display: none;
+}
+
+/* On mobile screens */
+@media (max-width: 768px) {
+  .mil-logo-desktop {
+    display: none;
+  }
+  .mil-logo-mobile {
+    display: block;
+    height: 80px; /* adjust size */
+    width: auto;
+    margin-left: -10px;
+    margin-bottom: 10px; /* shift left */
+  }
+}

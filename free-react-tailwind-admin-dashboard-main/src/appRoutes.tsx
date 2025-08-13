@@ -1,101 +1,114 @@
 import { Route, Routes } from "react-router-dom";
-import SignIn from "./pages/AuthPages/SignIn";
-import SignUp from "./pages/AuthPages/SignUp";
-import MasterDashboard from "./pages/Dashboard/MasterDashboard";
-import AdminDashboard from "./pages/Dashboard/AdminDashboard";
-import AdminPage from "./pages/Master/Adminpage";
-import CompanyList from "./pages/Master/Companypage";
-import NotFound from "./pages/OtherPage/NotFound";
-import UserProfiles from "./pages/UserProfiles";
-import Videos from "./pages/UiElements/Videos";
-import Images from "./pages/UiElements/Images";
-import Alerts from "./pages/UiElements/Alerts";
-import Badges from "./pages/UiElements/Badges";
-import Avatars from "./pages/UiElements/Avatars";
-import Buttons from "./pages/UiElements/Buttons";
-import LineChart from "./pages/Charts/LineChart";
-import BarChart from "./pages/Charts/BarChart";
-import Calendar from "./pages/Calendar";
-import AdminCalendar from "./pages/Admin/Calendar";
-import BasicTables from "./pages/Tables/BasicTables";
-import EmployeeLayout from "./layout/EmployeeLayout/EmployeeLayout";
-import MasterLayout from "./layout/MasterLayout/MasterLayout";
-import Home from "./pages/Dashboard/Home";
-import FormElements from "./pages/Forms/FormElements";
-import Blank from "./pages/Blank";
-import AdminLayout from "./layout/AdminLayout/AdminLayout";
-import Department from "./pages/Admin/Department";
-import Level from "./pages/Admin/Level";
-import CreateAdmin from "./pages/Forms/CreateAdmin";
-import CreateCompany from "./pages/Forms/CreateCompany";
-import Designation from "./pages/Admin/Designation";
-import AssetsInventory from "./pages/Admin/Assets&Inventory";
-import LearningCornerPage from "./pages/Admin/LearningCorner";
-import ShiftPolicyList from "./pages/Admin/Shift";
-import LeaveCountPage from "./pages/Admin/LeaveCount";
-import EmployeeRegister from "./pages/Admin/EmployeeRegister";
-import RecruitmentPage from "./pages/Admin/Recruitment";
-import DepartmentWorkingDays from "./pages/Admin/DepartmentWiseWorking";
-import DepartmentForm from "./pages/Forms/DepartmentForm";
-import LevelForm from "./pages/Forms/LevelForm";
-import DesignationForm from "./pages/Forms/DesignationForm";
-import SalaryStructureList from "./pages/Admin/SalaryStructure";
-import SalaryStructureForm from "./pages/Forms/SalaryStructureForm";
-import IncomeTax from "./pages/Admin/IncomeTax";
-import IncomeTaxForm from "./pages/Forms/IncomeTaxForm";
-import AssetsInventoryForm from "./pages/Forms/AssetsInventoryForm";
-import AdminNotifications from "./pages/Admin/AdminNotifications";
-import ShiftConfigForm from "./pages/Forms/ShiftConfigForm";
-import DepartmentWorkingForm from "./pages/Forms/DepartmentWorkingForm";
-import RecruitmentForm from "./pages/Forms/RecruitmentForm";
-import EmployeeRegisterForm from "./pages/Forms/EmployeeRegisterForm";
-import LearningCornerForm from "./pages/Forms/LearningCornerForm";
-import ApprovedLeave from "./pages/Admin/ApprovedLeaves";
-import RejectedLeave from "./pages/Admin/RejectedLeaves";
-import Attendance from "./pages/Admin/AttendanceDetails";
-import AttendanceLog from "./pages/Admin/Attendance_log";
-import CompanyPolicy from "./pages/Admin/CompanyPolicy";
-import PayrollBatches from "./pages/Admin/PayrollBatches";
-import CompanyPolicyForm from "./pages/Forms/CompanyPolicyForm";
-import GeneratePayroll from "./pages/Admin/GeneratePayroll";
-import EmployeeDashboard from "./pages/Dashboard/EmployeeDashboard";
-import LeaveApply from "./pages/Employee/LeaveApply";
-import AttendanceHistory from "./pages/Employee/AttendanceHistory";
-import PersonalCalendar from "./pages/Employee/Personalcalendar";
-import Notifications from "./pages/Employee/Notifications";
-import LearningCorner from "./pages/Employee/EmployeeLearningCorner";
-import MyTask from "./pages/Employee/MyTask";
-import AssignTask from "./pages/Employee/AssignTask";
-import CreateTask from "./pages/Forms/CreateTask";
-import UpdateTaskForm from "./pages/Forms/UpdateTaskForm";
+import { lazy, Suspense } from "react";
+const SignIn = lazy(() => import("./pages/AuthPages/SignIn"));
+const SignUp = lazy(() => import("./pages/AuthPages/SignUp"));
+const MasterDashboard = lazy(() => import("./pages/Dashboard/MasterDashboard"));
+const AdminDashboard = lazy(() => import("./pages/Dashboard/AdminDashboard"));
+const AdminPage = lazy(() => import("./pages/Master/Adminpage"));
+const CompanyList = lazy(() => import("./pages/Master/Companypage"));
+const NotFound = lazy(() => import("./pages/OtherPage/NotFound"));
+const UserProfiles = lazy(() => import("./pages/UserProfiles"));
+const Videos = lazy(() => import("./pages/UiElements/Videos"));
+const Images = lazy(() => import("./pages/UiElements/Images"));
+const Alerts = lazy(() => import("./pages/UiElements/Alerts"));
+const Badges = lazy(() => import("./pages/UiElements/Badges"));
+const Avatars = lazy(() => import("./pages/UiElements/Avatars"));
+const Buttons = lazy(() => import("./pages/UiElements/Buttons"));
+const LineChart = lazy(() => import("./pages/Charts/LineChart"));
+const BarChart = lazy(() => import("./pages/Charts/BarChart"));
+const Calendar = lazy(() => import("./pages/Calendar"));
+const AdminCalendar = lazy(() => import("./pages/Admin/Calendar"));
+const BasicTables = lazy(() => import("./pages/Tables/BasicTables"));
+const EmployeeLayout = lazy(() => import("./layout/EmployeeLayout/EmployeeLayout"));
+const MasterLayout = lazy(() => import("./layout/MasterLayout/MasterLayout"));
+const Home = lazy(() => import("./pages/Dashboard/Home"));
+const FormElements = lazy(() => import("./pages/Forms/FormElements"));
+const Blank = lazy(() => import("./pages/Blank"));
+const AdminLayout = lazy(() => import("./layout/AdminLayout/AdminLayout"));
+const Department = lazy(() => import("./pages/Admin/Department"));
+const Level = lazy(() => import("./pages/Admin/Level"));
+const CreateAdmin = lazy(() => import("./pages/Forms/CreateAdmin"));
+const CreateCompany = lazy(() => import("./pages/Forms/CreateCompany"));
+const Designation = lazy(() => import("./pages/Admin/Designation"));
+const AssetsInventory = lazy(() => import("./pages/Admin/Assets&Inventory"));
+const LearningCornerPage = lazy(() => import("./pages/Admin/LearningCorner"));
+const ShiftPolicyList = lazy(() => import("./pages/Admin/Shift"));
+const LeaveCountPage = lazy(() => import("./pages/Admin/LeaveCount"));
+const EmployeeRegister = lazy(() => import("./pages/Admin/EmployeeRegister"));
+const RecruitmentPage = lazy(() => import("./pages/Admin/Recruitment"));
+const DepartmentWorkingDays = lazy(() => import("./pages/Admin/DepartmentWiseWorking"));
+const DepartmentForm = lazy(() => import("./pages/Forms/DepartmentForm"));
+const LevelForm = lazy(() => import("./pages/Forms/LevelForm"));
+const DesignationForm = lazy(() => import("./pages/Forms/DesignationForm"));
+const SalaryStructureList = lazy(() => import("./pages/Admin/SalaryStructure"));
+const SalaryStructureForm = lazy(() => import("./pages/Forms/SalaryStructureForm"));
+const IncomeTax = lazy(() => import("./pages/Admin/IncomeTax"));
+const IncomeTaxForm = lazy(() => import("./pages/Forms/IncomeTaxForm"));
+const AssetsInventoryForm = lazy(() => import("./pages/Forms/AssetsInventoryForm"));
+const AdminNotifications = lazy(() => import("./pages/Admin/AdminNotifications"));
+const ShiftConfigForm = lazy(() => import("./pages/Forms/ShiftConfigForm"));
+const DepartmentWorkingForm = lazy(() => import("./pages/Forms/DepartmentWorkingForm"));
+const RecruitmentForm = lazy(() => import("./pages/Forms/RecruitmentForm"));
+const EmployeeRegisterForm = lazy(() => import("./pages/Forms/EmployeeRegisterForm"));
+const LearningCornerForm = lazy(() => import("./pages/Forms/LearningCornerForm"));
+const ApprovedLeave = lazy(() => import("./pages/Admin/ApprovedLeaves"));
+const RejectedLeave = lazy(() => import("./pages/Admin/RejectedLeaves"));
+const Attendance = lazy(() => import("./pages/Admin/AttendanceDetails"));
+const AttendanceLog = lazy(() => import("./pages/Admin/Attendance_log"));
+const CompanyPolicy = lazy(() => import("./pages/Admin/CompanyPolicy"));
+const PayrollBatches = lazy(() => import("./pages/Admin/PayrollBatches"));
+const CompanyPolicyForm = lazy(() => import("./pages/Forms/CompanyPolicyForm"));
+const GeneratePayroll = lazy(() => import("./pages/Admin/GeneratePayroll"));
+const EmployeeDashboard = lazy(() => import("./pages/Dashboard/EmployeeDashboard"));
+const LeaveApply = lazy(() => import("./pages/Employee/LeaveApply"));
+const AttendanceHistory = lazy(() => import("./pages/Employee/AttendanceHistory"));
+const PersonalCalendar = lazy(() => import("./pages/Employee/Personalcalendar"));
+const Notifications = lazy(() => import("./pages/Employee/Notifications"));
+const LearningCorner = lazy(() => import("./pages/Employee/EmployeeLearningCorner"));
+const MyTask = lazy(() => import("./pages/Employee/MyTask"));
+const AssignTask = lazy(() => import("./pages/Employee/AssignTask"));
+const CreateTask = lazy(() => import("./pages/Forms/CreateTask"));
+const UpdateTaskForm = lazy(() => import("./pages/Forms/UpdateTaskForm"));
 
+const UserManagementPage = lazy(() => import("./pages/UserManagement/index"));
+const ProductPage = lazy(() => import("./pages/Products/index"));
+const ServicePage = lazy(() => import("./pages/Services/index"));
+const SubServicePage = lazy(() => import("./pages/SubService/index"));
+const DemoRequestPage = lazy(() => import("./pages/DemoRequests/index"));
+const ContactRequestPage = lazy(() => import("./pages/ContactRequests/index"));
 
+const MainPage = lazy(() => import("./Website/Pages/Home"));
+const Service = lazy(() => import("./Website/Pages/Service"));
+const Services = lazy(() => import("./Website/Pages/Services"));
+const Team = lazy(() => import("./Website/Pages/Team"));
+const Contact = lazy(() => import("./Website/Pages/Contact"));
+const AboutUs = lazy(() => import("./Website/Pages/AboutUs"));
+const Products = lazy(() => import("./Website/Pages/Products"));
+const DigitalMarketing = lazy(() => import("./Website/Pages/DigitalMarketing"));
+const SoftwareSolutions = lazy(() => import("./Website/Pages/SoftwareSolutions"));
+const AnalyticsSolution = lazy(() => import("./Website/Pages/AnalyticsSolution"));
+const BookDemo = lazy(() => import("./Website/Pages/BookDemo"));
+const ProductDetailsPage = lazy(() => import("./Website/Pages/ProductDetailsPage"));
+const PrivacyPolicy = lazy(() => import("./Website/Pages/PrivacyPolicy"));
+const Terms = lazy(() => import("./Website/Pages/Terms"));
 
-import UserManagementPage from "./pages/UserManagement/index"
-import ProductPage from "./pages/Products/index"
-import ServicePage from "./pages/Services/index"
-import SubServicePage from "./pages/SubService/index"
-import DemoRequestPage from "./pages/DemoRequests/index"
-import ContactRequestPage from "./pages/ContactRequests/index"
+const LoadingSpinner = () => (
+  <div className="flex items-center justify-center min-h-screen">
+    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+  </div>
+);
 
-import MainPage from "./Website/Pages/Home"
-import Service from "./Website/Pages/Service"
-import Services from "./Website/Pages/Services"
-import Team from "./Website/Pages/Team"
-import Contact from "./Website/Pages/Contact"
-import AboutUs from "./Website/Pages/AboutUs"
-import Products from "./Website/Pages/Products"
-import DigitalMarketing from "./Website/Pages/DigitalMarketing"
-import SoftwareSolutions from "./Website/Pages/SoftwareSolutions"
-import AnalyticsSolution from "./Website/Pages/AnalyticsSolution"
-import BookDemo from "./Website/Pages/BookDemo"
-import ProductDetailsPage  from "./Website/Pages/ProductDetailsPage"
-import PrivacyPolicy  from "./Website/Pages/PrivacyPolicy"
-import Terms  from "./Website/Pages/Terms"
+// interface RoutesComponentProps {
+//     hasPreloaderShown: boolean;
+// }
 
+// export function appRoutes({ hasPreloaderShown }: RoutesComponentProps) {
 
 export function appRoutes() {
   return (
+
+  <Suspense fallback={<LoadingSpinner />}>
+
     <Routes>
           {/* Dashboard Layout */}
           <Route element={<MasterLayout />}>
@@ -218,6 +231,7 @@ export function appRoutes() {
             <Route path="/signin" element={<SignIn />} />
             <Route path="/signup" element={<SignUp />} />
             <Route path="/" element={<MainPage />} />
+            {/* <Route path="/" element={<MainPage hasPreloaderShown={hasPreloaderShown} />} /> */}
             <Route path="/service" element={<Service />} />
             <Route path="/contact" element={<Contact />} />
             <Route path="/about" element={<AboutUs />} />
@@ -250,6 +264,8 @@ export function appRoutes() {
             {/* Fallback Route */}
             <Route path="*" element={<NotFound />} />
     </Routes>
+  </Suspense>
+
   );
 }
 

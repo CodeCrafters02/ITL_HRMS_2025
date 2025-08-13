@@ -421,6 +421,21 @@ const BaseLayout: React.FC<BaseLayoutProps> = ({ children, pageTitle, breadcrumb
       {/* Top Frame */}
       <div className="mil-frame">
         <div className="mil-frame-top">
+        {/* <img className="mil-logo" src="/logooo (2).png" alt="Logo" /> */}
+            {/* Desktop Logo */}
+            <img
+              className="mil-logo-desktop"
+              src="/logooo (2).png"
+              alt="Logo"
+              style={{ height: '140px', width: 'auto' }}
+            />
+            {/* Mobile Logo */}
+            <img
+              className="mil-logo-mobile"
+              src="/IMG_9162 (1).png"
+              alt="Mobile Logo"
+            />
+
           <Link
             to="/bookdemo"
             className="mil-logo"
@@ -429,7 +444,7 @@ const BaseLayout: React.FC<BaseLayoutProps> = ({ children, pageTitle, breadcrumb
             onMouseLeave={() => setHover(false)}
           >
             Book A Demo
-          </Link>
+          </Link>          
           <div className={`mil-menu-btn ${isMenuOpen ? 'mil-active' : ''}`} onClick={toggleMenu}>
             <span></span>
           </div>

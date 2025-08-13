@@ -93,7 +93,7 @@ const HomeLayout: React.FC<HomeLayoutProps> = ({ children, hasPreloaderShown = f
       </div>
 
       {/* Preloader - Only show on first load */}
-      {/* {!hasPreloaderShown && (
+      {!hasPreloaderShown && (
         <div className="mil-preloader" ref={preloaderRef}>
           <div className="mil-preloader-animation">
           <div className="mil-pos-abs mil-animation-1">
@@ -109,7 +109,7 @@ const HomeLayout: React.FC<HomeLayoutProps> = ({ children, hasPreloaderShown = f
             </div>
           </div>
         </div>
-      )} */}
+      )}
 
 
       {/* Progress Bar */}
@@ -237,13 +237,20 @@ const HomeLayout: React.FC<HomeLayoutProps> = ({ children, hasPreloaderShown = f
       {/* Top Frame */}
       <div className="mil-frame">
         <div className="mil-frame-top">
-{/* <img className="mil-logo" src="/logooo (2).png" alt="Logo" /> */}
-  <img
-    className="mil-logo"
-    src="/logooo (2).png"
-    alt="Logo"
-    style={{ height: '140px', width: 'auto' }}  // adjust size as needed
-  />
+        {/* <img className="mil-logo" src="/logooo (2).png" alt="Logo" /> */}
+            {/* Desktop Logo */}
+            <img
+              className="mil-logo-desktop"
+              src="/logooo (2).png"
+              alt="Logo"
+              style={{ height: '140px', width: 'auto' }}
+            />
+            {/* Mobile Logo */}
+            <img
+              className="mil-logo-mobile"
+              src="/IMG_9162 (1).png"
+              alt="Mobile Logo"
+            />
 
           <Link
             to="/bookdemo"
