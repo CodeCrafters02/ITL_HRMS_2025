@@ -55,36 +55,40 @@ export interface Employee {
   is_active?: boolean;
 }
 
+
 const EmployeeRegister: React.FC = () => {
   const navigate = useNavigate();
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [editRowId, setEditRowId] = useState<number | null>(null);
-  
+
+  // Search state
+  const [search, setSearch] = useState("");
+
   interface EditFormType extends Partial<Employee> {
     reporting_manager_id?: string | number;
     who_referred_id?: string | number;
   }
-  
+
   const [editForm, setEditForm] = useState<EditFormType>({});
   const [departments, setDepartments] = useState<{ id: number; name: string }[]>([]);
   const [designations, setDesignations] = useState<{ id: number; name: string; department: number }[]>([]);
   const [employeesList, setEmployeesList] = useState<{ id: number; name: string }[]>([]);
   const [levelChoices, setLevelChoices] = useState<{ id: number; name: string }[]>([]);
   const [reportingManagerChoices, setReportingManagerChoices] = useState<{ id: number; first_name: string; last_name: string }[]>([]);
-  
+
   const genderOptions = [
     { value: 'male', label: 'Male' },
     { value: 'female', label: 'Female' },
     { value: 'other', label: 'Other' },
   ];
-  
+
   const paymentOptions = [
     { value: 'cash', label: 'Cash' },
     { value: 'bank', label: 'Bank' },
   ];
-  
+
   const epfEsicOptions = [
     { value: 'yes', label: 'Yes' },
     { value: 'no', label: 'No' },
@@ -265,17 +269,35 @@ const EmployeeRegister: React.FC = () => {
   if (error) return <div>{error}</div>;
   if (!employees.length) return <div>No employees found</div>;
 
+  // Filter employees by search (id or name)
+  const filteredEmployees = employees.filter(emp => {
+    const searchLower = search.toLowerCase();
+    return (
+      emp.employee_id?.toLowerCase().includes(searchLower) ||
+      [emp.first_name, emp.middle_name, emp.last_name].filter(Boolean).join(' ').toLowerCase().includes(searchLower)
+    );
+  });
+
   return (
     <>
-           
       <div className="space-y-6">
-        <div className="flex items-center gap-4">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Employee Register</h1>
-            <p className="text-gray-600 dark:text-gray-400 mt-2">Manage all employee records and information</p>
+        <div className="flex flex-col md:flex-row md:items-center md:space-x-3 space-y-2 md:space-y-0">
+          <div className="flex flex-col justify-center">
+            <h1 className="text-3xl font-bold text-gray-900 dark:text-white m-0">Employee Register</h1>
+            <p className="text-gray-600 dark:text-gray-400 m-0 text-sm">Manage all employee records and information</p>
           </div>
+         
+          <div className="hidden md:block" style={{ flexBasis: '15%' }}></div>
+          <input
+            type="text"
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            placeholder="Search by Employee ID or Name"
+            className="md:w-64 px-4 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            style={{ minWidth: 0 }}
+          />
           <button
-            className="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-lg shadow-md transition-colors duration-200 flex items-center gap-2"
+            className="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-3 md:py-3 md:px-6 rounded-lg shadow-md transition-colors duration-200 flex items-center gap-2 w-full md:w-auto text-sm md:text-base"
             onClick={() => navigate('/admin/form-employee-register')}
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -287,7 +309,7 @@ const EmployeeRegister: React.FC = () => {
 
         <ComponentCard 
           title="Employee Records" 
-          desc={`Total employees: ${employees.length}`}
+          desc={`Total employees: ${filteredEmployees.length}`}
         >
           <div className="overflow-x-auto">
             <Table className="border-collapse border border-gray-200 dark:border-gray-700">
@@ -333,7 +355,7 @@ const EmployeeRegister: React.FC = () => {
               </TableHeader>
               
               <TableBody>
-                {employees.map((emp) => (
+                {filteredEmployees.map((emp) => (
                   <TableRow key={emp.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/50">
                     {/* Actions */}
                     <TableCell className="border border-gray-200 dark:border-gray-700 p-4">

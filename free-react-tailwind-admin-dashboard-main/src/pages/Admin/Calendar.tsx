@@ -3,7 +3,7 @@ import FullCalendar from "@fullcalendar/react";
 import dayGridPlugin from "@fullcalendar/daygrid";
 import timeGridPlugin from "@fullcalendar/timegrid";
 import interactionPlugin from "@fullcalendar/interaction";
-import { EventInput, DateSelectArg, EventClickArg } from "@fullcalendar/core";
+import { EventInput, DateSelectArg, EventClickArg, EventContentArg, DayCellContentArg } from "@fullcalendar/core";
 import { Modal } from "../../components/ui/modal";
 import { useModal } from "../../hooks/useModal";
 import PageMeta from "../../components/common/PageMeta";
@@ -11,32 +11,24 @@ import { axiosInstance } from "../Dashboard/api";
 
 interface CalendarEvent extends EventInput {
   id?: string;
-  extendedProps: {
-    calendar: string;
-    [key: string]: unknown;
-  };
+  name: string;
+  date: string;
+  description?: string;
+  is_holiday?: boolean;
 }
 
 const AdminCalendar: React.FC = () => {
   const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
-  const [eventTitle, setEventTitle] = useState("");
-  const [eventStartDate, setEventStartDate] = useState("");
-  const [eventEndDate, setEventEndDate] = useState("");
-  const [eventLevel, setEventLevel] = useState("");
+  const [eventName, setEventName] = useState("");
+  const [eventDate, setEventDate] = useState("");
+  const [eventDescription, setEventDescription] = useState("");
+  const [eventIsHoliday, setEventIsHoliday] = useState(false);
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const calendarRef = useRef<FullCalendar>(null);
   const { isOpen, openModal, closeModal } = useModal();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const calendarsEvents = {
-    Danger: "danger",
-    Success: "success",
-    Primary: "primary",
-    Warning: "warning",
-  };
-
-  // Fetch events from backend
   useEffect(() => {
     fetchEvents();
   }, []);
@@ -46,22 +38,16 @@ const AdminCalendar: React.FC = () => {
     setError(null);
     try {
       const response = await axiosInstance.get("/calendar-events/");
-      // Map backend events to FullCalendar format
       setEvents(
-        response.data.map((ev: {
-          id: string;
-          title: string;
-          start: string;
-          end?: string;
-          allDay?: boolean;
-          calendar: string;
-        }) => ({
+        response.data.map((ev: CalendarEvent) => ({
           id: String(ev.id),
-          title: ev.title,
-          start: ev.start,
-          end: ev.end,
-          allDay: ev.allDay,
-          extendedProps: { calendar: ev.calendar },
+          name: ev.name,
+          date: ev.date,
+          description: ev.description,
+          is_holiday: ev.is_holiday,
+          title: ev.name, // For FullCalendar display
+          start: ev.date, // For FullCalendar
+          allDay: true,
         }))
       );
     } catch {
@@ -71,20 +57,35 @@ const AdminCalendar: React.FC = () => {
     }
   };
 
+  const handleDeleteEvent = async () => {
+    if (!selectedEvent || !selectedEvent.id) return;
+    setLoading(true);
+    setError(null);
+    try {
+      await axiosInstance.delete(`/calendar-events/${selectedEvent.id}/`);
+      fetchEvents();
+      closeModal();
+      resetModalFields();
+    } catch {
+      setError("Failed to delete event");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleDateSelect = (selectInfo: DateSelectArg) => {
     resetModalFields();
-    setEventStartDate(selectInfo.startStr);
-    setEventEndDate(selectInfo.endStr || selectInfo.startStr);
+    setEventDate(selectInfo.startStr);
     openModal();
   };
 
   const handleEventClick = (clickInfo: EventClickArg) => {
     const event = clickInfo.event;
     setSelectedEvent(event as unknown as CalendarEvent);
-    setEventTitle(event.title);
-    setEventStartDate(event.start?.toISOString().split("T")[0] || "");
-    setEventEndDate(event.end?.toISOString().split("T")[0] || "");
-    setEventLevel(event.extendedProps.calendar);
+    setEventName(event.title);
+    setEventDate(event.start?.toISOString().split("T")[0] || "");
+    setEventDescription(event.extendedProps.description || "");
+    setEventIsHoliday(!!event.extendedProps.is_holiday);
     openModal();
   };
 
@@ -95,18 +96,18 @@ const AdminCalendar: React.FC = () => {
       if (selectedEvent && selectedEvent.id) {
         // Update existing event
         await axiosInstance.put(`/calendar-events/${selectedEvent.id}/`, {
-          title: eventTitle,
-          start: eventStartDate,
-          end: eventEndDate,
-          calendar: eventLevel,
+          name: eventName,
+          date: eventDate,
+          description: eventDescription,
+          is_holiday: eventIsHoliday,
         });
       } else {
         // Add new event
         await axiosInstance.post(`/calendar-events/`, {
-          title: eventTitle,
-          start: eventStartDate,
-          end: eventEndDate,
-          calendar: eventLevel,
+          name: eventName,
+          date: eventDate,
+          description: eventDescription,
+          is_holiday: eventIsHoliday,
         });
       }
       fetchEvents();
@@ -120,13 +121,74 @@ const AdminCalendar: React.FC = () => {
   };
 
   const resetModalFields = () => {
-    setEventTitle("");
-    setEventStartDate("");
-    setEventEndDate("");
-    setEventLevel("");
+    setEventName("");
+    setEventDate("");
+    setEventDescription("");
+    setEventIsHoliday(false);
     setSelectedEvent(null);
   };
 
+  // Render event content for FullCalendar
+  const renderEventContent = (eventInfo: EventContentArg) => {
+    const isHoliday = eventInfo.event.extendedProps.is_holiday;
+    return (
+      <div className="event-fc-color flex fc-event-main p-1 rounded-sm items-center">
+        <div className="fc-event-time" style={{marginRight: 6}}>{eventInfo.timeText}</div>
+        <div className="fc-event-title flex items-center">
+          {!isHoliday && (
+            <span role="img" aria-label="calendar" style={{marginRight: 6}}>📅</span>
+          )}
+          <span>{eventInfo.event.title}</span>
+        </div>
+      </div>
+    );
+  };
+
+  // Render badge/mark on days with events or holidays
+  const renderDayCellContent = (arg: DayCellContentArg) => {
+    const dateStr = arg.date.toISOString().split('T')[0];
+    // Check if there is a holiday event on this date
+    const isHoliday = events.some(ev => ev.date === dateStr && ev.is_holiday);
+    // Check if there is any event (non-holiday)
+    const hasEvent = events.some(ev => ev.date === dateStr && !ev.is_holiday);
+    return (
+      <div style={{ position: 'relative', width: '100%', height: '100%' }}>
+        <span>{arg.dayNumberText}</span>
+        {isHoliday && (
+          <span
+            style={{
+              position: 'absolute',
+              top: 2,
+              right: 2,
+              width: 10,
+              height: 10,
+              borderRadius: '50%',
+              background: '#ef4444', // red for holiday
+              display: 'inline-block',
+              border: '2px solid #fff',
+              boxShadow: '0 0 0 2px #ef4444',
+            }}
+            title="Holiday"
+          ></span>
+        )}
+        {!isHoliday && hasEvent && (
+          <span
+            style={{
+              position: 'absolute',
+              top: 2,
+              right: 15,
+              width: 8,
+              height: 8,
+              borderRadius: '50%',
+              background: '#d11111ff',
+              display: 'inline-block',
+            }}
+            title="Holiday"
+          ></span>
+        )}
+      </div>
+    );
+  };
   return (
     <>
       <PageMeta title="Admin Calendar" description="Admin Calendar" />
@@ -148,6 +210,7 @@ const AdminCalendar: React.FC = () => {
             select={handleDateSelect}
             eventClick={handleEventClick}
             eventContent={renderEventContent}
+            dayCellContent={renderDayCellContent}
             customButtons={{
               addEventButton: {
                 text: "Add Event +",
@@ -174,78 +237,53 @@ const AdminCalendar: React.FC = () => {
               <div>
                 <div>
                   <label className="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">
-                    Event Title
+                    Event Name
                   </label>
                   <input
-                    id="event-title"
+                    id="event-name"
                     type="text"
-                    value={eventTitle}
-                    onChange={(e) => setEventTitle(e.target.value)}
+                    value={eventName}
+                    onChange={(e) => setEventName(e.target.value)}
                     className="dark:bg-dark-900 h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800"
                   />
                 </div>
-              </div>
-              <div className="mt-6">
-                <label className="block mb-4 text-sm font-medium text-gray-700 dark:text-gray-400">
-                  Event Color
-                </label>
-                <div className="flex flex-wrap items-center gap-4 sm:gap-5">
-                  {Object.entries(calendarsEvents).map(([key, value]) => (
-                    <div key={key} className="n-chk">
-                      <div className={`form-check form-check-${value} form-check-inline`}>
-                        <label
-                          className="flex items-center text-sm text-gray-700 form-check-label dark:text-gray-400"
-                          htmlFor={`modal${key}`}
-                        >
-                          <span className="relative">
-                            <input
-                              className="sr-only form-check-input"
-                              type="radio"
-                              name="event-level"
-                              value={key}
-                              id={`modal${key}`}
-                              checked={eventLevel === key}
-                              onChange={() => setEventLevel(key)}
-                            />
-                            <span className="flex items-center justify-center w-5 h-5 mr-2 border border-gray-300 rounded-full box dark:border-gray-700">
-                              <span
-                                className={`h-2 w-2 rounded-full bg-white ${eventLevel === key ? "block" : "hidden"}`}
-                              ></span>
-                            </span>
-                          </span>
-                          {key}
-                        </label>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              <div className="mt-6">
-                <label className="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">
-                  Enter Start Date
-                </label>
-                <div className="relative">
-                  <input
-                    id="event-start-date"
-                    type="date"
-                    value={eventStartDate}
-                    onChange={(e) => setEventStartDate(e.target.value)}
-                    className="dark:bg-dark-900 h-11 w-full appearance-none rounded-lg border border-gray-300 bg-transparent bg-none px-4 py-2.5 pl-4 pr-11 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800"
+                <div className="mt-6">
+                  <label className="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">
+                    Description
+                  </label>
+                  <textarea
+                    id="event-description"
+                    value={eventDescription}
+                    onChange={(e) => setEventDescription(e.target.value)}
+                    className="dark:bg-dark-900 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800"
+                    rows={3}
                   />
                 </div>
+                <div className="mt-6 flex items-center">
+                  <input
+                    id="event-is-holiday"
+                    type="checkbox"
+                    checked={eventIsHoliday}
+                    onChange={(e) => setEventIsHoliday(e.target.checked)}
+                    className="mr-2"
+                  />
+                  <label htmlFor="event-is-holiday" className="text-sm font-medium text-gray-700 dark:text-gray-400">
+                    Is Holiday
+                  </label>
+                </div>
               </div>
+              {/* Removed Event Color selection, not in backend model */}
 
               <div className="mt-6">
                 <label className="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">
-                  Enter End Date
+                  Event Date
                 </label>
                 <div className="relative">
                   <input
-                    id="event-end-date"
+                    id="event-date"
                     type="date"
-                    value={eventEndDate}
-                    onChange={(e) => setEventEndDate(e.target.value)}
+                    value={eventDate}
+                    onChange={(e) => setEventDate(e.target.value)}
                     className="dark:bg-dark-900 h-11 w-full appearance-none rounded-lg border border-gray-300 bg-transparent bg-none px-4 py-2.5 pl-4 pr-11 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800"
                   />
                 </div>
@@ -259,6 +297,16 @@ const AdminCalendar: React.FC = () => {
               >
                 Close
               </button>
+              {selectedEvent && selectedEvent.id && (
+                <button
+                  onClick={handleDeleteEvent}
+                  type="button"
+                  className="btn btn-danger flex w-full justify-center rounded-lg bg-red-500 px-4 py-2.5 text-sm font-medium text-white hover:bg-red-600 sm:w-auto"
+                  disabled={loading}
+                >
+                  Delete
+                </button>
+              )}
               <button
                 onClick={handleAddOrUpdateEvent}
                 type="button"
@@ -272,20 +320,6 @@ const AdminCalendar: React.FC = () => {
         </Modal>
       </div>
     </>
-  );
-};
-
-import { EventContentArg } from "@fullcalendar/core";
-const renderEventContent = (eventInfo: EventContentArg) => {
-  const colorClass = `fc-bg-${eventInfo.event.extendedProps.calendar?.toLowerCase?.()}`;
-  return (
-    <div
-      className={`event-fc-color flex fc-event-main ${colorClass} p-1 rounded-sm`}
-    >
-      <div className="fc-daygrid-event-dot"></div>
-      <div className="fc-event-time">{eventInfo.timeText}</div>
-      <div className="fc-event-title">{eventInfo.event.title}</div>
-    </div>
   );
 };
 

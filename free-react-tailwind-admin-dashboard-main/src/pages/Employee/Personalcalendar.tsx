@@ -49,14 +49,14 @@ const PersonalCalendar: React.FC = () => {
 
       const calendarEvents: CalendarEvent[] = [];
       
-      response.data.weeks.forEach((week: { day: string; date: string; personal_events: { id: number; name: string; description?: string }[]; admin_events: { id: number; name: string }[] }[]) => {
+      response.data.weeks.forEach((week: { day: string; date: string; personal_events: { id: number; name?: string; title?: string; description?: string }[]; admin_events: { id: number; name?: string; title?: string }[] }[]) => {
         week.forEach((day) => {
           if (day.day) {
             // Add personal events
             day.personal_events.forEach((event) => {
               calendarEvents.push({
                 id: `personal-${event.id}`,
-                title: event.name,
+                title: event.name || event.title || '',
                 start: day.date,
                 extendedProps: {
                   type: 'personal',
@@ -69,7 +69,7 @@ const PersonalCalendar: React.FC = () => {
             day.admin_events.forEach((event) => {
               calendarEvents.push({
                 id: `admin-${event.id}`,
-                title: event.name,
+                title: event.name || event.title || '',
                 start: day.date,
                 extendedProps: {
                   type: 'admin'

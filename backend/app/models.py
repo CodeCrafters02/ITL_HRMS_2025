@@ -492,22 +492,33 @@ class Attendance(models.Model):
             self.save()
 
 class BreakConfig(models.Model):
-    company = models.ForeignKey(Company, on_delete=models.CASCADE)
-    break_type = models.CharField(max_length=50, null=True, blank=True)  
-    duration_minutes = models.PositiveIntegerField()
+    BREAK_CHOICES = [
+        ('dont_disturb', "Don't Disturb"),
+        ('short_break', 'Short Break'),
+        ('meal_break', 'Meal Break'),
+    ]
+
+    company = models.ForeignKey(Company, on_delete=models.CASCADE, related_name='break_configs')
+    break_choice = models.CharField(max_length=20, choices=BREAK_CHOICES,null=True, blank=True)
+    duration_minutes = models.PositiveIntegerField(null=True, blank=True)  
+    enabled = models.BooleanField(default=True) 
 
     def __str__(self):
-        return f"{self.break_type} - {self.duration_minutes} min"
+        if self.duration_minutes:
+            return f"{self.company} - {self.get_break_choice_display()} ({self.duration_minutes} min)"
+        return f"{self.company} - {self.get_break_choice_display()} (No fixed duration)"
+
+
 class BreakLog(models.Model):
-    employee = models.ForeignKey(Employee, on_delete=models.CASCADE, related_name='breaks', null=True, blank=True)
+    employee = models.ForeignKey(Employee, on_delete=models.CASCADE, related_name='break_logs', null=True, blank=True)
     attendance = models.ForeignKey('Attendance', on_delete=models.CASCADE, null=True, related_name='break_logs')
-    break_policy = models.ForeignKey(BreakConfig, on_delete=models.SET_NULL, null=True, blank=True)
+    break_config = models.ForeignKey(BreakConfig, on_delete=models.SET_NULL, null=True, blank=True)
     start = models.DateTimeField(null=True, blank=True)
     end = models.DateTimeField(null=True, blank=True)
     duration_minutes = models.PositiveIntegerField(null=True, blank=True)
 
     def __str__(self):
-        return f"{self.employee} - {self.break_policy} ({self.start} - {self.end})"
+        return f"{self.employee} - {self.break_config} ({self.start} - {self.end})"
 
     
 class CompanyPolicies(models.Model):

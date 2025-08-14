@@ -7,7 +7,6 @@ urlpatterns = [
     path('employee-id/', EmployeeIdAPIView.as_view(), name='employee_id'),
     path('checkin/', CheckInAPIView.as_view(), name='api_checkin'),
     path('checkout/', CheckOutAPIView.as_view(), name='api_checkout'),
-    path('break/', BreakAPIView.as_view(), name='api_break'),
     path('dashboard/', DashboardAPIView.as_view(), name='dashboard'),
     path('employee-notifications/', NotificationListAPIView.as_view(), name='employee-notifications'),
 
@@ -28,4 +27,5 @@ urlpatterns = [
     path('emp-leaves/<int:leave_id>/reject/', RejectEmpLeaveAPIView.as_view(), name='emp_leave_reject'),
     path('emp-learning-corner/', EmpLearningCornerAPIView.as_view(), name='emp_learning_corner'),
     path('employee-profile/', EmployeeProfileAPIView.as_view(), name='employee_profile'),
+    path('employee-breaks/', BreakLogAPIView.as_view(), name='employee-breaks'),
 ]

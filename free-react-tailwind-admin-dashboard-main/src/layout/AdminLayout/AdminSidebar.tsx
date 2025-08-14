@@ -86,6 +86,7 @@ const navItems: NavItem[] = [
     name: "Configuration",
     icon: <PlugInIcon />,
     subItems: [
+      { name: "Break Config", path: "/admin/configuration/break-config", pro: false },
       { name: "Shift", path: "/admin/configuration/shift", pro: false },
       { name: "Department Wise Working days", path: "/admin/configuration/department-wise-working-days", pro: false },
       { name: "Leave Count", path: "/admin/configuration/leave-count", pro: false },

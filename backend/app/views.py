@@ -2,7 +2,7 @@ from rest_framework import viewsets, generics, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from django.utils.timezone import localtime
-from django.db.models import Sum
+from django.db.models import Sum, Q
 from django.utils import timezone
 from datetime import datetime, timedelta
 from calendar import monthrange
@@ -437,6 +437,30 @@ class CalendarEventViewSet(viewsets.ModelViewSet):
 
 
 class RelievedEmployeeViewSet(viewsets.ModelViewSet):
+
+    @action(detail=False, methods=['get'], url_path='search-employee')
+    def search_employee(self, request):
+        query = request.GET.get('q', '')
+        company = request.user.company
+        employees = Employee.objects.filter(
+            is_active=True,
+            company=company
+        ).filter(
+            Q(first_name__icontains=query) |
+            Q(last_name__icontains=query) |
+            Q(employee_id__icontains=query)
+        )[:20]
+        results = [
+            {
+                'id': emp.id,
+                'employee_id': emp.employee_id,
+                'full_name': emp.full_name,
+                'department': emp.department.department_name if emp.department else '',
+                'designation': emp.designation.designation_name if emp.designation else '',
+            }
+            for emp in employees
+        ]
+        return Response(results, status=status.HTTP_200_OK)
     queryset = RelievedEmployee.objects.all()
     serializer_class = RelievedEmployeeSerializer
     permission_classes = [IsAuthenticated, IsAdminUser]
@@ -1112,14 +1136,11 @@ class UserLogDeleteView(generics.DestroyAPIView):
 
 
 class BreakConfigViewSet(viewsets.ModelViewSet):
-    queryset = BreakConfig.objects.all()
     serializer_class = BreakConfigSerializer
-    permission_classes = [IsAuthenticated, IsAdminUser]
+    permission_classes = [IsAuthenticated,IsAdminUser]
 
     def get_queryset(self):
-        # Limit to the current user’s company
-        company = self.request.user.company
-        return BreakConfig.objects.filter(company=company)
+        return BreakConfig.objects.filter(company=self.request.user.company)
 
     def perform_create(self, serializer):
         serializer.save(company=self.request.user.company)

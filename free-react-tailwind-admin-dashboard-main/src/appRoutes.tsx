@@ -71,7 +71,9 @@ const CreateTask = lazy(() => import("./pages/Forms/CreateTask"));
 const UpdateTaskForm = lazy(() => import("./pages/Forms/UpdateTaskForm"));
 const EmployeeProfiles = lazy(() => import("./pages/Employee/Profile"));
 const ChangePasswordForm = lazy(() => import("./pages/Forms/ChangePasswordForm"));
-
+const BreakConfig = lazy(() => import("./pages/Admin/BreakConfig"));
+const RelievedEmployee = lazy(() => import("./pages/Admin/RelievedEmployee"));
+const UpdateEmployeeProfile = lazy(() => import("./pages/Forms/UpdateEmployeeProfile"));
 
 const UserManagementPage = lazy(() => import("./pages/UserManagement/index"));
 const ProductPage = lazy(() => import("./pages/Products/index"));
@@ -179,6 +181,8 @@ export function appRoutes() {
             <Route path="configuration/company-policies" element={<CompanyPolicy />} />
             <Route path="attendance-details" element={<Attendance />} />
             <Route path="admin-notifications" element={<AdminNotifications />} />
+            <Route path="configuration/break-config" element={<BreakConfig />} />
+            <Route path="relieved-employees" element={<RelievedEmployee />} />
 
 
             {/* Admin Forms */}
@@ -269,6 +273,8 @@ export function appRoutes() {
                 <Route path="/employee/assign-task" element={<AssignTask />} />
                 <Route path="/employee/create-tasks" element={<CreateTask />} />
                 <Route path="/employee/profile" element={<EmployeeProfiles />} />
+                <Route path="update-profile" element={<UpdateEmployeeProfile />} />
+
             </Route>
 
             {/* Fallback Route */}

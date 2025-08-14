@@ -178,62 +178,6 @@ class CheckOutAPIView(APIView):
         })
 
 
-class BreakAPIView(APIView):
-    permission_classes = [IsAuthenticated]
-
-    def post(self, request):
-        user = request.user
-        action = request.data.get('action')
-
-        if not hasattr(user, 'role') or user.role != 'employee':
-            return Response({"detail": "Unauthorized."}, status=403)
-
-        if not action:
-            return Response({"detail": "Action required."}, status=400)
-
-        try:
-            employee = Employee.objects.get(email=user.email)
-        except Employee.DoesNotExist:
-            return Response({"detail": "Employee not found."}, status=404)
-
-        today = timezone.localdate()
-        now_dt = timezone.localtime(timezone.now(), pytz.timezone('Asia/Kolkata'))
-
-        attendance = Attendance.objects.filter(employee=employee, date=today).first()
-        if not attendance or not attendance.check_in:
-            return Response({"detail": "Cannot break without check-in."}, status=400)
-        if attendance.check_out:
-            return Response({"detail": "Already checked out. No break allowed."}, status=400)
-
-        break_type = 'short' if action == 'shortbreak' else 'meal'
-
-        # Start or end break logic
-        active_break = BreakLog.objects.filter(
-            employee=employee,
-            end__isnull=True
-        ).first()
-
-        if not active_break:
-            BreakLog.objects.create(
-                employee=employee,
-                break_type=break_type,
-                start=now_dt
-            )
-            return Response({"detail": f"{break_type.capitalize()} break started."})
-        else:
-            active_break.end = now_dt
-            active_break.save()
-
-            duration = active_break.end - active_break.start
-            attendance.calculate_work_duration()
-            attendance.save()
-
-            return Response({
-                "detail": f"Break ended. Duration: {duration.total_seconds() // 60} mins",
-                "break": BreakLogSerializer(active_break).data
-            })
-
-
 
 class DashboardAPIView(APIView):
     permission_classes = [IsAuthenticated]
@@ -266,14 +210,16 @@ class DashboardAPIView(APIView):
             punch_in = attendance.check_in if attendance else None
             punch_out = attendance.check_out if attendance else None
 
-            # Break minutes calculation
-            break_minutes = 0
-            if attendance:
-                breaks = BreakLog.objects.filter(attendance=attendance, end__isnull=False)
-                break_minutes = sum(
-                    int((b.end - b.start).total_seconds() // 60)
-                    for b in breaks
-                )
+            # Break minutes calculation (fix: always sum all breaks for today for this employee)
+            breaks = BreakLog.objects.filter(
+                employee=employee,
+                start__date=today,
+                end__isnull=False
+            )
+            break_minutes = sum(
+                int((b.end - b.start).total_seconds() // 60)
+                for b in breaks
+            )
 
             # Late check-in logic
             is_late = False
@@ -330,17 +276,19 @@ class DashboardAPIView(APIView):
                 'shift_timing': f"{attendance.shift.checkin.strftime('%H:%M')} - {attendance.shift.checkout.strftime('%H:%M')}" if attendance and attendance.shift else '--:--',
                 'server_time': now.strftime('%Y-%m-%d %H:%M:%S'),
                 'active_break': {
-                    'type': active_break.break_type,
-                    'start_time': timezone.localtime(active_break.start, tz).strftime('%H:%M:%S')
-                } if active_break else None,
+                        'type': active_break.break_config.get_break_choice_display() if active_break.break_config else None,
+                        'break_config_id': active_break.break_config.id if active_break.break_config else None,
+                        'start_time': timezone.localtime(active_break.start, tz).strftime('%H:%M:%S')
+                    } if active_break else None,
                 'recent_breaks': [
-                    {
-                        'type': br.break_type,
-                        'start_time': timezone.localtime(br.start, tz).strftime('%H:%M:%S'),
-                        'end_time': timezone.localtime(br.end, tz).strftime('%H:%M:%S')
-                    }
-                    for br in recent_breaks
-                ] if recent_breaks else None,
+                        {
+                            'type': br.break_config.get_break_choice_display() if br.break_config else None,
+                            'break_config_id': br.break_config.id if br.break_config else None,
+                            'start_time': timezone.localtime(br.start, tz).strftime('%H:%M:%S'),
+                            'end_time': timezone.localtime(br.end, tz).strftime('%H:%M:%S')
+                        }
+                        for br in recent_breaks
+                    ] if recent_breaks else None,
                 'overtime': overtime,
                 'latest_payroll': latest_payroll_data
             }
@@ -403,7 +351,6 @@ class AttendanceHistoryAPIView(APIView):
 
         # Index by date
         att_map = {att.date: att for att in attendances}
-
         # Monthly stats
         monthly_data = []
         stats = {
@@ -433,66 +380,78 @@ class AttendanceHistoryAPIView(APIView):
                 status = 'leave'
                 stats['leave'] += 1
             elif att and att.check_in:
-                # Calculate work duration
-                check_out = att.check_out or timezone.localtime(timezone.now(), tz)
-                work_duration = (check_out - att.check_in).total_seconds() / 3600
-
-                if att.break_logs.exists():
+                if att.check_out:
+                    check_out = att.check_out
+                    check_in = att.check_in
+                    # Get all completed breaks for this employee for this day
+                    breaks = BreakLog.objects.filter(
+                        employee=employee,
+                        start__date=day,
+                        end__isnull=False
+                    )
                     total_break = sum(
                         (b.end - b.start).total_seconds()
-                        for b in att.break_logs.all() if b.end and b.start
+                        for b in breaks if b.end and b.start
                     )
+                    work_duration = (check_out - check_in).total_seconds() / 3600
                     work_duration -= total_break / 3600
-
-                total_hours = round(work_duration, 2)
-
-                # Shift rules
-                if att.shift:
-                    grace = att.shift.grace_period or timedelta(minutes=0)
-                    shift_start = timezone.make_aware(datetime.combine(day, att.shift.checkin), tz)
-                    if att.check_in > (shift_start + grace):
-                        is_late = True
-                        late_delta = att.check_in - (shift_start + grace)
-                        late_duration = str(late_delta).split('.')[0]  # Format as HH:MM:SS
-
-                    full_day_hours = att.shift.full_day_hours()
-                    half_day_hours = att.shift.half_day_hours()
-
-                    if work_duration >= full_day_hours:
+                    total_hours = round(work_duration, 2)
+                    # Shift rules
+                    if att.shift:
+                        grace = att.shift.grace_period or timedelta(minutes=15)
+                        shift_start_naive = datetime.combine(day, att.shift.checkin)
+                        shift_start_aware = tz.localize(shift_start_naive)
+                        check_in_local = check_in.astimezone(tz)
+                        if check_in_local > (shift_start_aware + grace):
+                            is_late = True
+                            late_delta = check_in_local - (shift_start_aware + grace)
+                            late_duration = str(late_delta).split('.')[0]  # Format as HH:MM:SS
+                        full_day_hours = att.shift.full_day_hours()
+                        half_day_hours = att.shift.half_day_hours()
+                        if work_duration >= full_day_hours:
+                            status = 'present'
+                            stats['present'] += 1
+                        elif work_duration >= half_day_hours:
+                            status = 'half_day'
+                            stats['half_day'] += 1
+                            stats['present'] += 0.5
+                            stats['absent'] += 0.5
+                        else:
+                            status = 'absent'
+                            stats['absent'] += 1
+                    else:
                         status = 'present'
                         stats['present'] += 1
-                    elif work_duration >= half_day_hours:
-                        status = 'half_day'
-                        stats['half_day'] += 1
-                        stats['present'] += 0.5
-                        stats['absent'] += 0.5
-                    else:
-                        status = 'absent'
-                        stats['absent'] += 1
+                    if att.overtime_duration:
+                        overtime_hours = round(att.overtime_duration.total_seconds() / 3600, 2)
+                    break_time = f'{int(total_break // 60)} min' if total_break else '-'
                 else:
-                    status = 'present'
-                    stats['present'] += 1
-
-                if att.overtime_duration:
-                    overtime_hours = round(att.overtime_duration.total_seconds() / 3600, 2)
-
+                    # Checked in but not checked out: show status as 'checked_in', and calculate late
+                    status = 'checked_in'
+                    break_time = '-'
+                    if att.shift:
+                        grace = att.shift.grace_period or timedelta(minutes=15)
+                        shift_start_naive = datetime.combine(day, att.shift.checkin)
+                        shift_start_aware = tz.localize(shift_start_naive)
+                        check_in_local = att.check_in.astimezone(tz)
+                        if check_in_local > (shift_start_aware + grace):
+                            is_late = True
+                            late_delta = check_in_local - (shift_start_aware + grace)
+                            late_duration = str(late_delta).split('.')[0]
             else:
                 if not is_weekend and status not in ['leave']:
                     status = 'absent'
                     stats['absent'] += 1
 
-            if is_late and status == 'present':
+            if is_late and status in ['present', 'half_day', 'checked_in']:
                 stats['late'] += 1
-
-            if att and att.total_work_duration:
-                break_time = str(att.total_work_duration)
 
             monthly_data.append({
                 'date': str(day),
-                'day_name': day.strftime('%A'),  # NEW: Monday, Tuesday, etc.
+                'day_name': day.strftime('%A'),
                 'check_in': att.check_in.astimezone(tz).strftime('%H:%M:%S') if att and att.check_in else '-',
                 'check_out': att.check_out.astimezone(tz).strftime('%H:%M:%S') if att and att.check_out else '-',
-                'shift': str(att.shift) if att and att.shift else '-',  # Or format shift times if needed
+                'shift': str(att.shift) if att and att.shift else '-',
                 'is_weekend': is_weekend,
                 'status': status,
                 'is_late': is_late,
@@ -547,7 +506,7 @@ class EmployeeCalendarAPIView(APIView):
                 week.append({
                     'day': day_num,
                     'date': str(day_date),
-                    'admin_events': [{'id': e.id, 'title': e.title} for e in admin_events],
+                    'admin_events': [{'id': e.id, 'title': e.name} for e in admin_events],
                     'personal_events': [{'id': e.id, 'title': e.name} for e in personal_events],
                     'is_today': day_date == today,
                     'is_selected': day_date == current_date
@@ -982,3 +941,62 @@ class EmployeeProfileAPIView(generics.RetrieveUpdateAPIView):
 
     def get_object(self):
         return Employee.objects.get(user=self.request.user)
+    
+    
+class BreakLogAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        employee = request.user.employee_profile
+        configs = BreakConfig.objects.filter(company=employee.company, enabled=True)
+        serializer = EmployeeBreakConfigSerializer(configs, many=True)
+        return Response(serializer.data)
+
+    def post(self, request):
+        
+        employee = request.user.employee_profile
+        break_config_id = request.data.get("break_config_id")
+        action = request.data.get("action")  # "start" or "end"
+
+        break_config = get_object_or_404(
+            BreakConfig, 
+            id=break_config_id, 
+            company=employee.company, 
+            enabled=True
+        )
+
+        if action == "start":
+            # Prevent starting a new break if one is active
+            active_break = BreakLog.objects.filter(
+                employee=employee, 
+                end__isnull=True
+            ).first()
+            if active_break:
+                return Response({"detail": "You already have an active break."}, status=400)
+
+            break_log = BreakLog.objects.create(
+                    employee=employee,
+                    break_config=break_config,  
+                    start=timezone.now()
+                )
+            return Response(EmployeeBreakLogSerializer(break_log).data, status=201)
+
+        elif action == "end":
+            active_break = BreakLog.objects.filter(
+                employee=employee, 
+                break_config=break_config, 
+                end__isnull=True
+            ).first()
+            if not active_break:
+                return Response({"detail": "No active break found."}, status=400)
+
+            active_break.end = timezone.now()
+            if active_break.start:
+                diff = active_break.end - active_break.start
+                active_break.duration_minutes = int(diff.total_seconds() // 60)
+            active_break.save()
+
+            return Response(EmployeeBreakLogSerializer(active_break).data)
+
+        else:
+            return Response({"detail": "Invalid action. Use 'start' or 'end'."}, status=400)

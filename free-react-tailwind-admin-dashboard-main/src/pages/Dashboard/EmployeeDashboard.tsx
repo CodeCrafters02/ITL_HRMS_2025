@@ -29,6 +29,7 @@ interface BreakData {
 interface ActiveBreakData {
   type: string;
   start_time: string;
+  break_config_id: number;
 }
 
 interface DashboardData {
@@ -59,6 +60,8 @@ export default function EmployeeDashboard(): React.JSX.Element {
   const [dashboardData, setDashboardData] = React.useState<DashboardData | null>(null);
   const [localTimer, setLocalTimer] = React.useState<number>(0);
   const [breakLoading, setBreakLoading] = React.useState<boolean>(false);
+  const [breakTimer, setBreakTimer] = React.useState<number>(0);
+  const breakTimerRef = React.useRef<ReturnType<typeof setInterval> | null>(null);
   const [notification, setNotification] = React.useState<NotificationState | null>(null);
   const [weeklyHours, setWeeklyHours] = React.useState<number>(0);
   const [attendanceScore, setAttendanceScore] = React.useState<number>(100);
@@ -134,20 +137,14 @@ export default function EmployeeDashboard(): React.JSX.Element {
     fetchDashboardData();
   }, [fetchDashboardData]);
 
-  // Local timer for real-time updates
+  // Local timer for real-time updates (working time)
   React.useEffect(() => {
-    const shouldBeRunning = dashboardData?.checkin_time && !dashboardData?.checkout_time;
+    const shouldBeRunning = dashboardData?.checkin_time && !dashboardData?.checkout_time && !dashboardData?.active_break;
 
     if (shouldBeRunning && dashboardData?.checkin_time) {
-      // Try different date parsing methods
       let checkinTime: number;
-
-      // First try: Direct parsing
       checkinTime = new Date(dashboardData.checkin_time).getTime();
-
-      // If invalid, try with manual formatting
       if (isNaN(checkinTime)) {
-        // Assume format like "HH:MM:SS" and use today's date
         const today = new Date();
         const timeParts = dashboardData.checkin_time.split(":");
         const hours = parseInt(timeParts[0]) || 0;
@@ -156,37 +153,66 @@ export default function EmployeeDashboard(): React.JSX.Element {
         today.setHours(hours, minutes, seconds, 0);
         checkinTime = today.getTime();
       }
-
       const now = Date.now();
       const elapsed = Math.max(0, Math.floor((now - checkinTime) / 1000));
-
       setLocalTimer(elapsed);
-
-      // Clear any existing timer
       if (timerRef.current) {
         clearInterval(timerRef.current);
       }
-
-      // Start live timer
       timerRef.current = setInterval(() => {
         setLocalTimer(prev => prev + 1);
       }, 1000);
     } else {
-      // When not checked in, clear timer and set to 0
       if (timerRef.current) {
         clearInterval(timerRef.current);
         timerRef.current = null;
       }
       setLocalTimer(0);
     }
-
     return () => {
       if (timerRef.current) {
         clearInterval(timerRef.current);
         timerRef.current = null;
       }
     };
-  }, [dashboardData?.checkin_time, dashboardData?.checkout_time]);
+  }, [dashboardData?.checkin_time, dashboardData?.checkout_time, dashboardData?.active_break]);
+
+  // Timer for active break
+  React.useEffect(() => {
+    if (dashboardData?.active_break && dashboardData?.active_break.start_time) {
+      let breakStart: number = new Date(dashboardData.active_break.start_time).getTime();
+      if (isNaN(breakStart)) {
+        const today = new Date();
+        const timeParts = dashboardData.active_break.start_time.split(":");
+        const hours = parseInt(timeParts[0]) || 0;
+        const minutes = parseInt(timeParts[1]) || 0;
+        const seconds = parseInt(timeParts[2]) || 0;
+        today.setHours(hours, minutes, seconds, 0);
+        breakStart = today.getTime();
+      }
+      const now = Date.now();
+      const elapsed = Math.max(0, Math.floor((now - breakStart) / 1000));
+      setBreakTimer(elapsed);
+      if (breakTimerRef.current) {
+        clearInterval(breakTimerRef.current);
+      }
+      breakTimerRef.current = setInterval(() => {
+        setBreakTimer(prev => prev + 1);
+      }, 1000);
+    } else {
+      if (breakTimerRef.current) {
+        clearInterval(breakTimerRef.current);
+        breakTimerRef.current = null;
+      }
+      setBreakTimer(0);
+    }
+    return () => {
+      if (breakTimerRef.current) {
+        clearInterval(breakTimerRef.current);
+        breakTimerRef.current = null;
+      }
+    };
+  }, [dashboardData?.active_break]);
 
   const formatTime = (seconds: number) => {
     // Safety check for invalid values (but allow 0 as a valid value)
@@ -228,13 +254,25 @@ export default function EmployeeDashboard(): React.JSX.Element {
     setLoading(false);
   };
 
-  const handleBreakAction = async (action: string) => {
+  // Handles both start and end break actions, expects break_config_id and action
+  const handleBreakAction = async (breakConfigOrAction: string | number, actionOverride?: string) => {
     setBreakLoading(true);
     try {
-      const res = await axiosInstance.post("break/", { action });
-      if (res.status === 200) {
+      let payload;
+      // If called from dropdown, breakConfigOrAction is break_config_id (number or string)
+      if (typeof breakConfigOrAction === 'number' || !isNaN(Number(breakConfigOrAction))) {
+        payload = { break_config_id: Number(breakConfigOrAction), action: "start" };
+      } else if (actionOverride) {
+        // For end action, pass break_config_id and action: "end"
+        payload = { break_config_id: actionOverride, action: "end" };
+      } else {
+        // fallback for legacy usage
+        payload = { action: breakConfigOrAction };
+      }
+      const res = await axiosInstance.post("/employee-breaks/", payload);
+      if (res.status === 200 || res.status === 201) {
         await fetchDashboardData();
-        showNotification(res.data.detail, "success");
+        showNotification("Break action successful", "success");
       } else {
         showNotification(res.data.detail || "Break action failed", "error");
       }
@@ -298,18 +336,23 @@ export default function EmployeeDashboard(): React.JSX.Element {
                     {isCheckedIn && (
                       <div className="flex gap-2 mt-3">
                         {hasActiveBreak ? (
-                          <button
-                            className="px-3 py-1 bg-orange-600 text-white rounded-full text-xs hover:bg-orange-700 transition-colors flex items-center gap-1"
-                            onClick={() => handleBreakAction(hasActiveBreak.type === 'short' ? 'shortbreak' : 'meal')}
-                            disabled={breakLoading}
-                          >
-                            <FaPause className="text-xs" />
-                            End {hasActiveBreak.type} Break
-                          </button>
+                          <div className="flex items-center gap-2">
+                            <span className="flex items-center px-3 py-1 bg-orange-100 text-orange-700 rounded-full text-xs font-semibold">
+                              <FaPause className="mr-1 text-orange-600" />
+                              <span className="ml-2 font-mono text-xs">{formatTime(breakTimer)}</span>
+                            </span>
+                            <button
+                              className="px-3 py-1 bg-orange-600 text-white rounded-full text-xs hover:bg-orange-700 transition-colors flex items-center gap-1"
+                              onClick={() => handleBreakAction('end', dashboardData?.active_break?.break_config_id?.toString())}
+                              disabled={breakLoading}
+                            >
+                              End Break
+                            </button>
+                          </div>
                         ) : (
                           <BreakIcons 
                             onBreakClick={handleBreakAction}
-                            disabled={breakLoading}
+                            disabled={breakLoading || !!dashboardData?.active_break}
                             activeBreak={dashboardData?.active_break?.type || null}
                           />
                         )}
@@ -322,10 +365,10 @@ export default function EmployeeDashboard(): React.JSX.Element {
                   {/* Live Timer Display */}
                   <div className="text-center">
                     <div className="text-sm font-bold text-gray-400 dark:text-gray-400 font-mono">
-                      {formatTime(localTimer)}
+                      {hasActiveBreak ? formatTime(breakTimer) : formatTime(localTimer)}
                     </div>
                     <div className="text-xs text-gray-500 dark:text-gray-400">
-                      {isCheckedIn ? 'Working Time' : 'Ready to Start'}
+                      {isCheckedIn ? (hasActiveBreak ? 'On Break' : 'Working Time') : 'Ready to Start'}
                     </div>
                   </div>
                   

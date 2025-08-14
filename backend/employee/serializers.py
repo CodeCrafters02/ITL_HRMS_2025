@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from app.models import Notification,LearningCorner, BreakLog,Attendance, ShiftPolicy, Employee,EmpLeave,Leave
+from app.models import Notification,LearningCorner,BreakConfig, BreakLog,Attendance, ShiftPolicy, Employee,EmpLeave,Leave
 from .models import *
 
 class ReportingManagerSerializer(serializers.ModelSerializer):
@@ -28,11 +28,6 @@ class EmployeeAttendanceSerializer(serializers.ModelSerializer):
             'is_present', 'created_at', 'updated_at'
         ]
 
-
-class BreakLogSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = BreakLog
-        fields = '__all__'
 
 class PersonalCalendarSerializer(serializers.ModelSerializer):
     class Meta:
@@ -330,3 +325,16 @@ class EmployeeUpdateSerializer(serializers.ModelSerializer):
             'date_of_birth', 'previous_employer',
             'date_of_releaving', 'previous_designation_name', 'previous_salary',
         ]
+        
+        
+class EmployeeBreakConfigSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = BreakConfig
+        fields = ['id', 'break_choice', 'duration_minutes', 'enabled']
+
+class EmployeeBreakLogSerializer(serializers.ModelSerializer):
+    break_config = EmployeeBreakConfigSerializer(read_only=True)
+
+    class Meta:
+        model = BreakLog
+        fields = ['id', 'break_config', 'start', 'end', 'duration_minutes']

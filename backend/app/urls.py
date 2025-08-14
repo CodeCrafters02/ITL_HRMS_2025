@@ -26,6 +26,7 @@ router.register(r'income-tax-configs', IncomeTaxConfigViewSet, basename='income-
 router.register(r'attendance', AttendanceViewSet, basename='attendance')
 router.register(r'policies', CompanyPoliciesViewSet, basename='company-policies')
 router.register(r'usermanagement', UserManagementViewSet, basename='usermanagement')
+router.register(r'break-config', BreakConfigViewSet, basename='break-config')
 
 
 urlpatterns = [
@@ -40,6 +41,6 @@ urlpatterns = [
     path('approved-leaves/', ApprovedLeaveLogView.as_view(), name='approved_leave_log'),
     path('rejected-leaves/', RejectedLeaveLogView.as_view(), name='rejected_leave_log'),
     path('attendance-logs/', AttendanceLogView.as_view(), name='attendance_log'),
-     path('generate-payroll/', GeneratePayrollView.as_view(), name='generate-payroll'),
+    path('generate-payroll/', GeneratePayrollView.as_view(), name='generate-payroll'),
 
 ]

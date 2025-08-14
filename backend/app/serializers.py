@@ -512,11 +512,19 @@ class CalendarEventSerializer(serializers.ModelSerializer):
         
         
 class RelievedEmployeeSerializer(serializers.ModelSerializer):
-    employee = serializers.PrimaryKeyRelatedField(queryset=Employee.objects.filter(is_active=True))
+    employee = serializers.PrimaryKeyRelatedField(queryset=Employee.objects.filter(is_active=True), required=True)
+    employee_name = serializers.SerializerMethodField(read_only=True)
+    employee_id = serializers.SerializerMethodField(read_only=True)
 
     class Meta:
         model = RelievedEmployee
-        fields = ['id', 'employee', 'relieving_date',  'remarks']
+        fields = ['id', 'employee', 'employee_name', 'employee_id', 'relieving_date',  'remarks']
+
+    def get_employee_name(self, obj):
+        return obj.employee.full_name if obj.employee else None
+
+    def get_employee_id(self, obj):
+        return obj.employee.employee_id if obj.employee else None
 
     def create(self, validated_data):
         employee = validated_data['employee']
@@ -699,6 +707,14 @@ class UserLogSerializer(serializers.ModelSerializer):
         
         
 class BreakConfigSerializer(serializers.ModelSerializer):
+    break_choice_display = serializers.CharField(source='get_break_choice_display', read_only=True)
+
     class Meta:
         model = BreakConfig
-        fields = ['id', 'company', 'break_type', 'duration_minutes']
+        fields = [
+            'id',
+            'break_choice',
+            'break_choice_display',
+            'duration_minutes',
+            'enabled'
+        ]
