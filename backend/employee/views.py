@@ -14,7 +14,7 @@ from rest_framework.views import APIView
 from calendar import month_name
 from .utils import calculate_worked_time, calculate_effective_time
 
-from app.models import Attendance,Notification,LearningCorner, ShiftPolicy, Employee, BreakLog,Payroll,CalendarEvent,EmpLeave
+from app.models import Attendance,Notification,LearningCorner, ShiftPolicy, Employee, BreakLog,Payroll,CalendarEvent,EmpLeave,CompanyPolicies
 from .models import *
 from .serializers import *
 
@@ -1000,3 +1000,16 @@ class BreakLogAPIView(APIView):
 
         else:
             return Response({"detail": "Invalid action. Use 'start' or 'end'."}, status=400)
+
+class EmployeeCompanyPoliciesAPIView(generics.ListAPIView):
+    serializer_class = PolicyConfigurationSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        user = self.request.user
+        return CompanyPolicies.objects.filter(company=user.company,is_active=True)
+
+    def get_serializer_context(self):
+        context = super().get_serializer_context()
+        context.update({"request": self.request})
+        return context

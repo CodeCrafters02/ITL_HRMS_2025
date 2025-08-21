@@ -24,36 +24,6 @@ export default function ProfessionalCard() {
   if (error) return <div className="text-red-500">{error}</div>;
   if (!profile) return null;
 
-  // If previous employer exists, show only previous employment details
-  if (profile.previous_employer) {
-    return (
-      <div className="p-5 border border-gray-200 rounded-2xl dark:border-gray-800 lg:p-6">
-        <h4 className="text-lg font-semibold text-gray-800 dark:text-white/90 mb-6">Previous Employment Details</h4>
-        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 lg:gap-7 2xl:gap-x-32">
-          <div>
-            <p className="mb-2 text-xs text-gray-500 dark:text-gray-400">Previous Employer</p>
-            <p className="text-sm font-medium text-gray-800 dark:text-white/90">{profile.previous_employer}</p>
-          </div>
-          <div>
-            <p className="mb-2 text-xs text-gray-500 dark:text-gray-400">Previous Designation</p>
-            <p className="text-sm font-medium text-gray-800 dark:text-white/90">{profile.previous_designation_name || '-'}</p>
-          </div>
-          <div>
-            <p className="mb-2 text-xs text-gray-500 dark:text-gray-400">Previous Salary</p>
-            <p className="text-sm font-medium text-gray-800 dark:text-white/90">{profile.previous_salary || '-'}</p>
-          </div>
-          <div>
-            <p className="mb-2 text-xs text-gray-500 dark:text-gray-400">Date of Joining</p>
-            <p className="text-sm font-medium text-gray-800 dark:text-white/90">{profile.date_of_joining || '-'}</p>
-          </div>
-          <div>
-            <p className="mb-2 text-xs text-gray-500 dark:text-gray-400">Date of Releaving</p>
-            <p className="text-sm font-medium text-gray-800 dark:text-white/90">{profile.date_of_releaving || '-'}</p>
-          </div>
-        </div>
-      </div>
-    );
-  }
 
   // Otherwise, show current professional details
   return (

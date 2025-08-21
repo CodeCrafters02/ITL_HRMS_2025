@@ -171,10 +171,10 @@ export default function AdminNotifications() {
               />
             </div>
             <div className="flex justify-end gap-3 pt-2">
-              <Button onClick={() => setShowModal(false)} className="bg-gray-200 text-gray-700 hover:bg-gray-300">
+              <Button type="button" onClick={() => setShowModal(false)} className="bg-gray-200 text-gray-700 hover:bg-gray-300">
                 Cancel
               </Button>
-              <Button className="bg-brand-500 text-white hover:bg-brand-600">
+              <Button type="submit" className="bg-brand-500 text-white hover:bg-brand-600">
                 Add
               </Button>
             </div>

@@ -28,4 +28,5 @@ urlpatterns = [
     path('emp-learning-corner/', EmpLearningCornerAPIView.as_view(), name='emp_learning_corner'),
     path('employee-profile/', EmployeeProfileAPIView.as_view(), name='employee_profile'),
     path('employee-breaks/', BreakLogAPIView.as_view(), name='employee-breaks'),
+    path('employee-companypolicies/', EmployeeCompanyPoliciesAPIView.as_view(), name='employee-company-policies'),
 ]

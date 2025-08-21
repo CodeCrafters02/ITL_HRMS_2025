@@ -499,8 +499,8 @@ const CreateTask: React.FC = () => {
             </Button>
 
             <Button
-              onClick={() => {}} // Form submission handled by Form component
               disabled={loading || !taskData.title || !taskData.deadline}
+              type="submit"
             >
               {loading ? "Creating..." : "Create Task"}
             </Button>

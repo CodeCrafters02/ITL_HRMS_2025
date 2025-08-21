@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from app.models import Notification,LearningCorner,BreakConfig, BreakLog,Attendance, ShiftPolicy, Employee,EmpLeave,Leave
+from app.models import Notification,LearningCorner,BreakConfig, BreakLog,Attendance, ShiftPolicy, Employee,EmpLeave,Leave,CompanyPolicies
 from .models import *
 
 class ReportingManagerSerializer(serializers.ModelSerializer):
@@ -321,10 +321,8 @@ class EmployeeUpdateSerializer(serializers.ModelSerializer):
         fields = [
             'first_name', 'middle_name', 'last_name',
             'mobile', 'temporary_address', 'permanent_address',
-            'photo', 'aadhar_card', 'pan_card',
-            'date_of_birth', 'previous_employer',
-            'date_of_releaving', 'previous_designation_name', 'previous_salary',
-        ]
+            'photo', 'aadhar_card', 'pan_card','aadhar_no','pan_no',
+            'date_of_birth']        
         
         
 class EmployeeBreakConfigSerializer(serializers.ModelSerializer):
@@ -338,3 +336,17 @@ class EmployeeBreakLogSerializer(serializers.ModelSerializer):
     class Meta:
         model = BreakLog
         fields = ['id', 'break_config', 'start', 'end', 'duration_minutes']
+        
+        
+class PolicyConfigurationSerializer(serializers.ModelSerializer):
+    document = serializers.SerializerMethodField()
+
+    class Meta:
+        model = CompanyPolicies
+        fields = ['id', 'name', 'document']
+
+    def get_document(self, obj):
+        request = self.context.get('request')
+        if obj.document:
+            return request.build_absolute_uri(obj.document.url)
+        return None

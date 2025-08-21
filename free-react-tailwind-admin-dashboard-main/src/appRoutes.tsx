@@ -64,6 +64,7 @@ const LeaveApply = lazy(() => import("./pages/Employee/LeaveApply"));
 const AttendanceHistory = lazy(() => import("./pages/Employee/AttendanceHistory"));
 const PersonalCalendar = lazy(() => import("./pages/Employee/Personalcalendar"));
 const Notifications = lazy(() => import("./pages/Employee/Notifications"));
+const ViewallNotification = lazy(() => import("./pages/Employee/ViewallNotification"));
 const LearningCorner = lazy(() => import("./pages/Employee/EmployeeLearningCorner"));
 const MyTask = lazy(() => import("./pages/Employee/MyTask"));
 const AssignTask = lazy(() => import("./pages/Employee/AssignTask"));
@@ -74,6 +75,7 @@ const ChangePasswordForm = lazy(() => import("./pages/Forms/ChangePasswordForm")
 const BreakConfig = lazy(() => import("./pages/Admin/BreakConfig"));
 const RelievedEmployee = lazy(() => import("./pages/Admin/RelievedEmployee"));
 const UpdateEmployeeProfile = lazy(() => import("./pages/Forms/UpdateEmployeeProfile"));
+const EmpCompanyPolicy = lazy(() => import("./pages/Employee/EmpCompanyPolicy"));
 
 const UserManagementPage = lazy(() => import("./pages/UserManagement/index"));
 const ProductPage = lazy(() => import("./pages/Products/index"));
@@ -268,12 +270,14 @@ export function appRoutes() {
                 <Route path="/employee/attendance-history" element={<AttendanceHistory />} />
                 <Route path="/employee/personal-calendar" element={<PersonalCalendar />} />
                 <Route path="/employee/notifications" element={<Notifications />} />
+                <Route path="/employee/view-all-notifications" element={<ViewallNotification />} />
                 <Route path="/employee/learning-corner" element={<LearningCorner />} />
                 <Route path="/employee/my-tasks" element={<MyTask />} />
                 <Route path="/employee/assign-task" element={<AssignTask />} />
                 <Route path="/employee/create-tasks" element={<CreateTask />} />
                 <Route path="/employee/profile" element={<EmployeeProfiles />} />
                 <Route path="update-profile" element={<UpdateEmployeeProfile />} />
+                <Route path="/employee/company-policy" element={<EmpCompanyPolicy />} />
 
             </Route>
 

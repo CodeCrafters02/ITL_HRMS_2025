@@ -9,12 +9,13 @@ import {
   FileIcon,
   ListIcon,
   PieChartIcon,
-  TableIcon,
+
 } from "../../icons";
 import { useSidebar } from "../../context/SidebarContext";
 import { useNotifications } from "../../context/NotificationContext";
 import NotificationBadge from "../../components/ui/NotificationBadge";
 import { axiosInstance } from "../../pages/Employee/api";
+import { FolderCheckIcon,  LucideChevronUpSquare, SendIcon } from "lucide-react";
 
 type NavItem = {
   name: string;
@@ -35,7 +36,7 @@ const navItems: NavItem[] = [
     path: "/employee/my-tasks",
   },
   {
-    icon: <TableIcon />,
+    icon: <LucideChevronUpSquare />,
     name: "Leave Application",
     path: "/employee/leave-application",
   },
@@ -59,6 +60,11 @@ const navItems: NavItem[] = [
     name: "Calendar",
     path: "/employee/personal-calendar",
   },
+  {
+    icon: <FolderCheckIcon />,
+    name: "Company policies",
+    path: "/employee/company-policy",
+  },
 ];
 
 const EmployeeSidebar: React.FC = () => {
@@ -74,6 +80,43 @@ const EmployeeSidebar: React.FC = () => {
   // Learning Corner badge logic
   const [lcCount, setLcCount] = useState(0);
   const [lcBadge, setLcBadge] = useState(0);
+
+  // My Tasks badge logic (unread count using localStorage)
+  const [myTasksCount, setMyTasksCount] = useState(0);
+  const [myTasksBadge, setMyTasksBadge] = useState(0);
+
+  useEffect(() => {
+    // Fetch count of tasks assigned to the logged-in employee
+    axiosInstance.get("my-tasks/").then((res) => {
+      let currentCount = 0;
+      if (Array.isArray(res.data)) {
+        currentCount = res.data.length;
+      } else if (res.data && typeof res.data.count === 'number') {
+        currentCount = res.data.count;
+      }
+      setMyTasksCount(currentCount);
+      // Only update badge if lastSeen is less than currentCount
+      const lastSeen = Number(localStorage.getItem("my_tasks_last_seen_count") || 0);
+      setMyTasksBadge(currentCount > lastSeen ? currentCount - lastSeen : 0);
+    }).catch(() => {
+      setMyTasksCount(0);
+      setMyTasksBadge(0);
+    });
+    // Listen for changes to localStorage from other tabs/windows
+    const handleStorage = (e: StorageEvent) => {
+      if (e.key === "my_tasks_last_seen_count") {
+        const lastSeen = Number(e.newValue || 0);
+        setMyTasksBadge(myTasksCount > lastSeen ? myTasksCount - lastSeen : 0);
+      }
+    };
+    window.addEventListener("storage", handleStorage);
+    return () => window.removeEventListener("storage", handleStorage);
+  }, [myTasksCount]);
+
+  const handleMyTasksClick = () => {
+    localStorage.setItem("my_tasks_last_seen_count", String(myTasksCount));
+    setMyTasksBadge(0);
+  };
 
   useEffect(() => {
     // Fetch learning corner items and update badge
@@ -110,7 +153,13 @@ const EmployeeSidebar: React.FC = () => {
               className={`menu-item group ${
                 isActive(nav.path) ? "menu-item-active" : "menu-item-inactive"
               }`}
-              onClick={nav.name === "Learning Corner" ? handleLearningCornerClick : undefined}
+              onClick={
+                nav.name === "Learning Corner"
+                  ? handleLearningCornerClick
+                  : nav.name === "My Tasks"
+                  ? handleMyTasksClick
+                  : undefined
+              }
             >
               <span
                 className={`menu-item-icon-size relative ${
@@ -120,8 +169,17 @@ const EmployeeSidebar: React.FC = () => {
                 }`}
               >
                 {nav.icon}
+                {/* Learning Corner badge */}
                 {nav.name === "Learning Corner" && lcBadge > 0 && (
                   <NotificationBadge count={lcBadge} className="bg-red-600 absolute -top-2 -right-2" />
+                )}
+                {/* Notifications badge */}
+                {nav.name === "Notifications" && unreadCount > 0 && (
+                  <NotificationBadge count={unreadCount} className="bg-red-600 absolute -top-2 -right-2" />
+                )}
+                {/* My Tasks badge */}
+                {nav.name === "My Tasks" && myTasksBadge > 0 && (
+                  <NotificationBadge count={myTasksBadge} className="bg-blue-600 absolute -top-2 -right-2" />
                 )}
               </span>
               {(isExpanded || isHovered || isMobileOpen) && (
@@ -179,6 +237,11 @@ const EmployeeSidebar: React.FC = () => {
             icon: <TaskIcon />, 
             name: 'Assign Task',
             path: '/employee/assign-task',
+          },
+          {
+            icon: <SendIcon />, 
+            name: 'Leave Request',
+            path: '/employee/leave-request',
           },
         ];
       })()

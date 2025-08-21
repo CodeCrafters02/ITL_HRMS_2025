@@ -1,11 +1,13 @@
 import { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
 import { axiosInstance } from '../pages/Employee/api';
 
+type NotificationType = 'notification' | 'calendar' | 'learning_corner';
 interface Notification {
   id: number;
   title: string;
   description: string;
   date: string;
+  type: NotificationType;
 }
 
 interface NotificationContextType {
@@ -47,20 +49,83 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
     localStorage.setItem('readNotificationIds', JSON.stringify(ids));
   };
 
-  // Fetch notifications from API
+  // Fetch notifications from multiple APIs and merge
   const fetchNotifications = useCallback(async () => {
+    setLoading(true);
     try {
-      setLoading(true);
-      const response = await axiosInstance.get("/employee-notifications/");
-      setNotifications(response.data);
+      // Fetch all in parallel
+      const [notifRes, calendarRes, learningRes] = await Promise.all([
+        axiosInstance.get("/employee-notifications/"),
+        axiosInstance.get("/employee-calendar/"),
+        axiosInstance.get("/emp-learning-corner/")
+      ]);
+
+     
+
+      // Tag each notification type
+      const notifications: Notification[] = (notifRes.data || []).map((n: {
+        id: number;
+        title: string;
+        description: string;
+        date: string;
+      }) => ({
+        ...n,
+        type: 'notification',
+      }));
+
+      // Flatten admin_events and personal_events from calendar weeks
+      const calendarEvents: Notification[] = [];
+      type CalendarDay = {
+        day: number | '';
+        date: string;
+        admin_events?: { id: number; title: string }[];
+        personal_events?: { id: number; title: string }[];
+      };
+      (Array.isArray(calendarRes.data?.weeks) ? calendarRes.data.weeks : []).forEach((week: CalendarDay[]) => {
+        week.forEach((dayObj: CalendarDay) => {
+          if (!dayObj.day) return;
+          (dayObj.admin_events || []).forEach((event) => {
+            calendarEvents.push({
+              id: event.id,
+              title: event.title,
+              description: "Admin Event",
+              date: dayObj.date,
+              type: "calendar"
+            });
+          });
+        });
+      });
+
+      const learningCorner: Notification[] = (learningRes.data || []).map((l: {
+        id: number;
+        title: string;
+        description: string;
+        date?: string;
+        created_at?: string;
+        updated_at?: string;
+      }) => ({
+        id: l.id,
+        title: l.title,
+        description: l.description,
+        date: l.date || l.created_at || l.updated_at || new Date().toISOString(),
+        type: 'learning_corner',
+      }));
+
+      // Merge and sort by date descending
+      const allNotifications: Notification[] = [...notifications, ...calendarEvents, ...learningCorner]
+        .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
+      
+
+      setNotifications(allNotifications);
       const readIds = getReadIds();
-      // Only count notifications not marked as read in localStorage
-      const unread = response.data.filter((n: Notification) => !readIds.includes(n.id)).length;
+      const unread = allNotifications.filter((n) => !readIds.includes(n.id)).length;
       setUnreadCount(unread);
       setError(null);
     } catch (err: unknown) {
-      const errorMessage = err instanceof Error 
-        ? err.message 
+      console.error("Error fetching notifications:", err);
+      const errorMessage = err instanceof Error
+        ? err.message
         : typeof err === 'object' && err !== null && 'response' in err
           ? (err as { response?: { data?: { message?: string } } }).response?.data?.message || "Failed to fetch notifications"
           : "Failed to fetch notifications";
@@ -99,67 +164,6 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
     return () => clearInterval(interval);
   }, [fetchNotifications]);
 
-  // const fetchNotifications = useCallback(async () => {
-  //   try {
-  //     setLoading(true);
-  //     const response = await axiosInstance.get("/employee-notifications/");
-  //     setNotifications(response.data);
-  //     const readIds = getReadIds();
-  //     // Only count notifications not marked as read in localStorage
-  //     const unread = response.data.filter((n: Notification) => !readIds.includes(n.id)).length;
-  //     setUnreadCount(unread);
-  //     setError(null);
-  //   } catch (err: unknown) {
-  //     const errorMessage = err instanceof Error 
-  //       ? err.message 
-  //       : typeof err === 'object' && err !== null && 'response' in err
-  //         ? (err as { response?: { data?: { message?: string } } }).response?.data?.message || "Failed to fetch notifications"
-  //         : "Failed to fetch notifications";
-  //     setError(errorMessage);
-  //   } finally {
-  //     setLoading(false);
-  //   }
-  // }, []);
-
-  // const markAsRead = (id: number) => {
-  //   // Mark a single notification as read in localStorage
-  //   const readIds = getReadIds();
-  //   if (!readIds.includes(id)) {
-  //     setReadIds([...readIds, id]);
-  //     fetchNotifications();
-  //   }
-  // };
-
-  // const markAllAsRead = () => {
-  //   // Mark all notifications as read in localStorage
-  //   const allIds = notifications.map(n => n.id);
-  //   setReadIds(allIds);
-  //   setUnreadCount(0);
-  // };
-
-  // // Fetch notifications on mount
-  // useEffect(() => {
-  //   fetchNotifications();
-  // }, [fetchNotifications]);
-
-  // // Poll for new notifications every 5 minutes
-  // useEffect(() => {
-  //   const interval = setInterval(() => {
-  //     fetchNotifications();
-  //   }, 5 * 60 * 1000); // 5 minutes
-
-  //   return () => clearInterval(interval);
-  // }, [fetchNotifications]);
-
-  // const value: NotificationContextType = {
-  //   notifications,
-  //   unreadCount,
-  //   loading,
-  //   error,
-  //   fetchNotifications,
-  //   markAsRead,
-  //   markAllAsRead,
-  // };
 
   // Provide the correct context value object
   const value: NotificationContextType = {

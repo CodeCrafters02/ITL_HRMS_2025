@@ -1,7 +1,7 @@
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { axiosInstance } from "../../pages/Employee/api";
-import { useNavigate } from "react-router-dom";
+// import { useNavigate } from "react-router-dom";
 
 function getInitials(firstName?: string, lastName?: string) {
   const first = firstName ? firstName[0] : "";
@@ -16,12 +16,12 @@ interface Profile {
   photo?: string;
 }
 
-
 export default function ProfileMetaCard() {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const navigate = useNavigate();
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     setLoading(true);
@@ -61,11 +61,45 @@ export default function ProfileMetaCard() {
                 <span className="text-3xl font-bold text-white">{getInitials(profile.first_name, profile.last_name)}</span>
               )}
             </div>
+            <input
+              type="file"
+              accept="image/*"
+              ref={fileInputRef}
+              style={{ display: 'none' }}
+              onChange={async (e) => {
+                const file = e.target.files && e.target.files[0];
+                if (!file) return;
+                setUploading(true);
+                setError(null);
+                try {
+                  const formData = new FormData();
+                  formData.append('photo', file);
+                  const res = await axiosInstance.patch('/employee-profile/', formData, {
+                    headers: { 'Content-Type': 'multipart/form-data' },
+                  });
+                  setProfile((prev) => prev ? { ...prev, photo: res.data.photo } : prev);
+                } catch (err: unknown) {
+                  let message = 'Failed to update photo';
+                  if (err && typeof err === 'object') {
+                    // Check for axios error structure
+                    if ('response' in err && typeof (err as { response?: { data?: { detail?: string } } }).response?.data?.detail === 'string') {
+                      message = (err as { response: { data: { detail: string } } }).response.data.detail;
+                    } else if ('message' in err && typeof (err as { message?: string }).message === 'string') {
+                      message = (err as { message: string }).message;
+                    }
+                  }
+                  setError(message);
+                } finally {
+                  setUploading(false);
+                }
+              }}
+            />
             <button
-              onClick={() => navigate("/employee/update-employee-form")}
+              onClick={() => fileInputRef.current?.click()}
               className="absolute -bottom-2 -right-2 bg-white border border-gray-300 dark:bg-gray-800 dark:border-gray-700 rounded-full p-2 shadow-theme-xs hover:bg-gray-50 hover:text-gray-800 dark:hover:bg-white/[0.03] dark:hover:text-gray-200"
-              title="Edit Profile"
+              title={uploading ? "Uploading..." : "Edit Photo"}
               style={{ zIndex: 2 }}
+              disabled={uploading}
             >
               <svg
                 className="fill-current"
