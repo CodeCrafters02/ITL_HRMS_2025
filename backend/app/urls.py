@@ -27,20 +27,25 @@ router.register(r'attendance', AttendanceViewSet, basename='attendance')
 router.register(r'policies', CompanyPoliciesViewSet, basename='company-policies')
 router.register(r'usermanagement', UserManagementViewSet, basename='usermanagement')
 router.register(r'break-config', BreakConfigViewSet, basename='break-config')
+router.register(r"letter-templates", LetterTemplateViewSet, basename="lettertemplate")
+router.register(r'generated-letters', GeneratedLetterViewSet, basename='generatedletter')
 
 
 urlpatterns = [
     path('', include(router.urls)),
+    path('company-update/', CompanyUpdateAPIView.as_view(), name='company_get'),
+    path('company-update/<int:pk>/', CompanyUpdateAPIView.as_view(), name='company_update'),
     path('change-password/', CustomPasswordChangeAPIView.as_view(), name='custom-password-change'),
     path('login/', LoginAPIView.as_view(), name='login'),
     path('change-password/', PasswordChangeView.as_view(), name='change-password'),
     path('users/', UserLogListView.as_view(), name='user_log_api'),
     path('master-dashboard/', MasterDashboardView.as_view(), name='master_dashboard'),
+    path('admin-dashboard/', AdminDashboardAPIView.as_view(), name='admin-dashboard'),
     path('company-logo/', CompanyLogoAPIView.as_view(), name='company_logo_get_by_admin'),
     path('users/<int:pk>/', UserLogDeleteView.as_view(), name='delete_user_api'),
     path('approved-leaves/', ApprovedLeaveLogView.as_view(), name='approved_leave_log'),
     path('rejected-leaves/', RejectedLeaveLogView.as_view(), name='rejected_leave_log'),
     path('attendance-logs/', AttendanceLogView.as_view(), name='attendance_log'),
     path('generate-payroll/', GeneratePayrollView.as_view(), name='generate-payroll'),
-
+    path('generate-letter-content/', GenerateLetterContentAPIView.as_view(), name='generate-letter-content'),
 ]

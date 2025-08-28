@@ -88,6 +88,46 @@ const Notifications: React.FC = () => {
     }
   };
 
+  // Group notifications by Today, Yesterday, or date
+  const groupByDate = (notifications: typeof notifications) => {
+    const groups: { [label: string]: typeof notifications } = {};
+    const today = new Date();
+    const yesterday = new Date();
+    yesterday.setDate(today.getDate() - 1);
+
+    notifications.forEach((n) => {
+      const nDate = new Date(n.date);
+      let label = nDate.toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" });
+      if (
+        nDate.getDate() === today.getDate() &&
+        nDate.getMonth() === today.getMonth() &&
+        nDate.getFullYear() === today.getFullYear()
+      ) {
+        label = "Today";
+      } else if (
+        nDate.getDate() === yesterday.getDate() &&
+        nDate.getMonth() === yesterday.getMonth() &&
+        nDate.getFullYear() === yesterday.getFullYear()
+      ) {
+        label = "Yesterday";
+      }
+      if (!groups[label]) groups[label] = [];
+      groups[label].push(n);
+    });
+
+    // Sort groups by date descending
+    const sortedLabels = Object.keys(groups).sort((a, b) => {
+      if (a === "Today") return -1;
+      if (b === "Today") return 1;
+      if (a === "Yesterday") return -1;
+      if (b === "Yesterday") return 1;
+      return new Date(b).getTime() - new Date(a).getTime();
+    });
+    return sortedLabels.map(label => ({ label, items: groups[label].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()) }));
+  };
+
+  const grouped = groupByDate(notifications);
+
   if (loading) {
     return (
       <div className="flex min-h-screen flex-col bg-gray-50 dark:bg-gray-900">
@@ -208,7 +248,7 @@ const Notifications: React.FC = () => {
             </div>
           </div>
 
-          {/* Notifications List */}
+          {/* Notifications List - Grouped by Today, Yesterday, Date */}
           {notifications.length === 0 ? (
             <div className="rounded-lg border border-gray-200 bg-white p-12 text-center shadow-sm dark:border-gray-700 dark:bg-gray-800">
               <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -222,34 +262,46 @@ const Notifications: React.FC = () => {
               </p>
             </div>
           ) : (
-            <div className="space-y-4">
-              {notifications.map((notification, index) => (
-                <div
-                  key={notification.id}
-                  className="group rounded-lg border border-gray-200 bg-white p-6 shadow-sm transition-all duration-200 hover:border-gray-300 hover:shadow-md dark:border-gray-700 dark:bg-gray-800 dark:hover:border-gray-600"
-                >
-                  <div className="flex items-start space-x-4">
-                    {/* Notification Icon */}
-                    {getNotificationIcon(index)}
-
-                    {/* Notification Content */}
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-start justify-between">
-                        <div className="min-w-0 flex-1">
-                          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-                            {notification.title}
-                          </h3>
-                          <p className="mt-1 text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
-                            {notification.description}
-                          </p>
-                        </div>
-                        <div className="ml-4 flex-shrink-0">
-                          <span className="inline-flex items-center rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-800 dark:bg-gray-700 dark:text-gray-300">
-                            {formatDate(notification.date)}
-                          </span>
+            <div className="space-y-8">
+              {grouped.map((group) => (
+                <div key={group.label} className="space-y-1">
+                  {/* Date Header */}
+                  <div className="sticky top-0 bg-gray-50 dark:bg-gray-900 py-2 z-10">
+                    <h2 className="text-sm font-medium text-gray-600 dark:text-gray-300 uppercase tracking-wider">
+                      {group.label}
+                    </h2>
+                  </div>
+                  {/* Notifications for this group */}
+                  <div className="space-y-4">
+                    {group.items.map((notification, index) => (
+                      <div
+                        key={notification.id}
+                        className="group rounded-lg border border-gray-200 bg-white p-6 shadow-sm transition-all duration-200 hover:border-gray-300 hover:shadow-md dark:border-gray-700 dark:bg-gray-800 dark:hover:border-gray-600"
+                      >
+                        <div className="flex items-start space-x-4">
+                          {/* Notification Icon */}
+                          {getNotificationIcon(index)}
+                          {/* Notification Content */}
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-start justify-between">
+                              <div className="min-w-0 flex-1">
+                                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                                  {notification.title}
+                                </h3>
+                                <p className="mt-1 text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
+                                  {notification.description}
+                                </p>
+                              </div>
+                              <div className="ml-4 flex-shrink-0">
+                                <span className="inline-flex items-center rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-800 dark:bg-gray-700 dark:text-gray-300">
+                                  {formatDate(notification.date)}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
                         </div>
                       </div>
-                    </div>
+                    ))}
                   </div>
                 </div>
               ))}

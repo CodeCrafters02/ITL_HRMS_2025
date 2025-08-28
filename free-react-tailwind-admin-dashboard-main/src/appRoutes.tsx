@@ -1,3 +1,4 @@
+import { useParams } from "react-router-dom";
 import { Route, Routes } from "react-router-dom";
 import { lazy, Suspense } from "react";
 const SignIn = lazy(() => import("./pages/AuthPages/SignIn"));
@@ -29,6 +30,7 @@ const Department = lazy(() => import("./pages/Admin/Department"));
 const Level = lazy(() => import("./pages/Admin/Level"));
 const CreateAdmin = lazy(() => import("./pages/Forms/CreateAdmin"));
 const CreateCompany = lazy(() => import("./pages/Forms/CreateCompany"));
+const EditCompanyProfile = lazy(() => import("./pages/Admin/EditProfile"));
 const Designation = lazy(() => import("./pages/Admin/Designation"));
 const AssetsInventory = lazy(() => import("./pages/Admin/Assets&Inventory"));
 const LearningCornerPage = lazy(() => import("./pages/Admin/LearningCorner"));
@@ -76,6 +78,13 @@ const BreakConfig = lazy(() => import("./pages/Admin/BreakConfig"));
 const RelievedEmployee = lazy(() => import("./pages/Admin/RelievedEmployee"));
 const UpdateEmployeeProfile = lazy(() => import("./pages/Forms/UpdateEmployeeProfile"));
 const EmpCompanyPolicy = lazy(() => import("./pages/Employee/EmpCompanyPolicy"));
+const LeaveRequests = lazy(() => import("./pages/Employee/LeaveRequests"));
+const EmpLeaveForm = lazy(() => import("./pages/Forms/EmpLeaveForm"));
+const LetterForm = lazy(() => import("./pages/Admin/LetterForm"));
+const Letter = lazy(() => import("./pages/Admin/Letter"));
+const LetterTemplates = lazy(() => import("./pages/Admin/LetterTemplate"));
+const LetterDup = lazy(() => import("./pages/Admin/Letter_dup"));
+
 
 const UserManagementPage = lazy(() => import("./pages/UserManagement/index"));
 const ProductPage = lazy(() => import("./pages/Products/index"));
@@ -98,6 +107,7 @@ const BookDemo = lazy(() => import("./Website/Pages/BookDemo"));
 const ProductDetailsPage = lazy(() => import("./Website/Pages/ProductDetailsPage"));
 const PrivacyPolicy = lazy(() => import("./Website/Pages/PrivacyPolicy"));
 const Terms = lazy(() => import("./Website/Pages/Terms"));
+
 
 const LoadingSpinner = () => (
   <div className="flex items-center justify-center min-h-screen">
@@ -133,7 +143,8 @@ export function appRoutes() {
             <Route path="/master/demorequest" element={<DemoRequestPage />} />
             <Route path="/master/contactrequest" element={<ContactRequestPage />} />
 
-            {/* Others Page */}
+            {/* Letter Form (dynamic companyId) */}
+                                  {/* Others Page */}
             <Route path="/profile" element={<UserProfiles />} />
             <Route path="/calendar" element={<Calendar />} />
             <Route path="/blank" element={<Blank />} />
@@ -185,6 +196,15 @@ export function appRoutes() {
             <Route path="admin-notifications" element={<AdminNotifications />} />
             <Route path="configuration/break-config" element={<BreakConfig />} />
             <Route path="relieved-employees" element={<RelievedEmployee />} />
+            <Route path="company-edit-profile" element={<EditCompanyProfile />} />
+            <Route path="letter" element={<Letter />} />
+            <Route path="letter-form" element={<LetterForm />} />
+            <Route path="letter-templates" element={<LetterTemplates />} />
+            <Route path="letter-pdf" element={<LetterDup />} />
+
+
+            {/* Admin Change Password */}
+           <Route path="change-password" element={<ChangePasswordForm apiEndpoint="/change-password/" />} />
 
 
             {/* Admin Forms */}
@@ -208,12 +228,9 @@ export function appRoutes() {
             <Route path="form-elements" element={<FormElements />} />
         </Route>
         
-         {/* Admin Change Password */}
-         <Route path="/admin/change-password" element={<ChangePasswordForm apiEndpoint="/admin/change-password/" />} />
-         {/* Employee Change Password */}
-         <Route path="/employee/change-password" element={<ChangePasswordForm apiEndpoint="/employee/change-password/" />} />
-
+         
          <Route path="/update-form/:id" element={<UpdateTaskForm />} />
+         
         {/* Direct Admin Dashboard Route with AdminLayout */}
         <Route path="/admin-dashboard" element={<AdminLayout />}>
             <Route index element={<AdminDashboard />} />
@@ -278,6 +295,11 @@ export function appRoutes() {
                 <Route path="/employee/profile" element={<EmployeeProfiles />} />
                 <Route path="update-profile" element={<UpdateEmployeeProfile />} />
                 <Route path="/employee/company-policy" element={<EmpCompanyPolicy />} />
+                <Route path="/employee/leave-request" element={<LeaveRequests />} />
+                <Route path="form-leave" element={<EmpLeaveForm />} />
+                {/* Employee Change Password */}
+                <Route path="change-password" element={<ChangePasswordForm apiEndpoint="/change-password/" />} />
+
 
             </Route>
 

@@ -110,7 +110,7 @@ export default function AdminUserDropdown() {
                 <DropdownItem
                   onItemClick={closeDropdown}
                   tag="a"
-                  to="/profile"
+                  to="/admin/company-edit-profile"
                   className="block px-4 py-2 text-gray-700 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-white/5"
                 >
                   Edit Profile

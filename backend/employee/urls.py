@@ -1,5 +1,6 @@
 from django.urls import path
 from .views import *
+from .all_notifications import AllNotificationsAPIView, NotificationSSEView
 
 urlpatterns = [
     path('employee/company-info/', EmployeeCompanyInfoAPIView.as_view(), name='employee-company-info'),
@@ -25,8 +26,13 @@ urlpatterns = [
     path('leaves-list/', LeaveListAPIView.as_view(), name='leave_list'),
     path('emp-leaves/<int:leave_id>/approve/', ApproveEmpLeaveAPIView.as_view(), name='emp_leave_approve'),
     path('emp-leaves/<int:leave_id>/reject/', RejectEmpLeaveAPIView.as_view(), name='emp_leave_reject'),
+    path('emp-leaves/<int:leave_id>/cancel/', CancelEmpLeaveAPIView.as_view(), name='emp_leave_cancel'),
     path('emp-learning-corner/', EmpLearningCornerAPIView.as_view(), name='emp_learning_corner'),
     path('employee-profile/', EmployeeProfileAPIView.as_view(), name='employee_profile'),
     path('employee-breaks/', BreakLogAPIView.as_view(), name='employee-breaks'),
     path('employee-companypolicies/', EmployeeCompanyPoliciesAPIView.as_view(), name='employee-company-policies'),
+
+    path('all-notifications/', AllNotificationsAPIView.as_view(), name='all-notifications'),
+    path('sse/', NotificationSSEView.as_view(), name='notification_sse'),    
+
 ]

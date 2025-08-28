@@ -283,7 +283,16 @@ const CreateTask: React.FC = () => {
                   id="deadline"
                   label="Deadline *"
                   defaultDate={taskData.deadline}
-                  onChange={([date]) => handleTaskChange("deadline", date instanceof Date ? date.toISOString().slice(0, 10) : "")}
+                  onChange={([date]) =>
+                    handleTaskChange(
+                      "deadline",
+                      date instanceof Date
+                        ? date.getFullYear() + '-' +
+                          String(date.getMonth() + 1).padStart(2, '0') + '-' +
+                          String(date.getDate()).padStart(2, '0')
+                        : ""
+                    )
+                  }
                   placeholder="Select deadline"
                 />
               </div>
@@ -406,7 +415,17 @@ const CreateTask: React.FC = () => {
                           id={`subtask-deadline-${index}`}
                           label="Deadline *"
                           defaultDate={subtask.deadline}
-                          onChange={([date]) => handleSubtaskChange(index, "deadline", date instanceof Date ? date.toISOString().slice(0, 10) : "")}
+                          onChange={([date]) =>
+                            handleSubtaskChange(
+                              index,
+                              "deadline",
+                              date instanceof Date
+                                ? date.getFullYear() + '-' +
+                                  String(date.getMonth() + 1).padStart(2, '0') + '-' +
+                                  String(date.getDate()).padStart(2, '0')
+                                : ""
+                            )
+                          }
                           placeholder="Select deadline"
                         />
                       </div>

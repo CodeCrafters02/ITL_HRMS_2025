@@ -50,7 +50,8 @@ const navItems: NavItem[] = [
       { name: "Employee Register", path: "/admin/employee-register", pro: false },
       { name: "Recruitment", path: "/admin/recruitment", pro: false },
       { name: "Relieved Employees", path: "/admin/relieved-employees", pro: false },
-    ],
+      { name: "Letter Templates", path: `/admin/letter-templates`, pro: false },
+      ],
   },
   {
     name: "Leave Mgt",
@@ -131,6 +132,7 @@ const AdminSidebar: React.FC = () => {
   // Company info state
   const [companyLogo, setCompanyLogo] = useState<string>("");
   const [companyName, setCompanyName] = useState<string>("");
+  
 
   // Notification badge from context
   // Only one badge should be shown, overlapped on sidebar icon

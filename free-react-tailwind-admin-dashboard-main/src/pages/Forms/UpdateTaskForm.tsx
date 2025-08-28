@@ -171,9 +171,10 @@ const UpdateTaskForm: React.FC = () => {
   ];
 
   const statusOptions = [
-    { value: "pending", label: "Pending" },
-    { value: "in_progress", label: "In Progress" },
-    { value: "completed", label: "Completed" }
+    { value: "todo", label: "To Do" },
+    { value: "inprogress", label: "In Progress" },
+    { value: "inreview", label: "In Review" },
+    { value: "done", label: "Done" }
   ];
 
   const handleTaskChange = (field: keyof TaskData, value: string | string[]) => {
@@ -339,7 +340,13 @@ const UpdateTaskForm: React.FC = () => {
                   id="deadline"
                   label="Deadline *"
                   defaultDate={taskData.deadline}
-                  onChange={([date]) => handleTaskChange("deadline", date instanceof Date ? date.toISOString().slice(0, 10) : "")}
+                  onChange={([date]) => {
+                    if (date instanceof Date && !isNaN(date.getTime())) {
+                      handleTaskChange("deadline", date.toISOString().slice(0, 10));
+                    } else {
+                      handleTaskChange("deadline", "");
+                    }
+                  }}
                   placeholder="Select deadline"
                 />
               </div>

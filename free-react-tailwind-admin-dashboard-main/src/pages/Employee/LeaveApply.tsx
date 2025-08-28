@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { axiosInstance } from './api';
 import ComponentCard from '../../components/common/ComponentCard';
 import { Table, TableRow, TableCell } from '../../components/ui/table';
@@ -28,7 +29,7 @@ interface AppliedLeave {
 const LeaveApply: React.FC = () => {
   const [leaveTypes, setLeaveTypes] = useState<LeaveType[]>([]);
   const [appliedLeaves, setAppliedLeaves] = useState<AppliedLeave[]>([]);
-  // Removed unused formData state
+  const navigate = useNavigate();
 
   const fetchLeaveTypes = async () => {
     try {
@@ -56,6 +57,27 @@ const LeaveApply: React.FC = () => {
     fetchAppliedLeaves();
   }, []);
 
+  // Cancel leave handler
+  const handleCancelLeave = async (leaveId: number) => {
+    const confirmed = window.confirm(
+      'Are you sure to cancel? This will delete from Leave Request in reporting manager also.'
+    );
+    if (!confirmed) return;
+    try {
+      const res = await axiosInstance.post(`/emp-leaves/${leaveId}/cancel/`);
+      const msg = res?.data?.detail || '';
+      if (msg.includes('removed')) {
+        // Pending leave: remove from list
+        setAppliedLeaves((prev) => prev.filter(l => l.id !== leaveId));
+      } else if (msg.includes('cancelled')) {
+        // Approved leave: update status
+        setAppliedLeaves((prev) => prev.map(l => l.id === leaveId ? { ...l, status: 'Cancelled' } : l));
+      }
+    } catch {
+      alert('Failed to cancel leave.');
+    }
+  };
+
   return (
     <>
       {/* Leave Types Section */}
@@ -81,7 +103,7 @@ const LeaveApply: React.FC = () => {
       </div>
       <ComponentCard title="Leave Application">
         <div className="flex justify-end mb-4">
-          <Button variant="primary" onClick={() => {}}>
+          <Button variant="primary" onClick={() => navigate('/employee/form-leave')}>
             Apply
           </Button>
         </div>
@@ -97,6 +119,7 @@ const LeaveApply: React.FC = () => {
                 <th className="px-6 py-3 text-sm font-semibold text-gray-700">Reason</th>
                 <th className="px-6 py-3 text-sm font-semibold text-gray-700">Status</th>
                 <th className="px-6 py-3 text-sm font-semibold text-gray-700">Applied On</th>
+               
               </tr>
             </thead>
             <tbody>
@@ -119,12 +142,20 @@ const LeaveApply: React.FC = () => {
                       leave.status === "Approved" ? "success"
                         : leave.status === "Rejected" ? "error"
                         : leave.status === "Pending" ? "info"
+                        : leave.status === "Cancelled" ? "warning"
                         : "light"
                     }>
                       {leave.status}
                     </Badge>
                   </TableCell>
                   <TableCell className="px-6 py-3 align-middle text-sm text-gray-800">{new Date(leave.created_at).toLocaleDateString()}</TableCell>
+                  <TableCell className="px-6 py-3 align-middle">
+                    {(leave.status === "Pending" || leave.status === "Approved") && (
+                      <Button variant="outline" size="sm" onClick={() => handleCancelLeave(leave.id)}>
+                        Cancel
+                      </Button>
+                    )}
+                  </TableCell>
                 </TableRow>
               ))}
             </tbody>

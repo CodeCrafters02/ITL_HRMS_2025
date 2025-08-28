@@ -9,7 +9,6 @@ import {
   FileIcon,
   ListIcon,
   PieChartIcon,
-
 } from "../../icons";
 import { useSidebar } from "../../context/SidebarContext";
 import { useNotifications } from "../../context/NotificationContext";
@@ -22,6 +21,8 @@ type NavItem = {
   icon: React.ReactNode;
   path?: string;
   subItems?: { name: string; path: string; pro?: boolean; new?: boolean }[];
+  badge?: number;
+  onClick?: () => void;
 };
 
 const navItems: NavItem[] = [
@@ -68,6 +69,121 @@ const navItems: NavItem[] = [
 ];
 
 const EmployeeSidebar: React.FC = () => {
+  // Reporting manager state (must be above badge logic)
+  const [isReportingManager, setIsReportingManager] = useState(false);
+  const [employeeId, setEmployeeId] = useState<string | null>(null);
+  // Company info state (must be above badge logic)
+  const [companyLogo, setCompanyLogo] = useState<string | null>(null);
+  const [companyName, setCompanyName] = useState<string | null>(null);
+  // Reporting manager and company info state (must be above badge logic)
+  // Leave Request badge logic for reporting manager
+  const [leaveRequestCount, setLeaveRequestCount] = useState(0);
+  const [leaveRequestBadge, setLeaveRequestBadge] = useState(0);
+
+  useEffect(() => {
+    if (!isReportingManager) return;
+    let isMounted = true;
+    const fetchLeaveRequests = () => {
+      axiosInstance.get("emp-leaves/").then((res) => {
+        // Adjust the endpoint and logic as per your API
+        const currentCount = Array.isArray(res.data) ? res.data.length : 0;
+        if (!isMounted) return;
+        setLeaveRequestCount(currentCount);
+        const lastSeen = Number(localStorage.getItem("leave_request_last_seen_count") || 0);
+        setLeaveRequestBadge(currentCount > lastSeen ? currentCount - lastSeen : 0);
+      });
+    };
+    fetchLeaveRequests();
+    const interval = setInterval(fetchLeaveRequests, 60 * 1000); // Poll every 1 minute
+    const handleStorage = (e: StorageEvent) => {
+      if (e.key === "leave_request_last_seen_count") {
+        const lastSeen = Number(e.newValue || 0);
+        setLeaveRequestBadge(leaveRequestCount > lastSeen ? leaveRequestCount - lastSeen : 0);
+      }
+    };
+    window.addEventListener("storage", handleStorage);
+    return () => {
+      isMounted = false;
+      clearInterval(interval);
+      window.removeEventListener("storage", handleStorage);
+    };
+  }, [isReportingManager, leaveRequestCount]);
+
+  const handleLeaveRequestClick = () => {
+    localStorage.setItem("leave_request_last_seen_count", String(leaveRequestCount));
+    setLeaveRequestBadge(0);
+  };
+  // Calendar badge logic
+  const [calendarCount, setCalendarCount] = useState(0);
+  const [calendarBadge, setCalendarBadge] = useState(0);
+
+  // Leave Request badge logic
+  const [leaveCount, setLeaveCount] = useState(0);
+  const [leaveBadge, setLeaveBadge] = useState(0);
+
+  useEffect(() => {
+    let isMounted = true;
+    const fetchCalendar = () => {
+      axiosInstance.get("employee-calendar/").then((res) => {
+        const currentCount = Array.isArray(res.data) ? res.data.length : 0;
+        if (!isMounted) return;
+        setCalendarCount(currentCount);
+        const lastSeen = Number(localStorage.getItem("calendar_last_seen_count") || 0);
+        setCalendarBadge(currentCount > lastSeen ? currentCount - lastSeen : 0);
+      });
+    };
+    fetchCalendar();
+    const interval = setInterval(fetchCalendar, 60 * 1000); // Poll every 1 minute
+    const handleStorage = (e: StorageEvent) => {
+      if (e.key === "calendar_last_seen_count") {
+        const lastSeen = Number(e.newValue || 0);
+        setCalendarBadge(calendarCount > lastSeen ? calendarCount - lastSeen : 0);
+      }
+    };
+    window.addEventListener("storage", handleStorage);
+    return () => {
+      isMounted = false;
+      clearInterval(interval);
+      window.removeEventListener("storage", handleStorage);
+    };
+  }, [calendarCount]);
+
+  const handleCalendarClick = () => {
+    localStorage.setItem("calendar_last_seen_count", String(calendarCount));
+    setCalendarBadge(0);
+  };
+
+  useEffect(() => {
+    let isMounted = true;
+    const fetchLeave = () => {
+      axiosInstance.get("emp-leaves/").then((res) => {
+        const currentCount = Array.isArray(res.data) ? res.data.length : 0;
+        if (!isMounted) return;
+        setLeaveCount(currentCount);
+        const lastSeen = Number(localStorage.getItem("leave_last_seen_count") || 0);
+        setLeaveBadge(currentCount > lastSeen ? currentCount - lastSeen : 0);
+      });
+    };
+    fetchLeave();
+    const interval = setInterval(fetchLeave, 60 * 1000); // Poll every 1 minute
+    const handleStorage = (e: StorageEvent) => {
+      if (e.key === "leave_last_seen_count") {
+        const lastSeen = Number(e.newValue || 0);
+        setLeaveBadge(leaveCount > lastSeen ? leaveCount - lastSeen : 0);
+      }
+    };
+    window.addEventListener("storage", handleStorage);
+    return () => {
+      isMounted = false;
+      clearInterval(interval);
+      window.removeEventListener("storage", handleStorage);
+    };
+  }, [leaveCount]);
+
+  const handleLeaveClick = () => {
+    localStorage.setItem("leave_last_seen_count", String(leaveCount));
+    setLeaveBadge(0);
+  };
   // Get unread notification count from context
   const { unreadCount } = useNotifications();
   const { isExpanded, isMobileOpen, isHovered, setIsHovered } = useSidebar();
@@ -86,23 +202,27 @@ const EmployeeSidebar: React.FC = () => {
   const [myTasksBadge, setMyTasksBadge] = useState(0);
 
   useEffect(() => {
-    // Fetch count of tasks assigned to the logged-in employee
-    axiosInstance.get("my-tasks/").then((res) => {
-      let currentCount = 0;
-      if (Array.isArray(res.data)) {
-        currentCount = res.data.length;
-      } else if (res.data && typeof res.data.count === 'number') {
-        currentCount = res.data.count;
-      }
-      setMyTasksCount(currentCount);
-      // Only update badge if lastSeen is less than currentCount
-      const lastSeen = Number(localStorage.getItem("my_tasks_last_seen_count") || 0);
-      setMyTasksBadge(currentCount > lastSeen ? currentCount - lastSeen : 0);
-    }).catch(() => {
-      setMyTasksCount(0);
-      setMyTasksBadge(0);
-    });
-    // Listen for changes to localStorage from other tabs/windows
+    let isMounted = true;
+    const fetchMyTasks = () => {
+      axiosInstance.get("my-tasks/").then((res) => {
+        let currentCount = 0;
+        if (Array.isArray(res.data)) {
+          currentCount = res.data.length;
+        } else if (res.data && typeof res.data.count === 'number') {
+          currentCount = res.data.count;
+        }
+        if (!isMounted) return;
+        setMyTasksCount(currentCount);
+        const lastSeen = Number(localStorage.getItem("my_tasks_last_seen_count") || 0);
+        setMyTasksBadge(currentCount > lastSeen ? currentCount - lastSeen : 0);
+      }).catch(() => {
+        if (!isMounted) return;
+        setMyTasksCount(0);
+        setMyTasksBadge(0);
+      });
+    };
+    fetchMyTasks();
+    const interval = setInterval(fetchMyTasks, 60 * 1000); // Poll every 1 minute
     const handleStorage = (e: StorageEvent) => {
       if (e.key === "my_tasks_last_seen_count") {
         const lastSeen = Number(e.newValue || 0);
@@ -110,7 +230,11 @@ const EmployeeSidebar: React.FC = () => {
       }
     };
     window.addEventListener("storage", handleStorage);
-    return () => window.removeEventListener("storage", handleStorage);
+    return () => {
+      isMounted = false;
+      clearInterval(interval);
+      window.removeEventListener("storage", handleStorage);
+    };
   }, [myTasksCount]);
 
   const handleMyTasksClick = () => {
@@ -119,15 +243,18 @@ const EmployeeSidebar: React.FC = () => {
   };
 
   useEffect(() => {
-    // Fetch learning corner items and update badge
-    axiosInstance.get("emp-learning-corner/").then((res) => {
-      const currentCount = Array.isArray(res.data) ? res.data.length : 0;
-      setLcCount(currentCount);
-      // Only update badge if lastSeen is less than currentCount
-      const lastSeen = Number(localStorage.getItem("lc_last_seen_count") || 0);
-      setLcBadge(currentCount > lastSeen ? currentCount - lastSeen : 0);
-    });
-    // Listen for changes to localStorage from other tabs/windows
+    let isMounted = true;
+    const fetchLearningCorner = () => {
+      axiosInstance.get("emp-learning-corner/").then((res) => {
+        const currentCount = Array.isArray(res.data) ? res.data.length : 0;
+        if (!isMounted) return;
+        setLcCount(currentCount);
+        const lastSeen = Number(localStorage.getItem("lc_last_seen_count") || 0);
+        setLcBadge(currentCount > lastSeen ? currentCount - lastSeen : 0);
+      });
+    };
+    fetchLearningCorner();
+    const interval = setInterval(fetchLearningCorner, 60 * 1000); // Poll every 1 minute
     const handleStorage = (e: StorageEvent) => {
       if (e.key === "lc_last_seen_count") {
         const lastSeen = Number(e.newValue || 0);
@@ -135,7 +262,11 @@ const EmployeeSidebar: React.FC = () => {
       }
     };
     window.addEventListener("storage", handleStorage);
-    return () => window.removeEventListener("storage", handleStorage);
+    return () => {
+      isMounted = false;
+      clearInterval(interval);
+      window.removeEventListener("storage", handleStorage);
+    };
   }, [lcCount]);
 
   const handleLearningCornerClick = () => {
@@ -154,10 +285,16 @@ const EmployeeSidebar: React.FC = () => {
                 isActive(nav.path) ? "menu-item-active" : "menu-item-inactive"
               }`}
               onClick={
-                nav.name === "Learning Corner"
+                nav.onClick
+                  ? nav.onClick
+                  : nav.name === "Learning Corner"
                   ? handleLearningCornerClick
                   : nav.name === "My Tasks"
                   ? handleMyTasksClick
+                  : nav.name === "Calendar"
+                  ? handleCalendarClick
+                  : nav.name === "Leave Application"
+                  ? handleLeaveClick
                   : undefined
               }
             >
@@ -179,7 +316,19 @@ const EmployeeSidebar: React.FC = () => {
                 )}
                 {/* My Tasks badge */}
                 {nav.name === "My Tasks" && myTasksBadge > 0 && (
-                  <NotificationBadge count={myTasksBadge} className="bg-blue-600 absolute -top-2 -right-2" />
+                  <NotificationBadge count={myTasksBadge} className="bg-red-600 absolute -top-2 -right-2" />
+                )}
+                {/* Calendar badge */}
+                {nav.name === "Calendar" && calendarBadge > 0 && (
+                  <NotificationBadge count={calendarBadge} className="bg-red-600 absolute -top-2 -right-2" />
+                )}
+                {/* Leave Application badge */}
+                {nav.name === "Leave Application" && leaveBadge > 0 && (
+                  <NotificationBadge count={leaveBadge} className="bg-red-600 absolute -top-2 -right-2" />
+                )}
+                {/* Leave Request badge for reporting manager */}
+                {nav.name === "Leave Request" && leaveRequestBadge > 0 && (
+                  <NotificationBadge count={leaveRequestBadge} className="bg-red-600 absolute -top-2 -right-2" />
                 )}
               </span>
               {(isExpanded || isHovered || isMobileOpen) && (
@@ -192,10 +341,7 @@ const EmployeeSidebar: React.FC = () => {
     </ul>
   );
 
-  const [isReportingManager, setIsReportingManager] = useState(false);
-  const [employeeId, setEmployeeId] = useState<string | null>(null);
-  const [companyLogo, setCompanyLogo] = useState<string | null>(null);
-  const [companyName, setCompanyName] = useState<string | null>(null);
+
 
   useEffect(() => {
     // Fetch company info for employee from new API endpoint
@@ -230,24 +376,22 @@ const EmployeeSidebar: React.FC = () => {
 
   // Add Assign Task nav item if reporting manager
   const navItemsWithManager = isReportingManager
-    ? (() => {
-              return [
-          ...navItems,
-          {
-            icon: <TaskIcon />, 
-            name: 'Assign Task',
-            path: '/employee/assign-task',
-          },
-          {
-            icon: <SendIcon />, 
-            name: 'Leave Request',
-            path: '/employee/leave-request',
-          },
-        ];
-      })()
-    : (() => {
-              return navItems;
-      })();
+    ? [
+        ...navItems,
+        {
+          icon: <TaskIcon />, 
+          name: 'Assign Task',
+          path: '/employee/assign-task',
+        },
+        {
+          icon: <SendIcon />, 
+          name: 'Leave Request',
+          path: '/employee/leave-request',
+          badge: leaveRequestBadge,
+          onClick: handleLeaveRequestClick,
+        },
+      ]
+    : navItems;
 
   return (
     <aside

@@ -4,6 +4,7 @@ from django.db.models.signals import post_save, pre_save
 from django.dispatch import receiver
 from employee.models import TaskAssignment, Task
 from app.models import Employee, EmpLeave, CalendarEvent, LearningCorner, Notification
+from notifications.models import UserNotification
 
 def _company_user_ids(company):
     return list(
@@ -14,51 +15,50 @@ def _company_user_ids(company):
 def task_assigned_updated(sender, instance, created, **kwargs):
     """
     When a manager assigns/updates a task assignment, notify only the assigned employee.
+    Also create a UserNotification so the frontend gets live notification via SSE and API.
     """
-    print("[DEBUG] TaskAssignment signal fired. Instance:", instance)
     emp_user_id = instance.employee.user.id if hasattr(instance.employee, 'user') else None
-    print(f"[DEBUG] Assigned employee user id: {emp_user_id}")
     if not emp_user_id:
-        print("[DEBUG] No emp_user_id found, skipping notification.")
         return
     task = instance.task
-    print(f"[DEBUG] Task: {task}")
     body = f"{task.title} (deadline: {task.deadline})"
     data = {"type": "task", "task_id": task.id, "assignment_id": instance.id, "status": instance.status}
-    print(f"[DEBUG] Notification body: {body}")
-    print(f"[DEBUG] Notification data: {data}")
     default_sender = UserRegister.objects.filter(role='admin').first()
-    print(f"[DEBUG] Default sender: {default_sender}")
     send_fcm_to_users([emp_user_id], "task", body, sender=default_sender, extra_data=data)
-    print("[DEBUG] send_fcm_to_users called for TaskAssignment.")
-
-@receiver(post_save, sender=Task)
-def task_created_by_manager(sender, instance, created, **kwargs):
-    """
-    If a manager creates a task and already has assignments, notify ONLY assigned employees.
-    """
-    print(f"[DEBUG] Task post_save signal fired. Created: {created}, Instance: {instance}")
+    # Create UserNotification for live notification
     if created:
-        assigned_user_ids = list(
-            instance.assignments.select_related("employee__user").values_list("employee__user__id", flat=True)
+        UserNotification.objects.create(
+            recipient=instance.employee,
+            title=f"Task Assigned: {task.title}",
+            message=f"You have been assigned a task: {task.title} (deadline: {task.deadline})",
+            related_object_id=task.id,
+            sender=default_sender
         )
-        print(f"[DEBUG] Assigned user ids for new task: {assigned_user_ids}")
-        if assigned_user_ids:
-            default_sender = UserRegister.objects.filter(role='admin').first()
-            print(f"[DEBUG] Default sender: {default_sender}")
-            send_fcm_to_users(
-                assigned_user_ids,
-                "task",
-                f"{instance.title} assigned to you",
-                sender=default_sender,
-                extra_data={"type": "task", "task_id": instance.id}
-            )
-            print("[DEBUG] send_fcm_to_users called for Task creation.")
+
+@receiver(post_save, sender=TaskAssignment)
+def notify_employees_on_assignment(sender, instance, created, **kwargs):
+    if created:
+        # all users currently assigned to this task
+        assigned_user_ids = list(
+            instance.task.assignments.select_related("employee__user").values_list("employee__user__id", flat=True)
+        )
+
+        
+        default_sender = UserRegister.objects.filter(role="admin").first()
+        send_fcm_to_users(
+            assigned_user_ids,
+            "task",
+            f"{instance.task.title} assigned to you",
+            sender=default_sender,
+            extra_data={"type": "task", "task_id": instance.task.id},
+        )
+        print(f"[DEBUG] Notification sent to {assigned_user_ids} for Task {instance.task.id}")
 
 @receiver(post_save, sender=EmpLeave)
 def leave_created_notify_manager(sender, instance, created, **kwargs):
     """
     When employee submits leave -> notify reporting manager only.
+    Also create a UserNotification for the manager.
     """
     if created and instance.reporting_manager and instance.reporting_manager.user and instance.reporting_manager.user.id:
         default_sender = UserRegister.objects.filter(role='admin').first()
@@ -68,6 +68,14 @@ def leave_created_notify_manager(sender, instance, created, **kwargs):
             f"{instance.employee} requested {instance.leave_type} ({instance.from_date} → {instance.to_date})",
             sender=default_sender,
             extra_data={"type": "leave_request", "leave_id": instance.id}
+        )
+        # Create UserNotification for manager, set sender to default_sender
+        UserNotification.objects.create(
+            recipient=instance.reporting_manager,
+            title=f"Leave Request from {instance.employee}",
+            message=f"{instance.employee} requested {instance.leave_type} ({instance.from_date} → {instance.to_date})",
+            related_object_id=instance.id,
+            sender=default_sender
         )
 
 @receiver(pre_save, sender=EmpLeave)
@@ -88,6 +96,14 @@ def leave_status_change(sender, instance, **kwargs):
                 sender=default_sender,
                 extra_data={"type": "leave_status", "leave_id": instance.id, "status": instance.status}
             )
+            # Create UserNotification for employee, set sender to default_sender
+            UserNotification.objects.create(
+                recipient=instance.employee,
+                title=f"Leave Status Updated",
+                message=f"Your leave ({instance.from_date} → {instance.to_date}) is {instance.status}",
+                related_object_id=instance.id,
+                sender=default_sender
+            )
 
 @receiver(post_save, sender=Notification)
 def admin_notification_broadcast(sender, instance, created, **kwargs):
@@ -103,6 +119,15 @@ def admin_notification_broadcast(sender, instance, created, **kwargs):
             related_object_id=instance.id,
             extra_data={"type": "admin_notification", "notification_id": instance.id}
         )
+        # Create UserNotification for all employees in company
+        for emp in Employee.objects.filter(company=instance.company):
+            UserNotification.objects.create(
+                recipient=emp,
+                title=instance.title or "Admin Notification",
+                message=instance.description or instance.title or "",
+                related_object_id=instance.id,
+                sender=default_sender
+            )
 
 @receiver(post_save, sender=CalendarEvent)
 def calendar_event_broadcast(sender, instance, created, **kwargs):
@@ -118,6 +143,15 @@ def calendar_event_broadcast(sender, instance, created, **kwargs):
             related_object_id=instance.id,
             extra_data={"type": "calendar_event", "event_id": instance.id}
         )
+        # Create UserNotification for all employees in company
+        for emp in Employee.objects.filter(company=instance.company):
+            UserNotification.objects.create(
+                recipient=emp,
+                title=instance.name or "Calendar Event",
+                message=getattr(instance, 'description', "Calendar Event"),
+                related_object_id=instance.id,
+                sender=default_sender  # Make sure default_sender is set to a valid UserRegister instance
+            )
 
 @receiver(post_save, sender=LearningCorner)
 def learning_corner_broadcast(sender, instance, created, **kwargs):
@@ -133,3 +167,12 @@ def learning_corner_broadcast(sender, instance, created, **kwargs):
             related_object_id=instance.id,
             extra_data={"type": "learning_corner", "learning_id": instance.id}
         )
+        # Create UserNotification for all employees in company
+        for emp in Employee.objects.filter(company=instance.company):
+            UserNotification.objects.create(
+                recipient=emp,
+                title=instance.title or "Learning Corner",
+                message=(instance.description or instance.title or "Learning Corner"),
+                related_object_id=instance.id,
+                sender=default_sender
+            )

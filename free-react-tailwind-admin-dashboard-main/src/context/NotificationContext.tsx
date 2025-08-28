@@ -1,7 +1,7 @@
-import { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
+import { createContext, useContext, useState, useEffect, ReactNode, useCallback, useRef } from 'react';
 import { axiosInstance } from '../pages/Employee/api';
 
-type NotificationType = 'notification' | 'calendar' | 'learning_corner';
+type NotificationType = 'notification' | 'calendar' | 'learning_corner' | 'admin' | 'task' | 'leave' | string;
 interface Notification {
   id: number;
   title: string;
@@ -49,74 +49,18 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
     localStorage.setItem('readNotificationIds', JSON.stringify(ids));
   };
 
-  // Fetch notifications from multiple APIs and merge
+  // Fetch notifications from unified all-notifications endpoint
   const fetchNotifications = useCallback(async () => {
     setLoading(true);
     try {
-      // Fetch all in parallel
-      const [notifRes, calendarRes, learningRes] = await Promise.all([
-        axiosInstance.get("/employee-notifications/"),
-        axiosInstance.get("/employee-calendar/"),
-        axiosInstance.get("/emp-learning-corner/")
-      ]);
-
-     
-
-      // Tag each notification type
-      const notifications: Notification[] = (notifRes.data || []).map((n: {
-        id: number;
-        title: string;
-        description: string;
-        date: string;
-      }) => ({
-        ...n,
-        type: 'notification',
+      const res = await axiosInstance.get("/all-notifications/");
+      const allNotifications: Notification[] = (res.data || []).map((n: any) => ({
+        id: n.id,
+        title: n.title,
+        description: n.description,
+        date: n.date,
+        type: n.type,
       }));
-
-      // Flatten admin_events and personal_events from calendar weeks
-      const calendarEvents: Notification[] = [];
-      type CalendarDay = {
-        day: number | '';
-        date: string;
-        admin_events?: { id: number; title: string }[];
-        personal_events?: { id: number; title: string }[];
-      };
-      (Array.isArray(calendarRes.data?.weeks) ? calendarRes.data.weeks : []).forEach((week: CalendarDay[]) => {
-        week.forEach((dayObj: CalendarDay) => {
-          if (!dayObj.day) return;
-          (dayObj.admin_events || []).forEach((event) => {
-            calendarEvents.push({
-              id: event.id,
-              title: event.title,
-              description: "Admin Event",
-              date: dayObj.date,
-              type: "calendar"
-            });
-          });
-        });
-      });
-
-      const learningCorner: Notification[] = (learningRes.data || []).map((l: {
-        id: number;
-        title: string;
-        description: string;
-        date?: string;
-        created_at?: string;
-        updated_at?: string;
-      }) => ({
-        id: l.id,
-        title: l.title,
-        description: l.description,
-        date: l.date || l.created_at || l.updated_at || new Date().toISOString(),
-        type: 'learning_corner',
-      }));
-
-      // Merge and sort by date descending
-      const allNotifications: Notification[] = [...notifications, ...calendarEvents, ...learningCorner]
-        .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-
-      
-
       setNotifications(allNotifications);
       const readIds = getReadIds();
       const unread = allNotifications.filter((n) => !readIds.includes(n.id)).length;
@@ -151,6 +95,7 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
     setUnreadCount(0);
   };
 
+
   // Fetch notifications on mount
   useEffect(() => {
     fetchNotifications();
@@ -163,6 +108,50 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
     }, 5 * 60 * 1000); // 5 minutes
     return () => clearInterval(interval);
   }, [fetchNotifications]);
+
+  // SSE: Listen for live notifications
+  const eventSourceRef = useRef<EventSource | null>(null);
+  useEffect(() => {
+    // Only connect if user is authenticated (optional: add your own auth check)
+    // Use absolute or relative path as needed
+  const sseUrl = axiosInstance.defaults.baseURL
+  ? `${axiosInstance.defaults.baseURL.replace(/\/$/, '')}/sse/`
+  : '/employee/sse/';
+const eventSource = new window.EventSource(sseUrl);
+    eventSourceRef.current = eventSource;
+
+    eventSource.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data);
+        if (!data.id) return; // Ignore messages that are not notifications
+        // Map backend fields to Notification type
+        const newNotification = {
+          id: data.id,
+          title: data.title,
+          description: data.message,
+          date: data.created_at,
+          type: data.type || 'notification',
+        };
+        setNotifications((prev) => {
+          // Avoid duplicates
+          if (prev.some((n) => n.id === newNotification.id)) return prev;
+          return [newNotification, ...prev];
+        });
+        // Update unread count
+        const readIds = getReadIds();
+        setUnreadCount((prev) => readIds.includes(newNotification.id) ? prev : prev + 1);
+      } catch {
+        // Ignore parse errors
+      }
+    };
+    eventSource.onerror = () => {
+      // Optionally handle errors
+      // eventSource.close();
+    };
+    return () => {
+      eventSource.close();
+    };
+  }, []);
 
 
   // Provide the correct context value object

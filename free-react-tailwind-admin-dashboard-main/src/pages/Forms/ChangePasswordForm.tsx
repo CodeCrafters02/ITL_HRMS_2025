@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { axiosInstance } from "../Employee/api";
+import { axiosInstance } from "../Dashboard/api";
 import InputField from "../../components/form/input/InputField";
 import Button from "../../components/ui/button/Button";
 import Form from "../../components/form/Form";

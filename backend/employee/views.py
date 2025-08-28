@@ -864,11 +864,25 @@ class EmpLeaveListCreateAPIView(generics.ListCreateAPIView):
 
     def perform_create(self, serializer):
         emp = self.request.user.employee_profile
+        start_date = serializer.validated_data.get("from_date")
+        end_date = serializer.validated_data.get("to_date")
+
+        # Check if leave already exists in the given date range
+        exists = EmpLeave.objects.filter(
+            employee=emp,
+            from_date__lte=end_date,
+            to_date__gte=start_date
+        ).exists()
+
+        if exists:
+            raise Exception("Leave already exists for the given dates.")
+
         serializer.save(
             company=emp.company,
             employee=emp,
             reporting_manager=emp.reporting_manager
         )
+
 
 class LeaveListAPIView(generics.ListAPIView):
     serializer_class = LeaveSerializer
@@ -918,7 +932,28 @@ class RejectEmpLeaveAPIView(APIView):
             return Response({'detail': 'Leave rejected.'})
         return Response({'detail': 'Already rejected.'})
 
+class CancelEmpLeaveAPIView(APIView):
+    permission_classes = [IsAuthenticated]
 
+    def post(self, request, leave_id):
+        emp = request.user.employee_profile
+        leave = get_object_or_404(EmpLeave, id=leave_id, employee=emp)
+
+        if leave.status not in ["Pending", "Approved"]:
+            return Response(
+                {"detail": "Only pending or approved leaves can be cancelled."},
+                status=400
+            )
+
+        if leave.status == "Pending":
+            leave.delete()
+            return Response({"detail": "Pending leave request cancelled and removed."})
+
+        if leave.status == "Approved":            
+            leave.status = "Cancelled"
+            leave.save()
+            return Response({"detail": "Approved leave has been cancelled."})
+    
 class EmpLearningCornerAPIView(generics.ListAPIView):
     serializer_class = EmpLearningCornerSerializer
     permission_classes = [IsAuthenticated]

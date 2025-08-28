@@ -216,7 +216,33 @@ class PasswordChangeSerializer(serializers.Serializer):
         if data['new_password'] != data['confirm_password']:
             raise serializers.ValidationError("New password and confirm password do not match.")
         validate_password(data['new_password'], user=self.context['request'].user)
-        return data   
+        return data  
+    
+class CompanySerializer(serializers.ModelSerializer):
+    logo_url = serializers.SerializerMethodField()
+    class Meta:
+        model = Company
+        fields = [
+            'id',
+            'name',
+            'address',
+            'location',
+            'email',
+            'phone_number',
+            'logo',
+            'logo_url',
+            'created_at',
+            'updated_at',
+        ]
+        read_only_fields = ['id', 'name','email','created_at', 'updated_at'] 
+
+    def get_logo_url(self, obj):
+            request = self.context.get('request')
+            if obj.logo and request:
+                return request.build_absolute_uri(obj.logo.url)
+            elif obj.logo:
+                return obj.logo.url
+            return None
 
 class DepartmentSerializer(serializers.ModelSerializer):
     class Meta:
@@ -512,23 +538,30 @@ class CalendarEventSerializer(serializers.ModelSerializer):
         
         
 class RelievedEmployeeSerializer(serializers.ModelSerializer):
-    employee = serializers.PrimaryKeyRelatedField(queryset=Employee.objects.filter(is_active=True), required=True)
-    employee_name = serializers.SerializerMethodField(read_only=True)
+    employee = serializers.PrimaryKeyRelatedField(queryset=Employee.objects.all(), write_only=True)
+    employee_details = EmployeeSerializer(source='employee', read_only=True)
     employee_id = serializers.SerializerMethodField(read_only=True)
+    employee_name = serializers.SerializerMethodField(read_only=True)
 
     class Meta:
         model = RelievedEmployee
-        fields = ['id', 'employee', 'employee_name', 'employee_id', 'relieving_date',  'remarks']
+        fields = ['id', 'employee', 'employee_details', 'employee_id', 'employee_name', 'relieving_date', 'remarks']
 
-    def get_employee_name(self, obj):
-        return obj.employee.full_name if obj.employee else None
 
     def get_employee_id(self, obj):
         return obj.employee.employee_id if obj.employee else None
 
+    def get_employee_name(self, obj):
+        return obj.employee.full_name if obj.employee else None
+
     def create(self, validated_data):
-        employee = validated_data['employee']
-        # Mark the employee as inactive
+        employee = validated_data.get('employee', None)
+        if not employee:
+            raise serializers.ValidationError({'employee': 'Employee is required.'})
+        if RelievedEmployee.objects.filter(employee=employee).exists():
+            raise serializers.ValidationError({
+                'employee': 'This employee has already been relieved.'
+            })
         employee.is_active = False
         employee.save()
         return super().create(validated_data)
@@ -718,3 +751,23 @@ class BreakConfigSerializer(serializers.ModelSerializer):
             'duration_minutes',
             'enabled'
         ]
+             
+        
+class LetterTemplateSerializer(serializers.ModelSerializer):
+    company_details = CompanySerializer(source="company", read_only=True)
+
+    class Meta:
+        model = LetterTemplate
+        fields = [
+            "id", "company", "company_details", "title", "content", "created_by", "created_at"
+        ]
+        read_only_fields = ["id", "company", "created_by", "created_at", "company_details"]
+
+class GeneratedLetterSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = GeneratedLetter
+        fields = '__all__'
+        extra_kwargs = {
+            'file_path': {'required': False, 'allow_blank': True, 'allow_null': True}
+        }
+

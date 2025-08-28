@@ -1,4 +1,5 @@
 from rest_framework import viewsets, generics, status
+import string
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from django.utils.timezone import localtime
@@ -15,6 +16,7 @@ from decimal import Decimal
 from rest_framework import viewsets, permissions
 from rest_framework.views import APIView
 from rest_framework.response import Response
+import re
 from rest_framework.permissions import IsAuthenticated
 from .permissions import IsMaster,IsAdminUser
 from .serializers import *
@@ -23,7 +25,7 @@ from .models import *
 
 class CustomPasswordChangeAPIView(generics.UpdateAPIView):
     serializer_class = CustomPasswordChangeSerializer
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [IsAuthenticated]
 
     def update(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data, context={'request': request})
@@ -189,7 +191,126 @@ class CompanyLogoAPIView(APIView):
         return Response(serializer.data)
 
 
+class CompanyUpdateAPIView(APIView):
+    permission_classes = [IsAuthenticated, IsAdminUser]
+    
+    def get(self, request):
+       
+        user = request.user
+        company = getattr(user, 'company', None)
+        if not company:
+            return Response({"detail": "No company found for user."}, status=status.HTTP_404_NOT_FOUND)
+        serializer = CompanySerializer(company, context={"request": request})
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
+    def put(self, request, pk):
+        try:
+            company = Company.objects.get(pk=pk)
+        except Company.DoesNotExist:
+            return Response({"detail": "Company not found."}, status=status.HTTP_404_NOT_FOUND)
+
+        
+        serializer = CompanySerializer(company, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class AdminDashboardAPIView(APIView):
+    permission_classes = [IsAuthenticated,IsAdminUser]
+    def get(self, request):
+        today = timezone.now().date()
+        company = request.user.company  
+
+        # Department count
+        total_departments = Department.objects.filter(company=company).count()
+
+        # Leaves today
+        leaves_today = EmpLeave.objects.filter(
+            company=company,
+            from_date__lte=today,
+            to_date__gte=today,
+            status='Approved'
+        ).count()
+
+        # Employee Overview
+        total_employees = Employee.objects.filter(company=company).count()
+        active_employees = Employee.objects.filter(company=company, is_active=True).count()
+        inactive_employees = Employee.objects.filter(company=company, is_active=False).count()
+        new_joinees = Employee.objects.filter(
+            company=company,
+            date_of_joining__year=today.year,
+            date_of_joining__month=today.month
+        ).count()
+        
+        exits_this_month = Employee.objects.filter(
+            company=company,
+            relieved_info__relieving_date__year=today.year,
+            relieved_info__relieving_date__month=today.month
+        ).count()
+        # Upcoming Birthdays/Anniversaries (next 30 days)
+        next_30 = today + timezone.timedelta(days=30)
+        upcoming_birthdays = Employee.objects.filter(
+            company=company,
+            date_of_birth__month__gte=today.month,
+            date_of_birth__day__gte=today.day,
+            date_of_birth__month__lte=next_30.month,
+            date_of_birth__day__lte=next_30.day,
+            is_active=True
+        ).order_by('date_of_birth')
+        
+
+        # Attendance Snapshot
+        present = Attendance.objects.filter(company=company, date=today, is_present=True).count()
+        absent = Attendance.objects.filter(company=company, date=today, is_present=False).count()
+        on_leave = EmpLeave.objects.filter(
+            company=company,
+            from_date__lte=today,
+            to_date__gte=today,
+            status='Approved'
+        ).count()
+
+        # Pending Leave Requests
+        pending_leaves = EmpLeave.objects.filter(company=company, status='Pending').count()
+
+        # Payroll Status
+        current_month = today.month
+        current_year = today.year
+        payroll_batches = PayrollBatch.objects.filter(company=company, month=current_month, year=current_year)
+        payroll_status = "pending"
+        if payroll_batches.filter(status='Locked').exists():
+            payroll_status = "completed"
+
+        # Upcoming Salary Release (next batch with status 'Draft')
+        next_salary_release = payroll_batches.filter(status='Draft').order_by('id').first()
+        next_salary_release_date = None
+        if next_salary_release:
+            next_salary_release_date = f"{current_year}-{current_month}-01"  # Or use a real field if you have one
+
+        return Response({
+            "department_count": total_departments,
+            "leaves_today": leaves_today,
+            "employee_overview": {
+                "total": total_employees,
+                "active": active_employees,
+                "inactive": inactive_employees,
+                "new_joinees": new_joinees,
+                "exits_this_month": exits_this_month,
+            },
+            "upcoming_birthdays": [
+                {"name": e.full_name, "date_of_birth": e.date_of_birth} for e in upcoming_birthdays
+            ],
+           
+            "attendance_snapshot": {
+                "present": present,
+                "absent": absent,
+                "on_leave": on_leave,
+            },
+            "pending_leave_requests": pending_leaves,
+            "payroll_status": payroll_status,
+            "next_salary_release_date": next_salary_release_date,
+        })
 
 class DepartmentViewSet(viewsets.ModelViewSet):
     serializer_class = DepartmentSerializer
@@ -938,8 +1059,8 @@ class AttendanceLogView(APIView):
         year, month_num = map(int, month.split('-'))
         start_date = datetime(year, month_num, 1).date()
         end_date = datetime(year, month_num, monthrange(year, month_num)[1]).date()
-        
-        holidays = CalendarEvent.objects.filter(date__range=(start_date, end_date))
+
+        holidays = CalendarEvent.objects.filter(date__range=(start_date, end_date), is_holiday=True)
         holidays_dict = {h.date: h.name for h in holidays}
 
         employees = Employee.objects.all()
@@ -953,33 +1074,31 @@ class AttendanceLogView(APIView):
             leave_summary = {}
 
             for att in attendance_qs:
-                # Infer status based on check-in/check-out
+                # Infer status and leave type initials
+                worked_hours = (att.check_out - att.check_in).total_seconds() / 3600 if att.check_in and att.check_out else 0
+                leave_type_val = att.leave.leave_type.leave_name if (att.leave and att.leave.leave_type) else None
+                leave_type_initials = att.leave.leave_type.leave_name[:2].upper() if (att.leave and att.leave.leave_type and att.leave.leave_type.leave_name) else None
+                # Default
+                status = "Absent"
+                half_day = False
                 if att.check_in and att.check_out:
-                    worked_hours = (att.check_out - att.check_in).total_seconds() / 3600
                     if worked_hours >= shift_policy.full_day_hours():
                         status = "Present"
                     elif worked_hours >= shift_policy.half_day_hours():
                         status = "Half Day"
+                        half_day = True
                     else:
                         status = "Absent"
-                elif att.leave_type:
+                elif att.leave and att.leave.leave_type:
                     status = "Leave"
-                else:
-                    status = "Absent"
-
                 # Check if late
                 grace_limit = shift_policy.grace()
-
-                # Convert check-in to localtime before extracting time
                 check_in_local = localtime(att.check_in) if att.check_in else None
-
                 scheduled_checkin = datetime.combine(att.date, shift_policy.checkin)
-
                 if check_in_local:
                     actual_checkin = datetime.combine(att.date, check_in_local.time())
                     is_late = actual_checkin > (scheduled_checkin + grace_limit)
                     late_minutes = (actual_checkin - scheduled_checkin).seconds // 60 if is_late else 0
-
                     if late_minutes < 60:
                         late_by = f"{late_minutes} min"
                     else:
@@ -989,8 +1108,6 @@ class AttendanceLogView(APIView):
                 else:
                     is_late = False
                     late_by = None
-
-
                 # Count status
                 if status == "Present":
                     present_days += 1
@@ -1003,10 +1120,10 @@ class AttendanceLogView(APIView):
                         late_days += 1
                 elif status == "Leave":
                     leave_days += 1
-                    leave_summary[att.leave_type] = leave_summary.get(att.leave_type, 0) + 1
+                    if leave_type_val:
+                        leave_summary[leave_type_val] = leave_summary.get(leave_type_val, 0) + 1
                 elif status == "Absent":
                     absent_days += 1
-
                 # Append daily data
                 daily_data.append({
                     "date": str(att.date),
@@ -1015,7 +1132,9 @@ class AttendanceLogView(APIView):
                     "check_out": localtime(att.check_out).strftime("%H:%M") if att.check_out else None,
                     "is_late": is_late,
                     "late_by_minutes": late_by if is_late else 0,
-                    "leave_type": att.leave,
+                    "leave_type": leave_type_val,
+                    "leave_type_initials": leave_type_initials,
+                    "half_day": half_day,
                     "remarks": att.remarks or ""
                 })
 
@@ -1144,3 +1263,215 @@ class BreakConfigViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         serializer.save(company=self.request.user.company)
+        
+        
+        
+class LetterTemplateViewSet(viewsets.ModelViewSet):
+    serializer_class = LetterTemplateSerializer
+    permission_classes = [IsAuthenticated, IsAdminUser]
+
+    def get_queryset(self):
+        return LetterTemplate.objects.filter(
+            company=self.request.user.company
+        ).order_by("-created_at")
+
+    def perform_create(self, serializer):
+        serializer.save(company=self.request.user.company, created_by=self.request.user)
+
+    @action(detail=True, methods=["post"], url_path="preview")
+    def preview(self, request, pk=None):
+        """
+        Preview a letter template with candidate data before sending
+        """
+        template = self.get_object()
+        candidate_data = request.data.get("candidate_data", {})
+
+        try:
+            # Use safe Python string.Template
+            tmpl = string.Template(template.content)
+            rendered_text = tmpl.safe_substitute(candidate_data)  
+            
+            return Response({
+                "template_id": template.id,
+                "preview_text": rendered_text,
+                "input_data": candidate_data
+            }, status=status.HTTP_200_OK)
+
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        
+
+
+class GenerateLetterContentAPIView(APIView):
+    permission_classes = [IsAuthenticated, IsAdminUser]
+
+    def post(self, request):
+        template_id = request.data.get('template_id')
+        letter_type = request.data.get('type') 
+        employee_id = request.data.get('employee_id')
+        candidate_id = request.data.get('candidate_id')
+        relieved_employee_id = request.data.get('relieved_employee_id')
+
+        if not letter_type:
+            return Response({'error': 'Letter type is required.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Fetch template
+        try:
+            template = LetterTemplate.objects.get(id=template_id, company=request.user.company)
+        except LetterTemplate.DoesNotExist:
+            return Response({'error': 'Template not found'}, status=status.HTTP_404_NOT_FOUND)
+
+        # Determine which model to use
+        obj = None
+        obj_type = None
+        if employee_id:
+            try:
+                obj = Employee.objects.select_related('company', 'department', 'designation').get(id=employee_id, company=request.user.company)
+                obj_type = 'employee'
+            except Employee.DoesNotExist:
+                return Response({'error': 'Employee not found'}, status=status.HTTP_404_NOT_FOUND)
+        elif candidate_id:
+            try:
+                obj = Recruitment.objects.get(id=candidate_id)
+                obj_type = 'candidate'
+            except Recruitment.DoesNotExist:
+                return Response({'error': 'Candidate not found'}, status=status.HTTP_404_NOT_FOUND)
+        elif relieved_employee_id:
+            try:
+                obj = RelievedEmployee.objects.select_related('employee').get(id=relieved_employee_id)
+                obj_type = 'relievedemployee'
+            except RelievedEmployee.DoesNotExist:
+                return Response({'error': 'Relieved employee not found'}, status=status.HTTP_404_NOT_FOUND)
+        else:
+            return Response({'error': 'No valid person id provided.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Build data dict for placeholders
+        data = {}
+        if obj_type == 'employee':
+            data = {
+                'name': obj.full_name,
+                'employee_id': obj.employee_id,
+                'designation': obj.designation.designation_name if obj.designation else '',
+                'department': obj.department.department_name if obj.department else '',
+                'joining_date': obj.date_of_joining.strftime('%Y-%m-%d') if obj.date_of_joining else '',
+                'last_working_date': obj.date_of_releaving.strftime('%Y-%m-%d') if obj.date_of_releaving else '',
+                'ctc': str(obj.ctc) if obj.ctc else '',
+                'company': obj.company.name if obj.company else '',
+                'location': obj.company.location if obj.company else '',
+            }
+        elif obj_type == 'candidate':
+            data = {
+                'name': obj.name,
+                'designation': obj.job_title,
+                'joining_date': obj.appointment_date.strftime('%Y-%m-%d') if obj.appointment_date else '',
+                'ctc': str(obj.salary) if obj.salary else '',
+                'company': request.user.company.name if hasattr(request.user, 'company') and request.user.company else '',
+                'location': request.user.company.location if hasattr(request.user, 'company') and request.user.company else '',
+                'address': obj.address or '',
+            }
+        elif obj_type == 'relievedemployee':
+            emp = obj.employee
+            data = {
+                'name': emp.full_name,
+                'employee_id': emp.employee_id,
+                'designation': emp.designation.designation_name if emp.designation else '',
+                'department': emp.department.department_name if emp.department else '',
+                'joining_date': emp.date_of_joining.strftime('%Y-%m-%d') if emp.date_of_joining else '',
+                'last_working_date': obj.relieving_date.strftime('%Y-%m-%d') if obj.relieving_date else '',
+                'ctc': str(emp.ctc) if emp.ctc else '',
+                'company': emp.company.name if emp.company else '',
+                'location': emp.company.location if emp.company else '',
+            }
+
+        # Find all placeholders in the template
+        placeholders = set(re.findall(r'<(\w+)>', template.content))
+
+        # Replace placeholders
+        def replacer(match):
+            key = match.group(1)
+            return str(data.get(key, f'<{key}>'))
+        filled_content = re.sub(r'<(\w+)>', replacer, template.content)
+
+       
+
+        generated_letter = None
+        if obj_type == 'candidate':
+            generated_letter, created = GeneratedLetter.objects.get_or_create(
+                candidate=obj,
+                template=template,
+                type=letter_type,  # <-- filter by type
+                defaults={
+                    'content': filled_content,
+                    'title': template.title,
+                }
+            )
+            if not created:
+                generated_letter.content = filled_content
+                generated_letter.title = template.title
+                generated_letter.save()
+        elif obj_type == 'employee':
+            generated_letter, created = GeneratedLetter.objects.get_or_create(
+                employee=obj,
+                template=template,
+                type=letter_type,  # <-- filter by type
+                defaults={
+                    'content': filled_content,
+                    'title': template.title,
+                }
+            )
+            if not created:
+                generated_letter.content = filled_content
+                generated_letter.title = template.title
+                generated_letter.save()
+        elif obj_type == 'relievedemployee':
+            generated_letter, created = GeneratedLetter.objects.get_or_create(
+                relieved_employee=obj,
+                template=template,
+                type=letter_type,  # <-- filter by type
+                defaults={
+                    'content': filled_content,
+                    'title': template.title,
+                }
+            )
+            if not created:
+                generated_letter.content = filled_content
+                generated_letter.title = template.title
+                generated_letter.save()
+
+        return Response({
+            'content': filled_content,
+            'placeholders': list(placeholders),
+            'filled': data,
+            'generated_letter_id': generated_letter.id if generated_letter else None,
+        }, status=status.HTTP_200_OK)
+        
+
+
+class GeneratedLetterViewSet(viewsets.ModelViewSet):
+    queryset = GeneratedLetter.objects.all()
+    serializer_class = GeneratedLetterSerializer
+
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        letter_type = self.request.query_params.get('type')
+        template_id = self.request.query_params.get('template_id')
+        candidate_id = self.request.query_params.get('candidate_id')
+        relieved_id = self.request.query_params.get('relieved_id')
+
+        if letter_type:
+            queryset = queryset.filter(type=letter_type)
+        if template_id:
+            queryset = queryset.filter(template_id=template_id)
+        if candidate_id:
+            queryset = queryset.filter(candidate_id=candidate_id)
+        if relieved_id:
+            queryset = queryset.filter(relieved_employee_id=relieved_id)
+        return queryset
+
+    def perform_create(self, serializer):
+        instance = serializer.save()
+        uploaded_file = self.request.FILES.get('file')
+        if uploaded_file:
+            # Save the file and set file_path (adjust path as needed)
+            instance.file_path = f'letters/{uploaded_file.name}'
+            instance.save()
