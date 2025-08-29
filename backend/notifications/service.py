@@ -1,4 +1,11 @@
 from django.conf import settings
+from app.models import UserRegister
+import json
+import requests
+from django.conf import settings
+from google.oauth2 import service_account
+from google.auth.transport.requests import Request
+from .models import UserNotification, UserDevice
 
 # Helper to get absolute logo URL
 
@@ -16,12 +23,7 @@ def get_absolute_logo_url(logo_field, request=None):
         return url  # fallback to relative if SITE_URL not set
     return f"{base.rstrip('/')}/{url.lstrip('/')}"
 
-import json
-import requests
-from django.conf import settings
-from google.oauth2 import service_account
-from google.auth.transport.requests import Request
-from .models import UserNotification, UserDevice
+
 
 
 def remove_unregistered_token(token):
@@ -107,3 +109,8 @@ def send_fcm_to_users(user_ids, notif_type, message, sender, title="", related_o
         this_extra_data['company_name'] = emp_name_map.get(user_id, "")
         print("FCM Notification company_logo (absolute):", this_extra_data['company_logo'])
         send_fcm_push(tk, title or notif_type.capitalize(), message, this_extra_data)
+  
+        
+def send_push_notification_to_all(title, message):
+    user_ids = list(UserRegister.objects.values_list('id', flat=True))
+    send_fcm_to_users(user_ids, "general", message, title=title)

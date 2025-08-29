@@ -262,6 +262,17 @@ class DashboardAPIView(APIView):
                 'date': latest_payroll.payroll_date
             } if latest_payroll else None
 
+
+            # Birthday message logic
+            birthday_message = None
+            if employee.date_of_birth:
+                today_month = today.month
+                today_day = today.day
+                dob_month = employee.date_of_birth.month
+                dob_day = employee.date_of_birth.day
+                if today_month == dob_month and today_day == dob_day:
+                    birthday_message = f"Happy Birthday, {employee.first_name}! 🎉"
+
             dashboard_data = {
                 'employee_name': f"{employee.first_name} {employee.last_name}",
                 'employee_photo': request.build_absolute_uri(employee.photo.url) if employee.photo else None,
@@ -290,7 +301,8 @@ class DashboardAPIView(APIView):
                         for br in recent_breaks
                     ] if recent_breaks else None,
                 'overtime': overtime,
-                'latest_payroll': latest_payroll_data
+                'latest_payroll': latest_payroll_data,
+                'birthday_message': birthday_message,
             }
 
             return Response({"dashboard_data": dashboard_data})

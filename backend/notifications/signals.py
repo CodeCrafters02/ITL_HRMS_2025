@@ -1,10 +1,12 @@
-from .service import send_fcm_to_users
+from .service import send_fcm_to_users,send_push_notification_to_all
 from app.models import UserRegister
-from django.db.models.signals import post_save, pre_save
+from django.db.models.signals import post_save, pre_save, post_migrate
 from django.dispatch import receiver
+from django.utils import timezone
 from employee.models import TaskAssignment, Task
 from app.models import Employee, EmpLeave, CalendarEvent, LearningCorner, Notification
 from notifications.models import UserNotification
+
 
 def _company_user_ids(company):
     return list(
@@ -176,3 +178,13 @@ def learning_corner_broadcast(sender, instance, created, **kwargs):
                 related_object_id=instance.id,
                 sender=default_sender
             )
+
+
+@receiver(post_migrate)
+def send_birthday_push_notifications(sender, **kwargs):
+    today = timezone.localdate()
+    birthday_employees = Employee.objects.filter(date_of_birth__month=today.month, date_of_birth__day=today.day)
+    for emp in birthday_employees:
+        message = f"Happy Birthday, {emp.full_name}! May your day be filled with joy and success 🎉."
+        # This function should send a push notification to all users
+        send_push_notification_to_all(title="🎂 Birthday Wish", message=message)

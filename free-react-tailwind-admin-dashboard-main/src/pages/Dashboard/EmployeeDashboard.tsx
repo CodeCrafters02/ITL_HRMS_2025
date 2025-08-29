@@ -47,6 +47,7 @@ interface DashboardData {
   recent_breaks: BreakData[] | null;
   overtime: OvertimeData | null;
   latest_payroll: PayrollData | null;
+  birthday_message?: string | null;
 }
 
 interface NotificationState {
@@ -306,11 +307,17 @@ export default function EmployeeDashboard(): React.JSX.Element {
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
         <div className="max-w-7xl mx-auto p-6">
           
-          {/* Header Section */}
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 mb-6">
+          {/* Header Section with Birthday Theme */}
+          <div
+            className={
+              `rounded-lg shadow-sm border mb-6 ` +
+              (dashboardData?.birthday_message
+                ? 'bg-gradient-to-r from-pink-400 via-yellow-300 to-blue-400 border-yellow-400 animate-pulse'
+                : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700')
+            }
+          >
             <div className="p-6">
               <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
-                
                 {/* Employee Info */}
                 <div className="flex items-center gap-4">
                   <div className="relative">
@@ -330,24 +337,41 @@ export default function EmployeeDashboard(): React.JSX.Element {
                     }`}></div>
                   </div>
                   <div>
-                    <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+                    <h1 className="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
                       Welcome, {dashboardData?.employee_name || 'Employee'}
+                      {dashboardData?.birthday_message && (
+                        <span className="ml-2 text-3xl" role="img" aria-label="birthday">🎂</span>
+                      )}
                     </h1>
                     <p className="text-gray-600 dark:text-gray-400">{getCurrentDate()}</p>
+                    {dashboardData?.birthday_message && (
+                      <div className="mt-2 px-4 py-2 rounded-lg bg-white/80 text-pink-700 font-semibold text-lg shadow animate-bounce border border-pink-300 flex items-center gap-2">
+                        <span role="img" aria-label="party">🎉</span>
+                        {dashboardData.birthday_message}
+                        <span role="img" aria-label="party">🎉</span>
+                      </div>
+                    )}
                   </div>
                 </div>
 
                 {/* Status & Controls */}
                 <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
                   <div className="text-center">
-                    <div className="text-lg font-mono font-bold text-gray-600 dark:text-white">
+                    <div className={
+                      dashboardData?.birthday_message
+                        ? 'text-lg font-mono font-bold text-yellow-700 drop-shadow-lg'
+                        : 'text-lg font-mono font-bold text-gray-600 dark:text-white'
+                    }>
                       {hasActiveBreak ? formatTime(breakTimer) : formatTime(localTimer)}
                     </div>
-                    <div className="text-sm text-gray-600 dark:text-gray-400">
+                    <div className={
+                      dashboardData?.birthday_message
+                        ? 'text-sm text-yellow-800'
+                        : 'text-sm text-gray-600 dark:text-gray-400'
+                    }>
                       {isCheckedIn ? (hasActiveBreak ? 'On Break' : 'Working Time') : 'Ready to Start'}
                     </div>
                   </div>
-                  
                   <div className="flex items-center gap-3">
                     <button
                       className="p-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors"
@@ -356,7 +380,6 @@ export default function EmployeeDashboard(): React.JSX.Element {
                     >
                       <FaSyncAlt size={16} />
                     </button>
-                    
                     <Button
                       className={`px-6 py-2 rounded-md font-medium transition-colors ${
                         isCheckedIn
@@ -376,7 +399,6 @@ export default function EmployeeDashboard(): React.JSX.Element {
               {isCheckedIn && (
                 <div className="mt-6 pt-6 border-t border-gray-200 dark:border-gray-700">
                   <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                                       
                     <div className="flex items-center gap-3">
                       {hasActiveBreak ? (
                         <div className="flex items-center gap-3">

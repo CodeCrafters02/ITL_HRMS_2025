@@ -1,8 +1,9 @@
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
-from app.models import Notification, CalendarEvent, LearningCorner
+from app.models import Notification, CalendarEvent, LearningCorner,Employee
 from notifications.models import UserNotification
+from django.utils import timezone
 from datetime import datetime
 import json
 import time
@@ -97,6 +98,19 @@ class AllNotificationsAPIView(APIView):
                     "date": None,  # No date field available in model
                     "type": "learning_corner"
                 })
+
+        # Birthday wishes for all employees whose birthday is today
+        
+        today = timezone.localdate()
+        birthday_employees = Employee.objects.filter(date_of_birth__month=today.month, date_of_birth__day=today.day)
+        for emp in birthday_employees:
+            notifications.append({
+                "id": 9000000 + emp.id,
+                "title": "🎂 Birthday Wish",
+                "description": f"Happy Birthday, {emp.full_name}! May your day be filled with joy and success 🎉.",
+                "date": today.isoformat(),
+                "type": "birthday"
+            })
 
         # Sort by date descending, handling None values by using a fallback
         def sort_key(x):
