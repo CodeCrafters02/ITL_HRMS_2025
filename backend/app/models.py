@@ -125,9 +125,9 @@ class Employee(models.Model):
 
     # ID proofs
     aadhar_no = models.CharField(max_length=100, null=True, blank=True)
-    aadhar_card = models.ImageField(upload_to='documents', null=True, blank=True)
+    aadhar_card = models.FileField(upload_to='documents', null=True, blank=True)
     pan_no = models.CharField(max_length=100, null=True, blank=True)
-    pan_card = models.ImageField(upload_to='documents', null=True, blank=True)
+    pan_card = models.FileField(upload_to='documents', null=True, blank=True)
 
     # Family & emergency
     guardian_name = models.CharField(max_length=100, null=True, blank=True)
@@ -204,7 +204,7 @@ class Employee(models.Model):
         return f"{self.first_name} {self.last_name}"
     
 class RelievedEmployee(models.Model):
-    employee = models.OneToOneField(Employee, on_delete=models.CASCADE, related_name='relieved_info')
+    employee = models.OneToOneField(Employee, on_delete=models.SET_NULL, null=True, blank=True, related_name='relieved_info')
     relieving_date = models.DateField()
     remarks = models.TextField(null=True, blank=True)
 

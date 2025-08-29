@@ -13,8 +13,8 @@ from django.db.models import Q,Prefetch
 from rest_framework.views import APIView
 from calendar import month_name
 from .utils import calculate_worked_time, calculate_effective_time
-
-from app.models import Attendance,Notification,LearningCorner, ShiftPolicy, Employee, BreakLog,Payroll,CalendarEvent,EmpLeave,CompanyPolicies
+import re
+from app.models import Attendance,Notification,LearningCorner, ShiftPolicy, Employee, BreakLog,Payroll,CalendarEvent,EmpLeave,CompanyPolicies,Level,Designation
 from .models import *
 from .serializers import *
 
@@ -1048,3 +1048,100 @@ class EmployeeCompanyPoliciesAPIView(generics.ListAPIView):
         context = super().get_serializer_context()
         context.update({"request": self.request})
         return context
+
+
+class EmployeeHierarchyAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def extract_level_number(self, level_name):
+        match = re.search(r'(\d+)', level_name)
+        return int(match.group(1)) if match else None
+
+    def get(self, request):
+        user = request.user
+        try:
+            employee = Employee.objects.select_related('level', 'designation', 'reporting_manager').get(user=user)
+        except Employee.DoesNotExist:
+            return Response({'error': 'Employee not found.'}, status=404)
+
+        # Current employee info
+        current_level = employee.level
+        current_designation = employee.designation
+
+        # Reporting manager info
+        reporting_manager = getattr(employee, 'reporting_manager', None)
+        reportees = []
+        if reporting_manager:
+            # Get reportees for this manager (excluding the current employee)
+            reportees_qs = Employee.objects.filter(reporting_manager=reporting_manager).exclude(id=employee.id)
+            reportees = [
+                {
+                    'id': rep.id,
+                    'name': rep.full_name,
+                    'designation': rep.designation.designation_name if rep.designation else None,
+                }
+                for rep in reportees_qs
+            ]
+            manager_info = {
+                'name': reporting_manager.full_name,
+                'level': reporting_manager.level.level_name if reporting_manager.level else None,
+                'designation': reporting_manager.designation.designation_name if reporting_manager.designation else None,
+                'reportees': reportees,
+            }
+        else:
+            # If no reporting manager (e.g., CEO), get direct reportees for this employee
+            reportees_qs = Employee.objects.filter(reporting_manager=employee)
+            reportees = [
+                {
+                    'id': rep.id,
+                    'name': rep.full_name,
+                    'designation': rep.designation.designation_name if rep.designation else None,
+                }
+                for rep in reportees_qs
+            ]
+            manager_info = None
+
+        # Higher authority (next higher level by numeric order in level name)
+        current_level_number = self.extract_level_number(current_level.level_name) if current_level else None
+        all_levels = Level.objects.filter(company=employee.company)
+        higher_levels = [
+            lvl for lvl in all_levels
+            if self.extract_level_number(lvl.level_name) is not None and self.extract_level_number(lvl.level_name) < current_level_number
+        ] if current_level_number is not None else []
+
+        next_higher_level = max(higher_levels, key=lambda lvl: self.extract_level_number(lvl.level_name)) if higher_levels else None
+
+        if next_higher_level:
+            # Get all designations for this level
+            designations = Designation.objects.filter(level=next_higher_level)
+            employees_at_level = Employee.objects.filter(company=employee.company, level=next_higher_level)
+            if employees_at_level.count() == 1:
+                higher_emp = employees_at_level.first()
+                higher_info = {
+                    'level': next_higher_level.level_name,
+                    'employee_name': higher_emp.full_name,
+                    'designation': higher_emp.designation.designation_name if higher_emp.designation else None,
+                }
+            else:
+                # If multiple employees, show level and designation only
+                higher_info = {
+                    'level': next_higher_level.level_name,
+                    'designation': designations.first().designation_name if designations.exists() else None,
+                    'employee_count': employees_at_level.count(),
+                }
+        else:
+            higher_info = None
+
+        response_data = {
+            'employee': {
+                'name': employee.full_name,
+                'level': current_level.level_name if current_level else None,
+                'designation': current_designation.designation_name if current_designation else None,
+            },
+            'reporting_manager': manager_info,
+            'higher_authority': higher_info,
+        }
+        # If the current employee has no reporting manager, add their reportees to the response
+        if not reporting_manager:
+            response_data['reportees'] = reportees
+        return Response(response_data)

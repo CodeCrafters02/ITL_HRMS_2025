@@ -31,6 +31,7 @@ urlpatterns = [
     path('employee-profile/', EmployeeProfileAPIView.as_view(), name='employee_profile'),
     path('employee-breaks/', BreakLogAPIView.as_view(), name='employee-breaks'),
     path('employee-companypolicies/', EmployeeCompanyPoliciesAPIView.as_view(), name='employee-company-policies'),
+    path('employee-hierarchy/', EmployeeHierarchyAPIView.as_view(), name='employee-hierarchy'),
 
     path('all-notifications/', AllNotificationsAPIView.as_view(), name='all-notifications'),
     path('sse/', NotificationSSEView.as_view(), name='notification_sse'),    

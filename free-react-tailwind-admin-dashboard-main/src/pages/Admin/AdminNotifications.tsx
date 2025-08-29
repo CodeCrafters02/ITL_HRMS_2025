@@ -1,5 +1,7 @@
 import React, { useEffect, useState } from "react";
+import { TrashIcon } from '@heroicons/react/24/outline';
 import { axiosInstance } from "../../pages/Dashboard/api";
+import { toast } from "react-toastify";
 // Built-in Modal component
 function Modal({ isOpen, onClose, children }: { isOpen: boolean; onClose: () => void; children: React.ReactNode }) {
   if (!isOpen) return null;
@@ -25,24 +27,38 @@ import Input from "../../components/form/input/InputField";
 import TextArea from "../../components/form/input/TextArea";
 import Button from "../../components/ui/button/Button";
 
-type Notification = {
-  id: number;
-  title: string;
-  description: string;
-  date: string;
-};
-
 export default function AdminNotifications() {
-  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [notifications, setNotifications] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [form, setForm] = useState({ title: "", description: "", date: "" });
+  const [deleteId, setDeleteId] = useState<number | null>(null);
+  const [deleteTitle, setDeleteTitle] = useState<string>("");
+
+  // Delete notification
+  const handleDeleteClick = (id: number, title: string) => {
+    setDeleteId(id);
+    setDeleteTitle(title);
+  };
+
+  const confirmDelete = async () => {
+    if (!deleteId) return;
+    try {
+      await axiosInstance.delete(`/notifications/${deleteId}/`);
+      setNotifications(prev => prev.filter(n => n.id !== deleteId));
+      setDeleteId(null);
+      setDeleteTitle("");
+      toast.success("Deleted successfully", { position: "bottom-right" });
+    } catch {
+      toast.error("Failed to delete notification", { position: "bottom-right" });
+    }
+  };
 
   // Fetch notifications
   useEffect(() => {
     setLoading(true);
     axiosInstance.get("/notifications/")
-      .then((res: { data: Notification[] }) => setNotifications(res.data))
+      .then((res: { data: any[] }) => setNotifications(res.data))
       .catch(() => setNotifications([]))
       .finally(() => setLoading(false));
   }, []);
@@ -56,7 +72,7 @@ export default function AdminNotifications() {
   const handleAdd = (e: React.FormEvent) => {
     e.preventDefault();
     axiosInstance.post("/notifications/", form)
-      .then((res: { data: Notification }) => {
+      .then((res: { data: any }) => {
         setNotifications(prev => [res.data, ...prev]);
         setShowModal(false);
         setForm({ title: "", description: "", date: "" });
@@ -104,8 +120,16 @@ export default function AdminNotifications() {
             {notifications.map((notification, index) => (
               <div
                 key={notification.id}
-                className="group rounded-lg border border-gray-200 bg-white p-6 shadow-sm transition-all duration-200 hover:border-gray-300 hover:shadow-md"
+                className="group rounded-lg border border-gray-200 bg-white p-6 shadow-sm transition-all duration-200 hover:border-gray-300 hover:shadow-md relative"
               >
+                {/* Centered delete icon, only visible on hover */}
+                <button
+                  className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/10 z-10"
+                  title="Delete Notification"
+                  onClick={() => handleDeleteClick(notification.id, notification.title)}
+                >
+                  <TrashIcon className="w-5 h-5" />
+                </button>
                 <div className="flex items-start space-x-4">
                   {/* Notification Icon */}
                   <div className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-100">
@@ -133,6 +157,24 @@ export default function AdminNotifications() {
           </div>
         )}
       </div>
+
+      {/* Delete Confirmation Modal */}
+      {deleteId !== null && (
+        <Modal isOpen={true} onClose={() => { setDeleteId(null); setDeleteTitle(""); }}>
+          <div className="space-y-6">
+            <h2 className="text-xl font-bold text-center mb-4">Confirm Delete</h2>
+            <p className="mb-6 text-gray-700">Are you sure you want to delete the notification <span className="font-semibold">{deleteTitle}</span>?</p>
+            <div className="flex justify-end gap-3 pt-2">
+              <Button type="button" onClick={() => { setDeleteId(null); setDeleteTitle(""); }} className="bg-gray-200 text-gray-700 hover:bg-gray-300">
+                Cancel
+              </Button>
+              <Button type="button" onClick={confirmDelete} className="bg-brand-500 text-white hover:bg-brand-600">
+                Delete
+              </Button>
+            </div>
+          </div>
+        </Modal>
+      )}
 
       {/* Add Notification Modal */}
       {showModal && (

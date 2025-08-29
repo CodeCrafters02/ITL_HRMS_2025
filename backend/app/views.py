@@ -235,7 +235,7 @@ class AdminDashboardAPIView(APIView):
         ).count()
 
         # Employee Overview
-        total_employees = Employee.objects.filter(company=company).count()
+        total_employees = Employee.objects.filter(company=company, is_active=True).count()
         active_employees = Employee.objects.filter(company=company, is_active=True).count()
         inactive_employees = Employee.objects.filter(company=company, is_active=False).count()
         new_joinees = Employee.objects.filter(
@@ -412,20 +412,7 @@ class RecruitmentViewSet(viewsets.ModelViewSet):
         # Trigger email only if status field is updated
         new_status = self.request.data.get('status')
         if new_status:
-            if new_status == 'selected':
-                send_mail(
-                    subject='Congratulations!',
-                    message=(
-                        f"Dear {instance.name},\n\n"
-                        f"Congratulations! You have been selected for the position of {instance.job_title}.\n"
-                        "Please contact HR to confirm your acceptance.\n\n"
-                        "Regards,\nYour Company"
-                    ),
-                    from_email=settings.DEFAULT_FROM_EMAIL,
-                    recipient_list=[instance.email],
-                    fail_silently=False,
-                )
-            elif new_status == 'rejected':
+            if new_status == 'rejected':
                 send_mail(
                     subject='Application Status',
                     message=(
@@ -588,6 +575,24 @@ class RelievedEmployeeViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         return RelievedEmployee.objects.filter(employee__company=self.request.user.company)
+
+    def perform_create(self, serializer):
+        
+        relieved_instance = serializer.save()
+       
+        employee = relieved_instance.employee
+        if employee:
+           
+            assigned_assets = EmployeeAssetDetails.objects.filter(employee=employee)
+            if assigned_assets.exists():
+                for asset_detail in assigned_assets:
+                    asset = asset_detail.asset
+                    if asset:
+                        asset.quantity += asset_detail.quantity
+                        asset.save()
+            # Mark employee as inactive
+            employee.is_active = False
+            employee.save()
 
 
 

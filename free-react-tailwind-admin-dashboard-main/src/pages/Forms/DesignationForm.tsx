@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import PageBreadcrumb from "../../components/common/PageBreadCrumb";
@@ -7,6 +6,7 @@ import Input from "../../components/form/input/InputField";
 import Label from "../../components/form/Label";
 import Select from "../../components/form/Select";
 import { axiosInstance } from "../Dashboard/api";
+import { Info } from 'lucide-react';
 
 interface Department {
   id: number;
@@ -120,6 +120,20 @@ export default function DesignationForm() {
           title="Designation Information" 
          
         >
+          {/* Info Card */}
+      <div className="mb-6">
+        <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg dark:bg-blue-900/20 dark:border-blue-800">
+          <div className="flex items-center">
+            <div className="flex-shrink-0">
+              <Info className="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0" />
+            </div>
+            <div className="ml-3">
+              <p className="text-sm font-medium text-blue-800 dark:text-blue-200">
+                Assign Level1 or L1 ,.. etc in ascending order as the highest authority when defining designations.              </p>
+            </div>
+          </div>
+        </div>
+      </div>
           <div className="space-y-6">
             <div>
               <Label htmlFor="designationName">

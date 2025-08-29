@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import PageBreadcrumb from "../../components/common/PageBreadCrumb";
@@ -7,6 +6,7 @@ import ComponentCard from "../../components/common/ComponentCard";
 import Input from "../../components/form/input/InputField";
 import Label from "../../components/form/Label";
 import { axiosInstance } from "../Dashboard/api";
+import { Info } from 'lucide-react';
 
 export default function LevelForm() {
   const [levelName, setLevelName] = useState("");
@@ -88,14 +88,26 @@ export default function LevelForm() {
   return (
     <>
       <PageMeta title="Add Level | HRMS" description="Form to add a new organizational level" />
-      <PageBreadcrumb pageTitle="Add Level" />
-      
-      <div className="space-y-6">
-        
+      <PageBreadcrumb pageTitle="Add Level" />    
 
+      <div className="space-y-6">
         <ComponentCard 
           title="Level Information" 
         >
+          {/* Info Card */}
+          <div className="mb-6">
+            <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg dark:bg-blue-900/20 dark:border-blue-800">
+              <div className="flex items-center">
+                <div className="flex-shrink-0">
+                  <Info className="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0" />
+                </div>
+                <div className="ml-3">
+                  <p className="text-sm font-medium text-blue-800 dark:text-blue-200">
+                    Use level names in the format <b>Level1 or L1, Level2 or L2, …</b>. Assign Level1 as the highest authority when defining designations.              </p>
+                </div>
+              </div>
+            </div>
+          </div>
           <form onSubmit={handleSubmit} className="space-y-6">
             <div>
               <Label htmlFor="levelName">

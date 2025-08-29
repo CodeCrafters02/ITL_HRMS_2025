@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { axiosInstance } from '../Dashboard/api';
 import { useNavigate } from 'react-router-dom';
 import { Pencil, Trash2 } from 'lucide-react';
+import { toast } from 'react-toastify';
 
 interface Policy {
   id: number;
@@ -17,6 +18,8 @@ const CompanyPolicy: React.FC = () => {
   const [policies, setPolicies] = useState<Policy[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+  const [deleteId, setDeleteId] = useState<number | null>(null);
+  const [deleteName, setDeleteName] = useState<string>("");
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -36,15 +39,24 @@ const CompanyPolicy: React.FC = () => {
       });
   }, []);
 
-  const handleDelete = async (id: number) => {
-    if (!window.confirm("Are you sure you want to delete this policy?")) return;
+
+  const handleDeleteClick = (id: number, name: string) => {
+    setDeleteId(id);
+    setDeleteName(name);
+  };
+
+  const confirmDeletePolicy = async () => {
+    if (!deleteId) return;
     try {
-      await axiosInstance.delete(`/policies/${id}/`, {
+      await axiosInstance.delete(`/policies/${deleteId}/`, {
         headers: {
           Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
         },
       });
-      setPolicies(prev => prev.filter(policy => policy.id !== id));
+      setPolicies(prev => prev.filter(policy => policy.id !== deleteId));
+      setDeleteId(null);
+      setDeleteName("");
+      toast.success("Deleted successfully", { position: "bottom-right" });
     } catch {
       setError("Failed to delete policy.");
     }
@@ -84,7 +96,7 @@ const CompanyPolicy: React.FC = () => {
                 <button
                   className="text-red-600 hover:text-red-800"
                   title="Delete"
-                  onClick={() => handleDelete(policy.id)}
+                  onClick={() => handleDeleteClick(policy.id, policy.name)}
                 >
                   <Trash2 className="w-5 h-5" />
                 </button>
@@ -118,7 +130,30 @@ const CompanyPolicy: React.FC = () => {
           ))}
         </div>
       )}
-    </div>
+    {/* Delete Confirmation Modal */}
+    {deleteId !== null && (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-opacity-40">
+        <div className="bg-white dark:bg-gray-900 rounded-lg shadow-lg p-8 w-full max-w-md">
+          <h2 className="text-xl font-bold mb-4 text-gray-900 dark:text-white">Confirm Delete</h2>
+          <p className="mb-6 text-gray-700 dark:text-gray-300">Are you sure you want to delete the policy <span className="font-semibold">{deleteName}</span>?</p>
+          <div className="flex justify-end gap-3">
+            <button
+              onClick={() => { setDeleteId(null); setDeleteName(""); }}
+              className="px-4 py-2 rounded-lg bg-gray-200 text-gray-800 hover:bg-gray-300 font-medium"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={confirmDeletePolicy}
+              className="px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 font-medium"
+            >
+              Delete
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
+  </div>
   );
 };
 

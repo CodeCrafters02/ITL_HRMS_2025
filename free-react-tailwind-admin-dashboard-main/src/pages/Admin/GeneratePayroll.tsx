@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { Link } from "react-router-dom";
 import { axiosInstance } from "../Dashboard/api";
 
 interface PayrollResult {
@@ -126,9 +127,14 @@ const GeneratePayroll: React.FC = () => {
                       <tr key={idx} className="hover:bg-gray-50">
                         <td className="px-4 py-2">{idx + 1}</td>
                         <td className="px-4 py-2">
-                          <button className="bg-gray-200 hover:bg-gray-300 text-xs px-2 py-1 rounded">
-                            Slip
-                          </button>
+                        <Link
+                          to={`/admin/payslip?employeeId=${pay.employee_id || pay.employee}&batchId=${batchId}`}
+                          className="bg-gray-200 hover:bg-gray-300 text-xs px-2 py-1 rounded"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                        >
+                          Slip
+                        </Link>
                         </td>
                         <td className="px-4 py-2">{pay.employee_name || pay.employee}</td>
                         <td className="px-4 py-2">₹{pay.basic_salary}</td>

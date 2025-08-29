@@ -1,6 +1,8 @@
 import React, { useEffect, useState } from 'react';
+import { Table, TableBody, TableCell, TableHeader, TableRow } from '../../components/ui/table';
 import { FaEdit, FaTrash, FaPlus } from 'react-icons/fa';
 import { useNavigate } from 'react-router-dom';
+import { toast } from 'react-toastify';
 import { axiosInstance } from '../Dashboard/api';
 
 interface Recruitment {
@@ -34,6 +36,7 @@ const RecruitmentPage: React.FC = () => {
   const [templateLoading, setTemplateLoading] = useState(false);
   const [templateError, setTemplateError] = useState<string | null>(null);
   const [templateSelectFor, setTemplateSelectFor] = useState<{id: number, type: 'offer' | 'appointment'} | null>(null);
+  const [deleteId, setDeleteId] = useState<number | null>(null);
   const navigate = useNavigate();
 
   // Fetch recruitments and their generated letters
@@ -48,9 +51,10 @@ const RecruitmentPage: React.FC = () => {
       const letterRes = await axiosInstance.get('/generated-letters/');
       const letters = letterRes.data; // [{candidate, template, ...}]
       // Map generated letters to each recruitment (ignore type, only candidate and template)
+      type Letter = { candidate: number; template: number };
       const recruitmentsWithLetters = recruitmentsData.map((rec: Recruitment) => {
-        const recLetters = letters.filter((l: any) => l.candidate === rec.id);
-        return { ...rec, generated_letters: recLetters.map((l: any) => ({ template_id: l.template })) };
+        const recLetters = (letters as Letter[]).filter((l) => l.candidate === rec.id);
+        return { ...rec, generated_letters: recLetters.map((l) => ({ template_id: l.template })) };
       });
       
       setRecruitments(recruitmentsWithLetters);
@@ -93,15 +97,22 @@ const RecruitmentPage: React.FC = () => {
     setEditData({});
   };
 
-  const handleDelete = async (id: number) => {
-    if (!window.confirm('Are you sure you want to delete this recruitment record?')) return;
+  const handleDeleteClick = (id: number) => {
+    setDeleteId(id);
+  };
+
+  const confirmDelete = async () => {
+    if (!deleteId) return;
     setLoading(true);
     setError(null);
     try {
-      await axiosInstance.delete(`/recruitment/${id}/`);
+      await axiosInstance.delete(`/recruitment/${deleteId}/`);
       fetchRecruitments();
+      setDeleteId(null);
+      toast.success('Deleted successfully', { position: 'bottom-right' });
     } catch {
       setError('Error deleting recruitment');
+      toast.error('Failed to delete', { position: 'bottom-right' });
     } finally {
       setLoading(false);
     }
@@ -109,11 +120,7 @@ const RecruitmentPage: React.FC = () => {
 
 
 
-  // Helper to get generated letter for a candidate and template_id and type
-  const getGeneratedLetter = (rec: Recruitment, template_id: number, type: 'offer' | 'appointment') => {
-    // In future, generated_letters should include type for robust filtering
-    return rec.generated_letters?.find(l => l.template_id === template_id);
-  };
+  // (getGeneratedLetter removed, was unused)
 
   // For Offer Letter: if generated letter exists, go to letter page, else open template selection modal
   const handleOfferLetterClick = async (rec: Recruitment) => {
@@ -125,11 +132,11 @@ const RecruitmentPage: React.FC = () => {
       setTemplateOptions(tplRes.data);
       // Fetch all generated letters for this candidate and type=offer
       const generatedRes = await axiosInstance.get(`/generated-letters/?candidate_id=${rec.id}&type=offer`);
-      const generatedLetters = Array.isArray(generatedRes.data) ? generatedRes.data : [];
+      const generatedLetters: { template: number }[] = Array.isArray(generatedRes.data) ? generatedRes.data : [];
       // If only one template, check if letter exists for that template
       if (tplRes.data.length === 1) {
         const templateId = tplRes.data[0].id;
-        const found = generatedLetters.find((l: any) => l.template === templateId);
+        const found = generatedLetters.find((l) => l.template === templateId);
         if (found) {
           window.location.href = `/admin/letter-pdf?id=${rec.id}&type=offer&template_id=${templateId}`;
           setTemplateLoading(false);
@@ -138,7 +145,7 @@ const RecruitmentPage: React.FC = () => {
       } else {
         // If multiple templates, check if any generated letter exists for this candidate and type=offer
         for (const tpl of tplRes.data) {
-          const found = generatedLetters.find((l: any) => l.template === tpl.id);
+          const found = generatedLetters.find((l) => l.template === tpl.id);
           if (found) {
             window.location.href = `/admin/letter-pdf?id=${rec.id}&type=offer&template_id=${tpl.id}`;
             setTemplateLoading(false);
@@ -165,11 +172,11 @@ const RecruitmentPage: React.FC = () => {
       setTemplateOptions(tplRes.data);
       // Fetch all generated letters for this candidate and type=appointment
       const generatedRes = await axiosInstance.get(`/generated-letters/?candidate_id=${rec.id}&type=appointment`);
-      const generatedLetters = Array.isArray(generatedRes.data) ? generatedRes.data : [];
+      const generatedLetters: { template: number }[] = Array.isArray(generatedRes.data) ? generatedRes.data : [];
       // If only one template, check if letter exists for that template
       if (tplRes.data.length === 1) {
         const templateId = tplRes.data[0].id;
-        const found = generatedLetters.find((l: any) => l.template === templateId);
+        const found = generatedLetters.find((l) => l.template === templateId);
         if (found) {
           window.location.href = `/admin/letter-pdf?id=${rec.id}&type=appointment&template_id=${templateId}`;
           setTemplateLoading(false);
@@ -232,33 +239,33 @@ const RecruitmentPage: React.FC = () => {
         <div className="text-center py-8 text-lg text-gray-500">Loading...</div>
       ) : (
         <div className="overflow-x-auto">
-          <table className="w-full border border-gray-200 rounded-lg shadow-lg bg-white">
-            <thead>
-              <tr className="bg-gray-100 sticky top-0 z-10 text-sm font-semibold text-gray-700">
-                <th className="px-4 py-3 border-b">S.no</th>
-                <th className="px-4 py-3 border-b">Action</th>
-                <th className="px-4 py-3 border-b">Ref ID</th>
-                <th className="px-4 py-3 border-b">Name</th>
-                <th className="px-4 py-3 border-b">Email</th>
-                <th className="px-4 py-3 border-b">Job Title</th>
-                <th className="px-4 py-3 border-b">Salary</th>
-                <th className="px-4 py-3 border-b">Application Date</th>
-                <th className="px-4 py-3 border-b">Interview Date</th>
-                <th className="px-4 py-3 border-b">Appointment Date</th>
-                <th className="px-4 py-3 border-b">Guardian</th>
-                <th className="px-4 py-3 border-b">Status</th>
-                <th className="px-4 py-3 border-b">Action</th>
-              </tr>
-            </thead>
-            <tbody>
+          <Table className="w-full border border-gray-200 rounded-lg shadow-lg bg-white">
+            <TableHeader>
+              <TableRow className="bg-gray-100 sticky top-0 z-10 text-sm font-semibold text-gray-700">
+                <TableCell className="px-4 py-3 border-b">S.no</TableCell>
+                <TableCell className="px-4 py-3 border-b">Action</TableCell>
+                <TableCell className="px-4 py-3 border-b">Ref ID</TableCell>
+                <TableCell className="px-4 py-3 border-b">Name</TableCell>
+                <TableCell className="px-4 py-3 border-b">Email</TableCell>
+                <TableCell className="px-4 py-3 border-b">Job Title</TableCell>
+                <TableCell className="px-4 py-3 border-b">Salary</TableCell>
+                <TableCell className="px-4 py-3 border-b">Application Date</TableCell>
+                <TableCell className="px-4 py-3 border-b">Interview Date</TableCell>
+                <TableCell className="px-4 py-3 border-b">Appointment Date</TableCell>
+                <TableCell className="px-4 py-3 border-b">Guardian</TableCell>
+                <TableCell className="px-4 py-3 border-b">Status</TableCell>
+                <TableCell className="px-4 py-3 border-b">Action</TableCell>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
               {recruitments.length === 0 ? (
-                <tr>
-                  <td colSpan={12} className="text-center py-8 text-gray-500">No recruitment records found.</td>
-                </tr>
+                <TableRow>
+                  <TableCell colSpan={12} className="text-center py-8 text-gray-500">No recruitment records found.</TableCell>
+                </TableRow>
               ) : (
                 recruitments.map((r, idx) => {
                   return (
-                    <tr
+                    <TableRow
                       key={r.id}
                       className={
                         idx % 2 === 0
@@ -266,8 +273,8 @@ const RecruitmentPage: React.FC = () => {
                           : 'bg-gray-50 hover:bg-blue-50 transition-colors'
                       }
                     >
-                      <td className="px-4 py-3 border-b">{idx + 1}</td>
-                      <td className="px-4 py-3 border-b">
+                      <TableCell className="px-4 py-3 border-b">{idx + 1}</TableCell>
+                      <TableCell className="px-4 py-3 border-b">
                         <div className="flex items-center gap-2">
                           {editId === r.id ? (
                             <>
@@ -283,16 +290,16 @@ const RecruitmentPage: React.FC = () => {
                               <button className="text-blue-600 hover:text-blue-800" title="Edit" onClick={() => handleEdit(r)}>
                                 <FaEdit />
                               </button>
-                              <button className="text-red-600 hover:text-red-800" title="Delete" onClick={() => handleDelete(r.id)}>
+                              <button className="text-red-600 hover:text-red-800" title="Delete" onClick={() => handleDeleteClick(r.id)}>
                                 <FaTrash />
                               </button>
                             </>
                           )}
                         </div>
-                      </td>
+                      </TableCell>
                      
-                      <td className="px-4 py-3 border-b">{r.reference_id}</td>
-                      <td className="px-4 py-3 border-b">
+                      <TableCell className="px-4 py-3 border-b">{r.reference_id}</TableCell>
+                      <TableCell className="px-4 py-3 border-b">
                         {editId === r.id ? (
                           <input
                             type="text"
@@ -304,8 +311,8 @@ const RecruitmentPage: React.FC = () => {
                         ) : (
                           r.name
                         )}
-                      </td>
-                      <td className="px-4 py-3 border-b">
+                      </TableCell>
+                      <TableCell className="px-4 py-3 border-b">
                         {editId === r.id ? (
                           <input
                             type="email"
@@ -317,8 +324,8 @@ const RecruitmentPage: React.FC = () => {
                         ) : (
                           r.email
                         )}
-                      </td>
-                      <td className="px-4 py-3 border-b">
+                      </TableCell>
+                      <TableCell className="px-4 py-3 border-b">
                         {editId === r.id ? (
                           <input
                             type="text"
@@ -330,8 +337,8 @@ const RecruitmentPage: React.FC = () => {
                         ) : (
                           r.job_title
                         )}
-                      </td>
-                      <td className="px-4 py-3 border-b">
+                      </TableCell>
+                      <TableCell className="px-4 py-3 border-b">
                         {editId === r.id ? (
                           <input
                             type="text"
@@ -343,8 +350,8 @@ const RecruitmentPage: React.FC = () => {
                         ) : (
                           r.salary || '-'
                         )}
-                      </td>
-                      <td className="px-4 py-3 border-b">
+                      </TableCell>
+                      <TableCell className="px-4 py-3 border-b">
                         {editId === r.id ? (
                           <input
                             type="date"
@@ -356,8 +363,8 @@ const RecruitmentPage: React.FC = () => {
                         ) : (
                           r.application_date || '-'
                         )}
-                      </td>
-                      <td className="px-4 py-3 border-b">
+                      </TableCell>
+                      <TableCell className="px-4 py-3 border-b">
                         {editId === r.id ? (
                           <input
                             type="date"
@@ -369,8 +376,8 @@ const RecruitmentPage: React.FC = () => {
                         ) : (
                           r.interview_date || '-'
                         )}
-                      </td>
-                      <td className="px-4 py-3 border-b">
+                      </TableCell>
+                      <TableCell className="px-4 py-3 border-b">
                         {editId === r.id ? (
                           <input
                             type="date"
@@ -382,8 +389,8 @@ const RecruitmentPage: React.FC = () => {
                         ) : (
                           r.appointment_date || '-'
                         )}
-                      </td>
-                      <td className="px-4 py-3 border-b">
+                      </TableCell>
+                      <TableCell className="px-4 py-3 border-b">
                         {editId === r.id ? (
                           <input
                             type="text"
@@ -395,8 +402,8 @@ const RecruitmentPage: React.FC = () => {
                         ) : (
                           r.guardian_name || '-'
                         )}
-                      </td>
-                      <td className="px-4 py-3 border-b">
+                      </TableCell>
+                      <TableCell className="px-4 py-3 border-b">
                         {editId === r.id ? (
                           <select
                             name="status"
@@ -421,21 +428,33 @@ const RecruitmentPage: React.FC = () => {
                             {r.status}
                           </span>
                         )}
-                      </td>
-                      <td className="px-4 py-3 border-b">
+                      </TableCell>
+                      <TableCell className="px-4 py-3 border-b">
                         {r.status === 'selected' && (
                           <div className="flex gap-2">
-                            <button className="bg-blue-600 text-white px-3 py-1 rounded" onClick={() => handleOfferLetterClick(r)}>Offer Letter</button>
-                            <button className="bg-green-600 text-white px-3 py-1 rounded" onClick={() => handleAppointmentLetterClick(r)}>Appointment Letter</button>
+                            <button
+                              className="px-2 py-1 rounded capitalize text-xs font-medium bg-blue-100 text-blue-800 border border-blue-300 hover:bg-blue-200 transition-colors"
+                              style={{ minWidth: 90 }}
+                              onClick={() => handleOfferLetterClick(r)}
+                            >
+                              Offer Letter
+                            </button>
+                            <button
+                              className="px-2 py-1 rounded capitalize text-xs font-medium bg-green-100 text-green-800 border border-green-300 hover:bg-green-200 transition-colors"
+                              style={{ minWidth: 120 }}
+                              onClick={() => handleAppointmentLetterClick(r)}
+                            >
+                              Appointment Letter
+                            </button>
                           </div>
                         )}
-                      </td>
-                    </tr>
+                      </TableCell>
+                    </TableRow>
                   );
                 })
               )}
-            </tbody>
-          </table>
+            </TableBody>
+          </Table>
         </div>
       )}
       {/* Template Selection Modal rendered as a child of the main content area */}
@@ -475,6 +494,29 @@ const RecruitmentPage: React.FC = () => {
             </div>
           </div>
         </>
+      )}
+      {/* Delete Confirmation Modal */}
+      {deleteId !== null && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center  bg-opacity-40">
+          <div className="bg-white rounded-lg shadow-lg p-8 w-full max-w-md">
+            <h2 className="text-xl font-bold mb-4 text-gray-900">Confirm Delete</h2>
+            <p className="mb-6 text-gray-700">Are you sure you want to delete this department?</p>
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={() => setDeleteId(null)}
+                className="px-4 py-2 rounded-lg bg-gray-200 text-gray-800 hover:bg-gray-300 font-medium"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmDelete}
+                className="px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 font-medium"
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

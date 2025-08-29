@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { toast } from "react-toastify";
 import { axiosInstance } from "../Dashboard/api";
 import { FaTrash, FaEdit, FaPlus } from "react-icons/fa";
 import {
@@ -38,6 +39,9 @@ export default function Designation() {
   const [editDesignationName, setEditDesignationName] = useState("");
   const [editDepartment, setEditDepartment] = useState<number | null>(null);
   const [editLevel, setEditLevel] = useState<number | null>(null);
+
+  const [deleteId, setDeleteId] = useState<number | null>(null);
+  const [deleteName, setDeleteName] = useState<string>("");
 
   const navigate = useNavigate();
 
@@ -85,14 +89,21 @@ export default function Designation() {
     }
   };
 
-  const deleteDesignation = async (id: number) => {
-    if (!window.confirm('Are you sure you want to delete this designation?')) return;
+  const handleDeleteClick = (id: number, name: string) => {
+    setDeleteId(id);
+    setDeleteName(name);
+  };
+
+  const confirmDeleteDesignation = async () => {
+    if (!deleteId) return;
     try {
-      await axiosInstance.delete(`/designations/${id}/`);
+      await axiosInstance.delete(`/designations/${deleteId}/`);
       fetchDesignations();
-      alert('Designation deleted successfully');
+      setDeleteId(null);
+      setDeleteName("");
+      toast.success("Deleted successfully", { position: "bottom-right" });
     } catch {
-      alert('Failed to delete designation');
+      toast.error("Failed to delete designation", { position: "bottom-right" });
     }
   };
 
@@ -285,7 +296,7 @@ export default function Designation() {
                                     Edit
                                   </button>
                                   <button
-                                    onClick={() => deleteDesignation(des.id)}
+                                    onClick={() => handleDeleteClick(des.id, des.designation_name)}
                                     className="flex items-center gap-1 bg-red-100 text-red-700 hover:bg-red-200 px-3 py-2 rounded-lg font-medium text-sm transition-colors"
                                     title="Delete Designation"
                                   >
@@ -306,6 +317,29 @@ export default function Designation() {
           </div>
         </ComponentCard>
       </div>
+      {/* Delete Confirmation Modal */}
+      {deleteId !== null && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center  bg-opacity-40">
+          <div className="bg-white dark:bg-gray-900 rounded-lg shadow-lg p-8 w-full max-w-md">
+            <h2 className="text-xl font-bold mb-4 text-gray-900 dark:text-white">Confirm Delete</h2>
+            <p className="mb-6 text-gray-700 dark:text-gray-300">Are you sure you want to delete the designation <span className="font-semibold">{deleteName}</span>?</p>
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={() => { setDeleteId(null); setDeleteName(""); }}
+                className="px-4 py-2 rounded-lg bg-gray-200 text-gray-800 hover:bg-gray-300 font-medium"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmDeleteDesignation}
+                className="px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 font-medium"
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }

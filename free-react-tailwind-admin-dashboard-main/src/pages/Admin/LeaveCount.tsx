@@ -9,6 +9,7 @@ import {
 import ComponentCard from "../../components/common/ComponentCard";
 import { axiosInstance } from "../Dashboard/api";
 import { FaEdit, FaTrash, FaPlus } from "react-icons/fa";
+import { toast } from "react-toastify";
 
 interface Leave {
   id: number;
@@ -23,6 +24,8 @@ const LeaveCountPage: React.FC = () => {
   const [editId, setEditId] = useState<number | null>(null);
   const [editLeave, setEditLeave] = useState<Partial<Leave>>({});
   const [loading, setLoading] = useState(false);
+  const [deleteId, setDeleteId] = useState<number | null>(null);
+  const [deleteName, setDeleteName] = useState<string>("");
 
   const fetchLeaves = async () => {
     try {
@@ -69,14 +72,23 @@ const LeaveCountPage: React.FC = () => {
     setLoading(false);
   };
 
-  const handleDelete = async (id: number) => {
-    if (!window.confirm("Are you sure you want to delete this leave policy?")) return;
+  const handleDeleteClick = (id: number, name: string) => {
+    setDeleteId(id);
+    setDeleteName(name);
+  };
+
+  const confirmDelete = async () => {
+    if (!deleteId) return;
     setLoading(true);
     try {
-      await axiosInstance.delete(`/leaves/${id}/`);
-      setLeaves((prev) => prev.filter((leave) => leave.id !== id));
+      await axiosInstance.delete(`/leaves/${deleteId}/`);
+      setLeaves((prev) => prev.filter((leave) => leave.id !== deleteId));
+      setDeleteId(null);
+      setDeleteName("");
+      toast.success("Deleted successfully", { position: "bottom-right" });
     } catch {
       setError("Failed to delete leave policy.");
+      toast.error("Failed to delete", { position: "bottom-right" });
     }
     setLoading(false);
   };
@@ -255,7 +267,7 @@ const LeaveCountPage: React.FC = () => {
                         <button
                           className="flex items-center gap-1 bg-red-100 text-red-700 hover:bg-red-200 px-3 py-2 rounded-lg font-medium text-sm transition-colors"
                           title="Delete Leave"
-                          onClick={() => handleDelete(leave.id)}
+                          onClick={() => handleDeleteClick(leave.id, leave.leave_name)}
                           disabled={loading}
                         >
                           <FaTrash className="w-3 h-3" />
@@ -270,6 +282,29 @@ const LeaveCountPage: React.FC = () => {
           </TableBody>
         </Table>
       </ComponentCard>
+      {/* Delete Confirmation Modal */}
+      {deleteId !== null && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center  bg-opacity-40">
+          <div className="bg-white rounded-lg shadow-lg p-8 w-full max-w-md">
+            <h2 className="text-xl font-bold mb-4 text-gray-900">Confirm Delete</h2>
+            <p className="mb-6 text-gray-700">Are you sure you want to delete this department <span className="font-semibold">{deleteName}</span>?</p>
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={() => { setDeleteId(null); setDeleteName(""); }}
+                className="px-4 py-2 rounded-lg bg-gray-200 text-gray-800 hover:bg-gray-300 font-medium"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmDelete}
+                className="px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 font-medium"
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

@@ -307,6 +307,8 @@ class EmployeeSerializer(serializers.ModelSerializer):
         return obj.designation.designation_name if obj.designation else None
 
     def get_asset_names(self, obj):
+        if not obj.id:
+            return []
         return [asset.name for asset in obj.asset_details.all()]
 
     def get_source_choices(self, obj):
@@ -384,12 +386,18 @@ class EmployeeSerializer(serializers.ModelSerializer):
 
         employee = Employee.objects.create(**validated_data)
 
+        # Convert asset IDs to AssetInventory instances if needed
+        asset_instances = []
         for asset in assets:
-            if asset.quantity <= 0:
-                raise serializers.ValidationError(f"Asset '{asset.name}' is out of stock.")
-            asset.quantity -= 1
-            asset.save()
-            EmployeeAssetDetails.objects.create(employee=employee, assetinventory=asset)
+            if isinstance(asset, int):
+                asset_obj = AssetInventory.objects.get(pk=asset)
+            else:
+                asset_obj = asset
+            if asset_obj.quantity <= 0:
+                raise serializers.ValidationError(f"Asset '{asset_obj.name}' is out of stock.")
+            asset_obj.quantity -= 1
+            asset_obj.save()
+            EmployeeAssetDetails.objects.create(employee=employee, assetinventory=asset_obj)
 
         self.send_welcome_email(user, password)
 

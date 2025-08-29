@@ -4,6 +4,7 @@
     "lexical": "^0.34.0",
     "lucide-react": "^0.535.0",
     "pdfjs-dist": "^5.4.54",
-    "react-pdf": "^10.1.0"
+    "react-pdf": "^10.1.0",
+    "react-toastify": "^11.0.5"
   }
 }

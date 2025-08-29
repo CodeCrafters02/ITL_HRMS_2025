@@ -107,6 +107,7 @@ const RelievedEmployee: React.FC = () => {
   const [remarks, setRemarks] = useState('');
   const [searchLoading, setSearchLoading] = useState(false);
   const [success, setSuccess] = useState('');
+  const [showSuccess, setShowSuccess] = useState(false);
   const [error, setError] = useState('');
   const [relievedDetails, setRelievedDetails] = useState<RelievedEmployeeDetails | null>(null);
   const [selectedEmployeeDetails, setSelectedEmployeeDetails] = useState<RelievedEmployeeDetails | null>(null);
@@ -137,7 +138,8 @@ const RelievedEmployee: React.FC = () => {
         relieving_date: dateToUse,
         remarks: remarks.trim(),
       });
-      setSuccess(`${selectedEmployeeDetails.employee_name} has been successfully relieved`);
+  setSuccess(`${selectedEmployeeDetails.employee_name} has been successfully relieved`);
+  setShowSuccess(true);
       const relievedId = res.data.id;
       const detailsRes = await axiosInstance.get(`relieved-employees/${relievedId}/`);
       setRelievedDetails({ ...detailsRes.data, relieving_date: detailsRes.data.relieving_date || dateToUse });
@@ -247,7 +249,13 @@ const RelievedEmployee: React.FC = () => {
       }
     };
     fetchRelievedList();
-  }, [success]);
+    if (showSuccess) {
+      const timer = setTimeout(() => {
+        setShowSuccess(false);
+      }, 2000);
+      return () => clearTimeout(timer);
+    }
+  }, [success, showSuccess]);
 
   // Fetch all relieved employees on mount
   useEffect(() => {
@@ -494,85 +502,10 @@ const RelievedEmployee: React.FC = () => {
                 </Table>
               </div>
             )}
-            {/* Table of relieved employee details after success */}
-            {success && relievedDetails && (
-              <div className="overflow-x-auto mt-8">
-                <Table className="min-w-full border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 rounded-lg">
-                  <TableHeader className="bg-gray-50 dark:bg-gray-800">
-                    <TableRow>
-                      <TableCell isHeader className="p-4 border-b text-blue-600 underline cursor-pointer">Download</TableCell>
-                      <TableCell isHeader className="p-4 border-b">Employee ID</TableCell>
-                      <TableCell isHeader className="p-4 border-b">Name & Photo</TableCell>
-                      <TableCell isHeader className="p-4 border-b">DOB</TableCell>
-                      <TableCell isHeader className="p-4 border-b">Email</TableCell>
-                      <TableCell isHeader className="p-4 border-b">Phone</TableCell>
-                      <TableCell isHeader className="p-4 border-b">Designation</TableCell>
-                      <TableCell isHeader className="p-4 border-b">Department</TableCell>
-                      <TableCell isHeader className="p-4 border-b">Date of Joining</TableCell>
-                      <TableCell isHeader className="p-4 border-b">Date of Relieving</TableCell>
-                      <TableCell isHeader className="p-4 border-b">Address</TableCell>
-                      <TableCell isHeader className="p-4 border-b">Asset Details</TableCell>
-                      <TableCell isHeader className="p-4 border-b">Aadhar No</TableCell>
-                      <TableCell isHeader className="p-4 border-b">PAN No</TableCell>
-                      <TableCell isHeader className="p-4 border-b">Guardian Name</TableCell>
-                      <TableCell isHeader className="p-4 border-b">Guardian Mobile</TableCell>
-                      <TableCell isHeader className="p-4 border-b">CTC</TableCell>
-                      <TableCell isHeader className="p-4 border-b">Gross Salary</TableCell>
-                      <TableCell isHeader className="p-4 border-b">Payment Method</TableCell>
-                      <TableCell isHeader className="p-4 border-b">Account No</TableCell>
-                      <TableCell isHeader className="p-4 border-b">IFSC Code</TableCell>
-                      <TableCell isHeader className="p-4 border-b">Bank Name</TableCell>
-                      <TableCell isHeader className="p-4 border-b">ESIC Status</TableCell>
-                      <TableCell isHeader className="p-4 border-b">ESIC No</TableCell>
-                      <TableCell isHeader className="p-4 border-b">EPF Status</TableCell>
-                      <TableCell isHeader className="p-4 border-b">UAN</TableCell>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    <TableRow>
-                      <TableCell className="p-4 border-b text-blue-600 underline cursor-pointer">Download</TableCell>
-                      <TableCell className="p-4 border-b">{relievedDetails.employee_id}</TableCell>
-                      <TableCell className="p-4 border-b flex items-center gap-2">
-                        {typeof relievedDetails.employee === 'object' && relievedDetails.employee.photo ? (
-                          <img src={relievedDetails.employee.photo} alt="Employee" className="w-10 h-10 rounded-full object-cover" />
-                        ) : (
-                          <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center text-gray-500">
-                            <span className="text-xl">👤</span>
-                          </div>
-                        )}
-                        <span>{
-                          relievedDetails.employee_name ||
-                          (typeof relievedDetails.employee === 'object' && relievedDetails.employee.first_name && relievedDetails.employee.last_name
-                            ? `${relievedDetails.employee.first_name} ${relievedDetails.employee.last_name}`
-                            : relievedDetails.employee_id || '-')
-                        }</span>
-                      </TableCell>
-                      <TableCell className="p-4 border-b">{typeof relievedDetails.employee === 'object' && (relievedDetails.employee.dob || relievedDetails.employee.date_of_birth) || '-'}</TableCell>
-                      <TableCell className="p-4 border-b">{typeof relievedDetails.employee === 'object' && relievedDetails.employee.email || '-'}</TableCell>
-                      <TableCell className="p-4 border-b">{typeof relievedDetails.employee === 'object' && (relievedDetails.employee.phone || relievedDetails.employee.mobile) || '-'}</TableCell>
-                      <TableCell className="p-4 border-b">{typeof relievedDetails.employee === 'object' && (relievedDetails.employee.designation_name || relievedDetails.employee.designation) || '-'}</TableCell>
-                      <TableCell className="p-4 border-b">{typeof relievedDetails.employee === 'object' && (relievedDetails.employee.department_name || relievedDetails.employee.department) || '-'}</TableCell>
-                      <TableCell className="p-4 border-b">{typeof relievedDetails.employee === 'object' && relievedDetails.employee.date_of_joining || '-'}</TableCell>
-                      <TableCell className="p-4 border-b">{relievedDetails.relieving_date || '-'}</TableCell>
-                      <TableCell className="p-4 border-b">{typeof relievedDetails.employee === 'object' && (relievedDetails.employee.address || relievedDetails.employee.temporary_address || relievedDetails.employee.permanent_address) || '-'}</TableCell>
-                      <TableCell className="p-4 border-b">{typeof relievedDetails.employee === 'object' && (relievedDetails.employee.asset_details || (relievedDetails.employee.asset_names ? relievedDetails.employee.asset_names.join(', ') : '-')) || '-'}</TableCell>
-                      <TableCell className="p-4 border-b">{typeof relievedDetails.employee === 'object' && relievedDetails.employee.aadhar_no || '-'}</TableCell>
-                      <TableCell className="p-4 border-b">{typeof relievedDetails.employee === 'object' && relievedDetails.employee.pan_no || '-'}</TableCell>
-                      <TableCell className="p-4 border-b">{typeof relievedDetails.employee === 'object' && relievedDetails.employee.guardian_name || '-'}</TableCell>
-                      <TableCell className="p-4 border-b">{typeof relievedDetails.employee === 'object' && relievedDetails.employee.guardian_mobile || '-'}</TableCell>
-                      <TableCell className="p-4 border-b">{typeof relievedDetails.employee === 'object' && relievedDetails.employee.ctc || '-'}</TableCell>
-                      <TableCell className="p-4 border-b">{typeof relievedDetails.employee === 'object' && relievedDetails.employee.gross_salary || '-'}</TableCell>
-                      <TableCell className="p-4 border-b">{typeof relievedDetails.employee === 'object' && relievedDetails.employee.payment_method || '-'}</TableCell>
-                      <TableCell className="p-4 border-b">{typeof relievedDetails.employee === 'object' && relievedDetails.employee.account_no || '-'}</TableCell>
-                      <TableCell className="p-4 border-b">{typeof relievedDetails.employee === 'object' && relievedDetails.employee.ifsc_code || '-'}</TableCell>
-                      <TableCell className="p-4 border-b">{typeof relievedDetails.employee === 'object' && relievedDetails.employee.bank_name || '-'}</TableCell>
-                      <TableCell className="p-4 border-b">{typeof relievedDetails.employee === 'object' && relievedDetails.employee.esic_status || '-'}</TableCell>
-                      <TableCell className="p-4 border-b">{typeof relievedDetails.employee === 'object' && relievedDetails.employee.esic_no || '-'}</TableCell>
-                      <TableCell className="p-4 border-b">{typeof relievedDetails.employee === 'object' && relievedDetails.employee.epf_status || '-'}</TableCell>
-                      <TableCell className="p-4 border-b">{typeof relievedDetails.employee === 'object' && relievedDetails.employee.uan || '-'}</TableCell>
-                    </TableRow>
-                  </TableBody>
-                </Table>
+            {/* Show success message at the top of relievedList for 2 sec */}
+            {showSuccess && success && (
+              <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg mb-4">
+                {success}
               </div>
             )}
             {/* Show 'No relieved employees found' if relievedList is empty and not loading/searching */}
@@ -583,9 +516,15 @@ const RelievedEmployee: React.FC = () => {
                 <p className="text-sm text-gray-500">No employees have been relieved yet.</p>
               </div>
             )}
-            {/* Only show the table if there are relieved employees */}
+            {/* Only show the table if there are relieved employees and not after success (but show success message above table for 2 sec) */}
             {relievedList.length > 0 && (
               <div className="overflow-x-auto mt-8">
+                {/* Success message at the top of the table for 2 sec */}
+                {showSuccess && success && (
+                  <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg mb-4">
+                    {success}
+                  </div>
+                )}
                 <Table className="min-w-full border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 rounded-lg">
                   <TableHeader className="bg-gray-50 dark:bg-gray-800">
                     <TableRow>

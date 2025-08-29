@@ -1,4 +1,3 @@
-import { useParams } from "react-router-dom";
 import { Route, Routes } from "react-router-dom";
 import { lazy, Suspense } from "react";
 const SignIn = lazy(() => import("./pages/AuthPages/SignIn"));
@@ -84,6 +83,8 @@ const LetterForm = lazy(() => import("./pages/Admin/LetterForm"));
 const Letter = lazy(() => import("./pages/Admin/Letter"));
 const LetterTemplates = lazy(() => import("./pages/Admin/LetterTemplate"));
 const LetterDup = lazy(() => import("./pages/Admin/Letter_dup"));
+const PayslipPage = lazy(() => import("./pages/Admin/Payslip"));
+const UpdateEmployeeForm = lazy(() => import("./pages/Forms/UpdateEmployeeForm"));
 
 
 const UserManagementPage = lazy(() => import("./pages/UserManagement/index"));
@@ -201,6 +202,8 @@ export function appRoutes() {
             <Route path="letter-form" element={<LetterForm />} />
             <Route path="letter-templates" element={<LetterTemplates />} />
             <Route path="letter-pdf" element={<LetterDup />} />
+            <Route path="payslip" element={<PayslipPage />} />
+            <Route path="update-employee-form/:id" element={<UpdateEmployeeForm />} />
 
 
             {/* Admin Change Password */}

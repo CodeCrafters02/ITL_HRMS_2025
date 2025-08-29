@@ -2,6 +2,7 @@ import ProfileMetaCard from "../../components/UserProfile/ProfileMetaCard";
 import ProfileInfoCard from "../../components/UserProfile/ProfileInfoCard";
 import ProfileAddressCard from "../../components/UserProfile/ProfileAddressCard";
 import ProfessionalCard from "../../components/UserProfile/ProfessionalCard";
+import HierarchyCard from "../../components/UserProfile/HierarchyCard";
 import PageMeta from "../../components/common/PageMeta";
 import * as React from 'react';
 import Tabs from '@mui/material/Tabs';
@@ -52,7 +53,9 @@ export default function EmployeeProfiles() {
             </div>
           )}
           {tab === 'hierarchy' && (
-            <div className="text-gray-500 dark:text-gray-400">Hierarchy details coming soon.</div>
+            <div className="space-y-6">
+              <HierarchyCard />
+            </div>
           )}
         </div>
       </div>

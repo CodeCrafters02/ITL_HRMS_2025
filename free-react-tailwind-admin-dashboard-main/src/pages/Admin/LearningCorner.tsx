@@ -8,6 +8,7 @@ import Label from '../../components/form/Label';
 import InputField from '../../components/form/input/InputField';
 import TextArea from '../../components/form/input/TextArea';
 import FileInput from '../../components/form/input/FileInput';
+import { toast } from 'react-toastify';
 
 interface LearningCorner {
   id: number;
@@ -26,6 +27,8 @@ const LearningCornerPage: React.FC = () => {
   const [editId, setEditId] = useState<number | null>(null);
   const [editForm, setEditForm] = useState({ title: '', description: '', image: null, document: null, video: null });
   const [showModal, setShowModal] = useState(false);
+  const [deleteId, setDeleteId] = useState<number | null>(null);
+  const [deleteName, setDeleteName] = useState<string>("");
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -87,17 +90,24 @@ const LearningCornerPage: React.FC = () => {
     }
   };
 
-  const handleDelete = async (id: number) => {
-    if (window.confirm('Are you sure you want to delete this item?')) {
-      setLoading(true);
-      try {
-        await axiosInstance.delete(`/learning-corner/${id}/`);
-        setItems(items.filter(item => item.id !== id));
-      } catch {
-        setError('Failed to delete item');
-      } finally {
-        setLoading(false);
-      }
+  const handleDeleteClick = (id: number, name: string) => {
+    setDeleteId(id);
+    setDeleteName(name);
+  };
+
+  const confirmDelete = async () => {
+    if (!deleteId) return;
+    setLoading(true);
+    try {
+      await axiosInstance.delete(`/learning-corner/${deleteId}/`);
+      setItems(items.filter(item => item.id !== deleteId));
+      setDeleteId(null);
+      setDeleteName("");
+      toast.success("Deleted successfully", { position: "bottom-right" });
+    } catch {
+      setError('Failed to delete item');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -163,7 +173,7 @@ const LearningCornerPage: React.FC = () => {
                       Edit
                     </button>
                     <button
-                      onClick={() => handleDelete(item.id)}
+                      onClick={() => handleDeleteClick(item.id, item.title)}
                       className="flex items-center gap-1 bg-red-100 text-red-700 hover:bg-red-200 px-3 py-2 rounded-lg font-medium text-sm transition-colors"
                       title="Delete Learning Corner"
                     >
@@ -234,6 +244,29 @@ const LearningCornerPage: React.FC = () => {
             </div>
           </div>
         )}
+      {/* Delete Confirmation Modal */}
+      {deleteId !== null && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-opacity-40">
+          <div className="bg-white dark:bg-gray-900 rounded-lg shadow-lg p-8 w-full max-w-md">
+            <h2 className="text-xl font-bold mb-4 text-gray-900 dark:text-white">Confirm Delete</h2>
+            <p className="mb-6 text-gray-700 dark:text-gray-300">Are you sure you want to delete the department <span className="font-semibold">{deleteName}</span>?</p>
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={() => { setDeleteId(null); setDeleteName(""); }}
+                className="px-4 py-2 rounded-lg bg-gray-200 text-gray-800 hover:bg-gray-300 font-medium"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmDelete}
+                className="px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 font-medium"
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       </ComponentCard>
     </div>
   );

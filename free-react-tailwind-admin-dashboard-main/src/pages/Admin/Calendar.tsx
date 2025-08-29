@@ -4,7 +4,26 @@ import dayGridPlugin from "@fullcalendar/daygrid";
 import timeGridPlugin from "@fullcalendar/timegrid";
 import interactionPlugin from "@fullcalendar/interaction";
 import { EventInput, DateSelectArg, EventClickArg, EventContentArg, DayCellContentArg } from "@fullcalendar/core";
-import { Modal } from "../../components/ui/modal";
+// Inline Modal implementation for this file
+function Modal({ isOpen, onClose, className = '', children }: { isOpen: boolean; onClose: () => void; className?: string; children: React.ReactNode }) {
+  if (!isOpen) return null;
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30">
+      <div className={`bg-white dark:bg-gray-900 rounded-lg shadow-lg ${className} relative`}>
+        <button
+          onClick={onClose}
+          className="absolute top-2 right-2 text-gray-400 hover:text-gray-700 focus:outline-none"
+          aria-label="Close"
+        >
+          <svg width="20" height="20" fill="none" viewBox="0 0 24 24">
+            <path stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" d="M6 6l12 12M6 18L18 6" />
+          </svg>
+        </button>
+        <div className="p-2 sm:p-4 md:p-6">{children}</div>
+      </div>
+    </div>
+  );
+}
 import { useModal } from "../../hooks/useModal";
 import PageMeta from "../../components/common/PageMeta";
 import { axiosInstance } from "../Dashboard/api";
@@ -153,39 +172,7 @@ const AdminCalendar: React.FC = () => {
     const hasEvent = events.some(ev => ev.date === dateStr && !ev.is_holiday);
     return (
       <div style={{ position: 'relative', width: '100%', height: '100%' }}>
-        <span>{arg.dayNumberText}</span>
-        {isHoliday && (
-          <span
-            style={{
-              position: 'absolute',
-              top: 2,
-              right: 2,
-              width: 10,
-              height: 10,
-              borderRadius: '50%',
-              background: '#ef4444', // red for holiday
-              display: 'inline-block',
-              border: '2px solid #fff',
-              boxShadow: '0 0 0 2px #ef4444',
-            }}
-            title="Holiday"
-          ></span>
-        )}
-        {!isHoliday && hasEvent && (
-          <span
-            style={{
-              position: 'absolute',
-              top: 2,
-              right: 15,
-              width: 8,
-              height: 8,
-              borderRadius: '50%',
-              background: '#d11111ff',
-              display: 'inline-block',
-            }}
-            title="Holiday"
-          ></span>
-        )}
+        <span style={isHoliday ? { color: '#ef4444', fontWeight: 'bold' } : {}}>{arg.dayNumberText}</span>
       </div>
     );
   };
@@ -214,7 +201,10 @@ const AdminCalendar: React.FC = () => {
             customButtons={{
               addEventButton: {
                 text: "Add Event +",
-                click: openModal,
+                click: () => {
+                  resetModalFields();
+                  openModal();
+                },
               },
             }}
           />

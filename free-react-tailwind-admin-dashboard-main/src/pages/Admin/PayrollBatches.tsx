@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { axiosInstance } from "../Dashboard/api";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 
 interface PayrollBatch {
   id: number;
@@ -132,7 +132,7 @@ const PayrollBatches: React.FC = () => {
 
       {/* Modal for finalized payroll */}
       {modalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-blur bg-opacity-40">
           <div className="bg-white rounded-lg shadow-lg max-w-4xl w-full p-6 relative">
             <h2 className="text-xl font-bold mb-2">Payroll Batch Details</h2>
             {modalLoading && <div className="mb-4 text-gray-500">Loading...</div>}
@@ -149,6 +149,7 @@ const PayrollBatches: React.FC = () => {
                     <thead className="bg-gray-50">
                       <tr>
                         <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">#</th>
+                        <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Payslip</th>
                         <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Employee</th>
                         <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Basic</th>
                         <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">HRA</th>
@@ -169,6 +170,16 @@ const PayrollBatches: React.FC = () => {
                         payrolls.map((pay: any, idx: number) => (
                           <tr key={idx} className="hover:bg-gray-50">
                             <td className="px-4 py-2 whitespace-nowrap">{idx + 1}</td>
+                            <td className="px-4 py-2 whitespace-nowrap">
+                              <Link
+                                to={`/admin/payslip?employeeId=${pay.employee_id || (pay.employee && pay.employee.id) || pay.employee}&batchId=${selectedBatch.id}`}
+                                className="bg-gray-200 hover:bg-gray-300 text-xs px-2 py-1 rounded"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                              >
+                                View
+                              </Link>
+                            </td>
                             <td className="px-4 py-2 whitespace-nowrap">{pay.employee_name || pay.employee?.name || pay.employee}</td>
                             <td className="px-4 py-2 whitespace-nowrap">₹{pay.basic_salary}</td>
                             <td className="px-4 py-2 whitespace-nowrap">₹{pay.hra}</td>
