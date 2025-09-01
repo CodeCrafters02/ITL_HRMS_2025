@@ -365,11 +365,10 @@ const EmployeeSidebar: React.FC = () => {
     // Use employeeId from state (set by employee-id/ endpoint)
     if (!employeeId) return;
     axiosInstance.get("reporting-managers/").then((res) => {
-      console.log('Reporting managers API response:', res.data);
+      
       const managers = Array.isArray(res.data) ? res.data : res.data.reporting_managers || [];
-      console.log('Managers used for check:', managers);
+     
       const isManager = managers.some((mgr: {id: string|number, full_name?: string}) => String(mgr.id) === String(employeeId));
-      console.log('Current employeeId:', employeeId, 'Is reporting manager:', isManager);
       setIsReportingManager(isManager);
     });
   }, [employeeId]);

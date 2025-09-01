@@ -463,7 +463,7 @@ class RecruitmentSerializer(serializers.ModelSerializer):
     class Meta:
         model = Recruitment
         fields = '__all__'
-        read_only_fields = ['reference_id']
+        read_only_fields = ['id','reference_id']
         
         
 class LeaveSerializer(serializers.ModelSerializer):
@@ -642,14 +642,22 @@ class PayrollSerializer(serializers.ModelSerializer):
     employee_id = serializers.CharField(source='employee.employee_id', read_only=True)
     employee_name = serializers.SerializerMethodField()
     payroll_date = serializers.DateField(format="%Y-%m-%d", read_only=True)
+    designation = serializers.SerializerMethodField()
+    department = serializers.SerializerMethodField()
+
 
     def get_employee_name(self, obj):
         return f"{obj.employee.first_name} {obj.employee.last_name}"
+    def get_designation(self, obj):
+        return obj.employee.designation.designation_name if obj.employee and obj.employee.designation else ""
+
+    def get_department(self, obj):
+        return obj.employee.department.department_name if obj.employee and obj.employee.department else ""
 
     class Meta:
         model = Payroll
         fields = [
-            'id', 'employee_id', 'employee_name', 'payroll_date',
+            'id', 'employee_id', 'employee_name','designation','department', 'payroll_date',
             'gross_salary', 'basic_salary', 'hra', 'conveyance', 'medical',
             'special_allowance', 'service_charges', 'pf', 'income_tax', 'net_pay',
             'total_working_days', 'days_paid', 'loss_of_pay_days',
@@ -767,7 +775,7 @@ class LetterTemplateSerializer(serializers.ModelSerializer):
     class Meta:
         model = LetterTemplate
         fields = [
-            "id", "company", "company_details", "title", "content", "created_by", "created_at"
+            "id", "company", "company_details", "title", "content", "email_content", "created_by", "created_at"
         ]
         read_only_fields = ["id", "company", "created_by", "created_at", "company_details"]
 

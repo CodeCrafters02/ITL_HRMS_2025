@@ -6,7 +6,7 @@ from django.utils import timezone
 class UserNotification(models.Model):
 
     recipient = models.ForeignKey(Employee, related_name='notifications', on_delete=models.CASCADE)
-    sender =  models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="notifications")
+    sender =  models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, null=True, blank=True, related_name="notifications")
     title = models.CharField(max_length=255)
     message = models.TextField()
     related_object_id = models.PositiveIntegerField(null=True, blank=True)

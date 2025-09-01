@@ -48,11 +48,10 @@ This offer is contingent upon receipt of the above documents and verification of
 
 Confirmation of Acceptance
 Please confirm your acceptance of this offer by replying to this email or signing and returning a copy of this letter by
-<Date>.
+.
 We are thrilled to welcome you to the <company> family and look forward to working together on exciting
 projects and achieving great success.
-If you have any questions or need further clarification, feel free to reach out to us at <email> or
-<phone_number>. Welcome aboard!
+If you have any questions or need further clarification, feel free to reach out to us at samplecompanyname@gmail.com or 123-456-7890. Welcome aboard!
 
 Warm regards,
 <sender_name>
@@ -63,6 +62,8 @@ I, <name>, have read and understood the terms of this offer letter and accept th
 Signature: __________________________
 Date: ______________________________
 `);
+
+  const [emailContent, setEmailContent] = useState('Dear <name>,\n\nPlease find attached your letter.\n\nRegards,\n<company>');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
@@ -96,15 +97,17 @@ Date: ______________________________
       await axiosInstance.post('/letter-templates/', {
         title,
         content,
+        email_content: emailContent,
       });
       setSuccess(true);
       if (onSuccess) {
         onSuccess(title, content);
       }
       // Redirect to Letter page and pass content as state
-      navigate('/admin/letter', { state: { title, content } });
+      navigate('/admin/letter', { state: { title, content, emailContent } });
       setTitle('');
       setContent('');
+      setEmailContent('Dear <name>,\n\nPlease find attached your letter.\n\nRegards,\n<company>');
     } catch (err: unknown) {
       console.error('Backend error:', err);
     } finally {
@@ -159,12 +162,21 @@ Date: ______________________________
               onChange={setContent}
               rows={12}
               placeholder="Enter letter content..."
-             
             />
             {/* Word count and limit */}
             <div className="text-right text-xs text-gray-500 mt-1">
               {content.trim().split(/\s+/).filter(Boolean).length} / 400 words
             </div>
+          </div>
+          <div>
+            <Label htmlFor="email-content">Email Content</Label>
+            <TextArea
+              value={emailContent}
+              onChange={setEmailContent}
+              rows={4}
+              placeholder="Enter the email body to be sent with the letter..."
+            />
+            <div className="text-xs text-gray-500 mt-1">This content will be used as the email body when sending the letter as an attachment.</div>
           </div>
           {error && <div className="text-red-500 mb-2">{error}</div>}
           {success && <div className="text-green-600 mb-2">Letter created successfully!</div>}

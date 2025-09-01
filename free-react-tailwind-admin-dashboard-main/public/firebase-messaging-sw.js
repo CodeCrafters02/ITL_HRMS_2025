@@ -20,7 +20,7 @@ const messaging = firebase.messaging();
 // Listen for background messages and show notifications
 messaging.onBackgroundMessage(function(payload) {
   const data = payload.data || {};
-  console.log("Background notification:", data);
+  
 
   const notificationTitle = data.company_name || data.title || "New Notification";
   const notificationOptions = {

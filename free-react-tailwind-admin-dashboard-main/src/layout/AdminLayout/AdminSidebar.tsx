@@ -143,7 +143,7 @@ const AdminSidebar: React.FC = () => {
     // Fetch company logo and name for admin
    axiosInstance.get("company-logo/")
       .then(res => {
-        console.log("Company API response:", res.data); // Debug log
+        
         setCompanyLogo(res.data.logo_url || "");
         setCompanyName(res.data.name || "");
       })

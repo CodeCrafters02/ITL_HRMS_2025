@@ -541,6 +541,7 @@ class LetterTemplate(models.Model):
     company = models.ForeignKey(Company, on_delete=models.CASCADE, related_name="letter_templates")
     title = models.CharField(max_length=255)
     content = models.TextField()  
+    email_content = models.TextField(null=True, blank=True)
     created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
@@ -562,6 +563,8 @@ class GeneratedLetter(models.Model):
     generated_at = models.DateTimeField(auto_now_add=True)
     content = models.TextField(null=True, blank=True)
     title = models.CharField(max_length=255, blank=True, null=True)  
+    email_sent = models.BooleanField(default=False)
+    email_sent_at = models.DateTimeField(null=True, blank=True)
 
     def __str__(self):
         who = self.employee or self.candidate or self.relieved_employee

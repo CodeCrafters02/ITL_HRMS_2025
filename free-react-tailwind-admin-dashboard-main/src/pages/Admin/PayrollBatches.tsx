@@ -15,6 +15,7 @@ const monthNames = [
   "July", "August", "September", "October", "November", "December"
 ];
 
+
 const PayrollBatches: React.FC = () => {
   const [batches, setBatches] = useState<PayrollBatch[]>([]);
   const [modalOpen, setModalOpen] = useState(false);
@@ -22,6 +23,8 @@ const PayrollBatches: React.FC = () => {
   const [modalError, setModalError] = useState<string | null>(null);
   const [selectedBatch, setSelectedBatch] = useState<any | null>(null);
   const [payrolls, setPayrolls] = useState<any[]>([]);
+  const [sending, setSending] = useState(false);
+  const [sendResult, setSendResult] = useState<string | null>(null);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -42,6 +45,7 @@ const PayrollBatches: React.FC = () => {
     setModalLoading(true);
     setModalError(null);
     setPayrolls([]);
+    setSendResult(null);
     try {
       // Fetch batch details
       const batchRes = await axiosInstance.get(`/payroll-batches/${batchId}/`);
@@ -60,7 +64,22 @@ const PayrollBatches: React.FC = () => {
     setModalOpen(false);
     setSelectedBatch(null);
     setPayrolls([]);
+    setSendResult(null);
     navigate("/admin/payroll-batches");
+  };
+
+  const handleSendPayslips = async () => {
+    if (!selectedBatch?.id) return;
+    setSending(true);
+    setSendResult(null);
+    try {
+      await axiosInstance.post(`/payroll-batches/${selectedBatch.id}/send-payslips/`);
+      setSendResult("Payslips sent to all employees!");
+    } catch (err: any) {
+      setSendResult("Failed to send payslips: " + (err.response?.data?.error || err.message));
+    } finally {
+      setSending(false);
+    }
   };
 
   return (
@@ -103,7 +122,7 @@ const PayrollBatches: React.FC = () => {
                         {batch.status}
                       </span>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
+                    <td className="px-6 py-4 whitespace-nowrap flex items-center gap-2">
                       <button
                         type="button"
                         className="text-blue-600 hover:text-blue-800"
@@ -115,6 +134,29 @@ const PayrollBatches: React.FC = () => {
                           <circle cx="12" cy="12" r="3" />
                         </svg>
                       </button>
+                      {batch.status === "Locked" && (
+                        <button
+                          type="button"
+                          className="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-1 px-3 rounded shadow text-xs"
+                          onClick={async (e) => {
+                            e.stopPropagation();
+                            setSelectedBatch(batch);
+                            setSending(true);
+                            setSendResult(null);
+                            try {
+                              await axiosInstance.post(`/payroll-batches/${batch.id}/send-payslips/`);
+                              setSendResult("Payslips sent to all employees!");
+                            } catch (err: any) {
+                              setSendResult("Failed to send payslips: " + (err.response?.data?.error || err.message));
+                            } finally {
+                              setSending(false);
+                            }
+                          }}
+                          disabled={sending}
+                        >
+                          {sending && selectedBatch?.id === batch.id ? "Sending..." : "Send Payslips"}
+                        </button>
+                      )}
                     </td>
                   </tr>
                 ))
@@ -127,6 +169,7 @@ const PayrollBatches: React.FC = () => {
               )}
             </tbody>
           </table>
+          {sendResult && <div className="mt-2 text-center">{sendResult}</div>}
         </div>
       </div>
 

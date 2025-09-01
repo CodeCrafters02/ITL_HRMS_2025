@@ -13,6 +13,8 @@ from django.contrib.auth import authenticate
 from rest_framework_simplejwt.tokens import RefreshToken
 from datetime import date
 from decimal import Decimal
+from django.core.mail import EmailMessage
+from .utils import generate_payslip_pdf
 from rest_framework import viewsets, permissions
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -721,7 +723,34 @@ class PayrollBatchViewSet(viewsets.ModelViewSet):
 
         except PayrollBatch.DoesNotExist:
             return Response({'error': 'Batch not found'}, status=status.HTTP_404_NOT_FOUND)
+        
+    @action(detail=True, methods=['post'], url_path='send-payslips')
+    def send_payslips(self, request, pk=None):
+        batch = self.get_object()
+        if batch.status != 'Locked':
+            return Response({'error': 'Batch must be locked before sending payslips.'}, status=400)
 
+        company = batch.company
+        logo_path = company.logo.path if company.logo and hasattr(company.logo, 'path') else None
+
+        payrolls = Payroll.objects.filter(batch=batch)
+        for payroll in payrolls:
+            employee = payroll.employee
+            if not employee.email:
+                continue
+
+            pdf_buffer = generate_payslip_pdf(employee, payroll, batch, company=company, logo_path=logo_path)
+            email = EmailMessage(
+                subject=f"Payslip for {batch.month}/{batch.year}",
+                body=f"Dear {employee.full_name},\n\nPlease find attached your payslip for {batch.month}/{batch.year}.\n\nRegards,\nHR Team",
+                to=[employee.email]
+            )
+            email.attach(f"Payslip_{employee.employee_id}_{batch.month}_{batch.year}.pdf", pdf_buffer.read(), 'application/pdf')
+            email.send()
+
+        return Response({'message': 'Payslips sent to all employees.'})
+
+           
 class GeneratePayrollView(APIView):
     permission_classes = [IsAuthenticated, IsAdminUser]
 
@@ -1310,12 +1339,18 @@ class LetterTemplateViewSet(viewsets.ModelViewSet):
 class GenerateLetterContentAPIView(APIView):
     permission_classes = [IsAuthenticated, IsAdminUser]
 
+
     def post(self, request):
+        import io
+        from django.utils import timezone
+        from .utils import generate_letter_pdf, fill_placeholders
+
         template_id = request.data.get('template_id')
-        letter_type = request.data.get('type') 
+        letter_type = request.data.get('type')
         employee_id = request.data.get('employee_id')
         candidate_id = request.data.get('candidate_id')
         relieved_employee_id = request.data.get('relieved_employee_id')
+        email_content = request.data.get('email_content')
 
         if not letter_type:
             return Response({'error': 'Letter type is required.'}, status=status.HTTP_400_BAD_REQUEST)
@@ -1329,22 +1364,26 @@ class GenerateLetterContentAPIView(APIView):
         # Determine which model to use
         obj = None
         obj_type = None
+        recipient_email = None
         if employee_id:
             try:
                 obj = Employee.objects.select_related('company', 'department', 'designation').get(id=employee_id, company=request.user.company)
                 obj_type = 'employee'
+                recipient_email = obj.email
             except Employee.DoesNotExist:
                 return Response({'error': 'Employee not found'}, status=status.HTTP_404_NOT_FOUND)
         elif candidate_id:
             try:
                 obj = Recruitment.objects.get(id=candidate_id)
                 obj_type = 'candidate'
+                recipient_email = obj.email
             except Recruitment.DoesNotExist:
                 return Response({'error': 'Candidate not found'}, status=status.HTTP_404_NOT_FOUND)
         elif relieved_employee_id:
             try:
                 obj = RelievedEmployee.objects.select_related('employee').get(id=relieved_employee_id)
                 obj_type = 'relievedemployee'
+                recipient_email = obj.employee.email if obj.employee else None
             except RelievedEmployee.DoesNotExist:
                 return Response({'error': 'Relieved employee not found'}, status=status.HTTP_404_NOT_FOUND)
         else:
@@ -1391,20 +1430,22 @@ class GenerateLetterContentAPIView(APIView):
         # Find all placeholders in the template
         placeholders = set(re.findall(r'<(\w+)>', template.content))
 
-        # Replace placeholders
+        # Replace placeholders in letter content
         def replacer(match):
             key = match.group(1)
             return str(data.get(key, f'<{key}>'))
         filled_content = re.sub(r'<(\w+)>', replacer, template.content)
 
-       
+        # Replace placeholders in email_content (only <name> and <company> for safety)
+        if email_content:
+            email_content = re.sub(r'<(name|company)>', lambda m: str(data.get(m.group(1), f'<{m.group(1)}>')), email_content)
 
         generated_letter = None
         if obj_type == 'candidate':
             generated_letter, created = GeneratedLetter.objects.get_or_create(
                 candidate=obj,
                 template=template,
-                type=letter_type,  # <-- filter by type
+                type=letter_type,
                 defaults={
                     'content': filled_content,
                     'title': template.title,
@@ -1418,7 +1459,7 @@ class GenerateLetterContentAPIView(APIView):
             generated_letter, created = GeneratedLetter.objects.get_or_create(
                 employee=obj,
                 template=template,
-                type=letter_type,  # <-- filter by type
+                type=letter_type,
                 defaults={
                     'content': filled_content,
                     'title': template.title,
@@ -1432,7 +1473,7 @@ class GenerateLetterContentAPIView(APIView):
             generated_letter, created = GeneratedLetter.objects.get_or_create(
                 relieved_employee=obj,
                 template=template,
-                type=letter_type,  # <-- filter by type
+                type=letter_type,
                 defaults={
                     'content': filled_content,
                     'title': template.title,
@@ -1443,11 +1484,58 @@ class GenerateLetterContentAPIView(APIView):
                 generated_letter.title = template.title
                 generated_letter.save()
 
+        # --- EMAIL SENDING LOGIC ---
+        # Only send if not already sent
+        if hasattr(generated_letter, 'sent') and generated_letter.sent:
+            return Response({
+                'content': filled_content,
+                'placeholders': list(placeholders),
+                'filled': data,
+                'generated_letter_id': generated_letter.id if generated_letter else None,
+                'email_status': 'already_sent'
+            }, status=status.HTTP_200_OK)
+
+        # Generate PDF (implement generate_letter_pdf to return PDF bytes)
+        try:
+            # Determine company for PDF context
+            if obj_type == 'candidate':
+                company = request.user.company
+            elif obj_type == 'employee':
+                company = obj.company
+            elif obj_type == 'relievedemployee':
+                company = emp.company
+            else:
+                company = None
+            pdf_bytes = generate_letter_pdf(company, template.title, filled_content)
+        except Exception as e:
+            return Response({'error': f'PDF generation failed: {str(e)}'}, status=500)
+
+        # Send email if recipient email and email_content are present
+        if recipient_email and email_content:
+            try:
+                email = EmailMessage(
+                    subject=template.title,
+                    body=email_content,
+                    to=[recipient_email]
+                )
+                email.attach(f"{template.title}.pdf", pdf_bytes, "application/pdf")
+                email.send()
+                # Mark as sent
+                generated_letter.sent = True
+                generated_letter.sent_at = timezone.now()
+                generated_letter.save()
+                email_status = 'sent'
+            except Exception as e:
+                email_status = f'error: {str(e)}'
+        else:
+            email_status = 'no_email_or_content'
+
         return Response({
             'content': filled_content,
             'placeholders': list(placeholders),
             'filled': data,
             'generated_letter_id': generated_letter.id if generated_letter else None,
+            'email_status': email_status
         }, status=status.HTTP_200_OK)
         
 

@@ -31,107 +31,111 @@ const StudioShodweLetterhead: React.FC = () => {
     let getParams = '';
     // Always include type, template_id, and candidate_id/relieved_id in all requests
     const postBody: Record<string, string> = { template_id: templateId, type: type || '' };
-    if (type === 'offer' || type === 'appointment') {
-      if (!candidate_id) {
-        setError('No valid candidate ID provided.');
+    let emailContent = '';
+    const fetchAndGenerate = async () => {
+      if (type === 'offer' || type === 'appointment') {
+        if (!candidate_id) {
+          setError('No valid candidate ID provided.');
+          setLetterContent('');
+          setLetterTitle('');
+          return;
+        }
+        getParams = `/generated-letters/?candidate_id=${candidate_id}&template_id=${templateId}&type=${type}`;
+        if (typeof candidate_id === 'string') {
+          postBody.candidate_id = candidate_id;
+        }
+      } else if (type === 'relieve') {
+        if (!relieved_id) {
+          setError('No valid relieved employee ID provided.');
+          setLetterContent('');
+          setLetterTitle('');
+          return;
+        }
+        getParams = `/generated-letters/?relieved_id=${relieved_id}&template_id=${templateId}&type=${type}`;
+        if (typeof relieved_id === 'string') {
+          postBody.relieved_employee_id = relieved_id;
+        }
+      } else {
+        setError('Invalid letter type.');
         setLetterContent('');
         setLetterTitle('');
         return;
       }
-      getParams = `/generated-letters/?candidate_id=${candidate_id}&template_id=${templateId}&type=${type}`;
-      if (typeof candidate_id === 'string') {
-        postBody.candidate_id = candidate_id;
+      setLoading(true);
+      try {
+        // Fetch the template to get email_content
+        const templateRes = await axiosInstance.get(`/letter-templates/${templateId}/`);
+        emailContent = templateRes.data.email_content || '';
+        postBody.email_content = emailContent;
+      } catch {
+        // If template fetch fails, continue without email_content
+        postBody.email_content = '';
       }
-    } else if (type === 'relieve') {
-      if (!relieved_id) {
-        setError('No valid relieved employee ID provided.');
-        setLetterContent('');
-        setLetterTitle('');
-        return;
-      }
-      getParams = `/generated-letters/?relieved_id=${relieved_id}&template_id=${templateId}&type=${type}`;
-      if (typeof relieved_id === 'string') {
-        postBody.relieved_employee_id = relieved_id;
-      }
-    } else {
-      setError('Invalid letter type.');
-      setLetterContent('');
-      setLetterTitle('');
-      return;
-    }
-    setLoading(true);
-    axiosInstance.get(getParams)
-      .then((res) => {
+      try {
+        const res = await axiosInstance.get(getParams);
         if (Array.isArray(res.data) && res.data.length > 0) {
           setLetterContent(res.data[0].content || '');
           if (res.data[0].title && res.data[0].title !== '') {
             setLetterTitle(res.data[0].title);
           } else {
-            axiosInstance.get(`/letter-templates/${templateId}/`).then((tplRes) => {
+            try {
+              const tplRes = await axiosInstance.get(`/letter-templates/${templateId}/`);
               setLetterTitle(tplRes.data.title || '');
-            }).catch(() => setLetterTitle(''));
+            } catch {
+              setLetterTitle('');
+            }
           }
           setLoading(false);
         } else {
-          
-          if (type === 'offer' || type === 'appointment') {
-            if (typeof candidate_id === 'string') {
-              postBody.candidate_id = candidate_id;
-            }
-          } else if (type === 'relieve') {
-            if (typeof relieved_id === 'string') {
-              postBody.relieved_employee_id = relieved_id;
-            }
-          }
-          axiosInstance.post('/generate-letter-content/', postBody)
-            .then((res2) => {
-              setLetterContent(res2.data.content || '');
-              if (res2.data.title && res2.data.title !== '') {
-                setLetterTitle(res2.data.title);
-              } else {
-                axiosInstance.get(`/letter-templates/${templateId}/`).then((tplRes) => {
-                  setLetterTitle(tplRes.data.title || '');
-                }).catch(() => setLetterTitle(''));
-              }
-            })
-            .catch(() => {
-              setError('Could not generate letter content');
-              setLetterContent('');
-            })
-            .finally(() => setLoading(false));
-        }
-      })
-      .catch(() => {
-        // If GET fails, fallback to POST
-        if (type === 'offer' || type === 'appointment') {
-          if (typeof candidate_id === 'string') {
-            postBody.candidate_id = candidate_id;
-          }
-        } else if (type === 'relieve') {
-          if (typeof relieved_id === 'string') {
-            postBody.relieved_employee_id = relieved_id;
-          }
-        }
-        axiosInstance.post('/generate-letter-content/', postBody)
-          .then((res2) => {
+          // No letter found, generate new letter
+          try {
+            const res2 = await axiosInstance.post('/generate-letter-content/', postBody);
             setLetterContent(res2.data.content || '');
             if (res2.data.title && res2.data.title !== '') {
               setLetterTitle(res2.data.title);
             } else {
-              axiosInstance.get(`/letter-templates/${templateId}/`).then((tplRes) => {
+              try {
+                const tplRes = await axiosInstance.get(`/letter-templates/${templateId}/`);
                 setLetterTitle(tplRes.data.title || '');
-              }).catch(() => setLetterTitle(''));
+              } catch {
+                setLetterTitle('');
+              }
             }
-          })
-          .catch(() => {
+          } catch {
             setError('Could not generate letter content');
             setLetterContent('');
-          })
-          .finally(() => setLoading(false));
+          } finally {
+            setLoading(false);
+          }
+        }
+      } catch {
+        // If GET fails, fallback to POST
+        try {
+          const res2 = await axiosInstance.post('/generate-letter-content/', postBody);
+          setLetterContent(res2.data.content || '');
+          if (res2.data.title && res2.data.title !== '') {
+            setLetterTitle(res2.data.title);
+          } else {
+            try {
+              const tplRes = await axiosInstance.get(`/letter-templates/${templateId}/`);
+              setLetterTitle(tplRes.data.title || '');
+            } catch {
+              setLetterTitle('');
+            }
+          }
+        } catch {
+          setError('Could not generate letter content');
+          setLetterContent('');
+        } finally {
+          setLoading(false);
+        }
+      }
+      // Fetch company info
+      axiosInstance.get("/company-update/").then((res) => {
+        setCompany(res.data || null);
       });
-    axiosInstance.get("/company-update/").then((res) => {
-      setCompany(res.data || null);
-    });
+    };
+    fetchAndGenerate();
   }, [templateId, type, candidate_id, relieved_id]);
 
   // Get current date

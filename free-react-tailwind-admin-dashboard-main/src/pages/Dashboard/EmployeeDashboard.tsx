@@ -66,6 +66,8 @@ export default function EmployeeDashboard(): React.JSX.Element {
   const [weeklyHours, setWeeklyHours] = React.useState<number>(0);
   const [attendanceScore, setAttendanceScore] = React.useState<number>(100);
   const timerRef = React.useRef<ReturnType<typeof setInterval> | null>(null);
+  // Birthday wishes state
+  const [birthdayCards, setBirthdayCards] = React.useState<{id:number,title:string,description:string}[]>([]);
 
   // Helper to get initials from employee name
   const getInitials = (name: string | null) => {
@@ -107,8 +109,7 @@ export default function EmployeeDashboard(): React.JSX.Element {
       
       if (response.status === 200 && response.data.dashboard_data) {
         const dashboardData = response.data.dashboard_data;
-        console.log('🎯 Dashboard Data Structure:', dashboardData);
-        
+               
         setDashboardData(dashboardData);
         // Calculate dynamic values
         calculateWeeklyHours(dashboardData);
@@ -135,6 +136,26 @@ export default function EmployeeDashboard(): React.JSX.Element {
 
   React.useEffect(() => {
     fetchDashboardData();
+    // Show birthday wishes only once per session
+    if (!sessionStorage.getItem('birthdayWishesShown')) {
+      (async () => {
+        try {
+          const res = await axiosInstance.get('/all-notifications/');
+          if (Array.isArray(res.data)) {
+            // Use a more specific type for n
+            const birthdays = res.data.filter((n: { type: string }) => n.type === 'birthday');
+            if (birthdays.length > 0) {
+              setBirthdayCards(birthdays);
+              setTimeout(() => setBirthdayCards([]), 10000);
+              sessionStorage.setItem('birthdayWishesShown', '1');
+            }
+          }
+        } catch (err) {
+          // Optionally log error for debugging
+          // console.error('Failed to fetch birthday notifications', err);
+        }
+      })();
+    }
   }, [fetchDashboardData]);
 
   // Local timer for real-time updates (working time)
@@ -287,6 +308,20 @@ export default function EmployeeDashboard(): React.JSX.Element {
 
   return (
     <>
+      {/* Birthday wishes cards */}
+      {birthdayCards.length > 0 && (
+        <div className="fixed bottom-10 left-1/2 transform -translate-x-1/2 z-50 flex flex-col gap-3 items-center">
+          {birthdayCards.map(card => (
+            <div key={card.id} className="bg-yellow-100 border border-yellow-400 rounded-lg shadow px-6 py-3 flex items-center gap-3 animate-fade-in-out">
+            
+              <div>
+                <div className="font-bold text-yellow-800">{card.title}</div>
+                <div className="text-yellow-700 text-sm">{card.description}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
       <PageMeta
         title="Employee Dashboard"
         description="Employee dashboard overview"

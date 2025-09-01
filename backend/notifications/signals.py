@@ -54,8 +54,7 @@ def notify_employees_on_assignment(sender, instance, created, **kwargs):
             sender=default_sender,
             extra_data={"type": "task", "task_id": instance.task.id},
         )
-        print(f"[DEBUG] Notification sent to {assigned_user_ids} for Task {instance.task.id}")
-
+       
 @receiver(post_save, sender=EmpLeave)
 def leave_created_notify_manager(sender, instance, created, **kwargs):
     """

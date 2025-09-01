@@ -19,9 +19,7 @@ export const FirebaseNotificationListener = ({ userToken }: { userToken: string 
       try {
         const currentToken = await getToken(messaging, { vapidKey: VAPID_KEY });
         if (currentToken) {
-          console.log("FCM Token:", currentToken);
-          console.log("userToken (access token):", userToken);
-
+          
           const response = await fetch("http://localhost:8000/notifications/devices/", {
             method: "POST",
             headers: {

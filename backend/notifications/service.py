@@ -73,10 +73,7 @@ def send_fcm_to_users(user_ids, notif_type, message, sender, title="", related_o
     Create UserNotification, then send FCM push to all user devices.
     sender: required, must be a User instance (AUTH_USER_MODEL)
     """
-    if not user_ids:
-        print("[FCM DEBUG] No user_ids provided to send_fcm_to_users.")
-        return
-    print(f"[FCM DEBUG] send_fcm_to_users called with user_ids is success")
+    
     from app.models import Employee
     employee_ids = list(Employee.objects.filter(user_id__in=user_ids).values_list('id', flat=True))
     if not employee_ids:
@@ -107,10 +104,9 @@ def send_fcm_to_users(user_ids, notif_type, message, sender, title="", related_o
         this_extra_data = dict(base_extra_data)
         this_extra_data['company_logo'] = emp_logo_map.get(user_id, "")
         this_extra_data['company_name'] = emp_name_map.get(user_id, "")
-        print("FCM Notification company_logo (absolute):", this_extra_data['company_logo'])
         send_fcm_push(tk, title or notif_type.capitalize(), message, this_extra_data)
   
         
 def send_push_notification_to_all(title, message):
     user_ids = list(UserRegister.objects.values_list('id', flat=True))
-    send_fcm_to_users(user_ids, "general", message, title=title)
+    send_fcm_to_users(user_ids, "general", message, sender=None, title=title)  # sender can be None for general announcements

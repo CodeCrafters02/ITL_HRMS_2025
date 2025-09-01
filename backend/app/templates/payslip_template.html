@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Payslip</title>
+  <style>
+    :root {
+      --primary: #111827;
+      --secondary: #3498db;
+      --accent: #27ae60;
+      --light-bg: #f8f9fa;
+      --border: #e2e8f0;
+      --text: #2d3748;
+      --text-light: #718096;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Segoe UI', Arial, sans-serif;
+      background: #fff;
+      color: var(--text);
+    }
+
+    .payslip-container {
+      max-width: 800px;
+      margin: 15px auto;
+      background: #fff;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 20px;
+    }
+
+    .header {
+      text-align: center;
+      padding-bottom: 10px;
+      margin-bottom: 15px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .company-name {
+      font-size: 22px;
+      font-weight: 600;
+      color: var(--primary);
+    }
+
+    .payslip-title {
+      font-size: 18px;
+      font-weight: 500;
+      color: var(--text);
+    }
+
+    .period {
+      font-size: 14px;
+      color: var(--text-light);
+    }
+
+    .info-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 8px 15px;
+      margin-bottom: 15px;
+    }
+
+    .info-item {
+      font-size: 14px;
+      padding: 4px 0;
+      border-bottom: 1px solid #f3f4f6;
+    }
+
+    .info-label {
+      font-weight: 500;
+      color: var(--text);
+    }
+
+    .section-title {
+      font-size: 16px;
+      font-weight: 600;
+      color: var(--secondary);
+      margin: 10px 0;
+      padding-bottom: 6px;
+      border-bottom: 2px solid var(--border);
+    }
+
+    .earnings-deductions {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 15px;
+    }
+
+    @media (min-width: 768px) {
+      .earnings-deductions {
+        grid-template-columns: 1fr 1fr;
+      }
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 14px;
+    }
+
+    th, td {
+      padding: 6px 10px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    th {
+      text-align: left;
+      background: var(--light-bg);
+      font-weight: 600;
+    }
+
+    .amount {
+      text-align: right;
+      font-family: 'Courier New', monospace;
+    }
+
+    .total-row {
+      font-weight: 700;
+      background: var(--light-bg);
+    }
+
+    .net-pay-section {
+      background: var(--light-bg);
+      padding: 12px;
+      border-radius: 6px;
+      text-align: center;
+      margin: 20px 0;
+    }
+
+    .net-pay-label {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text-light);
+    }
+
+    .net-pay-amount {
+      font-size: 22px;
+      font-weight: 700;
+      color: var(--accent);
+    }
+
+    .footer {
+      text-align: center;
+      padding: 10px;
+      font-size: 12px;
+      color: var(--text-light);
+      border-top: 1px solid var(--border);
+      margin-top: 10px;
+    }
+
+    /* Print optimization */
+    @media print {
+      body {
+        background: #fff;
+      }
+      .payslip-container {
+        margin: 0;
+        box-shadow: none;
+        border: none;
+        page-break-inside: avoid;
+      }
+      .footer {
+        font-size: 11px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="payslip-container">
+
+    <div class="header">
+      {% if logo_path %}
+        <img src="{{ logo_path }}" alt="Company Logo" style="height: 60px; margin-bottom: 8px; display: block; margin-left: auto; margin-right: auto;" />
+      {% endif %}
+      <div class="company-name">{{ company.name|default:'Company Name' }}</div>
+      <div class="payslip-title">Payslip</div>
+      <div class="period">{{ batch.month }} {{ batch.year }}</div>
+    </div>
+
+    <div class="info-grid">
+      <div class="info-item"><span class="info-label">Employee Name:</span> {{ employee.full_name }}</div>
+      <div class="info-item"><span class="info-label">Employee ID:</span> {{ employee.employee_id }}</div>
+      <div class="info-item"><span class="info-label">Designation:</span> {{ employee.designation.designation_name }}</div>
+      <div class="info-item"><span class="info-label">Department:</span> {{ employee.department.department_name }}</div>
+      <div class="info-item"><span class="info-label">Pay Date:</span> {{ payroll.payroll_date }}</div>
+      <div class="info-item"><span class="info-label">Payment Mode:</span> Bank Transfer</div>
+      <div class="info-item"><span class="info-label">Working Days:</span> {{ payroll.total_working_days }}</div>
+      <div class="info-item"><span class="info-label">Days Paid:</span> {{ payroll.days_paid }}</div>
+      <div class="info-item"><span class="info-label">LOP Days:</span> {{ payroll.loss_of_pay_days }}</div>
+    </div>
+
+    <div class="section-title">Earnings & Deductions</div>
+    <div class="earnings-deductions">
+      <div>
+        <table>
+          <thead>
+            <tr><th>Earnings</th><th class="amount">Amount (₹)</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>Basic Salary</td><td class="amount">{{ payroll.basic_salary }}</td></tr>
+            <tr><td>HRA</td><td class="amount">{{ payroll.hra }}</td></tr>
+            <tr><td>Conveyance</td><td class="amount">{{ payroll.conveyance }}</td></tr>
+            <tr><td>Medical</td><td class="amount">{{ payroll.medical }}</td></tr>
+            <tr><td>Special Allowance</td><td class="amount">{{ payroll.special_allowance }}</td></tr>
+            <tr><td>Service Charges</td><td class="amount">{{ payroll.service_charges }}</td></tr>
+            {% if extra_allowances %}
+            <tr><td>Other Allowances</td><td class="amount">{{ extra_allowances }}</td></tr>
+            {% endif %}
+            <tr class="total-row"><td>Total Earnings</td><td class="amount">{{ payroll.gross_salary }}</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div>
+        <table>
+          <thead>
+            <tr><th>Deductions</th><th class="amount">Amount (₹)</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>Provident Fund</td><td class="amount">{{ payroll.pf }}</td></tr>
+            <tr><td>Income Tax</td><td class="amount">{{ payroll.income_tax }}</td></tr>
+            {% if extra_deductions %}
+            <tr><td>Other Deductions</td><td class="amount">{{ extra_deductions }}</td></tr>
+            {% endif %}
+            <tr class="total-row"><td>Total Deductions</td><td class="amount">{{ payroll.total_deductions }}</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="net-pay-section">
+      <div class="net-pay-label">Net Pay</div>
+      <div class="net-pay-amount">₹{{ payroll.net_pay }}</div>
+    </div>
+
+    <div class="footer">
+      This is a system-generated payslip and does not require a signature.<br>
+      For any queries, please contact the HR department.
+    </div>
+  </div>
+</body>
+</html>
