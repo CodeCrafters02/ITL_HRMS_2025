@@ -3,7 +3,7 @@ import { axiosInstance } from '../pages/Employee/api';
 
 type NotificationType = 'notification' | 'calendar' | 'learning_corner' | 'admin' | 'task' | 'leave' | string;
 interface Notification {
-  id: number;
+  id: string | number; // Allow both string and number IDs
   title: string;
   description: string;
   date: string;
@@ -16,7 +16,7 @@ interface NotificationContextType {
   loading: boolean;
   error: string | null;
   fetchNotifications: () => Promise<void>;
-  markAsRead: (id: number) => void;
+  markAsRead: (id: string | number) => void;
   markAllAsRead: () => void;
 }
 
@@ -43,9 +43,9 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
   // Helper to get/set read notification IDs in localStorage
   const getReadIds = () => {
     const stored = localStorage.getItem('readNotificationIds');
-    return stored ? JSON.parse(stored) as number[] : [];
+    return stored ? JSON.parse(stored) as (string | number)[] : [];
   };
-  const setReadIds = (ids: number[]) => {
+  const setReadIds = (ids: (string | number)[]) => {
     localStorage.setItem('readNotificationIds', JSON.stringify(ids));
   };
 
@@ -54,16 +54,41 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
     setLoading(true);
     try {
       const res = await axiosInstance.get("/all-notifications/");
-      const allNotifications: Notification[] = (res.data || []).map((n: any) => ({
-        id: n.id,
-        title: n.title,
-        description: n.description,
-        date: n.date,
-        type: n.type,
-      }));
-      setNotifications(allNotifications);
+      const rawNotifications = res.data || [];
+      
+      // Enhanced deduplication logic
+      const uniqueNotifications: Notification[] = [];
+      const seen = new Set<string>();
+      
+      for (const n of rawNotifications) {
+        // Create a unique key based on title, description, and date (ignoring ID)
+        const uniqueKey = `${n.title.trim()}_${n.description.trim()}_${new Date(n.date).toDateString()}`;
+        
+        if (!seen.has(uniqueKey)) {
+          seen.add(uniqueKey);
+          uniqueNotifications.push({
+            id: n.id, // Keep original ID (string or number)
+            title: n.title,
+            description: n.description,
+            date: n.date,
+            type: n.type,
+          });
+        }
+      }
+      
+      console.log(`Raw notifications: ${rawNotifications.length}, After deduplication: ${uniqueNotifications.length}`);
+      
+      // Log learning corner specific info
+      const learningNotifs = uniqueNotifications.filter(n => 
+        n.title.toLowerCase().includes('learning') || 
+        n.description.toLowerCase().includes('learning') ||
+        n.type === 'learning_corner'
+      );
+      console.log(`Learning corner notifications: ${learningNotifs.length}`, learningNotifs);
+      
+      setNotifications(uniqueNotifications);
       const readIds = getReadIds();
-      const unread = allNotifications.filter((n) => !readIds.includes(n.id)).length;
+      const unread = uniqueNotifications.filter((n) => !readIds.includes(n.id)).length;
       setUnreadCount(unread);
       setError(null);
     } catch (err: unknown) {
@@ -80,7 +105,7 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
   }, []);
 
   // Mark a single notification as read in localStorage
-  const markAsRead = (id: number) => {
+  const markAsRead = (id: string | number) => {
     const readIds = getReadIds();
     if (!readIds.includes(id)) {
       setReadIds([...readIds, id]);
@@ -101,11 +126,11 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
     fetchNotifications();
   }, [fetchNotifications]);
 
-  // Poll for new notifications every 5 minutes
+  // Poll for new notifications every 10 minutes (reduced frequency)
   useEffect(() => {
     const interval = setInterval(() => {
       fetchNotifications();
-    }, 5 * 60 * 1000); // 5 minutes
+    }, 10 * 60 * 1000); // 10 minutes instead of 5
     return () => clearInterval(interval);
   }, [fetchNotifications]);
 
@@ -133,8 +158,25 @@ const eventSource = new window.EventSource(sseUrl);
           type: data.type || 'notification',
         };
         setNotifications((prev) => {
-          // Avoid duplicates
-          if (prev.some((n) => n.id === newNotification.id)) return prev;
+          // Enhanced duplicate checking for SSE
+          const isDuplicate = prev.some((n) => {
+            // Check by ID first
+            if (n.id === newNotification.id) return true;
+            
+            // Check by content (title + description + same day)
+            const sameContent = n.title.trim().toLowerCase() === newNotification.title.trim().toLowerCase() &&
+                               n.description.trim().toLowerCase() === newNotification.description.trim().toLowerCase();
+            const sameDay = new Date(n.date).toDateString() === new Date(newNotification.date).toDateString();
+            
+            return sameContent && sameDay;
+          });
+          
+          if (isDuplicate) {
+            console.log('SSE: Skipping duplicate notification', newNotification);
+            return prev;
+          }
+          
+          console.log('SSE: Adding new notification', newNotification);
           return [newNotification, ...prev];
         });
         // Update unread count

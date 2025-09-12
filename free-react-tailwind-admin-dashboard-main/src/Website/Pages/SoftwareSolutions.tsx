@@ -1,7 +1,5 @@
-import React ,{useEffect,useState,useRef}from 'react';
-import { Link } from 'react-router-dom';
-import BaseLayout from './BaseLayout.js';
-import { useNavigate } from 'react-router-dom';
+import {useEffect,useState,useRef}from 'react';
+import BaseLayout from './BaseLayout';
 import { getSubServiceList, SubServiceData } from './api'; 
 
 const DigitalMarketing = () => {
@@ -124,30 +122,30 @@ const DigitalMarketing = () => {
             });
 
             // Dropdown menu functionality
-            $('.mil-has-children a').on('click', function(this: HTMLElement, e: any) {
-                e.preventDefault();
-                $('.mil-has-children ul').removeClass('mil-active');
-                $('.mil-has-children a').removeClass('mil-active');
-                $(this).toggleClass('mil-active');
-                $(this).next('ul').toggleClass('mil-active');
-            });
+      $('.mil-has-children a').on('click', function(this: HTMLElement, e: MouseEvent) {
+        e.preventDefault();
+        $('.mil-has-children ul').removeClass('mil-active');
+        $('.mil-has-children a').removeClass('mil-active');
+        $(this).toggleClass('mil-active');
+        $(this).next('ul').toggleClass('mil-active');
+      });
 
             // Back to top functionality
-            $('.mil-back-to-top .mil-link').on('click', function(e: any) {
-                e.preventDefault();
-                $('html, body').animate({ scrollTop: 0 }, 800);
-            });
+      $('.mil-back-to-top .mil-link').on('click', function(e: MouseEvent) {
+        e.preventDefault();
+        $('html, body').animate({ scrollTop: 0 }, 800);
+      });
 
             // Smooth scroll for anchor links
-            $('a[href^="#"]').on('click', function(this: HTMLElement, e: any) {
-                e.preventDefault();
-                const target = $(this.getAttribute('href'));
-                if (target.length) {
-                    $('html, body').animate({
-                        scrollTop: target.offset().top - 100
-                    }, 800);
-                }
-            });
+      $('a[href^="#"]').on('click', function(this: HTMLElement, e: MouseEvent) {
+        e.preventDefault();
+        const target = $(this.getAttribute('href'));
+        if (target.length) {
+          $('html, body').animate({
+            scrollTop: target.offset().top - 100
+          }, 800);
+        }
+      });
 
             // Initialize GSAP ScrollTrigger if available
             if (typeof window.gsap !== 'undefined' && window.gsap.registerPlugin) {

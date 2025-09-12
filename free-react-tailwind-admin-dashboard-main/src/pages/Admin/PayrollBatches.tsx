@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { axiosInstance } from "../Dashboard/api";
 import { useNavigate, Link } from "react-router-dom";
+import { AxiosError } from "axios";
 
 interface PayrollBatch {
   id: number;
@@ -8,6 +9,24 @@ interface PayrollBatch {
   year: number;
   status: "Draft" | "Locked";
   company: number;
+}
+
+interface Payroll {
+  employee_id?: number;
+  employee?: { id?: number; name?: string } | string | number;
+  employee_name?: string;
+  basic_salary?: number;
+  hra?: number;
+  conveyance?: number;
+  medical?: number;
+  special_allowance?: number;
+  service_charges?: number;
+  extra_allowances?: number;
+  pf?: number;
+  extra_deductions?: number;
+  gross_salary?: number;
+  net_pay?: number;
+  created_at?: string;
 }
 
 const monthNames = [
@@ -21,8 +40,8 @@ const PayrollBatches: React.FC = () => {
   const [modalOpen, setModalOpen] = useState(false);
   const [modalLoading, setModalLoading] = useState(false);
   const [modalError, setModalError] = useState<string | null>(null);
-  const [selectedBatch, setSelectedBatch] = useState<any | null>(null);
-  const [payrolls, setPayrolls] = useState<any[]>([]);
+  const [selectedBatch, setSelectedBatch] = useState<PayrollBatch | null>(null);
+  const [payrolls, setPayrolls] = useState<Payroll[]>([]);
   const [sending, setSending] = useState(false);
   const [sendResult, setSendResult] = useState<string | null>(null);
   const navigate = useNavigate();
@@ -53,8 +72,21 @@ const PayrollBatches: React.FC = () => {
       // Fetch payrolls for batch
       const payrollRes = await axiosInstance.get(`/payrolls/?batch_id=${batchId}`);
       setPayrolls(payrollRes.data);
-    } catch (err: any) {
-      setModalError("Failed to fetch payroll batch or payrolls");
+    } catch (err: unknown) {
+      let msg = "Failed to fetch payroll batch or payrolls";
+      if (typeof err === "object" && err !== null) {
+        const errorObj = err as AxiosError;
+        if (errorObj.response && errorObj.response.data) {
+          if (typeof errorObj.response.data === "string") {
+            msg = errorObj.response.data;
+          } else if (typeof errorObj.response.data === "object" && "error" in errorObj.response.data) {
+            msg = String((errorObj.response.data as Record<string, unknown>).error);
+          }
+        } else if ("message" in errorObj && typeof errorObj.message === "string") {
+          msg = errorObj.message;
+        }
+      }
+      setModalError(msg);
     } finally {
       setModalLoading(false);
     }
@@ -68,19 +100,7 @@ const PayrollBatches: React.FC = () => {
     navigate("/admin/payroll-batches");
   };
 
-  const handleSendPayslips = async () => {
-    if (!selectedBatch?.id) return;
-    setSending(true);
-    setSendResult(null);
-    try {
-      await axiosInstance.post(`/payroll-batches/${selectedBatch.id}/send-payslips/`);
-      setSendResult("Payslips sent to all employees!");
-    } catch (err: any) {
-      setSendResult("Failed to send payslips: " + (err.response?.data?.error || err.message));
-    } finally {
-      setSending(false);
-    }
-  };
+  // Removed unused handleSendPayslips to fix lint error
 
   return (
     <div className="p-6">
@@ -146,8 +166,21 @@ const PayrollBatches: React.FC = () => {
                             try {
                               await axiosInstance.post(`/payroll-batches/${batch.id}/send-payslips/`);
                               setSendResult("Payslips sent to all employees!");
-                            } catch (err: any) {
-                              setSendResult("Failed to send payslips: " + (err.response?.data?.error || err.message));
+                            } catch (err: unknown) {
+                              let msg = "Failed to send payslips";
+                              if (typeof err === "object" && err !== null) {
+                                const errorObj = err as AxiosError;
+                                if (errorObj.response && errorObj.response.data) {
+                                  if (typeof errorObj.response.data === "string") {
+                                    msg += ": " + errorObj.response.data;
+                                  } else if (typeof errorObj.response.data === "object" && "error" in errorObj.response.data) {
+                                    msg += ": " + String((errorObj.response.data as Record<string, unknown>).error);
+                                  }
+                                } else if ("message" in errorObj && typeof errorObj.message === "string") {
+                                  msg += ": " + errorObj.message;
+                                }
+                              }
+                              setSendResult(msg);
                             } finally {
                               setSending(false);
                             }
@@ -183,7 +216,7 @@ const PayrollBatches: React.FC = () => {
             {selectedBatch && (
               <>
                 <div className="mb-2 text-green-600 font-semibold">{selectedBatch.status}</div>
-                <div className="mb-2">Batch ID: <span className="font-mono">{selectedBatch.batch_id}</span></div>
+                <div className="mb-2">Batch ID: <span className="font-mono">{selectedBatch.id}</span></div>
                 {selectedBatch.month && selectedBatch.year && (
                   <div className="mb-2">Month: <span className="font-mono">{selectedBatch.month}</span> Year: <span className="font-mono">{selectedBatch.year}</span></div>
                 )}
@@ -210,12 +243,15 @@ const PayrollBatches: React.FC = () => {
                     </thead>
                     <tbody className="divide-y divide-gray-200">
                       {payrolls.length > 0 ? (
-                        payrolls.map((pay: any, idx: number) => (
+                        payrolls.map((pay: Payroll, idx: number) => (
                           <tr key={idx} className="hover:bg-gray-50">
                             <td className="px-4 py-2 whitespace-nowrap">{idx + 1}</td>
                             <td className="px-4 py-2 whitespace-nowrap">
                               <Link
-                                to={`/admin/payslip?employeeId=${pay.employee_id || (pay.employee && pay.employee.id) || pay.employee}&batchId=${selectedBatch.id}`}
+                                to={`/admin/payslip?employeeId=${
+                                  pay.employee_id ||
+                                  (typeof pay.employee === 'object' && pay.employee !== null && 'id' in pay.employee ? pay.employee.id : pay.employee)
+                                }&batchId=${selectedBatch.id}`}
                                 className="bg-gray-200 hover:bg-gray-300 text-xs px-2 py-1 rounded"
                                 target="_blank"
                                 rel="noopener noreferrer"
@@ -223,7 +259,11 @@ const PayrollBatches: React.FC = () => {
                                 View
                               </Link>
                             </td>
-                            <td className="px-4 py-2 whitespace-nowrap">{pay.employee_name || pay.employee?.name || pay.employee}</td>
+                            <td className="px-4 py-2 whitespace-nowrap">{
+                              pay.employee_name ? pay.employee_name :
+                              (typeof pay.employee === 'object' && pay.employee !== null && 'name' in pay.employee && typeof pay.employee.name === 'string') ? pay.employee.name :
+                              (typeof pay.employee === 'string' || typeof pay.employee === 'number') ? pay.employee : ''
+                            }</td>
                             <td className="px-4 py-2 whitespace-nowrap">₹{pay.basic_salary}</td>
                             <td className="px-4 py-2 whitespace-nowrap">₹{pay.hra}</td>
                             <td className="px-4 py-2 whitespace-nowrap">₹{pay.conveyance}</td>
@@ -240,7 +280,7 @@ const PayrollBatches: React.FC = () => {
                         ))
                       ) : (
                         <tr>
-                          <td colSpan={14} className="px-4 py-2 text-center text-gray-500">No payrolls found for this batch.</td>
+                          <td colSpan={15} className="px-4 py-2 text-center text-gray-500">No payrolls found for this batch.</td>
                         </tr>
                       )}
                     </tbody>

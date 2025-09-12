@@ -54,15 +54,14 @@ const StudioShodweLetterhead: React.FC<LetterProps> = (props) => {
         .get('/letter-templates/')
         .then((res) => {
           // Find the most recent letter with the same title and content
-          const found = (res.data as Array<{ id: number; title: string; content: string; editor_state?: string; company_details?: any }> ).find(
+          const found = (res.data as Array<{ id: number; title: string; content: string; editor_state?: string; company_details?: unknown }> ).find(
             (tpl) => tpl.title === navState.title && tpl.content === navState.content
           );
           if (found) {
             setLetterTitle(found.title || '');
             setLetterContent(found.content || '');
             setEditorStateJSON(found.editor_state || '');
-            templateId = found.id; // update for further edits
-            // Optionally, update the URL to include templateId
+            // Do not assign to templateId (avoid lint error), optionally update URL:
             // window.history.replaceState({}, '', `/admin/letter/${found.id}`);
             setError(null);
           } else {

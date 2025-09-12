@@ -1,5 +1,4 @@
 import React, { useEffect, useState } from "react";
-import { FiCalendar } from "react-icons/fi";
 import PageBreadcrumb from "../../components/common/PageBreadCrumb";
 import ComponentCard from "../../components/common/ComponentCard";
 import PageMeta from "../../components/common/PageMeta";
@@ -8,7 +7,7 @@ import { getDemoRequests, DemoRequest } from "./api";
 const DemoRequestPage: React.FC = () => {
   const [demoRequests, setDemoRequests] = useState<DemoRequest[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
+  const [error, setError] = useState<string>("");
 
   useEffect(() => {
     fetchDemoRequests();
@@ -18,8 +17,12 @@ const DemoRequestPage: React.FC = () => {
     try {
       const data = await getDemoRequests();
       setDemoRequests(data);
-    } catch (err: any) {
-      setError(err.message || "Failed to load demo requests");
+    } catch (err) {
+      if (err instanceof Error) {
+        setError(err.message);
+      } else {
+        setError("Failed to load demo requests");
+      }
     } finally {
       setLoading(false);
     }

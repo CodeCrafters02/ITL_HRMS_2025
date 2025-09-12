@@ -1,4 +1,7 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { ToastContainer, toast } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 import { Link } from "react-router-dom"; // ✅ FIXED!
 import axios from "axios"; // ✅
 
@@ -8,6 +11,7 @@ import Input from "../form/input/InputField";
 import Checkbox from "../form/input/Checkbox";
 
 export default function SignUpForm() {
+  const navigate = useNavigate();
   const [showPassword, setShowPassword] = useState(false);
   const [isChecked, setIsChecked] = useState(false);
   const [formData, setFormData] = useState({
@@ -33,15 +37,40 @@ export default function SignUpForm() {
         formData
       );
       console.log("Success:", response.data);
-      alert("Master registered successfully!");
+      toast.success("Master registered successfully!");
+      setTimeout(() => {
+        navigate("/signin");
+      }, 1500);
     } catch (error) {
       console.error("Registration failed:", error);
-      alert("Registration failed. Check console for details.");
+      const err = error as Record<string, unknown>;
+      if (
+        err &&
+        typeof err === 'object' &&
+        'response' in err &&
+        err.response &&
+        typeof err.response === 'object' &&
+        'data' in err.response &&
+        (err.response as Record<string, unknown>).data &&
+        typeof (err.response as Record<string, unknown>).data === 'object'
+      ) {
+        const data = (err.response as Record<string, unknown>).data as Record<string, unknown>;
+        if (data.detail === "Email already exists.") {
+          toast.error("Email already exists.");
+        } else if (typeof data.detail === 'string') {
+          toast.error(data.detail);
+        } else {
+          toast.error("Registration failed.");
+        }
+      } else {
+        toast.error("Registration failed.");
+      }
     }
   };
 
   return (
     <div className="flex flex-col flex-1 w-full overflow-y-auto lg:w-1/2 no-scrollbar">
+  <ToastContainer position="top-right" autoClose={3000} hideProgressBar={false} newestOnTop closeOnClick pauseOnHover aria-label="Notification" />
       <div className="w-full max-w-md mx-auto mb-5 sm:pt-10">
         <Link
           to="/"

@@ -1,4 +1,4 @@
-import { createApiUrl, getAuthHeaders } from "../../access/access.ts";
+import { createApiUrl} from "../../access/access.ts";
 import axios from "axios";
 import { jwtDecode } from 'jwt-decode';
 
@@ -34,10 +34,43 @@ export interface UserRegister {
   role: string;                // e.g., 'admin', 'master', 'user', etc.
   is_active?: boolean;
   created_by?: number;         // user ID of creator, optional for creation
+  company?: number;            // company ID for employees
+  company_name?: string;       // company name (read-only)
   // Add other fields your model uses, e.g.:
   // date_joined?: string;     // ISO date string
   // phone_number?: string;
 }
+
+export interface Company {
+  id: number;
+  name: string;
+  address: string;
+  location?: string;
+  email: string;
+  phone_number: string;
+  logo?: string;
+  logo_url?: string;
+}
+
+// Fetch all companies
+export const getCompanies = async (): Promise<Company[]> => {
+  const url = createApiUrl("/app/company-with-admin/");
+  
+  // Get token from localStorage
+  const access_token = localStorage.getItem('access') || localStorage.getItem('access_token');
+  
+  if (!access_token) {
+    throw new Error("No authentication token found");
+  }
+
+  const response = await axios.get(url, {
+    headers: {
+      'Authorization': `Bearer ${access_token}`,
+      'Content-Type': 'application/json'
+    }
+  });
+  return response.data;
+};
 
 // Create a new user
 export const createUser = async (data: UserRegister) => {

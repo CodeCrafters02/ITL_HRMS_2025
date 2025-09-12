@@ -22,19 +22,17 @@ type Company = {
 const EditCompanyProfile: React.FC = () => {
   const [company, setCompany] = useState<Company | null>(null);
   const navigate = useNavigate();
-  const [originalCompany, setOriginalCompany] = useState<Company | null>(null);
+  // Removed unused originalCompany state
   const [loading, setLoading] = useState(true);
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
-  const [originalLogoPreview, setOriginalLogoPreview] = useState<string | null>(null);
+  // Removed unused originalLogoPreview state
 
   useEffect(() => {
     axiosInstance.get(`${API_URL}/`)
       .then(res => {
         // Deep copy to avoid reference issues
         setCompany({ ...res.data });
-        setOriginalCompany({ ...res.data });
-        setLogoPreview(res.data.logo_url || null);
-        setOriginalLogoPreview(res.data.logo_url || null);
+  setLogoPreview(res.data.logo_url || null);
       })
       .catch(() => {})
       .finally(() => setLoading(false));

@@ -169,7 +169,7 @@ const AdminCalendar: React.FC = () => {
     // Check if there is a holiday event on this date
     const isHoliday = events.some(ev => ev.date === dateStr && ev.is_holiday);
     // Check if there is any event (non-holiday)
-    const hasEvent = events.some(ev => ev.date === dateStr && !ev.is_holiday);
+    // const hasEvent = events.some(ev => ev.date === dateStr && !ev.is_holiday);
     return (
       <div style={{ position: 'relative', width: '100%', height: '100%' }}>
         <span style={isHoliday ? { color: '#ef4444', fontWeight: 'bold' } : {}}>{arg.dayNumberText}</span>

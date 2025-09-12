@@ -75,8 +75,10 @@ export default function SalaryStructureForm() {
       });
       navigate("/admin/salary-structure");
     } catch (err: unknown) {
-      if (typeof err === 'object' && err !== null && 'response' in err) {
-        setError((err as any)?.response?.data?.detail || "Failed to add salary structure");
+      type AxiosErrorType = { response?: { data?: { detail?: string } } };
+      const errorObj = err as AxiosErrorType;
+      if (typeof err === 'object' && err !== null && 'response' in errorObj) {
+        setError(errorObj.response?.data?.detail || "Failed to add salary structure");
       } else {
         setError("Failed to add salary structure");
       }

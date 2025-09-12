@@ -1,5 +1,4 @@
-import React, { useEffect, useState, useRef } from "react";
-import { Link } from "react-router-dom";
+import { useEffect, useState, useRef } from "react";
 import BaseLayout from './BaseLayout.js';
 
 export default function PrivacyPolicy() {
@@ -20,10 +19,10 @@ export default function PrivacyPolicy() {
       '/src/Website/static/js/plugins/ScrollTo.min.js'
     ];
 
-    const loadedScripts = [];
+  const loadedScripts: HTMLScriptElement[] = [];
 
-    const loadScript = (url) => {
-      return new Promise((resolve, reject) => {
+    const loadScript = (url: string): Promise<void> => {
+      return new Promise<void>((resolve, reject) => {
         if (document.querySelector(`script[src="${url}"]`)) {
           resolve();
           return;
@@ -52,7 +51,7 @@ export default function PrivacyPolicy() {
     loadAllScripts();
 
     return () => {
-      loadedScripts.forEach(script => {
+      loadedScripts.forEach((script: HTMLScriptElement) => {
         if (document.body.contains(script)) {
           document.body.removeChild(script);
         }

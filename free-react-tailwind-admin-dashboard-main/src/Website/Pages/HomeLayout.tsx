@@ -2,8 +2,6 @@ import React, { useState, useEffect } from 'react';
 import type { ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { useTemplateScripts } from '../../hooks/useTemplateScripts.js';
-import { useNavigate } from 'react-router-dom';
-import logo from './logooo (2).png';
 // "C:\varshitha1\NEW_INNOVYX_HRMS\free-react-tailwind-admin-dashboard-main\public\logooo (2).png"
 interface HomeLayoutProps {
   children: ReactNode;
@@ -18,28 +16,23 @@ const HomeLayout: React.FC<HomeLayoutProps> = ({ children, hasPreloaderShown = f
   const toggleMenu = () => {
     setIsMenuOpen(!isMenuOpen);
   };
-  const navigate = useNavigate();
 
-  const handleNavigate = (path: string) => {
-    setIsMenuOpen(false);
-    navigate(path);
-  };
-  const baseStyle = {
+  const baseStyle: React.CSSProperties = {
     backgroundColor: "rgb(255, 152, 0)",
     color: "#fff",
     padding: "14px 40px",
     borderRadius: "40px",
     fontWeight: "700",
     boxShadow: "0 6px 16px rgba(136,136,136,0.5)",
-  textDecoration: "none",
-    textAlign: "center",
-    textTransform: "uppercase",
+    textDecoration: "none",
+    textAlign: "center" as React.CSSProperties["textAlign"],
+    textTransform: "uppercase" as React.CSSProperties["textTransform"],
     fontSize: "16px",
     letterSpacing: "2px",
     whiteSpace: "nowrap",
     cursor: "pointer",
     transition: "background-color 0.3s ease",
-    userSelect: "none",
+    userSelect: "none" as React.CSSProperties["userSelect"],
     display: "inline-block",
     marginLeft: "auto",
     marginRight: "100px",
@@ -255,7 +248,7 @@ const HomeLayout: React.FC<HomeLayoutProps> = ({ children, hasPreloaderShown = f
           <Link
             to="/bookdemo"
             className="mil-logo"
-            style={hover ? { ...baseStyle, ...hoverStyle } : baseStyle}
+            style={hover ? { ...baseStyle, ...hoverStyle } : baseStyle as React.CSSProperties}
             onMouseEnter={() => setHover(true)}
             onMouseLeave={() => setHover(false)}
           >

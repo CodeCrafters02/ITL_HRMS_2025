@@ -1,38 +1,29 @@
-import { useEffect, useState ,useMemo} from "react";
-import { FiTrash2, FiEdit } from "react-icons/fi";
+import { useEffect, useState, useMemo } from "react";
+import { FiTrash2, FiEdit, FiPlus } from "react-icons/fi";
+import { useNavigate } from "react-router-dom";
 import PageBreadcrumb from "../../components/common/PageBreadCrumb";
-import ComponentCard from "../../components/common/ComponentCard";
 import PageMeta from "../../components/common/PageMeta";
-import { getUserList, deleteUser, userId } from "./api";
-import AddUser from "./AddUser";
+import Button from "../../components/ui/button/Button";
+import { getUserList, deleteUser, UserRegister } from "./api";
 import EditUser from "./EditUser";
 import { Table, TableBody, TableCell, TableHeader, TableRow } from "../../components/ui/table";
 
-export interface UserRegister {
-  id: number;
-  username: string;
-  email: string;
-  first_name?: string;
-  last_name?: string;
-  role: string;
-  is_active: boolean;
-  created_by?: number;
-}
+// ...existing code...
 
 const UserManagementPage: React.FC = () => {
+  const navigate = useNavigate();
   const [users, setUsers] = useState<UserRegister[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editUserId, setEditUserId] = useState<number | null>(null);
 
   // Search, sort, pagination states
-  const [searchQuery, setSearchQuery] = useState("");
+  // ...existing code...
   const [sortField, setSortField] = useState<keyof UserRegister>("username");
   // const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 5;
+  // ...existing code...
   const [searchTerm, setSearchTerm] = useState("");
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
   const [pageSize, setPageSize] = useState(10);
@@ -42,7 +33,7 @@ const UserManagementPage: React.FC = () => {
 
   const fetchUsers = async () => {
     try {
-      const userList = await getUserList(userId);
+      const userList = await getUserList();
       setUsers(userList);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Unknown error");
@@ -61,15 +52,15 @@ const UserManagementPage: React.FC = () => {
     }
   };
 
-  const onUserAdded = (newUser: UserRegister) => {
-    setUsers((prev) => [newUser, ...prev]);
-    setIsAddModalOpen(false);
-  };
-
   const onUserUpdated = () => {
     fetchUsers();
     setIsEditModalOpen(false);
     setEditUserId(null);
+  };
+
+  // Handle navigation to add user page
+  const handleAddUser = () => {
+    navigate("/master/usermanagement/add");
   };
 
   const filteredUsers = useMemo(() => {
@@ -155,12 +146,13 @@ const UserManagementPage: React.FC = () => {
             </svg>
           </div>
           <div>
-            <button
-              className="bg-blue-600 text-white px-4 py-2 rounded"
-              onClick={() => setIsAddModalOpen(true)}
+            <Button
+              onClick={handleAddUser}
+              className="flex items-center gap-2"
             >
+              <FiPlus className="w-4 h-4" />
               Add New User
-            </button>
+            </Button>
           </div>
     
           <div className="flex items-center gap-2">
@@ -210,9 +202,8 @@ const UserManagementPage: React.FC = () => {
                 <TableCell
                   isHeader
                   className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
-                  onClick={() => handleSort('username')}
                 >
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2" onClick={() => handleSort('username')} style={{ cursor: 'pointer' }}>
                     User Name 
                     <span className="text-gray-300 dark:text-gray-600">
                       {sortField === 'username' ? (
@@ -222,25 +213,23 @@ const UserManagementPage: React.FC = () => {
                   </div>
                 </TableCell>
                                 <TableCell
-                  isHeader
-                  className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
-                  onClick={() => handleSort('email')}
-                >
-                  <div className="flex items-center gap-2">
-                    Email
-                    <span className="text-gray-300 dark:text-gray-600">
-                      {sortField === 'email' ? (
-                        sortDirection === 'asc' ? '↑' : '↓'
-                      ) : '↕'}
-                    </span>
-                  </div>
-                </TableCell>                
+                                  isHeader
+                                  className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
+                                >
+                                  <div className="flex items-center gap-2" onClick={() => handleSort('email')} style={{ cursor: 'pointer' }}>
+                                    Email
+                                    <span className="text-gray-300 dark:text-gray-600">
+                                      {sortField === 'email' ? (
+                                        sortDirection === 'asc' ? '↑' : '↓'
+                                      ) : '↕'}
+                                    </span>
+                                  </div>
+                                </TableCell>                
                 <TableCell
                   isHeader
                   className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
-                  onClick={() => handleSort('first_name')}
                 >
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2" onClick={() => handleSort('first_name')} style={{ cursor: 'pointer' }}>
                     First Name
                     <span className="text-gray-300 dark:text-gray-600">
                       {sortField === 'first_name' ? (
@@ -252,9 +241,8 @@ const UserManagementPage: React.FC = () => {
                 <TableCell
                   isHeader
                   className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
-                  onClick={() => handleSort('last_name')}
                 >
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2" onClick={() => handleSort('last_name')} style={{ cursor: 'pointer' }}>
                     Last Name
                     <span className="text-gray-300 dark:text-gray-600">
                       {sortField === 'last_name' ? (
@@ -266,9 +254,8 @@ const UserManagementPage: React.FC = () => {
                 <TableCell
                   isHeader
                   className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
-                  onClick={() => handleSort('role')}
                 >
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2" onClick={() => handleSort('role')} style={{ cursor: 'pointer' }}>
                     Role
                     <span className="text-gray-300 dark:text-gray-600">
                       {sortField === 'role' ? (
@@ -292,7 +279,7 @@ const UserManagementPage: React.FC = () => {
             <TableBody className="divide-y divide-gray-100 dark:divide-white/[0.05]">
               {paginatedDefinitions.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={5} className="px-5 py-8 text-center text-gray-500 dark:text-gray-400">
+                  <TableCell className="px-5 py-8 text-center text-gray-500 dark:text-gray-400">
                     {searchTerm ? 'No value defnitions match your search' : 'No value definition found'}
                   </TableCell>
                 </TableRow>
@@ -357,7 +344,7 @@ const UserManagementPage: React.FC = () => {
                         className="text-blue-600 hover:text-blue-800"
                         title="Edit"
                         onClick={() => {
-                          setEditUserId(def.id);
+                          setEditUserId(def.id ?? 0);
                           setIsEditModalOpen(true);
                         }}
                       >
@@ -366,7 +353,7 @@ const UserManagementPage: React.FC = () => {
                       <button
                         className="text-red-600 hover:text-red-800"
                         title="Delete"
-                        onClick={() => handleDelete(def.id)}
+                        onClick={() => handleDelete(def.id ?? 0)}
                       >
                         <FiTrash2 />
                       </button>
@@ -436,7 +423,6 @@ const UserManagementPage: React.FC = () => {
           </div>
         </div>
       )}
-      {isAddModalOpen && <AddUser onClose={() => setIsAddModalOpen(false)} onAdd={onUserAdded} />}
       {isEditModalOpen && editUserId !== null && (
         <EditUser
           userId={editUserId}

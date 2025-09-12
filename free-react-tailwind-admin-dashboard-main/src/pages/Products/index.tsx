@@ -1,10 +1,12 @@
 import { useEffect, useState } from "react";
-import { FiTrash2, FiEdit } from "react-icons/fi";
+import { FiTrash2, FiEdit, FiPlus } from "react-icons/fi";
+import { useNavigate } from "react-router-dom";
 import PageBreadcrumb from "../../components/common/PageBreadCrumb";
 import ComponentCard from "../../components/common/ComponentCard";
 import PageMeta from "../../components/common/PageMeta";
-import { getProductList, deleteProduct,getServiceList,ServiceData } from "./api"; // product api
-import AddProducts from "./AddProducts";
+import Button from "../../components/ui/button/Button";
+import { getProductList, deleteProduct, getServiceList, ServiceData } from "./api";
+import { toast } from "react-toastify";
 import EditProduct from "./EditProducts";
 
 interface ServiceDetails {
@@ -32,13 +34,15 @@ interface Product {
 }
 
 const ProductsPage: React.FC = () => {
+  const navigate = useNavigate();
   const [products, setProducts] = useState<Product[]>([]);
-  const [services, setServices] = useState<ServiceData[]>([]); // <-- new state
+  const [services, setServices] = useState<ServiceData[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editProductId, setEditProductId] = useState<number | null>(null);
+  const [deleteId, setDeleteId] = useState<number | null>(null);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
 
   useEffect(() => {
     Promise.all([fetchProducts(), fetchServices()]);
@@ -48,7 +52,7 @@ const ProductsPage: React.FC = () => {
     try {
       const productList = await getProductList();
       setProducts(productList);
-    } catch (err: unknown) {
+    } catch (err) {
       if (err instanceof Error) setError(err.message);
       else setError("Unknown error");
     } finally {
@@ -65,25 +69,34 @@ const ProductsPage: React.FC = () => {
     }
   };
 
-  const handleDelete = async (id: number) => {
-    if (!window.confirm("Are you sure you want to delete this product?")) return;
-    try {
-      await deleteProduct(id);
-      setProducts((prev) => prev.filter((p) => p.id !== id));
-    } catch {
-      alert("Failed to delete product.");
-    }
+  const handleDeleteClick = (id: number) => {
+    setDeleteId(id);
+    setIsDeleteModalOpen(true);
   };
 
-  const onProductAdded = (newProduct: Product) => {
-    setProducts((prev) => [newProduct, ...prev]);
-    setIsAddModalOpen(false);
+  const handleConfirmDelete = async () => {
+    if (deleteId === null) return;
+    try {
+      await deleteProduct(deleteId);
+      setProducts((prev) => prev.filter((p) => p.id !== deleteId));
+      toast.success("Product deleted successfully!");
+    } catch {
+      toast.error("Failed to delete product.");
+    } finally {
+      setIsDeleteModalOpen(false);
+      setDeleteId(null);
+    }
   };
 
   const onProductUpdated = () => {
     fetchProducts();
     setIsEditModalOpen(false);
     setEditProductId(null);
+  };
+
+  // Handle navigation to add product page
+  const handleAddProduct = () => {
+    navigate("/master/products/add");
   };
 
   if (loading) return <div>Loading products...</div>;
@@ -95,12 +108,18 @@ const ProductsPage: React.FC = () => {
       <PageBreadcrumb pageTitle="Products" />
       <div className="space-y-6">
         <ComponentCard title="Product List">
-          <button
-            className="mb-4 bg-blue-600 text-white px-4 py-2 rounded"
-            onClick={() => setIsAddModalOpen(true)}
-          >
-            Add New Product
-          </button>
+          <div className="flex justify-between items-center mb-6">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+              Manage Products
+            </h3>
+            <Button
+              onClick={handleAddProduct}
+              className="flex items-center gap-2"
+            >
+              <FiPlus className="w-4 h-4" />
+              Add New Product
+            </Button>
+          </div>
 
           <table className="min-w-full bg-white dark:bg-white/[0.03] rounded-xl overflow-hidden">
             <thead className="bg-gray-100 dark:bg-white/[0.05]">
@@ -149,7 +168,7 @@ const ProductsPage: React.FC = () => {
                       <button
                         className="text-red-600 hover:text-red-800"
                         title="Delete"
-                        onClick={() => handleDelete(product.id)}
+                        onClick={() => handleDeleteClick(product.id)}
                       >
                         <FiTrash2 />
                       </button>
@@ -162,23 +181,39 @@ const ProductsPage: React.FC = () => {
         </ComponentCard>
       </div>
 
-      {isAddModalOpen && (
-        <AddProducts
-          services={services} // <-- pass here
-          onClose={() => setIsAddModalOpen(false)}
-          onAdd={onProductAdded}
-        />
-      )}
-
       {isEditModalOpen && editProductId !== null && (
         <EditProduct
-          services={services} // <-- pass here
+          services={services}
           productId={editProductId}
           isOpen={isEditModalOpen}
           onClose={() => setIsEditModalOpen(false)}
           onUpdated={onProductUpdated}
         />
       )}
+
+      {/* Delete Confirmation Modal */}
+      {isDeleteModalOpen && (
+      <div className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center z-50">
+        <div className="bg-white dark:bg-gray-800 p-6 rounded shadow w-full max-w-sm">
+          <h3 className="text-lg font-semibold mb-4 text-gray-900 dark:text-white">Confirm Delete</h3>
+          <p className="mb-6 text-gray-700 dark:text-gray-300">Are you sure you want to delete this {products.find(p => p.id === deleteId)?.name}?</p>
+          <div className="flex justify-end gap-2">
+            <button
+              className="px-4 py-2 bg-gray-300 dark:bg-gray-700 text-gray-800 dark:text-white rounded"
+              onClick={() => { setIsDeleteModalOpen(false); setDeleteId(null); }}
+            >
+              Cancel
+            </button>
+            <button
+              className="px-4 py-2 bg-red-600 text-white rounded"
+              onClick={handleConfirmDelete}
+            >
+              Delete
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
     </>
   );
 };

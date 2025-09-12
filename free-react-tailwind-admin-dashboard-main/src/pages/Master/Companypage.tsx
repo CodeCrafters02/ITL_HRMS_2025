@@ -1,5 +1,8 @@
 import { useEffect, useState } from "react";
+import { ToastContainer, toast } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 import { axiosInstance } from "../Dashboard/api";
+import { AxiosError } from "axios";
 import { useNavigate } from "react-router-dom";
 import { FiEdit, FiTrash2 } from "react-icons/fi";
 import PageBreadcrumb from "../../components/common/PageBreadCrumb";
@@ -31,6 +34,7 @@ const CompanyList: React.FC = () => {
   const [editId, setEditId] = useState<number | null>(null);
   const [editCompany, setEditCompany] = useState<Partial<Company>>({});
   const [saving, setSaving] = useState(false);
+  const [logoFile, setLogoFile] = useState<File | null>(null);
   const navigate = useNavigate();
   // Fetch admin users for dropdown
   useEffect(() => {
@@ -45,39 +49,60 @@ const CompanyList: React.FC = () => {
     fetchAdmins();
   }, []);
   // Delete handler
+  const [deleteConfirmId, setDeleteConfirmId] = useState<number | null>(null);
   const handleDelete = async (id: number) => {
-    if (!window.confirm("Are you sure you want to delete this company?")) return;
+    setDeleteConfirmId(id);
+  };
+  const confirmDelete = async (id: number) => {
     try {
       await axiosInstance.delete(`/company-with-admin/${id}/`);
       setCompanies((prev) => prev.filter((c) => c.id !== id));
+      toast.success("Company deleted successfully.");
     } catch {
-      alert("Failed to delete company.");
+      toast.error("Failed to delete company.");
+    } finally {
+      setDeleteConfirmId(null);
     }
   };
 
   // Start editing a row
   const handleEdit = (company: Company) => {
     setEditId(company.id);
-    // Try to get admin id from company object, fallback to undefined
-    setEditCompany({ ...company, admin: company.admin });
+    // Prefill admin field with admin user id if available
+    let adminId = company.admin;
+    // If adminId is not set, try to find by username
+    if (!adminId && company.admin_username) {
+      const found = adminUsers.find(a => a.username === company.admin_username);
+      if (found) adminId = found.id;
+    }
+    setEditCompany({ ...company, admin: adminId });
+    setLogoFile(null); // Reset logo file on edit
   };
 
   // Cancel editing
   const handleCancel = () => {
     setEditId(null);
     setEditCompany({});
+    setLogoFile(null);
   };
 
   // Save update
   const handleSave = async (id: number) => {
     setSaving(true);
     try {
-      // Always send admin field
-      const payload = { ...editCompany };
-      if (editCompany.admin) {
-        payload.admin = editCompany.admin;
+      const formData = new FormData();
+      Object.entries(editCompany).forEach(([key, value]) => {
+        if (value !== undefined && value !== null) {
+          // Only handle string and number values for FormData
+          formData.append(key, String(value));
+        }
+      });
+      if (logoFile) {
+        formData.append("logo", logoFile);
       }
-      const response = await axiosInstance.put(`/company-with-admin/${id}/`, payload);
+      const response = await axiosInstance.put(`/company-with-admin/${id}/`, formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
       setCompanies((prev) =>
         prev.map((c) =>
           c.id === id ? { ...c, ...response.data } : c
@@ -85,7 +110,7 @@ const CompanyList: React.FC = () => {
       );
       handleCancel();
     } catch {
-      alert("Failed to update company.");
+      toast.error("Failed to update company.");
     } finally {
       setSaving(false);
     }
@@ -96,8 +121,11 @@ const CompanyList: React.FC = () => {
       try {
         const response = await axiosInstance.get("/company-with-admin/");
         setCompanies(response.data);
-      } catch (err: unknown) {
-        if (err instanceof Error) {
+      } catch (err) {
+        if ((err as AxiosError).isAxiosError) {
+          const axiosErr = err as AxiosError<{ detail?: string }>;
+          setError(axiosErr.response?.data?.detail || axiosErr.message);
+        } else if (err instanceof Error) {
           setError(err.message);
         } else {
           setError("An unknown error occurred");
@@ -114,6 +142,7 @@ const CompanyList: React.FC = () => {
 
   return (
     <>
+      <ToastContainer position="top-right" autoClose={3000} hideProgressBar={false} newestOnTop closeOnClick pauseOnHover aria-label="Notification" />
       <PageMeta title="Company List" description="Company management page" />
       <PageBreadcrumb pageTitle="Company List" />
       <div className="space-y-6">
@@ -215,7 +244,27 @@ const CompanyList: React.FC = () => {
                       )}
                     </td>
                     <td className="px-5 py-4 text-start">
-                      {company.logo ? (
+                      {editId === company.id ? (
+                        <div className="flex flex-col gap-2">
+                          {editCompany.logo && typeof editCompany.logo === "string" && (
+                            <img
+                              src={editCompany.logo}
+                              alt={`${editCompany.name} Logo`}
+                              className="h-10 w-auto rounded"
+                            />
+                          )}
+                          <input
+                            type="file"
+                            accept="image/*"
+                            onChange={e => {
+                              if (e.target.files && e.target.files[0]) {
+                                setLogoFile(e.target.files[0]);
+                              }
+                            }}
+                            disabled={saving}
+                          />
+                        </div>
+                      ) : company.logo ? (
                         <img
                           src={company.logo}
                           alt={`${company.name} Logo`}
@@ -278,6 +327,28 @@ const CompanyList: React.FC = () => {
                           >
                             <FiTrash2 />
                           </button>
+                          {deleteConfirmId === company.id && (
+                            <div className="fixed inset-0 flex items-center justify-center z-50  bg-opacity-30">
+                              <div className="bg-white rounded-lg shadow-lg p-6 w-80">
+                                <div className="mb-4 text-lg font-semibold text-gray-800">Confirm Delete</div>
+                                <div className="mb-6 text-gray-600">Are you sure you want to delete this <b>{company.name}</b>?</div>
+                                <div className="flex gap-4 justify-end">
+                                  <button
+                                    className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"
+                                    onClick={() => confirmDelete(company.id)}
+                                  >
+                                    Delete
+                                  </button>
+                                  <button
+                                    className="px-4 py-2 bg-gray-300 text-gray-800 rounded hover:bg-gray-400"
+                                    onClick={() => setDeleteConfirmId(null)}
+                                  >
+                                    Cancel
+                                  </button>
+                                </div>
+                              </div>
+                            </div>
+                          )}
                         </>
                       )}
                     </td>

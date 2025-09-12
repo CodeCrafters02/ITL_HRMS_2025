@@ -58,27 +58,49 @@ class UserRegisterSerializer(serializers.ModelSerializer):
 
 class UserSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True,required=False)
+    company = serializers.PrimaryKeyRelatedField(
+        queryset=Company.objects.all(),
+        required=False,
+        allow_null=True
+    )
+    company_name = serializers.SerializerMethodField(read_only=True)
 
     class Meta:
         model = UserRegister
-        fields = ['id', 'username', 'email', 'password', 'role','is_active','first_name','last_name']
+        fields = ['id', 'username', 'email', 'password', 'role', 'is_active', 'first_name', 'last_name', 'company', 'company_name']
         read_only_fields = ['created_by'] 
+
+    def get_company_name(self, obj):
+        return obj.company.name if obj.company else None
 
     def validate_role(self, value):
         if value not in ['master', 'admin', 'employee']:
             raise serializers.ValidationError("Role must be master, admin, or employee.")
         return value
 
+    def validate(self, data):
+        role = data.get('role')
+        company = data.get('company')
+        
+        # Company is optional for all roles
+        # If company is provided, it should be valid
+        if company and not Company.objects.filter(id=company.id).exists():
+            raise serializers.ValidationError("Invalid company selected.")
+        
+        return data
+
     def create(self, validated_data):
         created_by_id = self.initial_data.pop('created_by', None)
         first_name = self.initial_data.get('first_name', '')
         last_name = self.initial_data.get('last_name', '')
+        company = validated_data.get('company', None)
 
         user = UserRegister.objects.create_user(
             username=validated_data['username'],
             email=validated_data['email'],
             password=validated_data['password'],
             role=validated_data['role'],
+            company=company,  # Assign company to user
         )
         user.first_name = first_name
         user.last_name = last_name
@@ -87,9 +109,10 @@ class UserSerializer(serializers.ModelSerializer):
             try:
                 created_by_user = UserRegister.objects.get(id=created_by_id)
                 user.created_by = created_by_user
-                user.save()
             except ObjectDoesNotExist:
                 print(f"UserRegister with id={created_by_id} does not exist")
+        
+        user.save()
         return user
 
 class AdminRegisterSerializer(serializers.ModelSerializer):
@@ -168,36 +191,36 @@ class CompanyWithAdminSerializer(serializers.ModelSerializer):
 
 
     def create(self, validated_data):
-        admin_id = validated_data.pop('admin')
+        admin_id = validated_data.pop('admin', None)
         company = Company.objects.create(**validated_data)
 
-        try:
-            admin_user = UserRegister.objects.get(pk=admin_id)
-        except UserRegister.DoesNotExist:
-            raise serializers.ValidationError({"admin": "Admin user not found."})
-
-        admin_user.company = company
-        admin_user.role = 'admin'
-        admin_user.save()
-
-        # Send welcome email to the admin user 
-        subject = f"Welcome to {company.name}!"
-        message = (
-            f"Hi {admin_user.username},\n\n"
-            f"You have been registered as an Admin for {company.name}.\n\n"
-            f"Your username: {admin_user.username}\n"
-            f"Your email: {admin_user.email}\n\n"
-            f"Please login and get started!\n\n"
-            f"Regards,\n"
-            f"{company.name} Team"
-        )
-        send_mail(
-            subject,
-            message,
-            None,  # uses DEFAULT_FROM_EMAIL
-            [admin_user.email],
-            fail_silently=False,
-        )
+        if admin_id is not None:
+            try:
+                admin_user = UserRegister.objects.get(pk=admin_id)
+                admin_user.company = company
+                admin_user.role = 'admin'
+                admin_user.save()
+                
+                # Send welcome email to the admin user 
+                subject = f"Welcome to {company.name}!"
+                message = (
+                    f"Hi {admin_user.username},\n\n"
+                    f"You have been registered as an Admin for {company.name}.\n\n"
+                    f"Your username: {admin_user.username}\n"
+                    f"Your email: {admin_user.email}\n\n"
+                    f"Please login and get started!\n\n"
+                    f"Regards,\n"
+                    f"{company.name} Team"
+                )
+                send_mail(
+                    subject,
+                    message,
+                    None,  # uses DEFAULT_FROM_EMAIL
+                    [admin_user.email],
+                    fail_silently=False,
+                )
+            except UserRegister.DoesNotExist:
+                raise serializers.ValidationError({"admin": "Admin user not found."})
 
         return company
     
@@ -259,6 +282,26 @@ class DesignationSerializer(serializers.ModelSerializer):
     class Meta:
         model = Designation
         fields = ['id', 'designation_name', 'department', 'level']
+
+    def validate(self, attrs):
+        designation_name = attrs.get('designation_name', '').strip()
+        department = attrs.get('department')
+        level = attrs.get('level')
+
+        # Case-insensitive check for existing designation
+        qs = Designation.objects.filter(
+            department=department,
+            level=level,
+            designation_name__iexact=designation_name
+        )
+        # Exclude self in update
+        if self.instance:
+            qs = qs.exclude(pk=self.instance.pk)
+        if qs.exists():
+            raise serializers.ValidationError({
+                'designation_name': 'A designation with this name, department, and level already exists.'
+            })
+        return attrs
         
 
 

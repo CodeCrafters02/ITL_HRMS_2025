@@ -28,8 +28,10 @@ const IncomeTaxForm: React.FC = () => {
         tax_percent: taxPercent,
       });
       navigate("/income-tax");
-    } catch (err: any) {
-      setError(err.response?.data?.detail || "Failed to add income tax config.");
+    } catch (err: unknown) {
+      type AxiosErrorType = { response?: { data?: { detail?: string } } };
+      const errorObj = err as AxiosErrorType;
+      setError(errorObj.response?.data?.detail || "Failed to add income tax config.");
     } finally {
       setLoading(false);
     }

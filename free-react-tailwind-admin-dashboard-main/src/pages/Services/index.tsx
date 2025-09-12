@@ -1,9 +1,11 @@
 import { useEffect, useState } from "react";
-import { FiTrash2,FiEdit} from "react-icons/fi";
+import { ToastContainer, toast } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
+import { FiTrash2, FiEdit } from "react-icons/fi";
 import PageBreadcrumb from "../../components/common/PageBreadCrumb";
 import ComponentCard from "../../components/common/ComponentCard";
 import PageMeta from "../../components/common/PageMeta";
-import { getServiceList,deleteService } from "./api";
+import { getServiceList, deleteService } from "./api";
 import AddService from "./AddService";
 import EditService from "./EditService";
 
@@ -21,8 +23,9 @@ const ServicesPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
-    const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editServiceId, setEditServiceId] = useState<number | null>(null);
+  const [deleteConfirmId, setDeleteConfirmId] = useState<number | null>(null);
 
   useEffect(() => {
     fetchServices();
@@ -40,24 +43,28 @@ const ServicesPage: React.FC = () => {
     }
   };
 
-const handleDelete = async (id: number) => {
-  if (!window.confirm("Are you sure you want to delete this service?")) return;
-  try {
-    await deleteService(id);
-    setServices((prev) => prev.filter((s) => s.id !== id));
-  } catch {
-    alert("Failed to delete service.");
-  }
-};
+  const handleDelete = (id: number) => {
+    setDeleteConfirmId(id);
+  };
 
+  const confirmDelete = async (id: number) => {
+    try {
+      await deleteService(id);
+      setServices((prev) => prev.filter((s) => s.id !== id));
+      toast.success("Service deleted successfully.");
+    } catch {
+      toast.error("Failed to delete service.");
+    } finally {
+      setDeleteConfirmId(null);
+    }
+  };
 
   // When a new service is added, refresh list or append to services
   const onServiceAdded = (newService: Service) => {
     setServices((prev) => [newService, ...prev]);
     setIsAddModalOpen(false);
   };
-   const onServiceUpdated = () => {
-    console.log("jj")
+  const onServiceUpdated = () => {
     fetchServices();
     setIsEditModalOpen(false);
     setEditServiceId(null);
@@ -68,6 +75,7 @@ const handleDelete = async (id: number) => {
 
   return (
     <>
+      <ToastContainer position="top-right" autoClose={3000} hideProgressBar={false} newestOnTop closeOnClick pauseOnHover aria-label="Notification" />
       <PageMeta title="Services" description="Services management page" />
       <PageBreadcrumb pageTitle="Services" />
       <div className="space-y-6">
@@ -120,17 +128,16 @@ const handleDelete = async (id: number) => {
                     <td className="px-5 py-4 text-start">{service.description || "-"}</td>
                     <td className="px-5 py-4 text-start">{service.is_active ? "Yes" : "No"}</td>
                     <td className="px-5 py-4 text-start flex gap-3 items-center">
-                    <button
-                    className="text-blue-600 hover:text-blue-800"
-                    title="Edit"
-                      onClick={() => {
-                        console.log("Editing service with ID:", service.id);
-                      setEditServiceId(service.id);      //  store ID
-                      setIsEditModalOpen(true);          //  open modal
-                    }}
-                  >
-                    <FiEdit />
-                  </button>
+                      <button
+                        className="text-blue-600 hover:text-blue-800"
+                        title="Edit"
+                        onClick={() => {
+                          setEditServiceId(service.id);
+                          setIsEditModalOpen(true);
+                        }}
+                      >
+                        <FiEdit />
+                      </button>
                       <button
                         className="text-red-600 hover:text-red-800"
                         title="Delete"
@@ -138,6 +145,28 @@ const handleDelete = async (id: number) => {
                       >
                         <FiTrash2 />
                       </button>
+                      {deleteConfirmId === service.id && (
+                        <div className="fixed inset-0 flex items-center justify-center z-50  bg-opacity-30">
+                          <div className="bg-white rounded-lg shadow-lg p-6 w-80">
+                            <div className="mb-4 text-lg font-semibold text-gray-800">Confirm Delete</div>
+                            <div className="mb-6 text-gray-600">Are you sure you want to delete this {service.name}?</div>
+                            <div className="flex gap-4 justify-end">
+                              <button
+                                className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"
+                                onClick={() => confirmDelete(service.id)}
+                              >
+                                Delete
+                              </button>
+                              <button
+                                className="px-4 py-2 bg-gray-300 text-gray-800 rounded hover:bg-gray-400"
+                                onClick={() => setDeleteConfirmId(null)}
+                              >
+                                Cancel
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      )}
                     </td>
                   </tr>
                 ))

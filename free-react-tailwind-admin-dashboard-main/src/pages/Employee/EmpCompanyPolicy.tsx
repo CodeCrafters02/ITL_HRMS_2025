@@ -1,5 +1,10 @@
+// Import pdfjsLib for PDF rendering
+import { getDocument, GlobalWorkerOptions } from 'pdfjs-dist';
 import { useEffect, useState } from "react";
 import { axiosInstance } from "../Employee/api";
+
+// Set up PDF.js worker
+GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/5.4.149/pdf.worker.min.js`;
 
 
 interface Policy {
@@ -34,7 +39,7 @@ export default function EmpCompanyPolicy() {
                 const pdfBlobUrl = URL.createObjectURL(response.data);
 
                 // Generate first-page preview image
-                const loadingTask = pdfjs.getDocument(pdfBlobUrl);
+                const loadingTask = getDocument({ url: pdfBlobUrl });
                 const pdf = await loadingTask.promise;
                 const page = await pdf.getPage(1);
 
@@ -44,11 +49,15 @@ export default function EmpCompanyPolicy() {
                 canvas.width = viewport.width;
                 canvas.height = viewport.height;
 
-                await page.render({ canvasContext: context, viewport }).promise;
+                await page.render({ 
+                  canvasContext: context, 
+                  viewport: viewport,
+                  canvas: canvas
+                }).promise;
                 const previewImg = canvas.toDataURL();
 
                 return { ...policy, pdfBlobUrl, previewImg };
-              } catch (e) {
+              } catch {
                 return { ...policy };
               }
             }

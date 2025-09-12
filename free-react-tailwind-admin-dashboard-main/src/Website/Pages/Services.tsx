@@ -1,7 +1,7 @@
 
 import React,{useEffect,useState,useRef} from 'react';
-import { Link } from 'react-router-dom';
-import BaseLayout from './BaseLayout.js';
+// ...existing code...
+import BaseLayout from './BaseLayout';
 import { getSubServiceList, getServiceList,ServiceData ,SubServiceData} from './api'; // Adjust import path accordingly
 
 const PentagonPage: React.FC = () => {
@@ -123,30 +123,30 @@ const PentagonPage: React.FC = () => {
             });
 
             // Dropdown menu functionality
-            $('.mil-has-children a').on('click', function(this: HTMLElement, e: any) {
-                e.preventDefault();
-                $('.mil-has-children ul').removeClass('mil-active');
-                $('.mil-has-children a').removeClass('mil-active');
-                $(this).toggleClass('mil-active');
-                $(this).next('ul').toggleClass('mil-active');
-            });
+      $('.mil-has-children a').on('click', function(this: HTMLElement, e: MouseEvent) {
+        e.preventDefault();
+        $('.mil-has-children ul').removeClass('mil-active');
+        $('.mil-has-children a').removeClass('mil-active');
+        $(this).toggleClass('mil-active');
+        $(this).next('ul').toggleClass('mil-active');
+      });
 
             // Back to top functionality
-            $('.mil-back-to-top .mil-link').on('click', function(e: any) {
-                e.preventDefault();
-                $('html, body').animate({ scrollTop: 0 }, 800);
-            });
+      $('.mil-back-to-top .mil-link').on('click', function(e: MouseEvent) {
+        e.preventDefault();
+        $('html, body').animate({ scrollTop: 0 }, 800);
+      });
 
             // Smooth scroll for anchor links
-            $('a[href^="#"]').on('click', function(this: HTMLElement, e: any) {
-                e.preventDefault();
-                const target = $(this.getAttribute('href'));
-                if (target.length) {
-                    $('html, body').animate({
-                        scrollTop: target.offset().top - 100
-                    }, 800);
-                }
-            });
+      $('a[href^="#"]').on('click', function(this: HTMLElement, e: MouseEvent) {
+        e.preventDefault();
+        const target = $(this.getAttribute('href'));
+        if (target.length) {
+          $('html, body').animate({
+            scrollTop: target.offset().top - 100
+          }, 800);
+        }
+      });
 
             // Initialize GSAP ScrollTrigger if available
             if (typeof window.gsap !== 'undefined' && window.gsap.registerPlugin) {
@@ -244,18 +244,10 @@ const PentagonPage: React.FC = () => {
         },
         {}
       );
-        const [expandedServices, setExpandedServices] = useState<Record<number, boolean>>({});
-      
-        const toggleExpand = (serviceId: number) => {
-          setExpandedServices((prev) => ({
-            ...prev,
-            [serviceId]: !prev[serviceId],
-          }));
-        };
+  // ...existing code...
       
         // Helper to generate URL path from service name
-        const getServiceUrl = (serviceName: string) =>
-          "/" + serviceName.toLowerCase().replace(/\s+/g, "");
+  // ...existing code...
       
         if (!stylesLoaded) {
           // Show blank or loader until styles are loaded
@@ -305,9 +297,8 @@ const PentagonPage: React.FC = () => {
           <div className="row g-3">
             {services.length === 0 && <p>No services available.</p>}
 
-            {services.map((service, index) => {
+            {services.map((service) => {
               const allSubs = subservicesByService[service.id] || [];
-              const subsToShow = allSubs.slice(0, 5);
 
               return (
                 <div

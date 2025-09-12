@@ -4,9 +4,6 @@ import { Link } from 'react-router-dom';
 import BaseLayout from './BaseLayout.js';
 import { postContactRequest } from './api';  
 
-interface ContactProps {
-    hasPreloaderShown?: boolean;
-}
 
 interface FormData {
     name: string;
@@ -15,7 +12,7 @@ interface FormData {
     contact:string;
 }
 
-const Contact: React.FC<ContactProps> = ({ hasPreloaderShown }) => {
+const Contact: React.FC = () => {
     // State for the contact form fields
     const [formData, setFormData] = useState<FormData>({
         name: '',
@@ -23,7 +20,7 @@ const Contact: React.FC<ContactProps> = ({ hasPreloaderShown }) => {
         message: '',
         contact:''
     });
-    const [isSubmitting, setIsSubmitting] = useState(false);
+    // Removed unused isSubmitting state
 
 
     // Handle input changes
@@ -40,22 +37,24 @@ const Contact: React.FC<ContactProps> = ({ hasPreloaderShown }) => {
     // Handle form submission
     const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
         e.preventDefault();
-        setIsSubmitting(true);
         setFormResponse('');
         try {
-        await postContactRequest({
-            name: formData.name,
-            email: formData.email,
-            contact_number: formData.contact,  // API expects contact_number key
-            message: formData.message,
-        });
-        setFormResponse('<p style="color: green;">Message sent successfully!</p>');
-        setFormData({ name: '', email: '', message: '', contact: '' }); // reset form
-        } catch (error: any) {
-        setFormResponse(`<p style="color: red;">Failed to send message: ${error.message || 'Unknown error'}</p>`);
+            await postContactRequest({
+                name: formData.name,
+                email: formData.email,
+                contact_number: formData.contact,  // API expects contact_number key
+                message: formData.message,
+            });
+            setFormResponse('<p style="color: green;">Message sent successfully!</p>');
+            setFormData({ name: '', email: '', message: '', contact: '' }); // reset form
+        } catch (error: unknown) {
+            let errorMsg = 'Unknown error';
+            if (typeof error === 'object' && error !== null && 'message' in error) {
+                errorMsg = (error as { message?: string }).message || errorMsg;
+            }
+            setFormResponse(`<p style="color: red;">Failed to send message: ${errorMsg}</p>`);
         } finally {
-        setIsSubmitting(false);
-        setTimeout(() => setFormResponse(''), 5000);
+            setTimeout(() => setFormResponse(''), 5000);
         }
     };
       const [stylesLoaded, setStylesLoaded] = useState(false);

@@ -19,7 +19,7 @@ const BreakConfigDisplay: React.FC = () => {
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Fetch all breaks
+  // Fetch all breaks (initial load)
   const fetchBreaks = () => {
     setLoading(true);
     axiosInstance
@@ -34,9 +34,21 @@ const BreakConfigDisplay: React.FC = () => {
       });
   };
 
+  // Refetch breaks after CRUD (no loading spinner)
+  const refetchBreaks = () => {
+    axiosInstance
+      .get("/break-config/")
+      .then((res) => {
+        setBreaks(res.data);
+      })
+      .catch((err) => {
+        setError(err?.response?.data?.detail || "Failed to fetch break configs");
+      });
+  };
+
   useEffect(() => {
     fetchBreaks();
-    // eslint-disable-next-line
+    // / eslint-disable-next-line
   }, []);
 
   if (loading) return (
@@ -60,39 +72,39 @@ const BreakConfigDisplay: React.FC = () => {
     const breakToUpdate = breaks.find((b: BreakConfig) => b.id === id);
     if (!breakToUpdate) return;
     axiosInstance.patch(`/break-config/${id}/`, { ...breakToUpdate, ...changes })
-      .then(() => fetchBreaks());
+      .then(() => refetchBreaks());
   };
   const handleRemoveShortBreak = (id: number) => {
-    axiosInstance.delete(`/break-config/${id}/`).then(() => fetchBreaks());
+  axiosInstance.delete(`/break-config/${id}/`).then(() => refetchBreaks());
   };
   const handleAddShortBreak = () => {
     axiosInstance.post(`/break-config/`, {
       break_choice: "short_break",
       duration_minutes: 5,
       enabled: true,
-    }).then(() => fetchBreaks());
+    }).then(() => refetchBreaks());
   };
   const handleMealBreakChange = (id: number, changes: Partial<BreakConfig>) => {
     const breakToUpdate = breaks.find((b: BreakConfig) => b.id === id);
     if (!breakToUpdate) return;
     axiosInstance.patch(`/break-config/${id}/`, { ...breakToUpdate, ...changes })
-      .then(() => fetchBreaks());
+      .then(() => refetchBreaks());
   };
   const handleAddMealBreak = () => {
     axiosInstance.post(`/break-config/`, {
       break_choice: "meal_break",
       duration_minutes: 30,
       enabled: true,
-    }).then(() => fetchBreaks());
+    }).then(() => refetchBreaks());
   };
   const handleRemoveMealBreak = (id: number) => {
-    axiosInstance.delete(`/break-config/${id}/`).then(() => fetchBreaks());
+  axiosInstance.delete(`/break-config/${id}/`).then(() => refetchBreaks());
   };
   const handleDontDisturbChange = (id: number, changes: Partial<BreakConfig>) => {
     const breakToUpdate = breaks.find((b: BreakConfig) => b.id === id);
     if (!breakToUpdate) return;
     axiosInstance.patch(`/break-config/${id}/`, { ...breakToUpdate, ...changes })
-      .then(() => fetchBreaks());
+      .then(() => refetchBreaks());
   };
 
 

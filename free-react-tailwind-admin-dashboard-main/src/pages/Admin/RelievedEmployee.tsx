@@ -1,6 +1,7 @@
 import { Table, TableBody, TableCell, TableHeader, TableRow } from "../../components/ui/table";
 import React, { useState, useRef, useEffect } from 'react';
 import { axiosInstance } from '../Dashboard/api';
+import { AxiosError } from 'axios';
 import { useModal } from "../../hooks/useModal";
 import PageMeta from '../../components/common/PageMeta';
 import ComponentCard from '../../components/common/ComponentCard';
@@ -151,15 +152,19 @@ const RelievedEmployee: React.FC = () => {
       setRemarks('');
     } catch (err: unknown) {
       let msg = 'Failed to relieve employee. Please try again.';
-      if (typeof err === 'object' && err !== null && 'response' in err) {
-        const response = (err as any).response;
+      if (typeof err === 'object' && err !== null) {
+        const errorObj = err as AxiosError;
+        const response = errorObj.response;
         if (response && response.data) {
           if (typeof response.data === 'string') {
             msg = response.data;
-          } else if (response.data.employee) {
-            msg = Array.isArray(response.data.employee) ? response.data.employee.join(' ') : response.data.employee;
-          } else if (response.data.detail) {
-            msg = response.data.detail;
+          } else if (typeof response.data === 'object' && response.data !== null) {
+            const dataObj = response.data as Record<string, unknown>;
+            if ('employee' in dataObj) {
+              msg = Array.isArray(dataObj.employee) ? (dataObj.employee as string[]).join(' ') : String(dataObj.employee);
+            } else if ('detail' in dataObj) {
+              msg = String(dataObj.detail);
+            }
           }
         }
       }
@@ -167,7 +172,7 @@ const RelievedEmployee: React.FC = () => {
     }
   };
 
-  const { openModal, closeModal } = useModal(false);
+  const { openModal } = useModal(false);
   const searchRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
 
@@ -216,14 +221,7 @@ const RelievedEmployee: React.FC = () => {
   };
 
   // Handle modal close
-  const handleCloseModal = () => {
-    closeModal();
-    setSelectedEmployee(null);
-    setSelectedEmployeeDetails(null);
-    setRelievingDate('');
-    setRemarks('');
-    setError('');
-  };
+  // Removed unused handleCloseModal to fix lint error
 
   // Handle clicks outside search suggestions
   useEffect(() => {
@@ -364,13 +362,12 @@ const RelievedEmployee: React.FC = () => {
                     className="flex items-center px-4 py-3 hover:bg-gray-50 border-b border-gray-100 last:border-b-0 transition-colors cursor-pointer"
                     onClick={() => handleEmployeeSelect(employee)}
                   >
-                    <input
-                      type="checkbox"
-                      checked={selectedEmployee?.id === employee.id}
-                      onChange={() => handleEmployeeSelect(employee)}
-                      onClick={e => e.stopPropagation()}
-                      className="mr-3"
-                    />
+                    {/* Remove checkbox to avoid controlled/uncontrolled warning, use highlight for selection */}
+                    <div className={`mr-3 w-4 h-4 rounded border flex items-center justify-center ${selectedEmployee?.id === employee.id ? 'bg-blue-500 border-blue-500' : 'bg-white border-gray-300'}`}>
+                      {selectedEmployee?.id === employee.id && (
+                        <span className="text-white text-xs font-bold">✓</span>
+                      )}
+                    </div>
                     <div>
                       <div className="font-medium text-gray-900">
                         {employee.full_name} ({employee.employee_id})

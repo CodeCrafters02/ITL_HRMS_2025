@@ -1,33 +1,99 @@
-import React, { useState } from "react";
-import { createUser, UserRegister,userId } from "./api";
+import React, { useState, useEffect } from "react";
+import { createUser, UserRegister, userId, getCompanies, Company } from "./api";
+import Button from "../../components/ui/button/Button";
+import Input from "../../components/form/input/InputField";
+import Select from "../../components/form/Select";
+import Checkbox from "../../components/form/input/Checkbox";
+import Label from "../../components/form/Label";
+import ComponentCard from "../../components/common/ComponentCard";
+import PageBreadcrumb from "../../components/common/PageBreadCrumb";
+import PageMeta from "../../components/common/PageMeta";
+import { useNavigate } from "react-router-dom";
+import { toast } from "react-toastify";
 
-interface AddUserProps {
-  onClose: () => void;
-  onAdd: (newUser: UserRegister) => void;
-}
+const AddUser: React.FC = () => {
+  const navigate = useNavigate();
+  const [formData, setFormData] = useState({
+    username: "",
+    email: "",
+    role: "employee",
+    firstName: "",
+    lastName: "",
+    isActive: true,
+    password: "",
+    confirmPassword: "",
+    company: "",
+  });
 
-const AddUser: React.FC<AddUserProps> = ({ onClose, onAdd }) => {
-  const [username, setUsername] = useState("");
-  const [email, setEmail] = useState("");
-  const [role, setRole] = useState("employee"); // default role
-  const [firstName, setFirstName] = useState("");
-  const [lastName, setLastName] = useState("");
-  const [isActive, setIsActive] = useState(true);
-  const [password, setPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
-
+  const [companies, setCompanies] = useState<Company[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [loadingCompanies, setLoadingCompanies] = useState(false);
+
+  // Fetch companies on component mount
+  useEffect(() => {
+    const fetchCompanies = async () => {
+      setLoadingCompanies(true);
+      try {
+        console.log("Fetching companies...");
+        const companiesData = await getCompanies();
+        console.log("Companies fetched:", companiesData);
+        setCompanies(companiesData);
+      } catch (err) {
+        console.error("Failed to fetch companies:", err);
+        toast.error("Failed to load companies");
+      } finally {
+        setLoadingCompanies(false);
+      }
+    };
+
+    fetchCompanies();
+  }, []);
+
+  // Handle form field changes
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value, type, checked } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: type === "checkbox" ? checked : value
+    }));
+  };
+
+  // Handle select changes
+  const handleSelectChange = (value: string) => {
+    setFormData(prev => ({
+      ...prev,
+      role: value,
+      // Clear company when role is not employee
+      company: value === "employee" ? prev.company : ""
+    }));
+  };
+
+  // Handle company select changes
+  const handleCompanySelectChange = (value: string) => {
+    setFormData(prev => ({
+      ...prev,
+      company: value
+    }));
+  };
+
+  // Handle checkbox changes
+  const handleCheckboxChange = (checked: boolean) => {
+    setFormData(prev => ({
+      ...prev,
+      isActive: checked
+    }));
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
 
-    if (password !== confirmPassword) {
+    if (formData.password !== formData.confirmPassword) {
       setError("Passwords do not match");
       return;
     }
-    if (password.length < 6) {
+    if (formData.password.length < 6) {
       setError("Password must be at least 6 characters");
       return;
     }
@@ -36,142 +102,226 @@ const AddUser: React.FC<AddUserProps> = ({ onClose, onAdd }) => {
 
     try {
       const newUser: UserRegister & { password: string; created_by: number } = {
-        username,
-        email,
-        role,
-        first_name: firstName,
-        last_name: lastName,
-        is_active: isActive,
-        password,       // include password for creation
-        created_by: parseInt(userId),  // add logged in user ID here
+        username: formData.username,
+        email: formData.email,
+        role: formData.role,
+        first_name: formData.firstName,
+        last_name: formData.lastName,
+        is_active: formData.isActive,
+        password: formData.password,
+        created_by: parseInt(userId),
       };
 
-      const createdUser = await createUser(newUser);
-      onAdd(createdUser); // pass the created user back to parent
-    } catch (err: any) {
-      setError(err.message || "Failed to create user");
+      // Add company if role is employee
+      if (formData.role === "employee" && formData.company) {
+        newUser.company = parseInt(formData.company);
+      }
+
+      await createUser(newUser);
+      toast.success("User created successfully!");
+      navigate("/master/usermanagement");
+    } catch (err: unknown) {
+      if (err instanceof Error) {
+        setError(err.message);
+      } else {
+        setError("Failed to create user");
+      }
     } finally {
       setLoading(false);
     }
   };
 
+  // Handle cancel - navigate back to user management page
+  const handleCancel = () => {
+    navigate("/master/usermanagement");
+  };
+
+  // Prepare role options for Select component
+  const roleOptions = [
+    { value: "master", label: "Master" },
+    { value: "admin", label: "Admin" },
+    { value: "employee", label: "Employee" }
+  ];
+
+  // Prepare company options for Select component
+  const companyOptions = companies.map(company => ({
+    value: company.id.toString(),
+    label: company.name
+  }));
+
   return (
-    <div className="fixed inset-0 bg-white/50 backdrop-blur-sm flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg p-6 w-full max-w-md">
-        <h2 className="text-xl font-semibold mb-4">Add New User</h2>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="block mb-1 font-medium">Username</label>
-            <input
-              type="text"
-              required
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              className="w-full border border-gray-300 rounded px-3 py-2"
-            />
-          </div>
-
-          <div>
-            <label className="block mb-1 font-medium">Email</label>
-            <input
-              type="email"
-              required
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="w-full border border-gray-300 rounded px-3 py-2"
-            />
-          </div>
-
-          <div>
-            <label className="block mb-1 font-medium">First Name</label>
-            <input
-              type="text"
-              value={firstName}
-              onChange={(e) => setFirstName(e.target.value)}
-              className="w-full border border-gray-300 rounded px-3 py-2"
-            />
-          </div>
-
-          <div>
-            <label className="block mb-1 font-medium">Last Name</label>
-            <input
-              type="text"
-              value={lastName}
-              onChange={(e) => setLastName(e.target.value)}
-              className="w-full border border-gray-300 rounded px-3 py-2"
-            />
-          </div>
-
-          <div>
-            <label className="block mb-1 font-medium">Role</label>
-            <select
-              value={role}
-              onChange={(e) => setRole(e.target.value)}
-              className="w-full border border-gray-300 rounded px-3 py-2"
-            >
-              <option value="master">Master</option>
-              <option value="admin">Admin</option>
-              <option value="employee">Employee</option>
-            </select>
-          </div>
+    <>
+      <PageMeta title="Add User" description="Add new user to the system" />
+      <PageBreadcrumb pageTitle="Add User" />
       
-          <div>
-            <label className="block mb-1 font-medium">Password</label>
-            <input
-              type="password"
-              required
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="w-full border border-gray-300 rounded px-3 py-2"
-            />
-          </div>
+      <div className="space-y-6">
+        <ComponentCard title="User Information">
+          <form onSubmit={handleSubmit} className="space-y-6">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Left Column */}
+              <div className="space-y-6">
+                {/* Username */}
+                <div>
+                  <Label htmlFor="username">Username *</Label>
+                  <Input
+                    id="username"
+                    name="username"
+                    value={formData.username}
+                    onChange={handleChange}
+                    placeholder="Enter username"
+                    required
+                    disabled={loading}
+                  />
+                </div>
 
-          {/* Confirm Password */}
-          <div>
-            <label className="block mb-1 font-medium">Confirm Password</label>
-            <input
-              type="password"
-              required
-              value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
-              className="w-full border border-gray-300 rounded px-3 py-2"
-            />
-          </div>
-            <div className="flex items-center space-x-2">
-                <input
-                id="isActive"
-                type="checkbox"
-                checked={isActive}
-                onChange={() => setIsActive(!isActive)}
-                className="h-4 w-4"
-                />
-                <label htmlFor="isActive" className="font-medium">
-                Active
-                </label>
-            </div>   
+                {/* Email */}
+                <div>
+                  <Label htmlFor="email">Email *</Label>
+                  <Input
+                    id="email"
+                    name="email"
+                    type="email"
+                    value={formData.email}
+                    onChange={handleChange}
+                    placeholder="Enter email address"
+                    required
+                    disabled={loading}
+                  />
+                </div>
 
-          {error && <p className="text-red-600">{error}</p>}
+                {/* First Name */}
+                <div>
+                  <Label htmlFor="firstName">First Name</Label>
+                  <Input
+                    id="firstName"
+                    name="firstName"
+                    value={formData.firstName}
+                    onChange={handleChange}
+                    placeholder="Enter first name"
+                    disabled={loading}
+                  />
+                </div>
 
-          <div className="flex justify-end space-x-2">
-            <button
-              type="button"
-              onClick={onClose}
-              disabled={loading}
-              className="px-4 py-2 border rounded"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={loading}
-              className="px-4 py-2 bg-blue-600 text-white rounded"
-            >
-              {loading ? "Saving..." : "Save"}
-            </button>
-          </div>
-        </form>
+                {/* Last Name */}
+                <div>
+                  <Label htmlFor="lastName">Last Name</Label>
+                  <Input
+                    id="lastName"
+                    name="lastName"
+                    value={formData.lastName}
+                    onChange={handleChange}
+                    placeholder="Enter last name"
+                    disabled={loading}
+                  />
+                </div>
+              </div>
+
+              {/* Right Column */}
+              <div className="space-y-6">
+                {/* Role */}
+                <div>
+                  <Label>Role *</Label>
+                  <Select
+                    options={roleOptions}
+                    placeholder="Select a role"
+                    onChange={handleSelectChange}
+                    defaultValue={formData.role}
+                    className="dark:bg-gray-900"
+                  />
+                </div>
+
+                {/* Company - Show only for employee role */}
+                {formData.role === "employee" && (
+                  <div>
+                    <Label>Company</Label>
+                    <Select
+                      options={companyOptions}
+                      placeholder={loadingCompanies ? "Loading companies..." : "Select a company"}
+                      onChange={handleCompanySelectChange}
+                      defaultValue={formData.company}
+                      className="dark:bg-gray-900"
+                    />
+                  </div>
+                )}
+
+                {/* Password */}
+                <div>
+                  <Label htmlFor="password">Password *</Label>
+                  <Input
+                    id="password"
+                    name="password"
+                    type="password"
+                    value={formData.password}
+                    onChange={handleChange}
+                    placeholder="Enter password (min 6 characters)"
+                    required
+                    disabled={loading}
+                  />
+                </div>
+
+                {/* Confirm Password */}
+                <div>
+                  <Label htmlFor="confirmPassword">Confirm Password *</Label>
+                  <Input
+                    id="confirmPassword"
+                    name="confirmPassword"
+                    type="password"
+                    value={formData.confirmPassword}
+                    onChange={handleChange}
+                    placeholder="Confirm password"
+                    required
+                    disabled={loading}
+                  />
+                </div>
+
+                {/* Active Status */}
+                <div className="flex items-center gap-3 pt-4">
+                  <Checkbox
+                    checked={formData.isActive}
+                    onChange={handleCheckboxChange}
+                    disabled={loading}
+                  />
+                  <Label className="mb-0 cursor-pointer">
+                    User is active
+                  </Label>
+                </div>
+              </div>
+            </div>
+
+            {/* Error Message */}
+            {error && (
+              <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4">
+                <p className="text-red-600 dark:text-red-400 text-sm">{error}</p>
+              </div>
+            )}
+
+            {/* Action Buttons */}
+            <div className="flex justify-end gap-4 pt-6 border-t border-gray-200 dark:border-gray-600">
+              <Button 
+                type="button" 
+                variant="outline" 
+                onClick={handleCancel} 
+                disabled={loading}
+                className="px-8"
+              >
+                Cancel
+              </Button>
+              <Button 
+                type="submit" 
+                disabled={
+                  loading || 
+                  !formData.username.trim() || 
+                  !formData.email.trim()
+                }
+                className="px-8"
+              >
+                {loading ? "Creating..." : "Create User"}
+              </Button>
+            </div>
+          </form>
+        </ComponentCard>
       </div>
-    </div>
+    </>
   );
 };
 

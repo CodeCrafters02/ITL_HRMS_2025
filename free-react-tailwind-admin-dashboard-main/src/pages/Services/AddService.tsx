@@ -12,7 +12,14 @@ interface ServiceCreateData {
 
 interface AddServiceProps {
   onClose: () => void;
-  onAdd: (newService: any) => void; // You can type better if you want
+  onAdd: (newService: {
+    id: number;
+    name: string;
+    description?: string | null;
+    is_active: boolean;
+    created_at: string;
+    updated_at: string;
+  }) => void;
 }
 
 const AddService: React.FC<AddServiceProps> = ({ onClose, onAdd }) => {
@@ -26,10 +33,10 @@ const AddService: React.FC<AddServiceProps> = ({ onClose, onAdd }) => {
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
   ) => {
-    const { name, value, type, checked } = e.target;
+    const { name, value, type } = e.target;
     setFormData((prev) => ({
       ...prev,
-      [name]: type === "checkbox" ? checked : value,
+      [name]: type === "checkbox" ? (e.target as HTMLInputElement).checked : value,
     }));
   };
 
@@ -43,7 +50,7 @@ const AddService: React.FC<AddServiceProps> = ({ onClose, onAdd }) => {
     try {
       const newService = await createService(formData);
       onAdd(newService); // Pass new service back to parent to update list
-    } catch (err) {
+    } catch {
       // Optionally handle error here
     } finally {
       setLoading(false);

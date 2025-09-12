@@ -4,6 +4,17 @@ import { useNotifications } from "../../context/NotificationContext";
 
 const ViewallNotification: React.FC = () => {
 	const { notifications, loading, error, fetchNotifications } = useNotifications();
+	// Type guard to ensure notification.type is NotificationType
+	function toLocalNotification(n: unknown): Notification {
+		const notif = n as { id: number; title: string; description: string; date: string; type: string };
+		return {
+			id: notif.id,
+			title: notif.title,
+			description: notif.description,
+			date: notif.date,
+			type: notif.type as NotificationType
+		};
+	}
 
 	useEffect(() => {
 		fetchNotifications();
@@ -11,9 +22,9 @@ const ViewallNotification: React.FC = () => {
 	}, []);
 
 	// Local Notification type for grouping
-	type NotificationType = 'notification' | 'calendar' | 'learning_corner';
+	type NotificationType = 'notification' | 'calendar' | 'learning_corner' | 'admin' | 'birthday';
 	type Notification = {
-		id: number;
+		id: string | number;
 		title: string;
 		description: string;
 		date: string;
@@ -22,12 +33,21 @@ const ViewallNotification: React.FC = () => {
 	type GroupedNotifications = { label: string; items: Notification[] };
 
 	const groupByDate = (notifications: Notification[]): GroupedNotifications[] => {
+		// First, deduplicate notifications
+		const uniqueNotifications = notifications.filter((notif, index, self) => 
+			index === self.findIndex(n => 
+				n.id === notif.id && 
+				n.title === notif.title && 
+				n.description === notif.description
+			)
+		);
+
 		const groups: { [label: string]: Notification[] } = {};
 		const today = new Date();
 		const yesterday = new Date();
 		yesterday.setDate(today.getDate() - 1);
 
-		notifications.forEach((n: Notification) => {
+		uniqueNotifications.forEach((n: Notification) => {
 			const nDate = new Date(n.date);
 			let label = nDate.toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" });
 			if (
@@ -72,6 +92,16 @@ const ViewallNotification: React.FC = () => {
 						<path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
 					</svg>
 				);
+			case 'admin':
+				return (
+					<svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+						<path fillRule="evenodd" d="M18 8a6 6 0 01-7.743 5.743L10 14l-0.257-0.257A6 6 0 1118 8zM2 8a8 8 0 1016 0A8 8 0 002 8z" clipRule="evenodd" />
+					</svg>
+				);
+			case 'birthday':
+				return (
+					<span className="text-lg">🎂</span>
+				);
 			default:
 				return (
 					<svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
@@ -87,6 +117,10 @@ const ViewallNotification: React.FC = () => {
 				return 'text-green-600 dark:text-green-400';
 			case 'learning_corner':
 				return 'text-purple-600 dark:text-purple-400';
+			case 'admin':
+				return 'text-orange-600 dark:text-orange-400';
+			case 'birthday':
+				return 'text-pink-600 dark:text-pink-400';
 			default:
 				return 'text-blue-600 dark:text-blue-400';
 		}
@@ -135,7 +169,7 @@ const ViewallNotification: React.FC = () => {
 		);
 	}
 
-	const grouped = groupByDate(notifications);
+	const grouped = groupByDate((notifications as unknown[]).map(toLocalNotification));
 
 	return (
 		<div className="flex min-h-screen flex-col bg-gray-50 dark:bg-gray-900">
@@ -181,8 +215,8 @@ const ViewallNotification: React.FC = () => {
 
 									{/* Notifications */}
 									<div className="space-y-1">
-										{group.items.map((notification) => (
-											<div key={`${notification.id}-${notification.type}-${notification.date}`} 
+										{group.items.map((notification, index) => (
+											<div key={`${notification.id}-${index}`} 
 											     className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors duration-150 cursor-pointer group">
 												<div className="px-4 py-3">
 													<div className="flex items-start space-x-3">

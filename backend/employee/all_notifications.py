@@ -53,71 +53,108 @@ class AllNotificationsAPIView(APIView):
     def get(self, request):
         user = request.user
         notifications = []
+        seen_ids = set()  # Track unique IDs to prevent duplicates
 
-        # UserNotification (admin, task, leave, etc.)
+        # UserNotification (admin, task, leave, etc.) - Exclude learning corner notifications to avoid duplicates
         if hasattr(user, 'employee_profile') and user.employee_profile:
-            for n in UserNotification.objects.filter(recipient=user.employee_profile):
-                notifications.append({
-                    "id": n.id,
-                    "title": n.title,
-                    "description": getattr(n, 'message', n.title),
-                    "date": n.created_at.isoformat() if n.created_at else str(n.created_at),
-                    "type": "notification"
-                })
+            user_notifications = UserNotification.objects.filter(
+                recipient=user.employee_profile
+            ).exclude(
+                title__icontains='learning'  # Exclude learning corner notifications from user notifications
+            ).distinct()
+            
+            for n in user_notifications:
+                unique_id = f"user_notif_{n.id}"
+                if unique_id not in seen_ids:
+                    seen_ids.add(unique_id)
+                    notifications.append({
+                        "id": f"user_notif_{n.id}",
+                        "title": n.title,
+                        "description": getattr(n, 'message', n.title),
+                        "date": n.created_at.isoformat() if n.created_at else timezone.now().isoformat(),
+                        "type": "notification",
+                        "read": getattr(n, 'read', False)
+                    })
 
         # Admin Notification (company-wide)
         if hasattr(user, 'employee_profile') and user.employee_profile and user.employee_profile.company_id:
-            for n in Notification.objects.filter(company_id=user.employee_profile.company_id):
-                notifications.append({
-                    "id": n.id + 1000000,  # offset to avoid id clash
-                    "title": n.title or "Admin Notification",
-                    "description": n.description or n.title or "",
-                    "date": n.date.isoformat() if hasattr(n, 'date') and n.date else str(n.created_at),
-                    "type": "admin"
-                })
+            for n in Notification.objects.filter(company_id=user.employee_profile.company_id).distinct():
+                unique_id = f"admin_notif_{n.id}"
+                if unique_id not in seen_ids:
+                    seen_ids.add(unique_id)
+                    notifications.append({
+                        "id": f"admin_notif_{n.id}",
+                        "title": n.title or "Admin Notification",
+                        "description": n.description or n.title or "",
+                        "date": n.created_at.isoformat() if hasattr(n, 'created_at') and n.created_at else timezone.now().isoformat(),
+                        "type": "admin"
+                    })
 
         # Calendar Events (company-wide)
         if hasattr(user, 'employee_profile') and user.employee_profile and user.employee_profile.company_id:
-            for e in CalendarEvent.objects.filter(company_id=user.employee_profile.company_id):
-                notifications.append({
-                    "id": e.id + 2000000,
-                    "title": e.name or "Calendar Event",
-                    "description": getattr(e, 'description', "Calendar Event"),
-                    "date": e.date.isoformat() if hasattr(e, 'date') and isinstance(e.date, datetime) else str(e.date),
-                    "type": "calendar"
-                })
+            for e in CalendarEvent.objects.filter(company_id=user.employee_profile.company_id).distinct():
+                unique_id = f"calendar_{e.id}"
+                if unique_id not in seen_ids:
+                    seen_ids.add(unique_id)
+                    notifications.append({
+                        "id": f"calendar_{e.id}",
+                        "title": e.name or "Calendar Event",
+                        "description": getattr(e, 'description', "Calendar Event"),
+                        "date": e.date.isoformat() if hasattr(e, 'date') and e.date else timezone.now().isoformat(),
+                        "type": "calendar"
+                    })
 
         # Learning Corner (company-wide)
         if hasattr(user, 'employee_profile') and user.employee_profile and user.employee_profile.company_id:
-            for l in LearningCorner.objects.filter(company_id=user.employee_profile.company_id):
-                # LearningCorner has no created_at, so use id as fallback for date sorting, or None
-                notifications.append({
-                    "id": l.id + 3000000,
-                    "title": l.title or "Learning Corner",
-                    "description": getattr(l, 'description', "Learning Corner"),
-                    "date": None,  # No date field available in model
-                    "type": "learning_corner"
-                })
+            for l in LearningCorner.objects.filter(company_id=user.employee_profile.company_id).distinct():
+                unique_id = f"learning_{l.id}"
+                if unique_id not in seen_ids:
+                    seen_ids.add(unique_id)
+                    notifications.append({
+                        "id": f"learning_{l.id}",
+                        "title": l.title or "Learning Corner",
+                        "description": getattr(l, 'description', "Learning Corner"),
+                        "date": getattr(l, 'created_at', timezone.now()).isoformat() if hasattr(l, 'created_at') else timezone.now().isoformat(),
+                        "type": "learning_corner"
+                    })
 
         # Birthday wishes for all employees whose birthday is today
-        
         today = timezone.localdate()
-        birthday_employees = Employee.objects.filter(date_of_birth__month=today.month, date_of_birth__day=today.day)
-        for emp in birthday_employees:
-            notifications.append({
-                "id": 9000000 + emp.id,
-                "title": "🎂 Birthday Wish",
-                "description": f"Happy Birthday, {emp.full_name}! May your day be filled with joy and success 🎉.",
-                "date": today.isoformat(),
-                "type": "birthday"
-            })
+        if hasattr(user, 'employee_profile') and user.employee_profile and user.employee_profile.company_id:
+            birthday_employees = Employee.objects.filter(
+                company_id=user.employee_profile.company_id,
+                date_of_birth__month=today.month, 
+                date_of_birth__day=today.day
+            ).distinct()
+            for emp in birthday_employees:
+                unique_id = f"birthday_{emp.id}_{today}"
+                if unique_id not in seen_ids:
+                    seen_ids.add(unique_id)
+                    notifications.append({
+                        "id": f"birthday_{emp.id}_{today}",
+                        "title": "🎂 Birthday Wish",
+                        "description": f"Happy Birthday, {emp.full_name}! May your day be filled with joy and success 🎉.",
+                        "date": today.isoformat(),
+                        "type": "birthday"
+                    })
 
         # Sort by date descending, handling None values by using a fallback
         def sort_key(x):
             # If date is None, use a very old date so it appears last
             d = x["date"]
-            if d is None:
-                return "0000-01-01T00:00:00"
+            if d is None or d == "None":
+                return "1970-01-01T00:00:00"
             return d
-        notifications.sort(key=sort_key, reverse=True)
-        return Response(notifications)
+        
+        # Remove duplicates based on unique combination of title, description, and date
+        unique_notifications = []
+        seen_combinations = set()
+        
+        for notif in notifications:
+            combo = f"{notif['title']}_{notif['description']}_{notif['date']}"
+            if combo not in seen_combinations:
+                seen_combinations.add(combo)
+                unique_notifications.append(notif)
+        
+        unique_notifications.sort(key=sort_key, reverse=True)
+        return Response(unique_notifications)

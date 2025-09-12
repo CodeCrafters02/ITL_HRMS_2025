@@ -4,6 +4,7 @@ import Button from "../../components/ui/button/Button";
 import Input from "../../components/form/input/InputField";
 import Label from "../../components/form/Label";
 import { ServiceData } from "./api";
+import { toast } from "react-toastify";
 
 interface ImageType {
   id: number;
@@ -24,12 +25,11 @@ const EditProduct: React.FC<EditProductModalProps> = ({
   onUpdated,
   services,
 }) => {
-  if (!isOpen) return null;
-
+  // Hooks must be called unconditionally
   const [formData, setFormData] = useState<ProductEditData>({
     name: "",
     description: "",
-    client:"",
+    client: "",
     service: undefined,
     is_active: true,
   });
@@ -56,7 +56,7 @@ const EditProduct: React.FC<EditProductModalProps> = ({
           setImagesToRemove([]); // reset removals
         })
         .catch(() => {
-          alert("Failed to load product");
+          toast.error("Failed to load product");
         })
         .finally(() => {
           setLoading(false);
@@ -79,38 +79,40 @@ const EditProduct: React.FC<EditProductModalProps> = ({
     }
   };
 
-const handleSubmit = async (e: React.FormEvent) => {
-  e.preventDefault();
-  if (!formData.name.trim()) return;
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!formData.name.trim()) return;
 
-  setSaving(true);
-  try {
-    const dataToSend = new FormData();
+    setSaving(true);
+    try {
+      const dataToSend = new FormData();
 
-    // Append text fields
-    dataToSend.append("name", formData.name);
-    if (formData.description) dataToSend.append("description", formData.description);
-    if (formData.client) dataToSend.append("client", formData.client);
-    if (formData.service) dataToSend.append("service", String(formData.service));
-    dataToSend.append("is_active", String(formData.is_active));
+      // Append text fields
+      dataToSend.append("name", formData.name);
+      if (formData.description) dataToSend.append("description", formData.description);
+      if (formData.client) dataToSend.append("client", formData.client);
+      if (formData.service) dataToSend.append("service", String(formData.service));
+      dataToSend.append("is_active", String(formData.is_active));
 
-    // Append new image files
-    newImages.forEach((file) => dataToSend.append("images", file));
+      // Append new image files
+      newImages.forEach((file) => dataToSend.append("images", file));
 
-    // Append IDs of images to remove
-    imagesToRemove.forEach((id) => dataToSend.append("imagesToRemove", String(id)));
+      // Append IDs of images to remove
+      imagesToRemove.forEach((id) => dataToSend.append("imagesToRemove", String(id)));
 
-    await updateProduct(productId!, dataToSend, true); // pass flag if you want to customize axios call
-    alert("Product updated successfully!");
-    onUpdated();
-    onClose();
-  } catch {
-    alert("Failed to update product.");
-  } finally {
-    setSaving(false);
-  }
-};
+      await updateProduct(productId!, dataToSend, true); // pass flag if you want to customize axios call
+      toast.success("Product updated successfully!");
+      onUpdated();
+      onClose();
+    } catch {
+      toast.error("Failed to update product.");
+    } finally {
+      setSaving(false);
+    }
+  };
 
+  // Only render modal if isOpen is true
+  if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 bg-white/50 backdrop-blur-sm flex items-center justify-center z-50">

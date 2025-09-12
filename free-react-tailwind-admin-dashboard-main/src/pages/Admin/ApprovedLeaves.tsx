@@ -22,13 +22,21 @@ const ApprovedLeave: React.FC = () => {
       try {
         const res = await axiosInstance.get('/approved-leaves/');
         setLeaveLogs(res.data);
-      } catch (err: any) {
+      } catch (err) {
         console.error(err);
         let message = 'Failed to fetch leave data';
-        if (err.response && err.response.data && err.response.data.detail) {
-          message += ': ' + err.response.data.detail;
-        } else if (err.message) {
-          message += ': ' + err.message;
+        if (typeof err === 'object' && err !== null) {
+          const errorObj = err as Record<string, unknown>;
+          if (
+            errorObj.response &&
+            typeof errorObj.response === 'object' &&
+            (errorObj.response as Record<string, unknown>).data &&
+            typeof ((errorObj.response as Record<string, unknown>).data as Record<string, unknown>).detail === 'string'
+          ) {
+            message += ': ' + ((errorObj.response as Record<string, unknown>).data as Record<string, unknown>).detail;
+          } else if (typeof errorObj.message === 'string') {
+            message += ': ' + errorObj.message;
+          }
         }
         setError(message);
       } finally {

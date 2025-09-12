@@ -39,7 +39,19 @@ const AssetsInventoryForm: React.FC = () => {
       });
       navigate("/admin/assets-inventory");
     } catch (err: unknown) {
-      setError((err as any)?.response?.data?.detail || "Failed to create asset");
+      type AxiosErrorDetail = { response?: { data?: { detail?: string } } };
+      const errorObj = err as AxiosErrorDetail;
+      if (
+        typeof err === "object" &&
+        err !== null &&
+        "response" in errorObj &&
+        typeof errorObj.response === "object" &&
+        errorObj.response?.data?.detail
+      ) {
+        setError(errorObj.response.data.detail);
+      } else {
+        setError("Failed to create asset");
+      }
     }
     setLoading(false);
   };

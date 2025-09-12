@@ -284,7 +284,7 @@ const UpdateEmployeeForm: React.FC = () => {
           useFormData = true;
         }
       }
-      let dataToSend: FormData | Record<string, unknown> = payload;
+      let dataToSend: FormData | Record<string, unknown>;
       let config = {};
       if (useFormData) {
         const formData = new FormData();
@@ -297,22 +297,26 @@ const UpdateEmployeeForm: React.FC = () => {
             formData.append(key, String(value));
           }
         });
-        dataToSend = formData;
+  dataToSend = formData as unknown as FormData;
         config = { headers: { 'Content-Type': 'multipart/form-data' } };
+      } else {
+        dataToSend = payload;
       }
       await axiosInstance.patch(`/employee/${id}/`, dataToSend, config);
       setSuccess('Employee updated successfully!');
       setTimeout(() => navigate(-1), 1200);
     } catch (err: unknown) {
       let errorMsg = 'Failed to update employee';
+      type AxiosErrorType = { response?: { data?: unknown } };
+      const errorObj = err as AxiosErrorType;
       if (
         typeof err === 'object' &&
         err !== null &&
-        'response' in err &&
-        (err as { response?: { data?: unknown } }).response &&
-        'data' in (err as { response?: { data?: unknown } }).response!
+        'response' in errorObj &&
+        errorObj.response &&
+        'data' in errorObj.response
       ) {
-        const respData = (err as { response: { data: unknown } }).response.data;
+        const respData = errorObj.response.data;
         if (typeof respData === 'string') {
           errorMsg = respData;
         } else if (typeof respData === 'object' && respData !== null) {

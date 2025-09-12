@@ -74,16 +74,18 @@ export default function CreateCompany() {
       });
       console.log("Company creation response:", res.data);
       navigate("/master/company"); 
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("Company creation error:", err);
-      if (err.response) {
+  type AxiosErrorType = { response?: { data?: { detail?: string } }, message?: string };
+  const errorObj = err as AxiosErrorType;
+      if (errorObj.response) {
         setFormError(
-          err.response.data?.detail ||
-          JSON.stringify(err.response.data) ||
+          errorObj.response.data?.detail ||
+          JSON.stringify(errorObj.response.data) ||
           "Failed to create company"
         );
       } else {
-        setFormError("Failed to create company: " + (err.message || err.toString()));
+        setFormError("Failed to create company: " + (errorObj.message || String(err)));
       }
     } finally {
       setFormLoading(false);

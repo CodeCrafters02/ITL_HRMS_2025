@@ -267,14 +267,16 @@ const EmployeeRegisterForm: React.FC = () => {
     } catch (err: unknown) {
       // Try to extract backend error message
       let errorMsg = 'Failed to register employee';
+      type AxiosErrorType = { response?: { data?: unknown } };
+      const errorObj = err as AxiosErrorType;
       if (
         typeof err === 'object' &&
         err !== null &&
-        'response' in err &&
-        (err as any).response &&
-        'data' in (err as any).response
+        'response' in errorObj &&
+        errorObj.response &&
+        'data' in errorObj.response
       ) {
-        const respData = (err as { response: { data: unknown } }).response.data;
+        const respData = errorObj.response.data;
         if (typeof respData === 'string') {
           errorMsg = respData;
         } else if (typeof respData === 'object' && respData !== null) {
@@ -295,7 +297,6 @@ const EmployeeRegisterForm: React.FC = () => {
         
         console.error('Backend error:', respData);
       } else {
-       
         console.error('Unknown error:', err);
       }
       setError(errorMsg);

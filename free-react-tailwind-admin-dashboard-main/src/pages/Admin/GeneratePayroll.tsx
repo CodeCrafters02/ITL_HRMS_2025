@@ -2,16 +2,29 @@ import React, { useState } from "react";
 import { Link } from "react-router-dom";
 import { axiosInstance } from "../Dashboard/api";
 
-interface PayrollResult {
-  status: string;
-  batch_id: number;
-  payrolls: any[];
+
+interface Payroll {
+  employee_id?: number;
+  employee?: string | number;
+  employee_name?: string;
+  basic_salary?: number;
+  hra?: number;
+  conveyance?: number;
+  medical?: number;
+  special_allowance?: number;
+  service_charges?: number;
+  extra_allowances?: number;
+  pf?: number;
+  extra_deductions?: number;
+  gross_salary?: number;
+  net_pay?: number;
+  created_at?: string;
 }
 
 const GeneratePayroll: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [generating, setGenerating] = useState(false);
-  const [preview, setPreview] = useState<any[]>([]);
+  const [preview, setPreview] = useState<Payroll[]>([]);
   const [batchId, setBatchId] = useState<number | null>(null);
   const [batchStatus, setBatchStatus] = useState<string>("");
   const [error, setError] = useState<string | null>(null);
@@ -22,16 +35,19 @@ const GeneratePayroll: React.FC = () => {
     setGenerating(true);
     setError(null);
     try {
-      const res = await axiosInstance.post("/generate-payroll/");
-      setPreview(res.data.payroll_preview || []);
-      setBatchId(res.data.batch_id);
-      setBatchStatus(res.data.batch_status);
-    } catch (err: any) {
+            const { data } = await axiosInstance.post("/generate-payroll/");
+            setPreview(data.payroll_preview || []);
+            setBatchId(data.batch_id);
+            setBatchStatus(data.batch_status);
+    } catch (err: unknown) {
       let message = "Failed to generate payroll";
-      if (err.response?.data?.error) {
-        message += ": " + err.response.data.error;
-      } else if (err.message) {
-        message += ": " + err.message;
+      if (typeof err === "object" && err !== null) {
+        const errorObj = err as { response?: { data?: Record<string, unknown> }; message?: string };
+        if (errorObj.response && errorObj.response.data && typeof errorObj.response.data.error === 'string') {
+          message += ": " + errorObj.response.data.error;
+        } else if (errorObj.message) {
+          message += ": " + errorObj.message;
+        }
       }
       setError(message);
     } finally {
@@ -45,15 +61,18 @@ const GeneratePayroll: React.FC = () => {
     setLoading(true);
     setError(null);
     try {
-      const res = await axiosInstance.post(`/payroll-batches/${batchId}/finalize/`);
+            await axiosInstance.post(`/payroll-batches/${batchId}/finalize/`);
       setFinalized(true);
       setBatchStatus("Locked");
-    } catch (err: any) {
+    } catch (err: unknown) {
       let message = "Failed to lock payroll batch";
-      if (err.response?.data?.error) {
-        message += ": " + err.response.data.error;
-      } else if (err.message) {
-        message += ": " + err.message;
+      if (typeof err === "object" && err !== null) {
+        const errorObj = err as { response?: { data?: Record<string, unknown> }; message?: string };
+        if (errorObj.response && errorObj.response.data && typeof errorObj.response.data.error === 'string') {
+          message += ": " + errorObj.response.data.error;
+        } else if (errorObj.message) {
+          message += ": " + errorObj.message;
+        }
       }
       setError(message);
     } finally {

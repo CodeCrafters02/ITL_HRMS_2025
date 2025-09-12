@@ -20,10 +20,7 @@ interface Employee {
   full_name: string;
 }
 
-interface Manager {
-  id: number;
-  name: string;
-}
+
 
 interface TaskData {
   title: string;
@@ -51,9 +48,8 @@ const CreateTask: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
-  const [managers, setManagers] = useState<Manager[]>([]);
   // Use current employee ID from localStorage as manager_id
-  const [selectedManager, setSelectedManager] = useState<string>(() => {
+  const [selectedManager] = useState<string>(() => {
     const empId = localStorage.getItem("employee_id");
     return empId ? empId : "";
   });
@@ -87,14 +83,10 @@ const CreateTask: React.FC = () => {
   useEffect(() => {
     const fetchManagers = async () => {
       try {
-        const response = await axiosInstance.get("reporting-managers/");
-        if (response.data && Array.isArray(response.data.reporting_managers)) {
-          setManagers(response.data.reporting_managers);
-        } else {
-          setManagers([]);
-        }
+        await axiosInstance.get("reporting-managers/");
+        // No longer storing managers, so nothing to set here
       } catch {
-        setManagers([]);
+        // No longer storing managers, so nothing to set here
       }
     };
     fetchManagers();
@@ -128,10 +120,6 @@ const CreateTask: React.FC = () => {
   }, [selectedManager]);
 
   // Convert managers and employees to options format
-  const managerOptions = (managers || []).map(mgr => ({
-    value: mgr.id.toString(),
-    label: mgr.name
-  }));
 
   const employeeOptions = (employees || []).map(emp => ({
     value: emp.id.toString(),

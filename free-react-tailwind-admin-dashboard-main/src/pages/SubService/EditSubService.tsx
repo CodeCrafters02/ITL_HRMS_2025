@@ -1,4 +1,6 @@
 import React, { useEffect, useState } from "react";
+import { ToastContainer, toast } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 import { getServiceList } from "../Services/api";
 import { getSubServiceById, updateSubService } from "./api";
 
@@ -11,7 +13,7 @@ interface ServiceData {
 interface SubServiceEditData {
   name: string;
   description?: string;
-  service: number | "";
+  service: number | null;
 }
 
 interface EditSubServiceProps {
@@ -31,7 +33,7 @@ const EditSubService: React.FC<EditSubServiceProps> = ({
   const [formData, setFormData] = useState<SubServiceEditData>({
     name: "",
     description: "",
-    service: "",
+    service: null,
   });
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -58,10 +60,10 @@ const EditSubService: React.FC<EditSubServiceProps> = ({
         setFormData({
           name: data.name,
           description: data.description || "",
-          service: data.service_details?.id || "",
-
+          service: data.service_details?.id ?? null,
         });
       } catch {
+        toast.error("Failed to load subservice data");
         setError("Failed to load subservice data");
       } finally {
         setLoading(false);
@@ -80,13 +82,14 @@ const EditSubService: React.FC<EditSubServiceProps> = ({
     const { name, value } = e.target;
     setFormData((prev) => ({
       ...prev,
-      [name]: name === "service" ? (value === "" ? "" : Number(value)) : value,
+      [name]: name === "service" ? (value === "" ? null : Number(value)) : value,
     }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.name.trim() || !formData.service) {
+    if (!formData.name.trim() || formData.service === null) {
+      toast.error("Please fill all required fields");
       setError("Please fill all required fields");
       return;
     }
@@ -95,9 +98,11 @@ const EditSubService: React.FC<EditSubServiceProps> = ({
     setError("");
     try {
       await updateSubService(subServiceId!, formData);
+      toast.success("Subservice updated successfully!");
       onUpdated();
       onClose();
     } catch {
+      toast.error("Failed to update subservice");
       setError("Failed to update subservice");
     } finally {
       setSaving(false);
@@ -106,6 +111,7 @@ const EditSubService: React.FC<EditSubServiceProps> = ({
 
   return (
     <div className="fixed inset-0 bg-white/50 backdrop-blur-sm flex items-center justify-center z-50">
+      <ToastContainer position="top-right" autoClose={3000} hideProgressBar={false} newestOnTop closeOnClick pauseOnHover aria-label="Notification" />
       <div className="bg-white rounded-lg shadow-lg max-w-md w-full p-6">
         <h2 className="text-xl font-semibold mb-4">Edit SubService</h2>
 
@@ -152,22 +158,22 @@ const EditSubService: React.FC<EditSubServiceProps> = ({
                   Services
                 </label>            
                 <select
-                id="service"
-                name="service"
-                value={formData.service || ""}
-                onChange={handleChange}
-                disabled={saving}
-                className="w-full p-2 border rounded dark:bg-gray-700 dark:text-white"
-            >
-                <option value="">Select a service</option>
-                {services
-                .filter((s) => s.is_active) // only show active services
-                .map((s) => (
-                    <option key={s.id} value={s.id}>
-                    {s.name}
-                    </option>
-                ))}
-            </select>
+        id="service"
+        name="service"
+        value={formData.service !== null ? formData.service : ""}
+        onChange={handleChange}
+        disabled={saving}
+        className="w-full p-2 border rounded dark:bg-gray-700 dark:text-white"
+      >
+        <option value="">Select a service</option>
+        {services
+        .filter((s) => s.is_active) // only show active services
+        .map((s) => (
+          <option key={s.id} value={s.id}>
+          {s.name}
+          </option>
+        ))}
+      </select>
             </div>
 
               <div className="flex justify-end space-x-2">

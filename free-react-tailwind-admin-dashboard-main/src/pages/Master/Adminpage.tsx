@@ -1,4 +1,6 @@
 import { useEffect, useState } from "react";
+import { ToastContainer, toast } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 import { useNavigate } from "react-router-dom";
 import { axiosInstance } from "../Dashboard/api";
 import { FiEdit, FiTrash2 } from "react-icons/fi";
@@ -43,17 +45,23 @@ const AdminPage: React.FC = () => {
     fetchAdmins();
   }, []);
 
+  const [deleteConfirmId, setDeleteConfirmId] = useState<number | null>(null);
   if (loading) return <div>Loading admins...</div>;
   if (error) return <div>Error: {error}</div>;
 
   // Delete handler
   const handleDelete = async (id: number) => {
-    if (!window.confirm("Are you sure you want to delete this admin?")) return;
+    setDeleteConfirmId(id);
+  };
+  const confirmDelete = async (id: number) => {
     try {
       await axiosInstance.delete(`/admin-register/${id}/`);
       setAdmins((prev) => prev.filter((a) => a.id !== id));
-    } catch (err) {
-      alert("Failed to delete admin.");
+      toast.success("Admin deleted successfully.");
+    } catch {
+      toast.error("Failed to delete admin.");
+    } finally {
+      setDeleteConfirmId(null);
     }
   };
 
@@ -85,8 +93,9 @@ const AdminPage: React.FC = () => {
         )
       );
       handleCancel();
-    } catch (err) {
-      alert("Failed to update admin.");
+      toast.success("Admin updated successfully.");
+    } catch {
+      toast.error("Failed to update admin.");
     } finally {
       setSaving(false);
     }
@@ -94,6 +103,7 @@ const AdminPage: React.FC = () => {
 
   return (
     <>
+      <ToastContainer position="top-right" autoClose={3000} hideProgressBar={false} newestOnTop closeOnClick pauseOnHover aria-label="Notification" />
       <PageMeta title="Admin List" description="Admin management page" />
       <PageBreadcrumb pageTitle="Admin List" />
       <div className="space-y-6">
@@ -186,6 +196,28 @@ const AdminPage: React.FC = () => {
                           >
                             <FiTrash2 />
                           </button>
+                          {deleteConfirmId === admin.id && (
+                            <div className="fixed inset-0 flex items-center justify-center z-50  bg-opacity-30">
+                              <div className="bg-white rounded-lg shadow-lg p-6 w-80">
+                                <div className="mb-4 text-lg font-semibold text-gray-800">Confirm Delete</div>
+                                <div className="mb-6 text-gray-600">Are you sure you want to delete this {admin.username}?</div>
+                                <div className="flex gap-4 justify-end">
+                                  <button
+                                    className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"
+                                    onClick={() => confirmDelete(admin.id)}
+                                  >
+                                    Delete
+                                  </button>
+                                  <button
+                                    className="px-4 py-2 bg-gray-300 text-gray-800 rounded hover:bg-gray-400"
+                                    onClick={() => setDeleteConfirmId(null)}
+                                  >
+                                    Cancel
+                                  </button>
+                                </div>
+                              </div>
+                            </div>
+                          )}
                         </>
                       )}
                     </td>

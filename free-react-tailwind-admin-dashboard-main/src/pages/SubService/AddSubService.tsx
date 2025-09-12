@@ -5,11 +5,27 @@ import { createSubService } from "./api";
 interface ServiceOption {
   id: number;
   name: string;
+  is_active?: boolean;
+}
+
+
+interface SubService {
+  id: number;
+  name: string;
+  description?: string | null;
+  service: number;
+  service_details?: {
+    id: number;
+    name: string;
+  };
+  is_active?: boolean;
+  created_at?: string;
+  updated_at?: string;
 }
 
 interface AddSubServiceProps {
   onClose: () => void;
-  onAdd: (newSubService: any) => void; // adjust type if needed
+  onAdd: (newSubService: SubService) => void;
 }
 
 const AddSubService: React.FC<AddSubServiceProps> = ({ onClose, onAdd }) => {
@@ -51,7 +67,7 @@ const AddSubService: React.FC<AddSubServiceProps> = ({ onClose, onAdd }) => {
       };
       const newSubService = await createSubService(data);
       onAdd(newSubService);
-    } catch (err) {
+    } catch {
       setError("Failed to create subservice");
     } finally {
       setSubmitting(false);

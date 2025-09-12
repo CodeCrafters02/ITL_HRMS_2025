@@ -85,10 +85,12 @@ const LetterTemplates = lazy(() => import("./pages/Admin/LetterTemplate"));
 const LetterDup = lazy(() => import("./pages/Admin/Letter_dup"));
 const PayslipPage = lazy(() => import("./pages/Admin/Payslip"));
 const UpdateEmployeeForm = lazy(() => import("./pages/Forms/UpdateEmployeeForm"));
-
+const UpdateAttendanceForm = lazy(() => import("./pages/Forms/UpdateAttendanceForm"));
 
 const UserManagementPage = lazy(() => import("./pages/UserManagement/index"));
+const AddUserPage = lazy(() => import("./pages/UserManagement/AddUser"));
 const ProductPage = lazy(() => import("./pages/Products/index"));
+const AddProductPage = lazy(() => import("./pages/Products/AddProducts"));
 const ServicePage = lazy(() => import("./pages/Services/index"));
 const SubServicePage = lazy(() => import("./pages/SubService/index"));
 const DemoRequestPage = lazy(() => import("./pages/DemoRequests/index"));
@@ -138,9 +140,11 @@ export function appRoutes() {
             <Route path="/master/company" element={<CompanyList />} />
             <Route path="/master/company/create" element={<CreateCompany />} />
             <Route path="/master/products" element={<ProductPage />} />
+            <Route path="/master/products/add" element={<AddProductPage />} />
             <Route path="/master/services" element={<ServicePage />} />
             <Route path="/master/subservices" element={<SubServicePage />} />
             <Route path="/master/usermanagement" element={<UserManagementPage />} />
+            <Route path="/master/usermanagement/add" element={<AddUserPage />} />
             <Route path="/master/demorequest" element={<DemoRequestPage />} />
             <Route path="/master/contactrequest" element={<ContactRequestPage />} />
 
@@ -204,6 +208,7 @@ export function appRoutes() {
             <Route path="letter-pdf" element={<LetterDup />} />
             <Route path="payslip" element={<PayslipPage />} />
             <Route path="update-employee-form/:id" element={<UpdateEmployeeForm />} />
+            <Route path="update-attendance/:employee_id" element={<UpdateAttendanceForm />} />
 
 
             {/* Admin Change Password */}

@@ -2,6 +2,13 @@ import { useEffect } from "react";
 import PageMeta from "../../components/common/PageMeta";
 import { useNotifications } from "../../context/NotificationContext";
 
+interface Notification {
+  id: string | number; // Allow both string and number IDs to match backend
+  title: string;
+  description: string;
+  date: string;
+}
+
 const Notifications: React.FC = () => {
   const { notifications, loading, error, fetchNotifications, markAllAsRead } = useNotifications();
 
@@ -33,69 +40,134 @@ const Notifications: React.FC = () => {
     }
   };
 
-  const getNotificationIcon = (index: number) => {
-    // Cycle through different notification types for visual variety
-    const iconTypes = [
-      "info", // Info notification
-      "announcement", // Announcement
-      "reminder", // Reminder
-      "update" // System update
-    ];
+  const getNotificationIcon = (notification: Notification) => {
+    // Determine if it's a reminder based on title keywords
+    const isReminder = notification.title.toLowerCase().includes('reminder') || 
+                      notification.title.toLowerCase().includes('deadline') ||
+                      notification.title.toLowerCase().includes('due') ||
+                      notification.title.toLowerCase().includes('expire') ||
+                      notification.description.toLowerCase().includes('reminder');
     
-    const type = iconTypes[index % iconTypes.length];
+    if (isReminder) {
+      return (
+        <div className="flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-r from-yellow-100 to-orange-100 dark:from-yellow-900/30 dark:to-orange-900/30 ring-2 ring-yellow-200 dark:ring-yellow-700">
+          <svg className="h-6 w-6 text-yellow-600 dark:text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+        </div>
+      );
+    } else {
+      // Default to info notification
+      return (
+        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-100 dark:bg-blue-900/30">
+          <svg className="h-5 w-5 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+        </div>
+      );
+    }
+  };
+
+  const getNotificationStyle = (notification: Notification) => {
+    const isReminder = notification.title.toLowerCase().includes('reminder') || 
+                      notification.title.toLowerCase().includes('deadline') ||
+                      notification.title.toLowerCase().includes('due') ||
+                      notification.title.toLowerCase().includes('expire') ||
+                      notification.description.toLowerCase().includes('reminder');
     
-    switch (type) {
-      case "info":
-        return (
-          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-100 dark:bg-blue-900/30">
-            <svg className="h-5 w-5 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-          </div>
-        );
-      case "announcement":
-        return (
-          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-purple-100 dark:bg-purple-900/30">
-            <svg className="h-5 w-5 text-purple-600 dark:text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z" />
-            </svg>
-          </div>
-        );
-      case "reminder":
-        return (
-          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-yellow-100 dark:bg-yellow-900/30">
-            <svg className="h-5 w-5 text-yellow-600 dark:text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-          </div>
-        );
-      case "update":
-        return (
-          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-green-100 dark:bg-green-900/30">
-            <svg className="h-5 w-5 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-            </svg>
-          </div>
-        );
-      default:
-        return (
-          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gray-100 dark:bg-gray-800">
-            <svg className="h-5 w-5 text-gray-600 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-5 5-5-5h5v-5a7.5 7.5 0 00-15 0v5h5l-5 5-5-5h5V7a9.966 9.966 0 0110-10z" />
-            </svg>
-          </div>
-        );
+    if (isReminder) {
+      return "group rounded-lg border-2 border-yellow-300 bg-gradient-to-r from-yellow-50 to-orange-50 p-6 shadow-lg transition-all duration-200 hover:border-yellow-400 hover:shadow-xl dark:border-yellow-600 dark:from-yellow-900/20 dark:to-orange-900/20 dark:hover:border-yellow-500";
+    } else {
+      return "group rounded-lg border border-gray-200 bg-white p-6 shadow-sm transition-all duration-200 hover:border-gray-300 hover:shadow-md dark:border-gray-700 dark:bg-gray-800 dark:hover:border-gray-600";
+    }
+  };
+
+  const getNotificationBadge = (notification: Notification) => {
+    const isReminder = notification.title.toLowerCase().includes('reminder') || 
+                      notification.title.toLowerCase().includes('deadline') ||
+                      notification.title.toLowerCase().includes('due') ||
+                      notification.title.toLowerCase().includes('expire') ||
+                      notification.description.toLowerCase().includes('reminder');
+    
+    if (isReminder) {
+      return (
+        <div className="flex items-center space-x-2">
+         
+          <span className="inline-flex items-center rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-800 dark:bg-gray-700 dark:text-gray-300">
+            {formatDate(notification.date)}
+          </span>
+        </div>
+      );
+    } else {
+      return (
+        <div className="flex items-center space-x-2">
+          
+          <span className="inline-flex items-center rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-800 dark:bg-gray-700 dark:text-gray-300">
+            {formatDate(notification.date)}
+          </span>
+        </div>
+      );
     }
   };
 
   // Group notifications by Today, Yesterday, or date
-  const groupByDate = (notifications: typeof notifications) => {
-    const groups: { [label: string]: typeof notifications } = {};
+  const groupByDate = (notifications: Notification[]) => {
+    const groups: { [label: string]: Notification[] } = {};
     const today = new Date();
     const yesterday = new Date();
     yesterday.setDate(today.getDate() - 1);
 
-    notifications.forEach((n) => {
+    // Enhanced deduplication logic - remove duplicates based on multiple criteria
+    const uniqueNotifications = notifications.filter((notification, index, self) => {
+      const isDuplicate = self.findIndex((n) => {
+        // Check for exact duplicates (same ID, title, description)
+        const exactMatch = n.id === notification.id && 
+                          n.title === notification.title && 
+                          n.description === notification.description;
+        
+        // Special handling for learning corner notifications
+        const isLearningCorner = notification.title.toLowerCase().includes('learning') || 
+                               notification.description.toLowerCase().includes('learning') ||
+                               String(notification.id).includes('learning');
+        
+        const otherIsLearningCorner = n.title.toLowerCase().includes('learning') || 
+                                    n.description.toLowerCase().includes('learning') ||
+                                    String(n.id).includes('learning');
+        
+        if (isLearningCorner && otherIsLearningCorner) {
+          // For learning corner notifications, check if they're about the same content
+          const sameTitle = n.title.trim().toLowerCase() === notification.title.trim().toLowerCase();
+          const sameDay = new Date(n.date).toDateString() === new Date(notification.date).toDateString();
+          
+          // If same title and same day, consider them duplicates regardless of description differences
+          if (sameTitle && sameDay) {
+            console.log(`Duplicate learning corner found: ${n.id} and ${notification.id}`);
+            return true;
+          }
+        }
+        
+        // Standard content match for non-learning corner notifications
+        const contentMatch = n.title.trim().toLowerCase() === notification.title.trim().toLowerCase() && 
+                            n.description.trim().toLowerCase() === notification.description.trim().toLowerCase();
+        
+        return exactMatch || contentMatch;
+      });
+      
+      return isDuplicate === index; // Keep only the first occurrence
+    });
+
+    // Debug logging
+    const learningCornerCount = notifications.filter(n => 
+      n.title.toLowerCase().includes('learning') || n.description.toLowerCase().includes('learning')
+    ).length;
+    const uniqueLearningCornerCount = uniqueNotifications.filter(n => 
+      n.title.toLowerCase().includes('learning') || n.description.toLowerCase().includes('learning')
+    ).length;
+    
+    console.log(`Learning Corner - Original: ${learningCornerCount}, After deduplication: ${uniqueLearningCornerCount}`);
+    console.log(`Total - Original: ${notifications.length}, After deduplication: ${uniqueNotifications.length}`);
+
+    uniqueNotifications.forEach((n: Notification) => {
       const nDate = new Date(n.date);
       let label = nDate.toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" });
       if (
@@ -123,7 +195,10 @@ const Notifications: React.FC = () => {
       if (b === "Yesterday") return 1;
       return new Date(b).getTime() - new Date(a).getTime();
     });
-    return sortedLabels.map(label => ({ label, items: groups[label].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()) }));
+    return sortedLabels.map(label => ({
+      label,
+      items: groups[label].sort((a: Notification, b: Notification) => new Date(b.date).getTime() - new Date(a.date).getTime())
+    }));
   };
 
   const grouped = groupByDate(notifications);
@@ -233,7 +308,7 @@ const Notifications: React.FC = () => {
                   Notifications
                 </h1>
                 <p className="mt-2 text-gray-600 dark:text-gray-400">
-                  Stay updated with company announcements and important information
+                  Stay updated with important information and reminders
                 </p>
               </div>
               <button
@@ -245,6 +320,26 @@ const Notifications: React.FC = () => {
                 </svg>
                 Refresh
               </button>
+            </div>
+
+            {/* Legend */}
+            <div className="mt-4 flex items-center space-x-6 rounded-lg bg-white p-4 shadow-sm dark:bg-gray-800">
+              <div className="flex items-center space-x-2">
+                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-100 dark:bg-blue-900/30">
+                  <svg className="h-4 w-4 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                </div>
+                <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Information</span>
+              </div>
+              <div className="flex items-center space-x-2">
+                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-r from-yellow-100 to-orange-100 dark:from-yellow-900/30 dark:to-orange-900/30 ring-1 ring-yellow-200 dark:ring-yellow-700">
+                  <svg className="h-4 w-4 text-yellow-600 dark:text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                </div>
+                <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Reminders (Action Required)</span>
+              </div>
             </div>
           </div>
 
@@ -273,14 +368,14 @@ const Notifications: React.FC = () => {
                   </div>
                   {/* Notifications for this group */}
                   <div className="space-y-4">
-                    {group.items.map((notification, index) => (
+                    {group.items.map((notification: Notification, index: number) => (
                       <div
-                        key={notification.id}
-                        className="group rounded-lg border border-gray-200 bg-white p-6 shadow-sm transition-all duration-200 hover:border-gray-300 hover:shadow-md dark:border-gray-700 dark:bg-gray-800 dark:hover:border-gray-600"
+                        key={`${notification.id}-${index}`}
+                        className={getNotificationStyle(notification)}
                       >
                         <div className="flex items-start space-x-4">
                           {/* Notification Icon */}
-                          {getNotificationIcon(index)}
+                          {getNotificationIcon(notification)}
                           {/* Notification Content */}
                           <div className="min-w-0 flex-1">
                             <div className="flex items-start justify-between">
@@ -293,9 +388,7 @@ const Notifications: React.FC = () => {
                                 </p>
                               </div>
                               <div className="ml-4 flex-shrink-0">
-                                <span className="inline-flex items-center rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-800 dark:bg-gray-700 dark:text-gray-300">
-                                  {formatDate(notification.date)}
-                                </span>
+                                {getNotificationBadge(notification)}
                               </div>
                             </div>
                           </div>

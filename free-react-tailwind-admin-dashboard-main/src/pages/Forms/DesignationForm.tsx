@@ -6,6 +6,12 @@ import Input from "../../components/form/input/InputField";
 import Label from "../../components/form/Label";
 import Select from "../../components/form/Select";
 import { axiosInstance } from "../Dashboard/api";
+import { AxiosError } from "axios";
+
+interface DesignationErrorResponse {
+  designation_name?: string;
+  detail?: string;
+}
 import { Info } from 'lucide-react';
 
 interface Department {
@@ -76,10 +82,8 @@ export default function DesignationForm() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
     // Validate form
     const isDesignationNameValid = validateDesignationName(designationName);
-    
     if (!isDesignationNameValid || !department || !level) {
       setError("Please fill in all fields correctly.");
       return;
@@ -87,7 +91,6 @@ export default function DesignationForm() {
 
     setLoading(true);
     setError("");
-    
     try {
       await axiosInstance.post("/designations/", {
         designation_name: designationName.trim(),
@@ -97,7 +100,16 @@ export default function DesignationForm() {
       setSuccess("Designation created successfully!");
       setTimeout(() => navigate("/admin/branch-mgt/designation"), 1500);
     } catch (err) {
-      const errorMessage = (err as any)?.response?.data?.detail || "Failed to create designation. Please try again.";
+      let errorMessage = "Failed to create designation. Please try again.";
+      if (err && (err as AxiosError).isAxiosError) {
+        const axiosErr = err as AxiosError<DesignationErrorResponse>;
+        const data = axiosErr.response?.data;
+        if (data?.designation_name) {
+          errorMessage = data.designation_name;
+        } else if (data?.detail) {
+          errorMessage = data.detail;
+        }
+      }
       setError(errorMessage);
       console.error("Error creating designation:", err);
     } finally {

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { axiosInstance } from "../Dashboard/api";
+import { AxiosError } from 'axios';
 
 interface LeaveLog {
   id: number;
@@ -22,13 +23,21 @@ const RejectedLeave: React.FC = () => {
       try {
         const res = await axiosInstance.get('/rejected-leaves/');
         setLeaveLogs(res.data);
-      } catch (err: any) {
+      } catch (err: unknown) {
         console.error(err);
         let message = 'Failed to fetch leave data';
-        if (err.response && err.response.data && err.response.data.detail) {
-          message += ': ' + err.response.data.detail;
-        } else if (err.message) {
-          message += ': ' + err.message;
+        if (typeof err === 'object' && err !== null) {
+          const errorObj = err as AxiosError;
+          if (errorObj.response && errorObj.response.data) {
+            const data = errorObj.response.data;
+            if (typeof data === 'object' && data !== null && 'detail' in data) {
+              message += ': ' + String((data as Record<string, unknown>).detail);
+            } else if (typeof data === 'string') {
+              message += ': ' + data;
+            }
+          } else if ('message' in errorObj && typeof errorObj.message === 'string') {
+            message += ': ' + errorObj.message;
+          }
         }
         setError(message);
       } finally {

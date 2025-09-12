@@ -2,9 +2,8 @@ import React, { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { axiosInstance } from "../Dashboard/api";
 
-interface CompanyPolicyFormProps {}
 
-const CompanyPolicyForm: React.FC<CompanyPolicyFormProps> = () => {
+const CompanyPolicyForm: React.FC = () => {
   const [name, setName] = useState("");
   const [document, setDocument] = useState<File | null>(null);
   const [isActive, setIsActive] = useState(true);

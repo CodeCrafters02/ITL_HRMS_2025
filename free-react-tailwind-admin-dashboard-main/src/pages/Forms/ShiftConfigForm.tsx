@@ -50,8 +50,10 @@ const ShiftConfigForm: React.FC = () => {
     try {
       await axiosInstance.post("/shift-policies/", form);
       navigate("/admin/configuration/shift"); // Adjust path as needed
-    } catch (err) {
-      setError("Failed to add shift policy. Please try again.");
+    } catch (err: unknown) {
+      type AxiosErrorType = { response?: { data?: { detail?: string } } };
+      const errorObj = err as AxiosErrorType;
+      setError(errorObj.response?.data?.detail || "Failed to add shift policy. Please try again.");
     }
     setLoading(false);
   };

@@ -1,8 +1,6 @@
-import React ,{useEffect,useState,useRef}from 'react';
-import { Link } from 'react-router-dom';
+import { useEffect, useState, useRef } from 'react';
 import BaseLayout from './BaseLayout.js';
-import { useNavigate } from 'react-router-dom';
-import { getSubServiceList, SubServiceData } from './api'; 
+import { getSubServiceList, SubServiceData } from './api';
 
 const DigitalMarketing = () => {
   const [stylesLoaded, setStylesLoaded] = useState(false);
@@ -124,7 +122,7 @@ const DigitalMarketing = () => {
             });
 
             // Dropdown menu functionality
-            $('.mil-has-children a').on('click', function(this: HTMLElement, e: any) {
+            $('.mil-has-children a').on('click', function(this: HTMLElement, e: MouseEvent) {
                 e.preventDefault();
                 $('.mil-has-children ul').removeClass('mil-active');
                 $('.mil-has-children a').removeClass('mil-active');
@@ -133,13 +131,13 @@ const DigitalMarketing = () => {
             });
 
             // Back to top functionality
-            $('.mil-back-to-top .mil-link').on('click', function(e: any) {
+            $('.mil-back-to-top .mil-link').on('click', function(e: MouseEvent) {
                 e.preventDefault();
                 $('html, body').animate({ scrollTop: 0 }, 800);
             });
 
             // Smooth scroll for anchor links
-            $('a[href^="#"]').on('click', function(this: HTMLElement, e: any) {
+            $('a[href^="#"]').on('click', function(this: HTMLElement, e: MouseEvent) {
                 e.preventDefault();
                 const target = $(this.getAttribute('href'));
                 if (target.length) {

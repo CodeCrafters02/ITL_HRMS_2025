@@ -67,32 +67,7 @@ const MyTask: React.FC = () => {
     setExpandedTaskId(expandedTaskId === taskId ? null : taskId);
   };
 
-  const handleStatusChange = async (id: number, type: 'main' | 'subtask', parentId?: number) => {
-    try {
-      // PATCH request to update status
-      await axiosInstance.patch(
-        type === 'main' ? `tasks/${id}/` : `subtasks/${id}/`,
-        { status: 'completed' }
-      );
-      // Update local state
-      setTasks(prev => prev.map(task => {
-        if (type === 'main' && task.id === id) {
-          return { ...task, status: 'completed' };
-        }
-        if (type === 'subtask' && task.id === parentId) {
-          return {
-            ...task,
-            subtask_details: task.subtask_details.map(st =>
-              st.id === id ? { ...st, status: 'completed' } : st
-            )
-          };
-        }
-        return task;
-      }));
-    } catch (err) {
-      alert('Failed to update status.');
-    }
-  };
+  // Removed unused handleStatusChange function
 
   const handleAssignmentStatusChange = async (assignmentId: number, newStatus: string, parentId?: number, isSubtask?: boolean) => {
     try {

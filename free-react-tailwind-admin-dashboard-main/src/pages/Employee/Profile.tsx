@@ -12,7 +12,7 @@ import Box from '@mui/material/Box';
 export default function EmployeeProfiles() {
   const [tab, setTab] = React.useState('personal');
 
-  const handleTabChange = (event: React.SyntheticEvent, newValue: string) => {
+  const handleTabChange = (_: React.SyntheticEvent, newValue: string) => {
     setTab(newValue);
   };
 

@@ -2,8 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { useRef } from 'react';
 import { 
   Calendar, 
-  Download, 
-  Printer, 
   Search, 
   Settings, 
   ChevronDown, 
@@ -81,11 +79,34 @@ const AttendanceLog: React.FC = () => {
       .then(res => {
         const backendData = res.data;
         const month_dates: string[] = calendarDates;
-        const attendance_records: AttendanceRecord[] = backendData.map(emp => {
-          const daily_records: { [date: string]: DailyRecord } = {};
-          // Fill all dates for the month
-          month_dates.forEach(date => {
-            const d = emp.daily_attendance.find((rec: any) => rec.date === date);
+                const attendance_records: AttendanceRecord[] = backendData.map((emp: {
+                  employee_id: number;
+                  employee_name: string;
+                  daily_attendance: Array<{
+                    date: string;
+                    status: string;
+                    check_in: string | null;
+                    check_out: string | null;
+                    is_late: boolean;
+                    leave_type?: string;
+                    remarks?: string;
+                  }>;
+                  total_working_days: number;
+                  shift_policy?: { full_day_hours?: number };
+                  percentage_present: string;
+                }) => {
+                    const daily_records: { [date: string]: DailyRecord } = {};
+                    // Fill all dates for the month
+                    month_dates.forEach(date => {
+                        const d = emp.daily_attendance.find((rec: {
+                          date: string;
+                          status: string;
+                          check_in: string | null;
+                          check_out: string | null;
+                          is_late: boolean;
+                          leave_type?: string;
+                          remarks?: string;
+                        }) => rec.date === date);
             if (d) {
               daily_records[date] = {
                 status: d.status === 'Present' ? 'P' : d.status === 'Absent' ? 'A' : d.status === 'Leave' ? 'L' : d.status === 'Half Day' ? 'H' : d.status === 'Holiday' ? 'H' : '-',
@@ -178,7 +199,7 @@ const AttendanceLog: React.FC = () => {
         text = `Leave: ${record.leave_type || 'General Leave'}\nDate: ${new Date(date).toLocaleDateString()}`;
       } else if (record.status === 'H') {
         text = `Holiday: ${record.holiday_name || 'Public Holiday'}\nDate: ${new Date(date).toLocaleDateString()}`;
-      } else if (record.status === 'H' && record.half_day) {
+      } else if (record.status === 'HD' && record.half_day) {
         text = `Half Day Holiday\nDate: ${new Date(date).toLocaleDateString()}`;
       }
       setTooltip({
@@ -191,18 +212,8 @@ const AttendanceLog: React.FC = () => {
 
     const hideTooltip = () => setTooltip(null);
 
-    // Half Day
-    if (record.status === 'H' && record.half_day) {
-      return (
-        <div
-          className={baseClasses + ' bg-amber-400 hover:bg-amber-500'}
-          onMouseEnter={showTooltip}
-          onMouseLeave={hideTooltip}
-        >
-          <span className="font-bold">½</span>
-        </div>
-      );
-    }
+  // Half Day (should be status 'H' and half_day true, but previous 'H' branch covers all 'H' cases)
+  // Remove unreachable duplicate branch.
     // Present
     if (record.status === 'P') {
       return (
@@ -501,6 +512,7 @@ const AttendanceLog: React.FC = () => {
                 <tr className="bg-slate-50 border-b border-slate-200">
                   <th className="w-16 px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">#</th>
                   <th className="w-48 px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Employee</th>
+                  <th className="w-16 px-4 py-3 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider">Action</th>
                   <th className="w-32 px-4 py-3 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider">Attendance</th>
                   <th className="w-24 px-4 py-3 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider">Hours</th>
                   {attendanceData?.month_dates?.map((date) => {
@@ -528,6 +540,18 @@ const AttendanceLog: React.FC = () => {
                           <div className="text-sm font-medium text-slate-900">{record.employee_name}</div>
                           <div className="text-xs text-slate-500">ID: EMP{String(record.employee_id).padStart(5, '0')}</div>
                         </div>
+                      </td>
+                      {/* Action column */}
+                      <td className="px-4 py-4 text-center">
+                        <button
+                          className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-slate-100 hover:bg-blue-100 text-slate-500 hover:text-blue-600 transition-colors"
+                          title="Update Attendance"
+                          onClick={() => {
+                            window.location.href = `/admin/update-attendance/${record.employee_id}`;
+                          }}
+                        >
+                          <Settings className="w-5 h-5" />
+                        </button>
                       </td>
                       <td className="px-4 py-4">
                         <div className="flex items-center justify-center space-x-2">

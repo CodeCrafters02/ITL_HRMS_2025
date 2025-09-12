@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { AxiosError } from 'axios';
 import { axiosInstance } from '../Dashboard/api';
 import { useNavigate } from 'react-router-dom';
 import ComponentCard from '../../components/common/ComponentCard';
@@ -109,6 +110,20 @@ Date: ______________________________
       setContent('');
       setEmailContent('Dear <name>,\n\nPlease find attached your letter.\n\nRegards,\n<company>');
     } catch (err: unknown) {
+      let msg = 'Failed to create letter template';
+      if (typeof err === 'object' && err !== null) {
+        const errorObj = err as AxiosError;
+        if (errorObj.response && errorObj.response.data) {
+          if (typeof errorObj.response.data === 'string') {
+            msg = errorObj.response.data;
+          } else if (typeof errorObj.response.data === 'object' && 'error' in errorObj.response.data) {
+            msg = String((errorObj.response.data as Record<string, unknown>).error);
+          }
+        } else if ('message' in errorObj && typeof errorObj.message === 'string') {
+          msg = errorObj.message;
+        }
+      }
+      setError(msg);
       console.error('Backend error:', err);
     } finally {
       setLoading(false);

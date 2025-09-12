@@ -1,8 +1,9 @@
 import { useEffect, useState } from "react";
 import { FiTrash2, FiEdit } from "react-icons/fi";
 import PageBreadcrumb from "../../components/common/PageBreadCrumb";
-import ComponentCard from "../../components/common/ComponentCard";
 import PageMeta from "../../components/common/PageMeta";
+import { ToastContainer, toast } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 
 import { 
   getSubServiceList, 
@@ -21,7 +22,7 @@ interface SubService {
     id: number;
     name: string;
   };
-  is_active: boolean; // Optional - add if you track active status
+  is_active?: boolean; // Optional - add if you track active status
   created_at?: string;
   updated_at?: string;
 }
@@ -33,6 +34,7 @@ const SubServicesPage: React.FC = () => {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editSubServiceId, setEditSubServiceId] = useState<number | null>(null);
+  const [deleteConfirmId, setDeleteConfirmId] = useState<number | null>(null);
 
   useEffect(() => {
     fetchSubServices();
@@ -41,7 +43,7 @@ const SubServicesPage: React.FC = () => {
   const fetchSubServices = async () => {
     try {
       const list = await getSubServiceList();
-      setSubservices(list);
+  setSubservices(list as SubService[]);
     } catch (err: unknown) {
       if (err instanceof Error) setError(err.message);
       else setError("Unknown error");
@@ -50,13 +52,18 @@ const SubServicesPage: React.FC = () => {
     }
   };
 
-  const handleDelete = async (id: number) => {
-    if (!window.confirm("Are you sure you want to delete this subservice?")) return;
+  const handleDelete = (id: number) => {
+    setDeleteConfirmId(id);
+  };
+  const confirmDelete = async (id: number) => {
     try {
       await deleteSubService(id);
       setSubservices((prev) => prev.filter((s) => s.id !== id));
+      toast.success("Subservice deleted successfully.");
     } catch {
-      alert("Failed to delete subservice.");
+      toast.error("Failed to delete subservice.");
+    } finally {
+      setDeleteConfirmId(null);
     }
   };
 
@@ -81,7 +88,8 @@ const SubServicesPage: React.FC = () => {
       <PageMeta title="SubServices" description="SubServices management page" />
       <PageBreadcrumb pageTitle="SubServices" />
       <div className="space-y-6">
-        <ComponentCard title="SubService List">
+        <div className="bg-white rounded-xl shadow p-6 mb-6">
+          <h2 className="text-lg font-semibold mb-4">SubService List</h2>
           <button
             className="mb-4 bg-blue-600 text-white px-4 py-2 rounded"
             onClick={() => setIsAddModalOpen(true)}
@@ -155,9 +163,31 @@ const SubServicesPage: React.FC = () => {
               )}
             </tbody>
           </table>
-        </ComponentCard>
+  </div>
       </div>
 
+      {deleteConfirmId !== null && (
+        <div className="fixed inset-0 flex items-center justify-center z-50  bg-opacity-30">
+          <div className="bg-white rounded-lg shadow-lg p-6 w-80">
+            <div className="mb-4 text-lg font-semibold text-gray-800">Confirm Delete</div>
+            <div className="mb-6 text-gray-600">Are you sure you want to delete this {subservices.find(s => s.id === deleteConfirmId)?.name}?</div>
+            <div className="flex gap-4 justify-end">
+              <button
+                className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"
+                onClick={() => confirmDelete(deleteConfirmId)}
+              >
+                Delete
+              </button>
+              <button
+                className="px-4 py-2 bg-gray-300 text-gray-800 rounded hover:bg-gray-400"
+                onClick={() => setDeleteConfirmId(null)}
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       {isAddModalOpen && (
         <AddSubService
           onClose={() => setIsAddModalOpen(false)}
@@ -172,6 +202,7 @@ const SubServicesPage: React.FC = () => {
           onUpdated={onSubServiceUpdated}
         />
       )}
+      <ToastContainer position="top-right" autoClose={3000} hideProgressBar={false} newestOnTop closeOnClick pauseOnHover aria-label="Notification" />
     </>
   );
 };

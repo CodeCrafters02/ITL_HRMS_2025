@@ -13,8 +13,6 @@ const EditUser: React.FC<EditUserProps> = ({ userId, isOpen, onClose, onUpdated 
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
-  const [password, setPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
 
   useEffect(() => {
     if (!isOpen) return;
@@ -33,7 +31,7 @@ const EditUser: React.FC<EditUserProps> = ({ userId, isOpen, onClose, onUpdated 
       });
   }, [isOpen, userId]);
 
-  const handleChange = (field: keyof UserRegister, value: any) => {
+  const handleChange = <K extends keyof UserRegister>(field: K, value: UserRegister[K]) => {
     setUserData((prev) => ({ ...prev, [field]: value }));
   };
 
@@ -41,20 +39,12 @@ const EditUser: React.FC<EditUserProps> = ({ userId, isOpen, onClose, onUpdated 
     e.preventDefault();
     setError("");
 
-    if (password && password !== confirmPassword) {
-      setError("Passwords do not match");
-      return;
-    }
-
-    if (password && password.length < 6) {
-      setError("Password must be at least 6 characters");
-      return;
-    }
+  // ...existing code...
 
     setSaving(true);
     try {
-      // Build data to update; include password only if provided
-      const updateData: Partial<UserRegister> & { password?: string } = {
+      // Build data to update
+      const updateData: Partial<UserRegister> = {
         username: userData.username!,
         email: userData.email!,
         role: userData.role!,
@@ -63,14 +53,14 @@ const EditUser: React.FC<EditUserProps> = ({ userId, isOpen, onClose, onUpdated 
         is_active: userData.is_active,
       };
 
-      if (password) {
-        updateData.password = password;
-      }
-
       await updateUser(userId, updateData);
       onUpdated();
-    } catch (err: any) {
-      setError(err.message || "Failed to update user");
+    } catch (err) {
+      if (err instanceof Error) {
+        setError(err.message || "Failed to update user");
+      } else {
+        setError("Failed to update user");
+      }
     } finally {
       setSaving(false);
     }

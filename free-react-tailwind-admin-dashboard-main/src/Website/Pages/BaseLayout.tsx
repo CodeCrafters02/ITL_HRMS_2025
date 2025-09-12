@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import type { ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { useTemplateScripts } from '../../hooks/useTemplateScripts.js';
-import { useNavigate } from 'react-router-dom';
+// import { useNavigate } from 'react-router-dom';
 
 interface BreadcrumbItem {
   text: string;
@@ -17,17 +17,23 @@ interface BaseLayoutProps {
 
 declare global {
   interface Window {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     jQuery: any;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     gsap: any;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     ScrollTrigger: any;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     SmoothScroll: any;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     Swiper: any;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     Fancybox: any;
   }
 }
 
 const BaseLayout: React.FC<BaseLayoutProps> = ({ children, pageTitle, breadcrumbItems = [] }) => {
-  const { cursorRef, preloaderRef, progressRef } = useTemplateScripts();
+  const { cursorRef, progressRef } = useTemplateScripts();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [hover, setHover] = useState(false);
 
@@ -65,14 +71,14 @@ const BaseLayout: React.FC<BaseLayoutProps> = ({ children, pageTitle, breadcrumb
     fontWeight: "700",
     boxShadow: "0 6px 16px rgba(136,136,136,0.5)",
     textDecoration: "none",
-    textAlign: "center",
-    textTransform: "uppercase",
+  textAlign: "center" as React.CSSProperties["textAlign"],
+  textTransform: "uppercase" as React.CSSProperties["textTransform"],
     fontSize: "16px",
     letterSpacing: "2px",
     whiteSpace: "nowrap",
     cursor: "pointer",
     transition: "background-color 0.3s ease",
-    userSelect: "none",
+  userSelect: "none" as React.CSSProperties["userSelect"],
     display: "inline-block",
     marginLeft: "auto",
     marginRight: "100px",
@@ -169,7 +175,7 @@ const BaseLayout: React.FC<BaseLayoutProps> = ({ children, pageTitle, breadcrumb
         });
 
         // Dropdown menu functionality
-        $('.mil-has-children a').off('click').on('click', function(this: HTMLElement, e: any) {
+  $('.mil-has-children a').off('click').on('click', function(this: HTMLElement, e: MouseEvent) {
           e.preventDefault();
           $('.mil-has-children ul').removeClass('mil-active');
           $('.mil-has-children a').removeClass('mil-active');
@@ -178,13 +184,13 @@ const BaseLayout: React.FC<BaseLayoutProps> = ({ children, pageTitle, breadcrumb
         });
 
         // Back to top functionality
-        $('.mil-back-to-top .mil-link').off('click').on('click', function(e: any) {
+  $('.mil-back-to-top .mil-link').off('click').on('click', function(e: MouseEvent) {
           e.preventDefault();
           $('html, body').animate({ scrollTop: 0 }, 800);
         });
 
         // Smooth scroll for anchor links
-        $('a[href^="#"]').off('click').on('click', function(this: HTMLElement, e: any) {
+  $('a[href^="#"]').off('click').on('click', function(this: HTMLElement, e: MouseEvent) {
           e.preventDefault();
           const target = $(this.getAttribute('href'));
           if (target.length) {
@@ -207,8 +213,8 @@ const BaseLayout: React.FC<BaseLayoutProps> = ({ children, pageTitle, breadcrumb
         }
 
         // Initialize smooth scrolling
-        if (typeof window.SmoothScroll !== 'undefined') {
-          new window.SmoothScroll('a[href*="#"]', {
+        if (typeof window.SmoothScroll !== 'undefined' && window.SmoothScroll) {
+          new (window.SmoothScroll as unknown as { new(selector: string, options: object): unknown })('a[href*="#"]', {
             speed: 800,
             speedAsDuration: true,
             offset: 100

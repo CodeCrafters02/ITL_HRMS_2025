@@ -1,14 +1,14 @@
-import React, { useEffect, useState, useRef } from "react";
-import BaseLayout from './BaseLayout.js';
+import { useEffect, useState, useRef } from "react";
+import BaseLayout from './BaseLayout';
 
 export default function TermsAndConditions() {
-  const [stylesLoaded, setStylesLoaded] = useState(false);
-  const scriptsLoadedRef = useRef(false);
+  const [stylesLoaded, setStylesLoaded] = useState<boolean>(false);
+  const scriptsLoadedRef = useRef<boolean>(false);
 
   useEffect(() => {
     if (scriptsLoadedRef.current) return;
 
-    const scriptUrls = [
+  const scriptUrls: string[] = [
       '/src/Website/static/js/plugins/jquery.min.js',
       '/src/Website/static/js/plugins/swup.min.js',
       '/src/Website/static/js/plugins/swiper.min.js',
@@ -19,10 +19,10 @@ export default function TermsAndConditions() {
       '/src/Website/static/js/plugins/ScrollTo.min.js'
     ];
 
-    const loadedScripts = [];
+  const loadedScripts: HTMLScriptElement[] = [];
 
-    const loadScript = (url) => {
-      return new Promise((resolve, reject) => {
+    const loadScript = (url: string): Promise<void> => {
+      return new Promise<void>((resolve, reject) => {
         if (document.querySelector(`script[src="${url}"]`)) {
           resolve();
           return;
@@ -37,7 +37,7 @@ export default function TermsAndConditions() {
       });
     };
 
-    const loadAllScripts = async () => {
+    const loadAllScripts = async (): Promise<void> => {
       for (const url of scriptUrls) {
         try {
           await loadScript(url);
@@ -61,7 +61,7 @@ export default function TermsAndConditions() {
   }, []);
 
   useEffect(() => {
-    const styles = [
+  const styles: string[] = [
       "/src/Website/static/css/plugins/bootstrap-grid.css",
       "https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css",
       "/src/Website/static/css/plugins/swiper.min.css",
@@ -70,7 +70,7 @@ export default function TermsAndConditions() {
     ];
 
     let loadedCount = 0;
-    const links = styles.map((href) => {
+    const links: HTMLLinkElement[] = styles.map((href: string) => {
       const link = document.createElement("link");
       link.rel = "stylesheet";
       link.href = href;

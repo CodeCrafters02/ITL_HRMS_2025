@@ -146,9 +146,8 @@ const Calendar: React.FC = () => {
           />
         </div>
         <Modal
-          isOpen={isOpen}
+          open={isOpen}
           onClose={closeModal}
-          className="max-w-[700px] p-6 lg:p-10"
         >
           <div className="flex flex-col px-2 overflow-y-auto custom-scrollbar">
             <div>
@@ -268,8 +267,15 @@ const Calendar: React.FC = () => {
   );
 };
 
-const renderEventContent = (eventInfo: any) => {
-  const colorClass = `fc-bg-${eventInfo.event.extendedProps.calendar.toLowerCase()}`;
+const renderEventContent = (eventInfo: {
+  event: {
+    title: string;
+    extendedProps?: { calendar?: string };
+  };
+  timeText: string;
+}) => {
+  const calendar = eventInfo.event.extendedProps?.calendar;
+  const colorClass = calendar ? `fc-bg-${String(calendar).toLowerCase()}` : "";
   return (
     <div
       className={`event-fc-color flex fc-event-main ${colorClass} p-1 rounded-sm`}

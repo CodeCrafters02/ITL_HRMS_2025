@@ -4,7 +4,8 @@ import { useNavigate } from 'react-router-dom';
 import { axiosInstance } from "../Dashboard/api";
 import ComponentCard from "../../components/common/ComponentCard";
 import { Table, TableBody, TableCell, TableHeader, TableRow } from "../../components/ui/table";
-import { toast, ToastContainer } from 'react-toastify';
+import { toast } from 'react-toastify';
+import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 
 interface Employee {
@@ -78,8 +79,17 @@ const EmployeeRegister: React.FC = () => {
       await axiosInstance.delete(`/employee/${deleteId}/`);
       setEmployees((prev) => prev.filter((emp) => emp.id !== deleteId));
       toast.success('Deleted successfully');
-    } catch (err) {
-      toast.error('Failed to delete');
+    } catch (err: unknown) {
+      let message = 'Failed to delete';
+      if (typeof err === 'object' && err !== null) {
+        const errorObj = err as { response?: { data?: Record<string, unknown> }; message?: string };
+        if (errorObj.response && errorObj.response.data && typeof errorObj.response.data.error === 'string') {
+          message += ": " + errorObj.response.data.error;
+        } else if (errorObj.message) {
+          message += ": " + errorObj.message;
+        }
+      }
+      toast.error(message);
     } finally {
       setShowConfirm(false);
       setDeleteId(null);
@@ -137,7 +147,6 @@ const EmployeeRegister: React.FC = () => {
 
   if (loading) return <div>Loading...</div>;
   if (error) return <div>{error}</div>;
-  if (!employees.length) return <div>No employees found</div>;
 
 
   const filteredEmployees = employees.filter(emp => {
@@ -341,18 +350,6 @@ const EmployeeRegister: React.FC = () => {
                         )}
                       </div>
                     </TableCell>
-                    {/* Guardian Name */}
-                    <TableCell className="border border-gray-200 dark:border-gray-700 p-4">
-                      <span className="text-sm text-gray-900 dark:text-gray-100">{emp.guardian_name || '-'}</span>
-                    </TableCell>
-                    {/* Guardian Mobile */}
-                    <TableCell className="border border-gray-200 dark:border-gray-700 p-4">
-                      <span className="text-sm text-gray-900 dark:text-gray-100">{emp.guardian_mobile || '-'}</span>
-                    </TableCell>
-                    {/* Category */}
-                    <TableCell className="border border-gray-200 dark:border-gray-700 p-4">
-                      <span className="text-sm text-gray-900 dark:text-gray-100">{emp.category || '-'}</span>
-                    </TableCell>
                     {/* Department */}
                     <TableCell className="border border-gray-200 dark:border-gray-700 p-4">
                       <span className="inline-flex items-center px-2 py-0.5 rounded-full text-sm font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
@@ -365,130 +362,6 @@ const EmployeeRegister: React.FC = () => {
                         {emp.designation_name || '-'}
                       </span>
                     </TableCell>
-                    {/* Reporting Level */}
-                    <TableCell className="border border-gray-200 dark:border-gray-700 p-4">
-                      <span className="text-sm text-gray-900 dark:text-gray-100">{emp.reporting_level_name || '-'}</span>
-                    </TableCell>
-                    {/* Reporting Manager */}
-                    <TableCell className="border border-gray-200 dark:border-gray-700 p-4">
-                      <span className="text-sm text-gray-900 dark:text-gray-100">
-                        {Array.isArray(emp.reporting_manager_name) && emp.reporting_manager_name.length > 0
-                          ? emp.reporting_manager_name.map((mgr) => [mgr.first_name, mgr.last_name].filter(Boolean).join(' ')).join(', ')
-                          : emp.reporting_manager && typeof emp.reporting_manager === 'object' && emp.reporting_manager.first_name
-                            ? [emp.reporting_manager.first_name, emp.reporting_manager.last_name].filter(Boolean).join(' ')
-                            : emp.reporting_manager_name && typeof emp.reporting_manager_name === 'object' && 'first_name' in emp.reporting_manager_name
-                              ? [emp.reporting_manager_name.first_name, emp.reporting_manager_name.last_name].filter(Boolean).join(' ')
-                              : typeof emp.reporting_manager_name === 'string' && emp.reporting_manager_name
-                                ? emp.reporting_manager_name
-                                : typeof emp.reporting_manager === 'string' && emp.reporting_manager
-                                  ? emp.reporting_manager
-                                  : '-'}
-                      </span>
-                    </TableCell>
-                    {/* Date of Joining */}
-                    <TableCell className="border border-gray-200 dark:border-gray-700 p-4">
-                      <span className="text-sm text-gray-900 dark:text-gray-100">
-                        {emp.date_of_joining ? new Date(emp.date_of_joining).toLocaleDateString() : '-'}
-                      </span>
-                    </TableCell>
-                    {/* Previous Employer */}
-                    <TableCell className="border border-gray-200 dark:border-gray-700 p-4">
-                      <span className="text-sm text-gray-900 dark:text-gray-100">{emp.previous_employer || '-'}</span>
-                    </TableCell>
-                    {/* Date of Releaving */}
-                    <TableCell className="border border-gray-200 dark:border-gray-700 p-4">
-                      <span className="text-sm text-gray-900 dark:text-gray-100">
-                        {emp.date_of_releaving ? new Date(emp.date_of_releaving).toLocaleDateString() : '-'}
-                      </span>
-                    </TableCell>
-                    {/* Previous Designation */}
-                    <TableCell className="border border-gray-200 dark:border-gray-700 p-4">
-                      <span className="text-sm text-gray-900 dark:text-gray-100">{emp.previous_designation_name || '-'}</span>
-                    </TableCell>
-                    {/* Previous Salary */}
-                    <TableCell className="border border-gray-200 dark:border-gray-700 p-4">
-                      <span className="text-sm text-gray-900 dark:text-gray-100">
-                        {emp.previous_salary ? `₹${emp.previous_salary.toLocaleString()}` : '-'}
-                      </span>
-                    </TableCell>
-                    {/* CTC */}
-                    <TableCell className="border border-gray-200 dark:border-gray-700 p-4">
-                      <span className="font-medium text-gray-900 dark:text-white text-sm">
-                        ₹{emp.ctc?.toLocaleString() || '0'}
-                      </span>
-                    </TableCell>
-                    {/* Gross Salary */}
-                    <TableCell className="border border-gray-200 dark:border-gray-700 p-4">
-                      <span className="text-sm text-gray-900 dark:text-gray-100">
-                        {emp.gross_salary ? `₹${emp.gross_salary.toLocaleString()}` : '-'}
-                      </span>
-                    </TableCell>
-                    {/* EPF Status */}
-                    <TableCell className="border border-gray-200 dark:border-gray-700 p-4">
-                      <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-sm font-medium ${
-                        emp.epf_status === 'Yes' 
-                          ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' 
-                          : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
-                      }`}>
-                        {emp.epf_status || 'No'}
-                      </span>
-                    </TableCell>
-                    {/* UAN */}
-                    <TableCell className="border border-gray-200 dark:border-gray-700 p-4">
-                      <span className="text-sm text-gray-900 dark:text-gray-100 font-mono">{emp.uan || '-'}</span>
-                    </TableCell>
-                    {/* ESIC Status */}
-                    <TableCell className="border border-gray-200 dark:border-gray-700 p-4">
-                      <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-sm font-medium ${
-                        emp.esic_status === 'Yes' 
-                          ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' 
-                          : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
-                      }`}>
-                        {emp.esic_status || 'No'}
-                      </span>
-                    </TableCell>
-                    {/* ESIC No */}
-                    <TableCell className="border border-gray-200 dark:border-gray-700 p-4">
-                      <span className="text-sm text-gray-900 dark:text-gray-100 font-mono">{emp.esic_no || '-'}</span>
-                    </TableCell>
-                    {/* Payment Method */}
-                    <TableCell className="border border-gray-200 dark:border-gray-700 p-4">
-                      <span className="text-sm text-gray-900 dark:text-gray-100">{emp.payment_method || '-'}</span>
-                    </TableCell>
-                    {/* Bank Name */}
-                    <TableCell className="border border-gray-200 dark:border-gray-700 p-4">
-                      <span className="text-sm text-gray-900 dark:text-gray-100">{emp.bank_name || '-'}</span>
-                    </TableCell>
-                    {/* Account No */}
-                    <TableCell className="border border-gray-200 dark:border-gray-700 p-4">
-                      <span className="text-sm text-gray-900 dark:text-gray-100 font-mono">{emp.account_no || '-'}</span>
-                    </TableCell>
-                    {/* IFSC Code */}
-                    <TableCell className="border border-gray-200 dark:border-gray-700 p-4">
-                      <span className="text-sm text-gray-900 dark:text-gray-100 font-mono">{emp.ifsc_code || '-'}</span>
-                    </TableCell>
-                    {/* Source of Employment */}
-                    <TableCell className="border border-gray-200 dark:border-gray-700 p-4">
-                      <span className="text-sm text-gray-900 dark:text-gray-100">{emp.source_of_employment || '-'}</span>
-                    </TableCell>
-                    {/* Referred By */}
-                    <TableCell className="border border-gray-200 dark:border-gray-700 p-4">
-                      <span className="text-sm text-gray-900 dark:text-gray-100">{
-                        Array.isArray(emp.who_referred) && emp.who_referred.length > 0
-              ? emp.who_referred
-                .filter((ref): ref is { id: number; first_name: string; last_name: string } => typeof ref === 'object' && ref !== null && 'id' in ref && 'first_name' in ref && 'last_name' in ref)
-                .map((ref) => [ref.first_name, ref.last_name].filter(Boolean).join(' ')).join(', ')
-                          : emp.who_referred && typeof emp.who_referred === 'object' && !Array.isArray(emp.who_referred) && 'first_name' in emp.who_referred && 'last_name' in emp.who_referred
-                            ? [emp.who_referred.first_name, emp.who_referred.last_name].filter(Boolean).join(' ')
-                            : typeof emp.who_referred === 'string' && emp.who_referred
-                              ? emp.who_referred
-                              : '-'
-                      }</span>
-                    </TableCell>
-                    {/* Assets Assigned */}
-                    <TableCell className="border border-gray-200 dark:border-gray-700 p-4">
-                      <span className="text-sm text-gray-900 dark:text-gray-100">{Array.isArray(emp.asset_names) ? emp.asset_names.join(', ') : (emp.asset_names || '-')}</span>
-                    </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
@@ -496,7 +369,7 @@ const EmployeeRegister: React.FC = () => {
           </div>
         </ComponentCard>
       </div>
-      <ToastContainer position="top-right" autoClose={2000} hideProgressBar={false} newestOnTop={false} closeOnClick rtl={false} pauseOnFocusLoss draggable pauseOnHover />
+      <ToastContainer position="top-right" autoClose={2000} hideProgressBar={false} newestOnTop={false} closeOnClick rtl={false} pauseOnFocusLoss draggable pauseOnHover aria-label="Notification" />
     </div>
   );
 };

@@ -16,6 +16,7 @@ export default function SignInForm() {
     password: "",
   });
   const [toast, setToast] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
 
   const navigate = useNavigate();
 
@@ -29,37 +30,73 @@ export default function SignInForm() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
+    // Validation
+    if (!formData.username.trim() || !formData.password.trim()) {
+      setToast("Please enter both username and password.");
+      setTimeout(() => setToast(null), 3000);
+      return;
+    }
+
+    setIsLoading(true);
+
     try {
       const response = await axios.post(
         "http://127.0.0.1:8000/app/login/",
-        formData
+        {
+          username: formData.username.trim(),
+          password: formData.password,
+        },
+        {
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        }
       );
 
       const { access, refresh, role } = response.data;
 
+      if (!access || !refresh || !role) {
+        throw new Error("Invalid response from server");
+      }
+
       localStorage.setItem("access_token", access);
       localStorage.setItem("refresh_token", refresh);
+      localStorage.setItem("user_role", role);
 
-      // Optionally set default header for other requests
+      // Set default header for other requests
       axios.defaults.headers.common["Authorization"] = `Bearer ${access}`;
 
-      setToast("SignIn successfully");
-      setTimeout(() => setToast(null), 3000);
+      setToast("Sign in successful! Redirecting...");
 
-      if (role === "master") {
-        navigate("/master-dashboard");
-      } else if (role === "admin") {
-        navigate("/admin");
-      } else if (role === "employee") {
-        navigate("/employee");
-      } else {
-        setToast("Unknown role. Cannot redirect.");
-        setTimeout(() => setToast(null), 3000);
-      }
+      // Redirect based on role
+      setTimeout(() => {
+        if (role === "master") {
+          navigate("/master-dashboard");
+        } else if (role === "admin") {
+          navigate("/admin");
+        } else if (role === "employee") {
+          navigate("/employee");
+        } else {
+          setToast("Unknown role. Cannot redirect.");
+          setTimeout(() => setToast(null), 3000);
+        }
+      }, 1000);
+
     } catch (err) {
-      console.error("Login failed:", err);
-      setToast("Login failed. Check credentials.");
-      setTimeout(() => setToast(null), 3000);
+      if (axios.isAxiosError(err)) {
+        const errorMessage = err.response?.data?.detail || 
+                           err.response?.data?.message || 
+                           err.response?.data?.error ||
+                           "Login failed. Please check your credentials.";
+        
+        setToast(errorMessage);
+      } else {
+        setToast("Network error. Please try again.");
+      }
+      
+      setTimeout(() => setToast(null), 5000);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -125,9 +162,10 @@ export default function SignInForm() {
 
           <button
             type="submit"
-            className="w-full px-4 py-3 text-sm font-medium text-white bg-brand-500 rounded-lg hover:bg-brand-600"
+            disabled={isLoading}
+            className="w-full px-4 py-3 text-sm font-medium text-white bg-brand-500 rounded-lg hover:bg-brand-600 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            Sign In
+            {isLoading ? "Signing In..." : "Sign In"}
           </button>
         </form>
 

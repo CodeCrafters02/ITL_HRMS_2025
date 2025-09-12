@@ -12,6 +12,9 @@ import calendar
 from django.contrib.auth import authenticate
 from rest_framework_simplejwt.tokens import RefreshToken
 from datetime import date
+import io
+from django.utils import timezone
+from .utils import generate_letter_pdf, fill_placeholders
 from decimal import Decimal
 from django.core.mail import EmailMessage
 from .utils import generate_payslip_pdf
@@ -44,6 +47,9 @@ class MasterRegisterViewSet(viewsets.ModelViewSet):
     def create(self, request):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
+        email = serializer.validated_data.get('email')
+        if UserRegister.objects.filter(email=email).exists():
+            return Response({"detail": "Email already exists."}, status=status.HTTP_400_BAD_REQUEST)
         if serializer.validated_data['role'] != 'master':
             return Response({"error": "Role must be 'master'"}, status=status.HTTP_400_BAD_REQUEST)
         self.perform_create(serializer)
@@ -1085,6 +1091,60 @@ class AttendanceViewSet(viewsets.ModelViewSet):
         
 class AttendanceLogView(APIView):
     permission_classes = [IsAuthenticated, IsAdminUser]
+    
+    def post(self, request):
+        employee_id = request.data.get('employee_id')
+        date_str = request.data.get('date')
+        check_in = request.data.get('check_in')
+        check_out = request.data.get('check_out')
+        remarks = request.data.get('remarks', '')
+        status_val = request.data.get('status', None)  # Optional: Present/Absent/Leave/Half Day/Holiday
+
+        if not employee_id or not date_str:
+            return Response({'error': 'employee_id and date are required.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            emp = Employee.objects.get(employee_id=employee_id)
+        except Employee.DoesNotExist:
+            return Response({'error': 'Employee not found.'}, status=status.HTTP_404_NOT_FOUND)
+
+        try:
+            date_obj = datetime.strptime(date_str, '%Y-%m-%d').date()
+        except Exception:
+            return Response({'error': 'Invalid date format. Use YYYY-MM-DD.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        att, created = Attendance.objects.get_or_create(
+                            employee=emp,
+                            date=date_obj,
+                            company=emp.company,  # Ensure company is set
+                            defaults={}
+                        )        # Prefill check-in if exists and no check-out
+        prefill = {}
+        if att.check_in and not att.check_out:
+            prefill['check_in'] = att.check_in.strftime('%H:%M')
+
+        # Update fields if provided
+        if check_in:
+            att.check_in = datetime.combine(date_obj, datetime.strptime(check_in, '%H:%M').time())
+        if check_out:
+            att.check_out = datetime.combine(date_obj, datetime.strptime(check_out, '%H:%M').time())
+        if remarks:
+            att.remarks = remarks
+        if status_val:
+            att.status = status_val  # If you have a status field
+
+        att.save()
+
+        return Response({
+            'message': 'Attendance updated.',
+            'employee_id': emp.employee_id,
+            'date': date_str,
+            'check_in': att.check_in.strftime('%H:%M') if att.check_in else None,
+            'check_out': att.check_out.strftime('%H:%M') if att.check_out else None,
+            'remarks': att.remarks,
+            'prefill': prefill
+        }, status=status.HTTP_200_OK)
+        
     def get(self, request):
         month = request.query_params.get('month')  
         if not month:
@@ -1341,10 +1401,7 @@ class GenerateLetterContentAPIView(APIView):
 
 
     def post(self, request):
-        import io
-        from django.utils import timezone
-        from .utils import generate_letter_pdf, fill_placeholders
-
+        
         template_id = request.data.get('template_id')
         letter_type = request.data.get('type')
         employee_id = request.data.get('employee_id')

@@ -33,7 +33,7 @@ const EmpLeaveForm: React.FC = () => {
 			// Expecting array of leaves with from_date and to_date
 			setExistingLeaves(
 				Array.isArray(res.data)
-					? res.data.map((l: any) => ({ from_date: l.from_date, to_date: l.to_date }))
+					? res.data.map((l: { from_date: string; to_date: string }) => ({ from_date: l.from_date, to_date: l.to_date }))
 					: []
 			);
 		});
@@ -65,15 +65,15 @@ const EmpLeaveForm: React.FC = () => {
 			return;
 		}
 
-				// Validation: check for overlap with existing leaves (backend logic, robust)
-				const overlap = existingLeaves.some(l =>
-				  isDateRangeOverlap(fromDate, toDate, l.from_date, l.to_date)
-				);
-				if (overlap) {
-				  setError("Leave already exists for the given dates.");
-				  setLoading(false);
-				  return;
-				}
+						// Validation: check for overlap with existing leaves (backend logic, robust)
+						const overlap = existingLeaves.some(l =>
+							isDateRangeOverlap(fromDate, toDate, l.from_date, l.to_date)
+						);
+						if (overlap) {
+							setError("Leave already exists for the given dates.");
+							setLoading(false);
+							return;
+						}
 
 		try {
 			await axiosInstance.post("employee-leave-create/", {
@@ -91,12 +91,14 @@ const EmpLeaveForm: React.FC = () => {
 			axiosInstance.get("emp-leaves/").then(res => {
 				setExistingLeaves(
 					Array.isArray(res.data)
-						? res.data.map((l: any) => ({ from_date: l.from_date, to_date: l.to_date }))
+						? res.data.map((l: { from_date: string; to_date: string }) => ({ from_date: l.from_date, to_date: l.to_date }))
 						: []
 				);
 			});
-		} catch (err: any) {
-			setError(err?.response?.data?.detail || "Failed to submit leave application.");
+		} catch (err: unknown) {
+			type AxiosErrorType = { response?: { data?: { detail?: string } } };
+			const errorObj = err as AxiosErrorType;
+			setError(errorObj.response?.data?.detail || "Failed to submit leave application.");
 		} finally {
 			setLoading(false);
 		}

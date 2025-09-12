@@ -1,4 +1,6 @@
 import React, { useEffect, useState } from "react";
+import { ToastContainer, toast } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 import { getServiceById, updateService } from "./api";
 import Button from "../../components/ui/button/Button";
 import Input from "../../components/form/input/InputField";
@@ -23,8 +25,6 @@ const EditServiceModal: React.FC<EditServiceModalProps> = ({
   onClose,
   onUpdated,
 }) => {
-  if (!isOpen) return null;
-
   const [formData, setFormData] = useState<ServiceEditData>({
     name: "",
     description: "",
@@ -45,7 +45,7 @@ const EditServiceModal: React.FC<EditServiceModalProps> = ({
           });
         })
         .catch(() => {
-          alert("Failed to load service");
+          toast.error("Failed to load service");
         })
         .finally(() => {
           setLoading(false);
@@ -53,14 +53,23 @@ const EditServiceModal: React.FC<EditServiceModalProps> = ({
     }
   }, [serviceId, isOpen]);
 
+  if (!isOpen) return null;
+
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
   ) => {
-    const { name, value, type, checked } = e.target;
-    setFormData((prev) => ({
-      ...prev,
-      [name]: type === "checkbox" ? checked : value,
-    }));
+    const { name, value, type } = e.target;
+    if (type === "checkbox" && "checked" in e.target) {
+      setFormData((prev) => ({
+        ...prev,
+        [name]: (e.target as HTMLInputElement).checked,
+      }));
+    } else {
+      setFormData((prev) => ({
+        ...prev,
+        [name]: value,
+      }));
+    }
   };
 
 const handleSubmit = async (e: React.FormEvent) => {
@@ -70,12 +79,11 @@ const handleSubmit = async (e: React.FormEvent) => {
   setSaving(true);
   try {
     await updateService(serviceId!, formData);
-    alert("Service updated successfully!");
+    toast.success("Service updated successfully!");
     onUpdated();
-    // Move this after async stuff finishes
     onClose();
   } catch {
-    alert("Failed to update service.");
+    toast.error("Failed to update service.");
   } finally {
     setSaving(false);
   }
@@ -83,6 +91,7 @@ const handleSubmit = async (e: React.FormEvent) => {
 
   return (
     <div className="fixed inset-0 bg-white/50 backdrop-blur-sm flex items-center justify-center z-50">
+      <ToastContainer position="top-right" autoClose={3000} hideProgressBar={false} newestOnTop closeOnClick pauseOnHover aria-label="Notification" />
       <div className="bg-white dark:bg-gray-800 p-6 rounded shadow w-full max-w-md">
         <h2 className="text-2xl font-bold mb-4 text-gray-900 dark:text-white">
           Edit Service

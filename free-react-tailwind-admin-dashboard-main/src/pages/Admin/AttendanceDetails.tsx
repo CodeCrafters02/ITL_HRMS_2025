@@ -255,14 +255,14 @@ const Attendance: React.FC = () => {
             <div className="flex space-x-2">
               <button
                 onClick={downloadPDF}
-                className="flex items-center space-x-2 bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg transition-colors duration-200"
+                className="flex items-center space-x-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors duration-200"
               >
                 <FileText className="h-4 w-4" />
                 <span>Export PDF</span>
               </button>
               <button
                 onClick={downloadExcel}
-                className="flex items-center space-x-2 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg transition-colors duration-200"
+                className="flex items-center space-x-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors duration-200"
               >
                 <FileSpreadsheet className="h-4 w-4" />
                 <span>Export Excel</span>

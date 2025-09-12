@@ -72,8 +72,10 @@ export default function LevelForm() {
       });
       setSuccess("Level created successfully!");
       setTimeout(() => navigate("/admin/branch-mgt/level"), 1500);
-    } catch (err) {
-      const errorMessage = (err as any)?.response?.data?.detail || "Failed to create level. Please try again.";
+    } catch (err: unknown) {
+      type AxiosErrorType = { response?: { data?: { detail?: string } } };
+      const errorObj = err as AxiosErrorType;
+      const errorMessage = errorObj.response?.data?.detail || "Failed to create level. Please try again.";
       setError(errorMessage);
       console.error("Error creating level:", err);
     } finally {

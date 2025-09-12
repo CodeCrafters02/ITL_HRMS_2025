@@ -5,11 +5,16 @@ import HomeLayout from './HomeLayout.js';
 // TypeScript declarations for global variables
 declare global {
     interface Window {
-        jQuery: any;
-        $: any;
-        gsap: any;
-        ScrollTrigger: any;
-        Swiper: any;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      jQuery: any;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      $: any;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      gsap: any;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      ScrollTrigger: any;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      Swiper: any;
     }
 }
 
@@ -20,11 +25,10 @@ interface HomeProps {
 const Home: React.FC<HomeProps> = ({ hasPreloaderShown }) => {
     const scriptsLoadedRef = useRef<boolean>(false);
     const [activeIndex, setActiveIndex] = useState(0); 
-    const [activeFAQ, setActiveFAQ] = useState(null);
-    const [activeTestimonial, setActiveTestimonial] = useState(0);
-  const [faqExpanded, setFaqExpanded] = useState(false);
+  const [activeFAQ, setActiveFAQ] = useState<number | null>(null);
+  // Removed unused states: activeTestimonial, faqExpanded
 
-  const toggleFAQ = (index) => {
+  const toggleFAQ = (index: number) => {
     setActiveFAQ(activeFAQ === index ? null : index);
   };
 
@@ -141,7 +145,7 @@ const Home: React.FC<HomeProps> = ({ hasPreloaderShown }) => {
             });
 
             // Dropdown menu functionality
-            $('.mil-has-children a').on('click', function(this: HTMLElement, e: any) {
+            $('.mil-has-children a').on('click', function(this: HTMLElement, e: MouseEvent) {
                 e.preventDefault();
                 $('.mil-has-children ul').removeClass('mil-active');
                 $('.mil-has-children a').removeClass('mil-active');
@@ -150,13 +154,13 @@ const Home: React.FC<HomeProps> = ({ hasPreloaderShown }) => {
             });
 
             // Back to top functionality
-            $('.mil-back-to-top .mil-link').on('click', function(e: any) {
+            $('.mil-back-to-top .mil-link').on('click', function(e: MouseEvent) {
                 e.preventDefault();
                 $('html, body').animate({ scrollTop: 0 }, 800);
             });
 
             // Smooth scroll for anchor links
-            $('a[href^="#"]').on('click', function(this: HTMLElement, e: any) {
+            $('a[href^="#"]').on('click', function(this: HTMLElement, e: MouseEvent) {
                 e.preventDefault();
                 const target = $(this.getAttribute('href'));
                 if (target.length) {

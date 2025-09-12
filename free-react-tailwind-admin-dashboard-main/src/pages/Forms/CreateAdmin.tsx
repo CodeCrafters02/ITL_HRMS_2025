@@ -36,7 +36,7 @@ export default function CreateAdmin() {
       const error = err as AxiosError;
       if (error.response && error.response.data) {
         // Try to get detail or fallback to stringified error
-        const data = error.response.data as any;
+        const data = error.response.data as unknown as { detail?: string };
         setError(data?.detail || JSON.stringify(data) || error.message || "Failed to create admin");
       } else {
         setError(error.message || "Failed to create admin");

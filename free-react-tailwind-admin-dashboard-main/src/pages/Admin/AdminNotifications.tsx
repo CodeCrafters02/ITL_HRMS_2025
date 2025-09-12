@@ -1,3 +1,9 @@
+interface Notification {
+  id: number;
+  title: string;
+  description: string;
+  date: string;
+}
 import React, { useEffect, useState } from "react";
 import { TrashIcon } from '@heroicons/react/24/outline';
 import { axiosInstance } from "../../pages/Dashboard/api";
@@ -28,7 +34,7 @@ import TextArea from "../../components/form/input/TextArea";
 import Button from "../../components/ui/button/Button";
 
 export default function AdminNotifications() {
-  const [notifications, setNotifications] = useState<any[]>([]);
+  const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [form, setForm] = useState({ title: "", description: "", date: "" });
@@ -58,7 +64,7 @@ export default function AdminNotifications() {
   useEffect(() => {
     setLoading(true);
     axiosInstance.get("/notifications/")
-      .then((res: { data: any[] }) => setNotifications(res.data))
+      .then((res: { data: Notification[] }) => setNotifications(res.data))
       .catch(() => setNotifications([]))
       .finally(() => setLoading(false));
   }, []);
@@ -72,7 +78,7 @@ export default function AdminNotifications() {
   const handleAdd = (e: React.FormEvent) => {
     e.preventDefault();
     axiosInstance.post("/notifications/", form)
-      .then((res: { data: any }) => {
+      .then((res: { data: Notification }) => {
         setNotifications(prev => [res.data, ...prev]);
         setShowModal(false);
         setForm({ title: "", description: "", date: "" });
@@ -117,7 +123,7 @@ export default function AdminNotifications() {
           </div>
         ) : (
           <div className="space-y-4">
-            {notifications.map((notification, index) => (
+            {notifications.map((notification) => (
               <div
                 key={notification.id}
                 className="group rounded-lg border border-gray-200 bg-white p-6 shadow-sm transition-all duration-200 hover:border-gray-300 hover:shadow-md relative"

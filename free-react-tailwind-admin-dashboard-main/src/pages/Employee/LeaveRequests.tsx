@@ -46,7 +46,8 @@ const LeaveRequests: React.FC = () => {
             : leave
         )
       );
-    } catch (err) {
+    } catch (err : unknown) {
+      console.error("Action failed:", err);
       // Optionally show error
     }
   };

@@ -1,4 +1,4 @@
-import { createApiUrl, getAuthHeaders } from "../../access/access.ts";
+import { createApiUrl } from "../../access/access.ts";
 import axios from "axios";
 
 export interface ServiceData {
