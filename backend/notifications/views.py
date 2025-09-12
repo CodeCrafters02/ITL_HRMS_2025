@@ -14,7 +14,7 @@ class DeviceTokenView(APIView):
     def post(self, request):
         token = request.data.get("token")
         user = request.user
-        print("DEBUG >> Saving token:", token, "for user:", user.id, user.username)
+       
 
         if not token:
             return Response({"detail": "Token required."}, status=status.HTTP_400_BAD_REQUEST)
@@ -27,7 +27,7 @@ class DeviceTokenView(APIView):
 
         if not created:
             if device.user != user:
-                print(f"DEBUG >> Updating token {token} from user {device.user_id} to {user.id}")
+                
                 device.user = user
                 device.save(update_fields=["user"])
 

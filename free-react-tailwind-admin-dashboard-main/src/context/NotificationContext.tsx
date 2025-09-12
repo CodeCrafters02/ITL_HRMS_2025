@@ -76,16 +76,6 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
         }
       }
       
-      console.log(`Raw notifications: ${rawNotifications.length}, After deduplication: ${uniqueNotifications.length}`);
-      
-      // Log learning corner specific info
-      const learningNotifs = uniqueNotifications.filter(n => 
-        n.title.toLowerCase().includes('learning') || 
-        n.description.toLowerCase().includes('learning') ||
-        n.type === 'learning_corner'
-      );
-      console.log(`Learning corner notifications: ${learningNotifs.length}`, learningNotifs);
-      
       setNotifications(uniqueNotifications);
       const readIds = getReadIds();
       const unread = uniqueNotifications.filter((n) => !readIds.includes(n.id)).length;
@@ -172,11 +162,9 @@ const eventSource = new window.EventSource(sseUrl);
           });
           
           if (isDuplicate) {
-            console.log('SSE: Skipping duplicate notification', newNotification);
             return prev;
           }
           
-          console.log('SSE: Adding new notification', newNotification);
           return [newNotification, ...prev];
         });
         // Update unread count

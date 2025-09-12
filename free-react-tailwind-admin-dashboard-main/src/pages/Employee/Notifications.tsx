@@ -141,7 +141,6 @@ const Notifications: React.FC = () => {
           
           // If same title and same day, consider them duplicates regardless of description differences
           if (sameTitle && sameDay) {
-            console.log(`Duplicate learning corner found: ${n.id} and ${notification.id}`);
             return true;
           }
         }
@@ -155,17 +154,6 @@ const Notifications: React.FC = () => {
       
       return isDuplicate === index; // Keep only the first occurrence
     });
-
-    // Debug logging
-    const learningCornerCount = notifications.filter(n => 
-      n.title.toLowerCase().includes('learning') || n.description.toLowerCase().includes('learning')
-    ).length;
-    const uniqueLearningCornerCount = uniqueNotifications.filter(n => 
-      n.title.toLowerCase().includes('learning') || n.description.toLowerCase().includes('learning')
-    ).length;
-    
-    console.log(`Learning Corner - Original: ${learningCornerCount}, After deduplication: ${uniqueLearningCornerCount}`);
-    console.log(`Total - Original: ${notifications.length}, After deduplication: ${uniqueNotifications.length}`);
 
     uniqueNotifications.forEach((n: Notification) => {
       const nDate = new Date(n.date);
