@@ -1150,129 +1150,380 @@ class AttendanceLogView(APIView):
         if not month:
             return Response({"error": "Month parameter required (format: YYYY-MM)"}, status=400)
 
-        year, month_num = map(int, month.split('-'))
-        start_date = datetime(year, month_num, 1).date()
-        end_date = datetime(year, month_num, monthrange(year, month_num)[1]).date()
+        try:
+            year, month_num = map(int, month.split('-'))
+            start_date = datetime(year, month_num, 1).date()
+            end_date = datetime(year, month_num, monthrange(year, month_num)[1]).date()
+        except (ValueError, IndexError):
+            return Response({"error": "Invalid month format. Use YYYY-MM"}, status=400)
 
-        holidays = CalendarEvent.objects.filter(date__range=(start_date, end_date), is_holiday=True)
+        # Get holidays for the month
+        holidays = CalendarEvent.objects.filter(
+            date__range=(start_date, end_date), 
+            is_holiday=True,
+            company=request.user.company
+        )
         holidays_dict = {h.date: h.name for h in holidays}
 
-        employees = Employee.objects.all()
-        shift_policy = ShiftPolicy.objects.first()  # Assuming same for all
+        # Get employees with related data
+        employees = Employee.objects.filter(
+            company=request.user.company,
+            is_active=True
+        ).select_related('department').prefetch_related('attendances')
         
         result = []
+        
         for emp in employees:
-            attendance_qs = Attendance.objects.filter(employee=emp, date__range=(start_date, end_date))
+            # Get all attendance records for this employee in the month
+            attendance_qs = Attendance.objects.filter(
+                employee=emp, 
+                date__range=(start_date, end_date)
+            ).select_related('shift').prefetch_related('break_logs')
+            
+            # Get department working days configuration
+            dept_working_days = DepartmentWiseWorkingDays.objects.filter(
+                department=emp.department,
+                company=request.user.company
+            ).first()
+            
+            # Determine working days for this employee
+            working_days = self._get_working_days_for_month(
+                start_date, end_date, dept_working_days, holidays_dict
+            )
+            
             daily_data = []
             present_days = absent_days = leave_days = half_days = late_days = 0
+            total_worked_hours = 0.0
+            cumulative_worked_hours = 0.0  # Track cumulative hours
             leave_summary = {}
 
-            for att in attendance_qs:
-                # Infer status and leave type initials
-                worked_hours = (att.check_out - att.check_in).total_seconds() / 3600 if att.check_in and att.check_out else 0
-                leave_type_val = att.leave.leave_type.leave_name if (att.leave and att.leave.leave_type) else None
-                leave_type_initials = att.leave.leave_type.leave_name[:2].upper() if (att.leave and att.leave.leave_type and att.leave.leave_type.leave_name) else None
-                # Default
-                status = "Absent"
-                half_day = False
-                if att.check_in and att.check_out:
-                    if worked_hours >= shift_policy.full_day_hours():
-                        status = "Present"
-                    elif worked_hours >= shift_policy.half_day_hours():
-                        status = "Half Day"
-                        half_day = True
-                    else:
-                        status = "Absent"
-                elif att.leave and att.leave.leave_type:
-                    status = "Leave"
-                # Check if late
-                grace_limit = shift_policy.grace()
-                check_in_local = localtime(att.check_in) if att.check_in else None
-                scheduled_checkin = datetime.combine(att.date, shift_policy.checkin)
-                if check_in_local:
-                    actual_checkin = datetime.combine(att.date, check_in_local.time())
-                    is_late = actual_checkin > (scheduled_checkin + grace_limit)
-                    late_minutes = (actual_checkin - scheduled_checkin).seconds // 60 if is_late else 0
-                    if late_minutes < 60:
-                        late_by = f"{late_minutes} min"
-                    else:
-                        hours = late_minutes // 60
-                        minutes = late_minutes % 60
-                        late_by = f"{hours} hr {minutes} min" if minutes else f"{hours} hr"
-                else:
-                    is_late = False
-                    late_by = None
-                # Count status
+            # Process each attendance record and sort by date for cumulative calculation
+            attendance_list = list(attendance_qs.order_by('date'))
+            
+            for att in attendance_list:
+                daily_record = self._process_attendance_record(att, emp.company)
+                
+                # Add cumulative calculation
+                worked_hours = daily_record["worked_hours"]
+                cumulative_worked_hours += worked_hours
+                daily_record["cumulative_worked_hours"] = round(cumulative_worked_hours, 2)
+                
+                daily_data.append(daily_record)
+                
+                # Count status types
+                status = daily_record["status"]
+                worked_hours = daily_record["worked_hours"]
+                
                 if status == "Present":
                     present_days += 1
-                    if is_late:
+                    total_worked_hours += worked_hours
+                    if daily_record["is_late"]:
                         late_days += 1
                 elif status == "Half Day":
                     half_days += 1
                     present_days += 0.5
-                    if is_late:
+                    total_worked_hours += worked_hours
+                    if daily_record["is_late"]:
                         late_days += 1
                 elif status == "Leave":
                     leave_days += 1
-                    if leave_type_val:
-                        leave_summary[leave_type_val] = leave_summary.get(leave_type_val, 0) + 1
+                    leave_type = daily_record["leave_type"]
+                    if leave_type:
+                        leave_summary[leave_type] = leave_summary.get(leave_type, 0) + 1
                 elif status == "Absent":
                     absent_days += 1
-                # Append daily data
-                daily_data.append({
-                    "date": str(att.date),
-                    "status": status,
-                    "check_in": localtime(att.check_in).strftime("%H:%M") if att.check_in else None,
-                    "check_out": localtime(att.check_out).strftime("%H:%M") if att.check_out else None,
-                    "is_late": is_late,
-                    "late_by_minutes": late_by if is_late else 0,
-                    "leave_type": leave_type_val,
-                    "leave_type_initials": leave_type_initials,
-                    "half_day": half_day,
-                    "remarks": att.remarks or ""
-                })
+                # Note: Holidays are not counted in any category as they're non-working days
 
-            # Add holidays
-            for date, name in holidays_dict.items():
-                daily_data.append({
-                    "date": str(date),
-                    "status": "Holiday",
-                    "check_in": None,
-                    "check_out": None,
-                    "is_late": False,
-                    "late_by_minutes": None,
-                    "leave_type": None,
-                    "remarks": name
-                })
+            # Add holidays to daily data
+            for holiday_date, holiday_name in holidays_dict.items():
+                if start_date <= holiday_date <= end_date:
+                    daily_data.append({
+                        "date": str(holiday_date),
+                        "status": "Holiday",
+                        "check_in": None,
+                        "check_out": None,
+                        "worked_hours": 0.0,
+                        "cumulative_worked_hours": cumulative_worked_hours,  # Keep same cumulative value
+                        "scheduled_hours": 0.0,
+                        "break_time": 0.0,
+                        "overtime_hours": 0.0,
+                        "is_late": False,
+                        "late_by_minutes": 0,
+                        "early_departure": False,
+                        "early_departure_minutes": 0,
+                        "leave_type": None,
+                        "leave_type_initials": None,
+                        "half_day": False,
+                        "remarks": holiday_name,
+                        "shift_type": None
+                    })
 
-            total_days = present_days + half_days + leave_days + absent_days
-            total_working = total_days - len(holidays_dict)
+            # Fill missing days as Absent (only for working days)
+            all_dates = {att.date for att in attendance_qs}
+            all_dates.update(holidays_dict.keys())
+            
+            for single_date in working_days:
+                if single_date not in all_dates:
+                    daily_data.append({
+                        "date": str(single_date),
+                        "status": "Absent",
+                        "check_in": None,
+                        "check_out": None,
+                        "worked_hours": 0.0,
+                        "cumulative_worked_hours": cumulative_worked_hours,  # Keep same cumulative value
+                        "scheduled_hours": 8.0,  # Default
+                        "break_time": 0.0,
+                        "overtime_hours": 0.0,
+                        "is_late": False,
+                        "late_by_minutes": 0,
+                        "early_departure": False,
+                        "early_departure_minutes": 0,
+                        "leave_type": None,
+                        "leave_type_initials": None,
+                        "half_day": False,
+                        "remarks": "No attendance record",
+                        "shift_type": None
+                    })
+                    absent_days += 1
 
-            percentage = (present_days / total_working * 100) if total_working else 0
+            # Calculate totals and percentages
+            total_working_days = len(working_days)
+            total_days_present = present_days  # This includes half days as 0.5
+            
+            # Attendance percentage based on working days only
+            attendance_percentage = (total_days_present / total_working_days * 100) if total_working_days > 0 else 0
+            
+            # Average working hours per present day
+            avg_hours_per_day = total_worked_hours / present_days if present_days > 0 else 0
+            
+            # Calculate monthly expected working hours
+            total_expected_hours = 0.0
+            total_overtime_hours = 0.0
+            total_break_time = 0.0
+            
+            for daily_record in daily_data:
+                if daily_record["status"] not in ["Holiday"]:
+                    total_expected_hours += daily_record["scheduled_hours"]
+                    total_overtime_hours += daily_record["overtime_hours"]
+                    total_break_time += daily_record["break_time"]
+            
+            # Working hours efficiency (actual vs expected)
+            hours_efficiency = (total_worked_hours / total_expected_hours * 100) if total_expected_hours > 0 else 0
+            
+            # Working hours shortage/surplus
+            hours_variance = total_worked_hours - total_expected_hours
+
+            # Get company's shift policies for reference
+            company_shifts = ShiftPolicy.objects.filter(company=request.user.company)
+            shift_policies_info = [
+                {
+                    "id": shift.id,
+                    "shift_type": shift.shift_type or f"Shift {shift.id}",
+                    "full_day_hours": shift.full_day_hours(),
+                    "half_day_hours": shift.half_day_hours(),
+                    "checkin": shift.checkin.strftime('%H:%M') if shift.checkin else None,
+                    "checkout": shift.checkout.strftime('%H:%M') if shift.checkout else None,
+                    "grace_period_minutes": int(shift.grace().total_seconds() / 60) if shift.grace() else 0
+                }
+                for shift in company_shifts
+            ]
 
             result.append({
                 "employee_id": emp.employee_id,
                 "employee_name": emp.full_name,
                 "department": emp.department.department_name if emp.department else None,
                 "month": month,
-                "total_working_days": total_working,
-                "total_present_days": round(present_days, 2),
+                
+                # Monthly Working Days Statistics
+                "total_working_days": total_working_days,
+                "total_present_days": round(total_days_present, 2),
                 "total_absent_days": absent_days,
                 "total_leave_days": leave_days,
                 "total_half_days": half_days,
                 "total_late_days": late_days,
-                "late_grace_limit_minutes": 15,
-                "percentage_present": f"{percentage:.2f}%",
+                "total_holidays": len(holidays_dict),
+                
+                # Monthly Working Hours Statistics
+                "total_worked_hours": round(total_worked_hours, 2),
+                "cumulative_worked_hours": round(cumulative_worked_hours, 2),  # Final cumulative total
+                "total_expected_hours": round(total_expected_hours, 2),
+                "total_overtime_hours": round(total_overtime_hours, 2),
+                "total_break_time": round(total_break_time, 2),
+                "hours_variance": round(hours_variance, 2),  # Positive = overtime, Negative = shortage
+                
+                # Monthly Percentages & Averages
+                "percentage_present": round(attendance_percentage, 2),
+                "hours_efficiency": round(hours_efficiency, 2),  # Actual vs Expected hours percentage
+                "average_hours_per_day": round(avg_hours_per_day, 2),
+                "average_hours_per_working_day": round(total_worked_hours / total_working_days, 2) if total_working_days > 0 else 0,
+                
+                # Additional Monthly Insights
+                "monthly_summary": {
+                    "productive_days": present_days + half_days,  # Days with any work done
+                    "non_productive_days": absent_days,
+                    "leave_utilization": leave_days,
+                    "punctuality_score": round((present_days - late_days) / present_days * 100, 2) if present_days > 0 else 100,
+                    "overtime_frequency": sum(1 for d in daily_data if d["overtime_hours"] > 0),
+                    "break_usage_hours": round(total_break_time, 2)
+                },
+                
+                # Reference Data
                 "holidays": [{"date": str(d), "name": n} for d, n in holidays_dict.items()],
                 "leave_summary": leave_summary,
-                "shift_policy": {
-                    "full_day_hours": shift_policy.full_day_hours(),
-                    "half_day_hours": shift_policy.half_day_hours()
-                },
+                "shift_policies": shift_policies_info,
                 "daily_attendance": sorted(daily_data, key=lambda x: x["date"])
             })
 
         return Response(result)
+
+    def _get_working_days_for_month(self, start_date, end_date, dept_working_days, holidays):
+        """Get all working days for the month excluding weekends and holidays"""
+        working_days = []
+        current_date = start_date
+        
+        # Define weekday mapping
+        weekdays = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday']
+        
+        if dept_working_days:
+            # Get valid working days based on department configuration
+            start_idx = weekdays.index(dept_working_days.week_start_day.lower())
+            end_idx = weekdays.index(dept_working_days.week_end_day.lower())
+            
+            if start_idx <= end_idx:
+                valid_weekdays = weekdays[start_idx:end_idx + 1]
+            else:
+                valid_weekdays = weekdays[start_idx:] + weekdays[:end_idx + 1]
+        else:
+            # Default to Monday-Friday
+            valid_weekdays = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday']
+        
+        while current_date <= end_date:
+            day_name = current_date.strftime('%A').lower()
+            
+            # Include if it's a valid working day and not a holiday
+            if day_name in valid_weekdays and current_date not in holidays:
+                working_days.append(current_date)
+            
+            current_date += timedelta(days=1)
+        
+        return working_days
+
+    def _process_attendance_record(self, attendance, company):
+        """Process a single attendance record and return comprehensive data"""
+        shift_policy = attendance.shift
+        
+        # If no shift assigned, get company's default shift
+        if not shift_policy:
+            shift_policy = ShiftPolicy.objects.filter(company=company).first()
+        
+        # Calculate basic worked hours
+        worked_hours = 0.0
+        scheduled_hours = shift_policy.full_day_hours() if shift_policy else 8.0
+        break_time = 0.0
+        overtime_hours = 0.0
+        
+        if attendance.check_in and attendance.check_out:
+            # Calculate total time between check-in and check-out
+            check_in_dt = attendance.check_in
+            check_out_dt = attendance.check_out
+            
+            # Convert to local time for calculation
+            check_in_local = localtime(check_in_dt)
+            check_out_local = localtime(check_out_dt)
+            
+            total_seconds = (check_out_local - check_in_local).total_seconds()
+            
+            # Deduct break time
+            break_logs = attendance.break_logs.all()
+            total_break_seconds = 0
+            
+            for break_log in break_logs:
+                if break_log.start and break_log.end:
+                    break_duration = (break_log.end - break_log.start).total_seconds()
+                    total_break_seconds += break_duration
+            
+            break_time = round(total_break_seconds / 3600, 2)
+            worked_hours = round((total_seconds - total_break_seconds) / 3600, 2)
+            worked_hours = max(0, worked_hours)  # Ensure non-negative
+            
+            # Calculate overtime (hours worked beyond scheduled hours)
+            if worked_hours > scheduled_hours:
+                overtime_hours = worked_hours - scheduled_hours
+
+        # Determine status based on worked hours and shift policy
+        status = "Absent"
+        half_day = False
+        
+        if attendance.leave:
+            status = "Leave"
+        elif worked_hours > 0 and shift_policy:
+            if worked_hours >= shift_policy.full_day_hours():
+                status = "Present"
+            elif worked_hours >= shift_policy.half_day_hours():
+                status = "Half Day"
+                half_day = True
+            else:
+                status = "Absent"  # Insufficient hours worked
+        elif worked_hours > 0:
+            # No shift policy, use default thresholds
+            if worked_hours >= 8.0:
+                status = "Present"
+            elif worked_hours >= 4.0:
+                status = "Half Day"
+                half_day = True
+            else:
+                status = "Absent"
+
+        # Check if late
+        is_late = False
+        late_minutes = 0
+        if shift_policy and attendance.check_in:
+            scheduled_checkin = datetime.combine(attendance.date, shift_policy.checkin)
+            actual_checkin = datetime.combine(attendance.date, localtime(attendance.check_in).time())
+            grace_period = shift_policy.grace()
+            
+            if actual_checkin > (scheduled_checkin + grace_period):
+                is_late = True
+                late_minutes = int((actual_checkin - scheduled_checkin).total_seconds() / 60)
+
+        # Check for early departure
+        early_departure = False
+        early_departure_minutes = 0
+        if shift_policy and attendance.check_out:
+            scheduled_checkout = datetime.combine(attendance.date, shift_policy.checkout)
+            actual_checkout = datetime.combine(attendance.date, localtime(attendance.check_out).time())
+            
+            if actual_checkout < scheduled_checkout:
+                early_departure = True
+                early_departure_minutes = int((scheduled_checkout - actual_checkout).total_seconds() / 60)
+
+        # Get leave information
+        leave_type_val = None
+        leave_type_initials = None
+        if attendance.leave and attendance.leave.leave_type:
+            leave_type_val = attendance.leave.leave_type.leave_name
+            leave_type_initials = leave_type_val[:2].upper() if leave_type_val else None
+
+        return {
+            "date": str(attendance.date),
+            "status": status,
+            "check_in": localtime(attendance.check_in).strftime("%H:%M") if attendance.check_in else None,
+            "check_out": localtime(attendance.check_out).strftime("%H:%M") if attendance.check_out else None,
+            "worked_hours": worked_hours,
+            "cumulative_worked_hours": 0.0,  # Will be calculated in main function
+            "scheduled_hours": scheduled_hours,
+            "break_time": break_time,
+            "overtime_hours": overtime_hours,
+            "is_late": is_late,
+            "late_by_minutes": late_minutes,
+            "early_departure": early_departure,
+            "early_departure_minutes": early_departure_minutes,
+            "leave_type": leave_type_val,
+            "leave_type_initials": leave_type_initials,
+            "half_day": half_day,
+            "remarks": attendance.remarks or "",
+            "shift_type": shift_policy.shift_type if shift_policy else None
+        }
 
 
 class CompanyPoliciesViewSet(viewsets.ModelViewSet):

@@ -19,24 +19,64 @@ import {
 import { axiosInstance } from '../Dashboard/api';
 
 interface DailyRecord {
+  date: string;
   status: string;
-  punch_in: string | null;
-  punch_out: string | null;
+  check_in: string | null;
+  check_out: string | null;
   worked_hours: number;
+  cumulative_worked_hours: number;
+  scheduled_hours: number;
+  break_time: number;
+  overtime_hours: number;
   is_late: boolean;
-  leave_type: string;
-  leave_type_initials?: string;
-  is_holiday: boolean;
-  holiday_name: string;
-  half_day?: boolean;
+  late_by_minutes: number;
+  early_departure: boolean;
+  early_departure_minutes: number;
+  leave_type: string | null;
+  leave_type_initials: string | null;
+  half_day: boolean;
+  remarks: string;
+  shift_type: string | null;
 }
 
 interface AttendanceRecord {
-  employee_id: number;
+  employee_id: string;
   employee_name: string;
-  daily_records: { [date: string]: DailyRecord };
-  total_hours: number;
-  attendance_percentage: number;
+  department: string | null;
+  month: string;
+  total_working_days: number;
+  total_present_days: number;
+  total_absent_days: number;
+  total_leave_days: number;
+  total_half_days: number;
+  total_late_days: number;
+  total_holidays: number;
+  total_worked_hours: number;
+  cumulative_worked_hours: number;
+  total_expected_hours: number;
+  total_overtime_hours: number;
+  total_break_time: number;
+  hours_variance: number;
+  percentage_present: number;
+  hours_efficiency: number;
+  average_hours_per_day: number;
+  average_hours_per_working_day: number;
+  monthly_summary: {
+    productive_days: number;
+    non_productive_days: number;
+    leave_utilization: number;
+    punctuality_score: number;
+    overtime_frequency: number;
+    break_usage_hours: number;
+  };
+  holidays: Array<{date: string; name: string}>;
+  leave_summary: {[key: string]: number};
+  shift_policies: Array<{
+    id: number;
+    name: string;
+    full_day_hours: number;
+  }>;
+  daily_attendance: DailyRecord[];
 }
 
 interface AttendanceData {
@@ -77,74 +117,17 @@ const AttendanceLog: React.FC = () => {
     const monthStr = `${calendarYear}-${String(calendarMonth + 1).padStart(2, '0')}`;
     axiosInstance.get(`/attendance-logs/?month=${monthStr}`)
       .then(res => {
-        const backendData = res.data;
+        
+        const response = res.data;
         const month_dates: string[] = calendarDates;
-                const attendance_records: AttendanceRecord[] = backendData.map((emp: {
-                  employee_id: number;
-                  employee_name: string;
-                  daily_attendance: Array<{
-                    date: string;
-                    status: string;
-                    check_in: string | null;
-                    check_out: string | null;
-                    is_late: boolean;
-                    leave_type?: string;
-                    remarks?: string;
-                  }>;
-                  total_working_days: number;
-                  shift_policy?: { full_day_hours?: number };
-                  percentage_present: string;
-                }) => {
-                    const daily_records: { [date: string]: DailyRecord } = {};
-                    // Fill all dates for the month
-                    month_dates.forEach(date => {
-                        const d = emp.daily_attendance.find((rec: {
-                          date: string;
-                          status: string;
-                          check_in: string | null;
-                          check_out: string | null;
-                          is_late: boolean;
-                          leave_type?: string;
-                          remarks?: string;
-                        }) => rec.date === date);
-            if (d) {
-              daily_records[date] = {
-                status: d.status === 'Present' ? 'P' : d.status === 'Absent' ? 'A' : d.status === 'Leave' ? 'L' : d.status === 'Half Day' ? 'H' : d.status === 'Holiday' ? 'H' : '-',
-                punch_in: d.check_in,
-                punch_out: d.check_out,
-                worked_hours: d.status === 'Present' || d.status === 'Half Day' ? (d.check_in && d.check_out ? 0 : 0) : 0,
-                is_late: d.is_late,
-                leave_type: d.leave_type || '',
-                is_holiday: d.status === 'Holiday',
-                holiday_name: d.remarks || ''
-              };
-            } else {
-              daily_records[date] = {
-                status: '-',
-                punch_in: null,
-                punch_out: null,
-                worked_hours: 0,
-                is_late: false,
-                leave_type: '',
-                is_holiday: false,
-                holiday_name: ''
-              };
-            }
-          });
-          return {
-            employee_id: emp.employee_id,
-            employee_name: emp.employee_name,
-            daily_records,
-            total_hours: emp.total_working_days * (emp.shift_policy?.full_day_hours || 8),
-            attendance_percentage: parseFloat(emp.percentage_present),
-          };
-        });
+        // Backend returns direct array, not wrapped in object
+        const attendance_records: AttendanceRecord[] = Array.isArray(response) ? response : (response.attendance_records || []);
         // Calculate statistics
         const totalEmployees = attendance_records.length;
-        const averageAttendance = attendance_records.reduce((sum, emp) => sum + emp.attendance_percentage, 0) / (totalEmployees || 1);
-        const totalHours = attendance_records.reduce((sum, emp) => sum + emp.total_hours, 0);
+        const averageAttendance = attendance_records.reduce((sum, emp) => sum + emp.percentage_present, 0) / (totalEmployees || 1);
+        const totalHours = attendance_records.reduce((sum, emp) => sum + emp.cumulative_worked_hours, 0);
         const today = new Date().toISOString().split('T')[0];
-        const presentToday = attendance_records.filter(emp => emp.daily_records[today]?.status === 'P').length;
+        const presentToday = attendance_records.filter(emp => emp.daily_attendance.find(day => day.date === today && day.status === 'Present')).length;
         setStats({
           totalEmployees,
           averageAttendance,
@@ -155,7 +138,11 @@ const AttendanceLog: React.FC = () => {
         setFilteredRecords(attendance_records);
         setLoading(false);
       })
-      .catch(() => setLoading(false));
+      .catch(error => {
+        console.error('Error fetching attendance data:', error);
+        console.error('Error response:', error.response?.data);
+        setLoading(false);
+      });
   }, [calendarMonth, calendarYear]);
 
   // Filter employees based on search and status
@@ -169,7 +156,7 @@ const AttendanceLog: React.FC = () => {
       const searchLower = searchEmployee.toLowerCase();
       filtered = filtered.filter(record => 
         record.employee_name.toLowerCase().includes(searchLower) ||
-        `EMP${String(record.employee_id).padStart(5, '0')}`.toLowerCase().includes(searchLower)
+        record.employee_id.toLowerCase().includes(searchLower)
       );
     }
 
@@ -177,8 +164,16 @@ const AttendanceLog: React.FC = () => {
     if (selectedStatus !== 'all') {
       filtered = filtered.filter(record => {
         const today = new Date().toISOString().split('T')[0];
-        const todayRecord = record.daily_records[today];
-        return todayRecord?.status === selectedStatus;
+        const todayRecord = record.daily_attendance.find(day => day.date === today);
+        // Map frontend filter values to backend status values
+        const statusMap: { [key: string]: string } = {
+          'P': 'Present',
+          'A': 'Absent', 
+          'L': 'Leave',
+          'H': 'Holiday',
+          'HD': 'Half Day'
+        };
+        return todayRecord?.status === statusMap[selectedStatus];
       });
     }
 
@@ -190,17 +185,20 @@ const AttendanceLog: React.FC = () => {
 
     const showTooltip = (e: React.MouseEvent) => {
       let text = '';
-      if (record.status === 'P' || record.status === 'A') {
-        text = `Date: ${new Date(date).toLocaleDateString()}\nCheck-in: ${record.punch_in || '—'}\nCheck-out: ${record.punch_out || '—'}`;
+      if (record.status === 'Present' || record.status === 'Absent') {
+        text = `Date: ${new Date(date).toLocaleDateString()}\nCheck-in: ${record.check_in || '—'}\nCheck-out: ${record.check_out || '—'}`;
         if (record.worked_hours > 0) {
           text += `\nHours: ${record.worked_hours}h`;
         }
-      } else if (record.status === 'L') {
+      } else if (record.status === 'Leave') {
         text = `Leave: ${record.leave_type || 'General Leave'}\nDate: ${new Date(date).toLocaleDateString()}`;
-      } else if (record.status === 'H') {
-        text = `Holiday: ${record.holiday_name || 'Public Holiday'}\nDate: ${new Date(date).toLocaleDateString()}`;
-      } else if (record.status === 'HD' && record.half_day) {
-        text = `Half Day Holiday\nDate: ${new Date(date).toLocaleDateString()}`;
+      } else if (record.status === 'Holiday') {
+        text = `Holiday: ${record.remarks || 'Public Holiday'}\nDate: ${new Date(date).toLocaleDateString()}`;
+      } else if (record.status === 'Half Day') {
+        text = `Half Day\nDate: ${new Date(date).toLocaleDateString()}\nCheck-in: ${record.check_in || '—'}\nCheck-out: ${record.check_out || '—'}`;
+        if (record.worked_hours > 0) {
+          text += `\nHours: ${record.worked_hours}h`;
+        }
       }
       setTooltip({
         visible: true,
@@ -215,7 +213,7 @@ const AttendanceLog: React.FC = () => {
   // Half Day (should be status 'H' and half_day true, but previous 'H' branch covers all 'H' cases)
   // Remove unreachable duplicate branch.
     // Present
-    if (record.status === 'P') {
+    if (record.status === 'Present') {
       return (
         <div
           className={baseClasses + ' bg-emerald-600 hover:bg-emerald-700'}
@@ -232,7 +230,7 @@ const AttendanceLog: React.FC = () => {
       );
     }
     // Absent
-    if (record.status === 'A') {
+    if (record.status === 'Absent') {
       return (
         <div
           className={baseClasses + ' bg-red-600 hover:bg-red-700'}
@@ -244,7 +242,7 @@ const AttendanceLog: React.FC = () => {
       );
     }
     // Holiday (full day)
-    if (record.status === 'H' && !record.half_day) {
+    if (record.status === 'Holiday' && !record.half_day) {
       return (
         <div
           className={baseClasses + ' bg-amber-600 hover:bg-amber-700'}
@@ -256,7 +254,7 @@ const AttendanceLog: React.FC = () => {
       );
     }
     // Leave with initials and overlap icon
-    if (record.status === 'L') {
+    if (record.status === 'Leave') {
       const leaveInitials = record.leave_type_initials || (record.leave_type ? record.leave_type[0].toUpperCase() : 'L');
       return (
         <div
@@ -271,6 +269,18 @@ const AttendanceLog: React.FC = () => {
               <text x="7" y="10" textAnchor="middle" fontSize="8" fontWeight="bold" fill="#2563eb">{leaveInitials}</text>
             </svg>
           </span>
+        </div>
+      );
+    }
+    // Half Day
+    if (record.status === 'Half Day') {
+      return (
+        <div
+          className={baseClasses + ' bg-orange-600 hover:bg-orange-700'}
+          onMouseEnter={showTooltip}
+          onMouseLeave={hideTooltip}
+        >
+          HD
         </div>
       );
     }
@@ -374,7 +384,7 @@ const AttendanceLog: React.FC = () => {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-slate-600">Avg. Attendance</p>
-                  <p className="text-3xl font-bold text-blue-600 mt-2">{stats.averageAttendance.toFixed(1)}%</p>
+                  <p className="text-3xl font-bold text-blue-600 mt-2">{stats.averageAttendance}%</p>
                   <p className="text-xs text-slate-500 mt-1">Monthly average</p>
                 </div>
                 <div className="p-3 bg-blue-100 rounded-lg">
@@ -460,6 +470,7 @@ const AttendanceLog: React.FC = () => {
                     <option value="A">Absent</option>
                     <option value="L">On Leave</option>
                     <option value="H">Holiday</option>
+                    <option value="HD">Half Day</option>
                   </select>
                 </div>
                 
@@ -538,7 +549,7 @@ const AttendanceLog: React.FC = () => {
                       <td className="px-4 py-4">
                         <div>
                           <div className="text-sm font-medium text-slate-900">{record.employee_name}</div>
-                          <div className="text-xs text-slate-500">ID: EMP{String(record.employee_id).padStart(5, '0')}</div>
+                          <div className="text-xs text-slate-500">ID: {record.employee_id}</div>
                         </div>
                       </td>
                       {/* Action column */}
@@ -558,21 +569,37 @@ const AttendanceLog: React.FC = () => {
                           <div className="w-20 h-2 bg-slate-200 rounded-full overflow-hidden">
                             <div 
                               className="h-full bg-gradient-to-r from-blue-500 to-emerald-500 rounded-full transition-all duration-500" 
-                              style={{ width: `${record.attendance_percentage || 0}%` }}
+                              style={{ width: `${record.percentage_present || 0}%` }}
                             ></div>
                           </div>
                           <span className="text-xs font-semibold text-slate-700 min-w-[3rem] text-right">
-                            {record.attendance_percentage?.toFixed(1)}%
+                            {record.percentage_present}%
                           </span>
                         </div>
                       </td>
                       <td className="px-4 py-4 text-center text-sm font-medium text-slate-900">
-                        {record.total_hours?.toFixed(0)}h
+                        {record.cumulative_worked_hours}h
                       </td>
                       {attendanceData?.month_dates?.map((date) => {
-                        const daily = record.daily_records?.[date] || { 
-                          status: '-', punch_in: null, punch_out: null, worked_hours: 0, 
-                          is_late: false, leave_type: '', is_holiday: false, holiday_name: '' 
+                        const daily = record.daily_attendance.find(day => day.date === date) || { 
+                          date: date,
+                          status: '-', 
+                          check_in: null, 
+                          check_out: null, 
+                          worked_hours: 0,
+                          cumulative_worked_hours: 0,
+                          scheduled_hours: 0,
+                          break_time: 0,
+                          overtime_hours: 0,
+                          is_late: false,
+                          late_by_minutes: 0,
+                          early_departure: false,
+                          early_departure_minutes: 0,
+                          leave_type: null,
+                          leave_type_initials: null,
+                          half_day: false,
+                          remarks: '',
+                          shift_type: null
                         };
                         const isWeekend = new Date(date).getDay() === 0 || new Date(date).getDay() === 6;
                         return (
@@ -648,6 +675,13 @@ const AttendanceLog: React.FC = () => {
                 <div>
                   <span className="text-sm font-medium text-slate-900">Holiday</span>
                   <p className="text-xs text-slate-600">Public holiday</p>
+                </div>
+              </div>
+              <div className="flex items-center space-x-3">
+                <div className="w-7 h-7 bg-orange-600 rounded text-white text-xs font-semibold flex items-center justify-center">HD</div>
+                <div>
+                  <span className="text-sm font-medium text-slate-900">Half Day</span>
+                  <p className="text-xs text-slate-600">Partial attendance</p>
                 </div>
               </div>
               <div className="flex items-center space-x-3">
