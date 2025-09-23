@@ -72,3 +72,13 @@ Killed
 
   ➜  Local:   http://localhost:5173/
   ➜  Network: use --host to expose
+
+> tailadmin-react@2.0.2 dev
+> vite
+
+sh: 1: vite: Permission denied
+
+> tailadmin-react@2.0.2 dev
+> vite
+
+sh: 1: vite: Permission denied

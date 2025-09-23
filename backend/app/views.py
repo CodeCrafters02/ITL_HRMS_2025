@@ -1194,20 +1194,11 @@ class AttendanceLogView(APIView):
             daily_data = []
             present_days = absent_days = leave_days = half_days = late_days = 0
             total_worked_hours = 0.0
-            cumulative_worked_hours = 0.0  # Track cumulative hours
             leave_summary = {}
 
-            # Process each attendance record and sort by date for cumulative calculation
-            attendance_list = list(attendance_qs.order_by('date'))
-            
-            for att in attendance_list:
+            # Process each attendance record
+            for att in attendance_qs:
                 daily_record = self._process_attendance_record(att, emp.company)
-                
-                # Add cumulative calculation
-                worked_hours = daily_record["worked_hours"]
-                cumulative_worked_hours += worked_hours
-                daily_record["cumulative_worked_hours"] = round(cumulative_worked_hours, 2)
-                
                 daily_data.append(daily_record)
                 
                 # Count status types
@@ -1243,7 +1234,6 @@ class AttendanceLogView(APIView):
                         "check_in": None,
                         "check_out": None,
                         "worked_hours": 0.0,
-                        "cumulative_worked_hours": cumulative_worked_hours,  # Keep same cumulative value
                         "scheduled_hours": 0.0,
                         "break_time": 0.0,
                         "overtime_hours": 0.0,
@@ -1270,7 +1260,6 @@ class AttendanceLogView(APIView):
                         "check_in": None,
                         "check_out": None,
                         "worked_hours": 0.0,
-                        "cumulative_worked_hours": cumulative_worked_hours,  # Keep same cumulative value
                         "scheduled_hours": 8.0,  # Default
                         "break_time": 0.0,
                         "overtime_hours": 0.0,
@@ -1345,7 +1334,6 @@ class AttendanceLogView(APIView):
                 
                 # Monthly Working Hours Statistics
                 "total_worked_hours": round(total_worked_hours, 2),
-                "cumulative_worked_hours": round(cumulative_worked_hours, 2),  # Final cumulative total
                 "total_expected_hours": round(total_expected_hours, 2),
                 "total_overtime_hours": round(total_overtime_hours, 2),
                 "total_break_time": round(total_break_time, 2),
@@ -1510,7 +1498,6 @@ class AttendanceLogView(APIView):
             "check_in": localtime(attendance.check_in).strftime("%H:%M") if attendance.check_in else None,
             "check_out": localtime(attendance.check_out).strftime("%H:%M") if attendance.check_out else None,
             "worked_hours": worked_hours,
-            "cumulative_worked_hours": 0.0,  # Will be calculated in main function
             "scheduled_hours": scheduled_hours,
             "break_time": break_time,
             "overtime_hours": overtime_hours,

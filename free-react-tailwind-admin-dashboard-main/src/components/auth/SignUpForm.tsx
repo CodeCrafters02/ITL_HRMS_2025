@@ -39,7 +39,7 @@ export default function SignUpForm() {
       console.log("Success:", response.data);
       toast.success("Master registered successfully!");
       setTimeout(() => {
-        navigate("/signin");
+        navigate("/");
       }, 1500);
     } catch (error) {
       console.error("Registration failed:", error);

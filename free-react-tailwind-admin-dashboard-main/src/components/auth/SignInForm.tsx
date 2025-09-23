@@ -16,6 +16,7 @@ export default function SignInForm() {
     password: "",
   });
   const [toast, setToast] = useState<string | null>(null);
+  const [toastVariant, setToastVariant] = useState<'success' | 'error'>('success');
   const [isLoading, setIsLoading] = useState(false);
 
   const navigate = useNavigate();
@@ -33,6 +34,7 @@ export default function SignInForm() {
     // Validation
     if (!formData.username.trim() || !formData.password.trim()) {
       setToast("Please enter both username and password.");
+      setToastVariant('error');
       setTimeout(() => setToast(null), 3000);
       return;
     }
@@ -66,7 +68,8 @@ export default function SignInForm() {
       // Set default header for other requests
       axios.defaults.headers.common["Authorization"] = `Bearer ${access}`;
 
-      setToast("Sign in successful! Redirecting...");
+  setToast("Sign in successful! Redirecting...");
+  setToastVariant('success');
 
       // Redirect based on role
       setTimeout(() => {
@@ -88,12 +91,12 @@ export default function SignInForm() {
                            err.response?.data?.message || 
                            err.response?.data?.error ||
                            "Login failed. Please check your credentials.";
-        
         setToast(errorMessage);
+        setToastVariant('error');
       } else {
         setToast("Network error. Please try again.");
+        setToastVariant('error');
       }
-      
       setTimeout(() => setToast(null), 5000);
     } finally {
       setIsLoading(false);
@@ -104,7 +107,7 @@ export default function SignInForm() {
     <div className="flex flex-col flex-1">
       {toast && (
         <div className="fixed bottom-4 left-1/2 transform -translate-x-1/2 z-50 max-w-md w-full flex justify-center">
-          <Toast variant="success" title="Success" message={toast} showLink={false} />
+          <Toast variant={toastVariant} title={toastVariant === 'error' ? 'Error' : 'Success'} message={toast} showLink={false} />
         </div>
       )}
 

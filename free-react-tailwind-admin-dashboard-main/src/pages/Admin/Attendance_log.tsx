@@ -117,7 +117,8 @@ const AttendanceLog: React.FC = () => {
     const monthStr = `${calendarYear}-${String(calendarMonth + 1).padStart(2, '0')}`;
     axiosInstance.get(`/attendance-logs/?month=${monthStr}`)
       .then(res => {
-        
+        console.log('Backend response:', res.data); // Debug log
+        console.log('Sample employee data:', res.data[0]); // Show first employee structure
         const response = res.data;
         const month_dates: string[] = calendarDates;
         // Backend returns direct array, not wrapped in object
