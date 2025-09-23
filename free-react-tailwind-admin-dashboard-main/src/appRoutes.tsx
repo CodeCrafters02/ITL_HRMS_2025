@@ -96,7 +96,7 @@ const SubServicePage = lazy(() => import("./pages/SubService/index"));
 const DemoRequestPage = lazy(() => import("./pages/DemoRequests/index"));
 const ContactRequestPage = lazy(() => import("./pages/ContactRequests/index"));
 
-const MainPage = lazy(() => import("./Website/Pages/Home"));
+// const MainPage = lazy(() => import("./Website/Pages/Home"));
 const Service = lazy(() => import("./Website/Pages/Service"));
 const Services = lazy(() => import("./Website/Pages/Services"));
 const Team = lazy(() => import("./Website/Pages/Team"));
@@ -268,9 +268,9 @@ export function appRoutes() {
             <Route path="/bar-chart" element={<BarChart />} />
 
             {/* Auth Routes */}
-            <Route path="/signin" element={<SignIn />} />
+            <Route path="/" element={<SignIn />} />
             <Route path="/signup" element={<SignUp />} />
-            <Route path="/" element={<MainPage />} />
+            {/* <Route path="/" element={<MainPage />} /> */}
             {/* <Route path="/" element={<MainPage hasPreloaderShown={hasPreloaderShown} />} /> */}
             <Route path="/service" element={<Service />} />
             <Route path="/contact" element={<Contact />} />

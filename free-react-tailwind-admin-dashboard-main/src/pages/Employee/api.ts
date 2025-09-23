@@ -40,7 +40,7 @@ axiosInstance.interceptors.request.use(
         // Automatic logout on refresh failure
         localStorage.removeItem("access_token");
         localStorage.removeItem("refresh_token");
-        window.location.href = "/signin";
+        window.location.href = "/";
         return Promise.reject(new Error(" Please sign in again."));
       }
     }

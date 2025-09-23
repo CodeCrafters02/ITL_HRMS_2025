@@ -78,7 +78,7 @@ axiosInstance.interceptors.response.use(
         // If refresh fails → log out
         localStorage.removeItem("access_token");
         localStorage.removeItem("refresh_token");
-        window.location.href = "/signin";
+        window.location.href = "/";
         return Promise.reject(err);
       }
     }

@@ -395,7 +395,7 @@ const BaseLayout: React.FC<BaseLayoutProps> = ({ children, pageTitle, breadcrumb
                           <li><a href="/terms" className="mil-light-soft">Terms and conditions</a></li>
                           <li><a href="#." className="mil-light-soft">Cookie Policy</a></li>
                           <li><a href="#." className="mil-light-soft">Careers</a></li>
-                          <li><a href="/signin" className="mil-light-soft">Login</a></li>
+                          <li><a href="/" className="mil-light-soft">Login</a></li>
                         </ul>
                       </div>
                     </div>
