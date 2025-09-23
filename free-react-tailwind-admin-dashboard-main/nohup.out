@@ -1,0 +1,74 @@
+
+> tailadmin-react@2.0.2 dev
+> vite
+
+
+  VITE v6.3.6  ready in 269 ms
+
+  ➜  Local:   http://localhost:3000/
+  ➜  Network: http://172.31.43.152:3000/
+5:21:29 PM [vite] vite.config.ts changed, restarting server...
+5:21:29 PM [vite] vite.config.ts changed, restarting server...
+Error: listen EADDRNOTAVAIL: address not available 13.60.53.55:3000
+Error: listen EADDRNOTAVAIL: address not available 13.60.53.55:3000
+
+> tailadmin-react@2.0.2 dev
+> vite
+
+error when starting dev server:
+Error: listen EADDRNOTAVAIL: address not available 13.60.53.55:3000
+    at Server.setupListenHandle [as _listen2] (node:net:1886:21)
+    at listenInCluster (node:net:1965:12)
+    at GetAddrInfoReqWrap.doListen [as callback] (node:net:2139:7)
+    at GetAddrInfoReqWrap.onlookup [as oncomplete] (node:dns:113:8)
+
+> tailadmin-react@2.0.2 dev
+> vite
+
+error when starting dev server:
+Error: listen EADDRNOTAVAIL: address not available 13.60.53.55:3000
+    at Server.setupListenHandle [as _listen2] (node:net:1886:21)
+    at listenInCluster (node:net:1965:12)
+    at GetAddrInfoReqWrap.doListen [as callback] (node:net:2139:7)
+    at GetAddrInfoReqWrap.onlookup [as oncomplete] (node:dns:113:8)
+5:23:16 PM [vite] vite.config.ts changed, restarting server...
+5:23:16 PM [vite] server restarted.
+
+  ➜  Local:   http://localhost:3000/
+  ➜  Network: http://172.31.43.152:3000/
+Killed
+
+> tailadmin-react@2.0.2 dev
+> vite
+
+
+  VITE v6.3.6  ready in 269 ms
+
+  ➜  Local:   http://localhost:3000/
+  ➜  Network: http://172.31.43.152:3000/
+The request url "/proc/self/environ" is outside of Vite serving allow list.
+
+- /var/www/ITL_HRMS_2025/free-react-tailwind-admin-dashboard-main
+
+Refer to docs https://vite.dev/config/server-options.html#server-fs-allow for configurations and more details.
+
+5:33:51 PM [vite] (client) page reload nohup.out
+Killed
+
+> tailadmin-react@2.0.2 dev
+> vite
+
+
+  VITE v6.3.6  ready in 269 ms
+
+  ➜  Local:   http://localhost:3000/
+  ➜  Network: http://172.31.43.152:3000/
+9:10:18 AM [vite] (client) page reload package.json
+9:10:18 AM [vite] (client) hmr update /src/context/NotificationContext.tsx, /src/index.css
+9:10:18 AM [vite] vite.config.ts changed, restarting server...
+9:10:18 AM [vite] (client) page reload nohup.out
+9:10:18 AM [vite] (client) Re-optimizing dependencies because lockfile has changed
+9:10:19 AM [vite] server restarted.
+
+  ➜  Local:   http://localhost:5173/
+  ➜  Network: use --host to expose
