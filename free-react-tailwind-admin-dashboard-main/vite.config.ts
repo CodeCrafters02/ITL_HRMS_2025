@@ -17,6 +17,19 @@ export default defineConfig({
   ],
   define: {
     // Global API URL variable
-    __API_URL__: '"http://127.0.0.1:8000"',
+    __API_URL__: '"https://apihrms.innovyxtechlabs.com/api"',
+  },
+  server: {
+    // Set the port you want to use
+    port: 3000, // or any port you prefer
+
+    // Bind to 0.0.0.0 to allow external devices to connect
+    host: '0.0.0.0',
+
+    // Allow access from specific domains or IPs (optional)
+    allowedHosts: ['hrms.innovyxtechlabs.com'],
+
+    // Alternatively, you can allow all hosts (use with caution)
+    // allowedHosts: 'all',
   },
 });
