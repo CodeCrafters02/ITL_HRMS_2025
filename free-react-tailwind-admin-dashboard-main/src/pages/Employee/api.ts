@@ -2,7 +2,7 @@ import axios, { InternalAxiosRequestConfig } from "axios";
 import { jwtDecode } from "jwt-decode";
 
 export const axiosInstance = axios.create({
-  baseURL: "http://127.0.0.1:8000/employee/",
+  baseURL: "https://apihrms.innovyxtechlabs.com/api/employee/",
   headers: {
     "Content-Type": "application/json",
   },
@@ -27,7 +27,7 @@ axiosInstance.interceptors.request.use(
     if (token && isTokenExpired(token) && refreshToken) {
       try {
         const response = await axios.post(
-          "http://127.0.0.1:8000/api/token/refresh/",
+          "https://apihrms.innovyxtechlabs.com/api/app/token/refresh/",
           {
             refresh: refreshToken,
           }

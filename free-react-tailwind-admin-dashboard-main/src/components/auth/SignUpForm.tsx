@@ -33,7 +33,7 @@ export default function SignUpForm() {
 
     try {
       const response = await axios.post(
-        "http://127.0.0.1:8000/app/master-register/",
+        "https://apihrms.innovyxtechlabs.com/app/master-register/",
         formData
       );
       console.log("Success:", response.data);

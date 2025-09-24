@@ -3,7 +3,7 @@ import { jwtDecode } from "jwt-decode";
 
 // 👉 Create an axios instance
 export const axiosInstance = axios.create({
-  baseURL: "http://127.0.0.1:8000/api",
+  baseURL: "https://apihrms.innovyxtechlabs.com/api",
 });
 
 // 👉 Attach access token automatically
@@ -26,7 +26,7 @@ axiosInstance.interceptors.request.use(
     const refreshToken = localStorage.getItem("refresh_token");
     if (token && isTokenExpired(token) && refreshToken) {
       try {
-        const response = await axios.post("http://127.0.0.1:8000/app/token/refresh/", {
+        const response = await axios.post("https://apihrms.innovyxtechlabs.com/api/app/token/refresh/", {
           refresh: refreshToken,
         });
         token = response.data.access;
@@ -61,7 +61,7 @@ axiosInstance.interceptors.response.use(
       try {
         // Get new access token
         const refreshResponse = await axios.post(
-          "http://127.0.0.1:8000/api/token/refresh/",
+          "http://https://apihrms.innovyxtechlabs.com/api/token/refresh/",
           { refresh: localStorage.getItem("refresh_token") }
         );
 

@@ -28,7 +28,7 @@ export default function CreateCompany() {
   useEffect(() => {
     const fetchAdmins = async () => {
       try {
-        const res = await axiosInstance.get("http://127.0.0.1:8000/app/admin-register/");
+        const res = await axiosInstance.get("https://apihrms.innovyxtechlabs.com/api/app/admin-register/");
         console.log("Admin API response:", res.data); // Debug output
         if (Array.isArray(res.data)) {
           setAdmins(res.data.map((a) => ({ id: a.id, username: a.username })));

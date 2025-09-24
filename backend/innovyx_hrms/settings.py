@@ -116,7 +116,7 @@ FCM_CREDENTIALS_FILE = BASE_DIR / "firebase-service-account.json"
 
 FCM_PROJECT_ID = "hrms-de74c"
 
-SITE_URL = "http://127.0.0.1:8000/"
+SITE_URL = "https://apihrms.innovyxtechlabs.com/"
 
 
 CORS_ALLOW_ALL_ORIGINS = True
