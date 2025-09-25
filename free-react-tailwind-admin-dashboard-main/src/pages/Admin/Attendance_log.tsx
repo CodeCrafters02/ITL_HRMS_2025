@@ -115,7 +115,7 @@ const AttendanceLog: React.FC = () => {
       return d.toISOString().split('T')[0];
     });
     const monthStr = `${calendarYear}-${String(calendarMonth + 1).padStart(2, '0')}`;
-    axiosInstance.get(`/attendance-logs/?month=${monthStr}`)
+    axiosInstance.get(`app/attendance-logs/?month=${monthStr}`)
       .then(res => {
         console.log('Backend response:', res.data); // Debug log
         console.log('Sample employee data:', res.data[0]); // Show first employee structure

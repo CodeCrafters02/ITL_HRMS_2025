@@ -30,7 +30,7 @@ const LeaveCountPage: React.FC = () => {
   const fetchLeaves = async () => {
     try {
       const accessToken = localStorage.getItem("access");
-      const response = await axiosInstance.get("/leaves/", {
+      const response = await axiosInstance.get("app/leaves/", {
         headers: {
           Authorization: `Bearer ${accessToken}`,
         },
@@ -62,7 +62,7 @@ const LeaveCountPage: React.FC = () => {
   const updateLeave = async (id: number) => {
     setLoading(true);
     try {
-      await axiosInstance.put(`/leaves/${id}/`, editLeave);
+      await axiosInstance.put(`app/leaves/${id}/`, editLeave);
       setEditId(null);
       setEditLeave({});
       fetchLeaves();
@@ -81,7 +81,7 @@ const LeaveCountPage: React.FC = () => {
     if (!deleteId) return;
     setLoading(true);
     try {
-      await axiosInstance.delete(`/leaves/${deleteId}/`);
+      await axiosInstance.delete(`app/leaves/${deleteId}/`);
       setLeaves((prev) => prev.filter((leave) => leave.id !== deleteId));
       setDeleteId(null);
       setDeleteName("");
@@ -101,7 +101,7 @@ const LeaveCountPage: React.FC = () => {
   const addLeave = async () => {
     setLoading(true);
     try {
-      await axiosInstance.post(`/leaves/`, editLeave);
+      await axiosInstance.post(`app/leaves/`, editLeave);
       setEditId(null);
       setEditLeave({});
       fetchLeaves();

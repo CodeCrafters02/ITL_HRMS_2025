@@ -26,7 +26,7 @@ const ShiftPolicyList = () => {
 
   useEffect(() => {
     axiosInstance
-      .get("/shift-policies/")
+      .get("app/shift-policies/")
       .then((response) => {
         setShifts(response.data);
       })
@@ -50,11 +50,11 @@ const ShiftPolicyList = () => {
   const updateShift = async (id: number) => {
     setLoading(true);
     try {
-      await axiosInstance.put(`/shift-policies/${id}/`, editShift);
+      await axiosInstance.put(`app/shift-policies/${id}/`, editShift);
       setEditId(null);
       setEditShift({});
       // Refresh list
-      const res = await axiosInstance.get("/shift-policies/");
+      const res = await axiosInstance.get("app/shift-policies/");
       setShifts(res.data);
     } catch {
       alert("Failed to update shift policy.");
@@ -71,7 +71,7 @@ const ShiftPolicyList = () => {
     if (!deleteId) return;
     setLoading(true);
     try {
-      await axiosInstance.delete(`/shift-policies/${deleteId}/`);
+      await axiosInstance.delete(`app/shift-policies/${deleteId}/`);
       setShifts((prev) => prev.filter((shift) => shift.id !== deleteId));
       setDeleteId(null);
       setDeleteName("");

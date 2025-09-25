@@ -125,9 +125,9 @@ const EmployeeRegisterForm: React.FC = () => {
     const fetchOptions = async () => {
       try {
         const [deptRes, desigRes, assetRes] = await Promise.all([
-          axiosInstance.get('/departments/'),
-          axiosInstance.get('/designations/'),
-          axiosInstance.get('/assets/'),
+          axiosInstance.get('app/departments/'),
+          axiosInstance.get('app/designations/'),
+          axiosInstance.get('app/assets/'),
         ]);
         setDepartments(
           deptRes.data.map((dept: { id?: string | number; department_id?: string | number; _id?: string | number; name?: string; department_name?: string; dept_name?: string; title?: string }) => ({
@@ -149,7 +149,7 @@ const EmployeeRegisterForm: React.FC = () => {
           }))
         );
         // Fetch initial level choices and reporting managers for default level
-        const url = form.level ? `/employee/get-reporting-manager-choices/?reporting_level_id=${form.level}` : '/employee/get-reporting-manager-choices/';
+        const url = form.level ? `app/employee/get-reporting-manager-choices/?reporting_level_id=${form.level}` : 'app/employee/get-reporting-manager-choices/';
         const res = await axiosInstance.get(url);
         setLevels((Array.isArray(res.data.level_choices) ? res.data.level_choices : []).map((lvl: { id: number | string; name: string }) => ({ id: String(lvl.id), name: lvl.name })));
         setReportingManagers((Array.isArray(res.data.reporting_managers) ? res.data.reporting_managers : []).map((mgr: { id: number | string; name: string }) => ({ id: mgr.id, name: mgr.name })));
@@ -169,7 +169,7 @@ const EmployeeRegisterForm: React.FC = () => {
         const updatedForm = { ...prevForm, [name]: value === '' ? '' : Number(value) };
         // If level changes, fetch reporting managers and levels from backend endpoint
         if (name === 'level') {
-          const url = `/employee/get-reporting-manager-choices/?reporting_level_id=${value}`;
+          const url = `app/employee/get-reporting-manager-choices/?reporting_level_id=${value}`;
           axiosInstance.get(url).then(res => {
             setReportingManagers((Array.isArray(res.data.reporting_managers) ? res.data.reporting_managers : []).map((mgr: { id: number | string; name: string }) => ({ id: mgr.id, name: mgr.name })));
             setLevels((Array.isArray(res.data.level_choices) ? res.data.level_choices : []).map((lvl: { id: number | string; name: string }) => ({ id: String(lvl.id), name: lvl.name })));
@@ -261,7 +261,7 @@ const EmployeeRegisterForm: React.FC = () => {
         config = { headers: { 'Content-Type': 'multipart/form-data' } };
       }
 
-      await axiosInstance.post('/employee/', dataToSend, config);
+      await axiosInstance.post('app/employee/', dataToSend, config);
       setSuccess('Employee registered successfully!');
       setTimeout(() => navigate(-1), 1200);
     } catch (err: unknown) {

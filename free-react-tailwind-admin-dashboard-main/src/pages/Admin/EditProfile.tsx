@@ -6,7 +6,7 @@ import TextArea from "../../components/form/input/TextArea";
 import FileInput from "../../components/form/input/FileInput";
 import { axiosInstance } from "../Dashboard/api";
 
-const API_URL = "/company-update";
+const API_URL = "app/company-update";
 
 type Company = {
   id: number;

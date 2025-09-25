@@ -1,9 +1,14 @@
+// Declare global variable from Vite config
+declare const __API_URL__: string;
 import axios from "axios";
 import { jwtDecode } from "jwt-decode";
 
+// Use global API URL from Vite config
+const API_URL = __API_URL__;
+
 // 👉 Create an axios instance
 export const axiosInstance = axios.create({
-  baseURL: "https://apihrms.innovyxtechlabs.com/api",
+  baseURL: API_URL,
 });
 
 // 👉 Attach access token automatically
@@ -26,7 +31,7 @@ axiosInstance.interceptors.request.use(
     const refreshToken = localStorage.getItem("refresh_token");
     if (token && isTokenExpired(token) && refreshToken) {
       try {
-        const response = await axios.post("https://apihrms.innovyxtechlabs.com/api/app/token/refresh/", {
+        const response = await axios.post(`${API_URL}/app/token/refresh/`, {
           refresh: refreshToken,
         });
         token = response.data.access;
@@ -61,7 +66,7 @@ axiosInstance.interceptors.response.use(
       try {
         // Get new access token
         const refreshResponse = await axios.post(
-          "http://https://apihrms.innovyxtechlabs.com/api/token/refresh/",
+          `${API_URL}/token/refresh/`,
           { refresh: localStorage.getItem("refresh_token") }
         );
 

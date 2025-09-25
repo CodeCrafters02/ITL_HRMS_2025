@@ -17,7 +17,7 @@ interface Asset {
   icon_image: string;
 }
 
-const API_URL = "/assets/"; // Adjust to your actual endpoint
+const API_URL = "app/assets/"; // Adjust to your actual endpoint
 
 const AssetsInventory: React.FC = () => {
   const [assets, setAssets] = useState<Asset[]>([]);

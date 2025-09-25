@@ -48,7 +48,7 @@ const ShiftConfigForm: React.FC = () => {
     setLoading(true);
     setError("");
     try {
-      await axiosInstance.post("/shift-policies/", form);
+      await axiosInstance.post("app/shift-policies/", form);
       navigate("/admin/configuration/shift"); // Adjust path as needed
     } catch (err: unknown) {
       type AxiosErrorType = { response?: { data?: { detail?: string } } };

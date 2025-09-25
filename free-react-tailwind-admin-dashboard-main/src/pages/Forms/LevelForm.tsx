@@ -66,7 +66,7 @@ export default function LevelForm() {
     setError("");
     
     try {
-      await axiosInstance.post("/levels/", {
+      await axiosInstance.post("app/levels/", {
         level_name: levelName.trim(),
         description: description.trim(),
       });

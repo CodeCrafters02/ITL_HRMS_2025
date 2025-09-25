@@ -52,7 +52,7 @@ const PayrollBatches: React.FC = () => {
 
   const fetchBatches = async () => {
     try {
-      const response = await axiosInstance.get("/payroll-batches/");
+      const response = await axiosInstance.get("app/payroll-batches/");
       setBatches(response.data);
     } catch (error) {
       console.error("Error fetching payroll batches:", error);
@@ -67,10 +67,10 @@ const PayrollBatches: React.FC = () => {
     setSendResult(null);
     try {
       // Fetch batch details
-      const batchRes = await axiosInstance.get(`/payroll-batches/${batchId}/`);
+      const batchRes = await axiosInstance.get(`app/payroll-batches/${batchId}/`);
       setSelectedBatch(batchRes.data);
       // Fetch payrolls for batch
-      const payrollRes = await axiosInstance.get(`/payrolls/?batch_id=${batchId}`);
+      const payrollRes = await axiosInstance.get(`app/payrolls/?batch_id=${batchId}`);
       setPayrolls(payrollRes.data);
     } catch (err: unknown) {
       let msg = "Failed to fetch payroll batch or payrolls";

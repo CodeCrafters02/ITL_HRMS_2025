@@ -51,14 +51,14 @@ export default function Designation() {
   }, []);
 
   const fetchDesignations = async () => {
-    const res = await axiosInstance.get("/designations/");
+    const res = await axiosInstance.get("app/designations/");
     setDesignations(res.data);
   };
 
   const fetchDependencies = async () => {
     const [depRes, lvlRes] = await Promise.all([
-      axiosInstance.get("/departments/"),
-      axiosInstance.get("/levels/"),
+      axiosInstance.get("app/departments/"),
+      axiosInstance.get("app/levels/"),
     ]);
     setDepartments(depRes.data);
     setLevels(lvlRes.data);
@@ -75,7 +75,7 @@ export default function Designation() {
     if (!editDesignationName || !editDepartment || !editLevel) return;
 
     try {
-      await axiosInstance.put(`/designations/${id}/`, {
+      await axiosInstance.put(`app/designations/${id}/`, {
         designation_name: editDesignationName,
         department: editDepartment,
         level: editLevel,
@@ -97,7 +97,7 @@ export default function Designation() {
   const confirmDeleteDesignation = async () => {
     if (!deleteId) return;
     try {
-      await axiosInstance.delete(`/designations/${deleteId}/`);
+      await axiosInstance.delete(`app/designations/${deleteId}/`);
       fetchDesignations();
       setDeleteId(null);
       setDeleteName("");

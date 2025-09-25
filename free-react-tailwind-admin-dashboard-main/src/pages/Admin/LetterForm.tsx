@@ -22,8 +22,7 @@ const LetterForm: React.FC<LetterFormProps> = ({ onSuccess }) => {
 
 To,
 <name>
-&
-<address>
+
 
 Dear <name>,
 We are excited to offer you the position of <designation> at <company>. After evaluating your skills, enthusiasm,
@@ -55,7 +54,7 @@ projects and achieving great success.
 If you have any questions or need further clarification, feel free to reach out to us at samplecompanyname@gmail.com or 123-456-7890. Welcome aboard!
 
 Warm regards,
-<sender_name>
+
 
 Acknowledgment and Acceptance
 I, <name>, have read and understood the terms of this offer letter and accept the position of <designation> at
@@ -95,7 +94,7 @@ Date: ______________________________
       return;
     }
     try {
-      await axiosInstance.post('/letter-templates/', {
+      await axiosInstance.post('app/letter-templates/', {
         title,
         content,
         email_content: emailContent,

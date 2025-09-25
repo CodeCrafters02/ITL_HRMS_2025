@@ -1,8 +1,10 @@
+// Declare global variable from Vite config
+declare const __API_URL__: string;
 import axios, { InternalAxiosRequestConfig } from "axios";
 import { jwtDecode } from "jwt-decode";
 
 export const axiosInstance = axios.create({
-  baseURL: "https://apihrms.innovyxtechlabs.com/api/employee/",
+  baseURL: `${__API_URL__}employee/`,
   headers: {
     "Content-Type": "application/json",
   },
@@ -27,7 +29,7 @@ axiosInstance.interceptors.request.use(
     if (token && isTokenExpired(token) && refreshToken) {
       try {
         const response = await axios.post(
-          "https://apihrms.innovyxtechlabs.com/api/app/token/refresh/",
+          `${__API_URL__}/app/token/refresh/`,
           {
             refresh: refreshToken,
           }

@@ -141,7 +141,7 @@ const AdminSidebar: React.FC = () => {
 
   useEffect(() => {
     // Fetch company logo and name for admin
-   axiosInstance.get("company-logo/")
+   axiosInstance.get("app/company-logo/")
       .then(res => {
         
         setCompanyLogo(res.data.logo_url || "");

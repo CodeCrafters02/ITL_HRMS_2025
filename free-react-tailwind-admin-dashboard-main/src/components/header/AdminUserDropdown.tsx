@@ -11,7 +11,7 @@ export default function AdminUserDropdown() {
   const [adminEmail, setAdminEmail] = useState<string>("");
 
   useEffect(() => {
-    axiosInstance.get("company-logo/")
+    axiosInstance.get("app/company-logo/")
       .then(res => {
         setCompanyLogo(res.data.logo_url || "");
         setAdminUsername(res.data.admin_username || "");

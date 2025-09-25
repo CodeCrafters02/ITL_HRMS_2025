@@ -35,7 +35,7 @@ const GeneratePayroll: React.FC = () => {
     setGenerating(true);
     setError(null);
     try {
-            const { data } = await axiosInstance.post("/generate-payroll/");
+            const { data } = await axiosInstance.post("app/generate-payroll/");
             setPreview(data.payroll_preview || []);
             setBatchId(data.batch_id);
             setBatchStatus(data.batch_status);
@@ -61,7 +61,7 @@ const GeneratePayroll: React.FC = () => {
     setLoading(true);
     setError(null);
     try {
-            await axiosInstance.post(`/payroll-batches/${batchId}/finalize/`);
+            await axiosInstance.post(`app/payroll-batches/${batchId}/finalize/`);
       setFinalized(true);
       setBatchStatus("Locked");
     } catch (err: unknown) {
@@ -180,11 +180,11 @@ const GeneratePayroll: React.FC = () => {
               <div className="flex gap-4 mt-6">
                 <button
                   type="button"
-                  className={`$${
-                    batchStatus === "Locked"
-                      ? "bg-gray-400"
-                      : "bg-green-600 hover:bg-green-700"
-                  } text-white font-semibold py-2 px-4 rounded shadow`}
+                  className={
+                    (loading || batchStatus === "Locked" || finalized)
+                      ? "bg-gray-400 text-white font-semibold py-2 px-4 rounded shadow cursor-not-allowed"
+                      : "bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-4 rounded shadow"
+                  }
                   onClick={handleLock}
                   disabled={loading || batchStatus === "Locked" || finalized}
                 >
@@ -192,7 +192,7 @@ const GeneratePayroll: React.FC = () => {
                     ? "Locking..."
                     : batchStatus === "Locked" || finalized
                     ? "Locked"
-                    : "Lock Payroll"}
+                    : "Finalize Payroll"}
                 </button>
 
                 <button

@@ -1,3 +1,5 @@
+// Declare global variable from Vite config
+declare const __API_URL__: string;
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ToastContainer, toast } from "react-toastify";
@@ -33,7 +35,7 @@ export default function SignUpForm() {
 
     try {
       const response = await axios.post(
-        "https://apihrms.innovyxtechlabs.com/app/master-register/",
+        `${__API_URL__}/app/master-register/`,
         formData
       );
       console.log("Success:", response.data);

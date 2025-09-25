@@ -20,7 +20,7 @@ const ApprovedLeave: React.FC = () => {
   useEffect(() => {
     const fetchLeaveLogs = async () => {
       try {
-        const res = await axiosInstance.get('/approved-leaves/');
+        const res = await axiosInstance.get('app/approved-leaves/');
         setLeaveLogs(res.data);
       } catch (err) {
         console.error(err);

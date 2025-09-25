@@ -25,7 +25,7 @@ const CompanyPolicy: React.FC = () => {
 
   useEffect(() => {
     axiosInstance
-      .get("/policies/", {
+      .get("app/policies/", {
         headers: {
           Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
         },
@@ -49,7 +49,7 @@ const CompanyPolicy: React.FC = () => {
   const confirmDeletePolicy = async () => {
     if (!deleteId) return;
     try {
-      await axiosInstance.delete(`/policies/${deleteId}/`, {
+      await axiosInstance.delete(`app/policies/${deleteId}/`, {
         headers: {
           Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
         },

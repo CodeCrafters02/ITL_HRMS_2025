@@ -50,7 +50,7 @@ export default function AdminNotifications() {
   const confirmDelete = async () => {
     if (!deleteId) return;
     try {
-      await axiosInstance.delete(`/notifications/${deleteId}/`);
+      await axiosInstance.delete(`app/notifications/${deleteId}/`);
       setNotifications(prev => prev.filter(n => n.id !== deleteId));
       setDeleteId(null);
       setDeleteTitle("");
@@ -63,7 +63,7 @@ export default function AdminNotifications() {
   // Fetch notifications
   useEffect(() => {
     setLoading(true);
-    axiosInstance.get("/notifications/")
+    axiosInstance.get("app/notifications/")
       .then((res: { data: Notification[] }) => setNotifications(res.data))
       .catch(() => setNotifications([]))
       .finally(() => setLoading(false));
@@ -77,7 +77,7 @@ export default function AdminNotifications() {
   // Add notification
   const handleAdd = (e: React.FormEvent) => {
     e.preventDefault();
-    axiosInstance.post("/notifications/", form)
+    axiosInstance.post("app/notifications/", form)
       .then((res: { data: Notification }) => {
         setNotifications(prev => [res.data, ...prev]);
         setShowModal(false);

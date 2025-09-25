@@ -1,3 +1,5 @@
+// Declare global variable from Vite config
+declare const __API_URL__: string;
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import axios from "axios";
@@ -43,7 +45,7 @@ export default function SignInForm() {
 
     try {
       const response = await axios.post(
-        "https://apihrms.innovyxtechlabs.com/app/login/",
+        `${__API_URL__}/app/login/`,
         {
           username: formData.username.trim(),
           password: formData.password,

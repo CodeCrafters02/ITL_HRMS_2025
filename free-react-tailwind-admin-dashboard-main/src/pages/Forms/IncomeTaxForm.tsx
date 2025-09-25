@@ -21,7 +21,7 @@ const IncomeTaxForm: React.FC = () => {
     }
     setLoading(true);
     try {
-      await axiosInstance.post("/income-tax-configs/", {
+      await axiosInstance.post("app/income-tax-configs/", {
         name,
         salary_from: salaryFrom,
         salary_to: salaryTo,

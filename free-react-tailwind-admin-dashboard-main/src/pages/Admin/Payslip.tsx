@@ -40,7 +40,7 @@ const Payslip: React.FC = () => {
 
   useEffect(() => {
     // Fetch company info for logged-in user
-    axiosInstance.get('/company-update/')
+    axiosInstance.get('app/company-update/')
       .then(res => {
         setCompany({
           name: res.data.name || 'Company Name',
@@ -52,7 +52,7 @@ const Payslip: React.FC = () => {
 
   useEffect(() => {
     if (employeeId && batchId) {
-      axiosInstance.get(`/payrolls/?batch_id=${batchId}`)
+      axiosInstance.get(`app/payrolls/?batch_id=${batchId}`)
         .then(res => {
           const found = (res.data as Payroll[]).find((p) => p.employee_id == employeeId);
           setPayroll(found || null);

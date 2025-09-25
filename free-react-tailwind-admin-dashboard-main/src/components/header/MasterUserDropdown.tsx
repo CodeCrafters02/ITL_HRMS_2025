@@ -9,7 +9,7 @@ export default function MasterUserDropdown() {
 
   useEffect(() => {
     const token = localStorage.getItem("access_token");
-    axiosInstance.get("master-register/", {
+    axiosInstance.get("app/master-register/", {
       headers: { Authorization: `Bearer ${token}` }
     })
     .then(res => {

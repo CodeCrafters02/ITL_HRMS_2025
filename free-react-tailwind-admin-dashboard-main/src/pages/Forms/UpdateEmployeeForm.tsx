@@ -1,3 +1,5 @@
+// Helper to ensure select value is never null
+const safeSelectValue = (value: string | undefined | null) => value ?? "";
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { axiosInstance } from '../Dashboard/api';
@@ -125,7 +127,7 @@ const UpdateEmployeeForm: React.FC = () => {
   useEffect(() => {
     if (!id) return;
     setLoading(true);
-    axiosInstance.get(`/employee/${id}/`)
+    axiosInstance.get(`app/employee/${id}/`)
       .then((res: { data: Record<string, unknown> }) => {
         const data = res.data as unknown as (FormData & { asset_details?: Array<{ id?: number } | number> });
         setForm({
@@ -158,9 +160,9 @@ const UpdateEmployeeForm: React.FC = () => {
     const fetchOptions = async () => {
       try {
         const [deptRes, desigRes, assetRes] = await Promise.all([
-          axiosInstance.get('/departments/'),
-          axiosInstance.get('/designations/'),
-          axiosInstance.get('/assets/'),
+          axiosInstance.get('app/departments/'),
+          axiosInstance.get('app/designations/'),
+          axiosInstance.get('app/assets/'),
         ]);
         setDepartments(
           deptRes.data.map((dept: { id?: string | number; department_id?: string | number; _id?: string | number; name?: string; department_name?: string; dept_name?: string; title?: string }) => ({
@@ -193,7 +195,7 @@ const UpdateEmployeeForm: React.FC = () => {
     const fetchLevelsAndManagers = async () => {
       try {
         if (form.department) {
-          const levelsRes = await axiosInstance.get(`/levels/?department_id=${form.department}`);
+          const levelsRes = await axiosInstance.get(`app/levels/?department_id=${form.department}`);
           setLevels(levelsRes.data.map((level: { id?: string | number; level_id?: string | number; _id?: string | number; name?: string; level_name?: string; title?: string; department?: string | number; department_id?: string | number }) => ({
             id: String(level.id ?? level.level_id ?? level._id),
             name: String(level.name ?? level.level_name ?? level.title),
@@ -203,7 +205,7 @@ const UpdateEmployeeForm: React.FC = () => {
           setLevels([]);
         }
         // Reporting managers
-        const url = form.level ? `/employee/get-reporting-manager-choices/?reporting_level_id=${form.level}` : '/employee/get-reporting-manager-choices/';
+        const url = form.level ? `app/employee/get-reporting-manager-choices/?reporting_level_id=${form.level}` : 'app/employee/get-reporting-manager-choices/';
         const mgrRes = await axiosInstance.get(url);
         setReportingManagers(mgrRes.data.map((mgr: { id?: number | string; manager_id?: number | string; _id?: number | string; name?: string; manager_name?: string; title?: string }) => ({
           id: mgr.id ?? mgr.manager_id ?? mgr._id,
@@ -302,7 +304,7 @@ const UpdateEmployeeForm: React.FC = () => {
       } else {
         dataToSend = payload;
       }
-      await axiosInstance.patch(`/employee/${id}/`, dataToSend, config);
+      await axiosInstance.patch(`app/employee/${id}/`, dataToSend, config);
       setSuccess('Employee updated successfully!');
       setTimeout(() => navigate(-1), 1200);
     } catch (err: unknown) {
@@ -451,7 +453,7 @@ const UpdateEmployeeForm: React.FC = () => {
                         options={genderOptions}
                         placeholder="Select gender"
                         onChange={handleSelectChange('gender')}
-                        defaultValue={form.gender}
+                        defaultValue={safeSelectValue(form.gender)}
                         key={form.gender}
                       />
                     </div>
@@ -670,7 +672,7 @@ const UpdateEmployeeForm: React.FC = () => {
                         options={departments.map(dept => ({ value: dept.id, label: dept.name }))}
                         placeholder="Select department"
                         onChange={handleSelectChange('department')}
-                        defaultValue={form.department}
+                        defaultValue={safeSelectValue(form.department)}
                         key={form.department}
                       />
                     </div>
@@ -682,7 +684,7 @@ const UpdateEmployeeForm: React.FC = () => {
                           .map(desig => ({ value: desig.id, label: desig.name }))}
                         placeholder="Select designation"
                         onChange={handleSelectChange('designation')}
-                        defaultValue={form.designation}
+                        defaultValue={safeSelectValue(form.designation)}
                         key={form.designation}
                       />
                     </div>
@@ -704,7 +706,7 @@ const UpdateEmployeeForm: React.FC = () => {
                         options={SOURCE_CHOICES}
                         placeholder="Select source"
                         onChange={handleSelectChange('source_of_employment')}
-                        defaultValue={form.source_of_employment}
+                        defaultValue={safeSelectValue(form.source_of_employment)}
                         key={form.source_of_employment}
                       />
                     </div>
@@ -720,7 +722,7 @@ const UpdateEmployeeForm: React.FC = () => {
                           handleSelectChange('level')(value);
                           setForm(prev => ({ ...prev, reporting_manager: '' }));
                         }}
-                        defaultValue={form.level}
+                        defaultValue={safeSelectValue(form.level)}
                         key={form.level}
                       />
                     </div>
@@ -730,7 +732,7 @@ const UpdateEmployeeForm: React.FC = () => {
                         options={reportingManagers.map(mgr => ({ value: mgr.id.toString(), label: mgr.name }))}
                         placeholder="Select reporting manager"
                         onChange={handleSelectChange('reporting_manager')}
-                        defaultValue={form.reporting_manager}
+                        defaultValue={safeSelectValue(form.reporting_manager)}
                         key={form.reporting_manager}
                       />
                     </div>
@@ -817,7 +819,7 @@ const UpdateEmployeeForm: React.FC = () => {
                         options={paymentOptions}
                         placeholder="Select payment method"
                         onChange={handleSelectChange('payment_method')}
-                        defaultValue={form.payment_method}
+                        defaultValue={safeSelectValue(form.payment_method)}
                         key={form.payment_method}
                       />
                     </div>
@@ -895,7 +897,7 @@ const UpdateEmployeeForm: React.FC = () => {
                         options={epfEsicOptions}
                         placeholder="Select EPF status"
                         onChange={handleSelectChange('epf_status')}
-                        defaultValue={form.epf_status}
+                        defaultValue={safeSelectValue(form.epf_status)}
                         key={form.epf_status}
                       />
                     </div>
@@ -905,7 +907,7 @@ const UpdateEmployeeForm: React.FC = () => {
                         options={epfEsicOptions}
                         placeholder="Select ESIC status"
                         onChange={handleSelectChange('esic_status')}
-                        defaultValue={form.esic_status}
+                        defaultValue={safeSelectValue(form.esic_status)}
                         key={form.esic_status}
                       />
                     </div>

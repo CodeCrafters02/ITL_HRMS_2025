@@ -711,7 +711,15 @@ class PayrollSerializer(serializers.ModelSerializer):
 class IncomeTaxConfigSerializer(serializers.ModelSerializer):
     class Meta:
         model = IncomeTaxConfig
-        fields = '__all__'        
+        fields = '__all__'  
+        read_only_fields = ['id','company']      
+
+    def create(self, validated_data):
+        request = self.context.get('request')
+        if not request or not hasattr(request.user, 'company') or not request.user.company:
+            raise serializers.ValidationError({'company': 'Company is required.'})
+        validated_data['company'] = request.user.company
+        return super().create(validated_data) 
         
         
 class AttendanceSerializer(serializers.ModelSerializer):

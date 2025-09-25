@@ -70,7 +70,7 @@ const Attendance: React.FC = () => {
     const fetchAttendance = async () => {
       setLoading(true);
       try {
-        const res = await axiosInstance.get('/attendance/', {
+        const res = await axiosInstance.get('app/attendance/', {
           params: {
             from_date: startDate,
             to_date: endDate,

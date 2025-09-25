@@ -51,7 +51,7 @@ const StudioShodweLetterhead: React.FC<LetterProps> = (props) => {
     if (navState?.title && navState?.content && !templateId) {
       setLoading(true);
       axiosInstance
-        .get('/letter-templates/')
+        .get('app/letter-templates/')
         .then((res) => {
           // Find the most recent letter with the same title and content
           const found = (res.data as Array<{ id: number; title: string; content: string; editor_state?: string; company_details?: unknown }> ).find(
@@ -76,7 +76,7 @@ const StudioShodweLetterhead: React.FC<LetterProps> = (props) => {
           setEditorStateJSON('');
         })
         .finally(() => setLoading(false));
-      axiosInstance.get("/company-update/").then((res) => {
+      axiosInstance.get("app/company-update/").then((res) => {
         setCompany(res.data || null);
       });
       return;
@@ -86,7 +86,7 @@ const StudioShodweLetterhead: React.FC<LetterProps> = (props) => {
     if (templateId) {
       setLoading(true);
       axiosInstance
-        .get(`/letter-templates/${templateId}/`)
+        .get(`app/letter-templates/${templateId}/`)
         .then((res) => {
           setLetterTitle(res.data.title || '');
           setLetterContent(res.data.content || '');
@@ -99,7 +99,7 @@ const StudioShodweLetterhead: React.FC<LetterProps> = (props) => {
         })
         .finally(() => setLoading(false));
       axiosInstance
-        .get("/letter-templates/")
+        .get("app/letter-templates/")
         .then((res) => {
           const found = (res.data as Array<{ id: number; company_details?: {
             name?: string;
@@ -294,14 +294,14 @@ const StudioShodweLetterhead: React.FC<LetterProps> = (props) => {
                 setError(null);
                 try {
                   if (templateId) {
-                    await axiosInstance.put(`/letter-templates/${templateId}/`, {
+                    await axiosInstance.put(`app/letter-templates/${templateId}/`, {
                       title: letterTitle,
                       content: letterContent,
                       editor_state: editorStateJSON,
                     });
                     setJustSaved(true);
                   } else {
-                    await axiosInstance.post("/letter-templates/", {
+                    await axiosInstance.post("app/letter-templates/", {
                       title: letterTitle,
                       content: letterContent,
                       editor_state: editorStateJSON,

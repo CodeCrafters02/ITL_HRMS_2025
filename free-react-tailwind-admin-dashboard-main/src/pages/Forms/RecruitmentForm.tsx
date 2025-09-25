@@ -56,10 +56,10 @@ const RecruitmentForm: React.FC<RecruitmentFormProps> = ({ initialData = {}, onS
     try {
       if (initialData && initialData.reference_id) {
         // Edit mode (assume reference_id is unique key)
-        await axiosInstance.put(`/recruitment/${initialData.reference_id}/`, form);
+        await axiosInstance.put(`app/recruitment/${initialData.reference_id}/`, form);
       } else {
         // Add mode
-        await axiosInstance.post('/recruitment/', form);
+        await axiosInstance.post('app/recruitment/', form);
       }
       if (onSuccess) onSuccess();
     } catch {

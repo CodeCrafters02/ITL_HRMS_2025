@@ -28,7 +28,7 @@ const AdminPage: React.FC = () => {
     const fetchAdmins = async () => {
       try {
         const response = await axiosInstance.get(
-          "/admin-register/"
+          "app/admin-register/"
         );
         setAdmins(response.data);
       } catch (err: unknown) {
@@ -55,7 +55,7 @@ const AdminPage: React.FC = () => {
   };
   const confirmDelete = async (id: number) => {
     try {
-      await axiosInstance.delete(`/admin-register/${id}/`);
+      await axiosInstance.delete(`app/admin-register/${id}/`);
       setAdmins((prev) => prev.filter((a) => a.id !== id));
       toast.success("Admin deleted successfully.");
     } catch {
@@ -83,7 +83,7 @@ const AdminPage: React.FC = () => {
   const handleSave = async (id: number) => {
     setSaving(true);
     try {
-      const response = await axiosInstance.put(`/admin-register/${id}/`, {
+      const response = await axiosInstance.put(`app/admin-register/${id}/`, {
         username: editUsername,
         email: editEmail,
       });

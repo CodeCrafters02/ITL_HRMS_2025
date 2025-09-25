@@ -68,8 +68,8 @@ export default function DesignationForm() {
     const fetchDeps = async () => {
       try {
         const [depRes, lvlRes] = await Promise.all([
-          axiosInstance.get("/departments/"),
-          axiosInstance.get("/levels/")
+          axiosInstance.get("app/departments/"),
+          axiosInstance.get("app/levels/")
         ]);
         setDepartments(depRes.data);
         setLevels(lvlRes.data);
@@ -92,7 +92,7 @@ export default function DesignationForm() {
     setLoading(true);
     setError("");
     try {
-      await axiosInstance.post("/designations/", {
+      await axiosInstance.post("app/designations/", {
         designation_name: designationName.trim(),
         department,
         level,

@@ -45,10 +45,10 @@ const RecruitmentPage: React.FC = () => {
     setError(null);
     try {
       // Fetch recruitments
-      const response = await axiosInstance.get('/recruitment/');
+  const response = await axiosInstance.get('app/recruitment/');
       const recruitmentsData = response.data;
       // Fetch generated letters for all candidates
-      const letterRes = await axiosInstance.get('/generated-letters/');
+      const letterRes = await axiosInstance.get('app/generated-letters/');
       const letters = letterRes.data; // [{candidate, template, ...}]
       // Map generated letters to each recruitment (ignore type, only candidate and template)
       type Letter = { candidate: number; template: number };
@@ -81,7 +81,7 @@ const RecruitmentPage: React.FC = () => {
     setLoading(true);
     setError(null);
     try {
-      await axiosInstance.patch(`/recruitment/${editId}/`, editData);
+  await axiosInstance.patch(`app/recruitment/${editId}/`, editData);
       setEditId(null);
       setEditData({});
       fetchRecruitments();
@@ -106,7 +106,7 @@ const RecruitmentPage: React.FC = () => {
     setLoading(true);
     setError(null);
     try {
-      await axiosInstance.delete(`/recruitment/${deleteId}/`);
+  await axiosInstance.delete(`app/recruitment/${deleteId}/`);
       fetchRecruitments();
       setDeleteId(null);
       toast.success('Deleted successfully', { position: 'bottom-right' });
@@ -128,10 +128,10 @@ const RecruitmentPage: React.FC = () => {
     setTemplateError(null);
     try {
       // Fetch all templates
-      const tplRes = await axiosInstance.get('/letter-templates/');
+      const tplRes = await axiosInstance.get('app/letter-templates/');
       setTemplateOptions(tplRes.data);
       // Fetch all generated letters for this candidate and type=offer
-      const generatedRes = await axiosInstance.get(`/generated-letters/?candidate_id=${rec.id}&type=offer`);
+      const generatedRes = await axiosInstance.get(`app/generated-letters/?candidate_id=${rec.id}&type=offer`);
       const generatedLetters: { template: number }[] = Array.isArray(generatedRes.data) ? generatedRes.data : [];
       // If only one template, check if letter exists for that template
       if (tplRes.data.length === 1) {
@@ -168,10 +168,10 @@ const RecruitmentPage: React.FC = () => {
     setTemplateError(null);
     try {
       // Fetch all templates
-      const tplRes = await axiosInstance.get('/letter-templates/');
+      const tplRes = await axiosInstance.get('app/letter-templates/');
       setTemplateOptions(tplRes.data);
       // Fetch all generated letters for this candidate and type=appointment
-      const generatedRes = await axiosInstance.get(`/generated-letters/?candidate_id=${rec.id}&type=appointment`);
+      const generatedRes = await axiosInstance.get(`app/generated-letters/?candidate_id=${rec.id}&type=appointment`);
       const generatedLetters: { template: number }[] = Array.isArray(generatedRes.data) ? generatedRes.data : [];
       // If only one template, check if letter exists for that template
       if (tplRes.data.length === 1) {
@@ -197,7 +197,7 @@ const RecruitmentPage: React.FC = () => {
     if (templateSelectFor) {
       // Check if letter already exists for this candidate and template, always include type
       try {
-        const res = await axiosInstance.get(`/generated-letters/?candidate_id=${templateSelectFor.id}&template_id=${template_id}&type=${templateSelectFor.type}`);
+        const res = await axiosInstance.get(`app/generated-letters/?candidate_id=${templateSelectFor.id}&template_id=${template_id}&type=${templateSelectFor.type}`);
         if (Array.isArray(res.data) && res.data.length > 0) {
           // Letter already exists, redirect directly
           window.location.href = `/admin/letter-pdf?id=${templateSelectFor.id}&type=${templateSelectFor.type}&template_id=${template_id}`;

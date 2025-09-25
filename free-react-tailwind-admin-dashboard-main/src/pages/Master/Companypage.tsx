@@ -40,7 +40,7 @@ const CompanyList: React.FC = () => {
   useEffect(() => {
     const fetchAdmins = async () => {
       try {
-        const response = await axiosInstance.get("/admin-register/");
+        const response = await axiosInstance.get("app/admin-register/");
         setAdminUsers(response.data);
       } catch {
         // ignore
@@ -55,7 +55,7 @@ const CompanyList: React.FC = () => {
   };
   const confirmDelete = async (id: number) => {
     try {
-      await axiosInstance.delete(`/company-with-admin/${id}/`);
+      await axiosInstance.delete(`app/company-with-admin/${id}/`);
       setCompanies((prev) => prev.filter((c) => c.id !== id));
       toast.success("Company deleted successfully.");
     } catch {
@@ -100,7 +100,7 @@ const CompanyList: React.FC = () => {
       if (logoFile) {
         formData.append("logo", logoFile);
       }
-      const response = await axiosInstance.put(`/company-with-admin/${id}/`, formData, {
+      const response = await axiosInstance.put(`app/company-with-admin/${id}/`, formData, {
         headers: { "Content-Type": "multipart/form-data" },
       });
       setCompanies((prev) =>
@@ -119,7 +119,7 @@ const CompanyList: React.FC = () => {
   useEffect(() => {
     const fetchCompanies = async () => {
       try {
-        const response = await axiosInstance.get("/company-with-admin/");
+        const response = await axiosInstance.get("app/company-with-admin/");
         setCompanies(response.data);
       } catch (err) {
         if ((err as AxiosError).isAxiosError) {

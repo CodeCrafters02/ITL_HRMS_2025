@@ -18,7 +18,7 @@ const CompanyPolicyForm: React.FC = () => {
     if (id) {
       setLoading(true);
       axiosInstance
-        .get(`/policies/${id}/`, {
+        .get(`app/policies/${id}/`, {
           headers: {
             Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
           },
@@ -52,14 +52,14 @@ const CompanyPolicyForm: React.FC = () => {
     formData.append("is_active", String(isActive));
     try {
       if (id) {
-        await axiosInstance.put(`/policies/${id}/`, formData, {
+        await axiosInstance.put(`app/policies/${id}/`, formData, {
           headers: {
             "Authorization": `Bearer ${localStorage.getItem("accessToken")}`,
             "Content-Type": "multipart/form-data",
           },
         });
       } else {
-        await axiosInstance.post("/policies/", formData, {
+        await axiosInstance.post("app/policies/", formData, {
           headers: {
             "Authorization": `Bearer ${localStorage.getItem("accessToken")}`,
             "Content-Type": "multipart/form-data",

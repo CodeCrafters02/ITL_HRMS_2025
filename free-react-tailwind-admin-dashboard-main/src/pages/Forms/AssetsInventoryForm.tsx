@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { axiosInstance } from "../Dashboard/api";
 import { useNavigate } from "react-router-dom";
 
-const API_URL = "/assets/"; 
+const API_URL = "app/assets/"; 
 
 const AssetsInventoryForm: React.FC = () => {
   const [name, setName] = useState("");

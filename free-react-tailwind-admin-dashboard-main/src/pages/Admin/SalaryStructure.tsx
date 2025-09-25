@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { FaTrash, FaPlus, FaEdit } from "react-icons/fa";
+import { FaTrash, FaPlus } from "react-icons/fa";
 import { toast } from "react-toastify";
 import { axiosInstance } from "../Dashboard/api";
 import { AxiosError } from "axios";
@@ -52,7 +52,7 @@ const SalaryStructureList: React.FC = () => {
   useEffect(() => {
     const fetchSalaryStructures = async () => {
       try {
-        const response = await axiosInstance.get("/salary-structures/");
+        const response = await axiosInstance.get("app/salary-structures/");
         setSalaryStructures(response.data);
       } catch (err) {
         if ((err as AxiosError).isAxiosError) {
@@ -78,7 +78,7 @@ const SalaryStructureList: React.FC = () => {
   const confirmDelete = async () => {
     if (!deleteId) return;
     try {
-      await axiosInstance.delete(`/salary-structures/${deleteId}/`);
+      await axiosInstance.delete(`app/salary-structures/${deleteId}/`);
       setSalaryStructures((prev) => prev.filter((s) => s.id !== deleteId));
       setDeleteId(null);
       setDeleteName("");
@@ -312,14 +312,6 @@ const SalaryStructureList: React.FC = () => {
                         </TableCell>
                         <TableCell className="px-6 py-5 text-center">
                           <div className="flex items-center justify-center gap-3">
-                            <button
-                              onClick={() => navigate(`/admin/form-salary-structure/${structure.id}`)}
-                              className="flex items-center gap-1 bg-blue-100 text-blue-700 hover:bg-blue-200 px-3 py-2 rounded-lg font-medium text-sm transition-colors"
-                              title="Edit Salary Structure"
-                            >
-                              <FaEdit className="w-3 h-3" />
-                              Edit
-                            </button>
                             <button
                               onClick={() => handleDeleteClick(structure.id, structure.name)}
                               className="flex items-center gap-1 bg-red-100 text-red-700 hover:bg-red-200 px-3 py-2 rounded-lg font-medium text-sm transition-colors"

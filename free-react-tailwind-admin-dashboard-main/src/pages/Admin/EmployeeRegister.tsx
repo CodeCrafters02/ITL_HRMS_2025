@@ -76,7 +76,7 @@ const EmployeeRegister: React.FC = () => {
   const confirmDelete = async () => {
     if (deleteId == null) return;
     try {
-      await axiosInstance.delete(`/employee/${deleteId}/`);
+      await axiosInstance.delete(`app/employee/${deleteId}/`);
       setEmployees((prev) => prev.filter((emp) => emp.id !== deleteId));
       toast.success('Deleted successfully');
     } catch (err: unknown) {
@@ -105,7 +105,7 @@ const EmployeeRegister: React.FC = () => {
 
     const fetchAll = async () => {
       try {
-        const empRes = await axiosInstance.get('/employee/');
+        const empRes = await axiosInstance.get('app/employee/');
         setEmployees(Array.isArray(empRes.data) ? empRes.data : []);
       } catch (err) {
         console.error(err);

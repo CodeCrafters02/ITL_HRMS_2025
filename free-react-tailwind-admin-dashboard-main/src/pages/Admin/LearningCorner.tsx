@@ -32,7 +32,7 @@ const LearningCornerPage: React.FC = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    axiosInstance.get('/learning-corner/')
+    axiosInstance.get('app/learning-corner/')
       .then(res => {
         setItems(Array.isArray(res.data) ? res.data : []);
         setLoading(false);
@@ -74,13 +74,13 @@ const LearningCornerPage: React.FC = () => {
       if (editForm.image && typeof editForm.image === 'object') data.append('image', editForm.image);
       if (editForm.document && typeof editForm.document === 'object') data.append('document', editForm.document);
       if (editForm.video && typeof editForm.video === 'object') data.append('video', editForm.video);
-  await axiosInstance.patch(`/learning-corner/${editId}/`, data, {
+  await axiosInstance.patch(`app/learning-corner/${editId}/`, data, {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
       setShowModal(false);
       setEditId(null);
       // Refetch items after update
-      axiosInstance.get('/learning-corner/').then(res => {
+      axiosInstance.get('app/learning-corner/').then(res => {
         setItems(Array.isArray(res.data) ? res.data : []);
       });
     } catch {
@@ -99,7 +99,7 @@ const LearningCornerPage: React.FC = () => {
     if (!deleteId) return;
     setLoading(true);
     try {
-      await axiosInstance.delete(`/learning-corner/${deleteId}/`);
+      await axiosInstance.delete(`app/learning-corner/${deleteId}/`);
       setItems(items.filter(item => item.id !== deleteId));
       setDeleteId(null);
       setDeleteName("");

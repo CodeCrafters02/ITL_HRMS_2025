@@ -27,7 +27,7 @@ export default function Department() {
   const navigate = useNavigate();
 
   const fetchDepartments = async () => {
-    const res = await axiosInstance.get("/departments/");
+    const res = await axiosInstance.get("app/departments/");
     setDepartments(res.data);
   };
 
@@ -41,7 +41,7 @@ export default function Department() {
   const updateDepartment = async (id: number) => {
     if (!editName) return;
     try {
-      await axiosInstance.put(`/departments/${id}/`, { department_name: editName });
+      await axiosInstance.put(`app/departments/${id}/`, { department_name: editName });
       setEditId(null);
       setEditName("");
       fetchDepartments();
@@ -59,7 +59,7 @@ export default function Department() {
   const confirmDeleteDepartment = async () => {
     if (!deleteId) return;
     try {
-      await axiosInstance.delete(`/departments/${deleteId}/`);
+      await axiosInstance.delete(`app/departments/${deleteId}/`);
       fetchDepartments();
       setDeleteId(null);
       setDeleteName("");

@@ -40,7 +40,7 @@ const StudioShodweLetterhead: React.FC = () => {
           setLetterTitle('');
           return;
         }
-        getParams = `/generated-letters/?candidate_id=${candidate_id}&template_id=${templateId}&type=${type}`;
+        getParams = `app/generated-letters/?candidate_id=${candidate_id}&template_id=${templateId}&type=${type}`;
         if (typeof candidate_id === 'string') {
           postBody.candidate_id = candidate_id;
         }
@@ -51,7 +51,7 @@ const StudioShodweLetterhead: React.FC = () => {
           setLetterTitle('');
           return;
         }
-        getParams = `/generated-letters/?relieved_id=${relieved_id}&template_id=${templateId}&type=${type}`;
+        getParams = `app/generated-letters/?relieved_id=${relieved_id}&template_id=${templateId}&type=${type}`;
         if (typeof relieved_id === 'string') {
           postBody.relieved_employee_id = relieved_id;
         }
@@ -64,7 +64,7 @@ const StudioShodweLetterhead: React.FC = () => {
       setLoading(true);
       try {
         // Fetch the template to get email_content
-        const templateRes = await axiosInstance.get(`/letter-templates/${templateId}/`);
+        const templateRes = await axiosInstance.get(`app/letter-templates/${templateId}/`);
         emailContent = templateRes.data.email_content || '';
         postBody.email_content = emailContent;
       } catch {
@@ -79,7 +79,7 @@ const StudioShodweLetterhead: React.FC = () => {
             setLetterTitle(res.data[0].title);
           } else {
             try {
-              const tplRes = await axiosInstance.get(`/letter-templates/${templateId}/`);
+              const tplRes = await axiosInstance.get(`app/letter-templates/${templateId}/`);
               setLetterTitle(tplRes.data.title || '');
             } catch {
               setLetterTitle('');
@@ -89,13 +89,13 @@ const StudioShodweLetterhead: React.FC = () => {
         } else {
           // No letter found, generate new letter
           try {
-            const res2 = await axiosInstance.post('/generate-letter-content/', postBody);
+            const res2 = await axiosInstance.post('app/generate-letter-content/', postBody);
             setLetterContent(res2.data.content || '');
             if (res2.data.title && res2.data.title !== '') {
               setLetterTitle(res2.data.title);
             } else {
               try {
-                const tplRes = await axiosInstance.get(`/letter-templates/${templateId}/`);
+                const tplRes = await axiosInstance.get(`app/letter-templates/${templateId}/`);
                 setLetterTitle(tplRes.data.title || '');
               } catch {
                 setLetterTitle('');
@@ -111,13 +111,13 @@ const StudioShodweLetterhead: React.FC = () => {
       } catch {
         // If GET fails, fallback to POST
         try {
-          const res2 = await axiosInstance.post('/generate-letter-content/', postBody);
+          const res2 = await axiosInstance.post('app/generate-letter-content/', postBody);
           setLetterContent(res2.data.content || '');
           if (res2.data.title && res2.data.title !== '') {
             setLetterTitle(res2.data.title);
           } else {
             try {
-              const tplRes = await axiosInstance.get(`/letter-templates/${templateId}/`);
+              const tplRes = await axiosInstance.get(`app/letter-templates/${templateId}/`);
               setLetterTitle(tplRes.data.title || '');
             } catch {
               setLetterTitle('');
@@ -131,7 +131,7 @@ const StudioShodweLetterhead: React.FC = () => {
         }
       }
       // Fetch company info
-      axiosInstance.get("/company-update/").then((res) => {
+      axiosInstance.get("app/company-update/").then((res) => {
         setCompany(res.data || null);
       });
     };
@@ -163,7 +163,7 @@ const StudioShodweLetterhead: React.FC = () => {
     <div className="min-h-screen bg-gray-50 p-4">
       <div className="flex justify-end mb-2">
         <button
-          className="bg-purple-600 text-white px-3 py-1 rounded"
+          className="bg-blue-600 text-white px-3 py-1 rounded"
           onClick={() => window.print()}
         >
           Print as PDF

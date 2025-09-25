@@ -56,7 +56,7 @@ const AdminCalendar: React.FC = () => {
     setLoading(true);
     setError(null);
     try {
-      const response = await axiosInstance.get("/calendar-events/");
+      const response = await axiosInstance.get("app/calendar-events/");
       setEvents(
         response.data.map((ev: CalendarEvent) => ({
           id: String(ev.id),
@@ -81,7 +81,7 @@ const AdminCalendar: React.FC = () => {
     setLoading(true);
     setError(null);
     try {
-      await axiosInstance.delete(`/calendar-events/${selectedEvent.id}/`);
+      await axiosInstance.delete(`app/calendar-events/${selectedEvent.id}/`);
       fetchEvents();
       closeModal();
       resetModalFields();
@@ -114,7 +114,7 @@ const AdminCalendar: React.FC = () => {
     try {
       if (selectedEvent && selectedEvent.id) {
         // Update existing event
-        await axiosInstance.put(`/calendar-events/${selectedEvent.id}/`, {
+        await axiosInstance.put(`app/calendar-events/${selectedEvent.id}/`, {
           name: eventName,
           date: eventDate,
           description: eventDescription,
@@ -122,7 +122,7 @@ const AdminCalendar: React.FC = () => {
         });
       } else {
         // Add new event
-        await axiosInstance.post(`/calendar-events/`, {
+        await axiosInstance.post(`app/calendar-events/`, {
           name: eventName,
           date: eventDate,
           description: eventDescription,

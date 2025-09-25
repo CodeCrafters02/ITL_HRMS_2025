@@ -44,7 +44,7 @@ export default function DepartmentForm() {
     setError("");
     
     try {
-      await axiosInstance.post("/departments/", { department_name: departmentName.trim() });
+      await axiosInstance.post("app/departments/", { department_name: departmentName.trim() });
       setSuccess("Department created successfully!");
       setTimeout(() => navigate("/admin/branch-mgt/department"), 1500);
     } catch (err) {

@@ -20,7 +20,7 @@ const LetterTemplate: React.FC = () => {
       setLoading(true);
       setError(null);
       try {
-        const res = await axiosInstance.get('/letter-templates/');
+        const res = await axiosInstance.get('app/letter-templates/');
         setTemplates(res.data);
       } catch (err: unknown) {
         let msg = 'Failed to load templates';
@@ -50,7 +50,7 @@ const LetterTemplate: React.FC = () => {
     // Refetch templates after creation
     (async () => {
       try {
-        const res = await axiosInstance.get('/letter-templates/');
+        const res = await axiosInstance.get('app/letter-templates/');
         setTemplates(res.data);
       } catch {
         // ignore

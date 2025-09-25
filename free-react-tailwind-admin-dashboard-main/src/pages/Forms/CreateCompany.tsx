@@ -1,3 +1,5 @@
+// Declare global variable from Vite config
+declare const __API_URL__: string;
 import { useEffect, useState } from "react";
 import { axiosInstance } from "../Dashboard/api";
 import { useNavigate } from "react-router-dom";
@@ -28,7 +30,7 @@ export default function CreateCompany() {
   useEffect(() => {
     const fetchAdmins = async () => {
       try {
-        const res = await axiosInstance.get("https://apihrms.innovyxtechlabs.com/api/app/admin-register/");
+  const res = await axiosInstance.get(`${__API_URL__}/app/admin-register/`);
         console.log("Admin API response:", res.data); // Debug output
         if (Array.isArray(res.data)) {
           setAdmins(res.data.map((a) => ({ id: a.id, username: a.username })));
@@ -69,7 +71,7 @@ export default function CreateCompany() {
       if (form.admin_id) {
         formData.append("admin", form.admin_id);
       }
-      const res = await axiosInstance.post("/company-with-admin/", formData, {
+      const res = await axiosInstance.post("app/company-with-admin/", formData, {
         headers: { "Content-Type": "multipart/form-data" },
       });
       console.log("Company creation response:", res.data);

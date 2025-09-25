@@ -134,7 +134,7 @@ const RelievedEmployee: React.FC = () => {
     setSuccess('');
     const dateToUse = relievingDate || new Date().toISOString().slice(0, 10);
     try {
-      const res = await axiosInstance.post('relieved-employees/', {
+      const res = await axiosInstance.post('app/relieved-employees/', {
         employee: employeeId,
         relieving_date: dateToUse,
         remarks: remarks.trim(),
@@ -142,7 +142,7 @@ const RelievedEmployee: React.FC = () => {
   setSuccess(`${selectedEmployeeDetails.employee_name} has been successfully relieved`);
   setShowSuccess(true);
       const relievedId = res.data.id;
-      const detailsRes = await axiosInstance.get(`relieved-employees/${relievedId}/`);
+      const detailsRes = await axiosInstance.get(`app/relieved-employees/${relievedId}/`);
       setRelievedDetails({ ...detailsRes.data, relieving_date: detailsRes.data.relieving_date || dateToUse });
       setSelectedEmployee(null);
       setSelectedEmployeeDetails(null);
@@ -188,7 +188,7 @@ const RelievedEmployee: React.FC = () => {
     }
     setSearchLoading(true);
     try {
-      const res = await axiosInstance.get('relieved-employees/search-employee/', { params: { q: value.trim() } });
+      const res = await axiosInstance.get('app/relieved-employees/search-employee/', { params: { q: value.trim() } });
       setSuggestions(res.data);
       setShowSuggestions(true);
     } catch {
@@ -212,7 +212,7 @@ const RelievedEmployee: React.FC = () => {
     setShowDelete(false); // Reset delete checkbox when new employee is selected
     // Fetch full employee details
     try {
-      const res = await axiosInstance.get(`employee/${employee.id}/`);
+      const res = await axiosInstance.get(`app/employee/${employee.id}/`);
       setSelectedEmployeeDetails(res.data);
     } catch {
       setSelectedEmployeeDetails(null);
@@ -239,7 +239,7 @@ const RelievedEmployee: React.FC = () => {
     const fetchRelievedList = async () => {
       if (success) {
         try {
-          const res = await axiosInstance.get('relieved-employees/');
+          const res = await axiosInstance.get('app/relieved-employees/');
           setRelievedList(res.data);
         } catch {
           setRelievedList([]);
@@ -259,7 +259,7 @@ const RelievedEmployee: React.FC = () => {
   useEffect(() => {
     const fetchRelieved = async () => {
       try {
-        const res = await axiosInstance.get('relieved-employees/');
+        const res = await axiosInstance.get('app/relieved-employees/');
         setRelievedList(res.data);
       } catch {
         // Optionally handle error
@@ -274,7 +274,7 @@ const RelievedEmployee: React.FC = () => {
     setTemplateLoading(true);
     try {
       // Fetch all generated letters for this relieved employee and type=relieve
-      const generatedRes = await axiosInstance.get(`/generated-letters/?relieved_id=${relievedId}&type=relieve`);
+      const generatedRes = await axiosInstance.get(`app/generated-letters/?relieved_id=${relievedId}&type=relieve`);
       const generatedLetters = Array.isArray(generatedRes.data) ? generatedRes.data : [];
       if (generatedLetters.length > 0) {
         // Redirect directly to the PDF for the first letter (or you can pick the most recent, etc.)
@@ -284,7 +284,7 @@ const RelievedEmployee: React.FC = () => {
         return;
       }
       // If no letter exists, show the template modal
-      const tplRes = await axiosInstance.get('/letter-templates/');
+      const tplRes = await axiosInstance.get('app/letter-templates/');
       setTemplateOptions(tplRes.data);
       setShowTemplateModal(true);
       setTemplateSelectFor(relievedId);
@@ -304,7 +304,7 @@ const RelievedEmployee: React.FC = () => {
     }
     try {
       // Check if letter already exists for this relieved employee and template, always include type=relieve
-      const res = await axiosInstance.get(`/generated-letters/?relieved_id=${templateSelectFor}&template_id=${template_id}&type=relieve`);
+      const res = await axiosInstance.get(`app/generated-letters/?relieved_id=${templateSelectFor}&template_id=${template_id}&type=relieve`);
       if (Array.isArray(res.data) && res.data.length > 0) {
         // Letter already exists, redirect directly
         window.location.href = `/admin/letter-pdf?id=${templateSelectFor}&type=relieve&template_id=${template_id}`;
@@ -456,27 +456,27 @@ const RelievedEmployee: React.FC = () => {
                   </TableHeader>
                   <TableBody>
                     <TableRow>
-                      <TableCell className="p-4 border-b">{selectedEmployeeDetails.employee_id}</TableCell>
-                      <TableCell className="p-4 border-b flex items-center gap-2">
-                        {selectedEmployeeDetails.photo_url ? (
-                          <img src={selectedEmployeeDetails.photo_url} alt="Employee" className="w-10 h-10 rounded-full object-cover" />
-                        ) : (
-                          <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center text-gray-500">
-                            <span className="text-xl">👤</span>
-                          </div>
-                        )}
-                        <span>{
-                          selectedEmployeeDetails.employee_name ||
-                          (selectedEmployeeDetails.first_name && selectedEmployeeDetails.last_name
-                            ? `${selectedEmployeeDetails.first_name} ${selectedEmployeeDetails.last_name}`
-                            : selectedEmployeeDetails.employee_id || '-')
-                        }</span>
-                      </TableCell>
-                      <TableCell className="p-4 border-b">{selectedEmployeeDetails.dob || selectedEmployeeDetails.date_of_birth || '-'}</TableCell>
-                      <TableCell className="p-4 border-b">{selectedEmployeeDetails.email || '-'}</TableCell>
-                      <TableCell className="p-4 border-b">{selectedEmployeeDetails.phone || selectedEmployeeDetails.mobile || '-'}</TableCell>
-                      <TableCell className="p-4 border-b">{selectedEmployeeDetails.designation || selectedEmployeeDetails.designation_name || '-'}</TableCell>
-                      <TableCell className="p-4 border-b">{selectedEmployeeDetails.department || selectedEmployeeDetails.department_name || '-'}</TableCell>
+                        <TableCell className="p-4 border-b">{selectedEmployeeDetails.employee_id}</TableCell>
+                        <TableCell className="p-4 border-b flex items-center gap-2">
+                          {selectedEmployeeDetails.photo_url ? (
+                            <img src={selectedEmployeeDetails.photo_url} alt="Employee" className="w-10 h-10 rounded-full object-cover" />
+                          ) : (
+                            <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center text-gray-500">
+                              <span className="text-xl">👤</span>
+                            </div>
+                          )}
+                          <span>{
+                            selectedEmployeeDetails.employee_name ||
+                            (selectedEmployeeDetails.first_name && selectedEmployeeDetails.last_name
+                              ? `${selectedEmployeeDetails.first_name} ${selectedEmployeeDetails.last_name}`
+                              : selectedEmployeeDetails.employee_id || '-')
+                          }</span>
+                        </TableCell>
+                        <TableCell className="p-4 border-b">{selectedEmployeeDetails.dob || selectedEmployeeDetails.date_of_birth || '-'}</TableCell>
+                        <TableCell className="p-4 border-b">{selectedEmployeeDetails.email || '-'}</TableCell>
+                        <TableCell className="p-4 border-b">{selectedEmployeeDetails.phone || selectedEmployeeDetails.mobile || '-'}</TableCell>
+                        <TableCell className="p-4 border-b">{selectedEmployeeDetails.designation_name || selectedEmployeeDetails.designation || '-'}</TableCell>
+                        <TableCell className="p-4 border-b">{selectedEmployeeDetails.department_name || selectedEmployeeDetails.department || '-'}</TableCell>
                       <TableCell className="p-4 border-b">{selectedEmployeeDetails.date_of_joining || '-'}</TableCell>
                       <TableCell className="p-4 border-b">{selectedEmployeeDetails.address || selectedEmployeeDetails.temporary_address || selectedEmployeeDetails.permanent_address || '-'}</TableCell>
                       <TableCell className="p-4 border-b">{selectedEmployeeDetails.asset_details || (selectedEmployeeDetails.asset_names ? selectedEmployeeDetails.asset_names.join(', ') : '-')}</TableCell>

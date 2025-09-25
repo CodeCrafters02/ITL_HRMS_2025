@@ -28,7 +28,7 @@ const IncomeTax = () => {
   const confirmDelete = async () => {
     if (!deleteId) return;
     try {
-      await axiosInstance.delete(`/income-tax-configs/${deleteId}/`);
+      await axiosInstance.delete(`app/income-tax-configs/${deleteId}/`);
       setTaxConfigs((prev) => prev.filter((c) => c.id !== deleteId));
       setDeleteId(null);
       setDeleteName("");
@@ -41,7 +41,7 @@ const IncomeTax = () => {
   useEffect(() => {
     const fetchTaxConfigs = async () => {
       try {
-        const response = await axiosInstance.get("/income-tax-configs/");
+        const response = await axiosInstance.get("app/income-tax-configs/");
         setTaxConfigs(response.data);
       } catch (err: unknown) {
         let msg = "Failed to fetch data.";
@@ -122,10 +122,10 @@ const IncomeTax = () => {
         )}
         {/* Delete Confirmation Modal */}
         {deleteId !== null && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
+          <div className="fixed inset-0 z-50 flex items-center justify-center  bg-opacity-40">
             <div className="bg-white rounded-lg shadow-lg p-8 w-full max-w-md">
               <h2 className="text-xl font-bold mb-4 text-gray-900">Confirm Delete</h2>
-              <p className="mb-6 text-gray-700">Are you sure you want to delete this department <span className="font-semibold">{deleteName}</span>?</p>
+              <p className="mb-6 text-gray-700">Are you sure you want to delete this income <span className="font-semibold">{deleteName}</span>?</p>
               <div className="flex justify-end gap-3">
                 <button
                   onClick={() => { setDeleteId(null); setDeleteName(""); }}

@@ -48,7 +48,7 @@ const DepartmentWorkingDays = () => {
 
   const fetchAllDepartments = async () => {
     try {
-      const response = await axiosInstance.get("/departments/");
+      const response = await axiosInstance.get("app/departments/");
       setAllDepartments(response.data);
     } catch (error) {
       console.error("Error fetching departments:", error);
@@ -57,7 +57,7 @@ const DepartmentWorkingDays = () => {
 
   const fetchWorkingDays = async () => {
     try {
-      const response = await axiosInstance.get("/department-working-days/");
+      const response = await axiosInstance.get("app/department-working-days/");
       setWorkingDays(response.data);
       // Log the received data for debugging
       console.log("Fetched working days:", response.data);
@@ -68,7 +68,7 @@ const DepartmentWorkingDays = () => {
 
   const fetchAllShifts = async () => {
     try {
-      const response = await axiosInstance.get("/shift-policies/");
+      const response = await axiosInstance.get("app/shift-policies/");
       setAllShifts(response.data);
     } catch (error) {
       console.error("Error fetching shifts:", error);
@@ -86,7 +86,7 @@ const DepartmentWorkingDays = () => {
 
   const updateItem = async (id: number) => {
     try {
-      await axiosInstance.put(`/department-working-days/${id}/`, editItem);
+      await axiosInstance.put(`app/department-working-days/${id}/`, editItem);
       setEditId(null);
       setEditItem({});
       fetchWorkingDays();
@@ -103,7 +103,7 @@ const DepartmentWorkingDays = () => {
   const confirmDelete = async () => {
     if (!deleteId) return;
     try {
-      await axiosInstance.delete(`/department-working-days/${deleteId}/`);
+      await axiosInstance.delete(`app/department-working-days/${deleteId}/`);
       setWorkingDays((prev) => prev.filter((item) => item.id !== deleteId));
       setDeleteId(null);
       setDeleteName("");
@@ -119,7 +119,7 @@ const DepartmentWorkingDays = () => {
 
   const addItem = async () => {
     try {
-      await axiosInstance.post(`/department-working-days/`, editItem);
+      await axiosInstance.post(`app/department-working-days/`, editItem);
       setAdding(false);
       setEditId(null);
       setEditItem({});

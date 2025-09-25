@@ -30,7 +30,7 @@ export default function Level() {
   const navigate = useNavigate();
 
   const fetchLevels = async () => {
-    const res = await axiosInstance.get("/levels/");
+    const res = await axiosInstance.get("app/levels/");
     setLevels(res.data);
   };
 
@@ -43,7 +43,7 @@ export default function Level() {
   const updateLevel = async (id: number) => {
     if (!editLevelName || !editDescription) return;
     try {
-      await axiosInstance.put(`/levels/${id}/`, {
+      await axiosInstance.put(`app/levels/${id}/`, {
         level_name: editLevelName,
         description: editDescription,
       });
@@ -65,7 +65,7 @@ export default function Level() {
   const confirmDeleteLevel = async () => {
     if (!deleteId) return;
     try {
-      await axiosInstance.delete(`/levels/${deleteId}/`);
+      await axiosInstance.delete(`app/levels/${deleteId}/`);
       fetchLevels();
       setDeleteId(null);
       setDeleteName("");

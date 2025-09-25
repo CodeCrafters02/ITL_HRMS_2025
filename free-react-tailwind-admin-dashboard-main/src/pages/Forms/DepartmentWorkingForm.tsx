@@ -45,7 +45,7 @@ const DepartmentWorkingForm: React.FC<DepartmentWorkingFormProps> = ({ initialDa
     // Fetch shift options from API
     const fetchShifts = async () => {
       try {
-        const response = await axiosInstance.get("/shift-policies/");
+        const response = await axiosInstance.get("app/shift-policies/");
         setShifts(response.data);
       } catch {
         setShifts([]);
@@ -55,7 +55,7 @@ const DepartmentWorkingForm: React.FC<DepartmentWorkingFormProps> = ({ initialDa
     // Fetch department options from API
     const fetchDepartments = async () => {
       try {
-        const response = await axiosInstance.get("/departments/");
+        const response = await axiosInstance.get("app/departments/");
         setDepartments(response.data);
       } catch {
         setDepartments([]);
@@ -102,7 +102,7 @@ const DepartmentWorkingForm: React.FC<DepartmentWorkingFormProps> = ({ initialDa
     };
     console.log("Submitting payload:", payload);
     try {
-      await axiosInstance.post("/department-working-days/", payload);
+      await axiosInstance.post("app/department-working-days/", payload);
       navigate(-1); // Go back after successful submit
     } catch (error) {
       console.error("Submission error:", error);

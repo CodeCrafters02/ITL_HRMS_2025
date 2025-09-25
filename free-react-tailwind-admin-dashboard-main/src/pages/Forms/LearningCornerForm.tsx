@@ -45,7 +45,7 @@ const LearningCornerForm: React.FC = () => {
     if (form.document) data.append('document', form.document);
     if (form.video) data.append('video', form.video);
     try {
-      await axiosInstance.post('/learning-corner/', data, {
+      await axiosInstance.post('app/learning-corner/', data, {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
       navigate('/admin/learning-corner');

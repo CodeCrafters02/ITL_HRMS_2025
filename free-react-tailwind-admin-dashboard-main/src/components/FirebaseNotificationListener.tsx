@@ -1,3 +1,5 @@
+// Declare global variable from Vite config
+declare const __API_URL__: string;
 import { useEffect, useState } from "react";
 import { messaging } from "../firebase";
 import { getToken, onMessage } from "firebase/messaging";
@@ -20,7 +22,7 @@ export const FirebaseNotificationListener = ({ userToken }: { userToken: string 
         const currentToken = await getToken(messaging, { vapidKey: VAPID_KEY });
         if (currentToken) {
           
-          const response = await fetch("http://localhost:8000/notifications/devices/", {
+          const response = await fetch(`${__API_URL__}notifications/devices/`, {
             method: "POST",
             headers: {
               "Content-Type": "application/json",

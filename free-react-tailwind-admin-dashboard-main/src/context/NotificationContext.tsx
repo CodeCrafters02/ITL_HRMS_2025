@@ -53,7 +53,7 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
   const fetchNotifications = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await axiosInstance.get("/all-notifications/");
+      const res = await axiosInstance.get("all-notifications/");
       const allNotifications: Notification[] = (res.data || []).map((n: any) => ({
         id: n.id,
         title: n.title,

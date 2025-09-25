@@ -39,7 +39,7 @@ const AdminDashboard: React.FC = () => {
 
   useEffect(() => {
     axiosInstance
-      .get("/admin-dashboard/")
+      .get("app/admin-dashboard/")
       .then((res) => setData(res.data))
       .finally(() => setLoading(false));
   }, []);

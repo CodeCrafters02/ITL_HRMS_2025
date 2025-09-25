@@ -61,7 +61,7 @@ export default function SalaryStructureForm() {
     setLoading(true);
     setError("");
     try {
-      await axiosInstance.post("/salary-structures/", {
+      await axiosInstance.post("app/salary-structures/", {
         name,
         basic_percent: Number(basicPercent),
         hra_percent: Number(hraPercent),

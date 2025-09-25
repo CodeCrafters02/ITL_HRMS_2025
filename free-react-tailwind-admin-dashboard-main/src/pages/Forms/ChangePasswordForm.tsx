@@ -9,7 +9,7 @@ interface ChangePasswordFormProps {
 	apiEndpoint?: string;
 }
 
-const ChangePasswordForm: React.FC<ChangePasswordFormProps> = ({ apiEndpoint = "/change-password/" }) => {
+const ChangePasswordForm: React.FC<ChangePasswordFormProps> = ({ apiEndpoint = "app/change-password/" }) => {
 	const navigate = useNavigate();
 	const [form, setForm] = useState({
 		old_password: "",

@@ -26,7 +26,7 @@ const MasterDashboard = () => {
   useEffect(() => {
     const fetchDashboardData = async () => {
       try {
-        const res = await axiosInstance.get("/master-dashboard/");
+        const res = await axiosInstance.get("app/master-dashboard/");
         setCompanies(res.data.companies);
       } catch (error) {
         console.error("Failed to fetch:", error);

@@ -21,7 +21,7 @@ const RejectedLeave: React.FC = () => {
   useEffect(() => {
     const fetchLeaveLogs = async () => {
       try {
-        const res = await axiosInstance.get('/rejected-leaves/');
+        const res = await axiosInstance.get('app/rejected-leaves/');
         setLeaveLogs(res.data);
       } catch (err: unknown) {
         console.error(err);
