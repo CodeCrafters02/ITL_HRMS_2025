@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { AxiosError } from "axios";
 import { useNavigate } from "react-router-dom";
 import { axiosInstance } from "../pages/Dashboard/api";
 
@@ -17,7 +18,7 @@ export default function CreateAdmin() {
     try {
       const accessToken = localStorage.getItem("access");
       await axiosInstance.post(
-        "/admin-register/",
+        "app/admin-register/",
         { username, email, password },
         {
           headers: {
@@ -27,9 +28,24 @@ export default function CreateAdmin() {
       );
       setSuccess("Admin created successfully!");
       setTimeout(() => navigate("/master/admin"), 1200);
-    } catch (err: any) {
-      setError(err.response?.data?.detail || err.message || "Failed to create admin");
-      
+    } catch (err) {
+      let errorMsg = "Failed to create admin";
+      if (err && typeof err === "object") {
+        const axiosErr = err as AxiosError;
+        if (axiosErr.response && axiosErr.response.data) {
+          if (typeof axiosErr.response.data === "string") {
+            errorMsg = axiosErr.response.data;
+          } else if (typeof axiosErr.response.data === "object" && "detail" in axiosErr.response.data) {
+            const dataObj = axiosErr.response.data as Record<string, unknown>;
+            if (typeof dataObj.detail === "string") {
+              errorMsg = dataObj.detail;
+            }
+          }
+        } else if (axiosErr.message) {
+          errorMsg = axiosErr.message;
+        }
+      }
+      setError(errorMsg);
     }
   };
 
