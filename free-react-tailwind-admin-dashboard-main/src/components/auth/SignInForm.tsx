@@ -45,7 +45,7 @@ export default function SignInForm() {
 
     try {
       const response = await axios.post(
-        `${__API_URL__}/app/login/`,
+        `${__API_URL__}app/login/`,
         {
           username: formData.username.trim(),
           password: formData.password,

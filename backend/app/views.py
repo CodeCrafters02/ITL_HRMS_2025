@@ -73,7 +73,11 @@ class UserManagementViewSet(viewsets.ModelViewSet):
             serializer.save(created_by=user)
         else:
             serializer.save()
-class AdminRegisterViewSet(viewsets.ViewSet):
+class AdminRegisterViewSet(viewsets.ModelViewSet):
+    queryset = UserRegister.objects.filter(role='admin')
+    serializer_class = AdminRegisterSerializer
+    permission_classes = [IsAuthenticated, IsMaster]
+
     def update(self, request, pk=None):
         try:
             admin = UserRegister.objects.get(pk=pk, role='admin')
@@ -84,7 +88,6 @@ class AdminRegisterViewSet(viewsets.ViewSet):
         serializer.is_valid(raise_exception=True)
         serializer.save()
         return Response(serializer.data, status=status.HTTP_200_OK)
-    permission_classes = [IsAuthenticated, IsMaster]
 
     def create(self, request):
         serializer = AdminRegisterSerializer(data=request.data)

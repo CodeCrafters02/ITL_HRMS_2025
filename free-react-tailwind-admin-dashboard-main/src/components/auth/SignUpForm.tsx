@@ -35,7 +35,7 @@ export default function SignUpForm() {
 
     try {
       const response = await axios.post(
-        `${__API_URL__}/app/master-register/`,
+        `${__API_URL__}app/master-register/`,
         formData
       );
       console.log("Success:", response.data);

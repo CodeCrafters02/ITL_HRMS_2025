@@ -22,7 +22,7 @@ export default function CreateAdmin() {
     try {
       const accessToken = localStorage.getItem("access");
       await axiosInstance.post(
-        "/admin-register/",
+        "app/admin-register/",
         { username, email, password },
         {
           headers: {

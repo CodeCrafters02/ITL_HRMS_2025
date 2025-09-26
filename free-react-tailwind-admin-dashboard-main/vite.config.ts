@@ -18,6 +18,8 @@ export default defineConfig({
   define: {
     // Global API URL variable
     __API_URL__: '"https://apihrms.innovyxtechlabs.com/"',
+    
+    // __API_URL__: '"http://127.0.0.1:8000/"',
    
   },
   server: {
