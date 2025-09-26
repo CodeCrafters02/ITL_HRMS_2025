@@ -82,11 +82,15 @@ const UpdateEmployeeProfile: React.FC = () => {
     try {
       const formData = new FormData();
       Object.entries(form).forEach(([key, value]) => {
-        if (value !== undefined && value !== null && value !== '') {
-          if (typeof value === 'string' || value instanceof Blob) {
+        // For file fields, only append if value is a File (Blob)
+        if (["photo", "aadhar_card", "pan_card"].includes(key)) {
+          if (value instanceof File || value instanceof Blob) {
             formData.append(key, value);
-          } else {
-            formData.append(key, String(value));
+          }
+          // If value is a string (URL), do not append (let backend keep existing)
+        } else {
+          if (value !== undefined && value !== null && value !== '') {
+            formData.append(key, value);
           }
         }
       });
