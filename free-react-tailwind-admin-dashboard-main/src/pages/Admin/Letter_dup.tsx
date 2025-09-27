@@ -16,6 +16,7 @@ const StudioShodweLetterhead: React.FC = () => {
   const [letterTitle, setLetterTitle] = useState<string>('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [emailStatus, setEmailStatus] = useState<string | null>(null);
   const [company, setCompany] = useState<{
     name?: string;
     tag?: string;
@@ -91,6 +92,7 @@ const StudioShodweLetterhead: React.FC = () => {
           try {
             const res2 = await axiosInstance.post('app/generate-letter-content/', postBody);
             setLetterContent(res2.data.content || '');
+            setEmailStatus(res2.data.email_status || null);
             if (res2.data.title && res2.data.title !== '') {
               setLetterTitle(res2.data.title);
             } else {
@@ -113,6 +115,7 @@ const StudioShodweLetterhead: React.FC = () => {
         try {
           const res2 = await axiosInstance.post('app/generate-letter-content/', postBody);
           setLetterContent(res2.data.content || '');
+          setEmailStatus(res2.data.email_status || null);
           if (res2.data.title && res2.data.title !== '') {
             setLetterTitle(res2.data.title);
           } else {
@@ -161,7 +164,21 @@ const StudioShodweLetterhead: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gray-50 p-4">
-      <div className="flex justify-end mb-2">
+      <div className="flex justify-end mb-2 gap-2">
+        {emailStatus && (
+          <div className={`px-3 py-1 rounded text-sm ${
+            emailStatus === 'sent' 
+              ? 'bg-green-100 text-green-800' 
+              : emailStatus.startsWith('error')
+              ? 'bg-red-100 text-red-800'
+              : 'bg-yellow-100 text-yellow-800'
+          }`}>
+            Email: {emailStatus === 'sent' ? 'Sent successfully' : 
+                   emailStatus.startsWith('error') ? `Failed: ${emailStatus.split(':')[1]}` :
+                   emailStatus === 'no_recipient_email' ? 'No recipient email found' :
+                   'Not sent'}
+          </div>
+        )}
         <button
           className="bg-blue-600 text-white px-3 py-1 rounded"
           onClick={() => window.print()}

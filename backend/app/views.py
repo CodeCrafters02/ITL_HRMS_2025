@@ -1804,16 +1804,19 @@ class GenerateLetterContentAPIView(APIView):
                 company = emp.company
             else:
                 company = None
-            pdf_bytes = generate_letter_pdf(company, template.title, filled_content)
+            pdf_bytes = generate_letter_pdf(company, template.title, filled_content, request)
         except Exception as e:
             return Response({'error': f'PDF generation failed: {str(e)}'}, status=500)
 
-        # Send email if recipient email and email_content are present
-        if recipient_email and email_content:
+        # Send email if recipient email is present (always send for offer/appointment letters)
+        if recipient_email:
             try:
+                # Use email_content if available, otherwise use a default message
+                email_body = email_content if email_content else f"Please find attached the {template.title} for your review."
+                
                 email = EmailMessage(
                     subject=template.title,
-                    body=email_content,
+                    body=email_body,
                     to=[recipient_email]
                 )
                 email.attach(f"{template.title}.pdf", pdf_bytes, "application/pdf")
@@ -1826,7 +1829,7 @@ class GenerateLetterContentAPIView(APIView):
             except Exception as e:
                 email_status = f'error: {str(e)}'
         else:
-            email_status = 'no_email_or_content'
+            email_status = 'no_recipient_email'
 
         return Response({
             'content': filled_content,

@@ -40,29 +40,35 @@ def generate_payslip_pdf(employee, payroll, batch, company=None, logo_path=None)
     pdf_file.seek(0)
     return pdf_file
 
-def generate_letter_pdf(company, letter_title, letter_content):
+def generate_letter_pdf(company, letter_title, letter_content, request=None):
     """
     Generate a PDF for a letter using the dynamic letter_template.html and full company context.
     """
 
     import os
+    from django.conf import settings
     current_date_str = timezone.now().strftime("%B %d, %Y")
-    # Resolve logo path to file:/// url if possible
+    # Resolve logo path to full URL
     logo_url = None
-    if getattr(company, 'logo', None) and hasattr(company.logo, 'path') and os.path.exists(company.logo.path):
-        logo_url = 'file:///' + company.logo.path.replace('\\', '/').replace(os.sep, '/')
-    elif getattr(company, 'logo', None) and hasattr(company.logo, 'url'):
-        logo_url = company.logo.url
+    if company and getattr(company, 'logo', None):
+        if hasattr(company.logo, 'url'):
+            # Build full URL using request or settings
+            if request:
+                logo_url = request.build_absolute_uri(company.logo.url)
+            else:
+                # Fallback: try to build URL from settings
+                domain = getattr(settings, 'SITE_URL', 'http://localhost:8000')
+                logo_url = f"{domain}{company.logo.url}"
 
     context = {
         "company_logo_url": logo_url,
         "company_initials": "".join([w[0] for w in company.name.split()])[:2] if getattr(company, 'name', None) else "CN",
-        "company_name": company.name if getattr(company, 'name', None) else "",
-        "company_tag": getattr(company, 'tagline', ""),
-        "company_address": getattr(company, 'address', ""),
-        "company_phone": getattr(company, 'phone_number', ""),
-        "company_email": getattr(company, 'email', ""),
-        "company_website": getattr(company, 'website', ""),
+        "company_name": company.name if company and getattr(company, 'name', None) else "",
+        "company_tag": "",  # Company doesn't have tagline field
+        "company_address": getattr(company, 'address', "") if company else "",
+        "company_phone": getattr(company, 'phone_number', "") if company else "",
+        "company_email": getattr(company, 'email', "") if company else "",
+        "company_website": getattr(company, 'website', "") if company else "",
         "current_date": current_date_str,
         "date": current_date_str,  # Add 'date' as alias for template compatibility
         "title": letter_title,

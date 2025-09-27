@@ -18,11 +18,10 @@ const LetterForm: React.FC<LetterFormProps> = ({ onSuccess }) => {
   const navigate = useNavigate();
 
   const [title, setTitle] = useState('');
-  const [content, setContent] = useState(`Subject: 
+  const [content, setContent] = useState(`
 
 To,
 <name>
-
 
 Dear <name>,
 We are excited to offer you the position of <designation> at <company>. After evaluating your skills, enthusiasm,
@@ -51,10 +50,9 @@ Please confirm your acceptance of this offer by replying to this email or signin
 .
 We are thrilled to welcome you to the <company> family and look forward to working together on exciting
 projects and achieving great success.
-If you have any questions or need further clarification, feel free to reach out to us at samplecompanyname@gmail.com or 123-456-7890. Welcome aboard!
+If you have any questions or need further clarification, feel free to reach out to us at <company_email>. Welcome aboard!
 
 Warm regards,
-
 
 Acknowledgment and Acceptance
 I, <name>, have read and understood the terms of this offer letter and accept the position of <designation> at
