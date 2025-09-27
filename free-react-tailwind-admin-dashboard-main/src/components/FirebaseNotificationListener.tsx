@@ -11,9 +11,17 @@ export const FirebaseNotificationListener = ({ userToken }: { userToken: string 
   const [visible, setVisible] = useState(false); 
 
   useEffect(() => {
-    // Request browser permission
-    if (Notification.permission !== "granted") {
-      Notification.requestPermission();
+    // Request browser permission if not granted or default
+    if (Notification.permission === "default") {
+      Notification.requestPermission().then((permission) => {
+        if (permission === "granted") {
+          updateToken();
+        }
+      });
+    } else if (Notification.permission === "granted") {
+      updateToken();
+    } else {
+      console.log("Notification permission denied or blocked.");
     }
 
     // Send FCM token to backend
@@ -42,7 +50,10 @@ export const FirebaseNotificationListener = ({ userToken }: { userToken: string 
       }
     }
 
-    updateToken();
+    // Only call updateToken if permission is granted
+    if (Notification.permission === "granted") {
+      updateToken();
+    }
 
     const unsubscribe = onMessage(messaging, (payload) => {
       console.log("Message received in foreground:", payload);

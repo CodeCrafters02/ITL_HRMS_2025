@@ -362,6 +362,106 @@ const EmployeeRegister: React.FC = () => {
                         {emp.designation_name || '-'}
                       </span>
                     </TableCell>
+                    {/* Guardian Name */}
+                    <TableCell className="border border-gray-200 dark:border-gray-700 p-4">
+                      <span className="text-sm text-gray-900 dark:text-gray-100">{emp.guardian_name || '-'}</span>
+                    </TableCell>
+                    {/* Guardian Mobile */}
+                    <TableCell className="border border-gray-200 dark:border-gray-700 p-4">
+                      <span className="text-sm text-gray-900 dark:text-gray-100">{emp.guardian_mobile || '-'}</span>
+                    </TableCell>
+                    {/* Category */}
+                    <TableCell className="border border-gray-200 dark:border-gray-700 p-4">
+                      <span className="text-sm text-gray-900 dark:text-gray-100">{emp.category || '-'}</span>
+                    </TableCell>
+                    {/* Reporting Level */}
+                    <TableCell className="border border-gray-200 dark:border-gray-700 p-4">
+                      <span className="text-sm text-gray-900 dark:text-gray-100">{emp.reporting_level_name || '-'}</span>
+                    </TableCell>
+                    {/* Reporting Manager */}
+                    <TableCell className="border border-gray-200 dark:border-gray-700 p-4">
+                      <span className="text-sm text-gray-900 dark:text-gray-100">
+                        {Array.isArray(emp.reporting_manager) ? emp.reporting_manager.map(m => `${m.first_name} ${m.last_name}`).join(', ') : typeof emp.reporting_manager === 'object' && emp.reporting_manager ? `${emp.reporting_manager.first_name} ${emp.reporting_manager.last_name}` : emp.reporting_manager || '-'}
+                      </span>
+                    </TableCell>
+                    {/* Date of Joining */}
+                    <TableCell className="border border-gray-200 dark:border-gray-700 p-4">
+                      <span className="text-sm text-gray-900 dark:text-gray-100">
+                        {emp.date_of_joining ? new Date(emp.date_of_joining).toLocaleDateString() : '-'}
+                      </span>
+                    </TableCell>
+                    {/* Previous Employer */}
+                    <TableCell className="border border-gray-200 dark:border-gray-700 p-4">
+                      <span className="text-sm text-gray-900 dark:text-gray-100">{emp.previous_employer || '-'}</span>
+                    </TableCell>
+                    {/* Date of Releaving */}
+                    <TableCell className="border border-gray-200 dark:border-gray-700 p-4">
+                      <span className="text-sm text-gray-900 dark:text-gray-100">
+                        {emp.date_of_releaving ? new Date(emp.date_of_releaving).toLocaleDateString() : '-'}
+                      </span>
+                    </TableCell>
+                    {/* Previous Designation */}
+                    <TableCell className="border border-gray-200 dark:border-gray-700 p-4">
+                      <span className="text-sm text-gray-900 dark:text-gray-100">{emp.previous_designation_name || '-'}</span>
+                    </TableCell>
+                    {/* Previous Salary */}
+                    <TableCell className="border border-gray-200 dark:border-gray-700 p-4">
+                      <span className="text-sm text-gray-900 dark:text-gray-100">{emp.previous_salary || '-'}</span>
+                    </TableCell>
+                    {/* CTC */}
+                    <TableCell className="border border-gray-200 dark:border-gray-700 p-4">
+                      <span className="text-sm text-gray-900 dark:text-gray-100">{emp.ctc || '-'}</span>
+                    </TableCell>
+                    {/* Gross Salary */}
+                    <TableCell className="border border-gray-200 dark:border-gray-700 p-4">
+                      <span className="text-sm text-gray-900 dark:text-gray-100">{emp.gross_salary || '-'}</span>
+                    </TableCell>
+                    {/* EPF Status */}
+                    <TableCell className="border border-gray-200 dark:border-gray-700 p-4">
+                      <span className="text-sm text-gray-900 dark:text-gray-100">{emp.epf_status || '-'}</span>
+                    </TableCell>
+                    {/* UAN */}
+                    <TableCell className="border border-gray-200 dark:border-gray-700 p-4">
+                      <span className="text-sm text-gray-900 dark:text-gray-100">{emp.uan || '-'}</span>
+                    </TableCell>
+                    {/* ESIC Status */}
+                    <TableCell className="border border-gray-200 dark:border-gray-700 p-4">
+                      <span className="text-sm text-gray-900 dark:text-gray-100">{emp.esic_status || '-'}</span>
+                    </TableCell>
+                    {/* ESIC No */}
+                    <TableCell className="border border-gray-200 dark:border-gray-700 p-4">
+                      <span className="text-sm text-gray-900 dark:text-gray-100">{emp.esic_no || '-'}</span>
+                    </TableCell>
+                    {/* Payment Method */}
+                    <TableCell className="border border-gray-200 dark:border-gray-700 p-4">
+                      <span className="text-sm text-gray-900 dark:text-gray-100">{emp.payment_method || '-'}</span>
+                    </TableCell>
+                    {/* Bank Name */}
+                    <TableCell className="border border-gray-200 dark:border-gray-700 p-4">
+                      <span className="text-sm text-gray-900 dark:text-gray-100">{emp.bank_name || '-'}</span>
+                    </TableCell>
+                    {/* Account No */}
+                    <TableCell className="border border-gray-200 dark:border-gray-700 p-4">
+                      <span className="text-sm text-gray-900 dark:text-gray-100">{emp.account_no || '-'}</span>
+                    </TableCell>
+                    {/* IFSC Code */}
+                    <TableCell className="border border-gray-200 dark:border-gray-700 p-4">
+                      <span className="text-sm text-gray-900 dark:text-gray-100">{emp.ifsc_code || '-'}</span>
+                    </TableCell>
+                    {/* Source of Employment */}
+                    <TableCell className="border border-gray-200 dark:border-gray-700 p-4">
+                      <span className="text-sm text-gray-900 dark:text-gray-100">{emp.source_of_employment || '-'}</span>
+                    </TableCell>
+                    {/* Referred By */}
+                    <TableCell className="border border-gray-200 dark:border-gray-700 p-4">
+                      <span className="text-sm text-gray-900 dark:text-gray-100">
+                        {Array.isArray(emp.who_referred) ? emp.who_referred.map(m => `${m.first_name} ${m.last_name}`).join(', ') : typeof emp.who_referred === 'object' && emp.who_referred ? `${emp.who_referred.first_name} ${emp.who_referred.last_name}` : emp.who_referred || '-'}
+                      </span>
+                    </TableCell>
+                    {/* Assets Assigned */}
+                    <TableCell className="border border-gray-200 dark:border-gray-700 p-4">
+                      <span className="text-sm text-gray-900 dark:text-gray-100">{emp.asset_names ? emp.asset_names.join(', ') : '-'}</span>
+                    </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
