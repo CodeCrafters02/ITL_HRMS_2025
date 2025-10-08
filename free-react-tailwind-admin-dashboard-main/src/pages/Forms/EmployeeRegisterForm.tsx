@@ -22,7 +22,9 @@ interface FormData {
   permanent_address?: string;
   photo?: string;
   aadhar_no?: string;
+  aadhar_card?: string;
   pan_no?: string;
+  pan_card?: string;
   guardian_name?: string;
   guardian_mobile?: string;
   category?: string;
@@ -61,6 +63,8 @@ const initialForm: FormData = {
   permanent_address: '',
   photo: '',
   aadhar_no: '',
+  aadhar_card:'',
+  pan_card:'',
   pan_no: '',
   guardian_name: '',
   guardian_mobile: '',
@@ -193,117 +197,254 @@ const EmployeeRegisterForm: React.FC = () => {
     setShowEsic(form.esic_status === 'yes');
   }, [form.payment_method, form.epf_status, form.esic_status]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError(null);
-    setSuccess(null);
-    setLoading(true);
-    try {
-      // Prepare payload: only include non-empty fields, convert PKs to int, handle file upload, and ensure date format
-      const payload: Record<string, unknown> = { ...form, asset_details: selectedAssets };
-      // Remove empty string fields (except required fields)
-      Object.keys(payload).forEach((key) => {
-        if (payload[key] === '') delete payload[key];
-      });
+  // const handleSubmit = async (e: React.FormEvent) => {
+  //   e.preventDefault();
+  //   setError(null);
+  //   setSuccess(null);
+  //   setLoading(true);
+  //   try {
+  //     // Prepare payload: only include non-empty fields, convert PKs to int, handle file upload, and ensure date format
+  //     const payload: Record<string, unknown> = { ...form, asset_details: selectedAssets };
+  //     // Remove empty string fields (except required fields)
+  //     Object.keys(payload).forEach((key) => {
+  //       if (payload[key] === '') delete payload[key];
+  //     });
 
-      // Convert PK fields to int if present and not empty, else remove
-      const pkFields = ['department', 'designation', 'level', 'reporting_manager'];
-      pkFields.forEach((field) => {
-        if (payload[field] !== undefined && payload[field] !== '') {
-          const parsed = parseInt(payload[field] as string, 10);
-          if (!isNaN(parsed)) {
-            payload[field] = parsed;
-          } else {
-            delete payload[field];
-          }
+  //     // Convert PK fields to int if present and not empty, else remove
+  //     const pkFields = ['department', 'designation', 'level', 'reporting_manager'];
+  //     pkFields.forEach((field) => {
+  //       if (payload[field] !== undefined && payload[field] !== '') {
+  //         const parsed = parseInt(payload[field] as string, 10);
+  //         if (!isNaN(parsed)) {
+  //           payload[field] = parsed;
+  //         } else {
+  //           delete payload[field];
+  //         }
+  //       } else {
+  //         delete payload[field];
+  //       }
+  //     });
+
+  //     // Only send who_referred if source_of_employment is 'internalreference'
+  //     if (payload.source_of_employment !== 'internalreference') {
+  //       delete payload.who_referred;
+  //     }
+
+  //     // Ensure date fields are in YYYY-MM-DD format (if present)
+  //     const dateFields = ['date_of_birth', 'date_of_joining', 'date_of_releaving'];
+  //     dateFields.forEach((field) => {
+  //       if (payload[field]) {
+  //         const val = payload[field] as string;
+  //         if (!/^\d{4}-\d{2}-\d{2}$/.test(val)) {
+  //           const d = new Date(val);
+  //           if (!isNaN(d.getTime())) {
+  //             payload[field] = d.toISOString().slice(0, 10);
+  //           }
+  //         }
+  //       }
+  //     });
+
+  //     // Handle file upload for photo (if present and is a File)
+  //     let dataToSend: FormData | Record<string, unknown> = payload;
+  //     let config = {};
+  //     // Type guard for File
+  //     const isFile = (f: unknown): f is File => typeof File !== 'undefined' && f instanceof File;
+  //     if (form.photo && isFile(form.photo)) {
+  //       // Use FormData for file upload
+  //       const formData = new FormData();
+  //       Object.entries(payload).forEach(([key, value]) => {
+  //         if (key === 'photo' && isFile(value)) {
+  //           formData.append('photo', value as Blob);
+  //         } else if (Array.isArray(value)) {
+  //           value.forEach((v, i) => formData.append(`${key}[${i}]`, String(v)));
+  //         } else if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
+  //           formData.append(key, String(value));
+  //         }
+  //       });
+  //       dataToSend = formData as unknown as FormData | Record<string, unknown>;
+  //       config = { headers: { 'Content-Type': 'multipart/form-data' } };
+  //     }
+
+
+
+  //     if (form.aadhar_card && isFile(form.aadhar_card)) {
+  //       // Use FormData for file upload
+  //       const formData = new FormData();
+  //       Object.entries(payload).forEach(([key, value]) => {
+  //         if (key === 'aadhar_card' && isFile(value)) {
+  //           formData.append('aadhar_card', value as Blob);
+  //         } else if (Array.isArray(value)) {
+  //           value.forEach((v, i) => formData.append(`${key}[${i}]`, String(v)));
+  //         } else if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
+  //           formData.append(key, String(value));
+  //         }
+  //       });
+  //       dataToSend = formData as unknown as FormData | Record<string, unknown>;
+  //       config = { headers: { 'Content-Type': 'multipart/form-data' } };
+  //     }
+
+
+
+
+  //     if (form.pan_card && isFile(form.pan_card)) {
+  //       // Use FormData for file upload
+  //       const formData = new FormData();
+  //       Object.entries(payload).forEach(([key, value]) => {
+  //         if (key === 'pan_card' && isFile(value)) {
+  //           formData.append('pan_card', value as Blob);
+  //         } else if (Array.isArray(value)) {
+  //           value.forEach((v, i) => formData.append(`${key}[${i}]`, String(v)));
+  //         } else if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
+  //           formData.append(key, String(value));
+  //         }
+  //       });
+  //       dataToSend = formData as unknown as FormData | Record<string, unknown>;
+  //       config = { headers: { 'Content-Type': 'multipart/form-data' } };
+  //     }
+
+
+
+  //     await axiosInstance.post('app/employee/', dataToSend, config);
+  //     alert("employee registration successfull")
+  //     setSuccess('Employee registered successfully!');
+  //     setTimeout(() => navigate(-1), 1200);
+  //   } catch (err: unknown) {
+  //     // Try to extract backend error message
+  //     let errorMsg = 'Failed to register employee';
+  //     type AxiosErrorType = { response?: { data?: unknown } };
+  //     const errorObj = err as AxiosErrorType;
+  //     if (
+  //       typeof err === 'object' &&
+  //       err !== null &&
+  //       'response' in errorObj &&
+  //       errorObj.response &&
+  //       'data' in errorObj.response
+  //     ) {
+  //       const respData = errorObj.response.data;
+  //       if (typeof respData === 'string') {
+  //         errorMsg = respData;
+  //       } else if (typeof respData === 'object' && respData !== null) {
+  //         // Recursively extract all error messages from the object
+  //         const extractMessages = (obj: unknown): string[] => {
+  //           if (Array.isArray(obj)) {
+  //             return obj.map(extractMessages).flat();
+  //           } else if (typeof obj === 'object' && obj !== null) {
+  //             return Object.values(obj).map(extractMessages).flat();
+  //           } else if (typeof obj === 'string') {
+  //             return [obj];
+  //           } else {
+  //             return [];
+  //           }
+  //         };
+  //         errorMsg = extractMessages(respData).join(' ');
+  //       }
+        
+  //       console.error('Backend error:', respData);
+  //     } else {
+  //       console.error('Unknown error:', err);
+  //     }
+  //     setError(errorMsg);
+  //   } finally {
+  //     setLoading(false);
+  //   }
+  // };
+  const handleSubmit = async (e: React.FormEvent) => {
+  e.preventDefault();
+  setError(null);
+  setSuccess(null);
+  setLoading(true);
+
+  try {
+    // Prepare payload: only include non-empty fields, convert PKs to int, handle file upload, and ensure date format
+    const payload: Record<string, unknown> = { ...form, asset_details: selectedAssets };
+
+    // Remove empty string fields
+    Object.keys(payload).forEach((key) => {
+      if (payload[key] === '') delete payload[key];
+    });
+
+    // Convert PK fields to int if present and not empty, else remove
+    const pkFields = ['department', 'designation', 'level', 'reporting_manager'];
+    pkFields.forEach((field) => {
+      if (payload[field] !== undefined && payload[field] !== '') {
+        const parsed = parseInt(payload[field] as string, 10);
+        if (!isNaN(parsed)) {
+          payload[field] = parsed;
         } else {
           delete payload[field];
         }
-      });
-
-      // Only send who_referred if source_of_employment is 'internalreference'
-      if (payload.source_of_employment !== 'internalreference') {
-        delete payload.who_referred;
-      }
-
-      // Ensure date fields are in YYYY-MM-DD format (if present)
-      const dateFields = ['date_of_birth', 'date_of_joining', 'date_of_releaving'];
-      dateFields.forEach((field) => {
-        if (payload[field]) {
-          const val = payload[field] as string;
-          if (!/^\d{4}-\d{2}-\d{2}$/.test(val)) {
-            const d = new Date(val);
-            if (!isNaN(d.getTime())) {
-              payload[field] = d.toISOString().slice(0, 10);
-            }
-          }
-        }
-      });
-
-      // Handle file upload for photo (if present and is a File)
-      let dataToSend: FormData | Record<string, unknown> = payload;
-      let config = {};
-      // Type guard for File
-      const isFile = (f: unknown): f is File => typeof File !== 'undefined' && f instanceof File;
-      if (form.photo && isFile(form.photo)) {
-        // Use FormData for file upload
-        const formData = new FormData();
-        Object.entries(payload).forEach(([key, value]) => {
-          if (key === 'photo' && isFile(value)) {
-            formData.append('photo', value as Blob);
-          } else if (Array.isArray(value)) {
-            value.forEach((v, i) => formData.append(`${key}[${i}]`, String(v)));
-          } else if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
-            formData.append(key, String(value));
-          }
-        });
-        dataToSend = formData as unknown as FormData | Record<string, unknown>;
-        config = { headers: { 'Content-Type': 'multipart/form-data' } };
-      }
-
-      await axiosInstance.post('app/employee/', dataToSend, config);
-      setSuccess('Employee registered successfully!');
-      setTimeout(() => navigate(-1), 1200);
-    } catch (err: unknown) {
-      // Try to extract backend error message
-      let errorMsg = 'Failed to register employee';
-      type AxiosErrorType = { response?: { data?: unknown } };
-      const errorObj = err as AxiosErrorType;
-      if (
-        typeof err === 'object' &&
-        err !== null &&
-        'response' in errorObj &&
-        errorObj.response &&
-        'data' in errorObj.response
-      ) {
-        const respData = errorObj.response.data;
-        if (typeof respData === 'string') {
-          errorMsg = respData;
-        } else if (typeof respData === 'object' && respData !== null) {
-          // Recursively extract all error messages from the object
-          const extractMessages = (obj: unknown): string[] => {
-            if (Array.isArray(obj)) {
-              return obj.map(extractMessages).flat();
-            } else if (typeof obj === 'object' && obj !== null) {
-              return Object.values(obj).map(extractMessages).flat();
-            } else if (typeof obj === 'string') {
-              return [obj];
-            } else {
-              return [];
-            }
-          };
-          errorMsg = extractMessages(respData).join(' ');
-        }
-        
-        console.error('Backend error:', respData);
       } else {
-        console.error('Unknown error:', err);
+        delete payload[field];
       }
-      setError(errorMsg);
-    } finally {
-      setLoading(false);
+    });
+
+    // Only send who_referred if source_of_employment is 'internalreference'
+    if (payload.source_of_employment !== 'internalreference') {
+      delete payload.who_referred;
     }
-  };
+
+    // Ensure date fields are in YYYY-MM-DD format
+    const dateFields = ['date_of_birth', 'date_of_joining', 'date_of_releaving'];
+    dateFields.forEach((field) => {
+      if (payload[field]) {
+        const val = payload[field] as string;
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(val)) {
+          const d = new Date(val);
+          if (!isNaN(d.getTime())) {
+            payload[field] = d.toISOString().slice(0, 10);
+          }
+        }
+      }
+    });
+
+    // Create FormData and append all fields and files
+    const formData = new FormData();
+    Object.entries(payload).forEach(([key, value]) => {
+      if (value instanceof File) {
+        formData.append(key, value);
+      } else if (Array.isArray(value)) {
+        value.forEach((v, i) => formData.append(`${key}[${i}]`, String(v)));
+      } else if (value !== undefined && value !== null) {
+        formData.append(key, String(value));
+      }
+    });
+
+    await axiosInstance.post('app/employee/', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+
+    alert("Employee registration successful");
+    setSuccess('Employee registered successfully!');
+    setTimeout(() => navigate(-1), 1200);
+  } catch (err: unknown) {
+    let errorMsg = 'Failed to register employee';
+    type AxiosErrorType = { response?: { data?: unknown } };
+    const errorObj = err as AxiosErrorType;
+
+    if (typeof err === 'object' && err !== null && 'response' in errorObj && errorObj.response && 'data' in errorObj.response) {
+      const respData = errorObj.response.data;
+      if (typeof respData === 'string') {
+        errorMsg = respData;
+      } else if (typeof respData === 'object' && respData !== null) {
+        const extractMessages = (obj: unknown): string[] => {
+          if (Array.isArray(obj)) return obj.map(extractMessages).flat();
+          if (typeof obj === 'object' && obj !== null) return Object.values(obj).map(extractMessages).flat();
+          if (typeof obj === 'string') return [obj];
+          return [];
+        };
+        errorMsg = extractMessages(respData).join(' ');
+      }
+      console.error('Backend error:', respData);
+    } else {
+      console.error('Unknown error:', err);
+    }
+
+    setError(errorMsg);
+  } finally {
+    setLoading(false);
+  }
+};
+
 
   const genderOptions = [
     { value: 'male', label: 'Male' },
@@ -582,6 +723,7 @@ const EmployeeRegisterForm: React.FC = () => {
                     </div>
                     <div>
                       <Label>Designation *</Label>
+                      
                       <Select
                         options={designations
                           .filter(desig => String(desig.department) === String(form.department))

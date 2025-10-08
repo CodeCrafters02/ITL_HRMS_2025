@@ -9,6 +9,7 @@ import Label from "../form/Label";
 import Input from "../form/input/InputField";
 import Checkbox from "../form/input/Checkbox";
 import Toast from "../ui/alert/Alert";
+import { createApiUrl } from "../../access/access.ts"; // use your helper
 
 export default function SignInForm() {
   const [showPassword, setShowPassword] = useState(false);
@@ -36,23 +37,27 @@ export default function SignInForm() {
     // Validation
     if (!formData.username.trim() || !formData.password.trim()) {
       setToast("Please enter both username and password.");
-      setToastVariant('error');
+      setToastVariant("error");
       setTimeout(() => setToast(null), 3000);
       return;
     }
 
     setIsLoading(true);
 
+    // Build the login URL using createApiUrl
+    const loginUrl = createApiUrl("app/login/");
+    console.log("Login URL:", loginUrl);
+
     try {
       const response = await axios.post(
-        `${__API_URL__}app/login/`,
+        loginUrl,
         {
           username: formData.username.trim(),
           password: formData.password,
         },
         {
           headers: {
-            'Content-Type': 'application/json',
+            "Content-Type": "application/json",
           },
         }
       );
@@ -70,8 +75,8 @@ export default function SignInForm() {
       // Set default header for other requests
       axios.defaults.headers.common["Authorization"] = `Bearer ${access}`;
 
-  setToast("Sign in successful! Redirecting...");
-  setToastVariant('success');
+      setToast("Sign in successful! Redirecting...");
+      setToastVariant("success");
 
       // Redirect based on role
       setTimeout(() => {
@@ -86,18 +91,18 @@ export default function SignInForm() {
           setTimeout(() => setToast(null), 3000);
         }
       }, 1000);
-
     } catch (err) {
       if (axios.isAxiosError(err)) {
-        const errorMessage = err.response?.data?.detail || 
-                           err.response?.data?.message || 
-                           err.response?.data?.error ||
-                           "Login failed. Please check your credentials.";
+        const errorMessage =
+          err.response?.data?.detail ||
+          err.response?.data?.message ||
+          err.response?.data?.error ||
+          "Login failed. Please check your credentials.";
         setToast(errorMessage);
-        setToastVariant('error');
+        setToastVariant("error");
       } else {
         setToast("Network error. Please try again.");
-        setToastVariant('error');
+        setToastVariant("error");
       }
       setTimeout(() => setToast(null), 5000);
     } finally {

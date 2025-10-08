@@ -310,15 +310,16 @@ class EmployeeSerializer(serializers.ModelSerializer):
     department = serializers.PrimaryKeyRelatedField(queryset=Department.objects.all())
     designation = serializers.PrimaryKeyRelatedField(queryset=Designation.objects.all())
     level = serializers.PrimaryKeyRelatedField(queryset=Level.objects.all(), required=False)
+    level_name = serializers.SerializerMethodField()
 
-    reporting_level = serializers.PrimaryKeyRelatedField(
-        queryset=Level.objects.all(), write_only=True, required=False, allow_null=True
-    )
-    reporting_manager = serializers.PrimaryKeyRelatedField(
-        queryset=Employee.objects.all(), required=False, allow_null=True
-    )
-    reporting_manager_name = serializers.SerializerMethodField()
-    reporting_level_name = serializers.SerializerMethodField()
+    # reporting_level = serializers.PrimaryKeyRelatedField(
+    #     queryset=Level.objects.all(), write_only=True, required=False, allow_null=True
+    # )
+    # reporting_manager = serializers.PrimaryKeyRelatedField(
+    #     queryset=Employee.objects.all(), required=False, allow_null=True
+    # )
+    # reporting_manager_name = serializers.SerializerMethodField()
+    # reporting_level_name = serializers.SerializerMethodField()
     asset_details = serializers.PrimaryKeyRelatedField(
         queryset=AssetInventory.objects.all(), many=True, required=False, allow_null=True
     )
@@ -327,6 +328,8 @@ class EmployeeSerializer(serializers.ModelSerializer):
     designation_name = serializers.SerializerMethodField()
     asset_names = serializers.SerializerMethodField()
     source_choices = serializers.SerializerMethodField()
+    reporting_manager = serializers.SerializerMethodField()
+    reporting_level = serializers.SerializerMethodField()
 
     class Meta:
         model = Employee
@@ -335,7 +338,9 @@ class EmployeeSerializer(serializers.ModelSerializer):
             'email', 'date_of_birth', 'mobile', 'temporary_address', 'permanent_address', 'photo',
             'aadhar_no', 'aadhar_card', 'pan_no', 'pan_card', 'guardian_name', 'guardian_mobile',
             'category', 'department', 'department_name', 'designation', 'designation_name',
-            'level', 'reporting_manager', 'reporting_level', 'reporting_level_name', 'reporting_manager_name',
+            'level','level_name',
+            'reporting_manager', 'reporting_level', 
+            # 'reporting_level_name', 'reporting_manager_name',
             'payment_method', 'account_no', 'ifsc_code', 'bank_name', 'source_of_employment',
             'who_referred', 'date_of_joining', 'previous_employer', 'date_of_releaving',
             'previous_designation_name', 'previous_salary', 'ctc', 'gross_salary',
@@ -357,14 +362,40 @@ class EmployeeSerializer(serializers.ModelSerializer):
     def get_source_choices(self, obj):
         return [{'value': key, 'label': label} for key, label in Employee.SOURCE_CHOICES]
 
-    def get_reporting_manager_name(self, obj):
-        """Return full name of reporting manager."""
+    # def get_reporting_manager_name(self, obj):
+    #     """Return full name of reporting manager."""
+    #     if obj.reporting_manager:
+    #         return f"{obj.reporting_manager.first_name} {obj.reporting_manager.last_name}".strip()
+    #     return None
+    
+    # def get_reporting_level_name(self, obj):
+    #     return obj.reporting_level.level_name if obj.reporting_level else None
+
+
+
+    def get_reporting_manager(self, obj):
         if obj.reporting_manager:
-            return f"{obj.reporting_manager.first_name} {obj.reporting_manager.last_name}".strip()
+            return {
+                "id": obj.reporting_manager.id,
+                "name": f"{obj.reporting_manager.first_name} {obj.reporting_manager.last_name}".strip()
+            }
+        return None
+
+    def get_reporting_level(self, obj):
+        if obj.reporting_level:
+            return {
+                "id": obj.reporting_level.id,
+                "name": obj.reporting_level.level_name
+            }
         return None
     
-    def get_reporting_level_name(self, obj):
-        return obj.reporting_level.level_name if obj.reporting_level else None
+    def get_level_name(self, obj):
+        if obj.level:
+            return {
+                "id": obj.level.id,
+                "name": obj.level.level_name
+            }
+        return None
 
     def validate(self, data):
         email = data.get('email')

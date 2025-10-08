@@ -121,13 +121,13 @@ class Employee(models.Model):
     mobile = models.CharField(max_length=11, null=True)
     temporary_address = models.CharField(max_length=255, null=True, blank=True)
     permanent_address = models.CharField(max_length=255, null=True, blank=True)
-    photo = models.ImageField(upload_to='photos', null=True, blank=True)
+    photo = models.ImageField(upload_to='employee/photos', null=True, blank=True)
 
     # ID proofs
     aadhar_no = models.CharField(max_length=100, null=True, blank=True)
-    aadhar_card = models.FileField(upload_to='documents', null=True, blank=True)
+    aadhar_card = models.FileField(upload_to='employee/aadhar', null=True, blank=True)
     pan_no = models.CharField(max_length=100, null=True, blank=True)
-    pan_card = models.FileField(upload_to='documents', null=True, blank=True)
+    pan_card = models.FileField(upload_to='employee/pancard', null=True, blank=True)
 
     # Family & emergency
     guardian_name = models.CharField(max_length=100, null=True, blank=True)
@@ -160,13 +160,15 @@ class Employee(models.Model):
         ('socialmedia', 'Social Media'),
     )
     source_of_employment = models.CharField(max_length=50, choices=SOURCE_CHOICES, null=True, blank=True)
-    who_referred = models.ForeignKey(
-        'self',
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
-        related_name='employees_referred_by_me'
-    )
+    # who_referred = models.ForeignKey(
+    #     'self',
+    #     on_delete=models.SET_NULL,
+    #     null=True,
+    #     blank=True,
+    #     related_name='employees_referred_by_me'
+    # )
+    who_referred = models.CharField(max_length=100, null=True, blank=True)
+    
 
     # Assets
     asset_details = models.ManyToManyField('AssetInventory', through='EmployeeAssetDetails', blank=True)

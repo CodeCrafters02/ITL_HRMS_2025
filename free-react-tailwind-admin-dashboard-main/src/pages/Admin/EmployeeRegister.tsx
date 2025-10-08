@@ -49,7 +49,9 @@ interface Employee {
   designation: number;
   designation_name?: string;
   reporting_level_name?: string;
-  reporting_manager?: { id: number; first_name: string; last_name: string } | string;
+  // reporting_manager?: { id: number; first_name: string; last_name: string } | string;
+  reporting_manager?: { id: number; name: string;} | string;
+  level_name?: { id: number; name: string;} | string;
   reporting_manager_name?: string | { id: number; first_name: string; last_name: string } | Array<{ id: number; first_name: string; last_name: string }>;
   who_referred?: string | { id: number; first_name: string; last_name: string } | Array<{ id: number; first_name: string; last_name: string }>;
   asset_names?: string[];
@@ -375,13 +377,22 @@ const EmployeeRegister: React.FC = () => {
                       <span className="text-sm text-gray-900 dark:text-gray-100">{emp.category || '-'}</span>
                     </TableCell>
                     {/* Reporting Level */}
-                    <TableCell className="border border-gray-200 dark:border-gray-700 p-4">
+                    {/* <TableCell className="border border-gray-200 dark:border-gray-700 p-4">
                       <span className="text-sm text-gray-900 dark:text-gray-100">{emp.reporting_level_name || '-'}</span>
+                    </TableCell> */}
+                    <TableCell className="border border-gray-200 dark:border-gray-700 p-4">
+                      <span className="text-sm text-gray-900 dark:text-gray-100">
+                        {typeof emp.level_name === 'object' && emp.level_name !== null
+                          ? emp.level_name.name
+                          : emp.level_name || '-'}
+                      </span>
                     </TableCell>
                     {/* Reporting Manager */}
                     <TableCell className="border border-gray-200 dark:border-gray-700 p-4">
                       <span className="text-sm text-gray-900 dark:text-gray-100">
-                        {Array.isArray(emp.reporting_manager) ? emp.reporting_manager.map(m => `${m.first_name} ${m.last_name}`).join(', ') : typeof emp.reporting_manager === 'object' && emp.reporting_manager ? `${emp.reporting_manager.first_name} ${emp.reporting_manager.last_name}` : emp.reporting_manager || '-'}
+                        {typeof emp.reporting_manager === 'object' && emp.reporting_manager !== null
+                          ? emp.reporting_manager.name
+                          : emp.reporting_manager || '-'}
                       </span>
                     </TableCell>
                     {/* Date of Joining */}

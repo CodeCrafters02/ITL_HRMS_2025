@@ -27,8 +27,8 @@ SECRET_KEY = 'django-insecure-v++-2-a@y^9k1+kky5l^fg6#r1hc)hd(fwjox62c7@=ccvdkff
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
-
+ALLOWED_HOSTS = ['apihrms.innovyxtechlabs.com']
+# ALLOWED_HOSTS = ['apihrms.innovyxtechlabs.com', 'localhost', '127.0.0.1']
 
 # Application definition
 
@@ -117,6 +117,7 @@ FCM_CREDENTIALS_FILE = BASE_DIR / "firebase-service-account.json"
 FCM_PROJECT_ID = "hrms-de74c"
 
 SITE_URL = "https://apihrms.innovyxtechlabs.com/"
+# SITE_URL = "http://localhost:8000/"
 
 
 CORS_ALLOW_ALL_ORIGINS = True

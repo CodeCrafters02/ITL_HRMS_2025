@@ -982,7 +982,7 @@ class EmployeeProfileAPIView(generics.RetrieveUpdateAPIView):
     permission_classes = [IsAuthenticated]
 
     def get_serializer_class(self):
-        if self.request.method in ['PUT', 'PATCH']:
+        if self.request.method in ['PUT', 'PATCH','GET']:
             return EmployeeUpdateSerializer
         return EmployeeDetailSerializer
 

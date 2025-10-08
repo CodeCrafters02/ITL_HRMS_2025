@@ -102,6 +102,18 @@ frontend/.vscode/*
 !frontend/.vscode/extensions.json
 frontend/.idea
 
+
+free-react-tailwind-admin-dashboard-main/node_modules/*
+
+node_modules/*
+!node_modules/.gitkeep
+# Node modules
+node_modules/
+
+
+# Node modules
+node_modules/
+
 # ============================
 # ✅ PYTHON TOOLS / OTHERS
 # ============================
