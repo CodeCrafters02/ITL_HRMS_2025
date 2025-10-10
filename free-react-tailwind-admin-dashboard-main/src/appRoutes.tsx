@@ -38,6 +38,8 @@ const LearningCornerPage = lazy(() => import("./pages/Admin/LearningCorner"));
 const ShiftPolicyList = lazy(() => import("./pages/Admin/Shift"));
 const LeaveCountPage = lazy(() => import("./pages/Admin/LeaveCount"));
 const EmployeeRegister = lazy(() => import("./pages/Admin/EmployeeRegister"));
+const AssignShift = lazy(() => import("./pages/Admin/AssignShifts"));
+const EditShift = lazy(() => import("./pages/Admin/EditAssignShift"));
 const RecruitmentPage = lazy(() => import("./pages/Admin/Recruitment"));
 const DepartmentWorkingDays = lazy(() => import("./pages/Admin/DepartmentWiseWorking"));
 const DepartmentForm = lazy(() => import("./pages/Forms/DepartmentForm"));
@@ -195,6 +197,9 @@ export function appRoutes() {
             <Route path="configuration/leave-count" element={<LeaveCountPage />} />
             <Route path="configuration/department-wise-working-days" element={<DepartmentWorkingDays />} />
             <Route path="employee-register" element={<EmployeeRegister />} />
+            <Route path="assignshifts" element={<AssignShift />} />
+            <Route path="assignshifts" element={<AssignShift />} />
+            <Route path="assignshifts/edit/:id" element={<EditShift />} />
             <Route path="recruitment" element={<RecruitmentPage />} />
             <Route path="approved-leaves" element={<ApprovedLeave/>} />
             <Route path="rejected-leaves" element={<RejectedLeave/>} />

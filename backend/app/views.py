@@ -1869,3 +1869,48 @@ class GeneratedLetterViewSet(viewsets.ModelViewSet):
             # Save the file and set file_path (adjust path as needed)
             instance.file_path = f'letters/{uploaded_file.name}'
             instance.save()
+
+
+from rest_framework.permissions import IsAuthenticated,AllowAny
+
+class RefreshTokenView(APIView):
+    permission_classes = [AllowAny] 
+
+    def post(self, request):
+        try:
+            serializer = RefreshTokenSerializer(data=request.data)
+            if serializer.is_valid():
+                return Response(serializer.validated_data)
+            return Response({"status":"failed","response_code":status.HTTP_404_NOT_FOUND,"message":serializer.errors})
+        except Exception as e:
+            message = str(e)
+            return Response({"status":"failed","response_code":status.HTTP_500_INTERNAL_SERVER_ERROR,"message":message})
+        
+
+
+class AssignShiftAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, *args, **kwargs):
+        """
+        Assign a shift to an employee.
+        Expects JSON: { "employee_id": 1, "shift_id": 2 }
+        """
+        employee_id = request.data.get("employee_id")
+        shift_id = request.data.get("shift_id")
+
+        try:
+            employee = Employee.objects.get(id=employee_id)
+        except Employee.DoesNotExist:
+            return Response({"error": "Employee not found"}, status=status.HTTP_404_NOT_FOUND)
+
+        try:
+            shift = ShiftPolicy.objects.get(id=shift_id)
+        except ShiftPolicy.DoesNotExist:
+            return Response({"error": "Shift not found"}, status=status.HTTP_404_NOT_FOUND)
+
+        employee.shift_assigned = shift
+        employee.save()
+
+        serializer = AssignShiftSerializer(employee)
+        return Response(serializer.data, status=status.HTTP_200_OK)

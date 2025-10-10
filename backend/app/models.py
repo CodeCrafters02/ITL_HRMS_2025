@@ -85,6 +85,29 @@ class Designation(models.Model):
         return f"{self.designation_name} ({self.company.name})"
 
 
+
+class ShiftPolicy(models.Model):
+    company = models.ForeignKey('Company', on_delete=models.CASCADE, null=True, blank=True)
+    shift_type = models.CharField(max_length=20, null=True)
+    checkin = models.TimeField()
+    checkout = models.TimeField()
+    grace_period = models.DurationField(null=True, blank=True)
+    half_day = models.DurationField(null=True, blank=True)
+    full_day = models.DurationField(null=True, blank=True)
+
+    def __str__(self):
+        return f"{self.shift_type} Shift ({self.checkin} - {self.checkout})"
+
+    def full_day_hours(self):
+        return round(self.full_day.total_seconds() / 3600, 2) if self.full_day else 8.0
+
+    def half_day_hours(self):
+        return round(self.half_day.total_seconds() / 3600, 2) if self.half_day else 4.0
+
+    def grace(self):
+        return self.grace_period if self.grace_period else timedelta(minutes=0)
+
+
 class Employee(models.Model):
     user = models.OneToOneField(UserRegister, on_delete=models.CASCADE, null=True, blank=True)
      # Company linkage
@@ -168,8 +191,8 @@ class Employee(models.Model):
     #     related_name='employees_referred_by_me'
     # )
     who_referred = models.CharField(max_length=100, null=True, blank=True)
+    shift_assigned=models.ForeignKey(ShiftPolicy,on_delete=models.SET_NULL,null=True,blank=True,related_name='shift_employee')
     
-
     # Assets
     asset_details = models.ManyToManyField('AssetInventory', through='EmployeeAssetDetails', blank=True)
 
@@ -318,27 +341,6 @@ class Notification(models.Model):
     def __str__(self):
         return self.title or "Untitled"
 
-class ShiftPolicy(models.Model):
-    company = models.ForeignKey('Company', on_delete=models.CASCADE, null=True, blank=True)
-    shift_type = models.CharField(max_length=20, null=True)
-    checkin = models.TimeField()
-    checkout = models.TimeField()
-    grace_period = models.DurationField(null=True, blank=True)
-    half_day = models.DurationField(null=True, blank=True)
-    full_day = models.DurationField(null=True, blank=True)
-
-    def __str__(self):
-        return f"{self.shift_type} Shift ({self.checkin} - {self.checkout})"
-
-    def full_day_hours(self):
-        return round(self.full_day.total_seconds() / 3600, 2) if self.full_day else 8.0
-
-    def half_day_hours(self):
-        return round(self.half_day.total_seconds() / 3600, 2) if self.half_day else 4.0
-
-    def grace(self):
-        return self.grace_period if self.grace_period else timedelta(minutes=0)
-
 
 class DepartmentWiseWorkingDays(models.Model):
     department = models.ForeignKey(Department, on_delete=models.CASCADE)
@@ -461,7 +463,7 @@ class IncomeTaxConfig(models.Model):
 class Attendance(models.Model):
     employee = models.ForeignKey('Employee', on_delete=models.CASCADE, related_name='attendances')
     company = models.ForeignKey('Company', on_delete=models.CASCADE, related_name='attendances')
-    shift = models.ForeignKey('ShiftPolicy', on_delete=models.SET_NULL, null=True, blank=True)
+    # shift = models.ForeignKey('ShiftPolicy', on_delete=models.SET_NULL, null=True, blank=True)
     date = models.DateField(default=timezone.now)
     check_in = models.DateTimeField(null=True, blank=True)
     check_out = models.DateTimeField(null=True, blank=True)
@@ -475,25 +477,43 @@ class Attendance(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     def calculate_work_duration(self):
-        if self.check_in and self.check_out:
-         
-            if hasattr(self, 'break_logs'):  
-                total_breaks = sum(
-                    (break_log.end - break_log.start for break_log in self.break_logs.all() if break_log.end and break_log.start),
-                    timezone.timedelta()
-                )
-            else:
-                total_breaks = timezone.timedelta()  # Default to zero if no breaks
-            
-            work_time = (self.check_out - self.check_in) - total_breaks
-            self.total_work_duration = work_time
-
-            if self.shift:
-                standard = timezone.timedelta(hours=self.shift.full_day_hours())
-                self.overtime_duration = max(work_time - standard, timezone.timedelta())
-            else:
-                self.overtime_duration = timezone.timedelta()
+        """
+        Calculate total worked time minus breaks, and calculate overtime based on employee's assigned shift.
+        """
+        if not self.check_in or not self.check_out:
+            # Nothing to calculate if check-in/out missing
+            self.total_work_duration = None
+            self.overtime_duration = None
+            self.total_break_time = None
             self.save()
+            return
+
+        # Calculate total breaks for this attendance
+        if hasattr(self, 'break_logs'):
+            total_breaks = sum(
+                (b.end - b.start for b in self.break_logs.all() if b.start and b.end),
+                timedelta()
+            )
+        else:
+            total_breaks = timedelta()
+
+        # Total worked time minus breaks
+        work_time = (self.check_out - self.check_in) - total_breaks
+        self.total_work_duration = work_time
+
+        # Overtime based on employee's assigned shift
+        active_shift = getattr(self.employee, 'shift_assigned', None)
+        if active_shift:
+            standard_hours = timedelta(hours=active_shift.full_day_hours())
+            self.overtime_duration = max(work_time - standard_hours, timedelta())
+        else:
+            self.overtime_duration = timedelta()
+
+        # Store total break time (optional: as hours and minutes)
+        self.total_break_time = (total_breaks.seconds // 3600, (total_breaks.seconds % 3600) // 60)
+
+        self.save()
+
 
 class BreakConfig(models.Model):
     BREAK_CHOICES = [

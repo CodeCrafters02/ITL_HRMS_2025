@@ -7,6 +7,7 @@ from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ObjectDoesNotExist
 from django.contrib.auth import get_user_model
 from .models import *
+from rest_framework_simplejwt.tokens import RefreshToken
 
 User = get_user_model()
 
@@ -331,6 +332,8 @@ class EmployeeSerializer(serializers.ModelSerializer):
     reporting_manager = serializers.SerializerMethodField()
     reporting_level = serializers.SerializerMethodField()
 
+    shift_assigned = serializers.SerializerMethodField()
+
     class Meta:
         model = Employee
         fields = [
@@ -345,7 +348,7 @@ class EmployeeSerializer(serializers.ModelSerializer):
             'who_referred', 'date_of_joining', 'previous_employer', 'date_of_releaving',
             'previous_designation_name', 'previous_salary', 'ctc', 'gross_salary',
             'epf_status', 'uan', 'asset_details', 'asset_names', 'esic_status', 'esic_no',
-            'source_choices'
+            'source_choices','shift_assigned'
         ]
 
     def get_department_name(self, obj):
@@ -371,7 +374,18 @@ class EmployeeSerializer(serializers.ModelSerializer):
     # def get_reporting_level_name(self, obj):
     #     return obj.reporting_level.level_name if obj.reporting_level else None
 
-
+    def get_shift_assigned(self, obj):
+        """
+        Returns the assigned shift details if any.
+        """
+        if obj.shift_assigned:
+            return {
+                "id": obj.shift_assigned.id,
+                "shift_type": obj.shift_assigned.shift_type,
+                "checkin": str(obj.shift_assigned.checkin),
+                "checkout": str(obj.shift_assigned.checkout)
+            }
+        return None
 
     def get_reporting_manager(self, obj):
         if obj.reporting_manager:
@@ -488,15 +502,19 @@ class EmployeeSerializer(serializers.ModelSerializer):
         return f'EMP-{last_id + 1:04d}'
 
     def send_welcome_email(self, user, password):
-        subject = 'Welcome to the Company!'
+        subject = "Welcome to Innovyx Tech Labs HRMS!"
         message = (
-            f'Hello {user.username},\n\n'
-            f'Your employee account has been created.\n\n'
-            f'Username: {user.username}\n'
-            f'Password: {password}\n\n'
-            f'Please log in and change your password after first login.\n\n'
-            f'Thank you!'
+            f"Hello {user.username},\n\n"
+            f"Your employee account has been successfully created.\n\n"
+            f"Username: {user.username}\n"
+            f"Password: {password}\n\n"
+            f"You can log in to your employee portal using the link below:\n"
+            f"🔗 https://hrms.innovyxtechlabs.com/\n\n"
+            f"Please log in and change your password after your first login for security purposes.\n\n"
+            f"Best regards,\n"
+            f"Innovyx Tech Labs HRMS Team"
         )
+
         send_mail(subject, message, settings.DEFAULT_FROM_EMAIL, [user.email])
     
     
@@ -869,3 +887,41 @@ class GeneratedLetterSerializer(serializers.ModelSerializer):
             'file_path': {'required': False, 'allow_blank': True, 'allow_null': True}
         }
 
+
+class RefreshTokenSerializer(serializers.Serializer):
+    refresh = serializers.CharField()
+    
+    def validate(self, data):
+        refresh = data.get("refresh")
+        try:
+            token = RefreshToken(refresh)
+            # Get user from token
+            user_id = token.payload.get('user_id')
+            if not user_id:
+                raise serializers.ValidationError("Invalid refresh token.")
+            
+            # Get user instance
+            user = UserRegister.objects.get(id=user_id)
+            
+            # Create new refresh token with user data
+            new_refresh = RefreshToken.for_user(user)
+            new_refresh['username'] = user.username    
+            new_refresh['role'] = user.role
+            
+            return {
+                "access": str(new_refresh.access_token)
+            }
+        except Exception as e:
+            raise serializers.ValidationError("Invalid refresh token.")
+
+
+class AssignShiftSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Employee
+        fields = ['id', 'shift_assigned']
+
+    # Optional: validate if shift exists
+    def validate_shift_assigned(self, value):
+        if value is None:
+            raise serializers.ValidationError("Shift must be selected")
+        return value

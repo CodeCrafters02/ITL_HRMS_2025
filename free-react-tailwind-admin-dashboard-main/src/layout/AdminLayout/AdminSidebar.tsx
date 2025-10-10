@@ -48,6 +48,7 @@ const navItems: NavItem[] = [
     icon: <UserCircleIcon />,
     subItems: [
       { name: "Employee Register", path: "/admin/employee-register", pro: false },
+      { name: "Assign Shifts", path: "/admin/assignshifts", pro: false },
       { name: "Recruitment", path: "/admin/recruitment", pro: false },
       { name: "Relieved Employees", path: "/admin/relieved-employees", pro: false },
       { name: "Letter Templates", path: `/admin/letter-templates`, pro: false },

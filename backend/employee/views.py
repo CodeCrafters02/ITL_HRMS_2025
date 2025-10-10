@@ -177,8 +177,6 @@ class CheckOutAPIView(APIView):
             "attendance": serializer.data
         })
 
-
-
 class DashboardAPIView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -188,62 +186,51 @@ class DashboardAPIView(APIView):
             return Response({"detail": "Unauthorized. Employee role required."}, status=403)
 
         try:
+            # Get employee
             employee = Employee.objects.get(email=user.email)
             today = timezone.localdate()
             tz = pytz.timezone('Asia/Kolkata')
             now = timezone.localtime(timezone.now(), tz)
 
+            # Today's attendance
             attendance = Attendance.objects.filter(employee=employee, date=today).first()
+            punch_in = attendance.check_in if attendance else None
+            punch_out = attendance.check_out if attendance else None
 
-            active_break = BreakLog.objects.filter(
-                employee=employee,
-                start__date=today,
-                end__isnull=True
-            ).first()
+            # Active break
+            active_break = BreakLog.objects.filter(employee=employee, start__date=today, end__isnull=True).first()
 
+            # Recent finished breaks
             recent_breaks = BreakLog.objects.filter(
                 employee=employee,
                 start__date=today,
                 end__isnull=False
             ).order_by('-start')[:5]
 
-            punch_in = attendance.check_in if attendance else None
-            punch_out = attendance.check_out if attendance else None
+            # Total break minutes
+            breaks = BreakLog.objects.filter(employee=employee, start__date=today, end__isnull=False)
+            break_minutes = sum(int((b.end - b.start).total_seconds() // 60) for b in breaks)
 
-            # Break minutes calculation (fix: always sum all breaks for today for this employee)
-            breaks = BreakLog.objects.filter(
-                employee=employee,
-                start__date=today,
-                end__isnull=False
-            )
-            break_minutes = sum(
-                int((b.end - b.start).total_seconds() // 60)
-                for b in breaks
-            )
+            # Employee's assigned shift
+            shift = getattr(employee, 'shift_assigned', None)
 
-            # Late check-in logic
+            # Late check-in
             is_late = False
-            if attendance and punch_in and attendance.shift:
-                grace = attendance.shift.grace_period or timedelta(minutes=15)
-                shift_start = datetime.combine(today, attendance.shift.checkin)
-                shift_start_aware = tz.localize(shift_start)
-
+            if attendance and punch_in and shift:
+                grace = shift.grace_period or timedelta(minutes=15)
+                shift_start_dt = datetime.combine(today, shift.checkin)
+                shift_start_aware = tz.localize(shift_start_dt)
                 if punch_in > (shift_start_aware + grace):
                     is_late = True
 
             # Overtime calculation
             overtime = None
-            if attendance and punch_out and attendance.shift:
-                shift_start_time = attendance.shift.checkin
-                shift_end_time = attendance.shift.checkout
-
-                shift_start_dt = datetime.combine(today, shift_start_time)
-                shift_end_dt = datetime.combine(today, shift_end_time)
-
-                # If overnight shift (e.g., 9 PM to 6 AM)
-                if shift_start_time > shift_end_time:
+            if attendance and punch_out and shift:
+                shift_start_dt = datetime.combine(today, shift.checkin)
+                shift_end_dt = datetime.combine(today, shift.checkout)
+                # Overnight shift
+                if shift.checkin > shift.checkout:
                     shift_end_dt += timedelta(days=1)
-
                 shift_end_aware = tz.localize(shift_end_dt)
 
                 if punch_out > shift_end_aware:
@@ -262,44 +249,37 @@ class DashboardAPIView(APIView):
                 'date': latest_payroll.payroll_date
             } if latest_payroll else None
 
-
-            # Birthday message logic
+            # Birthday message
             birthday_message = None
             if employee.date_of_birth:
-                today_month = today.month
-                today_day = today.day
-                dob_month = employee.date_of_birth.month
-                dob_day = employee.date_of_birth.day
-                if today_month == dob_month and today_day == dob_day:
+                if employee.date_of_birth.day == today.day and employee.date_of_birth.month == today.month:
                     birthday_message = f"Happy Birthday, {employee.first_name}! 🎉"
 
             dashboard_data = {
                 'employee_name': f"{employee.first_name} {employee.last_name}",
                 'employee_photo': request.build_absolute_uri(employee.photo.url) if employee.photo else None,
-
                 'checkin_time': timezone.localtime(punch_in, tz).strftime('%H:%M:%S') if punch_in else None,
                 'checkout_time': timezone.localtime(punch_out, tz).strftime('%H:%M:%S') if punch_out else None,
                 'is_late': is_late,
                 'total_worked': calculate_worked_time(punch_in, punch_out, now)[0],
                 'effective_time': calculate_effective_time(punch_in, break_minutes, punch_out, now)['formatted'],
                 'total_break_minutes': break_minutes,
-                'shift_name': attendance.shift.shift_type if attendance and attendance.shift else 'Not assigned',
-                'shift_timing': f"{attendance.shift.checkin.strftime('%H:%M')} - {attendance.shift.checkout.strftime('%H:%M')}" if attendance and attendance.shift else '--:--',
+                'shift_name': shift.shift_type if shift else 'Not assigned',
+                'shift_timing': f"{shift.checkin.strftime('%H:%M')} - {shift.checkout.strftime('%H:%M')}" if shift else '--:--',
                 'server_time': now.strftime('%Y-%m-%d %H:%M:%S'),
                 'active_break': {
-                        'type': active_break.break_config.get_break_choice_display() if active_break.break_config else None,
-                        'break_config_id': active_break.break_config.id if active_break.break_config else None,
-                        'start_time': timezone.localtime(active_break.start, tz).strftime('%H:%M:%S')
-                    } if active_break else None,
+                    'type': active_break.break_config.get_break_choice_display() if active_break and active_break.break_config else None,
+                    'break_config_id': active_break.break_config.id if active_break and active_break.break_config else None,
+                    'start_time': timezone.localtime(active_break.start, tz).strftime('%H:%M:%S') if active_break else None
+                } if active_break else None,
                 'recent_breaks': [
-                        {
-                            'type': br.break_config.get_break_choice_display() if br.break_config else None,
-                            'break_config_id': br.break_config.id if br.break_config else None,
-                            'start_time': timezone.localtime(br.start, tz).strftime('%H:%M:%S'),
-                            'end_time': timezone.localtime(br.end, tz).strftime('%H:%M:%S')
-                        }
-                        for br in recent_breaks
-                    ] if recent_breaks else None,
+                    {
+                        'type': br.break_config.get_break_choice_display() if br.break_config else None,
+                        'break_config_id': br.break_config.id if br.break_config else None,
+                        'start_time': timezone.localtime(br.start, tz).strftime('%H:%M:%S'),
+                        'end_time': timezone.localtime(br.end, tz).strftime('%H:%M:%S')
+                    } for br in recent_breaks
+                ] if recent_breaks else None,
                 'overtime': overtime,
                 'latest_payroll': latest_payroll_data,
                 'birthday_message': birthday_message,
@@ -307,6 +287,8 @@ class DashboardAPIView(APIView):
 
             return Response({"dashboard_data": dashboard_data})
 
+        except Employee.DoesNotExist:
+            return Response({"detail": "Employee record not found."}, status=404)
         except Exception as e:
             return Response({"detail": f"Error: {str(e)}"}, status=500)
 
