@@ -1,4 +1,4 @@
-import { ReactNode } from "react";
+import { ReactNode, MouseEventHandler } from "react";
 
 // Props for Table
 interface TableProps {
@@ -22,18 +22,22 @@ interface TableBodyProps {
 interface TableRowProps {
   children: ReactNode; // Cells (th or td)
   className?: string; // Optional className for styling
+  onClick?: MouseEventHandler<HTMLTableRowElement>; // Optional row click
 }
 
 // Props for TableCell
 interface TableCellProps {
-  children: ReactNode; // Cell content
-  isHeader?: boolean; // If true, renders as <th>, otherwise <td>
-  className?: string; // Optional className for styling
+  children: ReactNode;
+  isHeader?: boolean;
+  className?: string;
+  onClick?: MouseEventHandler<HTMLTableCellElement>;
+  colSpan?: number; // optional colspan
+  width?: string | number; // optional width
 }
 
 // Table Component
 const Table: React.FC<TableProps> = ({ children, className }) => {
-  return <table className={`min-w-full  ${className}`}>{children}</table>;
+  return <table className={`min-w-full ${className}`}>{children}</table>;
 };
 
 // TableHeader Component
@@ -47,8 +51,16 @@ const TableBody: React.FC<TableBodyProps> = ({ children, className }) => {
 };
 
 // TableRow Component
-const TableRow: React.FC<TableRowProps> = ({ children, className }) => {
-  return <tr className={className}>{children}</tr>;
+const TableRow: React.FC<TableRowProps> = ({ children, className, onClick }) => {
+  return (
+    <tr
+      className={className}
+      onClick={onClick}
+      style={{ cursor: onClick ? "pointer" : "default" }}
+    >
+      {children}
+    </tr>
+  );
 };
 
 // TableCell Component
@@ -56,9 +68,21 @@ const TableCell: React.FC<TableCellProps> = ({
   children,
   isHeader = false,
   className,
+  onClick,
+  colSpan,
+  width,
 }) => {
   const CellTag = isHeader ? "th" : "td";
-  return <CellTag className={` ${className}`}>{children}</CellTag>;
+  return (
+    <CellTag
+      className={className}
+      onClick={onClick}
+      colSpan={colSpan}
+      style={{ cursor: onClick ? "pointer" : "default", width }}
+    >
+      {children}
+    </CellTag>
+  );
 };
 
 export { Table, TableHeader, TableBody, TableRow, TableCell };

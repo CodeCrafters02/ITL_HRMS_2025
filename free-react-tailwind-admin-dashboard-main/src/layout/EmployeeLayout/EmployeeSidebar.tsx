@@ -342,7 +342,6 @@ const EmployeeSidebar: React.FC = () => {
   );
 
 
-
   useEffect(() => {
     // Fetch company info for employee from new API endpoint
     axiosInstance.get("employee/company-info/").then((res) => {

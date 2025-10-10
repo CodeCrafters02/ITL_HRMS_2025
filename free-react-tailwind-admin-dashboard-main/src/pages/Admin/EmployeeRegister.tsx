@@ -217,8 +217,14 @@ const EmployeeRegister: React.FC = () => {
               <TableHeader className="bg-gray-50 dark:bg-gray-800">
                 <TableRow>
                   <TableCell isHeader className="border border-gray-200 dark:border-gray-700 p-6 text-left font-semibold text-gray-900 dark:text-white text-sm">Actions</TableCell>
-                  <TableCell isHeader className="border border-gray-200 dark:border-gray-700 p-6 text-left font-semibold text-gray-900 dark:text-white text-sm">Employee ID</TableCell>
-                  <TableCell isHeader className="border border-gray-200 dark:border-gray-700 p-9 text-left font-semibold text-gray-900 dark:text-white text-sm">Name & Photo</TableCell>
+                  <TableCell 
+                  isHeader className="border border-gray-200 dark:border-gray-700 p-6 text-left font-semibold text-gray-900 dark:text-white text-sm">Employee ID</TableCell>
+                  <TableCell 
+                  isHeader 
+                  className="border border-gray-200 dark:border-gray-700 p-9 text-left font-semibold text-gray-900 dark:text-white text-sm w-200"
+                  colSpan={4}
+                  width="400px"
+                  >Name & Photo</TableCell>
                   <TableCell isHeader className="border border-gray-200 dark:border-gray-700 p-6 text-left font-semibold text-gray-900 dark:text-white text-sm">Gender</TableCell>
                   <TableCell isHeader className="border border-gray-200 dark:border-gray-700 p-6 text-left font-semibold text-gray-900 dark:text-white text-sm">Date of Birth</TableCell>
                   <TableCell isHeader className="border border-gray-200 dark:border-gray-700 p-6 text-left font-semibold text-gray-900 dark:text-white text-sm">Email</TableCell>
@@ -291,7 +297,7 @@ const EmployeeRegister: React.FC = () => {
                       </span>
                     </TableCell>
                     {/* Name */}
-                    <TableCell className="border border-gray-200 dark:border-gray-700 p-4">
+                    <TableCell colSpan={4}  width="400px"className="border border-gray-200 dark:border-gray-700 p-4">
                       <div className="flex items-center gap-4">
                         {/* Add photo if available */}
                         {emp.photo ? (

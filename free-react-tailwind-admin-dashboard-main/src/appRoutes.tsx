@@ -28,7 +28,9 @@ const AdminLayout = lazy(() => import("./layout/AdminLayout/AdminLayout"));
 const Department = lazy(() => import("./pages/Admin/Department"));
 const Level = lazy(() => import("./pages/Admin/Level"));
 const CreateAdmin = lazy(() => import("./pages/Forms/CreateAdmin"));
+const EditAdmin = lazy(() => import("./pages/Forms/EditAdmin"));
 const CreateCompany = lazy(() => import("./pages/Forms/CreateCompany"));
+const EditCompany=lazy(()=> import ("./pages/Forms/EditCompany"))
 const EditCompanyProfile = lazy(() => import("./pages/Admin/EditProfile"));
 const Designation = lazy(() => import("./pages/Admin/Designation"));
 const AssetsInventory = lazy(() => import("./pages/Admin/Assets&Inventory"));
@@ -137,8 +139,10 @@ export function appRoutes() {
             <Route path="/master-dashboard" element={<MasterDashboard />} />
             <Route path="/master/admin" element={<AdminPage />} />
             <Route path="/master/admin/create" element={<CreateAdmin />} />
+            <Route path="/master/admin/edit/:id" element={<EditAdmin />} />
             <Route path="/master/company" element={<CompanyList />} />
             <Route path="/master/company/create" element={<CreateCompany />} />
+            <Route path="/master/company/edit/:id" element={<EditCompany />} />
             <Route path="/master/products" element={<ProductPage />} />
             <Route path="/master/products/add" element={<AddProductPage />} />
             <Route path="/master/services" element={<ServicePage />} />

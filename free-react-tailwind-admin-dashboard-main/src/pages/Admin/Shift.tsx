@@ -15,11 +15,30 @@ interface ShiftPolicy {
   full_day: string;
 }
 
+interface EditShiftState {
+  shift_type?: string;
+  checkin_h?: string;
+  checkin_m?: string;
+  checkin_s?: string;
+  checkout_h?: string;
+  checkout_m?: string;
+  checkout_s?: string;
+  grace_h?: string;
+  grace_m?: string;
+  grace_s?: string;
+  half_h?: string;
+  half_m?: string;
+  half_s?: string;
+  full_h?: string;
+  full_m?: string;
+  full_s?: string;
+}
+
 const ShiftPolicyList = () => {
   const [shifts, setShifts] = useState<ShiftPolicy[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [editId, setEditId] = useState<number | null>(null);
-  const [editShift, setEditShift] = useState<Partial<ShiftPolicy>>({});
+  const [editShift, setEditShift] = useState<EditShiftState>({});
   const [deleteId, setDeleteId] = useState<number | null>(null);
   const [deleteName, setDeleteName] = useState<string>("");
   const navigate = useNavigate();
@@ -40,24 +59,65 @@ const ShiftPolicyList = () => {
 
   const startEdit = (shift: ShiftPolicy) => {
     setEditId(shift.id);
-    setEditShift({ ...shift });
+    const parseTime = (time: string) => {
+      const [h, m, s] = time.split(":");
+      return [h || "00", m || "00", s || "00"];
+    };
+    const [ch, cm, cs] = parseTime(shift.checkin);
+    const [coh, com, cos] = parseTime(shift.checkout);
+    const [gh, gm, gs] = parseTime(shift.grace_period);
+    const [hh, hm, hs] = parseTime(shift.half_day);
+    const [fh, fm, fs] = parseTime(shift.full_day);
+
+    setEditShift({
+      shift_type: shift.shift_type,
+      checkin_h: ch,
+      checkin_m: cm,
+      checkin_s: cs,
+      checkout_h: coh,
+      checkout_m: com,
+      checkout_s: cos,
+      grace_h: gh,
+      grace_m: gm,
+      grace_s: gs,
+      half_h: hh,
+      half_m: hm,
+      half_s: hs,
+      full_h: fh,
+      full_m: fm,
+      full_s: fs,
+    });
   };
 
-  const handleEditChange = (field: keyof ShiftPolicy, value: string) => {
+  const handleEditChange = (field: keyof EditShiftState, value: string) => {
     setEditShift((prev) => ({ ...prev, [field]: value }));
+  };
+
+  const timeToString = (h?: string, m?: string, s?: string) => {
+    const hh = h?.padStart(2, "0") || "00";
+    const mm = m?.padStart(2, "0") || "00";
+    const ss = s?.padStart(2, "0") || "00";
+    return `${hh}:${mm}:${ss}`;
   };
 
   const updateShift = async (id: number) => {
     setLoading(true);
     try {
-      await axiosInstance.put(`app/shift-policies/${id}/`, editShift);
+      const payload = {
+        shift_type: editShift.shift_type,
+        checkin: timeToString(editShift.checkin_h, editShift.checkin_m, editShift.checkin_s),
+        checkout: timeToString(editShift.checkout_h, editShift.checkout_m, editShift.checkout_s),
+        grace_period: timeToString(editShift.grace_h, editShift.grace_m, editShift.grace_s),
+        half_day: timeToString(editShift.half_h, editShift.half_m, editShift.half_s),
+        full_day: timeToString(editShift.full_h, editShift.full_m, editShift.full_s),
+      };
+      await axiosInstance.put(`app/shift-policies/${id}/`, payload);
       setEditId(null);
       setEditShift({});
-      // Refresh list
       const res = await axiosInstance.get("app/shift-policies/");
       setShifts(res.data);
     } catch {
-      alert("Failed to update shift policy.");
+      toast.error("Failed to update shift policy", { position: "bottom-right" });
     }
     setLoading(false);
   };
@@ -82,28 +142,36 @@ const ShiftPolicyList = () => {
     setLoading(false);
   };
 
-  // Helper to format seconds to HH:mm:ss
-  function formatTimeString(time: string) {
-    if (!time) return "00:00:00";
-    // If already in HH:mm:ss, return as is
-    if (/^\d{2}:\d{2}:\d{2}$/.test(time)) return time;
-    // If only seconds, convert
-    const sec = parseInt(time, 10);
-    if (!isNaN(sec)) {
-      const h = Math.floor(sec / 3600).toString().padStart(2, "0");
-      const m = Math.floor((sec % 3600) / 60).toString().padStart(2, "0");
-      const s = (sec % 60).toString().padStart(2, "0");
-      return `${h}:${m}:${s}`;
-    }
-    return time;
-  }
-  // Helper to parse HH:mm:ss to string
-  function parseTimeString(val: string) {
-    // Accepts HH:mm:ss or HH:mm
-    if (/^\d{2}:\d{2}:\d{2}$/.test(val)) return val;
-    if (/^\d{2}:\d{2}$/.test(val)) return val + ":00";
-    return val;
-  }
+  const renderTimeInput = (label: string, h: string, m: string, s: string, prefix: string) => (
+    <div className="mb-2">
+      <label className="block text-sm font-medium mb-1">{label}</label>
+      <div className="flex gap-1">
+        <input
+          type="text"
+          value={h}
+          onChange={(e) => handleEditChange(`${prefix}_h` as keyof EditShiftState, e.target.value)}
+          placeholder="HH"
+          className="w-12 border rounded px-1 py-1"
+        />
+        <span>:</span>
+        <input
+          type="text"
+          value={m}
+          onChange={(e) => handleEditChange(`${prefix}_m` as keyof EditShiftState, e.target.value)}
+          placeholder="MM"
+          className="w-12 border rounded px-1 py-1"
+        />
+        <span>:</span>
+        <input
+          type="text"
+          value={s}
+          onChange={(e) => handleEditChange(`${prefix}_s` as keyof EditShiftState, e.target.value)}
+          placeholder="SS"
+          className="w-12 border rounded px-1 py-1"
+        />
+      </div>
+    </div>
+  );
 
   return (
     <div className="p-6">
@@ -135,61 +203,18 @@ const ShiftPolicyList = () => {
                       <input
                         type="text"
                         value={editShift.shift_type || ""}
-                        onChange={e => handleEditChange("shift_type", e.target.value)}
+                        onChange={(e) => handleEditChange("shift_type", e.target.value)}
                         className="text-xl font-semibold border rounded px-2 py-1 w-full mb-2"
                         placeholder="Shift Type"
                       />
-                      <div className="mb-2">
-                        <label className="block text-sm font-medium mb-1">Check-in</label>
-                        <input
-                          type="time"
-                          value={editShift.checkin || ""}
-                          onChange={e => handleEditChange("checkin", e.target.value)}
-                          className="border rounded px-2 py-1 w-full"
-                        />
-                      </div>
-                      <div className="mb-2">
-                        <label className="block text-sm font-medium mb-1">Check-out</label>
-                        <input
-                          type="time"
-                          value={editShift.checkout || ""}
-                          onChange={e => handleEditChange("checkout", e.target.value)}
-                          className="border rounded px-2 py-1 w-full"
-                        />
-                      </div>
-                      <div className="mb-2">
-                        <label className="block text-sm font-medium mb-1">Grace Period</label>
-                        <input
-                          type="time"
-                          step="1"
-                          value={formatTimeString(editShift.grace_period || "00:00:00")}
-                          onChange={e => handleEditChange("grace_period", parseTimeString(e.target.value))}
-                          className="border rounded px-2 py-1 w-full"
-                        />
-                      </div>
-                      <div className="mb-2">
-                        <label className="block text-sm font-medium mb-1">Half Day</label>
-                        <input
-                          type="time"
-                          step="1"
-                          value={formatTimeString(editShift.half_day || "00:00:00")}
-                          onChange={e => handleEditChange("half_day", parseTimeString(e.target.value))}
-                          className="border rounded px-2 py-1 w-full"
-                        />
-                      </div>
-                      <div className="mb-2">
-                        <label className="block text-sm font-medium mb-1">Full Day</label>
-                        <input
-                          type="time"
-                          step="1"
-                          value={formatTimeString(editShift.full_day || "00:00:00")}
-                          onChange={e => handleEditChange("full_day", parseTimeString(e.target.value))}
-                          className="border rounded px-2 py-1 w-full"
-                        />
-                      </div>
+                      {renderTimeInput("Check-in", editShift.checkin_h || "", editShift.checkin_m || "", editShift.checkin_s || "", "checkin")}
+                      {renderTimeInput("Check-out", editShift.checkout_h || "", editShift.checkout_m || "", editShift.checkout_s || "", "checkout")}
+                      {renderTimeInput("Grace Period", editShift.grace_h || "", editShift.grace_m || "", editShift.grace_s || "", "grace")}
+                      {renderTimeInput("Half Day", editShift.half_h || "", editShift.half_m || "", editShift.half_s || "", "half")}
+                      {renderTimeInput("Full Day", editShift.full_h || "", editShift.full_m || "", editShift.full_s || "", "full")}
                       <div className="flex gap-2 justify-end mt-2">
                         <button className="text-green-600 hover:text-green-800" title="Save" onClick={() => updateShift(shift.id)}>
-                          <FaEdit />
+                          {/* <FaEdit /> */}Save 
                         </button>
                         <button className="text-gray-500 hover:text-gray-700" title="Cancel" onClick={() => { setEditId(null); setEditShift({}); }}>
                           Cancel
@@ -201,21 +226,11 @@ const ShiftPolicyList = () => {
                       <div className="flex items-center justify-between mb-2">
                         <h3 className="text-xl font-bold text-blue-900 flex-1 truncate">{shift.shift_type} Shift</h3>
                       </div>
-                      <div className="mb-2">
-                        <span className="font-semibold text-gray-700">Check-in:</span> {shift.checkin}
-                      </div>
-                      <div className="mb-2">
-                        <span className="font-semibold text-gray-700">Check-out:</span> {shift.checkout}
-                      </div>
-                      <div className="mb-2">
-                        <span className="font-semibold text-gray-700">Grace Period:</span> {formatTimeString(shift.grace_period) || "00:00:00"}
-                      </div>
-                      <div className="mb-2">
-                        <span className="font-semibold text-gray-700">Half Day:</span> {formatTimeString(shift.half_day) || "04:00:00"}
-                      </div>
-                      <div className="mb-2">
-                        <span className="font-semibold text-gray-700">Full Day:</span> {formatTimeString(shift.full_day) || "08:00:00"}
-                      </div>
+                      <div className="mb-2"><span className="font-semibold text-gray-700">Check-in:</span> {shift.checkin}</div>
+                      <div className="mb-2"><span className="font-semibold text-gray-700">Check-out:</span> {shift.checkout}</div>
+                      <div className="mb-2"><span className="font-semibold text-gray-700">Grace Period:</span> {shift.grace_period}</div>
+                      <div className="mb-2"><span className="font-semibold text-gray-700">Half Day:</span> {shift.half_day}</div>
+                      <div className="mb-2"><span className="font-semibold text-gray-700">Full Day:</span> {shift.full_day}</div>
                       <div className="flex gap-2 justify-end mt-2">
                         <button className="text-blue-600 hover:text-blue-800" title="Edit" onClick={() => startEdit(shift)}>
                           <FaEdit />
@@ -231,9 +246,10 @@ const ShiftPolicyList = () => {
             ))}
           </div>
         )}
+
         {/* Delete Confirmation Modal */}
         {deleteId !== null && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center  bg-opacity-40">
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-opacity-40">
             <div className="bg-white rounded-lg shadow-lg p-8 w-full max-w-md">
               <h2 className="text-xl font-bold mb-4 text-gray-900">Confirm Delete</h2>
               <p className="mb-6 text-gray-700">Are you sure you want to delete this department <span className="font-semibold">{deleteName}</span>?</p>

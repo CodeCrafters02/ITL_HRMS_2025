@@ -35,7 +35,6 @@ export default function CreateAdmin() {
     } catch (err) {
       const error = err as AxiosError;
       if (error.response && error.response.data) {
-        // Try to get detail or fallback to stringified error
         const data = error.response.data as unknown as { detail?: string };
         setError(data?.detail || JSON.stringify(data) || error.message || "Failed to create admin");
       } else {
@@ -48,43 +47,48 @@ export default function CreateAdmin() {
 
   return (
     <div className="p-8 max-w-3xl mx-auto">
-      <h1 className="text-2xl font-bold mb-4">Create Admin</h1>
-      <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-8 bg-white p-8 rounded-xl shadow-lg">
-        <div className="space-y-4">
-          <Label htmlFor="username">Username</Label>
+      <h1 className="text-2xl font-bold mb-4 text-gray-900 dark:text-white">Create Admin</h1>
+      <form
+        onSubmit={handleSubmit}
+        className="grid grid-cols-1 md:grid-cols-2 gap-8 bg-white dark:bg-gray-800 p-8 rounded-xl shadow-lg dark:shadow-gray-700"
+      >
+        <div className="space-y-2">
+          <Label htmlFor="username" className="text-gray-700 dark:text-gray-300">Username</Label>
           <Input
             type="text"
             id="username"
             value={username}
             onChange={e => setUsername(e.target.value)}
             required
-            className="w-full"
+            className="w-full px-3 py-2 border border-gray-300 rounded dark:border-gray-600 dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-blue-500"
           />
         </div>
-        <div className="space-y-4">
-          <Label htmlFor="email">Email</Label>
+        <div className="space-y-2">
+          <Label htmlFor="email" className="text-gray-700 dark:text-gray-300">Email</Label>
           <Input
             type="email"
             id="email"
             value={email}
             onChange={e => setEmail(e.target.value)}
             required
-            className="w-full"
+            className="w-full px-3 py-2 border border-gray-300 rounded dark:border-gray-600 dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-blue-500"
           />
         </div>
-        <div className="space-y-4 md:col-span-2">
-          <Label htmlFor="password">Password</Label>
+        <div className="space-y-2 md:col-span-2">
+          <Label htmlFor="password" className="text-gray-700 dark:text-gray-300">Password</Label>
           <Input
             type="password"
             id="password"
             value={password}
             onChange={e => setPassword(e.target.value)}
             required
-            className="w-full"
+            className="w-full px-3 py-2 border border-gray-300 rounded dark:border-gray-600 dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-blue-500"
           />
         </div>
+
         {error && <div className="text-red-500 text-sm md:col-span-2">{error}</div>}
         {success && <div className="text-green-500 text-sm md:col-span-2">{success}</div>}
+
         <div className="flex gap-2 md:col-span-2">
           <button
             type="submit"
@@ -95,7 +99,7 @@ export default function CreateAdmin() {
           </button>
           <button
             type="button"
-            className="bg-gray-300 text-gray-700 py-2 px-4 rounded hover:bg-gray-400"
+            className="bg-gray-300 dark:bg-gray-600 text-gray-800 dark:text-white py-2 px-4 rounded hover:bg-gray-400 dark:hover:bg-gray-500"
             onClick={() => navigate("/master/admin")}
           >
             Cancel
