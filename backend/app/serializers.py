@@ -332,6 +332,14 @@ class EmployeeSerializer(serializers.ModelSerializer):
     reporting_manager = serializers.SerializerMethodField()
     reporting_level = serializers.SerializerMethodField()
 
+
+    reporting_manager_id = serializers.PrimaryKeyRelatedField(
+        queryset=Employee.objects.all(), write_only=True, required=False, allow_null=True
+    )
+    reporting_level_id = serializers.PrimaryKeyRelatedField(
+        queryset=Level.objects.all(), write_only=True, required=False, allow_null=True
+    )
+
     shift_assigned = serializers.SerializerMethodField()
 
     class Meta:
@@ -348,7 +356,7 @@ class EmployeeSerializer(serializers.ModelSerializer):
             'who_referred', 'date_of_joining', 'previous_employer', 'date_of_releaving',
             'previous_designation_name', 'previous_salary', 'ctc', 'gross_salary',
             'epf_status', 'uan', 'asset_details', 'asset_names', 'esic_status', 'esic_no',
-            'source_choices','shift_assigned'
+            'source_choices','shift_assigned','reporting_manager_id','reporting_level_id',
         ]
 
     def get_department_name(self, obj):
@@ -447,11 +455,36 @@ class EmployeeSerializer(serializers.ModelSerializer):
         return data
 
     def create(self, validated_data):
-        reporting_level = validated_data.pop('reporting_level', None)
-        assets = validated_data.pop('asset_details', [])
-        request = self.context['request']
+        request = self.context.get('request')
         admin_user = request.user
+        assets = validated_data.pop('asset_details', [])
 
+
+        # print("Requested data:", request.data)
+
+
+        # Get reporting info directly from request.data
+        reporting_manager_id = request.data.get('reporting_manager')  # This is a string ID
+        reporting_level_id = request.data.get('reporting_level')      # optional
+
+        # print("reporting managaer",reporting_manager_id)
+        # print("reporting level ",reporting_level_id)
+
+
+        reporting_manager = None
+        reporting_level = None
+
+        if reporting_manager_id:
+            reporting_manager = Employee.objects.get(pk=int(reporting_manager_id))
+
+        if reporting_level_id:
+            reporting_level = Level.objects.get(pk=int(reporting_level_id))
+
+        # print("Reporting Manager:", reporting_manager)
+        # print("Reporting Level:", reporting_level)
+        # print("Validated data:", validated_data)
+
+        # Generate employee ID and user
         employee_id = self.generate_employee_id()
         username = f'emp_{get_random_string(6)}'
         password = get_random_string(8)
@@ -472,10 +505,14 @@ class EmployeeSerializer(serializers.ModelSerializer):
         if designation and designation.level:
             validated_data['level'] = designation.level
 
-        employee = Employee.objects.create(**validated_data)
+        # Save employee with reporting info
+        employee = Employee.objects.create(
+            reporting_manager=reporting_manager,
+            reporting_level=reporting_level,
+            **validated_data
+        )
 
-        # Convert asset IDs to AssetInventory instances if needed
-        asset_instances = []
+        # Assign assets
         for asset in assets:
             if isinstance(asset, int):
                 asset_obj = AssetInventory.objects.get(pk=asset)
@@ -489,9 +526,8 @@ class EmployeeSerializer(serializers.ModelSerializer):
 
         self.send_welcome_email(user, password)
 
+        # print("Employee created:", employee)
         return employee
-
-
 
     def generate_employee_id(self):
         last_employee = Employee.objects.order_by('id').last()
@@ -515,8 +551,50 @@ class EmployeeSerializer(serializers.ModelSerializer):
             f"Innovyx Tech Labs HRMS Team"
         )
 
-        send_mail(subject, message, settings.DEFAULT_FROM_EMAIL, [user.email])
-    
+        send_mail(subject, message, settings.DEFAULT_FROM_EMAIL, [user.email])  
+
+
+    def update(self, instance, validated_data):
+        request = self.context.get('request')
+        if not request:
+            raise serializers.ValidationError("Request context is required.")
+
+        # --- Reporting manager / level from request.data ---
+        reporting_manager_id = request.data.get('reporting_manager')
+        reporting_level_id = request.data.get('reporting_level')
+
+        reporting_manager = None
+        reporting_level = None
+
+        if reporting_manager_id:
+            try:
+                reporting_manager = Employee.objects.get(pk=int(reporting_manager_id))
+            except Employee.DoesNotExist:
+                raise serializers.ValidationError({"reporting_manager": "Invalid reporting manager ID."})
+
+        if reporting_level_id:
+            try:
+                reporting_level = Level.objects.get(pk=int(reporting_level_id))
+            except Level.DoesNotExist:
+                raise serializers.ValidationError({"reporting_level": "Invalid reporting level ID."})
+
+        instance.reporting_manager = reporting_manager or instance.reporting_manager
+        instance.reporting_level = reporting_level or instance.reporting_level
+
+        # --- Handle other fields ---
+        assets = validated_data.pop('asset_details', None)  # Remove M2M from validated_data
+
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+
+        instance.save()
+
+        # --- Update ManyToMany field properly ---
+        if assets is not None:
+            instance.asset_details.set(assets)  # Use .set() for M2M
+
+        return instance
+
     
 class AssetInventorySerializer(serializers.ModelSerializer):
     class Meta:
@@ -537,7 +615,7 @@ class AssetInventorySerializer(serializers.ModelSerializer):
 
         validated_data['company'] = company
         return AssetInventory.objects.create(**validated_data)
-
+    
     def update(self, instance, validated_data):
         return super().update(instance, validated_data)
 

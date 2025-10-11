@@ -39,8 +39,10 @@ const ChangePasswordForm: React.FC<ChangePasswordFormProps> = ({ apiEndpoint = "
 				setErrors({});
 				setSuccess("");
 				try {
+					// console.log("apiEnd point ",apiEndpoint)
+						const api="app/change-password/"
 							const res = await axiosInstance.patch(
-								apiEndpoint,
+								api,
 								form
 							);
 					setSuccess(res.data.detail || "Password updated successfully.");

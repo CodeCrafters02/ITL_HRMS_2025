@@ -1,6 +1,11 @@
 from django.urls import path
+from rest_framework.routers import DefaultRouter
 from .views import *
 from .all_notifications import AllNotificationsAPIView, NotificationSSEView
+
+router = DefaultRouter()
+
+router.register('employeereference', EmployeeReferenceViewSet, basename='employeereference')
 
 urlpatterns = [
     path('employee/company-info/', EmployeeCompanyInfoAPIView.as_view(), name='employee-company-info'),
@@ -37,3 +42,4 @@ urlpatterns = [
     path('sse/', NotificationSSEView.as_view(), name='notification_sse'),    
 
 ]
+urlpatterns += router.urls

@@ -190,31 +190,41 @@ const UpdateEmployeeForm: React.FC = () => {
     fetchOptions();
   }, []);
 
-  // Fetch levels and reporting managers when department or level changes
+    // Fetch levels and reporting managers when department or level changes
   useEffect(() => {
     const fetchLevelsAndManagers = async () => {
       try {
+        // Fetch levels
         if (form.department) {
           const levelsRes = await axiosInstance.get(`app/levels/?department_id=${form.department}`);
-          setLevels(levelsRes.data.map((level: { id?: string | number; level_id?: string | number; _id?: string | number; name?: string; level_name?: string; title?: string; department?: string | number; department_id?: string | number }) => ({
+          const mappedLevels = levelsRes.data.map((level: { id?: string | number; level_id?: string | number; _id?: string | number; name?: string; level_name?: string; title?: string; department?: string | number; department_id?: string | number }) => ({
             id: String(level.id ?? level.level_id ?? level._id),
             name: String(level.name ?? level.level_name ?? level.title),
             department: String(level.department ?? level.department_id ?? '')
-          })));
+          }));
+          console.log("Fetched Levels:", mappedLevels); // ✅ log levels
+          setLevels(mappedLevels);
         } else {
           setLevels([]);
         }
-        // Reporting managers
-        const url = form.level ? `app/employee/get-reporting-manager-choices/?reporting_level_id=${form.level}` : 'app/employee/get-reporting-manager-choices/';
+
+        // Fetch reporting managers
+        const url = form.level
+          ? `app/employee/get-reporting-manager-choices/?reporting_level_id=${form.level}`
+          : 'app/employee/get-reporting-manager-choices/';
         const mgrRes = await axiosInstance.get(url);
-        setReportingManagers(mgrRes.data.map((mgr: { id?: number | string; manager_id?: number | string; _id?: number | string; name?: string; manager_name?: string; title?: string }) => ({
+        const mappedManagers = mgrRes.data.reporting_managers.map((mgr: { id?: number | string; manager_id?: number | string; _id?: number | string; name?: string; manager_name?: string; title?: string }) => ({
           id: mgr.id ?? mgr.manager_id ?? mgr._id,
           name: mgr.name ?? mgr.manager_name ?? mgr.title
-        })));
-      } catch {
+        }));
+        console.log("Fetched Reporting Managers:", mappedManagers); // ✅ log managers
+        setReportingManagers(mappedManagers);
+      } catch (error) {
+        console.error("Error fetching levels or managers:", error);
         setReportingManagers([]);
       }
     };
+
     fetchLevelsAndManagers();
   }, [form.department, form.level]);
 
@@ -726,16 +736,20 @@ const UpdateEmployeeForm: React.FC = () => {
                         key={form.level}
                       />
                     </div>
-                    <div>
-                      <Label>Reporting Manager</Label>
-                      <Select
-                        options={reportingManagers.map(mgr => ({ value: mgr.id.toString(), label: mgr.name }))}
-                        placeholder="Select reporting manager"
-                        onChange={handleSelectChange('reporting_manager')}
-                        defaultValue={safeSelectValue(form.reporting_manager)}
-                        key={form.reporting_manager}
-                      />
-                    </div>
+<div>
+  <Label>Reporting Manager</Label>
+  <Select
+    options={reportingManagers.map(mgr => ({
+      value: mgr.id.toString(),
+      label: mgr.name
+    }))}
+    placeholder="Select reporting manager"
+    value={form.reporting_manager || ""}
+    onChange={value => handleSelectChange('reporting_manager')(value)}
+    // isClearable
+  />
+</div>
+
                   </div>
 
                   {form.source_of_employment === 'internalreference' && (

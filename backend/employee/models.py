@@ -1,6 +1,6 @@
 from django.db import models
 from django.conf import settings
-
+from app.models import Employee
 
 class PersonalCalendar(models.Model):
     name = models.CharField(max_length=100)
@@ -97,3 +97,28 @@ class TaskAssignment(models.Model):
 
     def __str__(self):
         return f"{self.employee} - {self.task.title} ({self.role})"
+
+class EmployeeReference(models.Model):
+    STATUS_CHOICES = [
+        ('Pending', 'Pending'),
+        ('Approved', 'Approved'),
+        ('Rejected', 'Rejected'),
+    ]
+
+    employee = models.ForeignKey(Employee,
+        on_delete=models.CASCADE,
+        related_name='references'
+    )
+    name = models.CharField(max_length=100)
+    designation = models.CharField(max_length=100)
+    contact_number = models.CharField(max_length=20)
+    email = models.EmailField()
+    resume = models.FileField(upload_to='employee_references/resume/', blank=True, null=True)
+    submitted_at = models.DateTimeField(auto_now_add=True)
+
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='Pending')
+    admin_comment = models.TextField(blank=True, null=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"{self.name} ({self.employee.username})"

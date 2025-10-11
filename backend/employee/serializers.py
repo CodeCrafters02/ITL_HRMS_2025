@@ -350,3 +350,34 @@ class PolicyConfigurationSerializer(serializers.ModelSerializer):
         if obj.document:
             return request.build_absolute_uri(obj.document.url)
         return None
+
+
+class EmployeeReferenceSerializer(serializers.ModelSerializer):
+    # Add employee details directly
+    employee_name = serializers.CharField(source='employee.full_name', read_only=True)
+    employee_id = serializers.CharField(source='employee.employee_id', read_only=True)
+    employee_email = serializers.CharField(source='employee.email', read_only=True)
+    employee_designation = serializers.CharField(source='employee.designation.name', read_only=True)
+    employee_department = serializers.CharField(source='employee.department.name', read_only=True)
+
+    class Meta:
+        model = EmployeeReference
+        fields = [
+            'id',
+            'employee',  # still includes ID
+            'employee_name',
+            'employee_id',
+            'employee_email',
+            'employee_designation',
+            'employee_department',
+            'name',
+            'designation',
+            'contact_number',
+            'email',
+            'resume',
+            'submitted_at',
+            'status',
+            'admin_comment',
+            'updated_at'
+        ]
+        read_only_fields = ['submitted_at', 'updated_at']

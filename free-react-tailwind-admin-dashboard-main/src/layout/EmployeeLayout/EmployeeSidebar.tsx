@@ -66,6 +66,11 @@ const navItems: NavItem[] = [
     name: "Company policies",
     path: "/employee/company-policy",
   },
+    {
+    icon: <FolderCheckIcon />,
+    name: "References",
+    path: "/employee/references",
+  },
 ];
 
 const EmployeeSidebar: React.FC = () => {

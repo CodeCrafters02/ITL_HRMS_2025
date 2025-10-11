@@ -115,6 +115,11 @@ const navItems: NavItem[] = [
     icon: <PieChartIcon />,
     path: "/admin/system-tracking",
   },
+    {
+    name: "Employee References",
+    icon: <PieChartIcon />,
+    path: "/admin/employeerefrences",
+  },
 ];
 
 

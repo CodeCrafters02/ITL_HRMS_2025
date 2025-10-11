@@ -1139,3 +1139,112 @@ class EmployeeHierarchyAPIView(APIView):
         if not reporting_manager:
             response_data['reportees'] = reportees
         return Response(response_data)
+    
+
+# class EmployeeReferenceViewSet(viewsets.ModelViewSet):
+#     queryset = EmployeeReference.objects.all().order_by('-submitted_at')
+#     serializer_class = EmployeeReferenceSerializer
+
+#     def get_permissions(self):
+#         return [permissions.IsAuthenticated()]
+
+#     def get_queryset(self):
+#         user = self.request.user
+#         if user.is_staff:
+#             return EmployeeReference.objects.all()
+        
+#         # Employees see only their references
+#         try:
+#             employee = Employee.objects.get(user=user)  # <-- get Employee instance
+#         except Employee.DoesNotExist:
+#             return EmployeeReference.objects.none()
+        
+#         return EmployeeReference.objects.filter(employee=employee)
+
+#     def perform_create(self, serializer):
+#         try:
+#             employee = Employee.objects.get(user=self.request.user)  # <-- correct Employee instance
+#         except Employee.DoesNotExist:
+#             raise serializers.ValidationError("Employee record not found for this user.")
+        
+#         serializer.save(employee=employee)
+
+
+
+
+from rest_framework import viewsets, permissions, serializers, decorators, response, status
+from .models import EmployeeReference, Employee
+from .serializers import EmployeeReferenceSerializer
+
+
+class EmployeeReferenceViewSet(viewsets.ModelViewSet):
+    serializer_class = EmployeeReferenceSerializer
+    queryset = EmployeeReference.objects.all().order_by('-submitted_at')
+
+    def get_permissions(self):
+        return [permissions.IsAuthenticated()]
+
+    def get_queryset(self):
+        user = self.request.user
+
+        # Admin: only see references from employees in the same company
+        if user.role == "admin" and user.company:
+            return EmployeeReference.objects.filter(
+                employee__company=user.company
+            ).order_by('-submitted_at')
+
+        # Superuser sees all
+        if user.is_superuser:
+            return EmployeeReference.objects.all().order_by('-submitted_at')
+
+        # Regular employee: only own references
+        try:
+            employee = Employee.objects.get(user=user)
+        except Employee.DoesNotExist:
+            return EmployeeReference.objects.none()
+
+        return EmployeeReference.objects.filter(employee=employee).order_by('-submitted_at')
+
+    def perform_create(self, serializer):
+        """Attach logged-in employee automatically"""
+        try:
+            employee = Employee.objects.get(user=self.request.user)
+        except Employee.DoesNotExist:
+            raise serializers.ValidationError("Employee record not found for this user.")
+        serializer.save(employee=employee)
+
+    @decorators.action(
+        detail=True,
+        methods=["patch"],
+        permission_classes=[permissions.IsAdminUser],
+        url_path="review",
+    )
+    def review(self, request, pk=None):
+        """Admin review: approve/reject + comment"""
+        reference = self.get_object()
+
+        # Ensure admin and employee are in same company
+        admin_user = request.user
+        if reference.employee.company != admin_user.company:
+            return response.Response(
+                {"error": "You are not allowed to review references from another company."},
+                status=status.HTTP_403_FORBIDDEN
+            )
+
+        status_value = request.data.get("status")
+        admin_comment = request.data.get("admin_comment", "")
+
+        if status_value not in ["Pending", "Approved", "Rejected"]:
+            return response.Response(
+                {"error": "Invalid status."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        reference.status = status_value
+        reference.admin_comment = admin_comment
+        reference.save(update_fields=["status", "admin_comment"])
+
+        return response.Response(
+            {"message": "Reference reviewed successfully."},
+            status=status.HTTP_200_OK
+        )

@@ -91,6 +91,12 @@ const PayslipPage = lazy(() => import("./pages/Admin/Payslip"));
 const UpdateEmployeeForm = lazy(() => import("./pages/Forms/UpdateEmployeeForm"));
 const UpdateAttendanceForm = lazy(() => import("./pages/Forms/UpdateAttendanceForm"));
 
+
+import EmployeeReferencePage from "./pages/Employee/references";
+import AddEmployeeReference from "./pages/Employee/references/AddReference";
+import AdminEmployeeReferencePage from "./pages/Admin/employeerefrences";
+import AdminEditEmployeeReference from "./pages/Admin/employeerefrences/EditEmployeeReferences";
+
 const UserManagementPage = lazy(() => import("./pages/UserManagement/index"));
 const AddUserPage = lazy(() => import("./pages/UserManagement/AddUser"));
 const ProductPage = lazy(() => import("./pages/Products/index"));
@@ -219,6 +225,11 @@ export function appRoutes() {
             <Route path="update-employee-form/:id" element={<UpdateEmployeeForm />} />
             <Route path="update-attendance/:employee_id" element={<UpdateAttendanceForm />} />
 
+            <Route path="update-attendance/:employee_id" element={<UpdateAttendanceForm />} />
+            <Route path="update-attendance/:employee_id" element={<UpdateAttendanceForm />} />
+
+            <Route path="employeerefrences" element={<AdminEmployeeReferencePage />} />
+            <Route path="employeerefrences/:id" element={<AdminEditEmployeeReference />} />
 
             {/* Admin Change Password */}
            <Route path="change-password" element={<ChangePasswordForm apiEndpoint="/change-password/" />} />
@@ -316,6 +327,8 @@ export function appRoutes() {
                 <Route path="form-leave" element={<EmpLeaveForm />} />
                 {/* Employee Change Password */}
                 <Route path="change-password" element={<ChangePasswordForm apiEndpoint="/change-password/" />} />
+                <Route path="/employee/references" element={<EmployeeReferencePage />} />
+                <Route path="/employee/reference/add" element={<AddEmployeeReference />} />
 
 
             </Route>
