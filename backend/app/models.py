@@ -3,6 +3,7 @@ from datetime import timedelta
 from django.utils import timezone
 from django.contrib.auth.models import AbstractUser
 from django.conf import settings
+from datetime import time
 
 
 
@@ -477,18 +478,14 @@ class Attendance(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     def calculate_work_duration(self):
-        """
-        Calculate total worked time minus breaks, and calculate overtime based on employee's assigned shift.
-        """
         if not self.check_in or not self.check_out:
-            # Nothing to calculate if check-in/out missing
             self.total_work_duration = None
             self.overtime_duration = None
             self.total_break_time = None
             self.save()
             return
 
-        # Calculate total breaks for this attendance
+        # Total breaks
         if hasattr(self, 'break_logs'):
             total_breaks = sum(
                 (b.end - b.start for b in self.break_logs.all() if b.start and b.end),
@@ -501,7 +498,7 @@ class Attendance(models.Model):
         work_time = (self.check_out - self.check_in) - total_breaks
         self.total_work_duration = work_time
 
-        # Overtime based on employee's assigned shift
+        # Overtime
         active_shift = getattr(self.employee, 'shift_assigned', None)
         if active_shift:
             standard_hours = timedelta(hours=active_shift.full_day_hours())
@@ -509,8 +506,10 @@ class Attendance(models.Model):
         else:
             self.overtime_duration = timedelta()
 
-        # Store total break time (optional: as hours and minutes)
-        self.total_break_time = (total_breaks.seconds // 3600, (total_breaks.seconds % 3600) // 60)
+        # Convert break duration to time object
+        hours = total_breaks.seconds // 3600
+        minutes = (total_breaks.seconds % 3600) // 60
+        self.total_break_time = time(hour=hours, minute=minutes)
 
         self.save()
 

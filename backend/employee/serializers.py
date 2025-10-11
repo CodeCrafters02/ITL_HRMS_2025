@@ -17,12 +17,11 @@ class NotificationSerializer(serializers.ModelSerializer):
         model = Notification
         fields = ['id', 'title', 'description', 'date']
 class EmployeeAttendanceSerializer(serializers.ModelSerializer):
-    shift = ShiftSerializer()
 
     class Meta:
         model = Attendance
         fields = [
-            'id', 'employee', 'company', 'shift',
+            'id', 'employee', 'company',
             'date', 'check_in', 'check_out',
             'total_work_duration', 'overtime_duration',
             'is_present', 'created_at', 'updated_at'

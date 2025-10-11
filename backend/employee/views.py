@@ -129,7 +129,6 @@ class CheckInAPIView(APIView):
         attendance = Attendance.objects.create(
             employee=employee,
             company=employee.company,
-            shift=selected_shift,
             date=today,
             check_in=now_dt,
             is_present=True
