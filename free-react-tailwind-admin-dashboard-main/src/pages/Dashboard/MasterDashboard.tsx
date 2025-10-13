@@ -142,8 +142,9 @@ const MasterDashboard = () => {
       </div>
 
       {/* Table */}
-      <div className="overflow-x-auto rounded-xl border border-gray-200 bg-white dark:border-white/[0.05] dark:bg-white/[0.03] z-10">
-        <Table>
+      <div className="overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-white/[0.05] dark:bg-white/[0.03] z-index-[100000000]">
+        <div className="max-w-full overflow-x-auto">        
+          <Table>
           <TableHeader className="border-b border-gray-100 dark:border-white/[0.05]">
             <TableRow>
               <TableCell
@@ -159,20 +160,20 @@ const MasterDashboard = () => {
               >
                 Name {sortField === "name" ? (sortDirection === "asc" ? "↑" : "↓") : "↕"}
               </TableCell>
-              <TableCell
+              {/* <TableCell
                 isHeader
                 className="px-5 py-3 font-medium text-gray-500 dark:text-gray-400 cursor-pointer"
                 onClick={() => handleSort("address")}
               >
                 Address {sortField === "address" ? (sortDirection === "asc" ? "↑" : "↓") : "↕"}
-              </TableCell>
-              <TableCell
+              </TableCell> */}
+              {/* <TableCell
                 isHeader
                 className="px-5 py-3 font-medium text-gray-500 dark:text-gray-400 cursor-pointer"
                 onClick={() => handleSort("location")}
               >
                 Location {sortField === "location" ? (sortDirection === "asc" ? "↑" : "↓") : "↕"}
-              </TableCell>
+              </TableCell> */}
               <TableCell
                 isHeader
                 className="px-5 py-3 font-medium text-gray-500 dark:text-gray-400"
@@ -219,8 +220,8 @@ const MasterDashboard = () => {
                 <TableRow key={c.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/20 transition-colors">
                   <TableCell className="px-5 py-4 text-gray-700 dark:text-gray-300">{(currentPage - 1) * pageSize + idx + 1}</TableCell>
                   <TableCell className="px-5 py-4 font-semibold text-gray-800 dark:text-white">{c.name}</TableCell>
-                  <TableCell className="px-5 py-4 text-gray-700 dark:text-gray-300">{c.address}</TableCell>
-                  <TableCell className="px-5 py-4 text-gray-700 dark:text-gray-300">{c.location}</TableCell>
+                  {/* <TableCell className="px-5 py-4 text-gray-700 dark:text-gray-300">{c.address}</TableCell> */}
+                  {/* <TableCell className="px-5 py-4 text-gray-700 dark:text-gray-300">{c.location}</TableCell> */}
                   <TableCell className="px-5 py-4">
                     {c.logo ? <img src={c.logo} alt="Logo" className="w-10 h-10 rounded-full" /> : <span className="text-gray-400 dark:text-gray-500">No logo</span>}
                   </TableCell>
@@ -233,6 +234,7 @@ const MasterDashboard = () => {
             )}
           </TableBody>
         </Table>
+      </div>
       </div>
 
       {/* Pagination */}

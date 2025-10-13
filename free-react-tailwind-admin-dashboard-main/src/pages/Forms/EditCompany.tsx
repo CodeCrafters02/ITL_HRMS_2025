@@ -101,57 +101,57 @@ const EditCompany: React.FC = () => {
       <ComponentCard title={`Editing: ${company.name}`}>
         <div className="grid grid-cols-2 gap-6">
           <div>
-            <label className="block font-medium mb-1">Name</label>
+            <label className="block font-medium mb-1 dark:text-white">Name</label>
             <input
               type="text"
-              className="border rounded px-3 py-2 w-full"
+              className="border rounded px-3 py-2 w-full dark:text-white"
               value={company.name}
               onChange={(e) => setCompany({ ...company, name: e.target.value })}
             />
           </div>
 
           <div>
-            <label className="block font-medium mb-1">Email</label>
+            <label className="block font-medium mb-1 dark:text-white">Email</label>
             <input
               type="email"
-              className="border rounded px-3 py-2 w-full"
+              className="border rounded px-3 py-2 w-full dark:text-white"
               value={company.email}
               onChange={(e) => setCompany({ ...company, email: e.target.value })}
             />
           </div>
 
           <div>
-            <label className="block font-medium mb-1">Address</label>
+            <label className="block font-medium mb-1 dark:text-white">Address</label>
             <input
               type="text"
-              className="border rounded px-3 py-2 w-full"
+              className="border rounded px-3 py-2 w-full dark:text-white"
               value={company.address}
               onChange={(e) => setCompany({ ...company, address: e.target.value })}
             />
           </div>
 
           <div>
-            <label className="block font-medium mb-1">Location</label>
+            <label className="block font-medium mb-1 dark:text-white">Location</label>
             <input
               type="text"
-              className="border rounded px-3 py-2 w-full"
+              className="border rounded px-3 py-2 w-full dark:text-white"
               value={company.location}
               onChange={(e) => setCompany({ ...company, location: e.target.value })}
             />
           </div>
 
           <div>
-            <label className="block font-medium mb-1">Phone Number</label>
+            <label className="block font-medium mb-1 dark:text-white">Phone Number</label>
             <input
               type="text"
-              className="border rounded px-3 py-2 w-full"
+              className="border rounded px-3 py-2 w-full dark:text-white"
               value={company.phone_number}
               onChange={(e) => setCompany({ ...company, phone_number: e.target.value })}
             />
           </div>
 
           <div>
-            <label className="block font-medium mb-1">Logo</label>
+            <label className="block font-medium mb-1 dark:text-white">Logo</label>
             {(company.logo_url || company.logo) && (
               <img
                 src={company.logo_url || company.logo || ""}
@@ -169,9 +169,9 @@ const EditCompany: React.FC = () => {
           </div>
 
           <div>
-            <label className="block font-medium mb-1">Admin</label>
+            <label className="block font-medium mb-1 dark:text-white">Admin</label>
             <select
-              className="border rounded px-3 py-2 w-full"
+              className="border rounded px-3 py-2 w-full dark:text-white"
               value={company.admin || ""}
               onChange={(e) =>
                 setCompany({ ...company, admin: Number(e.target.value) })

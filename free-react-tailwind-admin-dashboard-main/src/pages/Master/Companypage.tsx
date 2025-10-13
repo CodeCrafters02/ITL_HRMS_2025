@@ -139,53 +139,53 @@ const CompanyPage: React.FC = () => {
             <Table>
               <TableHeader className="border-b border-gray-100 dark:border-white/[0.05]">
                 <TableRow>
-                  <TableCell isHeader className="px-5 py-3 text-left">S.No</TableCell>
+                  <TableCell isHeader className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400">S.No</TableCell>
 
                   <TableCell
                     isHeader
-                    className="px-5 py-3 text-left cursor-pointer"
+                    className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 cursor-pointer"
                     onClick={() => handleSort("name")}
                   >
                     Name {sortField === "name" ? (sortDirection === "asc" ? "↑" : "↓") : "↕"}
                   </TableCell>
                   <TableCell
                     isHeader
-                    className="px-5 py-3 text-left"
+                    className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
                   >
                     Address
                   </TableCell>
                   <TableCell
                     isHeader
-                    className="px-5 py-3 text-left"
+                    className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
                   >
                     Location
                   </TableCell>
                   <TableCell
                     isHeader
-                    className="px-5 py-3 text-left"
+                    className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
                     onClick={() => handleSort("email")}
                   >
                     Email {sortField === "email" ? (sortDirection === "asc" ? "↑" : "↓") : "↕"}
                   </TableCell>
                   <TableCell
                     isHeader
-                    className="px-5 py-3 text-left"
+                    className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
                   >
                     Phone
                   </TableCell>
                   <TableCell
                     isHeader
-                    className="px-5 py-3 text-left"
+                    className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
                   >
                     Logo
                   </TableCell>
                   <TableCell
                     isHeader
-                    className="px-5 py-3 text-left"
+                    className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
                   >
                     Admin
                   </TableCell>
-                  <TableCell isHeader className="px-5 py-3 text-left">
+                  <TableCell isHeader className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400">
                     Actions
                   </TableCell>
                 </TableRow>
@@ -201,23 +201,23 @@ const CompanyPage: React.FC = () => {
                 ) : (
                   paginatedCompanies.map((company, idx) => (
                     <TableRow key={company.id} className="hover:bg-gray-50 dark:hover:bg-white/[0.08]">
-                              <TableCell className="px-5 py-4">
+                              <TableCell className="px-5 py-4 dark:text-gray-400">
                       {(currentPage - 1) * pageSize + idx + 1}
                     </TableCell>
-                      <TableCell className="px-5 py-4">{company.name}</TableCell>
-                      <TableCell className="px-5 py-4">{company.address}</TableCell>
-                      <TableCell className="px-5 py-4">{company.location}</TableCell>
-                      <TableCell className="px-5 py-4">{company.email}</TableCell>
-                      <TableCell className="px-5 py-4">{company.phone_number}</TableCell>
-                      <TableCell className="px-5 py-4">
+                      <TableCell className="px-5 py-4 dark:text-gray-400">{company.name}</TableCell>
+                      <TableCell className="px-5 py-4 dark:text-gray-400">{company.address}</TableCell>
+                      <TableCell className="px-5 py-4 dark:text-gray-400">{company.location}</TableCell>
+                      <TableCell className="px-5 py-4 dark:text-gray-400">{company.email}</TableCell>
+                      <TableCell className="px-5 py-4 dark:text-gray-400">{company.phone_number}</TableCell>
+                      <TableCell className="px-5 py-4 dark:text-gray-400">
                         {company.logo ? (
                           <img src={company.logo} alt={`${company.name} Logo`} className="h-10 w-auto rounded" />
                         ) : (
                           "N/A"
                         )}
                       </TableCell>
-                      <TableCell className="px-5 py-4">{company.admin_username || "N/A"}</TableCell>
-                      <TableCell className="px-5 py-4 flex gap-3">
+                      <TableCell className="px-5 py-4 dark:text-gray-400">{company.admin_username || "N/A"}</TableCell>
+                      <TableCell className="px-5 py-4 dark:text-gray-400 flex gap-3">
                         <button className="text-blue-600" onClick={() => navigate(`/master/company/edit/${company.id}`)}>
                           <FiEdit />
                         </button>

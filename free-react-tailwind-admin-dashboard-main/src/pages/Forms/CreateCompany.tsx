@@ -30,8 +30,7 @@ export default function CreateCompany() {
   useEffect(() => {
     const fetchAdmins = async () => {
       try {
-  const res = await axiosInstance.get(`${__API_URL__}/app/admin-register/`);
-        console.log("Admin API response:", res.data); // Debug output
+        const res = await axiosInstance.get(`${__API_URL__}/app/admin-register/`);
         if (Array.isArray(res.data)) {
           setAdmins(res.data.map((a) => ({ id: a.id, username: a.username })));
         } else {
@@ -65,21 +64,17 @@ export default function CreateCompany() {
       formData.append("location", form.location);
       formData.append("email", form.email);
       formData.append("phone_number", form.phone_number);
-      if (form.logo) {
-        formData.append("logo", form.logo);
-      }
-      if (form.admin_id) {
-        formData.append("admin", form.admin_id);
-      }
+      if (form.logo) formData.append("logo", form.logo);
+      if (form.admin_id) formData.append("admin", form.admin_id);
+
       const res = await axiosInstance.post("app/company-with-admin/", formData, {
         headers: { "Content-Type": "multipart/form-data" },
       });
-      console.log("Company creation response:", res.data);
-      navigate("/master/company"); 
+      navigate("/master/company");
     } catch (err: unknown) {
       console.error("Company creation error:", err);
-  type AxiosErrorType = { response?: { data?: { detail?: string } }, message?: string };
-  const errorObj = err as AxiosErrorType;
+      type AxiosErrorType = { response?: { data?: { detail?: string } }, message?: string };
+      const errorObj = err as AxiosErrorType;
       if (errorObj.response) {
         setFormError(
           errorObj.response.data?.detail ||
@@ -95,32 +90,82 @@ export default function CreateCompany() {
   };
 
   return (
-    <div className="p-8 max-w-3xl mx-auto">
-      <h1 className="text-2xl font-bold mb-4">Create Company</h1>
-      <form onSubmit={handleFormSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-8 bg-white p-8 rounded-xl shadow-lg">
+    <div className="p-8 max-w-3xl mx-auto border border-white dark:border-gray-300">
+      <h1 className="text-2xl font-bold mb-4 text-gray-900 dark:text-white">Create Company</h1>
+      <form
+        onSubmit={handleFormSubmit}
+        className="grid grid-cols-1 md:grid-cols-2 gap-8 bg-white dark:bg-gray-900 p-8 rounded-xl shadow-lg"
+      >
         <div className="space-y-4">
           <Label htmlFor="name">Name</Label>
-          <Input type="text" name="name" id="name" value={form.name} onChange={handleFormChange} required className="w-full" />
+          <Input
+            type="text"
+            name="name"
+            id="name"
+            value={form.name}
+            onChange={handleFormChange}
+            required
+            className="w-full bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white border border-gray-300 dark:border-gray-700"
+          />
         </div>
         <div className="space-y-4">
           <Label htmlFor="address">Address</Label>
-          <Input type="text" name="address" id="address" value={form.address} onChange={handleFormChange} required className="w-full" />
+          <Input
+            type="text"
+            name="address"
+            id="address"
+            value={form.address}
+            onChange={handleFormChange}
+            required
+            className="w-full bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white border border-gray-300 dark:border-gray-700"
+          />
         </div>
         <div className="space-y-4">
           <Label htmlFor="location">Location</Label>
-          <Input type="text" name="location" id="location" value={form.location} onChange={handleFormChange} required className="w-full" />
+          <Input
+            type="text"
+            name="location"
+            id="location"
+            value={form.location}
+            onChange={handleFormChange}
+            required
+            className="w-full bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white border border-gray-300 dark:border-gray-700"
+          />
         </div>
         <div className="space-y-4">
           <Label htmlFor="email">Email</Label>
-          <Input type="email" name="email" id="email" value={form.email} onChange={handleFormChange} required className="w-full" />
+          <Input
+            type="email"
+            name="email"
+            id="email"
+            value={form.email}
+            onChange={handleFormChange}
+            required
+            className="w-full bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white border border-gray-300 dark:border-gray-700"
+          />
         </div>
         <div className="space-y-4">
           <Label htmlFor="phone_number">Phone Number</Label>
-          <Input type="text" name="phone_number" id="phone_number" value={form.phone_number} onChange={handleFormChange} required className="w-full" />
+          <Input
+            type="text"
+            name="phone_number"
+            id="phone_number"
+            value={form.phone_number}
+            onChange={handleFormChange}
+            required
+            className="w-full bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white border border-gray-300 dark:border-gray-700"
+          />
         </div>
         <div className="space-y-4">
           <Label htmlFor="logo">Logo</Label>
-          <Input type="file" name="logo" id="logo" accept="image/*" onChange={handleFormChange} className="w-full" />
+          <Input
+            type="file"
+            name="logo"
+            id="logo"
+            accept="image/*"
+            onChange={handleFormChange}
+            className="w-full bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white border border-gray-300 dark:border-gray-700"
+          />
         </div>
         <div className="space-y-4 md:col-span-2">
           <Label htmlFor="admin_id">Admin</Label>
@@ -128,15 +173,17 @@ export default function CreateCompany() {
             options={admins.map(admin => ({ value: String(admin.id), label: admin.username }))}
             placeholder="Select Admin"
             onChange={value => setForm(f => ({ ...f, admin_id: value }))}
-            className="w-full"
+            className="w-full bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white border border-gray-300 dark:border-gray-700"
             defaultValue={form.admin_id}
           />
           {admins.length === 0 && (
             <div className="text-red-500 text-xs mt-1">No admin users found. Please register an admin first.</div>
           )}
         </div>
-        {formError && <div className="text-red-500 text-sm">{formError}</div>}
-        <div className="flex gap-2">
+
+        {formError && <div className="text-red-500 text-sm md:col-span-2">{formError}</div>}
+
+        <div className="flex gap-2 md:col-span-2">
           <button
             type="submit"
             className="bg-blue-600 text-white py-2 px-4 rounded hover:bg-blue-700 disabled:opacity-50"
@@ -146,7 +193,7 @@ export default function CreateCompany() {
           </button>
           <button
             type="button"
-            className="bg-gray-300 text-gray-700 py-2 px-4 rounded hover:bg-gray-400"
+            className="bg-gray-300 dark:bg-gray-700 text-gray-700 dark:text-white py-2 px-4 rounded hover:bg-gray-400 dark:hover:bg-gray-600"
             onClick={() => navigate(-1)}
           >
             Cancel

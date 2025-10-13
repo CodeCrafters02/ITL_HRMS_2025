@@ -8,6 +8,7 @@ import PageMeta from "../../components/common/PageMeta";
 import { getServiceList, deleteService } from "./api";
 import AddService from "./AddService";
 import EditService from "./EditService";
+import { Table, TableBody, TableCell, TableHeader, TableRow } from "../../components/ui/table";
 
 interface Service {
   id: number;
@@ -59,11 +60,11 @@ const ServicesPage: React.FC = () => {
     }
   };
 
-  // When a new service is added, refresh list or append to services
   const onServiceAdded = (newService: Service) => {
     setServices((prev) => [newService, ...prev]);
     setIsAddModalOpen(false);
   };
+
   const onServiceUpdated = () => {
     fetchServices();
     setIsEditModalOpen(false);
@@ -78,8 +79,9 @@ const ServicesPage: React.FC = () => {
       <ToastContainer position="top-right" autoClose={3000} hideProgressBar={false} newestOnTop closeOnClick pauseOnHover aria-label="Notification" />
       <PageMeta title="Services" description="Services management page" />
       <PageBreadcrumb pageTitle="Services" />
+
       <div className="space-y-6">
-        <ComponentCard title="Service List">
+        {/* <ComponentCard title="Service List"> */}
           <button
             className="mb-4 bg-blue-600 text-white px-4 py-2 rounded"
             onClick={() => setIsAddModalOpen(true)}
@@ -87,100 +89,101 @@ const ServicesPage: React.FC = () => {
             Add New Service
           </button>
 
-          <table
-            className="min-w-full bg-white dark:bg-white/[0.03] rounded-xl overflow-hidden"
-            aria-label="Services List"
-          >
-            <thead className="bg-gray-100 dark:bg-white/[0.05]">
-              <tr>
-                <th className="px-5 py-3 font-medium text-gray-500 text-left text-theme-xs dark:text-gray-400">
-                  S.no
-                </th>
-                <th className="px-5 py-3 font-medium text-gray-500 text-left text-theme-xs dark:text-gray-400">
-                  Name
-                </th>
-                <th className="px-5 py-3 font-medium text-gray-500 text-left text-theme-xs dark:text-gray-400">
-                  Description
-                </th>
-                <th className="px-5 py-3 font-medium text-gray-500 text-left text-theme-xs dark:text-gray-400">
-                  Active
-                </th>
-                <th className="px-5 py-3 font-medium text-gray-500 text-left text-theme-xs dark:text-gray-400">
-                  Actions
-                </th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100 dark:divide-white/[0.05]">
-              {services.length === 0 ? (
-                <tr>
-                  <td colSpan={6} className="text-center p-2 text-gray-400">
-                    No services found.
-                  </td>
-                </tr>
-              ) : (
-                services.map((service, idx) => (
-                  <tr
-                    key={service.id}
-                    className="hover:bg-gray-50 dark:hover:bg-white/[0.08]"
-                  >
-                    <td className="px-5 py-4 text-start">{idx + 1}</td>
-                    <td className="px-5 py-4 text-start">{service.name}</td>
-                    <td className="px-5 py-4 text-start">{service.description || "-"}</td>
-                    <td className="px-5 py-4 text-start">{service.is_active ? "Yes" : "No"}</td>
-                    <td className="px-5 py-4 text-start flex gap-3 items-center">
-                      <button
-                        className="text-blue-600 hover:text-blue-800"
-                        title="Edit"
-                        onClick={() => {
-                          setEditServiceId(service.id);
-                          setIsEditModalOpen(true);
-                        }}
-                      >
-                        <FiEdit />
-                      </button>
-                      <button
-                        className="text-red-600 hover:text-red-800"
-                        title="Delete"
-                        onClick={() => handleDelete(service.id)}
-                      >
-                        <FiTrash2 />
-                      </button>
-                      {deleteConfirmId === service.id && (
-                        <div className="fixed inset-0 flex items-center justify-center z-50  bg-opacity-30">
-                          <div className="bg-white rounded-lg shadow-lg p-6 w-80">
-                            <div className="mb-4 text-lg font-semibold text-gray-800">Confirm Delete</div>
-                            <div className="mb-6 text-gray-600">Are you sure you want to delete this {service.name}?</div>
-                            <div className="flex gap-4 justify-end">
-                              <button
-                                className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"
-                                onClick={() => confirmDelete(service.id)}
-                              >
-                                Delete
-                              </button>
-                              <button
-                                className="px-4 py-2 bg-gray-300 text-gray-800 rounded hover:bg-gray-400"
-                                onClick={() => setDeleteConfirmId(null)}
-                              >
-                                Cancel
-                              </button>
-                            </div>
+          <div className="overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-white/[0.05] dark:bg-white/[0.03]">
+            <div className="max-w-full overflow-x-auto">
+              <Table>
+                <TableHeader className="border-b border-gray-100 dark:border-white/[0.05]">
+                  <TableRow>
+                    <TableCell isHeader className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400">
+                      #
+                    </TableCell>
+                    <TableCell isHeader className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400">
+                      Name
+                    </TableCell>
+                    <TableCell isHeader className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400">
+                      Description
+                    </TableCell>
+                    <TableCell isHeader className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400">
+                      Active
+                    </TableCell>
+                    <TableCell isHeader className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400">
+                      Actions
+                    </TableCell>
+                  </TableRow>
+                </TableHeader>
+
+                <TableBody className="divide-y divide-gray-100 dark:divide-white/[0.05]">
+                  {services.length === 0 ? (
+                    <TableRow>
+                      <TableCell className="px-5 py-8 text-center text-gray-500 dark:text-gray-400" colSpan={5}>
+                        No services found.
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    services.map((service, idx) => (
+                      <TableRow key={service.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/20 transition-colors">
+                        <TableCell className="px-5 py-4 text-start dark:text-gray-400">{idx + 1}</TableCell>
+                        <TableCell className="px-5 py-4 text-start dark:text-gray-400">{service.name}</TableCell>
+                        <TableCell className="px-5 py-4 text-start dark:text-gray-400">{service.description || "-"}</TableCell>
+                        <TableCell className="px-5 py-4 text-start dark:text-gray-400">{service.is_active ? "Yes" : "No"}</TableCell>
+                        <TableCell className="px-5 py-4 text-start dark:text-gray-400">
+                          <div className="flex gap-3 items-center">
+                            <button
+                              className="text-blue-600 hover:text-blue-800"
+                              title="Edit"
+                              onClick={() => {
+                                setEditServiceId(service.id);
+                                setIsEditModalOpen(true);
+                              }}
+                            >
+                              <FiEdit />
+                            </button>
+                            <button
+                              className="text-red-600 hover:text-red-800"
+                              title="Delete"
+                              onClick={() => handleDelete(service.id)}
+                            >
+                              <FiTrash2 />
+                            </button>
                           </div>
-                        </div>
-                      )}
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </ComponentCard>
+
+                          {deleteConfirmId === service.id && (
+                            <div className="fixed inset-0 flex items-center justify-center z-50 bg-black bg-opacity-30">
+                              <div className="bg-white rounded-lg shadow-lg p-6 w-80">
+                                <div className="mb-4 text-lg font-semibold text-gray-800">Confirm Delete</div>
+                                <div className="mb-6 text-gray-600">
+                                  Are you sure you want to delete <b>{service.name}</b>?
+                                </div>
+                                <div className="flex gap-4 justify-end">
+                                  <button
+                                    className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"
+                                    onClick={() => confirmDelete(service.id)}
+                                  >
+                                    Delete
+                                  </button>
+                                  <button
+                                    className="px-4 py-2 bg-gray-300 text-gray-800 rounded hover:bg-gray-400"
+                                    onClick={() => setDeleteConfirmId(null)}
+                                  >
+                                    Cancel
+                                  </button>
+                                </div>
+                              </div>
+                            </div>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </div>
+          </div>
+        {/* </ComponentCard> */}
       </div>
 
       {isAddModalOpen && (
-        <AddService
-          onClose={() => setIsAddModalOpen(false)}
-          onAdd={onServiceAdded}
-        />
+        <AddService onClose={() => setIsAddModalOpen(false)} onAdd={onServiceAdded} />
       )}
       {isEditModalOpen && editServiceId !== null && (
         <EditService

@@ -28,6 +28,7 @@ const AdminLayout = lazy(() => import("./layout/AdminLayout/AdminLayout"));
 const Department = lazy(() => import("./pages/Admin/Department"));
 const Level = lazy(() => import("./pages/Admin/Level"));
 const CreateAdmin = lazy(() => import("./pages/Forms/CreateAdmin"));
+const EditAdminPage =lazy(()=>import( "./pages/Master/EditAdmin"));
 const EditAdmin = lazy(() => import("./pages/Forms/EditAdmin"));
 const CreateCompany = lazy(() => import("./pages/Forms/CreateCompany"));
 const EditCompany=lazy(()=> import ("./pages/Forms/EditCompany"))
@@ -149,7 +150,8 @@ export function appRoutes() {
             <Route path="/master-dashboard" element={<MasterDashboard />} />
             <Route path="/master/admin" element={<AdminPage />} />
             <Route path="/master/admin/create" element={<CreateAdmin />} />
-            <Route path="/master/admin/edit/:id" element={<EditAdmin />} />
+            <Route path="/master/admin/edit/:id" element={<EditAdminPage />} />
+            {/* <Route path="/master/admin/edit/:id" element={<EditAdmin />} /> */}
             <Route path="/master/company" element={<CompanyList />} />
             <Route path="/master/company/create" element={<CreateCompany />} />
             <Route path="/master/company/edit/:id" element={<EditCompany />} />
