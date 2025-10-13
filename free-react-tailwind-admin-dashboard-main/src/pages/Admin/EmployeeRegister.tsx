@@ -185,7 +185,7 @@ const EmployeeRegister: React.FC = () => {
             value={search}
             onChange={e => setSearch(e.target.value)}
             placeholder="Search by Employee ID or Name"
-            className="md:w-64 px-4 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            className="md:w-64 px-4 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:text-white"
             style={{ minWidth: 0 }}
           />
           <div className="flex gap-2">
@@ -218,10 +218,10 @@ const EmployeeRegister: React.FC = () => {
                 <TableRow>
                   <TableCell isHeader className="border border-gray-200 dark:border-gray-700 p-6 text-left font-semibold text-gray-900 dark:text-white text-sm">Actions</TableCell>
                   <TableCell 
-                  isHeader className="border border-gray-200 dark:border-gray-700 p-6 text-left font-semibold text-gray-900 dark:text-white text-sm">Employee ID</TableCell>
+                  isHeader className="border border-gray-200 dark:border-gray-700 p-6 text-left font-semibold text-gray-900 dark:text-white text-sm max-w-80 min-w-50">Employee ID</TableCell>
                   <TableCell 
                   isHeader 
-                  className="border border-gray-200 dark:border-gray-700 p-9 text-left font-semibold text-gray-900 dark:text-white text-sm w-200"
+                  className="border border-gray-200 dark:border-gray-700 p-9 text-left font-semibold text-gray-900 dark:text-white text-sm w-200 max-w-150 min-w-100"
                   colSpan={4}
                   width="400px"
                   >Name & Photo</TableCell>

@@ -92,10 +92,12 @@ const UpdateEmployeeForm = lazy(() => import("./pages/Forms/UpdateEmployeeForm")
 const UpdateAttendanceForm = lazy(() => import("./pages/Forms/UpdateAttendanceForm"));
 
 
-import EmployeeReferencePage from "./pages/Employee/references";
-import AddEmployeeReference from "./pages/Employee/references/AddReference";
-import AdminEmployeeReferencePage from "./pages/Admin/employeerefrences";
-import AdminEditEmployeeReference from "./pages/Admin/employeerefrences/EditEmployeeReferences";
+const EmployeeReferencePage = lazy(() => import("./pages/Employee/references"));
+const AddEmployeeReference = lazy(() => import("./pages/Employee/references/AddReference"));
+
+// Employee References (Admin side)
+const AdminEmployeeReferencePage = lazy(() => import("./pages/Admin/employeerefrences"));
+const AdminEditEmployeeReference = lazy(() => import("./pages/Admin/employeerefrences/EditEmployeeReferences"));
 
 const UserManagementPage = lazy(() => import("./pages/UserManagement/index"));
 const AddUserPage = lazy(() => import("./pages/UserManagement/AddUser"));
@@ -229,7 +231,6 @@ export function appRoutes() {
             <Route path="update-attendance/:employee_id" element={<UpdateAttendanceForm />} />
 
             <Route path="employeerefrences" element={<AdminEmployeeReferencePage />} />
-            <Route path="employeerefrences/:id" element={<AdminEditEmployeeReference />} />
 
             {/* Admin Change Password */}
            <Route path="change-password" element={<ChangePasswordForm apiEndpoint="/change-password/" />} />
