@@ -333,7 +333,7 @@ const RelievedEmployee: React.FC = () => {
       <div className="space-y-6">
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-4">
           <div className="flex-1 min-w-0">
-            <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Relieve Employee</h1>
+            <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-400">Relieve Employee</h1>
             <p className="text-gray-600 dark:text-gray-400 mt-2">Search and relieve an employee from the company</p>
           </div>
           {/* Search Bar next to title */}
@@ -345,7 +345,7 @@ const RelievedEmployee: React.FC = () => {
               value={searchTerm}
               onChange={(e) => handleSearchChange(e.target.value)}
               placeholder="Enter employee name or employee ID..."
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all dark:text-gray-400"
               autoComplete="off"
             />
             {searchLoading && (
@@ -428,36 +428,36 @@ const RelievedEmployee: React.FC = () => {
                 <Table className="min-w-full border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 rounded-lg">
                   <TableHeader className="bg-gray-50 dark:bg-gray-800">
                     <TableRow>
-                      <TableCell isHeader className="p-4 border-b text-left text-sm font-semibold text-gray-900 dark:text-white">Employee ID</TableCell>
-                      <TableCell isHeader className="p-4 border-b text-left text-sm font-semibold text-gray-900 dark:text-white">Name & Photo</TableCell>
-                      <TableCell isHeader className="p-4 border-b text-left text-sm font-semibold text-gray-900 dark:text-white">DOB</TableCell>
-                      <TableCell isHeader className="p-4 border-b text-left text-sm font-semibold text-gray-900 dark:text-white">Email</TableCell>
-                      <TableCell isHeader className="p-4 border-b text-left text-sm font-semibold text-gray-900 dark:text-white">Phone</TableCell>
-                      <TableCell isHeader className="p-4 border-b text-left text-sm font-semibold text-gray-900 dark:text-white">Designation</TableCell>
-                      <TableCell isHeader className="p-4 border-b text-left text-sm font-semibold text-gray-900 dark:text-white">Department</TableCell>
-                      <TableCell isHeader className="p-4 border-b text-left text-sm font-semibold text-gray-900 dark:text-white">Date of Joining</TableCell>
-                      <TableCell isHeader className="p-4 border-b text-left text-sm font-semibold text-gray-900 dark:text-white">Address</TableCell>
-                      <TableCell isHeader className="p-4 border-b text-left text-sm font-semibold text-gray-900 dark:text-white">Asset Details</TableCell>
-                      <TableCell isHeader className="p-4 border-b text-left text-sm font-semibold text-gray-900 dark:text-white">Aadhar No</TableCell>
-                      <TableCell isHeader className="p-4 border-b text-left text-sm font-semibold text-gray-900 dark:text-white">PAN No</TableCell>
-                      <TableCell isHeader className="p-4 border-b text-left text-sm font-semibold text-gray-900 dark:text-white">Guardian Name</TableCell>
-                      <TableCell isHeader className="p-4 border-b text-left text-sm font-semibold text-gray-900 dark:text-white">Guardian Mobile</TableCell>
-                      <TableCell isHeader className="p-4 border-b text-left text-sm font-semibold text-gray-900 dark:text-white">CTC</TableCell>
-                      <TableCell isHeader className="p-4 border-b text-left text-sm font-semibold text-gray-900 dark:text-white">Gross Salary</TableCell>
-                      <TableCell isHeader className="p-4 border-b text-left text-sm font-semibold text-gray-900 dark:text-white">Payment Method</TableCell>
-                      <TableCell isHeader className="p-4 border-b text-left text-sm font-semibold text-gray-900 dark:text-white">Account No</TableCell>
-                      <TableCell isHeader className="p-4 border-b text-left text-sm font-semibold text-gray-900 dark:text-white">IFSC Code</TableCell>
-                      <TableCell isHeader className="p-4 border-b text-left text-sm font-semibold text-gray-900 dark:text-white">Bank Name</TableCell>
-                      <TableCell isHeader className="p-4 border-b text-left text-sm font-semibold text-gray-900 dark:text-white">ESIC Status</TableCell>
-                      <TableCell isHeader className="p-4 border-b text-left text-sm font-semibold text-gray-900 dark:text-white">ESIC No</TableCell>
-                      <TableCell isHeader className="p-4 border-b text-left text-sm font-semibold text-gray-900 dark:text-white">EPF Status</TableCell>
-                      <TableCell isHeader className="p-4 border-b text-left text-sm font-semibold text-gray-900 dark:text-white">UAN</TableCell>
+                      <TableCell isHeader className="p-4 border-b dark:text-gray-400 text-left text-sm font-semibold text-gray-900 dark:text-white">Employee ID</TableCell>
+                      <TableCell isHeader className="p-4 border-b dark:text-gray-400 text-left text-sm font-semibold text-gray-900 dark:text-white">Name & Photo</TableCell>
+                      <TableCell isHeader className="p-4 border-b dark:text-gray-400 text-left text-sm font-semibold text-gray-900 dark:text-white">DOB</TableCell>
+                      <TableCell isHeader className="p-4 border-b dark:text-gray-400 text-left text-sm font-semibold text-gray-900 dark:text-white">Email</TableCell>
+                      <TableCell isHeader className="p-4 border-b dark:text-gray-400 text-left text-sm font-semibold text-gray-900 dark:text-white">Phone</TableCell>
+                      <TableCell isHeader className="p-4 border-b dark:text-gray-400 text-left text-sm font-semibold text-gray-900 dark:text-white">Designation</TableCell>
+                      <TableCell isHeader className="p-4 border-b dark:text-gray-400 text-left text-sm font-semibold text-gray-900 dark:text-white">Department</TableCell>
+                      <TableCell isHeader className="p-4 border-b dark:text-gray-400 text-left text-sm font-semibold text-gray-900 dark:text-white">Date of Joining</TableCell>
+                      <TableCell isHeader className="p-4 border-b dark:text-gray-400 text-left text-sm font-semibold text-gray-900 dark:text-white">Address</TableCell>
+                      <TableCell isHeader className="p-4 border-b dark:text-gray-400 text-left text-sm font-semibold text-gray-900 dark:text-white">Asset Details</TableCell>
+                      <TableCell isHeader className="p-4 border-b dark:text-gray-400 text-left text-sm font-semibold text-gray-900 dark:text-white">Aadhar No</TableCell>
+                      <TableCell isHeader className="p-4 border-b dark:text-gray-400 text-left text-sm font-semibold text-gray-900 dark:text-white">PAN No</TableCell>
+                      <TableCell isHeader className="p-4 border-b dark:text-gray-400 text-left text-sm font-semibold text-gray-900 dark:text-white">Guardian Name</TableCell>
+                      <TableCell isHeader className="p-4 border-b dark:text-gray-400 text-left text-sm font-semibold text-gray-900 dark:text-white">Guardian Mobile</TableCell>
+                      <TableCell isHeader className="p-4 border-b dark:text-gray-400 text-left text-sm font-semibold text-gray-900 dark:text-white">CTC</TableCell>
+                      <TableCell isHeader className="p-4 border-b dark:text-gray-400 text-left text-sm font-semibold text-gray-900 dark:text-white">Gross Salary</TableCell>
+                      <TableCell isHeader className="p-4 border-b dark:text-gray-400 text-left text-sm font-semibold text-gray-900 dark:text-white">Payment Method</TableCell>
+                      <TableCell isHeader className="p-4 border-b dark:text-gray-400 text-left text-sm font-semibold text-gray-900 dark:text-white">Account No</TableCell>
+                      <TableCell isHeader className="p-4 border-b dark:text-gray-400 text-left text-sm font-semibold text-gray-900 dark:text-white">IFSC Code</TableCell>
+                      <TableCell isHeader className="p-4 border-b dark:text-gray-400 text-left text-sm font-semibold text-gray-900 dark:text-white">Bank Name</TableCell>
+                      <TableCell isHeader className="p-4 border-b dark:text-gray-400 text-left text-sm font-semibold text-gray-900 dark:text-white">ESIC Status</TableCell>
+                      <TableCell isHeader className="p-4 border-b dark:text-gray-400 text-left text-sm font-semibold text-gray-900 dark:text-white">ESIC No</TableCell>
+                      <TableCell isHeader className="p-4 border-b dark:text-gray-400 text-left text-sm font-semibold text-gray-900 dark:text-white">EPF Status</TableCell>
+                      <TableCell isHeader className="p-4 border-b dark:text-gray-400 text-left text-sm font-semibold text-gray-900 dark:text-white">UAN</TableCell>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     <TableRow>
-                        <TableCell className="p-4 border-b">{selectedEmployeeDetails.employee_id}</TableCell>
-                        <TableCell className="p-4 border-b flex items-center gap-2">
+                        <TableCell className="p-4 border-b dark:text-gray-400">{selectedEmployeeDetails.employee_id}</TableCell>
+                        <TableCell className="p-4 border-b dark:text-gray-400 flex items-center gap-2">
                           {selectedEmployeeDetails.photo_url ? (
                             <img src={selectedEmployeeDetails.photo_url} alt="Employee" className="w-10 h-10 rounded-full object-cover" />
                           ) : (
@@ -472,28 +472,28 @@ const RelievedEmployee: React.FC = () => {
                               : selectedEmployeeDetails.employee_id || '-')
                           }</span>
                         </TableCell>
-                        <TableCell className="p-4 border-b">{selectedEmployeeDetails.dob || selectedEmployeeDetails.date_of_birth || '-'}</TableCell>
-                        <TableCell className="p-4 border-b">{selectedEmployeeDetails.email || '-'}</TableCell>
-                        <TableCell className="p-4 border-b">{selectedEmployeeDetails.phone || selectedEmployeeDetails.mobile || '-'}</TableCell>
-                        <TableCell className="p-4 border-b">{selectedEmployeeDetails.designation_name || selectedEmployeeDetails.designation || '-'}</TableCell>
-                        <TableCell className="p-4 border-b">{selectedEmployeeDetails.department_name || selectedEmployeeDetails.department || '-'}</TableCell>
-                      <TableCell className="p-4 border-b">{selectedEmployeeDetails.date_of_joining || '-'}</TableCell>
-                      <TableCell className="p-4 border-b">{selectedEmployeeDetails.address || selectedEmployeeDetails.temporary_address || selectedEmployeeDetails.permanent_address || '-'}</TableCell>
-                      <TableCell className="p-4 border-b">{selectedEmployeeDetails.asset_details || (selectedEmployeeDetails.asset_names ? selectedEmployeeDetails.asset_names.join(', ') : '-')}</TableCell>
-                      <TableCell className="p-4 border-b">{selectedEmployeeDetails.aadhar_no || '-'}</TableCell>
-                      <TableCell className="p-4 border-b">{selectedEmployeeDetails.pan_no || '-'}</TableCell>
-                      <TableCell className="p-4 border-b">{selectedEmployeeDetails.guardian_name || '-'}</TableCell>
-                      <TableCell className="p-4 border-b">{selectedEmployeeDetails.guardian_mobile || '-'}</TableCell>
-                      <TableCell className="p-4 border-b">{selectedEmployeeDetails.ctc || '-'}</TableCell>
-                      <TableCell className="p-4 border-b">{selectedEmployeeDetails.gross_salary || '-'}</TableCell>
-                      <TableCell className="p-4 border-b">{selectedEmployeeDetails.payment_method || '-'}</TableCell>
-                      <TableCell className="p-4 border-b">{selectedEmployeeDetails.account_no || '-'}</TableCell>
-                      <TableCell className="p-4 border-b">{selectedEmployeeDetails.ifsc_code || '-'}</TableCell>
-                      <TableCell className="p-4 border-b">{selectedEmployeeDetails.bank_name || '-'}</TableCell>
-                      <TableCell className="p-4 border-b">{selectedEmployeeDetails.esic_status || '-'}</TableCell>
-                      <TableCell className="p-4 border-b">{selectedEmployeeDetails.esic_no || '-'}</TableCell>
-                      <TableCell className="p-4 border-b">{selectedEmployeeDetails.epf_status || '-'}</TableCell>
-                      <TableCell className="p-4 border-b">{selectedEmployeeDetails.uan || '-'}</TableCell>
+                        <TableCell className="p-4 border-b dark:text-gray-400">{selectedEmployeeDetails.dob || selectedEmployeeDetails.date_of_birth || '-'}</TableCell>
+                        <TableCell className="p-4 border-b dark:text-gray-400">{selectedEmployeeDetails.email || '-'}</TableCell>
+                        <TableCell className="p-4 border-b dark:text-gray-400">{selectedEmployeeDetails.phone || selectedEmployeeDetails.mobile || '-'}</TableCell>
+                        <TableCell className="p-4 border-b dark:text-gray-400">{selectedEmployeeDetails.designation_name || selectedEmployeeDetails.designation || '-'}</TableCell>
+                        <TableCell className="p-4 border-b dark:text-gray-400">{selectedEmployeeDetails.department_name || selectedEmployeeDetails.department || '-'}</TableCell>
+                      <TableCell className="p-4 border-b dark:text-gray-400">{selectedEmployeeDetails.date_of_joining || '-'}</TableCell>
+                      <TableCell className="p-4 border-b dark:text-gray-400">{selectedEmployeeDetails.address || selectedEmployeeDetails.temporary_address || selectedEmployeeDetails.permanent_address || '-'}</TableCell>
+                      <TableCell className="p-4 border-b dark:text-gray-400">{selectedEmployeeDetails.asset_details || (selectedEmployeeDetails.asset_names ? selectedEmployeeDetails.asset_names.join(', ') : '-')}</TableCell>
+                      <TableCell className="p-4 border-b dark:text-gray-400">{selectedEmployeeDetails.aadhar_no || '-'}</TableCell>
+                      <TableCell className="p-4 border-b dark:text-gray-400">{selectedEmployeeDetails.pan_no || '-'}</TableCell>
+                      <TableCell className="p-4 border-b dark:text-gray-400">{selectedEmployeeDetails.guardian_name || '-'}</TableCell>
+                      <TableCell className="p-4 border-b dark:text-gray-400">{selectedEmployeeDetails.guardian_mobile || '-'}</TableCell>
+                      <TableCell className="p-4 border-b dark:text-gray-400">{selectedEmployeeDetails.ctc || '-'}</TableCell>
+                      <TableCell className="p-4 border-b dark:text-gray-400">{selectedEmployeeDetails.gross_salary || '-'}</TableCell>
+                      <TableCell className="p-4 border-b dark:text-gray-400">{selectedEmployeeDetails.payment_method || '-'}</TableCell>
+                      <TableCell className="p-4 border-b dark:text-gray-400">{selectedEmployeeDetails.account_no || '-'}</TableCell>
+                      <TableCell className="p-4 border-b dark:text-gray-400">{selectedEmployeeDetails.ifsc_code || '-'}</TableCell>
+                      <TableCell className="p-4 border-b dark:text-gray-400">{selectedEmployeeDetails.bank_name || '-'}</TableCell>
+                      <TableCell className="p-4 border-b dark:text-gray-400">{selectedEmployeeDetails.esic_status || '-'}</TableCell>
+                      <TableCell className="p-4 border-b dark:text-gray-400">{selectedEmployeeDetails.esic_no || '-'}</TableCell>
+                      <TableCell className="p-4 border-b dark:text-gray-400">{selectedEmployeeDetails.epf_status || '-'}</TableCell>
+                      <TableCell className="p-4 border-b dark:text-gray-400">{selectedEmployeeDetails.uan || '-'}</TableCell>
                     </TableRow>
                   </TableBody>
                 </Table>
@@ -525,32 +525,32 @@ const RelievedEmployee: React.FC = () => {
                 <Table className="min-w-full border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 rounded-lg">
                   <TableHeader className="bg-gray-50 dark:bg-gray-800">
                     <TableRow>
-                      <TableCell isHeader className="p-4 border-b">Action</TableCell>
-                      <TableCell isHeader className="p-4 border-b">Employee ID</TableCell>
-                      <TableCell isHeader className="p-4 border-b">Name & Photo</TableCell>
-                      <TableCell isHeader className="p-4 border-b">DOB</TableCell>
-                      <TableCell isHeader className="p-4 border-b">Email</TableCell>
-                      <TableCell isHeader className="p-4 border-b">Phone</TableCell>
-                      <TableCell isHeader className="p-4 border-b">Designation</TableCell>
-                      <TableCell isHeader className="p-4 border-b">Department</TableCell>
-                      <TableCell isHeader className="p-4 border-b">Date of Joining</TableCell>
-                      <TableCell isHeader className="p-4 border-b">Date of Relieving</TableCell>
-                      <TableCell isHeader className="p-4 border-b">Address</TableCell>
-                      <TableCell isHeader className="p-4 border-b">Asset Details</TableCell>
-                      <TableCell isHeader className="p-4 border-b">Aadhar No</TableCell>
-                      <TableCell isHeader className="p-4 border-b">PAN No</TableCell>
-                      <TableCell isHeader className="p-4 border-b">Guardian Name</TableCell>
-                      <TableCell isHeader className="p-4 border-b">Guardian Mobile</TableCell>
-                      <TableCell isHeader className="p-4 border-b">CTC</TableCell>
-                      <TableCell isHeader className="p-4 border-b">Gross Salary</TableCell>
-                      <TableCell isHeader className="p-4 border-b">Payment Method</TableCell>
-                      <TableCell isHeader className="p-4 border-b">Account No</TableCell>
-                      <TableCell isHeader className="p-4 border-b">IFSC Code</TableCell>
-                      <TableCell isHeader className="p-4 border-b">Bank Name</TableCell>
-                      <TableCell isHeader className="p-4 border-b">ESIC Status</TableCell>
-                      <TableCell isHeader className="p-4 border-b">ESIC No</TableCell>
-                      <TableCell isHeader className="p-4 border-b">EPF Status</TableCell>
-                      <TableCell isHeader className="p-4 border-b">UAN</TableCell>
+                      <TableCell isHeader className="p-4 border-b dark:text-gray-400">Action</TableCell>
+                      <TableCell isHeader className="p-4 border-b dark:text-gray-400">Employee ID</TableCell>
+                      <TableCell isHeader className="p-4 border-b dark:text-gray-400">Name & Photo</TableCell>
+                      <TableCell isHeader className="p-4 border-b dark:text-gray-400">DOB</TableCell>
+                      <TableCell isHeader className="p-4 border-b dark:text-gray-400">Email</TableCell>
+                      <TableCell isHeader className="p-4 border-b dark:text-gray-400">Phone</TableCell>
+                      <TableCell isHeader className="p-4 border-b dark:text-gray-400">Designation</TableCell>
+                      <TableCell isHeader className="p-4 border-b dark:text-gray-400">Department</TableCell>
+                      <TableCell isHeader className="p-4 border-b dark:text-gray-400">Date of Joining</TableCell>
+                      <TableCell isHeader className="p-4 border-b dark:text-gray-400">Date of Relieving</TableCell>
+                      <TableCell isHeader className="p-4 border-b dark:text-gray-400">Address</TableCell>
+                      <TableCell isHeader className="p-4 border-b dark:text-gray-400">Asset Details</TableCell>
+                      <TableCell isHeader className="p-4 border-b dark:text-gray-400">Aadhar No</TableCell>
+                      <TableCell isHeader className="p-4 border-b dark:text-gray-400">PAN No</TableCell>
+                      <TableCell isHeader className="p-4 border-b dark:text-gray-400">Guardian Name</TableCell>
+                      <TableCell isHeader className="p-4 border-b dark:text-gray-400">Guardian Mobile</TableCell>
+                      <TableCell isHeader className="p-4 border-b dark:text-gray-400">CTC</TableCell>
+                      <TableCell isHeader className="p-4 border-b dark:text-gray-400">Gross Salary</TableCell>
+                      <TableCell isHeader className="p-4 border-b dark:text-gray-400">Payment Method</TableCell>
+                      <TableCell isHeader className="p-4 border-b dark:text-gray-400">Account No</TableCell>
+                      <TableCell isHeader className="p-4 border-b dark:text-gray-400">IFSC Code</TableCell>
+                      <TableCell isHeader className="p-4 border-b dark:text-gray-400">Bank Name</TableCell>
+                      <TableCell isHeader className="p-4 border-b dark:text-gray-400">ESIC Status</TableCell>
+                      <TableCell isHeader className="p-4 border-b dark:text-gray-400">ESIC No</TableCell>
+                      <TableCell isHeader className="p-4 border-b dark:text-gray-400">EPF Status</TableCell>
+                      <TableCell isHeader className="p-4 border-b dark:text-gray-400">UAN</TableCell>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -558,7 +558,7 @@ const RelievedEmployee: React.FC = () => {
                       const emp = item.employee_details || (typeof item.employee === 'object' ? item.employee : null);
                       return (
                         <TableRow key={item.id}>
-                          <TableCell className="p-4 border-b">
+                          <TableCell className="p-4 border-b dark:text-gray-400">
                             <Button
                               variant="outline"
                               size="sm"
@@ -568,8 +568,8 @@ const RelievedEmployee: React.FC = () => {
                               Relieve Letter
                             </Button>
                           </TableCell>
-                          <TableCell className="p-4 border-b">{item.employee_id}</TableCell>
-                          <TableCell className="p-4 border-b flex items-center gap-2">
+                          <TableCell className="p-4 border-b dark:text-gray-400">{item.employee_id}</TableCell>
+                          <TableCell className="p-4 border-b dark:text-gray-400 flex items-center gap-2">
                             {emp && emp.photo ? (
                               <img src={emp.photo} alt="Employee" className="w-10 h-10 rounded-full object-cover" />
                             ) : (
@@ -582,29 +582,29 @@ const RelievedEmployee: React.FC = () => {
                               (emp && emp.first_name && emp.last_name ? `${emp.first_name} ${emp.last_name}` : item.employee_id || '-')
                             }</span>
                           </TableCell>
-                          <TableCell className="p-4 border-b">{emp && (emp.dob || emp.date_of_birth) || '-'}</TableCell>
-                          <TableCell className="p-4 border-b">{emp && emp.email || '-'}</TableCell>
-                          <TableCell className="p-4 border-b">{emp && (emp.phone || emp.mobile) || '-'}</TableCell>
-                          <TableCell className="p-4 border-b">{emp && (emp.designation_name || emp.designation) || '-'}</TableCell>
-                          <TableCell className="p-4 border-b">{emp && (emp.department_name || emp.department) || '-'}</TableCell>
-                          <TableCell className="p-4 border-b">{emp && emp.date_of_joining || '-'}</TableCell>
-                          <TableCell className="p-4 border-b">{item.relieving_date || '-'}</TableCell>
-                          <TableCell className="p-4 border-b">{emp && (emp.address || emp.temporary_address || emp.permanent_address) || '-'}</TableCell>
-                          <TableCell className="p-4 border-b">{emp && (emp.asset_details || (emp.asset_names ? emp.asset_names.join(', ') : '-')) || '-'}</TableCell>
-                          <TableCell className="p-4 border-b">{emp && emp.aadhar_no || '-'}</TableCell>
-                          <TableCell className="p-4 border-b">{emp && emp.pan_no || '-'}</TableCell>
-                          <TableCell className="p-4 border-b">{emp && emp.guardian_name || '-'}</TableCell>
-                          <TableCell className="p-4 border-b">{emp && emp.guardian_mobile || '-'}</TableCell>
-                          <TableCell className="p-4 border-b">{emp && emp.ctc || '-'}</TableCell>
-                          <TableCell className="p-4 border-b">{emp && emp.gross_salary || '-'}</TableCell>
-                          <TableCell className="p-4 border-b">{emp && emp.payment_method || '-'}</TableCell>
-                          <TableCell className="p-4 border-b">{emp && emp.account_no || '-'}</TableCell>
-                          <TableCell className="p-4 border-b">{emp && emp.ifsc_code || '-'}</TableCell>
-                          <TableCell className="p-4 border-b">{emp && emp.bank_name || '-'}</TableCell>
-                          <TableCell className="p-4 border-b">{emp && emp.esic_status || '-'}</TableCell>
-                          <TableCell className="p-4 border-b">{emp && emp.esic_no || '-'}</TableCell>
-                          <TableCell className="p-4 border-b">{emp && emp.epf_status || '-'}</TableCell>
-                          <TableCell className="p-4 border-b">{emp && emp.uan || '-'}</TableCell>
+                          <TableCell className="p-4 border-b dark:text-gray-400">{emp && (emp.dob || emp.date_of_birth) || '-'}</TableCell>
+                          <TableCell className="p-4 border-b dark:text-gray-400">{emp && emp.email || '-'}</TableCell>
+                          <TableCell className="p-4 border-b dark:text-gray-400">{emp && (emp.phone || emp.mobile) || '-'}</TableCell>
+                          <TableCell className="p-4 border-b dark:text-gray-400">{emp && (emp.designation_name || emp.designation) || '-'}</TableCell>
+                          <TableCell className="p-4 border-b dark:text-gray-400">{emp && (emp.department_name || emp.department) || '-'}</TableCell>
+                          <TableCell className="p-4 border-b dark:text-gray-400">{emp && emp.date_of_joining || '-'}</TableCell>
+                          <TableCell className="p-4 border-b dark:text-gray-400">{item.relieving_date || '-'}</TableCell>
+                          <TableCell className="p-4 border-b dark:text-gray-400">{emp && (emp.address || emp.temporary_address || emp.permanent_address) || '-'}</TableCell>
+                          <TableCell className="p-4 border-b dark:text-gray-400">{emp && (emp.asset_details || (emp.asset_names ? emp.asset_names.join(', ') : '-')) || '-'}</TableCell>
+                          <TableCell className="p-4 border-b dark:text-gray-400">{emp && emp.aadhar_no || '-'}</TableCell>
+                          <TableCell className="p-4 border-b dark:text-gray-400">{emp && emp.pan_no || '-'}</TableCell>
+                          <TableCell className="p-4 border-b dark:text-gray-400">{emp && emp.guardian_name || '-'}</TableCell>
+                          <TableCell className="p-4 border-b dark:text-gray-400">{emp && emp.guardian_mobile || '-'}</TableCell>
+                          <TableCell className="p-4 border-b dark:text-gray-400">{emp && emp.ctc || '-'}</TableCell>
+                          <TableCell className="p-4 border-b dark:text-gray-400">{emp && emp.gross_salary || '-'}</TableCell>
+                          <TableCell className="p-4 border-b dark:text-gray-400">{emp && emp.payment_method || '-'}</TableCell>
+                          <TableCell className="p-4 border-b dark:text-gray-400">{emp && emp.account_no || '-'}</TableCell>
+                          <TableCell className="p-4 border-b dark:text-gray-400">{emp && emp.ifsc_code || '-'}</TableCell>
+                          <TableCell className="p-4 border-b dark:text-gray-400">{emp && emp.bank_name || '-'}</TableCell>
+                          <TableCell className="p-4 border-b dark:text-gray-400">{emp && emp.esic_status || '-'}</TableCell>
+                          <TableCell className="p-4 border-b dark:text-gray-400">{emp && emp.esic_no || '-'}</TableCell>
+                          <TableCell className="p-4 border-b dark:text-gray-400">{emp && emp.epf_status || '-'}</TableCell>
+                          <TableCell className="p-4 border-b dark:text-gray-400">{emp && emp.uan || '-'}</TableCell>
                         </TableRow>
                       );
                     })}

@@ -307,7 +307,7 @@ const EmployeeRegister: React.FC = () => {
                             <span className="text-xl">👤</span>
                           </div>
                         )}
-                        <span>{[emp.first_name, emp.middle_name, emp.last_name].filter(Boolean).join(' ')}</span>
+                        <span className='dark:text-white'>{[emp.first_name, emp.middle_name, emp.last_name].filter(Boolean).join(' ')}</span>
                       </div>
                     </TableCell>
                     {/* Gender */}
