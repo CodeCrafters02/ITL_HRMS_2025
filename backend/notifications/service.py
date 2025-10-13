@@ -68,6 +68,43 @@ def send_fcm_push(token, title, body, data=None):
     return response.status_code, response.text
 
 
+
+# def send_fcm_push(token, title, body, data=None):
+#     try:
+#         scopes = ["https://www.googleapis.com/auth/firebase.messaging"]
+#         credentials = service_account.Credentials.from_service_account_file(
+#             settings.FCM_CREDENTIALS_FILE, scopes=scopes
+#         )
+#         credentials.refresh(Request())
+#         access_token = credentials.token
+
+#         project_id = settings.FCM_PROJECT_ID
+#         url = f"https://fcm.googleapis.com/v1/projects/{project_id}/messages:send"
+#         headers = {
+#             "Authorization": f"Bearer {access_token}",
+#             "Content-Type": "application/json; UTF-8",
+#         }
+#         message = {
+#             "message": {
+#                 "token": token,
+#                 "data": {
+#                     "title": title,
+#                     "body": body,
+#                     **(data or {})
+#                 },
+#             }
+#         }
+#         response = requests.post(url, headers=headers, data=json.dumps(message))
+#         if response.status_code == 404 and 'UNREGISTERED' in response.text:
+#             remove_unregistered_token(token)
+#         return response.status_code, response.text
+#     except Exception as e:
+#         # Log but do not break the workflow
+#         print("FCM push failed:", e)
+#         return None, str(e)
+
+
+
 def send_fcm_to_users(user_ids, notif_type, message, sender, title="", related_object_id=None, extra_data=None):
     """
     Create UserNotification, then send FCM push to all user devices.

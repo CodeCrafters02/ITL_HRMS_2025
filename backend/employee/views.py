@@ -302,6 +302,16 @@ class NotificationListAPIView(generics.ListAPIView):
             return Notification.objects.filter(company=employee_profile.company).order_by('-date')
         return Notification.objects.none()
 
+from datetime import datetime, timedelta
+from calendar import month_name
+import pytz
+from django.utils import timezone
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from rest_framework.permissions import IsAuthenticated
+from app.models import Attendance, BreakLog, Employee, EmpLeave
+
+
 class AttendanceHistoryAPIView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -327,7 +337,7 @@ class AttendanceHistoryAPIView(APIView):
         attendances = Attendance.objects.filter(
             employee=employee,
             date__range=(start_date, end_date)
-        ).select_related('shift').prefetch_related('break_logs')
+        ).select_related('employee__shift_assigned').prefetch_related('break_logs')
 
         # Approved leaves
         approved_leaves = EmpLeave.objects.filter(
@@ -344,6 +354,7 @@ class AttendanceHistoryAPIView(APIView):
 
         # Index by date
         att_map = {att.date: att for att in attendances}
+
         # Monthly stats
         monthly_data = []
         stats = {
@@ -367,16 +378,20 @@ class AttendanceHistoryAPIView(APIView):
 
             att = att_map.get(day)
 
+            # Get shift from employee
+            shift = getattr(employee, 'shift_assigned', None)
+
             if is_weekend:
                 status = 'weekend'
             elif day in approved_leave_days:
                 status = 'leave'
                 stats['leave'] += 1
             elif att and att.check_in:
-                if att.check_out:
-                    check_out = att.check_out
-                    check_in = att.check_in
-                    # Get all completed breaks for this employee for this day
+                check_in = att.check_in
+                check_out = att.check_out
+
+                # Calculate work hours and breaks
+                if check_out:
                     breaks = BreakLog.objects.filter(
                         employee=employee,
                         start__date=day,
@@ -389,18 +404,21 @@ class AttendanceHistoryAPIView(APIView):
                     work_duration = (check_out - check_in).total_seconds() / 3600
                     work_duration -= total_break / 3600
                     total_hours = round(work_duration, 2)
-                    # Shift rules
-                    if att.shift:
-                        grace = att.shift.grace_period or timedelta(minutes=15)
-                        shift_start_naive = datetime.combine(day, att.shift.checkin)
+
+                    if shift:
+                        grace = shift.grace_period or timedelta(minutes=15)
+                        shift_start_naive = datetime.combine(day, shift.checkin)
                         shift_start_aware = tz.localize(shift_start_naive)
                         check_in_local = check_in.astimezone(tz)
+
                         if check_in_local > (shift_start_aware + grace):
                             is_late = True
                             late_delta = check_in_local - (shift_start_aware + grace)
-                            late_duration = str(late_delta).split('.')[0]  # Format as HH:MM:SS
-                        full_day_hours = att.shift.full_day_hours()
-                        half_day_hours = att.shift.half_day_hours()
+                            late_duration = str(late_delta).split('.')[0]
+
+                        full_day_hours = shift.full_day_hours()
+                        half_day_hours = shift.half_day_hours()
+
                         if work_duration >= full_day_hours:
                             status = 'present'
                             stats['present'] += 1
@@ -415,18 +433,19 @@ class AttendanceHistoryAPIView(APIView):
                     else:
                         status = 'present'
                         stats['present'] += 1
+
                     if att.overtime_duration:
                         overtime_hours = round(att.overtime_duration.total_seconds() / 3600, 2)
+
                     break_time = f'{int(total_break // 60)} min' if total_break else '-'
+
                 else:
-                    # Checked in but not checked out: show status as 'checked_in', and calculate late
                     status = 'checked_in'
-                    break_time = '-'
-                    if att.shift:
-                        grace = att.shift.grace_period or timedelta(minutes=15)
-                        shift_start_naive = datetime.combine(day, att.shift.checkin)
+                    if shift:
+                        grace = shift.grace_period or timedelta(minutes=15)
+                        shift_start_naive = datetime.combine(day, shift.checkin)
                         shift_start_aware = tz.localize(shift_start_naive)
-                        check_in_local = att.check_in.astimezone(tz)
+                        check_in_local = check_in.astimezone(tz)
                         if check_in_local > (shift_start_aware + grace):
                             is_late = True
                             late_delta = check_in_local - (shift_start_aware + grace)
@@ -444,7 +463,7 @@ class AttendanceHistoryAPIView(APIView):
                 'day_name': day.strftime('%A'),
                 'check_in': att.check_in.astimezone(tz).strftime('%H:%M:%S') if att and att.check_in else '-',
                 'check_out': att.check_out.astimezone(tz).strftime('%H:%M:%S') if att and att.check_out else '-',
-                'shift': str(att.shift) if att and att.shift else '-',
+                'shift': str(shift) if shift else '-',
                 'is_weekend': is_weekend,
                 'status': status,
                 'is_late': is_late,
@@ -453,7 +472,6 @@ class AttendanceHistoryAPIView(APIView):
                 'overtime_hours': overtime_hours if overtime_hours is not None else '-',
                 'break_time': break_time,
             })
-
 
             if not is_weekend:
                 stats['working_days'] += 1

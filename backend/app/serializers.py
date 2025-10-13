@@ -881,9 +881,9 @@ class AttendanceSerializer(serializers.ModelSerializer):
 
     def get_is_late(self, obj):
         check_in = obj.check_in
-        shift = obj.shift
+        shift = getattr(obj.employee, 'shift_assigned', None)
 
-        if not (check_in and shift and shift.checkin and shift.grace_period):
+        if not (check_in and shift and shift.checkin):
             return False
 
         # Convert check-in to local time
@@ -894,7 +894,7 @@ class AttendanceSerializer(serializers.ModelSerializer):
         shift_start_dt = timezone.make_aware(shift_start_dt, timezone.get_current_timezone())
 
         # Add grace period
-        allowed_latest_checkin = shift_start_dt + shift.grace_period
+        allowed_latest_checkin = shift_start_dt + shift.grace()
 
         return check_in > allowed_latest_checkin
 

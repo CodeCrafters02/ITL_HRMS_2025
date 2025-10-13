@@ -110,11 +110,11 @@ const navItems: NavItem[] = [
     icon: <TableIcon />,
     path: "/admin/learning-corner",
   },
-  {
-    name: "System Tracking",
-    icon: <PieChartIcon />,
-    path: "/admin/system-tracking",
-  },
+  // {
+  //   name: "System Tracking",
+  //   icon: <PieChartIcon />,
+  //   path: "/admin/system-tracking",
+  // },
     {
     name: "Employee References",
     icon: <PieChartIcon />,
