@@ -18,7 +18,7 @@ const ComponentCard: React.FC<ComponentCardProps> = ({
       {/* Card Header */}
       <div className="px-6 py-5">
         {title && (
-          <div className="mb-2 text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+          <div className="mb-2 text-lg font-semibold text-gray-900 dark:text-gray-400 flex items-center gap-2">
             {title}
           </div>
         )}

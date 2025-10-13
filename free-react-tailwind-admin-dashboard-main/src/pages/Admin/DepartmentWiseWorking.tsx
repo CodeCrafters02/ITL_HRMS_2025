@@ -86,11 +86,17 @@ const DepartmentWorkingDays = () => {
 
   const updateItem = async (id: number) => {
     try {
-      await axiosInstance.put(`app/department-working-days/${id}/`, editItem);
+      const payload = {
+        ...editItem,
+        department: editItem.department?.id, 
+      };
+
+      await axiosInstance.put(`app/department-working-days/${id}/`, payload);
       setEditId(null);
       setEditItem({});
       fetchWorkingDays();
-    } catch {
+    } catch (error) {
+      console.error("Error updating:", error);
       setError("Failed to update working day.");
     }
   };
@@ -119,12 +125,18 @@ const DepartmentWorkingDays = () => {
 
   const addItem = async () => {
     try {
-      await axiosInstance.post(`app/department-working-days/`, editItem);
+      const payload = {
+        ...editItem,
+        department: editItem.department?.id,
+      };
+
+      await axiosInstance.post(`app/department-working-days/`, payload);
       setAdding(false);
       setEditId(null);
       setEditItem({});
       fetchWorkingDays();
-    } catch {
+    } catch (error) {
+      console.error("Error adding:", error);
       setError("Failed to add working day.");
     }
   };

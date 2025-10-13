@@ -109,7 +109,7 @@ const AdminEmployeeReferencePage: React.FC = () => {
                 "S.No", "Employee", "Name", "Designation", "Email", "Contact",
                 "Resume", "Status", "Admin Comment", "Submitted At", "Actions"
               ].map((header) => (
-                <TableCell key={header} isHeader className="px-4 py-2 text-left text-sm font-medium text-gray-700 dark:text-gray-200">{header}</TableCell>
+                <TableCell key={header} isHeader className="px-4 py-2 dark:text-white text-left text-sm font-medium text-gray-700 dark:text-gray-200">{header}</TableCell>
               ))}
             </TableRow>
           </thead>
@@ -123,13 +123,13 @@ const AdminEmployeeReferencePage: React.FC = () => {
             ) : (
               paginatedList.map((ref, idx) => (
                 <TableRow key={ref.id} className="hover:bg-gray-100 dark:hover:bg-gray-700">
-                  <TableCell className="px-4 py-2">{(currentPage - 1) * rowsPerPage + idx + 1}</TableCell>
-                  <TableCell className="px-4 py-2">{ref.employee_name || "-"}</TableCell>
-                  <TableCell className="px-4 py-2">{ref.name}</TableCell>
-                  <TableCell className="px-4 py-2">{ref.designation}</TableCell>
-                  <TableCell className="px-4 py-2">{ref.email}</TableCell>
-                  <TableCell className="px-4 py-2">{ref.contact_number}</TableCell>
-                  <TableCell className="px-4 py-2">
+                  <TableCell className="px-4 py-2 dark:text-white">{(currentPage - 1) * rowsPerPage + idx + 1}</TableCell>
+                  <TableCell className="px-4 py-2 dark:text-white">{ref.employee_name || "-"}</TableCell>
+                  <TableCell className="px-4 py-2 dark:text-white">{ref.name}</TableCell>
+                  <TableCell className="px-4 py-2 dark:text-white">{ref.designation}</TableCell>
+                  <TableCell className="px-4 py-2 dark:text-white">{ref.email}</TableCell>
+                  <TableCell className="px-4 py-2 dark:text-white">{ref.contact_number}</TableCell>
+                  <TableCell className="px-4 py-2 dark:text-white">
                     {ref.resume ? (
                       <a href={ref.resume} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">
                         View
@@ -140,9 +140,9 @@ const AdminEmployeeReferencePage: React.FC = () => {
                     ref.status === "Approved" ? "text-green-600" :
                     ref.status === "Rejected" ? "text-red-600" : "text-yellow-600"
                   }`}>{ref.status}</TableCell>
-                  <TableCell className="px-4 py-2">{ref.admin_comment || "-"}</TableCell>
-                  <TableCell className="px-4 py-2">{new Date(ref.submitted_at).toLocaleDateString()}</TableCell>
-                  <TableCell className="px-4 py-2 flex gap-2">
+                  <TableCell className="px-4 py-2 dark:text-white">{ref.admin_comment || "-"}</TableCell>
+                  <TableCell className="px-4 py-2 dark:text-white">{new Date(ref.submitted_at).toLocaleDateString()}</TableCell>
+                  <TableCell className="px-4 py-2 dark:text-white flex gap-2">
                     <Button variant="outline" size="sm" onClick={() => openEditModal(ref.id)}>
                       <FiEdit className="inline mr-1" /> Edit
                     </Button>
@@ -156,7 +156,7 @@ const AdminEmployeeReferencePage: React.FC = () => {
 
       {/* Pagination Controls */}
       {filteredList.length > 0 && (
-        <div className="flex justify-between items-center mt-4">
+        <div className="flex justify-between items-center mt-4 dark:text-white">
           <span>
             Page {currentPage} of {totalPages}
           </span>

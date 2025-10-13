@@ -77,7 +77,7 @@ export default function EmpCompanyPolicy() {
 
   return (
     <div className="p-6">
-      <h2 className="text-xl font-semibold mb-4">Company Policies</h2>
+      <h2 className="text-xl font-semibold mb-4 dark:text-white">Company Policies</h2>
       {loading ? (
         <p>Loading policies...</p>
       ) : error ? (

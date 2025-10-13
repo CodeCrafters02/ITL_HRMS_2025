@@ -226,7 +226,7 @@ const RecruitmentPage: React.FC = () => {
   return (
   <div className="p-4 max-w-7xl mx-auto relative">
       <div className="flex items-center gap-10 mb-4">
-        <h1 className="text-2xl font-bold">Recruitment List</h1>
+        <h1 className="text-2xl font-bold dark:text-gray-400">Recruitment List</h1>
         <button
           className="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-4 py-2 rounded flex items-center gap-2 shadow"
           onClick={() => navigate('/admin/form-recruitment')}

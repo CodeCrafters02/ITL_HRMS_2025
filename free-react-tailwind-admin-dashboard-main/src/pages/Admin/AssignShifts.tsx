@@ -105,15 +105,15 @@ const AssignShift: React.FC = () => {
 
       <div className="overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-white/[0.05] dark:bg-white/[0.03] z-[1000] m-5">
         <div className="flex justify-between items-center p-4 flex-wrap gap-2">
-          <h1 className="text-xl font-semibold">Assign Shift 👋</h1>
+          <h1 className="text-xl font-semibold dark:text-white">Assign Shift </h1>
           <input
             type="text"
             placeholder="Search by name or ID"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="border rounded px-3 py-1"
+            className="border rounded px-3 py-1 dark:text-white"
           />
-          <div>
+          <div className="dark:text-gray-400">
             Rows per page:{" "}
             <select
               value={pageSize}
@@ -121,7 +121,7 @@ const AssignShift: React.FC = () => {
                 setPageSize(Number(e.target.value));
                 setCurrentPage(1); // Reset page when page size changes
               }}
-              className="border rounded px-2 py-1"
+              className="border rounded px-2 py-1 dark:text-white dark:bg-gray-800"
             >
               {[5, 10, 20, 50].map((size) => (
                 <option key={size} value={size}>
@@ -136,19 +136,22 @@ const AssignShift: React.FC = () => {
           <Table>
             <TableHeader className="border-b border-gray-100 dark:border-white/[0.05]">
               <TableRow>
-                <TableCell                   isHeader
-
-                                  className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">#</TableCell>
-                <TableCell                  isHeader
-
-                                  className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">Employee ID</TableCell>
-                <TableCell                  isHeader
-
-                                  className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">Employee Name</TableCell>
-                <TableCell                  isHeader
-
-                                  className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">Current Shift</TableCell>
-                <TableCell>Action</TableCell>
+                <TableCell                   
+                isHeader
+                className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">#</TableCell>
+                <TableCell                  
+                isHeader
+                className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">Employee ID</TableCell>
+                <TableCell                  
+                isHeader
+                className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">Employee Name</TableCell>
+                <TableCell                  
+                isHeader
+                className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">Current Shift</TableCell>
+                <TableCell
+                isHeader
+                className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
+                >Action</TableCell>
               </TableRow>
             </TableHeader>
 
@@ -162,15 +165,15 @@ const AssignShift: React.FC = () => {
               ) : (
                 paginatedEmployees.map((emp, index) => (
                   <TableRow key={emp.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/20 transition-colors">
-                    <TableCell className="px-5 py-4 sm:px-6 text-start">{(currentPage - 1) * pageSize + index + 1}</TableCell>
-                    <TableCell className="px-5 py-4 sm:px-6 text-start">{emp.employee_id}</TableCell>
-                    <TableCell className="px-5 py-4 sm:px-6 text-start">{emp.first_name} {emp.last_name}</TableCell>
-                    <TableCell className="px-5 py-4 sm:px-6 text-start">
+                    <TableCell className="px-5 py-4 sm:px-6 text-start dark:text-gray-400">{(currentPage - 1) * pageSize + index + 1}</TableCell>
+                    <TableCell className="px-5 py-4 sm:px-6 text-start dark:text-gray-400">{emp.employee_id}</TableCell>
+                    <TableCell className="px-5 py-4 sm:px-6 text-start dark:text-gray-400">{emp.first_name} {emp.last_name}</TableCell>
+                    <TableCell className="px-5 py-4 sm:px-6 text-start dark:text-gray-400">
                       {emp.shift_assigned
                         ? `${emp.shift_assigned.shift_type} (${emp.shift_assigned.checkin} - ${emp.shift_assigned.checkout})`
                         : "No Shift"}
                     </TableCell>
-                    <TableCell className="px-5 py-4 sm:px-6 text-start">
+                    <TableCell className="px-5 py-4 sm:px-6 text-start dark:text-gray-400">
                       <div className="flex gap-2">
                         <button
                           className="bg-green-600 text-white px-3 py-1 rounded hover:bg-green-700"

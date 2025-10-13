@@ -70,7 +70,7 @@ const IncomeTax = () => {
     <div className="p-4">
       <ComponentCard title={`Income Tax Configuration (${taxConfigs.length} total)`}>
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-xl font-bold">Income Tax Configuration</h2>
+          <h2 className="text-xl font-bold dark:text-white">Income Tax Configuration</h2>
           <button
             className="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-4 py-2 rounded shadow"
             onClick={() => navigate("/admin/form-income-tax")}
@@ -83,7 +83,7 @@ const IncomeTax = () => {
         {error && <p className="text-red-500">{error}</p>}
 
         {!loading && !error && taxConfigs.length === 0 && (
-          <p>No tax configurations available.</p>
+          <p className="dark:text-white" >No tax configurations available.</p>
         )}
 
         {!loading && !error && taxConfigs.length > 0 && (

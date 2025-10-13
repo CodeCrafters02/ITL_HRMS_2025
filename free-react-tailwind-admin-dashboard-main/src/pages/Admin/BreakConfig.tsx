@@ -91,7 +91,7 @@ const BreakConfigDisplay: React.FC = () => {
       .then(() => refetchBreaks());
   };
   const handleAddMealBreak = () => {
-    axiosInstance.post(`/break-config/`, {
+    axiosInstance.post(`app/break-config/`, {
       break_choice: "meal_break",
       duration_minutes: 30,
       enabled: true,

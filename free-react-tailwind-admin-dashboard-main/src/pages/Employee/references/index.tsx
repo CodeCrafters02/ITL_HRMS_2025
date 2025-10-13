@@ -77,7 +77,7 @@ const EmployeeReferencePage: React.FC = () => {
       <PageBreadcrumb pageTitle="Employee References" />
 
       <div className="mb-6 flex justify-between items-center">
-        <h3 className="text-lg font-semibold">Manage Employee References</h3>
+        <h3 className="text-lg font-semibold dark:text-white">Manage Employee References</h3>
         <Button onClick={handleAddReference} className="flex items-center gap-2">
           <FiPlus className="w-4 h-4" />
           Add New Reference
@@ -88,27 +88,35 @@ const EmployeeReferencePage: React.FC = () => {
         <thead>
           <TableRow>
             <TableCell
-                              isHeader
-                              className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
-                              >S.No</TableCell>
-            <TableCell                   isHeader
-                  className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">Name</TableCell>
-            <TableCell                   isHeader
-                  className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">Designation</TableCell>
-            <TableCell                   isHeader
-                  className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">Contact</TableCell>
-            <TableCell                   isHeader
-                  className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">Email</TableCell>
-            <TableCell                   isHeader
-                  className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">Resume</TableCell>
-            <TableCell                   isHeader
-                  className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">Status</TableCell>
-                        <TableCell                   isHeader
-                  className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">Admin Comment</TableCell>
-            <TableCell                   isHeader
-                  className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">Submitted</TableCell>
-            <TableCell                   isHeader
-                  className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">Actions</TableCell>
+            isHeader
+            className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">S.No</TableCell>
+            <TableCell                   
+            isHeader
+            className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">Name</TableCell>
+            <TableCell                   
+            isHeader
+            className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">Designation</TableCell>
+            <TableCell                   
+            isHeader
+            className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">Contact</TableCell>
+            <TableCell                   
+            isHeader
+            className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">Email</TableCell>
+            <TableCell                   
+            isHeader
+            className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">Resume</TableCell>
+            <TableCell                   
+            isHeader
+            className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">Status</TableCell>
+            <TableCell                   
+            isHeader
+            className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">Admin Comment</TableCell>
+            <TableCell                   
+            isHeader
+            className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">Submitted</TableCell>
+            <TableCell                   
+            isHeader
+            className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">Actions</TableCell>
           </TableRow>
         </thead>
         <tbody>
@@ -121,12 +129,12 @@ const EmployeeReferencePage: React.FC = () => {
           ) : (
             references.map((ref, idx) => (
               <TableRow key={ref.id}>
-                <TableCell  className="px-5 py-4 sm:px-6 text-start">{idx + 1}</TableCell>
-                <TableCell  className="px-5 py-4 sm:px-6 text-start">{ref.name}</TableCell>
-                <TableCell  className="px-5 py-4 sm:px-6 text-start">{ref.designation}</TableCell>
-                <TableCell  className="px-5 py-4 sm:px-6 text-start">{ref.contact_number}</TableCell>
-                <TableCell  className="px-5 py-4 sm:px-6 text-start">{ref.email}</TableCell>
-                <TableCell  className="px-5 py-4 sm:px-6 text-start">
+                <TableCell  className="px-5 py-4 sm:px-6 text-start dark:text-white">{idx + 1}</TableCell>
+                <TableCell  className="px-5 py-4 sm:px-6 text-start dark:text-white">{ref.name}</TableCell>
+                <TableCell  className="px-5 py-4 sm:px-6 text-start dark:text-white">{ref.designation}</TableCell>
+                <TableCell  className="px-5 py-4 sm:px-6 text-start dark:text-white">{ref.contact_number}</TableCell>
+                <TableCell  className="px-5 py-4 sm:px-6 text-start dark:text-white">{ref.email}</TableCell>
+                <TableCell  className="px-5 py-4 sm:px-6 text-start dark:text-white">
                   {ref.resume ? (
                     <a href={ref.resume} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">
                       View
@@ -144,9 +152,9 @@ const EmployeeReferencePage: React.FC = () => {
                 >
                   {ref.status}
                 </TableCell>
-                <TableCell  className="px-5 py-4 sm:px-6 text-start">{ref.admin_comment}</TableCell>
-                <TableCell  className="px-5 py-4 sm:px-6 text-start">{new Date(ref.submitted_at).toLocaleDateString()}</TableCell>
-                <TableCell className="flex gap-2 px-5 py-4 sm:px-6 text-start">
+                <TableCell  className="px-5 py-4 sm:px-6 text-start dark:text-white">{ref.admin_comment}</TableCell>
+                <TableCell  className="px-5 py-4 sm:px-6 text-start dark:text-white">{new Date(ref.submitted_at).toLocaleDateString()}</TableCell>
+                <TableCell className="flex gap-2 px-5 py-4 sm:px-6 text-start dark:text-white">
                   <button
                     className="text-blue-600 hover:text-blue-800"
                     onClick={() => {
