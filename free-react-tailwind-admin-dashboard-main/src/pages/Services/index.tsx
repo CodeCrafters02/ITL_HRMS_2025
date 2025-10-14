@@ -124,7 +124,13 @@ const ServicesPage: React.FC = () => {
                       <TableRow key={service.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/20 transition-colors">
                         <TableCell className="px-5 py-4 text-start dark:text-gray-400">{idx + 1}</TableCell>
                         <TableCell className="px-5 py-4 text-start dark:text-gray-400">{service.name}</TableCell>
-                        <TableCell className="px-5 py-4 text-start dark:text-gray-400">{service.description || "-"}</TableCell>
+                        <TableCell className="px-5 py-4 text-start dark:text-gray-400">
+                          {service.description
+                            ? service.description.length > 20
+                              ? service.description.slice(0, 20) + "..."
+                              : service.description
+                            : "-"}
+                        </TableCell>
                         <TableCell className="px-5 py-4 text-start dark:text-gray-400">{service.is_active ? "Yes" : "No"}</TableCell>
                         <TableCell className="px-5 py-4 text-start dark:text-gray-400">
                           <div className="flex gap-3 items-center">

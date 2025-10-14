@@ -102,10 +102,9 @@ const AssignShift: React.FC = () => {
   return (
     <>
       <PageMeta title="Assign Shifts | HRMS" description="Assign shifts to employees" />
+          <h1 className="text-xl font-semibold dark:text-white pl-5">Assign Shift </h1>
 
-      <div className="overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-white/[0.05] dark:bg-white/[0.03] z-[1000] m-5">
         <div className="flex justify-between items-center p-4 flex-wrap gap-2">
-          <h1 className="text-xl font-semibold dark:text-white">Assign Shift </h1>
           <input
             type="text"
             placeholder="Search by name or ID"
@@ -131,7 +130,7 @@ const AssignShift: React.FC = () => {
             </select>
           </div>
         </div>
-
+      <div className="overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-white/[0.05] dark:bg-white/[0.03] z-[1000] m-5">
         <div className="max-w-full overflow-x-auto">
           <Table>
             <TableHeader className="border-b border-gray-100 dark:border-white/[0.05]">

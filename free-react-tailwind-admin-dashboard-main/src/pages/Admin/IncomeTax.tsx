@@ -1,9 +1,16 @@
 import { useEffect, useState } from "react";
-import ComponentCard from "../../components/common/ComponentCard";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
-import { axiosInstance } from "../Dashboard/api"; // adjust path as needed
+import { axiosInstance } from "../Dashboard/api";
 import { AxiosError } from "axios";
+import ComponentCard from "../../components/common/ComponentCard";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHeader,
+  TableRow,
+} from "../../components/ui/table";
 
 interface IncomeTaxConfig {
   id: number;
@@ -20,6 +27,7 @@ const IncomeTax = () => {
   const [deleteId, setDeleteId] = useState<number | null>(null);
   const [deleteName, setDeleteName] = useState<string>("");
   const navigate = useNavigate();
+
   const handleDeleteClick = (id: number, name: string) => {
     setDeleteId(id);
     setDeleteName(name);
@@ -50,8 +58,13 @@ const IncomeTax = () => {
           if (errorObj.response && errorObj.response.data) {
             if (typeof errorObj.response.data === "string") {
               msg = errorObj.response.data;
-            } else if (typeof errorObj.response.data === "object" && "error" in errorObj.response.data) {
-              msg = String((errorObj.response.data as Record<string, unknown>).error);
+            } else if (
+              typeof errorObj.response.data === "object" &&
+              "error" in errorObj.response.data
+            ) {
+              msg = String(
+                (errorObj.response.data as Record<string, unknown>).error
+              );
             }
           } else if ("message" in errorObj && typeof errorObj.message === "string") {
             msg = errorObj.message;
@@ -67,83 +80,119 @@ const IncomeTax = () => {
   }, []);
 
   return (
-    <div className="p-4">
-      <ComponentCard title={`Income Tax Configuration (${taxConfigs.length} total)`}>
+    <div className="p-4 dark:bg-gray-900 min-h-screen transition-colors duration-300">
+        {/* Header */}
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-xl font-bold dark:text-white">Income Tax Configuration</h2>
+          <h2 className="text-xl font-bold text-gray-900 dark:text-white">
+            Income Tax Configuration
+          </h2>
           <button
-            className="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-4 py-2 rounded shadow"
+            className="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-4 py-2 rounded-lg shadow transition-colors duration-200"
             onClick={() => navigate("/admin/form-income-tax")}
           >
             + Add Income Tax
           </button>
         </div>
 
-        {loading && <p>Loading...</p>}
-        {error && <p className="text-red-500">{error}</p>}
-
+        {/* Loading / Error / Empty */}
+        {loading && <p className="dark:text-gray-300">Loading...</p>}
+        {error && <p className="text-red-500 dark:text-red-400">{error}</p>}
         {!loading && !error && taxConfigs.length === 0 && (
-          <p className="dark:text-white" >No tax configurations available.</p>
+          <p className="dark:text-gray-300">No tax configurations available.</p>
         )}
 
+        {/* Table */}
         {!loading && !error && taxConfigs.length > 0 && (
-          <div className="overflow-x-auto">
-            <table className="min-w-full bg-white border border-gray-200">
-              <thead className="bg-gray-100">
-                <tr>
-                  <th className="p-2 border">Name</th>
-                  <th className="p-2 border">Salary From</th>
-                  <th className="p-2 border">Salary To</th>
-                  <th className="p-2 border">Tax %</th>
-                  <th className="p-2 border">Action</th>
-                </tr>
-              </thead>
-              <tbody>
+      <div className="overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-white/[0.05] dark:bg-white/[0.03] z-[1000] m-5">
+        <div className="max-w-full overflow-x-auto">             
+          <Table >
+                <TableRow>
+                  <TableCell isHeader className="px-4 py-3 border-b text-center dark:text-gray-400 dark:bg-gray-900 bg-white">
+                    Name
+                  </TableCell>
+                  <TableCell isHeader className="px-4 py-3 border-b text-center dark:text-gray-400 dark:bg-gray-900 bg-white">
+                    Salary From
+                  </TableCell>
+                  <TableCell isHeader className="px-4 py-3 border-b text-center dark:text-gray-400 dark:bg-gray-900 bg-white">
+                    Salary To
+                  </TableCell>
+                  <TableCell isHeader className="px-4 py-3 border-b text-center dark:text-gray-400 dark:bg-gray-900 bg-white">
+                    Tax %
+                  </TableCell>
+                  <TableCell isHeader className="px-4 py-3 border-b text-center dark:text-gray-400 dark:bg-gray-900 bg-white">
+                    Action
+                  </TableCell>
+                </TableRow>
+
+              <TableBody>
                 {taxConfigs.map((config) => (
-                    <tr key={config.id}>
-                      <td className="p-2 border">{config.name}</td>
-                      <td className="p-2 border">{config.salary_from}</td>
-                      <td className="p-2 border">{config.salary_to}</td>
-                      <td className="p-2 border">{config.tax_percent}</td>
-                      <td className="p-2 border text-center">
-                        <button
-                          className="text-red-600 hover:text-red-800 text-lg font-bold"
-                          title="Delete"
-                          onClick={() => handleDeleteClick(config.id, config.name)}
-                        >
-                          &#128465;
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-              </tbody>
-            </table>
+                  <TableRow
+                    key={config.id}
+                    className="bg-white dark:bg-gray-900 hover:bg-gray-50 dark:hover:bg-gray-800 transition"
+                  >
+                    <TableCell className="px-4 py-3 text-center dark:text-gray-400 dark:bg-gray-900 bg-white">
+                      {config.name}
+                    </TableCell>
+                    <TableCell className="px-4 py-3 text-center dark:text-gray-400 dark:bg-gray-900 bg-white">
+                      {config.salary_from}
+                    </TableCell>
+                    <TableCell className="px-4 py-3 text-center dark:text-gray-400 dark:bg-gray-900 bg-white">
+                      {config.salary_to}
+                    </TableCell>
+                    <TableCell className="px-4 py-3 text-center dark:text-gray-400 dark:bg-gray-900 bg-white">
+                      {config.tax_percent}
+                    </TableCell>
+                    <TableCell className="px-4 py-3 text-center dark:text-gray-400 dark:bg-gray-900 bg-white">
+                      <button
+                        className="text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300 text-lg font-bold"
+                        title="Delete"
+                        onClick={() => handleDeleteClick(config.id, config.name)}
+                      >
+                        &#128465;
+                      </button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
           </div>
         )}
-        {/* Delete Confirmation Modal */}
-        {deleteId !== null && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center  bg-opacity-40">
-            <div className="bg-white rounded-lg shadow-lg p-8 w-full max-w-md">
-              <h2 className="text-xl font-bold mb-4 text-gray-900">Confirm Delete</h2>
-              <p className="mb-6 text-gray-700">Are you sure you want to delete this income <span className="font-semibold">{deleteName}</span>?</p>
-              <div className="flex justify-end gap-3">
-                <button
-                  onClick={() => { setDeleteId(null); setDeleteName(""); }}
-                  className="px-4 py-2 rounded-lg bg-gray-200 text-gray-800 hover:bg-gray-300 font-medium"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={confirmDelete}
-                  className="px-4 py-2 rounded-lg bg-red-600 text-white hover:bg-red-700 font-medium"
-                >
-                  Delete
-                </button>
-              </div>
+
+      {/* Delete Confirmation Modal */}
+      {deleteId !== null && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm transition">
+          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-8 w-full max-w-md transform transition-all">
+            <h2 className="text-xl font-bold mb-4 text-gray-900 dark:text-gray-100">
+              Confirm Delete
+            </h2>
+            <p className="mb-6 text-gray-700 dark:text-gray-300">
+              Are you sure you want to delete{" "}
+              <span className="font-semibold text-gray-900 dark:text-white">
+                {deleteName}
+              </span>
+              ?
+            </p>
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={() => {
+                  setDeleteId(null);
+                  setDeleteName("");
+                }}
+                className="px-4 py-2 rounded-lg bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors duration-200"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmDelete}
+                className="px-4 py-2 rounded-lg bg-red-600 hover:bg-red-700 text-white font-medium transition-colors duration-200"
+              >
+                Delete
+              </button>
             </div>
           </div>
-        )}
-      </ComponentCard>
+        </div>
+      )}
     </div>
   );
 };

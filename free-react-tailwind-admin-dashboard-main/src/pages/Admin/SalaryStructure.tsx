@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { FaTrash, FaPlus } from "react-icons/fa";
+import { FaTrash, FaPlus,FaEdit } from "react-icons/fa";
 import { toast } from "react-toastify";
 import { axiosInstance } from "../Dashboard/api";
 import { AxiosError } from "axios";
@@ -13,6 +13,7 @@ import {
   TableHeader,
   TableRow,
 } from "../../components/ui/table";
+import EditSalaryForm from "../Forms/EditSalaryForm";
 
 interface Allowance {
   id?: number;
@@ -48,6 +49,8 @@ const SalaryStructureList: React.FC = () => {
   const [deleteId, setDeleteId] = useState<number | null>(null);
   const [deleteName, setDeleteName] = useState<string>("");
   const navigate = useNavigate();
+  //   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  // const [editSalaryId, setEditSalaryId] = useState<number | null>(null);
 
   useEffect(() => {
     const fetchSalaryStructures = async () => {
@@ -87,6 +90,24 @@ const SalaryStructureList: React.FC = () => {
       toast.error("Failed to delete", { position: "bottom-right" });
     }
   };
+  //   const handleEditClick = (id: number) => {
+  //   setEditSalaryId(id);
+  //   setIsEditModalOpen(true);
+  // };
+  //   const handleSalaryUpdated = (updatedSalary: SalaryStructure) => {
+  //   setSalaryStructures((prev) =>
+  //     prev.map((s) => (s.id === updatedSalary.id ? updatedSalary : s))
+  //   );
+  //   setIsEditModalOpen(false);
+  //   setEditSalaryId(null);
+  //   toast.success("Salary structure updated successfully", { position: "bottom-right" });
+  // };
+
+  const handleEditClick = (id: number) => {
+  navigate(`/admin/salary-structure/edit/${id}`);
+};
+
+
 
   if (loading) return (
     <div className="p-6">
@@ -129,7 +150,6 @@ const SalaryStructureList: React.FC = () => {
           </button>
         </div>
         
-        <ComponentCard title={`Salary Structure List (${salaryStructures.length} total)`}>
           <div className="overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-white/[0.05] dark:bg-white/[0.03]">
             <div className="max-w-full overflow-x-auto">
               <Table>
@@ -310,18 +330,23 @@ const SalaryStructureList: React.FC = () => {
                             <span className="text-gray-400 text-sm">No deductions</span>
                           )}
                         </TableCell>
-                        <TableCell className="px-6 py-5 text-center">
-                          <div className="flex items-center justify-center gap-3">
-                            <button
-                              onClick={() => handleDeleteClick(structure.id, structure.name)}
-                              className="flex items-center gap-1 bg-red-100 text-red-700 hover:bg-red-200 px-3 py-2 rounded-lg font-medium text-sm transition-colors"
-                              title="Delete Salary Structure"
-                            >
-                              <FaTrash className="w-3 h-3" />
-                              Delete
-                            </button>
-                          </div>
-                        </TableCell>
+                      <TableCell>
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => handleEditClick(structure.id)}
+                            className="flex items-center gap-1 bg-yellow-100 text-yellow-700 px-3 py-2 rounded-lg font-medium text-sm"
+                          >
+                            <FaEdit /> Edit
+                          </button>
+                          <button
+                            onClick={() => handleDeleteClick(structure.id, structure.name)}
+                            className="flex items-center gap-1 bg-red-100 text-red-700 px-3 py-2 rounded-lg font-medium text-sm"
+                          >
+                            <FaTrash /> Delete
+                          </button>
+                        </div>
+                      </TableCell>
+
                       </TableRow>
                     ))
                   )}
@@ -329,7 +354,6 @@ const SalaryStructureList: React.FC = () => {
               </Table>
             </div>
           </div>
-        </ComponentCard>
       </div>
       {/* Delete Confirmation Modal */}
       {deleteId !== null && (
@@ -354,6 +378,15 @@ const SalaryStructureList: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* {isEditModalOpen && editSalaryId !== null && (
+        <EditSalaryForm
+          isOpen={isEditModalOpen}
+          salaryId={editSalaryId}
+          onUpdated={handleSalaryUpdated}
+          onClose={() => { setIsEditModalOpen(false); setEditSalaryId(null); }}
+        />
+      )} */}
     </>
   );
 };

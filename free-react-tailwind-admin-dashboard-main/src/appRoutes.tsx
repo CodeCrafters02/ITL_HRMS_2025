@@ -47,6 +47,7 @@ const DepartmentForm = lazy(() => import("./pages/Forms/DepartmentForm"));
 const LevelForm = lazy(() => import("./pages/Forms/LevelForm"));
 const DesignationForm = lazy(() => import("./pages/Forms/DesignationForm"));
 const SalaryStructureList = lazy(() => import("./pages/Admin/SalaryStructure"));
+const EditSalaryForm = lazy(()=>import("./pages/Forms/EditSalaryForm"))
 const SalaryStructureForm = lazy(() => import("./pages/Forms/SalaryStructureForm"));
 const IncomeTax = lazy(() => import("./pages/Admin/IncomeTax"));
 const IncomeTaxForm = lazy(() => import("./pages/Forms/IncomeTaxForm"));
@@ -198,6 +199,7 @@ export function appRoutes() {
             <Route path="branch-mgt/level" element={<Level />} />
             <Route path="branch-mgt/designation" element={<Designation />} />
             <Route path="salary-structure" element={<SalaryStructureList />} />
+            <Route path="salary-structure/edit/:id" element={<EditSalaryForm />} />
             <Route path="income-tax" element={<IncomeTax />} />
             <Route path="payroll-batches" element={<PayrollBatches />} />
             <Route path="generate-payroll" element={<GeneratePayroll />} />

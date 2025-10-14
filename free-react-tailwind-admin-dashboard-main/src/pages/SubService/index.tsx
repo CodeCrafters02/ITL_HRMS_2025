@@ -84,10 +84,10 @@ const SubServicesPage: React.FC = () => {
       <PageBreadcrumb pageTitle="SubServices" />
 
       <div className="space-y-6">
-        <div className="bg-white dark:bg-white/[0.03] border border-gray-200 dark:border-white/[0.05] rounded-xl shadow p-6">
-          <h2 className="text-lg font-semibold mb-4 text-gray-800 dark:text-gray-200">
+        {/* <div className="bg-white dark:bg-white/[0.03] border border-gray-200 dark:border-white/[0.05] rounded-xl shadow p-6"> */}
+          {/* <h2 className="text-lg font-semibold mb-4 text-gray-800 dark:text-gray-200">
             SubService List
-          </h2>
+          </h2> */}
           <button
             className="mb-4 bg-blue-600 text-white px-4 py-2 rounded"
             onClick={() => setIsAddModalOpen(true)}
@@ -156,7 +156,11 @@ const SubServicesPage: React.FC = () => {
                           {subservice.name}
                         </TableCell>
                         <TableCell className="px-5 py-4 text-start dark:text-gray-400">
-                          {subservice.description || "-"}
+                          {subservice.description
+                            ? subservice.description.length > 20
+                              ? subservice.description.slice(0, 20) + "..."
+                              : subservice.description
+                            : "-"}
                         </TableCell>
                         <TableCell className="px-5 py-4 text-start dark:text-gray-400">
                           {subservice.service_details?.name || "N/A"}
@@ -217,7 +221,7 @@ const SubServicesPage: React.FC = () => {
               </Table>
             </div>
           </div>
-        </div>
+        {/* </div> */}
       </div>
 
       {isAddModalOpen && (

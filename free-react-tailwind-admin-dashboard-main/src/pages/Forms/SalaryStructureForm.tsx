@@ -1,9 +1,9 @@
-
-import { useState } from "react";
+import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { axiosInstance } from "../Dashboard/api";
 import Label from '../../components/form/Label';
 import InputField from '../../components/form/input/InputField';
+import Button from "../../components/ui/button/Button";
 
 interface Allowance {
   name: string;
@@ -77,119 +77,159 @@ export default function SalaryStructureForm() {
     } catch (err: unknown) {
       type AxiosErrorType = { response?: { data?: { detail?: string } } };
       const errorObj = err as AxiosErrorType;
-      if (typeof err === 'object' && err !== null && 'response' in errorObj) {
-        setError(errorObj.response?.data?.detail || "Failed to add salary structure");
-      } else {
-        setError("Failed to add salary structure");
-      }
+      setError(errorObj.response?.data?.detail || "Failed to add salary structure");
     } finally {
       setLoading(false);
     }
   };
 
-  const handleCancel = () => {
-    navigate("/admin/salary-structure");
-  };
+  const handleCancel = () => navigate("/admin/salary-structure");
 
   return (
-    <div className="p-10 max-w-3xl mx-auto">
-      <h2 className="text-3xl font-bold mb-8">Add Salary Structure</h2>
-      <form onSubmit={handleSubmit} className="space-y-8 bg-white p-8 rounded-xl shadow-lg">
-        <div>
-          <Label htmlFor="name">Name</Label>
-          <InputField
-            id="name"
-            name="name"
-            value={name}
-            onChange={e => setName(e.target.value)}
-            placeholder="Enter salary structure name"
-          />
-        </div>
-        <div className="grid grid-cols-2 gap-6">
+    <div className="fixed inset-0 bg-white/50 backdrop-blur-sm flex items-center justify-center z-50">
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 w-full max-w-lg max-h-[90vh] overflow-auto relative mt-10">
+        <button
+          onClick={handleCancel}
+          className="absolute top-3 right-3 w-10 h-10 flex items-center justify-center rounded-full text-gray-500 hover:text-gray-800 dark:hover:text-gray-200 text-4xl font-bold"
+        >
+          ×
+        </button>
+
+        <h2 className="text-2xl font-bold mb-4 text-gray-900 dark:text-white">
+          Add Salary Structure
+        </h2>
+
+        <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <Label htmlFor="basicPercent">Basic %</Label>
-            <InputField id="basicPercent" type="number" value={String(basicPercent)} onChange={e => setBasicPercent(e.target.value)} placeholder="Basic percent" min={'0'} />
-         </div>
+            <Label htmlFor="name">Name *</Label>
+            <InputField
+              id="name"
+              name="name"
+              value={name}
+              onChange={e => setName(e.target.value)}
+              required
+              disabled={loading}
+              className="w-full p-2 border rounded dark:bg-gray-700 dark:text-white"
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            {[
+              { id: 'basicPercent', label: 'Basic %', value: basicPercent, setter: setBasicPercent },
+              { id: 'hraPercent', label: 'HRA %', value: hraPercent, setter: setHraPercent },
+              { id: 'conveyancePercent', label: 'Conveyance %', value: conveyancePercent, setter: setConveyancePercent },
+              { id: 'medicalPercent', label: 'Medical %', value: medicalPercent, setter: setMedicalPercent },
+              { id: 'specialPercent', label: 'Special %', value: specialPercent, setter: setSpecialPercent },
+              { id: 'serviceChargePercent', label: 'Service Charge %', value: serviceChargePercent, setter: setServiceChargePercent },
+              { id: 'totalWorkingDays', label: 'Total Working Days', value: totalWorkingDays, setter: setTotalWorkingDays },
+            ].map(field => (
+              <div key={field.id}>
+                <Label htmlFor={field.id}>{field.label}</Label>
+                <InputField
+                  id={field.id}
+                  type="number"
+                  value={String(field.value)}
+                  onChange={e => field.setter(e.target.value)}
+                  placeholder={field.label}
+                  min="0"
+                  disabled={loading}
+                  className="w-full p-2 border rounded dark:bg-gray-700 dark:text-white"
+                />
+              </div>
+            ))}
+          </div>
+
+          {/* Allowances */}
           <div>
-            <Label htmlFor="hraPercent">HRA %</Label>
-            <InputField id="hraPercent" type="number" value={String(hraPercent)} onChange={e => setHraPercent(e.target.value)} placeholder="HRA percent" min={'0'} />
-           </div>
+            <Label>Allowances</Label>
+            <div className="flex gap-2 mb-2">
+              <InputField
+                type="text"
+                placeholder="Name"
+                value={allowanceName}
+                onChange={e => setAllowanceName(e.target.value)}
+                className="flex-1 p-2 border rounded dark:bg-gray-700 dark:text-white"
+                disabled={loading}
+              />
+              <InputField
+                type="number"
+                placeholder="Amount"
+                value={String(allowanceAmount)}
+                onChange={e => setAllowanceAmount(e.target.value)}
+                className="w-24 p-2 border rounded dark:bg-gray-700 dark:text-white"
+                min="0"
+                disabled={loading}
+              />
+              <Button type="button" onClick={handleAddAllowance} disabled={loading}>
+                Add
+              </Button>
+            </div>
+            {allowances.length > 0 && (
+              <ul className="list-disc ml-4 text-gray-800 dark:text-gray-200">
+                {allowances.map((a, idx) => (
+                  <li key={idx} className="flex justify-between items-center">
+                    {a.name}: ₹{a.amount}
+                    <button type="button" onClick={() => handleRemoveAllowance(idx)} className="text-red-500 hover:text-red-700 text-sm">
+                      Remove
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+
+          {/* Deductions */}
           <div>
-            <Label htmlFor="conveyancePercent">Conveyance %</Label>
-            <InputField id="conveyancePercent" type="number" value={String(conveyancePercent)} onChange={e => setConveyancePercent(e.target.value)} placeholder="Conveyance percent" min={'0'} />
+            <Label>Deductions</Label>
+            <div className="flex gap-2 mb-2">
+              <InputField
+                type="text"
+                placeholder="Name"
+                value={deductionName}
+                onChange={e => setDeductionName(e.target.value)}
+                className="flex-1 p-2 border rounded dark:bg-gray-700 dark:text-white"
+                disabled={loading}
+              />
+              <InputField
+                type="number"
+                placeholder="Amount"
+                value={String(deductionAmount)}
+                onChange={e => setDeductionAmount(e.target.value)}
+                className="w-24 p-2 border rounded dark:bg-gray-700 dark:text-white"
+                min="0"
+                disabled={loading}
+              />
+              <Button type="button" onClick={handleAddDeduction} disabled={loading}>
+                Add
+              </Button>
+            </div>
+            {deductions.length > 0 && (
+              <ul className="list-disc ml-4 text-gray-800 dark:text-gray-200">
+                {deductions.map((d, idx) => (
+                  <li key={idx} className="flex justify-between items-center">
+                    {d.name}: ₹{d.amount}
+                    <button type="button" onClick={() => handleRemoveDeduction(idx)} className="text-red-500 hover:text-red-700 text-sm">
+                      Remove
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
           </div>
-          <div>
-            <Label htmlFor="medicalPercent">Medical %</Label>
-            <InputField id="medicalPercent" type="number" value={String(medicalPercent)} onChange={e => setMedicalPercent(e.target.value)} placeholder="Medical percent" min={'0'} />
+
+          {error && <div className="text-red-600 font-semibold">{error}</div>}
+
+          {/* Buttons */}
+          <div className="flex justify-end gap-2 mt-4">
+            <Button type="button" variant="outline" onClick={handleCancel} disabled={loading}>
+              Cancel
+            </Button>
+            <Button type="submit" disabled={loading}>
+              {loading ? "Saving..." : "Save"}
+            </Button>
           </div>
-          <div>
-            <Label htmlFor="specialPercent">Special %</Label>
-            <InputField id="specialPercent" type="number" value={String(specialPercent)} onChange={e => setSpecialPercent(e.target.value)} placeholder="Special percent" min={'0'} />
-          </div>
-          <div>
-            <Label htmlFor="serviceChargePercent">Service Charge %</Label>
-            <InputField id="serviceChargePercent" type="number" value={String(serviceChargePercent)} onChange={e => setServiceChargePercent(e.target.value)} placeholder="Service charge percent" min={'0'} />
-          </div>
-          <div>
-            <Label htmlFor="totalWorkingDays">Total Working Days</Label>
-            <InputField id="totalWorkingDays" type="number" value={String(totalWorkingDays)} onChange={e => setTotalWorkingDays(e.target.value)} placeholder="Total working days" min={'0'} />
-          </div>
-        </div>
-        <div>
-          <Label>Allowances</Label>
-          <div className="flex gap-3 mb-2">
-            <InputField type="text" placeholder="Name" value={allowanceName} onChange={e => setAllowanceName(e.target.value)} className="w-1/2" />
-            <InputField type="number" placeholder="Amount" value={String(allowanceAmount)} onChange={e => setAllowanceAmount(e.target.value)} className="w-1/3" min={'0'} />
-            <button type="button" onClick={handleAddAllowance} className="bg-green-500 text-white px-4 py-2 rounded-lg font-semibold shadow hover:bg-green-600">Add</button>
-          </div>
-          {allowances.length > 0 && (
-            <ul className="list-disc ml-8 mt-2">
-              {allowances.map((a, idx) => (
-                <li key={idx} className="flex items-center gap-3 text-base">
-                  {a.name}: ₹{a.amount}
-                  <button type="button" onClick={() => handleRemoveAllowance(idx)} className="text-red-500 hover:text-red-700 text-sm font-bold">Remove</button>
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
-        <div>
-          <Label>Deductions</Label>
-          <div className="flex gap-3 mb-2">
-            <InputField type="text" placeholder="Name" value={deductionName} onChange={e => setDeductionName(e.target.value)} className="w-1/2" />
-            <InputField type="number" placeholder="Amount" value={String(deductionAmount)} onChange={e => setDeductionAmount(e.target.value)} className="w-1/3" min={'0'} />
-           <button type="button" onClick={handleAddDeduction} className="bg-green-500 text-white px-4 py-2 rounded-lg font-semibold shadow hover:bg-green-600">Add</button>
-          </div>
-          {deductions.length > 0 && (
-            <ul className="list-disc ml-8 mt-2">
-              {deductions.map((d, idx) => (
-                <li key={idx} className="flex items-center gap-3 text-base">
-                  {d.name}: ₹{d.amount}
-                  <button type="button" onClick={() => handleRemoveDeduction(idx)} className="text-red-500 hover:text-red-700 text-sm font-bold">Remove</button>
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
-        {error && <div className="text-red-600 text-base font-semibold mb-2">{error}</div>}
-        <div className="flex gap-6 justify-end mt-8">
-          <button
-            type="button"
-            onClick={handleCancel}
-            className="px-6 py-3 rounded-lg bg-gray-400 text-white hover:bg-gray-500 text-lg font-semibold shadow"
-            disabled={loading}
-          >
-            Cancel
-          </button>
-          <button
-            type="submit"
-            className="px-6 py-3 rounded-lg bg-blue-600 text-white hover:bg-blue-700 text-lg font-semibold shadow"
-            disabled={loading}
-          >
-            {loading ? "Saving..." : "Save"}
-          </button>
-        </div>
-      </form>
+        </form>
+      </div>
     </div>
   );
 }

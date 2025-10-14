@@ -1,14 +1,21 @@
+import React, { useEffect, useState } from "react";
 import PageBreadcrumb from "../../components/common/PageBreadCrumb";
 import ComponentCard from "../../components/common/ComponentCard";
 import PageMeta from "../../components/common/PageMeta";
-import React, { useEffect, useState } from "react";
 import { axiosInstance } from "../Dashboard/api";
 import { FaTrash, FaPlus, FaEdit } from "react-icons/fa";
 import { toast } from "react-toastify";
 import { useNavigate } from "react-router-dom";
-import Badge from "../../components/ui/badge/Badge";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHeader,
+  TableRow,
+} from "../../components/ui/table";
+import EditAssetModal from "./EditAsset";
 
-// Asset type definition
+
 interface Asset {
   id: number;
   name: string;
@@ -17,15 +24,16 @@ interface Asset {
   icon_image: string;
 }
 
-const API_URL = "app/assets/"; // Adjust to your actual endpoint
+const API_URL = "app/assets/";
 
 const AssetsInventory: React.FC = () => {
   const [assets, setAssets] = useState<Asset[]>([]);
   const [loading, setLoading] = useState(false);
-  const [editId, setEditId] = useState<number | null>(null);
-  const [editAsset, setEditAsset] = useState<Partial<Asset>>({});
   const [deleteId, setDeleteId] = useState<number | null>(null);
   const [deleteName, setDeleteName] = useState<string>("");
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [selectedAssetId, setSelectedAssetId] = useState<number | null>(null);
+
   const navigate = useNavigate();
 
   const fetchAssets = async () => {
@@ -34,32 +42,14 @@ const AssetsInventory: React.FC = () => {
       const res = await axiosInstance.get(API_URL);
       setAssets(res.data);
     } catch {
-      // Optionally handle error
+      toast.error("Failed to fetch assets", { position: "bottom-right" });
     }
     setLoading(false);
   };
 
-  const startEdit = (asset: Asset) => {
-    setEditId(asset.id);
-    setEditAsset({ ...asset });
-  };
-
-  const handleEditChange = (field: keyof Asset, value: string | number) => {
-    setEditAsset((prev) => ({ ...prev, [field]: value }));
-  };
-
-  const updateAsset = async (id: number) => {
-    setLoading(true);
-    try {
-      await axiosInstance.put(`${API_URL}${id}/`, editAsset);
-      setEditId(null);
-      setEditAsset({});
-      fetchAssets();
-    } catch {
-      // Optionally handle error
-    }
-    setLoading(false);
-  };
+  useEffect(() => {
+    fetchAssets();
+  }, []);
 
   const handleDeleteClick = (id: number, name: string) => {
     setDeleteId(id);
@@ -72,153 +62,140 @@ const AssetsInventory: React.FC = () => {
     try {
       await axiosInstance.delete(`${API_URL}${deleteId}/`);
       setAssets((prev) => prev.filter((a) => a.id !== deleteId));
-      setDeleteId(null);
-      setDeleteName("");
       toast.success("Deleted successfully", { position: "bottom-right" });
     } catch {
-      toast.error("Failed to delete", { position: "bottom-right" });
+      toast.error("Failed to delete asset", { position: "bottom-right" });
+    } finally {
+      setDeleteId(null);
+      setDeleteName("");
+      setLoading(false);
     }
-    setLoading(false);
   };
 
-  useEffect(() => {
+  const handleEditClick = (id: number) => {
+    setSelectedAssetId(id);
+    setIsEditModalOpen(true);
+  };
+
+  const handleAssetUpdated = () => {
+    setIsEditModalOpen(false);
+    setSelectedAssetId(null);
     fetchAssets();
-  }, []);
+  };
 
   return (
     <>
-      <PageMeta title="Assets & Inventory" description="Manage and view all company assets and inventory." />
+      <PageMeta title="Assets & Inventory" description="Manage and view all company assets." />
       <PageBreadcrumb pageTitle="Assets & Inventory" />
-      <div className="space-y-6">
-        <ComponentCard title="Assets & Inventory">
-          <div className="flex items-center justify-between mb-6">
-            <button
-              className="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-4 py-2 rounded flex items-center gap-2 shadow"
-              onClick={() => navigate("/admin/form-assets-inventory")}
-            >
-              <FaPlus /> Add Asset
-            </button>
-          </div>
-          {loading && <div className="text-center mt-4">Loading...</div>}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {assets.length === 0 ? (
-              <div className="shadow-lg bg-yellow-50 rounded-xl border border-yellow-200 flex flex-col items-center justify-center py-12">
-                <div className="text-6xl mb-4">📦</div>
-                <p className="text-lg font-medium mb-2">No assets found</p>
-                <p className="text-sm">Get started by adding your first asset</p>
-              </div>
-            ) : (
-              assets.map((asset, idx) => (
-                <div key={asset.id} className="shadow-lg rounded-xl border border-gray-200 hover:shadow-2xl transition-shadow duration-200 bg-gradient-to-br from-green-50 via-indigo-100 to-purple-100 dark:from-gray-800 dark:via-gray-900 dark:to-gray-700">
-                  <div className="p-6 space-y-3">
-                    {editId === asset.id ? (
-                      <>
-                        <div className="flex items-center gap-3 mb-2">
-                          <span className="inline-flex items-center justify-center w-8 h-8 bg-blue-100 text-blue-600 rounded-full font-semibold text-sm dark:bg-blue-900/30 dark:text-blue-400">
-                            {idx + 1}
-                          </span>
-                          <input
-                            type="text"
-                            value={editAsset.name || ""}
-                            onChange={e => handleEditChange("name", e.target.value)}
-                            className="border rounded px-2 py-1 w-full"
-                            placeholder="Asset Name"
-                          />
-                        </div>
-                        <input
-                          type="text"
-                          value={editAsset.description || ""}
-                          onChange={e => handleEditChange("description", e.target.value)}
-                          className="border rounded px-2 py-1 w-full mb-2"
-                          placeholder="Description"
+
+        <div className="flex items-center justify-between mb-4">
+          <button
+            className="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-4 py-2 rounded flex items-center gap-2 shadow"
+            onClick={() => navigate("/admin/form-assets-inventory")}
+          >
+            <FaPlus /> Add Asset
+          </button>
+        </div>
+
+        {loading ? (
+          <div className="text-center text-gray-500 dark:text-gray-300">Loading...</div>
+        ) : assets.length === 0 ? (
+          <div className="text-center py-6 text-gray-600 dark:text-gray-400">No assets available</div>
+        ) : (
+          <div className="overflow-x-auto rounded-lg shadow-md">
+            <Table className="min-w-full border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900">
+                <TableRow className="bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-200">
+                  <TableCell isHeader className="px-4 py-3 border-b text-center dark:text-gray-400 dark:bg-gray-900 bg-white">#</TableCell>
+                  <TableCell isHeader className="px-4 py-3 border-b text-center dark:text-gray-400 dark:bg-gray-900 bg-white">Name</TableCell>
+                  <TableCell isHeader className="px-4 py-3 border-b text-center dark:text-gray-400 dark:bg-gray-900 bg-white">Description</TableCell>
+                  <TableCell isHeader className="px-4 py-3 border-b text-center dark:text-gray-400 dark:bg-gray-900 bg-white">Quantity</TableCell>
+                  <TableCell isHeader className="px-4 py-3 border-b text-center dark:text-gray-400 dark:bg-gray-900 bg-white">Icon</TableCell>
+                  <TableCell isHeader className="px-4 py-3 border-b text-center dark:text-gray-400 dark:bg-gray-900 bg-white">Actions</TableCell>
+                </TableRow>
+              <TableBody>
+                {assets.map((asset, index) => (
+                  <TableRow key={asset.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/50">
+                    <TableCell className="px-4 py-3 text-center dark:text-gray-400 dark:bg-gray-900 bg-white">{index + 1}</TableCell>
+                    <TableCell className="px-4 py-3 text-center dark:text-gray-400 dark:bg-gray-900 bg-white">{asset.name}</TableCell>
+                    <TableCell className="px-4 py-3 text-center dark:text-gray-400 dark:bg-gray-900 bg-white">{asset.description}</TableCell>
+                    <TableCell className="px-4 py-3 text-center dark:text-gray-400 dark:bg-gray-900 bg-white">
+                      {asset.quantity}
+                    </TableCell>
+                    <TableCell className="p-3 text-center">
+                      {asset.icon_image && (
+                        <img
+                          src={asset.icon_image}
+                          alt="icon"
+                          className="w-10 h-10 object-cover rounded mx-auto border dark:border-gray-600"
                         />
-                        <input
-                          type="number"
-                          value={editAsset.quantity || 0}
-                          onChange={e => handleEditChange("quantity", Number(e.target.value))}
-                          className="border rounded px-2 py-1 w-20 text-center mb-2"
-                          placeholder="Quantity"
-                        />
-                        <div className="mb-2 text-center">
-                          {asset.icon_image && (
-                            <img
-                              src={asset.icon_image}
-                              alt="icon"
-                              className="w-10 h-10 object-cover rounded border mx-auto"
-                            />
-                          )}
-                        </div>
-                        <div className="flex gap-2 justify-end">
-                          <button className="text-green-600 hover:text-green-800" title="Save" onClick={() => updateAsset(asset.id)}>
-                            <FaEdit />
-                          </button>
-                          <button className="text-gray-500 hover:text-gray-700" title="Cancel" onClick={() => { setEditId(null); setEditAsset({}); }}>
-                            Cancel
-                          </button>
-                        </div>
-                      </>
-                    ) : (
-                      <>
-                        <div className="flex items-center gap-3 mb-2">
-                          <span className="inline-flex items-center justify-center w-8 h-8 bg-blue-100 text-blue-600 rounded-full font-semibold text-sm dark:bg-blue-900/30 dark:text-blue-400">
-                            {idx + 1}
-                          </span>
-                          <span className="text-lg font-medium text-gray-900 dark:text-white truncate">
-                            {asset.name}
-                          </span>
-                        </div>
-                        <div className="mb-2 text-gray-700 dark:text-gray-400">
-                          {asset.description}
-                        </div>
-                        <Badge variant="light">Quantity: {asset.quantity}</Badge>
-                        <div className="mb-2 text-center">
-                          {asset.icon_image && (
-                            <img
-                              src={asset.icon_image}
-                              alt="icon"
-                              className="w-10 h-10 object-cover rounded border mx-auto"
-                            />
-                          )}
-                        </div>
-                        <div className="flex gap-2 justify-end mt-2">
-                          <button className="text-blue-600 hover:text-blue-800" title="Edit" onClick={() => startEdit(asset)}>
-                            <FaEdit />
-                          </button>
-                          <button className="text-red-600 hover:text-red-800" title="Delete" onClick={() => handleDeleteClick(asset.id, asset.name)}>
-                            <FaTrash />
-                          </button>
-                        </div>
-                      </>
-                    )}
-                  </div>
-                </div>
-              ))
-            )}
+                      )}
+                    </TableCell>
+                    <TableCell className="p-3 text-center flex justify-center gap-3">
+                      <button
+                        onClick={() => handleEditClick(asset.id)}
+                        className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
+                        title="Edit"
+                      >
+                        <FaEdit />
+                      </button>
+                      <button
+                        onClick={() => handleDeleteClick(asset.id, asset.name)}
+                        className="text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300"
+                        title="Delete"
+                      >
+                        <FaTrash />
+                      </button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
           </div>
-        </ComponentCard>
-      </div>
+        )}
+
       {/* Delete Confirmation Modal */}
       {deleteId !== null && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center  bg-opacity-40">
-          <div className="bg-white rounded-lg shadow-lg p-8 w-full max-w-md">
-            <h2 className="text-xl font-bold mb-4 text-gray-900">Confirm Delete</h2>
-            <p className="mb-6 text-gray-700">Are you sure you want to delete this department <span className="font-semibold">{deleteName}</span>?</p>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+          <div className="bg-white dark:bg-gray-900 rounded-lg shadow-lg p-8 w-full max-w-md">
+            <h2 className="text-xl font-bold mb-4 text-gray-900 dark:text-gray-100">
+              Confirm Delete
+            </h2>
+            <p className="mb-6 text-gray-700 dark:text-gray-400">
+              Are you sure you want to delete asset{" "}
+              <span className="font-semibold">{deleteName}</span>?
+            </p>
             <div className="flex justify-end gap-3">
               <button
-                onClick={() => { setDeleteId(null); setDeleteName(""); }}
-                className="px-4 py-2 rounded-lg bg-gray-200 text-gray-800 hover:bg-gray-300 font-medium"
+                onClick={() => {
+                  setDeleteId(null);
+                  setDeleteName("");
+                }}
+                className="px-4 py-2 rounded-lg bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600 font-medium"
               >
                 Cancel
               </button>
               <button
                 onClick={confirmDelete}
-                className="px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 font-medium"
+                className="px-4 py-2 rounded-lg bg-red-600 text-white hover:bg-red-700 font-medium"
               >
                 Delete
               </button>
             </div>
           </div>
         </div>
+      )}
+
+      {/* Edit Modal */}
+      {isEditModalOpen && selectedAssetId !== null && (
+        <EditAssetModal
+          isOpen={isEditModalOpen}
+          assetId={selectedAssetId}
+          onClose={() => {
+            setIsEditModalOpen(false);
+            setSelectedAssetId(null);
+          }}
+          onUpdated={handleAssetUpdated}
+        />
       )}
     </>
   );

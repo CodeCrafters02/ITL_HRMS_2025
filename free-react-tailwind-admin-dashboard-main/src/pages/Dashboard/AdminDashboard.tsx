@@ -66,7 +66,14 @@ const AdminDashboard: React.FC = () => {
     );
   }
 
-  const StatCard = ({ title, value, icon: Icon, color, onClick, subtitle }: {
+  const StatCard = ({
+    title,
+    value,
+    icon: Icon,
+    color,
+    onClick,
+    subtitle,
+  }: {
     title: string;
     value: number;
     icon: React.ElementType;
@@ -74,15 +81,26 @@ const AdminDashboard: React.FC = () => {
     onClick?: () => void;
     subtitle?: string;
   }) => (
-    <div 
-      className={`bg-white rounded-xl shadow-sm border border-gray-100 p-6 hover:shadow-md transition-all duration-200 ${onClick ? 'cursor-pointer hover:scale-105' : ''}`}
+    <div
+      className={`rounded-xl p-6 shadow-sm border transition-all duration-200
+        bg-white border-gray-100 hover:shadow-md 
+        dark:bg-gray-800 dark:border-gray-700 dark:hover:shadow-lg
+        ${onClick ? "cursor-pointer hover:scale-105" : ""}`}
       onClick={onClick}
     >
       <div className="flex items-center justify-between">
         <div className="flex-1">
-          <p className="text-sm font-medium text-gray-600 mb-1">{title}</p>
-          <p className="text-3xl font-bold text-gray-900">{value}</p>
-          {subtitle && <p className="text-xs text-gray-500 mt-1">{subtitle}</p>}
+          <p className="text-sm font-medium text-gray-600 dark:text-gray-300 mb-1">
+            {title}
+          </p>
+          <p className="text-3xl font-bold text-gray-900 dark:text-gray-100">
+            {value}
+          </p>
+          {subtitle && (
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+              {subtitle}
+            </p>
+          )}
         </div>
         <div className={`p-3 rounded-lg ${color}`}>
           <Icon className="w-6 h-6 text-white" />
@@ -92,24 +110,31 @@ const AdminDashboard: React.FC = () => {
   );
 
   const InfoCard = ({ title, children }: { title: string; children: React.ReactNode }) => (
-    <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-      <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+    <div
+      className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6 transition-all duration-300"
+    >
+      <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4 flex items-center">
         {title}
       </h3>
       {children}
     </div>
   );
 
-  const MetricRow = ({ label, value, icon: Icon, color = "text-gray-700" }: {
+  const MetricRow = ({
+    label,
+    value,
+    icon: Icon,
+    color = "text-gray-700",
+  }: {
     label: string;
     value: string | number;
     icon?: React.ElementType;
     color?: string;
   }) => (
-    <div className="flex items-center justify-between py-3 border-b border-gray-50 last:border-b-0">
+    <div className="flex items-center justify-between py-3 border-b border-gray-100 dark:border-gray-700 last:border-b-0 transition-all duration-200">
       <div className="flex items-center space-x-3">
-        {Icon && <Icon className="w-4 h-4 text-gray-400" />}
-        <span className="text-sm font-medium text-gray-600">{label}</span>
+        {Icon && <Icon className="w-4 h-4 text-gray-400 dark:text-gray-500" />}
+        <span className="text-sm font-medium text-gray-600 dark:text-gray-300">{label}</span>
       </div>
       <span className={`text-sm font-semibold ${color}`}>{value}</span>
     </div>
@@ -121,11 +146,11 @@ const AdminDashboard: React.FC = () => {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
-      <div className="bg-white shadow-sm border-b border-gray-200">
+      <div className="bg-white shadow-sm border-b border-gray-200 dark:bg-gray-900">
         <div className="max-w-7xl mx-auto px-6 py-6">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">Admin Dashboard</h1>
+              <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-400">Admin Dashboard</h1>
               <p className="text-gray-600 mt-1">Welcome back! Here's what's happening with your organization.</p>
             </div>
             <div className="text-sm text-gray-500">
@@ -151,7 +176,7 @@ const AdminDashboard: React.FC = () => {
             value={data.department_count}
             icon={Building2}
             color="bg-green-500"
-            onClick={() => navigate("/admin/department")}
+            onClick={() => navigate("/admin/branch-mgt/department")}
           />
           <StatCard
             title="On Leave Today"

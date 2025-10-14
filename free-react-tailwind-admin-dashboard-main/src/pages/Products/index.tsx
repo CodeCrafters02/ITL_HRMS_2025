@@ -146,7 +146,13 @@ const ProductsPage: React.FC = () => {
                       <TableRow key={product.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/20 transition-colors">
                         <TableCell className="px-5 py-4 text-start dark:text-gray-400">{idx + 1}</TableCell>
                         <TableCell className="px-5 py-4 text-start dark:text-gray-400">{product.name}</TableCell>
-                        <TableCell className="px-5 py-4 text-start dark:text-gray-400">{product.description || "-"}</TableCell>
+                        <TableCell className="px-5 py-4 text-start dark:text-gray-400">
+                          {product.description
+                            ? product.description.length > 20
+                              ? product.description.slice(0, 20) + "..."
+                              : product.description
+                            : "-"}
+                        </TableCell>
                         <TableCell className="px-5 py-4 text-start dark:text-gray-400">{product.service_details?.name || "-"}</TableCell>
                         <TableCell className="px-5 py-4 text-start dark:text-gray-400">{product.client || "-"}</TableCell>
                         <TableCell className="px-5 py-4 text-start dark:text-gray-400">{product.is_active ? "Yes" : "No"}</TableCell>

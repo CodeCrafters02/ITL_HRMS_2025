@@ -1,128 +1,63 @@
-import React, { useEffect, useState } from 'react';
-import { Table, TableBody, TableCell, TableHeader, TableRow } from '../../components/ui/table';
-import { FaEdit, FaTrash, FaPlus } from 'react-icons/fa';
-import { useNavigate } from 'react-router-dom';
-import { toast } from 'react-toastify';
-import { axiosInstance } from '../Dashboard/api';
+import React, { useEffect, useState } from "react";
+import { Table, TableBody, TableCell, TableHeader, TableRow } from "../../components/ui/table";
+import { FaEdit, FaTrash, FaPlus } from "react-icons/fa";
+import { useNavigate } from "react-router-dom";
+import { toast } from "react-toastify";
+import { axiosInstance } from "../Dashboard/api";
+import EditRecruitment from "./EditRecruitment";
 
 interface Recruitment {
   id: number;
   reference_id: string;
   name: string;
   email: string;
-  address?: string;
   job_title: string;
   salary?: string;
-  application_date?: string;
-  interview_date?: string;
-  appointment_date?: string;
-  guardian_name?: string;
-  status: 'waiting' | 'selected' | 'rejected';
-  generated_letters?: Array<{
-    template_id: number;
-    // type is not used for backend logic, only for UI
-  }>;
+  status: "waiting" | "selected" | "rejected";
+  application_date?:string;
+  interview_date?:string;
+  appointment_date?:string;
+  guardian_name?:string;
 }
-
 
 const RecruitmentPage: React.FC = () => {
   const [recruitments, setRecruitments] = useState<Recruitment[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [editId, setEditId] = useState<number | null>(null);
-  const [editData, setEditData] = useState<Partial<Recruitment>>({});
-  const [showTemplateModal, setShowTemplateModal] = useState(false);
-  const [templateOptions, setTemplateOptions] = useState<Array<{id: number, title: string}>>([]);
+  const [deleteId, setDeleteId] = useState<number | null>(null);
+  const [templateOptions, setTemplateOptions] = useState<any[]>([]);
   const [templateLoading, setTemplateLoading] = useState(false);
   const [templateError, setTemplateError] = useState<string | null>(null);
-  const [templateSelectFor, setTemplateSelectFor] = useState<{id: number, type: 'offer' | 'appointment'} | null>(null);
-  const [deleteId, setDeleteId] = useState<number | null>(null);
+  const [showTemplateModal, setShowTemplateModal] = useState(false);
+  const [templateSelectFor, setTemplateSelectFor] = useState<{ id: number; type: string } | null>(null);
   const navigate = useNavigate();
 
-  // Fetch recruitments and their generated letters
   const fetchRecruitments = async () => {
     setLoading(true);
-    setError(null);
     try {
-      // Fetch recruitments
-  const response = await axiosInstance.get('app/recruitment/');
-      const recruitmentsData = response.data;
-      // Fetch generated letters for all candidates
-      const letterRes = await axiosInstance.get('app/generated-letters/');
-      const letters = letterRes.data; // [{candidate, template, ...}]
-      // Map generated letters to each recruitment (ignore type, only candidate and template)
-      type Letter = { candidate: number; template: number };
-      const recruitmentsWithLetters = recruitmentsData.map((rec: Recruitment) => {
-        const recLetters = (letters as Letter[]).filter((l) => l.candidate === rec.id);
-        return { ...rec, generated_letters: recLetters.map((l) => ({ template_id: l.template })) };
-      });
-      
-      setRecruitments(recruitmentsWithLetters);
+      const res = await axiosInstance.get("app/recruitment/");
+      setRecruitments(res.data);
     } catch (e) {
-      setError('Error fetching recruitments');
-      console.error('Error fetching recruitments:', e);
+      setError("Error fetching recruitments");
     } finally {
       setLoading(false);
     }
   };
 
-  const handleEdit = (r: Recruitment) => {
-    setEditId(r.id);
-    setEditData({ ...r });
-  };
-
-  const handleEditChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    const { name, value } = e.target;
-    setEditData(prev => ({ ...prev, [name]: value }));
-  };
-
-  const handleUpdate = async () => {
-    if (!editId) return;
-    setLoading(true);
-    setError(null);
-    try {
-  await axiosInstance.patch(`app/recruitment/${editId}/`, editData);
-      setEditId(null);
-      setEditData({});
-      fetchRecruitments();
-    } catch {
-      setError('Error updating recruitment');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleCancel = () => {
-    setEditId(null);
-    setEditData({});
-  };
-
-  const handleDeleteClick = (id: number) => {
-    setDeleteId(id);
-  };
-
-  const confirmDelete = async () => {
+  const handleDelete = async () => {
     if (!deleteId) return;
-    setLoading(true);
-    setError(null);
     try {
-  await axiosInstance.delete(`app/recruitment/${deleteId}/`);
+      await axiosInstance.delete(`app/recruitment/${deleteId}/`);
+      toast.success("Deleted successfully");
       fetchRecruitments();
       setDeleteId(null);
-      toast.success('Deleted successfully', { position: 'bottom-right' });
     } catch {
-      setError('Error deleting recruitment');
-      toast.error('Failed to delete', { position: 'bottom-right' });
-    } finally {
-      setLoading(false);
+      toast.error("Failed to delete");
     }
   };
 
-
-
-  // (getGeneratedLetter removed, was unused)
-
-  // For Offer Letter: if generated letter exists, go to letter page, else open template selection modal
+  // ✅ For Offer Letter
   const handleOfferLetterClick = async (rec: Recruitment) => {
     setTemplateLoading(true);
     setTemplateError(null);
@@ -162,7 +97,7 @@ const RecruitmentPage: React.FC = () => {
     }
   };
 
-  // For Appointment Letter: if generated letter exists, go to letter page, else open template selection modal
+  // ✅ For Appointment Letter
   const handleAppointmentLetterClick = async (rec: Recruitment) => {
     setTemplateLoading(true);
     setTemplateError(null);
@@ -191,8 +126,6 @@ const RecruitmentPage: React.FC = () => {
       setTemplateLoading(false);
     }
   };
-
-  // When user selects a template in the modal
   const handleTemplateSelect = async (template_id: number) => {
     if (templateSelectFor) {
       // Check if letter already exists for this candidate and template, always include type
@@ -224,212 +157,94 @@ const RecruitmentPage: React.FC = () => {
   }, []);
 
   return (
-  <div className="p-4 max-w-7xl mx-auto relative">
+    <div className="p-4 max-w-7xl mx-auto relative">
       <div className="flex items-center gap-10 mb-4">
         <h1 className="text-2xl font-bold dark:text-gray-400">Recruitment List</h1>
         <button
           className="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-4 py-2 rounded flex items-center gap-2 shadow"
-          onClick={() => navigate('/admin/form-recruitment')}
+          onClick={() => navigate("/admin/form-recruitment")}
         >
           <FaPlus /> Add
         </button>
       </div>
+
       {error && <div className="text-red-600 mb-2">{error}</div>}
       {loading ? (
         <div className="text-center py-8 text-lg text-gray-500">Loading...</div>
       ) : (
-        <div className="overflow-x-auto">
+      <div className="overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-white/[0.05] dark:bg-white/[0.03] z-[1000] m-5">
+        <div className="max-w-full overflow-x-auto">          
           <Table className="w-full border border-gray-200 rounded-lg shadow-lg bg-white">
-            <TableHeader>
-              <TableRow className="bg-gray-100 sticky top-0 z-10 text-sm font-semibold text-gray-700">
-                <TableCell className="px-4 py-3 border-b">S.no</TableCell>
-                <TableCell className="px-4 py-3 border-b">Action</TableCell>
-                <TableCell className="px-4 py-3 border-b">Ref ID</TableCell>
-                <TableCell className="px-4 py-3 border-b">Name</TableCell>
-                <TableCell className="px-4 py-3 border-b">Email</TableCell>
-                <TableCell className="px-4 py-3 border-b">Job Title</TableCell>
-                <TableCell className="px-4 py-3 border-b">Salary</TableCell>
-                <TableCell className="px-4 py-3 border-b">Application Date</TableCell>
-                <TableCell className="px-4 py-3 border-b">Interview Date</TableCell>
-                <TableCell className="px-4 py-3 border-b">Appointment Date</TableCell>
-                <TableCell className="px-4 py-3 border-b">Guardian</TableCell>
-                <TableCell className="px-4 py-3 border-b">Status</TableCell>
-                <TableCell className="px-4 py-3 border-b">Action</TableCell>
+              <TableRow className="bg-gray-100 text-sm font-semibold text-gray-700">
+                <TableCell isHeader className="px-4 py-3 border-b text-center dark:text-gray-400 dark:bg-gray-900 bg-white">S.no</TableCell>
+                <TableCell isHeader  className="px-4 py-3 border-b text-center dark:text-gray-400 dark:bg-gray-900 bg-white">Ref ID</TableCell>
+                <TableCell  isHeader className="px-4 py-3 border-b text-center dark:text-gray-400 dark:bg-gray-900 bg-white">Name</TableCell>
+                <TableCell  isHeader className="px-4 py-3 border-b text-center dark:text-gray-400 dark:bg-gray-900 bg-white">Email</TableCell>
+                <TableCell isHeader className="px-4 py-3 border-b text-center dark:text-gray-400 dark:bg-gray-900 bg-white">Job Title</TableCell>
+                <TableCell isHeader className="px-4 py-3 border-b text-center dark:text-gray-400 dark:bg-gray-900 bg-white">Salary</TableCell>
+                <TableCell isHeader className="px-4 py-3 border-b text-center dark:text-gray-400 dark:bg-gray-900 bg-white">Application Date</TableCell>
+                <TableCell isHeader className="px-4 py-3 border-b text-center dark:text-gray-400 dark:bg-gray-900 bg-white">Interview Date</TableCell>
+                <TableCell  isHeader className="px-4 py-3 border-b text-center dark:text-gray-400 dark:bg-gray-900 bg-white">Appointment Date</TableCell>
+                <TableCell isHeader className="px-4 py-3 border-b text-center dark:text-gray-400 dark:bg-gray-900 bg-white">Guardian</TableCell>
+                <TableCell isHeader className="px-4 py-3 border-b text-center dark:text-gray-400 dark:bg-gray-900 bg-white">Status</TableCell>
+                <TableCell isHeader className="px-4 py-3 border-b text-center dark:text-gray-400 dark:bg-gray-900 bg-white">Action</TableCell>
+                <TableCell isHeader className="px-4 py-3 border-b text-center dark:text-gray-400 dark:bg-gray-900 bg-white">Offer Letter</TableCell>
               </TableRow>
-            </TableHeader>
             <TableBody>
               {recruitments.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={12} className="text-center py-8 text-gray-500">No recruitment records found.</TableCell>
+                  <TableCell colSpan={8} className="text-center py-8 text-gray-500">
+                    No recruitment records found.
+                  </TableCell>
                 </TableRow>
               ) : (
-                recruitments.map((r, idx) => {
-                  return (
-                    <TableRow
-                      key={r.id}
-                      className={
-                        idx % 2 === 0
-                          ? 'bg-white hover:bg-blue-50 transition-colors'
-                          : 'bg-gray-50 hover:bg-blue-50 transition-colors'
-                      }
-                    >
-                      <TableCell className="px-4 py-3 border-b">{idx + 1}</TableCell>
-                      <TableCell className="px-4 py-3 border-b">
-                        <div className="flex items-center gap-2">
-                          {editId === r.id ? (
-                            <>
-                              <button className="text-green-600 hover:text-green-800" title="Update" onClick={handleUpdate}>
-                                Update
-                              </button>
-                              <button className="text-gray-600 hover:text-gray-800" title="Cancel" onClick={handleCancel}>
-                                Cancel
-                              </button>
-                            </>
-                          ) : (
-                            <>
-                              <button className="text-blue-600 hover:text-blue-800" title="Edit" onClick={() => handleEdit(r)}>
-                                <FaEdit />
-                              </button>
-                              <button className="text-red-600 hover:text-red-800" title="Delete" onClick={() => handleDeleteClick(r.id)}>
-                                <FaTrash />
-                              </button>
-                            </>
-                          )}
-                        </div>
-                      </TableCell>
-                     
-                      <TableCell className="px-4 py-3 border-b">{r.reference_id}</TableCell>
-                      <TableCell className="px-4 py-3 border-b">
-                        {editId === r.id ? (
-                          <input
-                            type="text"
-                            name="name"
-                            value={editData.name || ''}
-                            onChange={handleEditChange}
-                            className="border rounded px-2 py-1 w-full"
-                          />
-                        ) : (
-                          r.name
-                        )}
-                      </TableCell>
-                      <TableCell className="px-4 py-3 border-b">
-                        {editId === r.id ? (
-                          <input
-                            type="email"
-                            name="email"
-                            value={editData.email || ''}
-                            onChange={handleEditChange}
-                            className="border rounded px-2 py-1 w-full"
-                          />
-                        ) : (
-                          r.email
-                        )}
-                      </TableCell>
-                      <TableCell className="px-4 py-3 border-b">
-                        {editId === r.id ? (
-                          <input
-                            type="text"
-                            name="job_title"
-                            value={editData.job_title || ''}
-                            onChange={handleEditChange}
-                            className="border rounded px-2 py-1 w-full"
-                          />
-                        ) : (
-                          r.job_title
-                        )}
-                      </TableCell>
-                      <TableCell className="px-4 py-3 border-b">
-                        {editId === r.id ? (
-                          <input
-                            type="text"
-                            name="salary"
-                            value={editData.salary || ''}
-                            onChange={handleEditChange}
-                            className="border rounded px-2 py-1 w-full"
-                          />
-                        ) : (
-                          r.salary || '-'
-                        )}
-                      </TableCell>
-                      <TableCell className="px-4 py-3 border-b">
-                        {editId === r.id ? (
-                          <input
-                            type="date"
-                            name="application_date"
-                            value={editData.application_date || ''}
-                            onChange={handleEditChange}
-                            className="border rounded px-2 py-1 w-full"
-                          />
-                        ) : (
-                          r.application_date || '-'
-                        )}
-                      </TableCell>
-                      <TableCell className="px-4 py-3 border-b">
-                        {editId === r.id ? (
-                          <input
-                            type="date"
-                            name="interview_date"
-                            value={editData.interview_date || ''}
-                            onChange={handleEditChange}
-                            className="border rounded px-2 py-1 w-full"
-                          />
-                        ) : (
-                          r.interview_date || '-'
-                        )}
-                      </TableCell>
-                      <TableCell className="px-4 py-3 border-b">
-                        {editId === r.id ? (
-                          <input
-                            type="date"
-                            name="appointment_date"
-                            value={editData.appointment_date || ''}
-                            onChange={handleEditChange}
-                            className="border rounded px-2 py-1 w-full"
-                          />
-                        ) : (
-                          r.appointment_date || '-'
-                        )}
-                      </TableCell>
-                      <TableCell className="px-4 py-3 border-b">
-                        {editId === r.id ? (
-                          <input
-                            type="text"
-                            name="guardian_name"
-                            value={editData.guardian_name || ''}
-                            onChange={handleEditChange}
-                            className="border rounded px-2 py-1 w-full"
-                          />
-                        ) : (
-                          r.guardian_name || '-'
-                        )}
-                      </TableCell>
-                      <TableCell className="px-4 py-3 border-b">
-                        {editId === r.id ? (
-                          <select
-                            name="status"
-                            value={editData.status || 'waiting'}
-                            onChange={handleEditChange}
-                            className="border rounded px-2 py-1 w-full"
-                          >
-                            <option value="waiting">Waiting</option>
-                            <option value="selected">Selected</option>
-                            <option value="rejected">Rejected</option>
-                          </select>
-                        ) : (
-                          <span
-                            className={`px-2 py-1 rounded capitalize text-xs font-medium ${
-                              r.status === 'waiting'
-                                ? 'bg-yellow-100 text-yellow-800 border border-yellow-300'
-                                : r.status === 'selected'
-                                ? 'bg-green-100 text-green-800 border border-green-300'
-                                : 'bg-red-100 text-red-800 border border-red-300'
-                            }`}
-                          >
-                            {r.status}
-                          </span>
-                        )}
-                      </TableCell>
-                      <TableCell className="px-4 py-3 border-b">
+                recruitments.map((r, idx) => (
+                  <TableRow
+                    key={r.id}
+                    className={`${idx % 2 === 0 ? "bg-white" : "bg-gray-50"} hover:bg-blue-50 transition-colors`}
+                  >
+                    <TableCell className="px-4 py-3 text-center dark:text-gray-400 dark:bg-gray-900 bg-white">{idx + 1}</TableCell>
+                    <TableCell className="px-4 py-3 text-center dark:text-gray-400 dark:bg-gray-900 bg-white">{r.reference_id}</TableCell>
+                    <TableCell className="px-4 py-3 text-center dark:text-gray-400 dark:bg-gray-900 bg-white">{r.name}</TableCell>
+                    <TableCell className="px-4 py-3 text-center dark:text-gray-400 dark:bg-gray-900 bg-white">{r.email}</TableCell>
+                    <TableCell className="px-4 py-3 text-center dark:text-gray-400 dark:bg-gray-900 bg-white">{r.job_title}</TableCell>
+                    <TableCell className="px-4 py-3 text-center dark:text-gray-400 dark:bg-gray-900 bg-white">{r.salary || "-"}</TableCell>
+                    <TableCell className="px-4 py-3 text-center dark:text-gray-400 dark:bg-gray-900 bg-white">{r.application_date}</TableCell>
+                    <TableCell className="px-4 py-3 text-center dark:text-gray-400 dark:bg-gray-900 bg-white">{r.interview_date}</TableCell>
+                    <TableCell className="px-4 py-3 text-center dark:text-gray-400 dark:bg-gray-900 bg-white">{r.appointment_date}</TableCell>
+                    <TableCell className="px-4 py-3 text-center dark:text-gray-400 dark:bg-gray-900 bg-white">{r.guardian_name}</TableCell>
+
+                    <TableCell className="px-4 py-3 text-center dark:text-gray-400 dark:bg-gray-900 bg-white">
+                      <span
+                        className={`px-2 py-1 rounded capitalize text-xs font-medium ${
+                          r.status === "waiting"
+                            ? "bg-yellow-100 text-yellow-800 border border-yellow-300"
+                            : r.status === "selected"
+                            ? "bg-green-100 text-green-800 border border-green-300"
+                            : "bg-red-100 text-red-800 border border-red-300"
+                        }`}
+                      >
+                        {r.status}
+                      </span>
+                    </TableCell>
+                    <TableCell className="px-4 py-3 text-center dark:text-gray-400 dark:bg-gray-900 bg-white">
+                      <div className="flex items-center gap-2">
+                        <button
+                          className="text-blue-600 hover:text-blue-800"
+                          onClick={() => setEditId(r.id)}
+                        >
+                          <FaEdit />
+                        </button>
+                        <button
+                          className="text-red-600 hover:text-red-800"
+                          onClick={() => setDeleteId(r.id)}
+                        >
+                          <FaTrash />
+                        </button>
+                      </div>
+                    </TableCell>
+
+                      <TableCell className="px-4 py-3 text-center dark:text-gray-400 dark:bg-gray-900 bg-white">
                         {r.status === 'selected' && (
                           <div className="flex gap-2">
                             <button
@@ -449,15 +264,47 @@ const RecruitmentPage: React.FC = () => {
                           </div>
                         )}
                       </TableCell>
-                    </TableRow>
-                  );
-                })
+
+                  </TableRow>
+                ))
               )}
             </TableBody>
           </Table>
         </div>
+        </div>
       )}
-      {/* Template Selection Modal rendered as a child of the main content area */}
+
+      {/* ✅ Edit Modal */}
+      {editId && (
+        <EditRecruitment
+          id={editId}
+          onClose={() => setEditId(null)}
+          onUpdated={() => {
+            fetchRecruitments();
+            setEditId(null);
+          }}
+        />
+      )}
+
+      {/* ✅ Delete Confirmation */}
+      {deleteId && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
+          <div className="bg-white p-6 rounded-lg shadow-lg w-96">
+            <h2 className="text-lg font-bold mb-4">Confirm Delete</h2>
+            <p className="text-gray-600 mb-6">Are you sure you want to delete this record?</p>
+            <div className="flex justify-end gap-3">
+              <button onClick={() => setDeleteId(null)} className="px-4 py-2 bg-gray-200 rounded">
+                Cancel
+              </button>
+              <button onClick={handleDelete} className="px-4 py-2 bg-red-600 text-white rounded">
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ⚙️ Template Modal (Optional future UI) */}
       {showTemplateModal && (
         <>
           <div className="absolute inset-0 bg-blur bg-opacity-40 backdrop-blur-sm z-40" />
@@ -495,29 +342,7 @@ const RecruitmentPage: React.FC = () => {
           </div>
         </>
       )}
-      {/* Delete Confirmation Modal */}
-      {deleteId !== null && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center  bg-opacity-40">
-          <div className="bg-white rounded-lg shadow-lg p-8 w-full max-w-md">
-            <h2 className="text-xl font-bold mb-4 text-gray-900">Confirm Delete</h2>
-            <p className="mb-6 text-gray-700">Are you sure you want to delete this department?</p>
-            <div className="flex justify-end gap-3">
-              <button
-                onClick={() => setDeleteId(null)}
-                className="px-4 py-2 rounded-lg bg-gray-200 text-gray-800 hover:bg-gray-300 font-medium"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={confirmDelete}
-                className="px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 font-medium"
-              >
-                Delete
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+
     </div>
   );
 };

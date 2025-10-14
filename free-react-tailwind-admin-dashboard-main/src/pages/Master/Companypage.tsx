@@ -218,10 +218,10 @@ const CompanyPage: React.FC = () => {
                       </TableCell>
                       <TableCell className="px-5 py-4 dark:text-gray-400">{company.admin_username || "N/A"}</TableCell>
                       <TableCell className="px-5 py-4 dark:text-gray-400 flex gap-3">
-                        <button className="text-blue-600" onClick={() => navigate(`/master/company/edit/${company.id}`)}>
+                        <button className="text-blue-600 px-1 py-4" onClick={() => navigate(`/master/company/edit/${company.id}`)}>
                           <FiEdit />
                         </button>
-                        <button className="text-red-600" onClick={() => handleDelete(company.id)}>
+                        <button className="text-red-600 px-1 py-4" onClick={() => handleDelete(company.id)}>
                           <FiTrash2 />
                         </button>
 

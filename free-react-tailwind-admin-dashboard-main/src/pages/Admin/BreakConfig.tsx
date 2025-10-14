@@ -19,7 +19,6 @@ const BreakConfigDisplay: React.FC = () => {
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Fetch all breaks (initial load)
   const fetchBreaks = () => {
     setLoading(true);
     axiosInstance
@@ -34,127 +33,104 @@ const BreakConfigDisplay: React.FC = () => {
       });
   };
 
-  // Refetch breaks after CRUD (no loading spinner)
   const refetchBreaks = () => {
     axiosInstance
       .get("app/break-config/")
-      .then((res) => {
-        setBreaks(res.data);
-      })
-      .catch((err) => {
-        setError(err?.response?.data?.detail || "Failed to fetch break configs");
-      });
+      .then((res) => setBreaks(res.data))
+      .catch((err) => setError(err?.response?.data?.detail || "Failed to fetch break configs"));
   };
 
-  useEffect(() => {
-    fetchBreaks();
-    // / eslint-disable-next-line
-  }, []);
+  useEffect(() => { fetchBreaks(); }, []);
 
-  if (loading) return (
-    <div className="flex items-center justify-center min-h-64">
-      <div className="text-gray-500">Loading break configurations...</div>
-    </div>
-  );
+  if (loading)
+    return (
+      <div className="flex items-center justify-center min-h-64">
+        <div className="text-gray-500 dark:text-gray-400">Loading break configurations...</div>
+      </div>
+    );
 
-  if (error) return (
-    <div className="flex items-center justify-center min-h-64">
-      <div className="text-red-500 bg-red-50 p-4 rounded-lg border border-red-200">{error}</div>
-    </div>
-  );
+  if (error)
+    return (
+      <div className="flex items-center justify-center min-h-64">
+        <div className="text-red-500 bg-red-50 dark:bg-red-900/30 p-4 rounded-lg border border-red-200 dark:border-red-700">
+          {error}
+        </div>
+      </div>
+    );
 
-  // Group breaks by type
-  const shortBreaks = breaks.filter((b: BreakConfig) => b.break_choice === "short_break");
-  const mealBreak = breaks.find((b: BreakConfig) => b.break_choice === "meal_break");
-  const dontDisturb = breaks.find((b: BreakConfig) => b.break_choice === "dont_disturb");
-  // CRUD handlers
+  const shortBreaks = breaks.filter((b) => b.break_choice === "short_break");
+  const mealBreak = breaks.find((b) => b.break_choice === "meal_break");
+  const dontDisturb = breaks.find((b) => b.break_choice === "dont_disturb");
+
   const handleShortBreakChange = (id: number, changes: Partial<BreakConfig>) => {
-    const breakToUpdate = breaks.find((b: BreakConfig) => b.id === id);
+    const breakToUpdate = breaks.find((b) => b.id === id);
     if (!breakToUpdate) return;
-    axiosInstance.patch(`app/break-config/${id}/`, { ...breakToUpdate, ...changes })
-      .then(() => refetchBreaks());
+    axiosInstance.patch(`app/break-config/${id}/`, { ...breakToUpdate, ...changes }).then(refetchBreaks);
   };
-  const handleRemoveShortBreak = (id: number) => {
-  axiosInstance.delete(`app/break-config/${id}/`).then(() => refetchBreaks());
-  };
-  const handleAddShortBreak = () => {
-    axiosInstance.post(`app/break-config/`, {
-      break_choice: "short_break",
-      duration_minutes: 5,
-      enabled: true,
-    }).then(() => refetchBreaks());
-  };
-  const handleMealBreakChange = (id: number, changes: Partial<BreakConfig>) => {
-    const breakToUpdate = breaks.find((b: BreakConfig) => b.id === id);
-    if (!breakToUpdate) return;
-    axiosInstance.patch(`app/break-config/${id}/`, { ...breakToUpdate, ...changes })
-      .then(() => refetchBreaks());
-  };
-  const handleAddMealBreak = () => {
-    axiosInstance.post(`app/break-config/`, {
-      break_choice: "meal_break",
-      duration_minutes: 30,
-      enabled: true,
-    }).then(() => refetchBreaks());
-  };
-  const handleRemoveMealBreak = (id: number) => {
-  axiosInstance.delete(`app/break-config/${id}/`).then(() => refetchBreaks());
-  };
-  const handleDontDisturbChange = (id: number, changes: Partial<BreakConfig>) => {
-    const breakToUpdate = breaks.find((b: BreakConfig) => b.id === id);
-    if (!breakToUpdate) return;
-    axiosInstance.patch(`app/break-config/${id}/`, { ...breakToUpdate, ...changes })
-      .then(() => refetchBreaks());
-  };
+  const handleRemoveShortBreak = (id: number) => { axiosInstance.delete(`app/break-config/${id}/`).then(refetchBreaks); };
+  const handleAddShortBreak = () => { axiosInstance.post(`app/break-config/`, { break_choice: "short_break", duration_minutes: 5, enabled: true }).then(refetchBreaks); };
 
+  const handleMealBreakChange = (id: number, changes: Partial<BreakConfig>) => {
+    const breakToUpdate = breaks.find((b) => b.id === id);
+    if (!breakToUpdate) return;
+    axiosInstance.patch(`app/break-config/${id}/`, { ...breakToUpdate, ...changes }).then(refetchBreaks);
+  };
+  const handleAddMealBreak = () => { axiosInstance.post(`app/break-config/`, { break_choice: "meal_break", duration_minutes: 30, enabled: true }).then(refetchBreaks); };
+  const handleRemoveMealBreak = (id: number) => { axiosInstance.delete(`app/break-config/${id}/`).then(refetchBreaks); };
+
+  const handleDontDisturbChange = (id: number, changes: Partial<BreakConfig>) => {
+    const breakToUpdate = breaks.find((b) => b.id === id);
+    if (!breakToUpdate) return;
+    axiosInstance.patch(`app/break-config/${id}/`, { ...breakToUpdate, ...changes }).then(refetchBreaks);
+  };
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-8 transition-all duration-300">
       <div className="container mx-auto px-4 max-w-4xl">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Break Configurations</h1>
-          <p className="text-gray-600">Manage break settings for your organization</p>
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100 mb-2">Break Configurations</h1>
+          <p className="text-gray-600 dark:text-gray-300">Manage break settings for your organization</p>
         </div>
         <div className="grid gap-6">
-          {/* Short Breaks Section */}
+          {/* Short Breaks */}
           <ComponentCard title="Short Breaks">
             <div className="space-y-4">
-              <p className="text-sm text-gray-600 mb-4">
+              <p className="text-sm text-gray-600 dark:text-gray-300 mb-4">
                 Configure multiple short breaks with different durations. Users can take these breaks throughout their work day.
               </p>
               {shortBreaks.length === 0 ? (
-                <div className="text-center py-8 text-gray-500 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300">
-                  <Clock className="w-12 h-12 mx-auto mb-3 text-gray-400" />
+                <div className="text-center py-8 text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-800 rounded-lg border-2 border-dashed border-gray-300 dark:border-gray-700">
+                  <Clock className="w-12 h-12 mx-auto mb-3 text-gray-400 dark:text-gray-500" />
                   <p className="font-medium">No short breaks configured</p>
                   <p className="text-sm">Add your first short break to get started</p>
                 </div>
               ) : (
                 <div className="space-y-3">
-                  {shortBreaks.map(breakItem => (
-                    <div key={breakItem.id} className="flex items-center gap-4 bg-blue-50 p-4 rounded-lg border border-blue-100">
+                  {shortBreaks.map((b) => (
+                    <div key={b.id} className="flex items-center gap-4 bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg border border-blue-100 dark:border-blue-700">
                       <div className="flex items-center gap-2 flex-1">
                         <Clock className="w-4 h-4 text-blue-500" />
-                        <span className="text-sm font-medium text-gray-700">Duration:</span>
+                        <span className="text-sm font-medium text-gray-700 dark:text-gray-200">Duration:</span>
                         <InputField
                           type="number"
                           min={1}
-                          value={breakItem.duration_minutes ?? 5}
-                          onChange={e => handleShortBreakChange(breakItem.id, { duration_minutes: Number(e.target.value) })}
-                          className="w-20 text-center"
+                          value={b.duration_minutes ?? 5}
+                          onChange={(e) => handleShortBreakChange(b.id, { duration_minutes: Number(e.target.value) })}
+                          className="w-20 text-center bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 border border-gray-300 dark:border-gray-700"
                           placeholder="5"
                         />
-                        <span className="text-sm text-gray-600">minutes</span>
+                        <span className="text-sm text-gray-600 dark:text-gray-300">minutes</span>
                       </div>
                       <Switch
-                        defaultChecked={breakItem.enabled}
-                        onChange={val => handleShortBreakChange(breakItem.id, { enabled: val })}
-                        label={breakItem.enabled ? "Enabled" : "Disabled"}
+                        defaultChecked={b.enabled}
+                        onChange={(val) => handleShortBreakChange(b.id, { enabled: val })}
+                        label={b.enabled ? "Enabled" : "Disabled"}
                       />
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => handleRemoveShortBreak(breakItem.id)}
-                        className="flex items-center gap-1 text-red-600 border-red-300 hover:bg-red-50"
+                        onClick={() => handleRemoveShortBreak(b.id)}
+                        className="flex items-center gap-1 text-red-600 border-red-300 hover:bg-red-50 dark:hover:bg-red-900/30"
                       >
                         <X className="w-4 h-4" />
                         Remove
@@ -163,51 +139,47 @@ const BreakConfigDisplay: React.FC = () => {
                   ))}
                 </div>
               )}
-              <div className="pt-4 border-t border-gray-200">
-                <Button
-                  variant="primary"
-                  size="md"
-                  onClick={handleAddShortBreak}
-                  className="flex items-center gap-2"
-                >
+              <div className="pt-4 border-t border-gray-200 dark:border-gray-700">
+                <Button variant="primary" size="md" onClick={handleAddShortBreak} className="flex items-center gap-2">
                   <Plus className="w-4 h-4" />
                   Add Short Break
                 </Button>
               </div>
             </div>
           </ComponentCard>
-          {/* Meal Break Section */}
+
+          {/* Meal Break */}
           <ComponentCard title="Meal Break">
             <div className="space-y-4">
-              <p className="text-sm text-gray-600 mb-4">
+              <p className="text-sm text-gray-600 dark:text-gray-300 mb-4">
                 Configure a single meal break with adjustable duration. Typically used for lunch breaks.
               </p>
               {mealBreak ? (
-                <div className="bg-orange-50 p-4 rounded-lg border border-orange-100">
+                <div className="bg-orange-50 dark:bg-orange-900/20 p-4 rounded-lg border border-orange-100 dark:border-orange-700">
                   <div className="flex items-center gap-4">
                     <div className="flex items-center gap-2 flex-1">
                       <Coffee className="w-4 h-4 text-orange-500" />
-                      <span className="text-sm font-medium text-gray-700">Duration:</span>
+                      <span className="text-sm font-medium text-gray-700 dark:text-gray-200">Duration:</span>
                       <InputField
                         type="number"
                         min={1}
                         value={mealBreak.duration_minutes ?? 30}
-                        onChange={e => handleMealBreakChange(mealBreak.id, { duration_minutes: Number(e.target.value) })}
-                        className="w-20 text-center"
+                        onChange={(e) => handleMealBreakChange(mealBreak.id, { duration_minutes: Number(e.target.value) })}
+                        className="w-20 text-center bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 border border-gray-300 dark:border-gray-700"
                         placeholder="30"
                       />
-                      <span className="text-sm text-gray-600">minutes</span>
+                      <span className="text-sm text-gray-600 dark:text-gray-300">minutes</span>
                     </div>
                     <Switch
                       defaultChecked={mealBreak.enabled}
-                      onChange={val => handleMealBreakChange(mealBreak.id, { enabled: val })}
+                      onChange={(val) => handleMealBreakChange(mealBreak.id, { enabled: val })}
                       label={mealBreak.enabled ? "Enabled" : "Disabled"}
                     />
                     <Button
                       variant="outline"
                       size="sm"
                       onClick={() => handleRemoveMealBreak(mealBreak.id)}
-                      className="flex items-center gap-1 text-red-600 border-red-300 hover:bg-red-50"
+                      className="flex items-center gap-1 text-red-600 border-red-300 hover:bg-red-50 dark:hover:bg-red-900/30"
                     >
                       <X className="w-4 h-4" />
                       Remove
@@ -215,8 +187,8 @@ const BreakConfigDisplay: React.FC = () => {
                   </div>
                 </div>
               ) : (
-                <div className="text-center py-6 text-gray-500 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300">
-                  <Coffee className="w-10 h-10 mx-auto mb-2 text-gray-400" />
+                <div className="text-center py-6 text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-800 rounded-lg border-2 border-dashed border-gray-300 dark:border-gray-700">
+                  <Coffee className="w-10 h-10 mx-auto mb-2 text-gray-400 dark:text-gray-500" />
                   <p className="font-medium mb-3">No meal break configured</p>
                   <Button variant="primary" size="md" onClick={handleAddMealBreak}>
                     Add Meal Break
@@ -225,30 +197,31 @@ const BreakConfigDisplay: React.FC = () => {
               )}
             </div>
           </ComponentCard>
-          {/* Don't Disturb Section */}
+
+          {/* Don't Disturb */}
           <ComponentCard title="Don't Disturb">
             <div className="space-y-4">
-              <p className="text-sm text-gray-600 mb-4">
+              <p className="text-sm text-gray-600 dark:text-gray-300 mb-4">
                 Enable "Don't Disturb" mode to prevent interruptions. This setting has no fixed duration.
               </p>
               {dontDisturb ? (
-                <div className="bg-purple-50 p-4 rounded-lg border border-purple-100">
+                <div className="bg-purple-50 dark:bg-purple-900/20 p-4 rounded-lg border border-purple-100 dark:border-purple-700">
                   <div className="flex items-center gap-4">
                     <div className="flex items-center gap-2 flex-1">
                       <Moon className="w-4 h-4 text-purple-500" />
-                      <span className="text-sm font-medium text-gray-700">Don't Disturb Mode</span>
-                      <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">No fixed duration</span>
+                      <span className="text-sm font-medium text-gray-700 dark:text-gray-200">Don't Disturb Mode</span>
+                      <span className="text-xs text-gray-500 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded">No fixed duration</span>
                     </div>
                     <Switch
                       defaultChecked={dontDisturb.enabled}
-                      onChange={val => handleDontDisturbChange(dontDisturb.id, { enabled: val })}
+                      onChange={(val) => handleDontDisturbChange(dontDisturb.id, { enabled: val })}
                       label={dontDisturb.enabled ? "Enabled" : "Disabled"}
                     />
                   </div>
                 </div>
               ) : (
-                <div className="text-center py-6 text-gray-500 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300">
-                  <Moon className="w-10 h-10 mx-auto mb-2 text-gray-400" />
+                <div className="text-center py-6 text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-800 rounded-lg border-2 border-dashed border-gray-300 dark:border-gray-700">
+                  <Moon className="w-10 h-10 mx-auto mb-2 text-gray-400 dark:text-gray-500" />
                   <p className="font-medium">"Don't Disturb" break is not configured</p>
                   <p className="text-sm">This feature may be managed by system settings</p>
                 </div>
