@@ -517,7 +517,7 @@ class EmployeeCalendarAPIView(APIView):
                 week.append({
                     'day': day_num,
                     'date': str(day_date),
-                    'admin_events': [{'id': e.id, 'title': e.name} for e in admin_events],
+                    'admin_events': [{'id': e.id, 'title': e.name,'description':e.description} for e in admin_events],
                     'personal_events': [{'id': e.id, 'title': e.name} for e in personal_events],
                     'is_today': day_date == today,
                     'is_selected': day_date == current_date

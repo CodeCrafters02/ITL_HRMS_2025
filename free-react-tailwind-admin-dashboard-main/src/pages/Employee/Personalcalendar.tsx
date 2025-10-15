@@ -49,7 +49,7 @@ const PersonalCalendar: React.FC = () => {
 
       const calendarEvents: CalendarEvent[] = [];
       
-      response.data.weeks.forEach((week: { day: string; date: string; personal_events: { id: number; name?: string; title?: string; description?: string }[]; admin_events: { id: number; name?: string; title?: string }[] }[]) => {
+      response.data.weeks.forEach((week: { day: string; date: string; personal_events: { id: number; name?: string; title?: string; description?: string }[]; admin_events: { id: number; name?: string; title?: string,description?:string }[] }[]) => {
         week.forEach((day) => {
           if (day.day) {
             // Add personal events
@@ -70,9 +70,11 @@ const PersonalCalendar: React.FC = () => {
               calendarEvents.push({
                 id: `admin-${event.id}`,
                 title: event.name || event.title || '',
+                description:event.description || '',
                 start: day.date,
                 extendedProps: {
-                  type: 'admin'
+                  type: 'admin',
+                  description:event.description || '',
                 }
               });
             });
@@ -101,7 +103,7 @@ const PersonalCalendar: React.FC = () => {
     if (event.id && event.id.startsWith('personal-')) {
       setSelectedEvent(event as unknown as CalendarEvent);
       setEventName(event.title);
-      setEventDate(event.start?.toISOString().split("T")[0] || "");
+      setEventDate(event.startStr || ""); // <-- use startStr instead of start.toISOString()
       setEventDescription(event.extendedProps.description || "");
       openModal();
     }
@@ -293,16 +295,23 @@ const renderEventContent = (eventInfo: { event: { title: string; extendedProps: 
   const isPersonal = eventInfo.event.extendedProps.type === 'personal';
   const colorClass = isPersonal ? 'fc-bg-primary' : 'fc-bg-success';
   const textColor = isPersonal ? 'text-blue-700' : 'text-green-700';
-  
+  const description = eventInfo.event.extendedProps.description;
+
   return (
-    <div className={`event-fc-color flex fc-event-main ${colorClass} p-1 rounded-sm`}>
+    <div className={`event-fc-color flex fc-event-main ${colorClass} p-1 rounded-sm flex-col`}>
       <div className="fc-daygrid-event-dot"></div>
       <div className="fc-event-time">{eventInfo.timeText}</div>
       <div className={`fc-event-title ${textColor} font-medium`}>
         {isPersonal ? '📅 ' : '🏢 '}{eventInfo.event.title}
       </div>
+      {description && (
+        <div className="text-xs text-gray-600 dark:text-gray-300 ml-1">
+          {description}
+        </div>
+      )}
     </div>
   );
 };
+
 
 export default PersonalCalendar;

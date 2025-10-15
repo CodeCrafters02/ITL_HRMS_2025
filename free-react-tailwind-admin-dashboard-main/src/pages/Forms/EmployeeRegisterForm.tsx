@@ -197,7 +197,7 @@ const EmployeeRegisterForm: React.FC = () => {
     setShowEsic(form.esic_status === 'yes');
   }, [form.payment_method, form.epf_status, form.esic_status]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+const handleSubmit = async (e: React.FormEvent) => {
   e.preventDefault();
   setError(null);
   setSuccess(null);
@@ -205,7 +205,10 @@ const EmployeeRegisterForm: React.FC = () => {
 
   try {
     // Prepare payload: only include non-empty fields, convert PKs to int, handle file upload, and ensure date format
-    const payload: Record<string, unknown> = { ...form, asset_details: selectedAssets };
+    const payload: Record<string, any> = { ...form };
+
+    // Add asset IDs
+    payload.asset_details = selectedAssets; // This is an array of numbers
 
     // Remove empty string fields
     Object.keys(payload).forEach((key) => {
@@ -252,7 +255,8 @@ const EmployeeRegisterForm: React.FC = () => {
       if (value instanceof File) {
         formData.append(key, value);
       } else if (Array.isArray(value)) {
-        value.forEach((v, i) => formData.append(`${key}[${i}]`, String(v)));
+        // Append arrays without [i] to be compatible with DRF
+        value.forEach(v => formData.append(key, String(v)));
       } else if (value !== undefined && value !== null) {
         formData.append(key, String(value));
       }
@@ -270,14 +274,21 @@ const EmployeeRegisterForm: React.FC = () => {
     type AxiosErrorType = { response?: { data?: unknown } };
     const errorObj = err as AxiosErrorType;
 
-    if (typeof err === 'object' && err !== null && 'response' in errorObj && errorObj.response && 'data' in errorObj.response) {
+    if (
+      typeof err === 'object' &&
+      err !== null &&
+      'response' in errorObj &&
+      errorObj.response &&
+      'data' in errorObj.response
+    ) {
       const respData = errorObj.response.data;
       if (typeof respData === 'string') {
         errorMsg = respData;
       } else if (typeof respData === 'object' && respData !== null) {
         const extractMessages = (obj: unknown): string[] => {
           if (Array.isArray(obj)) return obj.map(extractMessages).flat();
-          if (typeof obj === 'object' && obj !== null) return Object.values(obj).map(extractMessages).flat();
+          if (typeof obj === 'object' && obj !== null)
+            return Object.values(obj).map(extractMessages).flat();
           if (typeof obj === 'string') return [obj];
           return [];
         };

@@ -15,11 +15,6 @@ function formatTimeString(time: string) {
   }
   return time;
 }
-function parseTimeString(val: string) {
-  if (/^\d{2}:\d{2}:\d{2}$/.test(val)) return val;
-  if (/^\d{2}:\d{2}$/.test(val)) return val + ":00";
-  return val;
-}
 
 const ShiftConfigForm: React.FC = () => {
   const [form, setForm] = useState({
@@ -35,25 +30,37 @@ const ShiftConfigForm: React.FC = () => {
   const navigate = useNavigate();
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value, type } = e.target;
-    if (["grace_period", "half_day", "full_day", "checkin", "checkout"].includes(name) && type === "time") {
-      setForm({ ...form, [name]: parseTimeString(value) });
-    } else {
-      setForm({ ...form, [name]: value });
-    }
+    const { name, value } = e.target;
+    setForm({ ...form, [name]: value });
   };
+
+  const validateDuration = (val: string) => /^\d{1,2}:\d{2}:\d{2}$/.test(val);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError("");
+
+    // Optional validation for duration fields
+    for (const field of ["grace_period", "half_day", "full_day"]) {
+      const val = (form as any)[field];
+      if (val && !validateDuration(val)) {
+        setError(`${field.replace("_", " ")} must be in HH:mm:ss format`);
+        setLoading(false);
+        return;
+      }
+    }
+
     try {
       await axiosInstance.post("app/shift-policies/", form);
-      navigate("/admin/configuration/shift"); // Adjust path as needed
+      navigate("/admin/configuration/shift");
     } catch (err: unknown) {
       type AxiosErrorType = { response?: { data?: { detail?: string } } };
       const errorObj = err as AxiosErrorType;
-      setError(errorObj.response?.data?.detail || "Failed to add shift policy. Please try again.");
+      setError(
+        errorObj.response?.data?.detail ||
+          "Failed to add shift policy. Please try again."
+      );
     }
     setLoading(false);
   };
@@ -98,34 +105,34 @@ const ShiftConfigForm: React.FC = () => {
           />
         </div>
         <div>
-          <label className="block font-medium mb-1">Grace Period (hh:mm:ss)</label>
+          <label className="block font-medium mb-1">Grace Period (HH:mm:ss)</label>
           <input
-            type="time"
-            step="1"
+            type="text"
             name="grace_period"
-            value={formatTimeString(form.grace_period)}
+            placeholder="HH:mm:ss"
+            value={form.grace_period}
             onChange={handleChange}
             className="border rounded px-3 py-2 w-full"
           />
         </div>
         <div>
-          <label className="block font-medium mb-1">Half Day (hh:mm:ss)</label>
+          <label className="block font-medium mb-1">Half Day (HH:mm:ss)</label>
           <input
-            type="time"
-            step="1"
+            type="text"
             name="half_day"
-            value={formatTimeString(form.half_day)}
+            placeholder="HH:mm:ss"
+            value={form.half_day}
             onChange={handleChange}
             className="border rounded px-3 py-2 w-full"
           />
         </div>
         <div>
-          <label className="block font-medium mb-1">Full Day (hh:mm:ss)</label>
+          <label className="block font-medium mb-1">Full Day (HH:mm:ss)</label>
           <input
-            type="time"
-            step="1"
+            type="text"
             name="full_day"
-            value={formatTimeString(form.full_day)}
+            placeholder="HH:mm:ss"
+            value={form.full_day}
             onChange={handleChange}
             className="border rounded px-3 py-2 w-full"
           />

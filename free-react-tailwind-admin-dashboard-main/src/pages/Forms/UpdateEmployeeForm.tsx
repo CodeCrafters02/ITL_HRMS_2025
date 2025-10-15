@@ -644,16 +644,15 @@ const UpdateEmployeeForm: React.FC = () => {
 
                   {assetOptions.length > 0 && (
                     <div>
-                      <MultiSelect
-                        label="Asset Details"
-                        options={assetOptions.map(asset => ({
-                          value: asset.id.toString(),
-                          text: asset.name,
-                          selected: selectedAssets.includes(asset.id)
-                        }))}
-                        key={selectedAssets.join(',')}
-                        onChange={(values) => setSelectedAssets(values.map(v => Number(v)))}
-                      />
+                    <MultiSelect
+                      label="Asset Details"
+                      options={assetOptions.map(asset => ({
+                        value: asset.id.toString(),
+                        text: asset.name
+                      }))}
+                      value={selectedAssets.map(id => id.toString())}
+                      onChange={(values) => setSelectedAssets(values.map(v => Number(v)))}
+                    />
                     </div>
                   )}
                 </div>

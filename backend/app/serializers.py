@@ -456,35 +456,32 @@ class EmployeeSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         request = self.context.get('request')
+        if not request:
+            raise serializers.ValidationError("Request context is required.")
+
         admin_user = request.user
         assets = validated_data.pop('asset_details', [])
 
-
-        # print("Requested data:", request.data)
-
-
-        # Get reporting info directly from request.data
-        reporting_manager_id = request.data.get('reporting_manager')  # This is a string ID
-        reporting_level_id = request.data.get('reporting_level')      # optional
-
-        # print("reporting managaer",reporting_manager_id)
-        # print("reporting level ",reporting_level_id)
-
+        # --- Get reporting info from request.data ---
+        reporting_manager_id = request.data.get('reporting_manager')
+        reporting_level_id = request.data.get('reporting_level')
 
         reporting_manager = None
         reporting_level = None
 
         if reporting_manager_id:
-            reporting_manager = Employee.objects.get(pk=int(reporting_manager_id))
+            try:
+                reporting_manager = Employee.objects.get(pk=int(reporting_manager_id))
+            except Employee.DoesNotExist:
+                raise serializers.ValidationError({"reporting_manager": "Invalid reporting manager ID."})
 
         if reporting_level_id:
-            reporting_level = Level.objects.get(pk=int(reporting_level_id))
+            try:
+                reporting_level = Level.objects.get(pk=int(reporting_level_id))
+            except Level.DoesNotExist:
+                raise serializers.ValidationError({"reporting_level": "Invalid reporting level ID."})
 
-        # print("Reporting Manager:", reporting_manager)
-        # print("Reporting Level:", reporting_level)
-        # print("Validated data:", validated_data)
-
-        # Generate employee ID and user
+        # --- Generate employee ID and user credentials ---
         employee_id = self.generate_employee_id()
         username = f'emp_{get_random_string(6)}'
         password = get_random_string(8)
@@ -505,28 +502,32 @@ class EmployeeSerializer(serializers.ModelSerializer):
         if designation and designation.level:
             validated_data['level'] = designation.level
 
-        # Save employee with reporting info
+        # --- Create employee instance ---
         employee = Employee.objects.create(
             reporting_manager=reporting_manager,
             reporting_level=reporting_level,
             **validated_data
         )
 
-        # Assign assets
-        for asset in assets:
-            if isinstance(asset, int):
-                asset_obj = AssetInventory.objects.get(pk=asset)
-            else:
-                asset_obj = asset
-            if asset_obj.quantity <= 0:
-                raise serializers.ValidationError(f"Asset '{asset_obj.name}' is out of stock.")
-            asset_obj.quantity -= 1
-            asset_obj.save()
-            EmployeeAssetDetails.objects.create(employee=employee, assetinventory=asset_obj)
+        # --- Assign assets properly ---
+        if assets:
+            # DRF already gives AssetInventory instances because of PrimaryKeyRelatedField
+            for asset_obj in assets:
+                if asset_obj.quantity <= 0:
+                    raise serializers.ValidationError(f"Asset '{asset_obj.name}' is out of stock.")
+                asset_obj.quantity -= 1
+                asset_obj.save()
 
+            # Assign to M2M
+            employee.asset_details.set(assets)
+
+            # Optional: create EmployeeAssetDetails only if you need a separate history table
+            # for asset_obj in assets:
+            #     EmployeeAssetDetails.objects.create(employee=employee, assetinventory=asset_obj)
+
+        # --- Send welcome email ---
         self.send_welcome_email(user, password)
 
-        # print("Employee created:", employee)
         return employee
 
     def generate_employee_id(self):

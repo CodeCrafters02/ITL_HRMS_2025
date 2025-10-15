@@ -109,7 +109,7 @@ TEMPLATES = [
 
 ASGI_APPLICATION = 'innovyx_hrms.asgi.application'
 
-# WSGI_APPLICATION = 'innovyx_hrms.wsgi.application'
+WSGI_APPLICATION = 'innovyx_hrms.wsgi.application'
 
 
 FCM_CREDENTIALS_FILE = BASE_DIR / "firebase-service-account.json"

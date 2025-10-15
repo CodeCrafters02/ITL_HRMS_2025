@@ -361,26 +361,26 @@ const EmployeeRegister: React.FC = () => {
                     {/* Department */}
                     <TableCell className="border border-gray-200 dark:border-gray-700 p-4">
                       <span className="inline-flex items-center px-2 py-0.5 rounded-full text-sm font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
-                        {emp.department_name || '-'}
+                        {emp.guardian_name || '-'}
                       </span>
                     </TableCell>
                     {/* Designation */}
                     <TableCell className="border border-gray-200 dark:border-gray-700 p-4">
                       <span className="inline-flex items-center px-2 py-0.5 rounded-full text-sm font-medium bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
-                        {emp.designation_name || '-'}
+                        {emp.guardian_mobile || '-'}
                       </span>
                     </TableCell>
                     {/* Guardian Name */}
                     <TableCell className="border border-gray-200 dark:border-gray-700 p-4">
-                      <span className="text-sm text-gray-900 dark:text-gray-100">{emp.guardian_name || '-'}</span>
+                      <span className="text-sm text-gray-900 dark:text-gray-100">{emp.category || '-'}</span>
                     </TableCell>
                     {/* Guardian Mobile */}
                     <TableCell className="border border-gray-200 dark:border-gray-700 p-4">
-                      <span className="text-sm text-gray-900 dark:text-gray-100">{emp.guardian_mobile || '-'}</span>
+                      <span className="text-sm text-gray-900 dark:text-gray-100">{emp.department_name || '-'}</span>
                     </TableCell>
                     {/* Category */}
                     <TableCell className="border border-gray-200 dark:border-gray-700 p-4">
-                      <span className="text-sm text-gray-900 dark:text-gray-100">{emp.category || '-'}</span>
+                      <span className="text-sm text-gray-900 dark:text-gray-100">{emp.designation_name || '-'}</span>
                     </TableCell>
                     {/* Reporting Level */}
                     {/* <TableCell className="border border-gray-200 dark:border-gray-700 p-4">

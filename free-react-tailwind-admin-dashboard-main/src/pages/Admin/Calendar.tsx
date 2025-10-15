@@ -57,24 +57,40 @@ const AdminCalendar: React.FC = () => {
     setError(null);
     try {
       const response = await axiosInstance.get("app/calendar-events/");
-      setEvents(
-        response.data.map((ev: CalendarEvent) => ({
+      
+      console.log("🔍 Raw API response:", response.data); // check what comes from backend
+
+      const mappedEvents = response.data.map((ev: CalendarEvent) => {
+        const [year, month, day] = ev.date.split('-').map(Number);
+        const mapped = {
           id: String(ev.id),
           name: ev.name,
           date: ev.date,
           description: ev.description,
-          is_holiday: ev.is_holiday,
-          title: ev.name, // For FullCalendar display
-          start: ev.date, // For FullCalendar
+          is_holiday: !!ev.is_holiday,
+          title: ev.name,
+          // start: `${ev.date}T00:00:00`,  // prevent timezone shift
+          start: ev.date,
+
           allDay: true,
-        }))
-      );
-    } catch {
+          extendedProps: {
+            description: ev.description,
+            is_holiday: !!ev.is_holiday,
+          },
+        };
+        console.log("🔍 Mapped Event:", mapped);
+        return mapped;
+      });
+
+      setEvents(mappedEvents);
+    } catch (err) {
+      console.error("❌ Failed to fetch events:", err);
       setError("Failed to load events");
     } finally {
       setLoading(false);
     }
   };
+
 
   const handleDeleteEvent = async () => {
     if (!selectedEvent || !selectedEvent.id) return;
@@ -102,7 +118,7 @@ const AdminCalendar: React.FC = () => {
     const event = clickInfo.event;
     setSelectedEvent(event as unknown as CalendarEvent);
     setEventName(event.title);
-    setEventDate(event.start?.toISOString().split("T")[0] || "");
+    setEventDate(event.startStr || "");
     setEventDescription(event.extendedProps.description || "");
     setEventIsHoliday(!!event.extendedProps.is_holiday);
     openModal();
@@ -150,6 +166,8 @@ const AdminCalendar: React.FC = () => {
   // Render event content for FullCalendar
   const renderEventContent = (eventInfo: EventContentArg) => {
     const isHoliday = eventInfo.event.extendedProps.is_holiday;
+    const description = eventInfo.event.extendedProps.description;
+
     return (
       <div className="event-fc-color flex fc-event-main p-1 rounded-sm items-center">
         <div className="fc-event-time" style={{marginRight: 6}}>{eventInfo.timeText}</div>
@@ -158,6 +176,11 @@ const AdminCalendar: React.FC = () => {
             <span role="img" aria-label="calendar" style={{marginRight: 6}}>📅</span>
           )}
           <span>{eventInfo.event.title}</span>
+      {description && (
+        <div className="fc-event-description text-xs text-gray-600 dark:text-gray-300">
+          {description}
+        </div>
+      )}
         </div>
       </div>
     );
@@ -165,14 +188,20 @@ const AdminCalendar: React.FC = () => {
 
   // Render badge/mark on days with events or holidays
   const renderDayCellContent = (arg: DayCellContentArg) => {
-    const dateStr = arg.date.toISOString().split('T')[0];
-    // Check if there is a holiday event on this date
-    const isHoliday = events.some(ev => ev.date === dateStr && ev.is_holiday);
-    // Check if there is any event (non-holiday)
-    // const hasEvent = events.some(ev => ev.date === dateStr && !ev.is_holiday);
+    const dateObj = arg.date;
+    const dateStr = dateObj instanceof Date 
+      ? dateObj.toLocaleDateString("en-CA")  // ✅ local date (YYYY-MM-DD)
+      : (arg as any).dateStr?.slice(0, 10) || "";
+
+    const isHoliday = events.some(
+      ev => ev.date.slice(0, 10) === dateStr && ev.is_holiday === true
+    );
+
     return (
-      <div style={{ position: 'relative', width: '100%', height: '100%' }}>
-        <span style={isHoliday ? { color: '#ef4444', fontWeight: 'bold' } : {}}>{arg.dayNumberText}</span>
+      <div style={{ position: "relative", width: "100%", height: "100%" }}>
+        <span style={isHoliday ? { color: "#ef4444", fontWeight: "bold" } : {}}>
+          {arg.dayNumberText}
+        </span>
       </div>
     );
   };
@@ -198,6 +227,7 @@ const AdminCalendar: React.FC = () => {
             eventClick={handleEventClick}
             eventContent={renderEventContent}
             dayCellContent={renderDayCellContent}
+            // timeZone="local"
             customButtons={{
               addEventButton: {
                 text: "Add Event +",
