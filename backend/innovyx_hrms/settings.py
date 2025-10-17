@@ -120,9 +120,18 @@ SITE_URL = "https://apihrms.innovyxtechlabs.com/"
 # SITE_URL = "http://localhost:8000/"
 
 
-CORS_ALLOW_ALL_ORIGINS = True
+# CORS_ALLOW_ALL_ORIGINS = True
 # CORS_ALLOW_ALL_HEADERS = True
 CORS_ALLOW_CREDENTIALS = True
+
+CORS_ALLOWED_ORIGINS = [
+    "https://hrms.innovyxtechlabs.com",
+]
+
+
+CSRF_TRUSTED_ORIGINS = [
+    "https://hrms.innovyxtechlabs.com",
+]
 
 CORS_ALLOW_HEADERS = [
     'content-type',
@@ -136,6 +145,7 @@ CORS_ALLOW_HEADERS = [
     'x-forwarded-for',
 ]
 
+CORS_ALLOW_METHODS = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS']
 
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
