@@ -50,5 +50,6 @@ urlpatterns = [
     path('generate-letter-content/', GenerateLetterContentAPIView.as_view(), name='generate-letter-content'),
     path('token/refresh/', RefreshTokenView.as_view(), name='token_refresh'),
     path('assignshift/', AssignShiftAPIView.as_view(), name='assignshift'),
+    path('updateusernamepassword/', UserUpdateView.as_view(), name='updateusernamepassword'),
 
 ]

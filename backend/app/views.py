@@ -370,10 +370,10 @@ class EmployeeViewSet(viewsets.ModelViewSet):
         if not company:
             return Response({"error": "User has no company"}, status=status.HTTP_400_BAD_REQUEST)
 
-        # Always return all levels linked to this company
+        # Always return all levels linked to this company, sorted by id
         level_choices = [
             {"id": lvl.id, "name": lvl.level_name}
-            for lvl in Level.objects.filter(company=company)
+            for lvl in Level.objects.filter(company=company).order_by('id')
         ]
 
         reporting_level_id = request.query_params.get('reporting_level_id')
@@ -384,8 +384,8 @@ class EmployeeViewSet(viewsets.ModelViewSet):
             except ValueError:
                 return Response({"error": "Invalid reporting_level_id"}, status=status.HTTP_400_BAD_REQUEST)
 
-            # Employees from the given level in the same company
-            employees = Employee.objects.filter(company=company, level_id=reporting_level_id)
+            # Employees from the given level in the same company, sorted by id
+            employees = Employee.objects.filter(company=company, level_id=reporting_level_id).order_by('id')
 
             reporting_managers = [
                 {"id": emp.id, "name": emp.full_name or emp.user.first_name or emp.user.username}
@@ -397,8 +397,15 @@ class EmployeeViewSet(viewsets.ModelViewSet):
                 "level_choices": level_choices
             })
 
-        # If no reporting_level_id param, only send levels
+        # If no reporting_level_id param, you can return all employees sorted by id
+        employees = Employee.objects.filter(company=company).order_by('id')
+        reporting_managers = [
+            {"id": emp.id, "name": emp.full_name or emp.user.first_name or emp.user.username}
+            for emp in employees
+        ]
+
         return Response({
+            "reporting_managers": reporting_managers,
             "level_choices": level_choices
         })
 
@@ -2287,3 +2294,26 @@ class AssignShiftAPIView(APIView):
 
         serializer = AssignShiftSerializer(employee)
         return Response(serializer.data, status=status.HTTP_200_OK)
+    
+class UserUpdateView(generics.UpdateAPIView):
+    serializer_class = UserUpdateSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_object(self):
+        return self.request.user
+
+    def update(self, request, *args, **kwargs):
+        user = self.get_object()
+        serializer = self.get_serializer(data=request.data, context={'request': request})
+        serializer.is_valid(raise_exception=True)
+
+        # Update username if provided
+        if 'username' in serializer.validated_data:
+            user.username = serializer.validated_data['username']
+
+        # Update password if provided
+        if 'new_password' in serializer.validated_data:
+            user.set_password(serializer.validated_data['new_password'])
+
+        user.save()
+        return Response({"detail": "Profile updated successfully."}, status=status.HTTP_200_OK)

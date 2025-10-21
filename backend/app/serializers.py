@@ -1004,3 +1004,22 @@ class AssignShiftSerializer(serializers.ModelSerializer):
         if value is None:
             raise serializers.ValidationError("Shift must be selected")
         return value
+    
+class UserUpdateSerializer(serializers.Serializer):
+    username = serializers.CharField(required=False)
+    old_password = serializers.CharField(required=True)
+    new_password = serializers.CharField(required=False)
+    confirm_password = serializers.CharField(required=False)
+
+    def validate_old_password(self, value):
+        user = self.context['request'].user
+        if not user.check_password(value):
+            raise serializers.ValidationError("Old password is not correct.")
+        return value
+
+    def validate(self, data):
+        if 'new_password' in data or 'confirm_password' in data:
+            if data.get('new_password') != data.get('confirm_password'):
+                raise serializers.ValidationError("New password and confirm password do not match.")
+            validate_password(data['new_password'], user=self.context['request'].user)
+        return data

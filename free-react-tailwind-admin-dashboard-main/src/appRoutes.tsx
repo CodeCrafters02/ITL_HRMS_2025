@@ -237,7 +237,7 @@ export function appRoutes() {
             <Route path="employeerefrences" element={<AdminEmployeeReferencePage />} />
 
             {/* Admin Change Password */}
-           <Route path="change-password" element={<ChangePasswordForm apiEndpoint="/change-password/" />} />
+           <Route path="change-password" element={<ChangePasswordForm />} />
 
 
             {/* Admin Forms */}
@@ -331,7 +331,7 @@ export function appRoutes() {
                 <Route path="/employee/leave-request" element={<LeaveRequests />} />
                 <Route path="form-leave" element={<EmpLeaveForm />} />
                 {/* Employee Change Password */}
-                <Route path="change-password" element={<ChangePasswordForm apiEndpoint="/change-password/" />} />
+                <Route path="change-password" element={<ChangePasswordForm />} />
                 <Route path="/employee/references" element={<EmployeeReferencePage />} />
                 <Route path="/employee/reference/add" element={<AddEmployeeReference />} />
 
