@@ -8,7 +8,7 @@ import {
   TaskIcon,
   FileIcon,
   ListIcon,
-  PieChartIcon,
+  PieChartIcon,UserIcon,UserCircleIcon
 } from "../../icons";
 import { useSidebar } from "../../context/SidebarContext";
 import { useNotifications } from "../../context/NotificationContext";
@@ -70,6 +70,16 @@ const navItems: NavItem[] = [
     icon: <FolderCheckIcon />,
     name: "References",
     path: "/employee/references",
+  },
+  {
+    icon: <UserCircleIcon />,
+    name: "Employee Status",
+    path: "/employee/userstatus",
+  },
+    {
+    icon: <UserIcon />,
+    name: "Reportees",
+    path: "/employee/reportees",
   },
 ];
 

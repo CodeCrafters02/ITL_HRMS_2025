@@ -194,16 +194,41 @@ const AttendanceHistory: React.FC = () => {
                 <TableCell className="px-6 py-3 align-middle text-sm text-gray-800">{row.check_out}</TableCell>
                 <TableCell className="px-6 py-3 align-middle text-sm text-gray-800">{row.shift}</TableCell>
                 <TableCell className="px-6 py-3 align-middle">
-                  <Badge variant="light" color={
-                    row.status === 'present' ? 'success'
-                      : row.status === 'leave' ? 'info'
-                      : row.status === 'half_day' ? 'warning'
-                      : row.status === 'absent' ? 'error'
-                      : row.status === 'weekend' ? 'light'
-                      : 'light'
-                  }>
-                    {row.status.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}
-                  </Badge>
+                  {(() => {
+                    const today = new Date();
+                    const recordDate = new Date(row.date);
+                    today.setHours(0, 0, 0, 0);
+                    recordDate.setHours(0, 0, 0, 0);
+
+                    // ✅ If the record is for a future date, show a light dash instead of "Absent"
+                    if (recordDate > today) {
+                      return <span className="text-gray-400">—</span>;
+                    }
+
+                    // Otherwise, show the actual status badge
+                    return (
+                      <Badge
+                        variant="light"
+                        color={
+                          row.status === 'present'
+                            ? 'success'
+                            : row.status === 'leave'
+                            ? 'info'
+                            : row.status === 'half_day'
+                            ? 'warning'
+                            : row.status === 'absent'
+                            ? 'error'
+                            : row.status === 'weekend'
+                            ? 'light'
+                            : 'light'
+                        }
+                      >
+                        {row.status
+                          ? row.status.replace('_', ' ').replace(/\b\w/g, (l) => l.toUpperCase())
+                          : '—'}
+                      </Badge>
+                    );
+                  })()}
                 </TableCell>
                 <TableCell className="px-6 py-3 align-middle">
                   {row.is_late && row.late_duration ? (

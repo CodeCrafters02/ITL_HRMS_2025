@@ -75,7 +75,7 @@ const AdminDashboard: React.FC = () => {
     subtitle,
   }: {
     title: string;
-    value: number;
+    value: string | number;
     icon: React.ElementType;
     color: string;
     onClick?: () => void;
@@ -140,7 +140,7 @@ const AdminDashboard: React.FC = () => {
     </div>
   );
 
-  const attendanceTotal = data.attendance_snapshot.present + data.attendance_snapshot.absent + data.attendance_snapshot.on_leave;
+  const attendanceTotal = data.employee_overview.total; // total employees
   const presentPercentage = attendanceTotal > 0 ? Math.round((data.attendance_snapshot.present / attendanceTotal) * 100) : 0;
 
   return (
@@ -187,7 +187,7 @@ const AdminDashboard: React.FC = () => {
           />
           <StatCard
             title="Attendance Rate"
-            value={presentPercentage}
+            value={presentPercentage + "%"}  // now shows "17%"
             icon={TrendingUp}
             color="bg-purple-500"
             subtitle={`${data.attendance_snapshot.present} present today`}

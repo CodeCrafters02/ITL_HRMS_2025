@@ -135,7 +135,10 @@ const AttendanceLog: React.FC = () => {
         const averageAttendance = attendance_records.reduce((sum, emp) => sum + emp.percentage_present, 0) / (totalEmployees || 1);
         const totalHours = attendance_records.reduce((sum, emp) => sum + emp.cumulative_worked_hours, 0);
         const today = new Date().toISOString().split('T')[0];
-        const presentToday = attendance_records.filter(emp => emp.daily_attendance.find(day => day.date === today && day.status === 'Present')).length;
+        // const presentToday = attendance_records.filter(emp => emp.daily_attendance.find(day => day.date === today && day.status === 'Present')).length;
+        const presentToday = attendance_records.filter(emp => 
+          emp.daily_attendance.some(day => day.date === today && day.check_in)
+        ).length;
         setStats({
           totalEmployees,
           averageAttendance,
@@ -189,25 +192,43 @@ const AttendanceLog: React.FC = () => {
   }, [searchEmployee, selectedStatus, attendanceData]);
 
   const getStatusCell = (record: DailyRecord, date: string) => {
-    const baseClasses = "w-7 h-7 rounded text-white text-xs font-semibold flex items-center justify-center cursor-pointer transition-all duration-200 hover:shadow-md relative";
+    const baseClasses =
+      "w-7 h-7 rounded text-white text-xs font-semibold flex items-center justify-center cursor-pointer transition-all duration-200 hover:shadow-md relative";
+
+    const cellDate = new Date(date);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    cellDate.setHours(0, 0, 0, 0);
+
+    // FUTURE DATES → '-'
+    if (cellDate > today) {
+      return <div className={baseClasses + " bg-gray-400"}>-</div>;
+    }
+
+    // ✅ SPECIAL CASE: If today and check_in exists, mark as Present
+    if (cellDate.getTime() === today.getTime() && record.check_in) {
+      record.status = "Present";
+    }
+
+    // ✅ Derive status
+    const status = record.status || (record.check_in ? "Present" : "-");
 
     const showTooltip = (e: React.MouseEvent) => {
-      let text = '';
-      if (record.status === 'Present' || record.status === 'Absent') {
-        text = `Date: ${new Date(date).toLocaleDateString()}\nCheck-in: ${record.check_in || '—'}\nCheck-out: ${record.check_out || '—'}`;
-        if (record.worked_hours > 0) {
-          text += `\nHours: ${record.worked_hours}h`;
-        }
-      } else if (record.status === 'Leave') {
-        text = `Leave: ${record.leave_type || 'General Leave'}\nDate: ${new Date(date).toLocaleDateString()}`;
-      } else if (record.status === 'Holiday') {
-        text = `Holiday: ${record.remarks || 'Public Holiday'}\nDate: ${new Date(date).toLocaleDateString()}`;
-      } else if (record.status === 'Half Day') {
-        text = `Half Day\nDate: ${new Date(date).toLocaleDateString()}\nCheck-in: ${record.check_in || '—'}\nCheck-out: ${record.check_out || '—'}`;
-        if (record.worked_hours > 0) {
-          text += `\nHours: ${record.worked_hours}h`;
-        }
+      let text = "";
+      if (status === "Present" || status === "Absent") {
+        text = `Date: ${cellDate.toLocaleDateString()}\nCheck-in: ${
+          record.check_in || "—"
+        }\nCheck-out: ${record.check_out || "—"}`;
+        if (record.worked_hours > 0) text += `\nHours: ${record.worked_hours}h`;
+      } else if (status === "Leave") {
+        text = `Leave: ${record.leave_type || "General Leave"}\nDate: ${cellDate.toLocaleDateString()}`;
+      } else if (status === "Holiday") {
+        text = `Holiday: ${record.remarks || "Public Holiday"}\nDate: ${cellDate.toLocaleDateString()}`;
+      } else if (status === "Half Day" || record.half_day) {
+        text = `Half Day\nDate: ${cellDate.toLocaleDateString()}\nCheck-in: ${record.check_in || "—"}\nCheck-out: ${record.check_out || "—"}`;
+        if (record.worked_hours > 0) text += `\nHours: ${record.worked_hours}h`;
       }
+
       setTooltip({
         visible: true,
         x: e.clientX,
@@ -218,82 +239,69 @@ const AttendanceLog: React.FC = () => {
 
     const hideTooltip = () => setTooltip(null);
 
-  // Half Day (should be status 'H' and half_day true, but previous 'H' branch covers all 'H' cases)
-  // Remove unreachable duplicate branch.
-    // Present
-    if (record.status === 'Present') {
-      return (
-        <div
-          className={baseClasses + ' bg-emerald-600 hover:bg-emerald-700'}
-          onMouseEnter={showTooltip}
-          onMouseLeave={hideTooltip}
-        >
-          P
-          {record.is_late && (
-            <span className="absolute -top-1 -right-1">
-              <div className="w-2.5 h-2.5 bg-red-500 rounded-full border border-white"></div>
-            </span>
-          )}
-        </div>
-      );
+    // STATUS DISPLAY
+    switch (status) {
+      case "Present":
+        return (
+          <div
+            className={baseClasses + " bg-emerald-600 hover:bg-emerald-700"}
+            onMouseEnter={showTooltip}
+            onMouseLeave={hideTooltip}
+          >
+            P
+            {record.is_late && (
+              <span className="absolute -top-1 -right-1">
+                <div className="w-2.5 h-2.5 bg-red-500 rounded-full border border-white"></div>
+              </span>
+            )}
+          </div>
+        );
+      case "Absent":
+        return (
+          <div
+            className={baseClasses + " bg-red-600 hover:bg-red-700"}
+            onMouseEnter={showTooltip}
+            onMouseLeave={hideTooltip}
+          >
+            A
+          </div>
+        );
+      case "Holiday":
+        return (
+          <div
+            className={baseClasses + " bg-amber-600 hover:bg-amber-700"}
+            onMouseEnter={showTooltip}
+            onMouseLeave={hideTooltip}
+          >
+            H
+          </div>
+        );
+      case "Leave":
+        const leaveInitials =
+          record.leave_type_initials ||
+          (record.leave_type ? record.leave_type[0].toUpperCase() : "L");
+        return (
+          <div
+            className={baseClasses + " bg-blue-600 hover:bg-blue-700"}
+            onMouseEnter={showTooltip}
+            onMouseLeave={hideTooltip}
+          >
+            {leaveInitials}
+          </div>
+        );
+      case "Half Day":
+        return (
+          <div
+            className={baseClasses + " bg-orange-600 hover:bg-orange-700"}
+            onMouseEnter={showTooltip}
+            onMouseLeave={hideTooltip}
+          >
+            HD
+          </div>
+        );
+      default:
+        return <div className={baseClasses + " bg-gray-400"}>-</div>;
     }
-    // Absent
-    if (record.status === 'Absent') {
-      return (
-        <div
-          className={baseClasses + ' bg-red-600 hover:bg-red-700'}
-          onMouseEnter={showTooltip}
-          onMouseLeave={hideTooltip}
-        >
-          A
-        </div>
-      );
-    }
-    // Holiday (full day)
-    if (record.status === 'Holiday' && !record.half_day) {
-      return (
-        <div
-          className={baseClasses + ' bg-amber-600 hover:bg-amber-700'}
-          onMouseEnter={showTooltip}
-          onMouseLeave={hideTooltip}
-        >
-          H
-        </div>
-      );
-    }
-    // Leave with initials and overlap icon
-    if (record.status === 'Leave') {
-      const leaveInitials = record.leave_type_initials || (record.leave_type ? record.leave_type[0].toUpperCase() : 'L');
-      return (
-        <div
-          className={baseClasses + ' bg-blue-600 hover:bg-blue-700'}
-          onMouseEnter={showTooltip}
-          onMouseLeave={hideTooltip}
-        >
-          {leaveInitials}
-          <span className="absolute -top-1 -right-1">
-            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <circle cx="7" cy="7" r="6" fill="#fff" stroke="#2563eb" strokeWidth="2" />
-              <text x="7" y="10" textAnchor="middle" fontSize="8" fontWeight="bold" fill="#2563eb">{leaveInitials}</text>
-            </svg>
-          </span>
-        </div>
-      );
-    }
-    // Half Day
-    if (record.status === 'Half Day') {
-      return (
-        <div
-          className={baseClasses + ' bg-orange-600 hover:bg-orange-700'}
-          onMouseEnter={showTooltip}
-          onMouseLeave={hideTooltip}
-        >
-          HD
-        </div>
-      );
-    }
-    // Default
-    return <div className={baseClasses + ' bg-gray-400'}>-</div>;
   };
 
   const getDayOfWeek = (dateStr: string) => {
@@ -582,20 +590,38 @@ const AttendanceLog: React.FC = () => {
                     <TableCell className="px-4 py-4 text-center text-sm font-medium text-slate-900 dark:text-white">
                       {record.cumulative_worked_hours}h
                     </TableCell>
-                    {attendanceData?.month_dates?.map((date) => {
-                      const daily = record.daily_attendance.find(day => day.date === date) || { 
-                        date, status: '-', check_in: null, check_out: null, worked_hours: 0,
-                        cumulative_worked_hours: 0, scheduled_hours: 0, break_time: 0, overtime_hours: 0,
-                        is_late: false, late_by_minutes: 0, early_departure: false, early_departure_minutes: 0,
-                        leave_type: null, leave_type_initials: null, half_day: false, remarks: '', shift_type: null
-                      };
-                      const isWeekend = new Date(date).getDay() === 0 || new Date(date).getDay() === 6;
-                      return (
-                        <TableCell key={date} className={`px-2 py-4 text-center ${isWeekend ? 'bg-slate-25 dark:bg-gray-700' : ''}`}>
-                          {getStatusCell(daily, date)}
-                        </TableCell>
-                      );
-                    })}
+                    {
+                      attendanceData?.month_dates?.map((date) => {
+                        const daily = record.daily_attendance.find(day => day.date === date) || { 
+                          date,
+                          status: '-', // default
+                          check_in: null,
+                          check_out: null,
+                          worked_hours: 0,
+                          cumulative_worked_hours: 0,
+                          scheduled_hours: 0,
+                          break_time: 0,
+                          overtime_hours: 0,
+                          is_late: false,
+                          late_by_minutes: 0,
+                          early_departure: false,
+                          early_departure_minutes: 0,
+                          leave_type: null,
+                          leave_type_initials: null,
+                          half_day: false,
+                          remarks: '',
+                          shift_type: null
+                        };
+
+                        const isWeekend = new Date(date).getDay() === 0 || new Date(date).getDay() === 6;
+
+                        return (
+                          <TableCell key={date} className={`px-2 py-4 text-center ${isWeekend ? 'bg-slate-25 dark:bg-gray-700' : ''}`}>
+                            {getStatusCell(daily, date)}
+                          </TableCell>
+                        );
+                      })
+                    }
                   </TableRow>
                 ))
               ) : (

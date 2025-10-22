@@ -165,7 +165,7 @@ export default function SignInForm() {
               <Checkbox checked={isChecked} onChange={setIsChecked} />
               <span className="text-sm text-gray-700">Keep me logged in</span>
             </div>
-            <Link to="/reset-password" className="text-sm text-brand-500">
+            <Link to="/resetpassword" className="text-sm text-brand-500">
               Forgot password?
             </Link>
           </div>

@@ -2,6 +2,7 @@ import { Route, Routes } from "react-router-dom";
 import { lazy, Suspense } from "react";
 const SignIn = lazy(() => import("./pages/AuthPages/SignIn"));
 const SignUp = lazy(() => import("./pages/AuthPages/SignUp"));
+const ForgotPassword = lazy(() => import("./pages/AuthPages/ForgotPassword"));
 const MasterDashboard = lazy(() => import("./pages/Dashboard/MasterDashboard"));
 const AdminDashboard = lazy(() => import("./pages/Dashboard/AdminDashboard"));
 const AdminPage = lazy(() => import("./pages/Master/Adminpage"));
@@ -96,6 +97,8 @@ const UpdateAttendanceForm = lazy(() => import("./pages/Forms/UpdateAttendanceFo
 
 const EmployeeReferencePage = lazy(() => import("./pages/Employee/references"));
 const AddEmployeeReference = lazy(() => import("./pages/Employee/references/AddReference"));
+const EmployeeStatusList =lazy(() =>import("./pages/Admin/employeestatus") )
+const EmployeeReporteesPage=lazy(()=>import("./pages/Employee/reportees"))
 
 // Employee References (Admin side)
 const AdminEmployeeReferencePage = lazy(() => import("./pages/Admin/employeerefrences"));
@@ -259,6 +262,8 @@ export function appRoutes() {
             <Route path="calendar" element={<Calendar />} />
             <Route path="blank" element={<Blank />} />
             <Route path="form-elements" element={<FormElements />} />
+            <Route path="userstatus" element={<EmployeeStatusList />} />
+           
         </Route>
         
          
@@ -295,6 +300,7 @@ export function appRoutes() {
             {/* Auth Routes */}
             <Route path="/" element={<SignIn />} />
             <Route path="/signup" element={<SignUp />} />
+            <Route path="/resetpassword" element={<ForgotPassword />} />
             {/* <Route path="/" element={<MainPage />} /> */}
             {/* <Route path="/" element={<MainPage hasPreloaderShown={hasPreloaderShown} />} /> */}
             <Route path="/service" element={<Service />} />
@@ -334,6 +340,8 @@ export function appRoutes() {
                 <Route path="change-password" element={<ChangePasswordForm />} />
                 <Route path="/employee/references" element={<EmployeeReferencePage />} />
                 <Route path="/employee/reference/add" element={<AddEmployeeReference />} />
+                <Route path="/employee/userstatus" element={<EmployeeStatusList />} />
+                <Route path="/employee/reportees" element={<EmployeeReporteesPage />} />
 
 
             </Route>

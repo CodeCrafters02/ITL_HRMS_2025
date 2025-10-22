@@ -254,6 +254,33 @@ class DashboardAPIView(APIView):
                 if employee.date_of_birth.day == today.day and employee.date_of_birth.month == today.month:
                     birthday_message = f"Happy Birthday, {employee.first_name}! 🎉"
 
+            # ------------------------
+            # Attendance score calculation
+            # ------------------------
+            attendance_score = 100
+            if not attendance or not punch_in:
+                attendance_score = 0  # absent
+            else:
+                # Deduct for late check-in
+                if is_late:
+                    attendance_score -= 10
+
+                # Deduct for short work duration (less than 8 hours)
+                if punch_in:
+                    end_time = punch_out or now
+                    worked_minutes = int((end_time - punch_in).total_seconds() // 60) - break_minutes
+                    worked_hours = worked_minutes / 60
+                    if worked_hours < 8:
+                        missing_hours = 8 - worked_hours
+                        attendance_score -= min((missing_hours / 0.5) * 2, 20)  # 2 points per 30 min short
+
+                # Deduct for long breaks (>60 minutes)
+                if break_minutes > 60:
+                    attendance_score -= min((break_minutes - 60) / 10, 10)  # 1 point per 10 min extra
+
+            attendance_score = max(int(round(attendance_score)), 0)
+
+            # Dashboard response
             dashboard_data = {
                 'employee_name': f"{employee.first_name} {employee.last_name}",
                 'employee_photo': request.build_absolute_uri(employee.photo.url) if employee.photo else None,
@@ -263,6 +290,7 @@ class DashboardAPIView(APIView):
                 'total_worked': calculate_worked_time(punch_in, punch_out, now)[0],
                 'effective_time': calculate_effective_time(punch_in, break_minutes, punch_out, now)['formatted'],
                 'total_break_minutes': break_minutes,
+                'attendance_score': attendance_score,  # ✅ New field added
                 'shift_name': shift.shift_type if shift else 'Not assigned',
                 'shift_timing': f"{shift.checkin.strftime('%H:%M')} - {shift.checkout.strftime('%H:%M')}" if shift else '--:--',
                 'server_time': now.strftime('%Y-%m-%d %H:%M:%S'),
@@ -368,7 +396,7 @@ class AttendanceHistoryAPIView(APIView):
 
         day = start_date
         while day <= end_date:
-            is_weekend = day.weekday() >= 5
+            is_weekend = day.weekday() >= 6
             status = 'absent'
             is_late = False
             late_duration = None
@@ -1157,38 +1185,6 @@ class EmployeeHierarchyAPIView(APIView):
             response_data['reportees'] = reportees
         return Response(response_data)
     
-
-# class EmployeeReferenceViewSet(viewsets.ModelViewSet):
-#     queryset = EmployeeReference.objects.all().order_by('-submitted_at')
-#     serializer_class = EmployeeReferenceSerializer
-
-#     def get_permissions(self):
-#         return [permissions.IsAuthenticated()]
-
-#     def get_queryset(self):
-#         user = self.request.user
-#         if user.is_staff:
-#             return EmployeeReference.objects.all()
-        
-#         # Employees see only their references
-#         try:
-#             employee = Employee.objects.get(user=user)  # <-- get Employee instance
-#         except Employee.DoesNotExist:
-#             return EmployeeReference.objects.none()
-        
-#         return EmployeeReference.objects.filter(employee=employee)
-
-#     def perform_create(self, serializer):
-#         try:
-#             employee = Employee.objects.get(user=self.request.user)  # <-- correct Employee instance
-#         except Employee.DoesNotExist:
-#             raise serializers.ValidationError("Employee record not found for this user.")
-        
-#         serializer.save(employee=employee)
-
-
-
-
 from rest_framework import viewsets, permissions, serializers, decorators, response, status
 from .models import EmployeeReference, Employee
 from .serializers import EmployeeReferenceSerializer

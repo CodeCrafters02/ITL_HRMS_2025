@@ -1,7 +1,7 @@
 import React from "react";
 import PageMeta from "../../components/common/PageMeta";
 import { FaSyncAlt, FaCalendarAlt, FaMoneyBillWave, FaCoffee, FaChartLine, FaPause, FaUser, FaClock } from 'react-icons/fa';
-import { axiosInstance } from "../Employee/api";
+import { axiosInstance ,axiosInstances} from "../Employee/api";
 import Button from "../../components/ui/button/Button";
 import Alert from "../../components/ui/alert/Alert";
 import BreakIcons from "../UiElements/Break";
@@ -68,6 +68,7 @@ export default function EmployeeDashboard(): React.JSX.Element {
   const timerRef = React.useRef<ReturnType<typeof setInterval> | null>(null);
   // Birthday wishes state
   const [birthdayCards, setBirthdayCards] = React.useState<{id:number,title:string,description:string}[]>([]);
+const [employeeStatus, setEmployeeStatus] = React.useState<string | null>(null);
 
   // Helper to get initials from employee name
   const getInitials = (name: string | null) => {
@@ -113,7 +114,9 @@ export default function EmployeeDashboard(): React.JSX.Element {
         setDashboardData(dashboardData);
         // Calculate dynamic values
         calculateWeeklyHours(dashboardData);
-        calculateAttendanceScore(dashboardData);
+        // calculateAttendanceScore(dashboardData);
+        setAttendanceScore(dashboardData.attendance_score || 0);
+
         
         // Do not show payment notification on dashboard refresh
       } else {
@@ -158,6 +161,8 @@ export default function EmployeeDashboard(): React.JSX.Element {
     }
   }, [fetchDashboardData]);
 
+
+  
   // Local timer for real-time updates (working time)
   React.useEffect(() => {
     const shouldBeRunning = dashboardData?.checkin_time && !dashboardData?.checkout_time && !dashboardData?.active_break;
@@ -291,6 +296,7 @@ export default function EmployeeDashboard(): React.JSX.Element {
         payload = { action: breakConfigOrAction };
       }
       const res = await axiosInstance.post("/employee-breaks/", payload);
+      console.log("response of brak confif ",res)
       if (res.status === 200 || res.status === 201) {
         await fetchDashboardData();
         showNotification("Break action successful", "success");
@@ -301,6 +307,35 @@ export default function EmployeeDashboard(): React.JSX.Element {
       showNotification("Network error occurred", "error");
     }
     setBreakLoading(false);
+  };
+
+
+  const handleStatusUpdate = async (newStatus: string) => {
+    try {
+      const employeeId = localStorage.getItem("employee_id");
+      if (!employeeId) return;
+
+      const res = await axiosInstances.get("/employeestatus/");
+      const employeeStatus = res.data.find(
+        (item: any) => item.id.toString() === employeeId
+      );
+
+      if (!employeeStatus) {
+        console.warn("Employee status not found for employee ID:", employeeId);
+        return;
+      }
+
+      const updateRes = await axiosInstances.patch(
+        `/employeestatus/${employeeStatus.id}/`,
+        { status: newStatus }
+      );
+
+      setEmployeeStatus(newStatus); // ✅ Update local state immediately
+      showNotification(`Status updated to ${newStatus}`, "success");
+    } catch (error) {
+      console.error("❌ Failed to update employee status:", error);
+      showNotification("Failed to update employee status", "error");
+    }
   };
 
   const isCheckedIn = dashboardData?.checkin_time && !dashboardData?.checkout_time;
@@ -452,8 +487,10 @@ export default function EmployeeDashboard(): React.JSX.Element {
                       ) : (
                         <BreakIcons 
                           onBreakClick={handleBreakAction}
+                          onStatusChange={handleStatusUpdate}
                           disabled={breakLoading || !!dashboardData?.active_break}
                           activeBreak={dashboardData?.active_break?.type || null}
+                          currentStatus={employeeStatus} 
                         />
                       )}
                     </div>
@@ -574,7 +611,7 @@ export default function EmployeeDashboard(): React.JSX.Element {
                     <div className="flex justify-between mb-2">
                       <span className="text-sm text-gray-600 dark:text-gray-400">Weekly Hours</span>
                       <span className="text-sm font-medium text-gray-900 dark:text-white">
-                        {weeklyHours.toFixed(1)}/40 hrs
+                        {weeklyHours.toFixed(1)}/48 hrs
                       </span>
                     </div>
                     <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">

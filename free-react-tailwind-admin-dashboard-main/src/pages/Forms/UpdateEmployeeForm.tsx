@@ -13,6 +13,7 @@ import FileInput from "../../components/form/input/FileInput";
 import Switch from "../../components/form/switch/Switch";
 
 interface FormData {
+  employee_id:string;
   aadhar_card?: string | File;
   pan_card?: string | File;
   photo?: string | File;
@@ -54,6 +55,7 @@ interface FormData {
 }
 
 const initialForm: FormData = {
+  employee_id:'',
   first_name: '',
   middle_name: '',
   last_name: '',
@@ -194,15 +196,17 @@ const UpdateEmployeeForm: React.FC = () => {
   useEffect(() => {
     const fetchLevelsAndManagers = async () => {
       try {
-        // Fetch levels
+        // Reset reporting manager when department or level changes
+        setForm(prev => ({ ...prev, reporting_manager: '' }));
+
+        // Fetch levels for selected department
         if (form.department) {
           const levelsRes = await axiosInstance.get(`app/levels/?department_id=${form.department}`);
-          const mappedLevels = levelsRes.data.map((level: { id?: string | number; level_id?: string | number; _id?: string | number; name?: string; level_name?: string; title?: string; department?: string | number; department_id?: string | number }) => ({
+          const mappedLevels = levelsRes.data.map((level: any) => ({
             id: String(level.id ?? level.level_id ?? level._id),
             name: String(level.name ?? level.level_name ?? level.title),
             department: String(level.department ?? level.department_id ?? '')
           }));
-          console.log("Fetched Levels:", mappedLevels); // ✅ log levels
           setLevels(mappedLevels);
         } else {
           setLevels([]);
@@ -212,13 +216,21 @@ const UpdateEmployeeForm: React.FC = () => {
         const url = form.level
           ? `app/employee/get-reporting-manager-choices/?reporting_level_id=${form.level}`
           : 'app/employee/get-reporting-manager-choices/';
-        const mgrRes = await axiosInstance.get(url);
-        const mappedManagers = mgrRes.data.reporting_managers.map((mgr: { id?: number | string; manager_id?: number | string; _id?: number | string; name?: string; manager_name?: string; title?: string }) => ({
-          id: mgr.id ?? mgr.manager_id ?? mgr._id,
-          name: mgr.name ?? mgr.manager_name ?? mgr.title
-        }));
-        console.log("Fetched Reporting Managers:", mappedManagers); // ✅ log managers
-        setReportingManagers(mappedManagers);
+        const response = await axiosInstance.get(url);
+        console.log("Reporting managers response:", response.data);
+
+        const currentEmployeeId = Number(id); // the employee being edited
+
+        const managers = response.data
+          .flatMap((item: any) => (item.employees ?? []))
+          .filter((emp: any) => emp.id !== currentEmployeeId) //  filter out current employee
+          .map((emp: any) => ({
+            id: emp.id,
+            name: emp.name
+          }));
+
+        setReportingManagers(managers);
+
       } catch (error) {
         console.error("Error fetching levels or managers:", error);
         setReportingManagers([]);
@@ -423,6 +435,16 @@ const UpdateEmployeeForm: React.FC = () => {
             <>
               <ComponentCard title="Personal Information" desc="Basic personal details of the employee">
                 <div className="space-y-6">
+                    <div>
+                      <Label htmlFor="employee_id">Employee ID *</Label>
+                      <Input 
+                        id="employee_id"
+                        name="employee_id" 
+                        value={form.employee_id} 
+                        onChange={handleChange} 
+                        placeholder="Enter Employee ID"
+                      />
+                    </div>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                     <div>
                       <Label htmlFor="first_name">First Name *</Label>
@@ -723,7 +745,7 @@ const UpdateEmployeeForm: React.FC = () => {
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
-                      <Label>Reporting Level</Label>
+                      <Label>    Level</Label>
                       <Select
                         options={levels.map(level => ({ value: level.id, label: level.name }))}
                         placeholder="Select level"
@@ -735,20 +757,19 @@ const UpdateEmployeeForm: React.FC = () => {
                         key={form.level}
                       />
                     </div>
-<div>
-  <Label>Reporting Manager</Label>
-  <Select
-    options={reportingManagers.map(mgr => ({
-      value: mgr.id.toString(),
-      label: mgr.name
-    }))}
-    placeholder="Select reporting manager"
-    value={form.reporting_manager || ""}
-    onChange={value => handleSelectChange('reporting_manager')(value)}
-    // isClearable
-  />
-</div>
+                    <div>
+                      <Label>Reporting manager</Label>
 
+                        <Select
+                          options={reportingManagers.map(mgr => ({
+                            value: String(mgr.id),
+                            label: mgr.name
+                          }))}
+                          placeholder="Select reporting manager"
+                          value={form.reporting_manager ?? ""} // ✅ string
+                          onChange={handleSelectChange('reporting_manager')}
+                        />
+                      </div>
                   </div>
 
                   {form.source_of_employment === 'internalreference' && (

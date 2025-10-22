@@ -362,7 +362,7 @@ class EmployeeViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         user = self.request.user
-        return Employee.objects.filter(company=user.company)
+        return Employee.objects.filter(company=user.company).order_by('employee_id')
 
     @action(detail=False, methods=['get'], url_path='get-reporting-manager-choices')
     def get_reporting_manager_choices(self, request):
@@ -370,44 +370,40 @@ class EmployeeViewSet(viewsets.ModelViewSet):
         if not company:
             return Response({"error": "User has no company"}, status=status.HTTP_400_BAD_REQUEST)
 
-        # Always return all levels linked to this company, sorted by id
-        level_choices = [
-            {"id": lvl.id, "name": lvl.level_name}
-            for lvl in Level.objects.filter(company=company).order_by('id')
-        ]
-
         reporting_level_id = request.query_params.get('reporting_level_id')
 
+        # Fetch all levels for this company
+        levels = Level.objects.filter(company=company).order_by('id')
         if reporting_level_id:
-            try:
-                reporting_level_id = int(reporting_level_id)
-            except ValueError:
-                return Response({"error": "Invalid reporting_level_id"}, status=status.HTTP_400_BAD_REQUEST)
+            levels = levels.filter(id=reporting_level_id)
 
-            # Employees from the given level in the same company, sorted by id
-            employees = Employee.objects.filter(company=company, level_id=reporting_level_id).order_by('id')
+        response_data = []
 
-            reporting_managers = [
-                {"id": emp.id, "name": emp.full_name or emp.user.first_name or emp.user.username}
-                for emp in employees
-            ]
+        for level in levels:
+            # Find all designations for this level
+            designations = Designation.objects.filter(company=company, level=level)
 
-            return Response({
-                "reporting_managers": reporting_managers,
-                "level_choices": level_choices
-            })
+            # Get all employees belonging to these designations
+            employees = Employee.objects.filter(
+                company=company,
+                designation__in=designations
+            ).order_by('id')
 
-        # If no reporting_level_id param, you can return all employees sorted by id
-        employees = Employee.objects.filter(company=company).order_by('id')
-        reporting_managers = [
-            {"id": emp.id, "name": emp.full_name or emp.user.first_name or emp.user.username}
-            for emp in employees
-        ]
+            level_data = {
+                "level_id": level.id,
+                "level_name": level.level_name,
+                "employees": [
+                    {
+                        "id": emp.id,
+                        "name": emp.full_name or emp.user.first_name or emp.user.username
+                    }
+                    for emp in employees
+                ]
+            }
 
-        return Response({
-            "reporting_managers": reporting_managers,
-            "level_choices": level_choices
-        })
+            response_data.append(level_data)
+
+        return Response(response_data, status=status.HTTP_200_OK)
 
     
 class AssetInventoryViewSet(viewsets.ModelViewSet):
@@ -1386,8 +1382,8 @@ class AttendanceLogView(APIView):
             else:
                 valid_weekdays = weekdays[start_idx:] + weekdays[:end_idx + 1]
         else:
-            # Default to Monday-Friday
-            valid_weekdays = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday']
+            # Default to Monday-Friday saturday
+            valid_weekdays = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday','saturday']
         
         while current_date <= end_date:
             day_name = current_date.strftime('%A').lower()
@@ -1517,383 +1513,6 @@ class AttendanceLogView(APIView):
             "remarks": attendance.remarks or "",
             "shift_type": shift_policy.shift_type if shift_policy else None
         }
-
-
-
-
-
-
-
-
-
-# from datetime import datetime, timedelta
-# from calendar import monthrange
-# from django.utils.timezone import localtime
-# from rest_framework.views import APIView
-# from rest_framework.permissions import IsAuthenticated, IsAdminUser
-# from rest_framework.response import Response
-# from rest_framework import status
-
-# from app.models import (
-#     Employee, Attendance, CalendarEvent,
-#     DepartmentWiseWorkingDays, ShiftPolicy
-# )
-
-
-# class AttendanceLogView(APIView):
-#     # permission_classes = [IsAuthenticated, IsAdminUser]
-    
-#     def post(self, request):
-#         employee_id = request.data.get('employee_id')
-#         date_str = request.data.get('date')
-#         check_in = request.data.get('check_in')
-#         check_out = request.data.get('check_out')
-#         remarks = request.data.get('remarks', '')
-#         status_val = request.data.get('status', None)  # Optional: Present/Absent/Leave/Half Day/Holiday
-
-#         if not employee_id or not date_str:
-#             return Response({'error': 'employee_id and date are required.'}, status=status.HTTP_400_BAD_REQUEST)
-
-#         try:
-#             emp = Employee.objects.get(employee_id=employee_id)
-#         except Employee.DoesNotExist:
-#             return Response({'error': 'Employee not found.'}, status=status.HTTP_404_NOT_FOUND)
-
-#         try:
-#             date_obj = datetime.strptime(date_str, '%Y-%m-%d').date()
-#         except Exception:
-#             return Response({'error': 'Invalid date format. Use YYYY-MM-DD.'}, status=status.HTTP_400_BAD_REQUEST)
-
-#         att, created = Attendance.objects.get_or_create(
-#             employee=emp,
-#             date=date_obj,
-#             company=emp.company,  # Ensure company is set
-#             defaults={}
-#         )
-        
-#         prefill = {}
-#         if att.check_in and not att.check_out:
-#             prefill['check_in'] = att.check_in.strftime('%H:%M')
-
-#         # Update fields if provided
-#         if check_in:
-#             att.check_in = datetime.combine(date_obj, datetime.strptime(check_in, '%H:%M').time())
-#         if check_out:
-#             att.check_out = datetime.combine(date_obj, datetime.strptime(check_out, '%H:%M').time())
-#         if remarks:
-#             att.remarks = remarks
-#         if status_val:
-#             att.status = status_val  # If you have a status field
-
-#         att.save()
-
-#         return Response({
-#             'message': 'Attendance updated.',
-#             'employee_id': emp.employee_id,
-#             'date': date_str,
-#             'check_in': att.check_in.strftime('%H:%M') if att.check_in else None,
-#             'check_out': att.check_out.strftime('%H:%M') if att.check_out else None,
-#             'remarks': att.remarks,
-#             'prefill': prefill
-#         }, status=status.HTTP_200_OK)
-        
-#     def get(self, request):
-#         month = request.query_params.get('month')  
-#         if not month:
-#             return Response({"error": "Month parameter required (format: YYYY-MM)"}, status=400)
-
-#         try:
-#             year, month_num = map(int, month.split('-'))
-#             start_date = datetime(year, month_num, 1).date()
-#             end_date = datetime(year, month_num, monthrange(year, month_num)[1]).date()
-#         except (ValueError, IndexError):
-#             return Response({"error": "Invalid month format. Use YYYY-MM"}, status=400)
-
-#         # Get holidays for the month
-#         holidays = CalendarEvent.objects.filter(
-#             date__range=(start_date, end_date), 
-#             is_holiday=True,
-#             company=request.user.company
-#         )
-#         holidays_dict = {h.date: h.name for h in holidays}
-
-#         # Get employees with related data
-#         employees = Employee.objects.filter(
-#             company=request.user.company,
-#             is_active=True
-#         ).select_related('department').prefetch_related('attendances')
-        
-#         result = []
-        
-#         for emp in employees:
-#             # Get all attendance records for this employee in the month
-#             attendance_qs = Attendance.objects.filter(
-#                 employee=emp, 
-#                 date__range=(start_date, end_date)
-#             ).prefetch_related('break_logs')  # removed select_related('shift')
-            
-#             # Get department working days configuration
-#             dept_working_days = DepartmentWiseWorkingDays.objects.filter(
-#                 department=emp.department,
-#                 company=request.user.company
-#             ).first()
-            
-#             # Determine working days for this employee
-#             working_days = self._get_working_days_for_month(
-#                 start_date, end_date, dept_working_days, holidays_dict
-#             )
-            
-#             daily_data = []
-#             present_days = absent_days = leave_days = half_days = late_days = 0
-#             total_worked_hours = 0.0
-#             leave_summary = {}
-
-#             # Process each attendance record
-#             for att in attendance_qs:
-#                 daily_record = self._process_attendance_record(att, emp.company)
-#                 daily_data.append(daily_record)
-                
-#                 # Count status types
-#                 status = daily_record["status"]
-#                 worked_hours = daily_record["worked_hours"]
-                
-#                 if status == "Present":
-#                     present_days += 1
-#                     total_worked_hours += worked_hours
-#                     if daily_record["is_late"]:
-#                         late_days += 1
-#                 elif status == "Half Day":
-#                     half_days += 1
-#                     present_days += 0.5
-#                     total_worked_hours += worked_hours
-#                     if daily_record["is_late"]:
-#                         late_days += 1
-#                 elif status == "Leave":
-#                     leave_days += 1
-#                     leave_type = daily_record["leave_type"]
-#                     if leave_type:
-#                         leave_summary[leave_type] = leave_summary.get(leave_type, 0) + 1
-#                 elif status == "Absent":
-#                     absent_days += 1
-
-#             # Add holidays to daily data
-#             for holiday_date, holiday_name in holidays_dict.items():
-#                 if start_date <= holiday_date <= end_date:
-#                     daily_data.append({
-#                         "date": str(holiday_date),
-#                         "status": "Holiday",
-#                         "check_in": None,
-#                         "check_out": None,
-#                         "worked_hours": 0.0,
-#                         "scheduled_hours": 0.0,
-#                         "break_time": 0.0,
-#                         "overtime_hours": 0.0,
-#                         "is_late": False,
-#                         "late_by_minutes": 0,
-#                         "early_departure": False,
-#                         "early_departure_minutes": 0,
-#                         "leave_type": None,
-#                         "leave_type_initials": None,
-#                         "half_day": False,
-#                         "remarks": holiday_name,
-#                         "shift_type": None
-#                     })
-
-#             # Fill missing days as Absent (only for working days)
-#             all_dates = {att.date for att in attendance_qs}
-#             all_dates.update(holidays_dict.keys())
-            
-#             for single_date in working_days:
-#                 if single_date not in all_dates:
-#                     daily_data.append({
-#                         "date": str(single_date),
-#                         "status": "Absent",
-#                         "check_in": None,
-#                         "check_out": None,
-#                         "worked_hours": 0.0,
-#                         "scheduled_hours": 8.0,
-#                         "break_time": 0.0,
-#                         "overtime_hours": 0.0,
-#                         "is_late": False,
-#                         "late_by_minutes": 0,
-#                         "early_departure": False,
-#                         "early_departure_minutes": 0,
-#                         "leave_type": None,
-#                         "leave_type_initials": None,
-#                         "half_day": False,
-#                         "remarks": "No attendance record",
-#                         "shift_type": None
-#                     })
-#                     absent_days += 1
-
-#             # Calculate totals and percentages
-#             total_working_days = len(working_days)
-#             total_days_present = present_days  # This includes half days as 0.5
-#             attendance_percentage = (total_days_present / total_working_days * 100) if total_working_days > 0 else 0
-#             avg_hours_per_day = total_worked_hours / present_days if present_days > 0 else 0
-#             total_expected_hours = total_overtime_hours = total_break_time = 0.0
-            
-#             for daily_record in daily_data:
-#                 if daily_record["status"] not in ["Holiday"]:
-#                     total_expected_hours += daily_record["scheduled_hours"]
-#                     total_overtime_hours += daily_record["overtime_hours"]
-#                     total_break_time += daily_record["break_time"]
-            
-#             hours_efficiency = (total_worked_hours / total_expected_hours * 100) if total_expected_hours > 0 else 0
-#             hours_variance = total_worked_hours - total_expected_hours
-
-#             # Shift policies info
-#             company_shifts = ShiftPolicy.objects.filter(company=request.user.company)
-#             shift_policies_info = [
-#                 {
-#                     "id": shift.id,
-#                     "shift_type": shift.shift_type or f"Shift {shift.id}",
-#                     "full_day_hours": shift.full_day_hours(),
-#                     "half_day_hours": shift.half_day_hours(),
-#                     "checkin": shift.checkin.strftime('%H:%M') if shift.checkin else None,
-#                     "checkout": shift.checkout.strftime('%H:%M') if shift.checkout else None,
-#                     "grace_period_minutes": int(shift.grace().total_seconds() / 60) if shift.grace() else 0
-#                 }
-#                 for shift in company_shifts
-#             ]
-
-#             result.append({
-#                 "employee_id": emp.employee_id,
-#                 "employee_name": emp.full_name,
-#                 "department": emp.department.department_name if emp.department else None,
-#                 "month": month,
-#                 "total_working_days": total_working_days,
-#                 "total_present_days": round(total_days_present, 2),
-#                 "total_absent_days": absent_days,
-#                 "total_leave_days": leave_days,
-#                 "total_half_days": half_days,
-#                 "total_late_days": late_days,
-#                 "total_holidays": len(holidays_dict),
-#                 "total_worked_hours": round(total_worked_hours, 2),
-#                 "total_expected_hours": round(total_expected_hours, 2),
-#                 "total_overtime_hours": round(total_overtime_hours, 2),
-#                 "total_break_time": round(total_break_time, 2),
-#                 "hours_variance": round(hours_variance, 2),
-#                 "percentage_present": round(attendance_percentage, 2),
-#                 "hours_efficiency": round(hours_efficiency, 2),
-#                 "average_hours_per_day": round(avg_hours_per_day, 2),
-#                 "average_hours_per_working_day": round(total_worked_hours / total_working_days, 2) if total_working_days > 0 else 0,
-#                 "monthly_summary": {
-#                     "productive_days": present_days + half_days,
-#                     "non_productive_days": absent_days,
-#                     "leave_utilization": leave_days,
-#                     "punctuality_score": round((present_days - late_days) / present_days * 100, 2) if present_days > 0 else 100,
-#                     "overtime_frequency": sum(1 for d in daily_data if d["overtime_hours"] > 0),
-#                     "break_usage_hours": round(total_break_time, 2)
-#                 },
-#                 "holidays": [{"date": str(d), "name": n} for d, n in holidays_dict.items()],
-#                 "leave_summary": leave_summary,
-#                 "shift_policies": shift_policies_info,
-#                 "daily_attendance": sorted(daily_data, key=lambda x: x["date"])
-#             })
-
-#         return Response(result)
-
-#     def _get_working_days_for_month(self, start_date, end_date, dept_working_days, holidays):
-#         working_days = []
-#         current_date = start_date
-#         weekdays = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday']
-        
-#         if dept_working_days:
-#             start_idx = weekdays.index(dept_working_days.week_start_day.lower())
-#             end_idx = weekdays.index(dept_working_days.week_end_day.lower())
-#             valid_weekdays = weekdays[start_idx:end_idx + 1] if start_idx <= end_idx else weekdays[start_idx:] + weekdays[:end_idx + 1]
-#         else:
-#             valid_weekdays = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday']
-        
-#         while current_date <= end_date:
-#             if current_date.strftime('%A').lower() in valid_weekdays and current_date not in holidays:
-#                 working_days.append(current_date)
-#             current_date += timedelta(days=1)
-#         return working_days
-
-#     def _process_attendance_record(self, attendance, company):
-#         shift_policy = getattr(attendance, 'shift', None) or ShiftPolicy.objects.filter(company=company).first()
-        
-#         worked_hours = break_time = overtime_hours = 0.0
-#         scheduled_hours = shift_policy.full_day_hours() if shift_policy else 8.0
-        
-#         if attendance.check_in and attendance.check_out:
-#             check_in_local = localtime(attendance.check_in)
-#             check_out_local = localtime(attendance.check_out)
-#             total_seconds = (check_out_local - check_in_local).total_seconds()
-#             total_break_seconds = sum(
-#                 (b.end - b.start).total_seconds() for b in attendance.break_logs.all() if b.start and b.end
-#             )
-#             break_time = round(total_break_seconds / 3600, 2)
-#             worked_hours = round((total_seconds - total_break_seconds) / 3600, 2)
-#             worked_hours = max(0, worked_hours)  # Ensure non-negative
-#             if worked_hours > scheduled_hours:
-#                 overtime_hours = worked_hours - scheduled_hours
-
-#         # Determine status based on worked hours and shift policy
-#         status = "Absent"
-#         half_day = False
-
-#         if getattr(attendance, 'leave', None):
-#             status = "Leave"
-#         elif worked_hours > 0:
-#             full_hours = shift_policy.full_day_hours() if shift_policy else 8.0
-#             half_hours = shift_policy.half_day_hours() if shift_policy else 4.0
-#             if worked_hours >= full_hours:
-#                 status = "Present"
-#             elif worked_hours >= half_hours:
-#                 status = "Half Day"
-#                 half_day = True
-
-#         # Check if late
-#         is_late = False
-#         late_minutes = 0
-#         if shift_policy and attendance.check_in:
-#             scheduled_checkin = datetime.combine(attendance.date, shift_policy.checkin)
-#             actual_checkin = datetime.combine(attendance.date, localtime(attendance.check_in).time())
-#             grace_period = shift_policy.grace() or timedelta()
-#             if actual_checkin > (scheduled_checkin + grace_period):
-#                 is_late = True
-#                 late_minutes = int((actual_checkin - scheduled_checkin).total_seconds() / 60)
-
-#         # Check for early departure
-#         early_departure = False
-#         early_departure_minutes = 0
-#         if shift_policy and attendance.check_out:
-#             scheduled_checkout = datetime.combine(attendance.date, shift_policy.checkout)
-#             actual_checkout = datetime.combine(attendance.date, localtime(attendance.check_out).time())
-#             if actual_checkout < scheduled_checkout:
-#                 early_departure = True
-#                 early_departure_minutes = int((scheduled_checkout - actual_checkout).total_seconds() / 60)
-
-#         # Get leave info
-#         leave_type_val = None
-#         leave_type_initials = None
-#         if getattr(attendance, 'leave', None) and getattr(attendance.leave, 'leave_type', None):
-#             leave_type_val = attendance.leave.leave_type.leave_name
-#             leave_type_initials = leave_type_val[:2].upper() if leave_type_val else None
-
-#         return {
-#             "date": str(attendance.date),
-#             "status": status,
-#             "check_in": localtime(attendance.check_in).strftime("%H:%M") if attendance.check_in else None,
-#             "check_out": localtime(attendance.check_out).strftime("%H:%M") if attendance.check_out else None,
-#             "worked_hours": worked_hours,
-#             "scheduled_hours": scheduled_hours,
-#             "break_time": break_time,
-#             "overtime_hours": overtime_hours,
-#             "is_late": is_late,
-#             "late_by_minutes": late_minutes,
-#             "early_departure": early_departure,
-#             "early_departure_minutes": early_departure_minutes,
-#             "leave_type": leave_type_val,
-#             "leave_type_initials": leave_type_initials,
-#             "half_day": half_day,
-#             "remarks": attendance.remarks or "",
-#             "shift_type": shift_policy.shift_type if shift_policy else None
-#         }
-
 
 
 class CompanyPoliciesViewSet(viewsets.ModelViewSet):
@@ -2317,3 +1936,129 @@ class UserUpdateView(generics.UpdateAPIView):
 
         user.save()
         return Response({"detail": "Profile updated successfully."}, status=status.HTTP_200_OK)
+    
+import random
+from django.contrib.auth.hashers import make_password
+
+
+class SendOtpView(APIView):
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        email = request.data.get("email")
+        if not email:
+            return Response({"error": "Email is required"})
+
+        otp = str(random.randint(100000, 999999))
+
+        otp_obj, created = EmailOTP.objects.get_or_create(email=email)
+        otp_obj.otp = otp
+        otp_obj.created_at = timezone.now()  
+        otp_obj.save()
+
+        subject = "Your OTP for Password Reset"
+        message = f"""
+        Hello,
+
+        You have requested to reset your password for your account.
+
+        Your One-Time Password (OTP) is: {otp}
+
+        This OTP is valid for the next 5 minutes. Please do not share this code with anyone for security reasons.
+
+        If you did not request this, please ignore this email or contact support immediately.
+
+        Thank you,  
+        Team Innovyx Tech Labs
+        """
+        from_email = settings.EMAIL_HOST_USER
+
+        try:
+            send_mail(subject, message, from_email, [email])
+            return Response({"message": "OTP sent successfully"})
+        except Exception as e:
+            return Response({"error": f"Failed to send email: {str(e)}"})
+
+
+class VerifyOTPView(APIView):
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        email = request.data.get('email')
+        otp_input = request.data.get('otp')
+
+        try:
+            otp_obj = EmailOTP.objects.get(email=email)
+
+            if otp_obj.is_expired():
+                return Response({'error': 'OTP expired'})
+
+            if otp_obj.otp == otp_input:
+                otp_obj.verified = True  
+                otp_obj.save()
+                return Response({'message': 'OTP verified successfully'})
+            else:
+                return Response({'error': 'Invalid OTP'})
+
+        except EmailOTP.DoesNotExist:
+            return Response({'error': 'OTP not found'})
+
+class ResetPasswordView(APIView):
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        email = request.data.get("email")
+        new_password = request.data.get("new_password")
+        confirm_password = request.data.get("confirm_password")
+
+        if not all([email, new_password, confirm_password]):
+            return Response({"error": "All fields are required."})
+
+        if new_password != confirm_password:
+            return Response({"error": "Passwords do not match."})
+
+        try:
+            otp_obj = EmailOTP.objects.get(email=email)
+            if not otp_obj.verified:
+                return Response({"error": "OTP not verified for this email."})
+        except EmailOTP.DoesNotExist:
+            return Response({"error": "OTP not found. Please verify OTP first."})
+
+        try:
+            user = UserRegister.objects.get(email=email)
+            user.password = make_password(new_password)
+            user.save()
+            otp_obj.verified = False
+            otp_obj.save()
+            return Response({"message": "Password reset successful."})
+        except UserRegister.DoesNotExist:
+            return Response({"error": "User not found."})
+
+
+class EmployeeStatusViewSet(viewsets.ModelViewSet):
+    serializer_class = EmployeeStatusSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        user = self.request.user
+        # If employee, filter by their company only
+        if user.role == 'employee':
+            return Employee.objects.filter(company=user.company)
+        # Otherwise (admin, master), return all employees
+        return Employee.objects.all()
+    
+
+class EmployeeReporteesView(APIView):
+    def post(self, request):
+        emp_id = request.data.get("employee_id")
+        if not emp_id:
+            return Response({"error": "employee_id is required"})
+        
+        try:
+            manager = Employee.objects.get(id=emp_id)
+        except Employee.DoesNotExist:
+            return Response({"error": "Employee not found"})
+        
+        reportees = Employee.objects.filter(reporting_manager=manager)
+        serializer = ReportingEmployeesSerializer(reportees, many=True)
+        return Response(serializer.data)

@@ -313,14 +313,6 @@ class EmployeeSerializer(serializers.ModelSerializer):
     level = serializers.PrimaryKeyRelatedField(queryset=Level.objects.all(), required=False)
     level_name = serializers.SerializerMethodField()
 
-    # reporting_level = serializers.PrimaryKeyRelatedField(
-    #     queryset=Level.objects.all(), write_only=True, required=False, allow_null=True
-    # )
-    # reporting_manager = serializers.PrimaryKeyRelatedField(
-    #     queryset=Employee.objects.all(), required=False, allow_null=True
-    # )
-    # reporting_manager_name = serializers.SerializerMethodField()
-    # reporting_level_name = serializers.SerializerMethodField()
     asset_details = serializers.PrimaryKeyRelatedField(
         queryset=AssetInventory.objects.all(), many=True, required=False, allow_null=True
     )
@@ -351,7 +343,6 @@ class EmployeeSerializer(serializers.ModelSerializer):
             'category', 'department', 'department_name', 'designation', 'designation_name',
             'level','level_name',
             'reporting_manager', 'reporting_level', 
-            # 'reporting_level_name', 'reporting_manager_name',
             'payment_method', 'account_no', 'ifsc_code', 'bank_name', 'source_of_employment',
             'who_referred', 'date_of_joining', 'previous_employer', 'date_of_releaving',
             'previous_designation_name', 'previous_salary', 'ctc', 'gross_salary',
@@ -373,14 +364,6 @@ class EmployeeSerializer(serializers.ModelSerializer):
     def get_source_choices(self, obj):
         return [{'value': key, 'label': label} for key, label in Employee.SOURCE_CHOICES]
 
-    # def get_reporting_manager_name(self, obj):
-    #     """Return full name of reporting manager."""
-    #     if obj.reporting_manager:
-    #         return f"{obj.reporting_manager.first_name} {obj.reporting_manager.last_name}".strip()
-    #     return None
-    
-    # def get_reporting_level_name(self, obj):
-    #     return obj.reporting_level.level_name if obj.reporting_level else None
 
     def get_shift_assigned(self, obj):
         """
@@ -1023,3 +1006,27 @@ class UserUpdateSerializer(serializers.Serializer):
                 raise serializers.ValidationError("New password and confirm password do not match.")
             validate_password(data['new_password'], user=self.context['request'].user)
         return data
+
+class EmployeeStatusSerializer(serializers.ModelSerializer):
+    full_name = serializers.CharField(read_only=True)
+    photo = serializers.ImageField(read_only=True)
+
+    class Meta:
+        model = Employee
+        fields = ['id', 'photo', 'status', 'last_active','full_name']
+        read_only_fields = ['last_active', 'photo','full_name']
+
+class ReportingEmployeesSerializer(serializers.ModelSerializer):
+    full_name = serializers.CharField(read_only=True)
+    department_name = serializers.SerializerMethodField()
+    designation_name = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Employee
+        fields = ['id', 'employee_id', 'full_name', 'status', 'department_name', 'designation_name']
+
+    def get_department_name(self, obj):
+        return obj.department.department_name if obj.department else None
+
+    def get_designation_name(self, obj):
+        return obj.designation.designation_name if obj.designation else None

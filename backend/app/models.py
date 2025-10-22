@@ -217,6 +217,14 @@ class Employee(models.Model):
     
     is_active = models.BooleanField(default=True)
 
+    STATUS_CHOICES = [
+        ('online', 'Online'),
+        ('away', 'Away'),
+        ('dnd', 'Do Not Disturb'),
+        ('offline', 'Offline'),
+    ]
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='offline')
+    last_active = models.DateTimeField(auto_now=True)
 
     @property
     def is_reporting_manager(self):
@@ -590,3 +598,12 @@ class GeneratedLetter(models.Model):
     def __str__(self):
         who = self.employee or self.candidate or self.relieved_employee
         return f"Letter for {who} ({self.template.title})"
+
+class EmailOTP(models.Model):
+    email = models.EmailField(unique=True)
+    otp = models.CharField(max_length=6)
+    verified = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def is_expired(self):
+        return timezone.now() > self.created_at + timedelta(minutes=5)  
