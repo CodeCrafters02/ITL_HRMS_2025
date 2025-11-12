@@ -639,8 +639,18 @@ class AttendanceHistoryAPIView(APIView):
                             status = 'absent'
                             stats['absent'] += 1
                     else:
-                        status = 'present'
-                        stats['present'] += 1
+                        # No shift assigned - use default hours (8.0 full day, 4.0 half day)
+                        if work_duration >= 8.0:
+                            status = 'present'
+                            stats['present'] += 1
+                        elif work_duration >= 4.0:
+                            status = 'half_day'
+                            stats['half_day'] += 1
+                            stats['present'] += 0.5
+                            stats['absent'] += 0.5
+                        else:
+                            status = 'absent'
+                            stats['absent'] += 1
 
                     if att.overtime_duration:
                         overtime_hours = round(att.overtime_duration.total_seconds() / 3600, 2)

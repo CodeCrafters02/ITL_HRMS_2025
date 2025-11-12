@@ -6,6 +6,7 @@ from django.utils.crypto import get_random_string
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ObjectDoesNotExist
 from django.contrib.auth import get_user_model
+from django.utils import timezone
 from rest_framework_simplejwt.tokens import RefreshToken
 from .models import *
 
@@ -760,6 +761,7 @@ class AttendanceSerializer(serializers.ModelSerializer):
     employee_id = serializers.SerializerMethodField()
     employee_name = serializers.SerializerMethodField()
     is_late = serializers.SerializerMethodField()
+    status = serializers.SerializerMethodField()
 
 
     class Meta:
@@ -778,6 +780,7 @@ class AttendanceSerializer(serializers.ModelSerializer):
             'remarks',
             'date',
             'is_late',
+            'status',
         ]
 
     def get_employee_id(self, obj):
@@ -788,7 +791,7 @@ class AttendanceSerializer(serializers.ModelSerializer):
 
     def get_is_late(self, obj):
         check_in = obj.check_in
-        shift = obj.shift
+        shift = obj.employee.shift_assigned if obj.employee else None
 
         if not (check_in and shift and shift.checkin and shift.grace_period):
             return False
@@ -804,6 +807,78 @@ class AttendanceSerializer(serializers.ModelSerializer):
         allowed_latest_checkin = shift_start_dt + shift.grace_period
 
         return check_in > allowed_latest_checkin
+
+    def get_status(self, obj):
+        if not obj.check_in:
+            return 'absent'
+        
+        # Determine status based on check-in time
+        check_in = timezone.localtime(obj.check_in)
+        check_in_time = check_in.time()
+        today = obj.date
+        
+        # Get shift or use company defaults
+        shift = obj.employee.shift_assigned if obj.employee else None
+        
+        # Get company default values from shift policies
+        company = obj.company
+        default_grace_period = self._get_company_default_grace_period(company)
+        default_half_day_duration = self._get_company_default_half_day(company)
+        
+        if shift:
+            shift_start = shift.checkin
+            grace_period = shift.grace_period if shift.grace_period else default_grace_period
+            half_day_duration = shift.half_day if shift.half_day else default_half_day_duration
+            
+            # Calculate grace time and half day time
+            grace_time = (datetime.combine(today, shift_start) + grace_period).time()
+            half_day_time = (datetime.combine(today, shift_start) + half_day_duration).time()
+            
+            if check_in_time >= half_day_time:
+                return 'full_day_leave'
+            elif check_in_time >= grace_time:
+                return 'half_day'
+            else:
+                return 'present'
+        else:
+            # No shift assigned - use company defaults
+            default_shift_start = time(9, 0)
+            
+            grace_time = (datetime.combine(today, default_shift_start) + default_grace_period).time()
+            half_day_time = (datetime.combine(today, default_shift_start) + default_half_day_duration).time()
+            
+            if check_in_time >= half_day_time:
+                return 'full_day_leave'
+            elif check_in_time >= grace_time:
+                return 'half_day'
+            else:
+                return 'present'
+    
+    def _get_company_default_grace_period(self, company):
+        """Get the default grace period for the company from its shift policies."""
+        from .models import ShiftPolicy
+        
+        shift_policies = ShiftPolicy.objects.filter(company=company)
+        
+        if shift_policies.exists():
+            grace_periods = [shift.grace_period for shift in shift_policies if shift.grace_period]
+            if grace_periods:
+                return min(grace_periods)
+        
+        return timedelta(minutes=15)
+    
+    def _get_company_default_half_day(self, company):
+        """Get the default half day duration for the company from its shift policies."""
+        from .models import ShiftPolicy
+        
+        shift_policies = ShiftPolicy.objects.filter(company=company)
+        
+        if shift_policies.exists():
+            half_days = [shift.half_day for shift in shift_policies if shift.half_day]
+            if half_days:
+                return min(half_days)
+        
+        return timedelta(hours=4)
 
         
 class PolicyConfigurationSerializer(serializers.ModelSerializer):

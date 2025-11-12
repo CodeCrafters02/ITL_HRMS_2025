@@ -5,7 +5,7 @@ from rest_framework.response import Response
 from django.utils.timezone import localtime
 from django.db.models import Sum, Q
 from django.utils import timezone
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, time
 from calendar import monthrange
 from django.db import transaction
 import calendar
@@ -247,7 +247,7 @@ class AdminDashboardAPIView(APIView):
 
         # Employee Overview
         total_employees = Employee.objects.filter(company=company, is_active=True).count()
-        active_employees = Employee.objects.filter(company=company, is_active=True).count()
+        active_employees_count = Employee.objects.filter(company=company, is_active=True).count()
         inactive_employees = Employee.objects.filter(company=company, is_active=False).count()
         new_joinees = Employee.objects.filter(
             company=company,
@@ -272,15 +272,9 @@ class AdminDashboardAPIView(APIView):
         ).order_by('date_of_birth')
         
 
-        # Attendance Snapshot
-        present = Attendance.objects.filter(company=company, date=today, is_present=True).count()
-        absent = Attendance.objects.filter(company=company, date=today, is_present=False).count()
-        on_leave = EmpLeave.objects.filter(
-            company=company,
-            from_date__lte=today,
-            to_date__gte=today,
-            status='Approved'
-        ).count()
+        # Attendance Snapshot - Calculate based on shift timing
+        employees_for_attendance = Employee.objects.filter(company=company, is_active=True)
+        attendance_snapshot = self._calculate_attendance_snapshot(company, today, employees_for_attendance)
 
         # Pending Leave Requests
         pending_leaves = EmpLeave.objects.filter(company=company, status='Pending').count()
@@ -304,7 +298,7 @@ class AdminDashboardAPIView(APIView):
             "leaves_today": leaves_today,
             "employee_overview": {
                 "total": total_employees,
-                "active": active_employees,
+                "active": active_employees_count,
                 "inactive": inactive_employees,
                 "new_joinees": new_joinees,
                 "exits_this_month": exits_this_month,
@@ -313,15 +307,156 @@ class AdminDashboardAPIView(APIView):
                 {"name": e.full_name, "date_of_birth": e.date_of_birth} for e in upcoming_birthdays
             ],
            
-            "attendance_snapshot": {
-                "present": present,
-                "absent": absent,
-                "on_leave": on_leave,
-            },
+            "attendance_snapshot": attendance_snapshot,
             "pending_leave_requests": pending_leaves,
             "payroll_status": payroll_status,
             "next_salary_release_date": next_salary_release_date,
         })
+
+    def _calculate_attendance_snapshot(self, company, today, employees):
+        """
+        Calculate attendance snapshot based on shift timing and current time.
+        Returns counts for present, absent, half_day, full_day_leave, on_leave
+        """
+        present = 0
+        absent = 0
+        half_day = 0
+        full_day_leave = 0
+        on_leave = 0
+        
+        # Get current time in local timezone
+        now = timezone.localtime(timezone.now())
+        current_time = now.time()
+        
+        # Get default grace period from company's shift policies
+        default_grace_period = self._get_company_default_grace_period(company)
+        
+        # Get approved leaves for today
+        approved_leaves = EmpLeave.objects.filter(
+            company=company,
+            from_date__lte=today,
+            to_date__gte=today,
+            status='Approved'
+        ).values_list('employee_id', flat=True)
+        
+        for employee in employees:
+            # Check if employee is on approved leave
+            if employee.id in approved_leaves:
+                on_leave += 1
+                continue
+                
+            # Get employee's attendance record for today
+            attendance = Attendance.objects.filter(
+                employee=employee, 
+                date=today
+            ).first()
+            
+            # Get employee's shift
+            shift = getattr(employee, 'shift_assigned', None)
+            
+            if attendance and attendance.check_in:
+                # Employee has checked in - determine status based on check-in time
+                check_in_local = timezone.localtime(attendance.check_in)
+                check_in_time = check_in_local.time()
+                
+                if shift:
+                    shift_start = shift.checkin
+                    grace_period = shift.grace_period or default_grace_period
+                    half_day_duration = shift.half_day or timedelta(hours=4)
+                    
+                    # Calculate half day time (shift start + half day duration)
+                    half_day_time = (datetime.combine(today, shift_start) + half_day_duration).time()
+                    grace_time = (datetime.combine(today, shift_start) + grace_period).time()
+                    
+                    if check_in_time >= half_day_time:
+                        # Checked in at or after half day time
+                        full_day_leave += 1
+                    elif check_in_time >= grace_time:
+                        # Checked in at or after grace period but before half day
+                        half_day += 1
+                    else:
+                        # Checked in within grace period
+                        present += 1
+                else:
+                    # No shift assigned - use default logic with company grace period
+                    default_shift_start = time(9, 0)  # Assume 9 AM default start
+                    default_half_day = timedelta(hours=4)  # 4 hours for half day
+                    half_day_time = (datetime.combine(today, default_shift_start) + default_half_day).time()
+                    grace_time = (datetime.combine(today, default_shift_start) + default_grace_period).time()
+                    
+                    if check_in_time >= half_day_time:
+                        full_day_leave += 1
+                    elif check_in_time >= grace_time:
+                        half_day += 1
+                    else:
+                        present += 1
+            else:
+                # Employee hasn't checked in - determine status based on current time
+                if shift:
+                    shift_start = shift.checkin
+                    grace_period = shift.grace_period or default_grace_period
+                    half_day_duration = shift.half_day or timedelta(hours=4)
+                    
+                    grace_time = (datetime.combine(today, shift_start) + grace_period).time()
+                    half_day_time = (datetime.combine(today, shift_start) + half_day_duration).time()
+                    
+                    if current_time >= half_day_time:
+                        # Past half day time and no check-in
+                        full_day_leave += 1
+                    elif current_time >= grace_time:
+                        # Past grace period but before half day
+                        half_day += 1
+                    else:
+                        # Still within grace period
+                        absent += 1
+                else:
+                    # No shift assigned - use default logic with company grace period
+                    default_shift_start = time(9, 0)  # Assume 9 AM default start
+                    default_half_day = timedelta(hours=4)  # 4 hours for half day
+                    grace_time = (datetime.combine(today, default_shift_start) + default_grace_period).time()
+                    half_day_time = (datetime.combine(today, default_shift_start) + default_half_day).time()
+                    
+                    if current_time >= half_day_time:
+                        full_day_leave += 1
+                    elif current_time >= grace_time:
+                        half_day += 1
+                    else:
+                        absent += 1
+        
+        return {
+            "present": present,
+            "absent": absent,
+            "half_day": half_day,
+            "full_day_leave": full_day_leave,
+            "on_leave": on_leave,
+        }
+
+    def _get_company_default_grace_period(self, company):
+        """
+        Get the default grace period for the company from its shift policies.
+        Returns the minimum grace period found, or 15 minutes as fallback.
+        """
+        from .models import ShiftPolicy
+        
+        # Get all shift policies for the company
+        shift_policies = ShiftPolicy.objects.filter(company=company)
+        
+        if shift_policies.exists():
+            # Find the minimum grace period among all shift policies
+            grace_periods = []
+            for shift in shift_policies:
+                if shift.grace_period:
+                    grace_periods.append(shift.grace_period)
+            
+            if grace_periods:
+                # Return the minimum grace period
+                return min(grace_periods)
+            else:
+                # No grace periods set, use default
+                return timedelta(minutes=15)
+        else:
+            # No shift policies exist, use default
+            return timedelta(minutes=15)
 
 class DepartmentViewSet(viewsets.ModelViewSet):
     serializer_class = DepartmentSerializer

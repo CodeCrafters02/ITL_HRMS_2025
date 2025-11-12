@@ -158,8 +158,8 @@ CORS_ALLOW_METHODS = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS']
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'innovyx_hrms_pr',
-        # 'NAME': 'hrms_db',
+        # 'NAME': 'innovyx_hrms_pr',
+        'NAME': 'hrms_db',
         'USER': 'postgres',
         'PASSWORD': '1234',
         'HOST': 'localhost',
