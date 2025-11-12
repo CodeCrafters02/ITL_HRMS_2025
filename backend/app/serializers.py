@@ -6,6 +6,7 @@ from django.utils.crypto import get_random_string
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ObjectDoesNotExist
 from django.contrib.auth import get_user_model
+from rest_framework_simplejwt.tokens import RefreshToken
 from .models import *
 
 User = get_user_model()
@@ -891,3 +892,59 @@ class EmployeeStatusSerializer(serializers.ModelSerializer):
     class Meta:
         model = Employee
         fields = ['id', 'employee_id', 'first_name', 'last_name', 'status']
+
+
+class ReportingEmployeesSerializer(serializers.ModelSerializer):
+    full_name = serializers.CharField(read_only=True)
+    department_name = serializers.SerializerMethodField()
+    designation_name = serializers.SerializerMethodField()
+ 
+    class Meta:
+        model = Employee
+        fields = ['id', 'employee_id', 'full_name', 'status', 'department_name', 'designation_name']
+ 
+    def get_department_name(self, obj):
+        return obj.department.department_name if obj.department else None
+ 
+    def get_designation_name(self, obj):
+        return obj.designation.designation_name if obj.designation else None
+
+
+
+class AssignShiftSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Employee
+        fields = ['id', 'shift_assigned']
+ 
+    # Optional: validate if shift exists
+    def validate_shift_assigned(self, value):
+        if value is None:
+            raise serializers.ValidationError("Shift must be selected")
+        return value
+
+
+class RefreshTokenSerializer(serializers.Serializer):
+    refresh = serializers.CharField()
+   
+    def validate(self, data):
+        refresh = data.get("refresh")
+        try:
+            token = RefreshToken(refresh)
+            # Get user from token
+            user_id = token.payload.get('user_id')
+            if not user_id:
+                raise serializers.ValidationError("Invalid refresh token.")
+           
+            # Get user instance
+            user = UserRegister.objects.get(id=user_id)
+           
+            # Create new refresh token with user data
+            new_refresh = RefreshToken.for_user(user)
+            new_refresh['username'] = user.username    
+            new_refresh['role'] = user.role
+           
+            return {
+                "access": str(new_refresh.access_token)
+            }
+        except Exception as e:
+            raise serializers.ValidationError("Invalid refresh token.")
