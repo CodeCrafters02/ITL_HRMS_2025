@@ -920,6 +920,66 @@ class AttendanceViewSet(viewsets.ModelViewSet):
     serializer_class = AttendanceSerializer
     permission_classes = [IsAuthenticated, IsAdminUser]
 
+    def get_queryset(self):
+        queryset = Attendance.objects.filter(company=self.request.user.company)
+        
+        # Filter by date range
+        from_date = self.request.query_params.get('from_date')
+        to_date = self.request.query_params.get('to_date')
+        if from_date:
+            queryset = queryset.filter(date__gte=from_date)
+        if to_date:
+            queryset = queryset.filter(date__lte=to_date)
+            
+        # Filter by status
+        status = self.request.query_params.get('status')
+        if status:
+            if status.lower() == 'present':
+                # All employees who are checked in or marked as present and not on leave
+                queryset = queryset.filter(
+                    Q(check_in__isnull=False) | Q(is_present=True),
+                    leave__isnull=True
+                )
+            elif status.lower() == 'absent':
+                queryset = queryset.filter(
+                    check_in__isnull=True,
+                    is_present=False,
+                    leave__isnull=True
+                )
+            elif status.lower() == 'leave':
+                queryset = queryset.filter(leave__isnull=False)
+                
+        # Filter by search term (employee name or ID)
+        search = self.request.query_params.get('search')
+        if search:
+            queryset = queryset.filter(
+                Q(employee__employee_id__icontains=search) |
+                Q(employee__first_name__icontains=search) |
+                Q(employee__last_name__icontains=search)
+            )
+            
+        return queryset.order_by('-date', 'employee__employee_id')
+
+    def _is_employee_late(self, attendance):
+        """Check if an employee was late for their shift"""
+        check_in = attendance.check_in
+        shift = getattr(attendance.employee, 'shift_assigned', None)
+
+        if not (check_in and shift and shift.checkin):
+            return False
+
+        # Convert check-in to local time
+        check_in = timezone.localtime(check_in)
+
+        # Construct shift start datetime in local timezone
+        shift_start_dt = datetime.combine(check_in.date(), shift.checkin)
+        shift_start_dt = timezone.make_aware(shift_start_dt, timezone.get_current_timezone())
+
+        # Add grace period
+        allowed_latest_checkin = shift_start_dt + shift.grace()
+
+        return check_in > allowed_latest_checkin
+
     @action(detail=False, methods=['get'])
     def log(self, request):
         current_date = timezone.localdate()

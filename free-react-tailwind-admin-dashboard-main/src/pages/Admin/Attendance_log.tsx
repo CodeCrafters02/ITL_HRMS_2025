@@ -1,5 +1,4 @@
-import React, { useState, useEffect } from 'react';
-import { useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { 
   Calendar, 
   Search, 
@@ -124,8 +123,6 @@ const AttendanceLog: React.FC = () => {
     const monthStr = `${calendarYear}-${String(calendarMonth + 1).padStart(2, '0')}`;
     axiosInstance.get(`app/attendance-logs/?month=${monthStr}`)
       .then(res => {
-        console.log('Backend response:', res.data); // Debug log
-        console.log('Sample employee data:', res.data[0]); // Show first employee structure
         const response = res.data;
         const month_dates: string[] = calendarDates;
         // Backend returns direct array, not wrapped in object
@@ -133,7 +130,7 @@ const AttendanceLog: React.FC = () => {
         // Calculate statistics
         const totalEmployees = attendance_records.length;
         const averageAttendance = attendance_records.reduce((sum, emp) => sum + emp.percentage_present, 0) / (totalEmployees || 1);
-        const totalHours = attendance_records.reduce((sum, emp) => sum + emp.cumulative_worked_hours, 0);
+        const totalHours = attendance_records.reduce((sum, emp) => sum + (emp.cumulative_worked_hours || 0), 0);
         const today = new Date().toISOString().split('T')[0];
         // const presentToday = attendance_records.filter(emp => emp.daily_attendance.find(day => day.date === today && day.status === 'Present')).length;
         const presentToday = attendance_records.filter(emp => 
@@ -149,9 +146,7 @@ const AttendanceLog: React.FC = () => {
         setFilteredRecords(attendance_records);
         setLoading(false);
       })
-      .catch(error => {
-        console.error('Error fetching attendance data:', error);
-        console.error('Error response:', error.response?.data);
+      .catch(() => {
         setLoading(false);
       });
   }, [calendarMonth, calendarYear]);
@@ -276,7 +271,7 @@ const AttendanceLog: React.FC = () => {
             H
           </div>
         );
-      case "Leave":
+      case "Leave": {
         const leaveInitials =
           record.leave_type_initials ||
           (record.leave_type ? record.leave_type[0].toUpperCase() : "L");
@@ -289,6 +284,7 @@ const AttendanceLog: React.FC = () => {
             {leaveInitials}
           </div>
         );
+      }
       case "Half Day":
         return (
           <div
@@ -400,7 +396,7 @@ const AttendanceLog: React.FC = () => {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-slate-600 dark:text-gray-400">Avg. Attendance</p>
-                <p className="text-3xl font-bold text-blue-600 dark:text-blue-400 mt-2">{stats.averageAttendance}%</p>
+                <p className="text-3xl font-bold text-blue-600 dark:text-blue-400 mt-2">{stats.averageAttendance.toFixed(2)}%</p>
                 <p className="text-xs text-slate-500 dark:text-gray-400 mt-1">Monthly average</p>
               </div>
               <div className="p-3 bg-blue-100 dark:bg-blue-900/20 rounded-lg">
@@ -413,7 +409,7 @@ const AttendanceLog: React.FC = () => {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-slate-600 dark:text-gray-400">Total Hours</p>
-                <p className="text-3xl font-bold text-purple-600 dark:text-purple-400 mt-2">{stats.totalHours.toLocaleString()}</p>
+                <p className="text-3xl font-bold text-purple-600 dark:text-purple-400 mt-2">{(stats.totalHours || 0).toLocaleString()}</p>
                 <p className="text-xs text-slate-500 dark:text-gray-400 mt-1">Working hours</p>
               </div>
               <div className="p-3 bg-purple-100 dark:bg-purple-900/20 rounded-lg">
@@ -529,124 +525,126 @@ const AttendanceLog: React.FC = () => {
         </div>
 
         {/* Attendance Table */}
-        <div className="overflow-x-auto">
-          <Table className="w-full table-fixed">
-            <TableHeader className="bg-slate-50 dark:bg-gray-700 border-b border-slate-200 dark:border-gray-600">
-              <TableRow>
-                <TableCell className="w-16 px-4 py-3 text-left text-xs font-semibold text-slate-600 dark:text-gray-300 uppercase tracking-wider">#</TableCell>
-                <TableCell className="w-48 px-4 py-3 text-left text-xs font-semibold text-slate-600 dark:text-gray-300 uppercase tracking-wider">Employee</TableCell>
-                <TableCell className="w-16 px-4 py-3 text-center text-xs font-semibold text-slate-600 dark:text-gray-300 uppercase tracking-wider">Action</TableCell>
-                <TableCell className="w-32 px-4 py-3 text-center text-xs font-semibold text-slate-600 dark:text-gray-300 uppercase tracking-wider">Attendance</TableCell>
-                <TableCell className="w-24 px-4 py-3 text-center text-xs font-semibold text-slate-600 dark:text-gray-300 uppercase tracking-wider">Hours</TableCell>
-                {attendanceData?.month_dates?.map((date) => {
-                  const day = getDayOfMonth(date);
-                  const weekday = getDayOfWeek(date);
-                  const isWeekend = new Date(date).getDay() === 0 || new Date(date).getDay() === 6;
-                  return (
-                    <TableCell key={date} className={`w-12 px-2 py-3 text-center text-xs font-semibold uppercase tracking-wider ${isWeekend ? 'bg-slate-100 dark:bg-gray-600 text-slate-500 dark:text-gray-400' : 'text-slate-600 dark:text-gray-300'}`}>
-                      <div className="flex flex-col items-center space-y-1">
-                        <span className="text-sm font-bold">{day}</span>
-                        <span className="text-xs">{weekday}</span>
-                      </div>
-                    </TableCell>
-                  );
-                })}
-              </TableRow>
-            </TableHeader>
-
-            <TableBody className="bg-white dark:bg-gray-800 divide-y divide-slate-200 dark:divide-gray-700">
-              {filteredRecords && filteredRecords.length > 0 ? (
-                filteredRecords.map((record, index) => (
-                  <TableRow key={record.employee_id} className="hover:bg-slate-50 dark:hover:bg-gray-700 transition-colors">
-                    <TableCell className="px-4 py-4 text-sm font-medium text-slate-900 dark:text-white">{index + 1}</TableCell>
-                    <TableCell className="px-4 py-4">
-                      <div>
-                        <div className="text-sm font-medium text-slate-900 dark:text-white">{record.employee_name}</div>
-                        <div className="text-xs text-slate-500 dark:text-gray-400">ID: {record.employee_id}</div>
-                      </div>
-                    </TableCell>
-                    <TableCell className="px-4 py-4 text-center">
-                      <button
-                        className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-slate-100 dark:bg-gray-700 hover:bg-blue-100 dark:hover:bg-blue-900 text-slate-500 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
-                        title="Update Attendance"
-                        onClick={() => window.location.href = `/admin/update-attendance/${record.employee_id}`}
-                      >
-                        <Settings className="w-5 h-5" />
-                      </button>
-                    </TableCell>
-                    <TableCell className="px-4 py-4">
-                      <div className="flex items-center justify-center space-x-2">
-                        <div className="w-20 h-2 bg-slate-200 dark:bg-gray-700 rounded-full overflow-hidden">
-                          <div 
-                            className="h-full bg-gradient-to-r from-blue-500 to-emerald-500 rounded-full transition-all duration-500" 
-                            style={{ width: `${record.percentage_present || 0}%` }}
-                          ></div>
-                        </div>
-                        <span className="text-xs font-semibold text-slate-700 dark:text-gray-300 min-w-[3rem] text-right">
-                          {record.percentage_present}%
-                        </span>
-                      </div>
-                    </TableCell>
-                    <TableCell className="px-4 py-4 text-center text-sm font-medium text-slate-900 dark:text-white">
-                      {record.cumulative_worked_hours}h
-                    </TableCell>
-                    {
-                      attendanceData?.month_dates?.map((date) => {
-                        const daily = record.daily_attendance.find(day => day.date === date) || { 
-                          date,
-                          status: '-', // default
-                          check_in: null,
-                          check_out: null,
-                          worked_hours: 0,
-                          cumulative_worked_hours: 0,
-                          scheduled_hours: 0,
-                          break_time: 0,
-                          overtime_hours: 0,
-                          is_late: false,
-                          late_by_minutes: 0,
-                          early_departure: false,
-                          early_departure_minutes: 0,
-                          leave_type: null,
-                          leave_type_initials: null,
-                          half_day: false,
-                          remarks: '',
-                          shift_type: null
-                        };
-
-                        const isWeekend = new Date(date).getDay() === 0 || new Date(date).getDay() === 6;
-
-                        return (
-                          <TableCell key={date} className={`px-2 py-4 text-center ${isWeekend ? 'bg-slate-25 dark:bg-gray-700' : ''}`}>
-                            {getStatusCell(daily, date)}
-                          </TableCell>
-                        );
-                      })
-                    }
-                  </TableRow>
-                ))
-              ) : (
+        <div className="relative overflow-hidden">
+          <div className="overflow-x-auto overflow-y-auto max-h-[70vh]">
+            <Table className="w-full table-fixed min-w-max">
+              <TableHeader className="bg-slate-50 dark:bg-gray-700 border-b border-slate-200 dark:border-gray-600 sticky top-0 z-20">
                 <TableRow>
-                  <TableCell colSpan={4 + (attendanceData?.month_dates?.length || 0)} className="px-4 py-16">
-                    <div className="text-center space-y-4">
-                      <FileText className="w-12 h-12 text-slate-300 dark:text-gray-400 mx-auto" />
-                      <div>
-                        <h3 className="text-sm font-medium text-slate-900 dark:text-white">No records found</h3>
-                        <p className="text-sm text-slate-500 dark:text-gray-400 mt-1">
-                          No employees match your current filter criteria.
-                        </p>
-                      </div>
-                      <button
-                        onClick={() => { setSearchEmployee(''); setSelectedStatus('all'); }}
-                        className="inline-flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white dark:text-gray-200 text-sm font-medium rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
-                      >
-                        Clear All Filters
-                      </button>
-                    </div>
-                  </TableCell>
+                  <TableCell className="w-12 px-4 py-3 text-left text-xs font-semibold text-slate-600 dark:text-gray-300 uppercase tracking-wider sticky left-0 z-30 bg-slate-50 dark:bg-gray-700">#</TableCell>
+                  <TableCell className="w-32 px-4 py-3 text-left text-xs font-semibold text-slate-600 dark:text-gray-300 uppercase tracking-wider sticky left-12 z-30 bg-slate-50 dark:bg-gray-700">Employee</TableCell>
+                  <TableCell className="w-18 px-4 py-3 text-center text-xs font-semibold text-slate-600 dark:text-gray-300 uppercase tracking-wider sticky left-44 z-30 bg-slate-50 dark:bg-gray-700">Action</TableCell>
+                  <TableCell className="w-26 px-4 py-3 text-center text-xs font-semibold text-slate-600 dark:text-gray-300 uppercase tracking-wider sticky left-56 z-30 bg-slate-50 dark:bg-gray-700">Attendance</TableCell>
+                  <TableCell className="w-16 px-4 py-3 text-center text-xs font-semibold text-slate-600 dark:text-gray-300 uppercase tracking-wider sticky left-76 z-30 bg-slate-50 dark:bg-gray-700">Hours</TableCell>
+                  {attendanceData?.month_dates?.map((date) => {
+                    const day = getDayOfMonth(date);
+                    const weekday = getDayOfWeek(date);
+                    const isWeekend = new Date(date).getDay() === 0 || new Date(date).getDay() === 6;
+                    return (
+                      <TableCell key={date} className={`w-12 px-2 py-3 text-center text-xs font-semibold uppercase tracking-wider ${isWeekend ? 'bg-slate-100 dark:bg-gray-600 text-slate-500 dark:text-gray-400' : 'text-slate-600 dark:text-gray-300'}`}>
+                        <div className="flex flex-col items-center space-y-1">
+                          <span className="text-sm font-bold">{day}</span>
+                          <span className="text-xs">{weekday}</span>
+                        </div>
+                      </TableCell>
+                    );
+                  })}
                 </TableRow>
-              )}
-            </TableBody>
-          </Table>
+              </TableHeader>
+
+              <TableBody className="bg-white dark:bg-gray-800 divide-y divide-slate-200 dark:divide-gray-700">
+                {filteredRecords && filteredRecords.length > 0 ? (
+                  filteredRecords.map((record, index) => (
+                    <TableRow key={record.employee_id} className="hover:bg-slate-50 dark:hover:bg-gray-700 transition-colors">
+                      <TableCell className="px-4 py-4 text-sm font-medium text-slate-900 dark:text-white sticky left-0 z-20 bg-white dark:bg-gray-800">{index + 1}</TableCell>
+                      <TableCell className="px-4 py-4 sticky left-12 z-20 bg-white dark:bg-gray-800">
+                        <div>
+                          <div className="text-sm font-medium text-slate-900 dark:text-white">{record.employee_name}</div>
+                          <div className="text-xs text-slate-500 dark:text-gray-400">ID: {record.employee_id}</div>
+                        </div>
+                      </TableCell>
+                      <TableCell className="px-4 py-4 text-center sticky left-44 z-20 bg-white dark:bg-gray-800">
+                        <button
+                          className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-slate-100 dark:bg-gray-700 hover:bg-blue-100 dark:hover:bg-blue-900 text-slate-500 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
+                          title="Update Attendance"
+                          onClick={() => window.location.href = `/admin/update-attendance/${record.employee_id}`}
+                        >
+                          <Settings className="w-5 h-5" />
+                        </button>
+                      </TableCell>
+                      <TableCell className="px-4 py-4 sticky left-56 z-20 bg-white dark:bg-gray-800">
+                        <div className="flex items-center justify-center space-x-2">
+                          <div className="w-20 h-2 bg-slate-200 dark:bg-gray-700 rounded-full overflow-hidden">
+                            <div 
+                              className="h-full bg-gradient-to-r from-blue-500 to-emerald-500 rounded-full transition-all duration-500" 
+                              style={{ width: `${record.percentage_present || 0}%` }}
+                            ></div>
+                          </div>
+                          <span className="text-xs font-semibold text-slate-700 dark:text-gray-300 min-w-[3rem] text-right">
+                            {record.percentage_present}%
+                          </span>
+                        </div>
+                      </TableCell>
+                      <TableCell className="px-4 py-4 text-center text-sm font-medium text-slate-900 dark:text-white sticky left-76 z-20 bg-white dark:bg-gray-800">
+                        {record.cumulative_worked_hours}h
+                      </TableCell>
+                      {
+                        attendanceData?.month_dates?.map((date) => {
+                          const daily = record.daily_attendance.find(day => day.date === date) || { 
+                            date,
+                            status: '-', // default
+                            check_in: null,
+                            check_out: null,
+                            worked_hours: 0,
+                            cumulative_worked_hours: 0,
+                            scheduled_hours: 0,
+                            break_time: 0,
+                            overtime_hours: 0,
+                            is_late: false,
+                            late_by_minutes: 0,
+                            early_departure: false,
+                            early_departure_minutes: 0,
+                            leave_type: null,
+                            leave_type_initials: null,
+                            half_day: false,
+                            remarks: '',
+                            shift_type: null
+                          };
+
+                          const isWeekend = new Date(date).getDay() === 0 || new Date(date).getDay() === 6;
+
+                          return (
+                            <TableCell key={date} className={`px-2 py-4 text-center ${isWeekend ? 'bg-slate-25 dark:bg-gray-700' : ''}`}>
+                              {getStatusCell(daily, date)}
+                            </TableCell>
+                          );
+                        })
+                      }
+                    </TableRow>
+                  ))
+                ) : (
+                  <TableRow>
+                    <TableCell colSpan={5 + (attendanceData?.month_dates?.length || 0)} className="px-4 py-16">
+                      <div className="text-center space-y-4">
+                        <FileText className="w-12 h-12 text-slate-300 dark:text-gray-400 mx-auto" />
+                        <div>
+                          <h3 className="text-sm font-medium text-slate-900 dark:text-white">No records found</h3>
+                          <p className="text-sm text-slate-500 dark:text-gray-400 mt-1">
+                            No employees match your current filter criteria.
+                          </p>
+                        </div>
+                        <button
+                          onClick={() => { setSearchEmployee(''); setSelectedStatus('all'); }}
+                          className="inline-flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white dark:text-gray-200 text-sm font-medium rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                        >
+                          Clear All Filters
+                        </button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </div>
         </div>
       </section>
 

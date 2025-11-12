@@ -120,11 +120,7 @@ const navItems: NavItem[] = [
     icon: <PieChartIcon />,
     path: "/admin/employeerefrences",
   },
-    {
-    icon: <UserCircleIcon />,
-    name: "Employee Status",
-    path: "/admin/userstatus",
-  },
+   
 ];
 
 

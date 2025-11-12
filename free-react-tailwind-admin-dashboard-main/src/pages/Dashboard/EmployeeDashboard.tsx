@@ -29,6 +29,7 @@ interface ActiveBreakData {
   type: string;
   start_time: string;
   break_config_id: number;
+  duration_minutes?: number;
 }
 
 interface DashboardData {
@@ -48,6 +49,8 @@ interface DashboardData {
   overtime: OvertimeData | null;
   latest_payroll: PayrollData | null;
   birthday_message?: string | null;
+  attendance_score?: number;
+  weekly_hours?: number;
 }
 
 interface NotificationState {
@@ -79,13 +82,18 @@ const [employeeStatus, setEmployeeStatus] = React.useState<string | null>(null);
     return ((parts[0][0] || '') + (parts[parts.length - 1][0] || '')).toUpperCase();
   };
 
-  // Calculate weekly hours dynamically
+  // Calculate weekly hours from backend data
   const calculateWeeklyHours = React.useCallback((data: DashboardData): void => {
-    if (data.total_worked) {
-      const worked = data.total_worked.split(' ');
-      const hours = parseInt(worked[0]) || 0;
-      const minutes = parseInt(worked[1]) || 0;
-      setWeeklyHours(hours + (minutes / 60));
+    if (data.weekly_hours !== undefined) {
+      setWeeklyHours(data.weekly_hours);
+    } else {
+      // Fallback to old calculation if backend doesn't provide weekly_hours
+      if (data.total_worked) {
+        const worked = data.total_worked.split(' ');
+        const hours = parseInt(worked[0]) || 0;
+        const minutes = parseInt(worked[1]) || 0;
+        setWeeklyHours(hours + (minutes / 60));
+      }
     }
   }, []);
 
@@ -267,6 +275,13 @@ const [employeeStatus, setEmployeeStatus] = React.useState<string | null>(null);
   const handleCheckinClick = async () => {
     setLoading(true);
     try {
+      // Check if already checked out for the day
+      if (dashboardData?.checkin_time && dashboardData?.checkout_time) {
+        showNotification("You have already checked out for today. Attendance for the day is complete.", "info");
+        setLoading(false);
+        return;
+      }
+
       const endpoint = dashboardData?.checkin_time && !dashboardData?.checkout_time ? "checkout/" : "checkin/";
       const res = await axiosInstance.post(endpoint);
       if (res.status === 200) {
@@ -439,7 +454,9 @@ const [employeeStatus, setEmployeeStatus] = React.useState<string | null>(null);
                         ? 'text-sm text-yellow-800'
                         : 'text-sm text-gray-600 dark:text-gray-400'
                     }>
-                      {isCheckedIn ? (hasActiveBreak ? 'On Break' : 'Working Time') : 'Ready to Start'}
+                      {isCheckedIn ? (hasActiveBreak ? 
+                        `On Break${dashboardData?.active_break?.duration_minutes ? ` (${dashboardData.active_break.duration_minutes} min)` : ''}` : 
+                        'Working Time') : 'Ready to Start'}
                     </div>
                   </div>
                   <div className="flex items-center gap-3">

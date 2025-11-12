@@ -5,6 +5,7 @@ import ComponentCard from '../../components/common/ComponentCard';
 import { Table, TableRow, TableCell } from '../../components/ui/table';
 import Button from '../../components/ui/button/Button';
 import Badge from '../../components/ui/badge/Badge';
+import { FaSyncAlt } from 'react-icons/fa';
 
 interface LeaveType {
   id: number;
@@ -29,6 +30,8 @@ interface AppliedLeave {
 const LeaveApply: React.FC = () => {
   const [leaveTypes, setLeaveTypes] = useState<LeaveType[]>([]);
   const [appliedLeaves, setAppliedLeaves] = useState<AppliedLeave[]>([]);
+  const [loading, setLoading] = useState<boolean>(false);
+  const [lastRefresh, setLastRefresh] = useState<Date>(new Date());
   const navigate = useNavigate();
 
   const fetchLeaveTypes = async () => {
@@ -50,11 +53,29 @@ const LeaveApply: React.FC = () => {
     }
   };
 
+  // Manual refresh function
+  const handleRefresh = async () => {
+    setLoading(true);
+    await fetchAppliedLeaves();
+    setLastRefresh(new Date());
+    setLoading(false);
+  };
+
   // Removed unused handleChange and handleSubmit
 
   useEffect(() => {
     fetchLeaveTypes();
     fetchAppliedLeaves();
+  }, []);
+
+  // Auto-refresh applied leaves every 30 seconds
+  useEffect(() => {
+    const interval = setInterval(() => {
+      fetchAppliedLeaves();
+      setLastRefresh(new Date());
+    }, 30000); // 30 seconds
+
+    return () => clearInterval(interval);
   }, []);
 
   // Cancel leave handler
@@ -73,6 +94,9 @@ const LeaveApply: React.FC = () => {
         // Approved leave: update status
         setAppliedLeaves((prev) => prev.map(l => l.id === leaveId ? { ...l, status: 'Cancelled' } : l));
       }
+      // Refresh data to ensure consistency
+      await fetchAppliedLeaves();
+      setLastRefresh(new Date());
     } catch {
       alert('Failed to cancel leave.');
     }
@@ -102,12 +126,27 @@ const LeaveApply: React.FC = () => {
         </div>
       </div>
       <ComponentCard title="Leave Application">
-        <div className="flex justify-end mb-4">
+        <div className="flex justify-end mb-4 gap-2">
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={handleRefresh}
+            disabled={loading}
+            className="flex items-center gap-2"
+          >
+            <FaSyncAlt className={loading ? 'animate-spin' : ''} />
+            {loading ? 'Refreshing...' : 'Refresh'}
+          </Button>
           <Button variant="primary" onClick={() => navigate('/employee/form-leave')}>
             Apply
           </Button>
         </div>
-        <h3 className="text-lg font-semibold mb-2">My Applied Leaves</h3>
+        <h3 className="text-lg font-semibold mb-2 flex items-center justify-between">
+          <span>My Applied Leaves</span>
+          <span className="text-sm text-gray-500">
+            Last updated: {lastRefresh.toLocaleTimeString()}
+          </span>
+        </h3>
         <div className="overflow-x-auto">
           <Table className="min-w-full text-left align-middle">
             <thead className="bg-gray-50">

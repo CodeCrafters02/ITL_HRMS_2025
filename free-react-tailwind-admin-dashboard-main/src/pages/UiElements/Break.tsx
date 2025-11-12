@@ -180,11 +180,11 @@ useEffect(() => {
           <div className="absolute left-0 mt-2 w-30 bg-white border border-gray-200 rounded-lg shadow-lg z-50">
             {loading ? (
               <div className="p-4 text-center text-gray-500 text-sm">Loading...</div>
-            ) : breakConfigs.length === 0 ? (
-              <div className="p-4 text-center text-gray-500 text-sm">No breaks available</div>
+            ) : breakConfigs.filter(cfg => cfg.break_choice === "short_break").length === 0 ? (
+              <div className="p-4 text-center text-gray-500 text-sm">No short breaks available</div>
             ) : (
               <ul>
-                {breakConfigs.map((cfg) => (
+                {breakConfigs.filter(cfg => cfg.break_choice === "short_break").map((cfg) => (
                   <li key={cfg.id}>
                     <button
                       className="w-full text-left px-4 py-2 hover:bg-yellow-50 text-gray-700"

@@ -7,7 +7,6 @@ from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ObjectDoesNotExist
 from django.contrib.auth import get_user_model
 from .models import *
-from rest_framework_simplejwt.tokens import RefreshToken
 
 User = get_user_model()
 
@@ -311,8 +310,15 @@ class EmployeeSerializer(serializers.ModelSerializer):
     department = serializers.PrimaryKeyRelatedField(queryset=Department.objects.all())
     designation = serializers.PrimaryKeyRelatedField(queryset=Designation.objects.all())
     level = serializers.PrimaryKeyRelatedField(queryset=Level.objects.all(), required=False)
-    level_name = serializers.SerializerMethodField()
 
+    reporting_level = serializers.PrimaryKeyRelatedField(
+        queryset=Level.objects.all(), write_only=True, required=False, allow_null=True
+    )
+    reporting_manager = serializers.PrimaryKeyRelatedField(
+        queryset=Employee.objects.all(), required=False, allow_null=True
+    )
+    reporting_manager_name = serializers.SerializerMethodField()
+    reporting_level_name = serializers.SerializerMethodField()
     asset_details = serializers.PrimaryKeyRelatedField(
         queryset=AssetInventory.objects.all(), many=True, required=False, allow_null=True
     )
@@ -321,18 +327,6 @@ class EmployeeSerializer(serializers.ModelSerializer):
     designation_name = serializers.SerializerMethodField()
     asset_names = serializers.SerializerMethodField()
     source_choices = serializers.SerializerMethodField()
-    reporting_manager = serializers.SerializerMethodField()
-    reporting_level = serializers.SerializerMethodField()
-
-
-    reporting_manager_id = serializers.PrimaryKeyRelatedField(
-        queryset=Employee.objects.all(), write_only=True, required=False, allow_null=True
-    )
-    reporting_level_id = serializers.PrimaryKeyRelatedField(
-        queryset=Level.objects.all(), write_only=True, required=False, allow_null=True
-    )
-
-    shift_assigned = serializers.SerializerMethodField()
 
     class Meta:
         model = Employee
@@ -341,13 +335,12 @@ class EmployeeSerializer(serializers.ModelSerializer):
             'email', 'date_of_birth', 'mobile', 'temporary_address', 'permanent_address', 'photo',
             'aadhar_no', 'aadhar_card', 'pan_no', 'pan_card', 'guardian_name', 'guardian_mobile',
             'category', 'department', 'department_name', 'designation', 'designation_name',
-            'level','level_name',
-            'reporting_manager', 'reporting_level', 
+            'level', 'reporting_manager', 'reporting_level', 'reporting_level_name', 'reporting_manager_name',
             'payment_method', 'account_no', 'ifsc_code', 'bank_name', 'source_of_employment',
             'who_referred', 'date_of_joining', 'previous_employer', 'date_of_releaving',
             'previous_designation_name', 'previous_salary', 'ctc', 'gross_salary',
             'epf_status', 'uan', 'asset_details', 'asset_names', 'esic_status', 'esic_no',
-            'source_choices','shift_assigned','reporting_manager_id','reporting_level_id',
+            'source_choices'
         ]
 
     def get_department_name(self, obj):
@@ -364,43 +357,14 @@ class EmployeeSerializer(serializers.ModelSerializer):
     def get_source_choices(self, obj):
         return [{'value': key, 'label': label} for key, label in Employee.SOURCE_CHOICES]
 
-
-    def get_shift_assigned(self, obj):
-        """
-        Returns the assigned shift details if any.
-        """
-        if obj.shift_assigned:
-            return {
-                "id": obj.shift_assigned.id,
-                "shift_type": obj.shift_assigned.shift_type,
-                "checkin": str(obj.shift_assigned.checkin),
-                "checkout": str(obj.shift_assigned.checkout)
-            }
-        return None
-
-    def get_reporting_manager(self, obj):
+    def get_reporting_manager_name(self, obj):
+        """Return full name of reporting manager."""
         if obj.reporting_manager:
-            return {
-                "id": obj.reporting_manager.id,
-                "name": f"{obj.reporting_manager.first_name} {obj.reporting_manager.last_name}".strip()
-            }
-        return None
-
-    def get_reporting_level(self, obj):
-        if obj.reporting_level:
-            return {
-                "id": obj.reporting_level.id,
-                "name": obj.reporting_level.level_name
-            }
+            return f"{obj.reporting_manager.first_name} {obj.reporting_manager.last_name}".strip()
         return None
     
-    def get_level_name(self, obj):
-        if obj.level:
-            return {
-                "id": obj.level.id,
-                "name": obj.level.level_name
-            }
-        return None
+    def get_reporting_level_name(self, obj):
+        return obj.reporting_level.level_name if obj.reporting_level else None
 
     def validate(self, data):
         email = data.get('email')
@@ -438,35 +402,13 @@ class EmployeeSerializer(serializers.ModelSerializer):
         return data
 
     def create(self, validated_data):
-        request = self.context.get('request')
-        if not request:
-            raise serializers.ValidationError("Request context is required.")
-
-        admin_user = request.user
+        reporting_level = validated_data.pop('reporting_level', None)
         assets = validated_data.pop('asset_details', [])
+        request = self.context['request']
+        admin_user = request.user
 
-        # --- Get reporting info from request.data ---
-        reporting_manager_id = request.data.get('reporting_manager')
-        reporting_level_id = request.data.get('reporting_level')
-
-        reporting_manager = None
-        reporting_level = None
-
-        if reporting_manager_id:
-            try:
-                reporting_manager = Employee.objects.get(pk=int(reporting_manager_id))
-            except Employee.DoesNotExist:
-                raise serializers.ValidationError({"reporting_manager": "Invalid reporting manager ID."})
-
-        if reporting_level_id:
-            try:
-                reporting_level = Level.objects.get(pk=int(reporting_level_id))
-            except Level.DoesNotExist:
-                raise serializers.ValidationError({"reporting_level": "Invalid reporting level ID."})
-
-        # --- Generate employee ID and user credentials ---
         employee_id = self.generate_employee_id()
-        username = f'emp_{get_random_string(6)}'
+        username = self.generate_username(validated_data)
         password = get_random_string(8)
 
         user = UserRegister.objects.create_user(
@@ -485,33 +427,26 @@ class EmployeeSerializer(serializers.ModelSerializer):
         if designation and designation.level:
             validated_data['level'] = designation.level
 
-        # --- Create employee instance ---
-        employee = Employee.objects.create(
-            reporting_manager=reporting_manager,
-            reporting_level=reporting_level,
-            **validated_data
-        )
+        employee = Employee.objects.create(**validated_data)
 
-        # --- Assign assets properly ---
-        if assets:
-            # DRF already gives AssetInventory instances because of PrimaryKeyRelatedField
-            for asset_obj in assets:
-                if asset_obj.quantity <= 0:
-                    raise serializers.ValidationError(f"Asset '{asset_obj.name}' is out of stock.")
-                asset_obj.quantity -= 1
-                asset_obj.save()
+        # Convert asset IDs to AssetInventory instances if needed
+        asset_instances = []
+        for asset in assets:
+            if isinstance(asset, int):
+                asset_obj = AssetInventory.objects.get(pk=asset)
+            else:
+                asset_obj = asset
+            if asset_obj.quantity <= 0:
+                raise serializers.ValidationError(f"Asset '{asset_obj.name}' is out of stock.")
+            asset_obj.quantity -= 1
+            asset_obj.save()
+            EmployeeAssetDetails.objects.create(employee=employee, assetinventory=asset_obj)
 
-            # Assign to M2M
-            employee.asset_details.set(assets)
-
-            # Optional: create EmployeeAssetDetails only if you need a separate history table
-            # for asset_obj in assets:
-            #     EmployeeAssetDetails.objects.create(employee=employee, assetinventory=asset_obj)
-
-        # --- Send welcome email ---
         self.send_welcome_email(user, password)
 
         return employee
+
+
 
     def generate_employee_id(self):
         last_employee = Employee.objects.order_by('id').last()
@@ -521,64 +456,50 @@ class EmployeeSerializer(serializers.ModelSerializer):
             last_id = 0
         return f'EMP-{last_id + 1:04d}'
 
+    def generate_username(self, validated_data):
+        first_name = validated_data.get('first_name', '').strip().lower()
+        middle_name = validated_data.get('middle_name', '').strip().lower()
+        last_name = validated_data.get('last_name', '').strip().lower()
+        
+        # Build base username
+        name_parts = [first_name]
+        if middle_name:
+            name_parts.append(middle_name)
+        if last_name:
+            name_parts.append(last_name)
+        
+        base_username = '.'.join(name_parts)
+        
+        # Clean the username (remove special characters, replace spaces with dots)
+        import re
+        base_username = re.sub(r'[^a-z0-9.]', '', base_username)
+        base_username = re.sub(r'\.+', '.', base_username).strip('.')
+        
+        # If base_username is empty, fallback to random
+        if not base_username:
+            return f'emp_{get_random_string(6)}'
+        
+        # Check for uniqueness and add counter if needed
+        username = base_username
+        counter = 1
+        while UserRegister.objects.filter(username=username).exists():
+            username = f"{base_username}{counter}"
+            counter += 1
+        
+        return username
+
     def send_welcome_email(self, user, password):
-        subject = "Welcome to Innovyx Tech Labs HRMS!"
+        subject = 'Welcome to the Company!'
         message = (
-            f"Hello {user.username},\n\n"
-            f"Your employee account has been successfully created.\n\n"
-            f"Username: {user.username}\n"
-            f"Password: {password}\n\n"
-            f"You can log in to your employee portal using the link below:\n"
-            f"🔗 https://hrms.innovyxtechlabs.com/\n\n"
-            f"Please log in and change your password after your first login for security purposes.\n\n"
-            f"Best regards,\n"
-            f"Innovyx Tech Labs HRMS Team"
+            f'Hello {user.first_name} {user.last_name},\n\n'
+            f'Your employee account has been created.\n\n'
+            f'Username: {user.username}\n'
+            f'Password: {password}\n\n'
+            f'Please log in and change your password after first login.\n\n'
+            f'Thank you!'
         )
-
-        send_mail(subject, message, settings.DEFAULT_FROM_EMAIL, [user.email])  
-
-
-    def update(self, instance, validated_data):
-        request = self.context.get('request')
-        if not request:
-            raise serializers.ValidationError("Request context is required.")
-
-        # --- Reporting manager / level from request.data ---
-        reporting_manager_id = request.data.get('reporting_manager')
-        reporting_level_id = request.data.get('reporting_level')
-
-        reporting_manager = None
-        reporting_level = None
-
-        if reporting_manager_id:
-            try:
-                reporting_manager = Employee.objects.get(pk=int(reporting_manager_id))
-            except Employee.DoesNotExist:
-                raise serializers.ValidationError({"reporting_manager": "Invalid reporting manager ID."})
-
-        if reporting_level_id:
-            try:
-                reporting_level = Level.objects.get(pk=int(reporting_level_id))
-            except Level.DoesNotExist:
-                raise serializers.ValidationError({"reporting_level": "Invalid reporting level ID."})
-
-        instance.reporting_manager = reporting_manager or instance.reporting_manager
-        instance.reporting_level = reporting_level or instance.reporting_level
-
-        # --- Handle other fields ---
-        assets = validated_data.pop('asset_details', None)  # Remove M2M from validated_data
-
-        for attr, value in validated_data.items():
-            setattr(instance, attr, value)
-
-        instance.save()
-
-        # --- Update ManyToMany field properly ---
-        if assets is not None:
-            instance.asset_details.set(assets)  # Use .set() for M2M
-
-        return instance
-
+        send_mail(subject, message, settings.DEFAULT_FROM_EMAIL, [user.email])
+    
     
 class AssetInventorySerializer(serializers.ModelSerializer):
     class Meta:
@@ -599,7 +520,7 @@ class AssetInventorySerializer(serializers.ModelSerializer):
 
         validated_data['company'] = company
         return AssetInventory.objects.create(**validated_data)
-    
+
     def update(self, instance, validated_data):
         return super().update(instance, validated_data)
 
@@ -865,9 +786,9 @@ class AttendanceSerializer(serializers.ModelSerializer):
 
     def get_is_late(self, obj):
         check_in = obj.check_in
-        shift = getattr(obj.employee, 'shift_assigned', None)
+        shift = obj.shift
 
-        if not (check_in and shift and shift.checkin):
+        if not (check_in and shift and shift.checkin and shift.grace_period):
             return False
 
         # Convert check-in to local time
@@ -878,7 +799,7 @@ class AttendanceSerializer(serializers.ModelSerializer):
         shift_start_dt = timezone.make_aware(shift_start_dt, timezone.get_current_timezone())
 
         # Add grace period
-        allowed_latest_checkin = shift_start_dt + shift.grace()
+        allowed_latest_checkin = shift_start_dt + shift.grace_period
 
         return check_in > allowed_latest_checkin
 
@@ -930,6 +851,23 @@ class BreakConfigSerializer(serializers.ModelSerializer):
             'enabled'
         ]
              
+
+
+class UserUpdateSerializer(serializers.Serializer):
+    username = serializers.CharField(required=False)
+    new_password = serializers.CharField(required=False, write_only=True)
+
+    def validate_username(self, value):
+        user = self.context['request'].user
+        if UserRegister.objects.filter(username=value).exclude(id=user.id).exists():
+            raise serializers.ValidationError("Username already exists.")
+        return value
+
+    def validate_new_password(self, value):
+        if len(value) < 8:
+            raise serializers.ValidationError("Password must be at least 8 characters long.")
+        return value
+
         
 class LetterTemplateSerializer(serializers.ModelSerializer):
     company_details = CompanySerializer(source="company", read_only=True)
@@ -949,84 +887,7 @@ class GeneratedLetterSerializer(serializers.ModelSerializer):
             'file_path': {'required': False, 'allow_blank': True, 'allow_null': True}
         }
 
-
-class RefreshTokenSerializer(serializers.Serializer):
-    refresh = serializers.CharField()
-    
-    def validate(self, data):
-        refresh = data.get("refresh")
-        try:
-            token = RefreshToken(refresh)
-            # Get user from token
-            user_id = token.payload.get('user_id')
-            if not user_id:
-                raise serializers.ValidationError("Invalid refresh token.")
-            
-            # Get user instance
-            user = UserRegister.objects.get(id=user_id)
-            
-            # Create new refresh token with user data
-            new_refresh = RefreshToken.for_user(user)
-            new_refresh['username'] = user.username    
-            new_refresh['role'] = user.role
-            
-            return {
-                "access": str(new_refresh.access_token)
-            }
-        except Exception as e:
-            raise serializers.ValidationError("Invalid refresh token.")
-
-
-class AssignShiftSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Employee
-        fields = ['id', 'shift_assigned']
-
-    # Optional: validate if shift exists
-    def validate_shift_assigned(self, value):
-        if value is None:
-            raise serializers.ValidationError("Shift must be selected")
-        return value
-    
-class UserUpdateSerializer(serializers.Serializer):
-    username = serializers.CharField(required=False)
-    old_password = serializers.CharField(required=True)
-    new_password = serializers.CharField(required=False)
-    confirm_password = serializers.CharField(required=False)
-
-    def validate_old_password(self, value):
-        user = self.context['request'].user
-        if not user.check_password(value):
-            raise serializers.ValidationError("Old password is not correct.")
-        return value
-
-    def validate(self, data):
-        if 'new_password' in data or 'confirm_password' in data:
-            if data.get('new_password') != data.get('confirm_password'):
-                raise serializers.ValidationError("New password and confirm password do not match.")
-            validate_password(data['new_password'], user=self.context['request'].user)
-        return data
-
 class EmployeeStatusSerializer(serializers.ModelSerializer):
-    full_name = serializers.CharField(read_only=True)
-    photo = serializers.ImageField(read_only=True)
-
     class Meta:
         model = Employee
-        fields = ['id', 'photo', 'status', 'last_active','full_name']
-        read_only_fields = ['last_active', 'photo','full_name']
-
-class ReportingEmployeesSerializer(serializers.ModelSerializer):
-    full_name = serializers.CharField(read_only=True)
-    department_name = serializers.SerializerMethodField()
-    designation_name = serializers.SerializerMethodField()
-
-    class Meta:
-        model = Employee
-        fields = ['id', 'employee_id', 'full_name', 'status', 'department_name', 'designation_name']
-
-    def get_department_name(self, obj):
-        return obj.department.department_name if obj.department else None
-
-    def get_designation_name(self, obj):
-        return obj.designation.designation_name if obj.designation else None
+        fields = ['id', 'employee_id', 'first_name', 'last_name', 'status']

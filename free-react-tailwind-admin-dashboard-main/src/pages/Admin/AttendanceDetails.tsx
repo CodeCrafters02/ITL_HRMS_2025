@@ -48,6 +48,7 @@ type RawAttendance = {
   check_in_late?: boolean;
   is_present?: boolean;
   status?: string;
+  leave?: number | null;
 };
 
 interface Attendance {
@@ -87,7 +88,16 @@ const Attendance: React.FC = () => {
         });
         const mapped = res.data.map((item: RawAttendance) => {
           const isLate = item.is_late || item.check_in_late || false;
-          const status = item.status || (item.is_present ? (isLate ? 'Late' : 'Present') : 'Absent');
+          let status = item.status;
+          if (!status) {
+            if (item.leave) {
+              status = 'Leave';
+            } else if (item.check_in || item.is_present) {
+              status = 'Present';
+            } else {
+              status = 'Absent';
+            }
+          }
           return {
             id: item.id,
             employee_id: item.employee_id || '',
@@ -114,10 +124,10 @@ const Attendance: React.FC = () => {
   }, [startDate, endDate, selectedStatus, searchTerm]);
 
   const handleDateChange = (days: number) => {
-    const newStart = dayjs(startDate).add(days, 'day').format('YYYY-MM-DD');
-    const newEnd = dayjs(endDate).add(days, 'day').format('YYYY-MM-DD');
-    setStartDate(newStart);
-    setEndDate(newEnd);
+    const currentDate = startDate; // Use startDate as the current selected date
+    const newDate = dayjs(currentDate).add(days, 'day').format('YYYY-MM-DD');
+    setStartDate(newDate);
+    setEndDate(newDate);
   };
 
   const handleReset = () => {
@@ -133,10 +143,10 @@ const Attendance: React.FC = () => {
     switch (status.toLowerCase()) {
       case 'present':
         return `${baseClasses} ${isLate ? 'bg-orange-100 text-orange-800' : 'bg-green-100 text-green-800'}`;
-      case 'late':
-        return `${baseClasses} bg-orange-100 text-orange-800`;
       case 'absent':
         return `${baseClasses} bg-red-100 text-red-800`;
+      case 'leave':
+        return `${baseClasses} bg-blue-100 text-blue-800`;
       default:
         return `${baseClasses} bg-gray-100 text-gray-800`;
     }
@@ -334,8 +344,8 @@ const Attendance: React.FC = () => {
             >
               <option value="">All Status</option>
               <option value="Present">Present</option>
-              <option value="Late">Late</option>
               <option value="Absent">Absent</option>
+              <option value="Leave">Leave</option>
             </select>
           </div>
 
@@ -361,9 +371,24 @@ const Attendance: React.FC = () => {
             <span>← Previous Day</span>
           </button>
 
-          {/* Date Display */}
-          <div className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-            {startDate === endDate ? startDate : `${startDate} to ${endDate}`}
+          {/* Date Selection */}
+          <div className="flex items-center space-x-4">
+            <div className="flex items-center space-x-2">
+              <Calendar className="h-5 w-5 text-gray-400 dark:text-gray-300" />
+              <input
+                type="date"
+                value={startDate}
+                onChange={(e) => {
+                  const selectedDate = e.target.value;
+                  setStartDate(selectedDate);
+                  setEndDate(selectedDate);
+                }}
+                className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              />
+            </div>
+            <div className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+              {startDate === endDate ? startDate : `${startDate} to ${endDate}`}
+            </div>
           </div>
 
           {/* Next Day */}

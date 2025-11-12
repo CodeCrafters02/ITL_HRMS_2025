@@ -248,6 +248,36 @@ class DashboardAPIView(APIView):
                 'date': latest_payroll.payroll_date
             } if latest_payroll else None
 
+            # Weekly hours calculation (Monday to Sunday)
+            week_start = today - timedelta(days=today.weekday())  # Monday
+            week_end = week_start + timedelta(days=6)  # Sunday
+            
+            weekly_attendances = Attendance.objects.filter(
+                employee=employee,
+                date__range=[week_start, week_end],
+                check_in__isnull=False,
+                check_out__isnull=False
+            )
+            
+            total_weekly_minutes = 0
+            for att in weekly_attendances:
+                # Calculate worked time minus breaks for each day
+                worked_delta = att.check_out - att.check_in
+                worked_minutes = worked_delta.total_seconds() // 60
+                
+                # Subtract break time for that day
+                day_breaks = BreakLog.objects.filter(
+                    employee=employee,
+                    start__date=att.date,
+                    end__isnull=False
+                )
+                break_minutes = sum(int((b.end - b.start).total_seconds() // 60) for b in day_breaks)
+                
+                effective_minutes = max(0, worked_minutes - break_minutes)
+                total_weekly_minutes += effective_minutes
+            
+            weekly_hours = round(total_weekly_minutes / 60, 2)
+
             # Birthday message
             birthday_message = None
             if employee.date_of_birth:
@@ -291,12 +321,14 @@ class DashboardAPIView(APIView):
                 'effective_time': calculate_effective_time(punch_in, break_minutes, punch_out, now)['formatted'],
                 'total_break_minutes': break_minutes,
                 'attendance_score': attendance_score,  # ✅ New field added
+                'weekly_hours': weekly_hours,  # ✅ Weekly hours calculation
                 'shift_name': shift.shift_type if shift else 'Not assigned',
                 'shift_timing': f"{shift.checkin.strftime('%H:%M')} - {shift.checkout.strftime('%H:%M')}" if shift else '--:--',
                 'server_time': now.strftime('%Y-%m-%d %H:%M:%S'),
                 'active_break': {
                     'type': active_break.break_config.get_break_choice_display() if active_break and active_break.break_config else None,
                     'break_config_id': active_break.break_config.id if active_break and active_break.break_config else None,
+                    'duration_minutes': active_break.break_config.duration_minutes if active_break and active_break.break_config else None,
                     'start_time': timezone.localtime(active_break.start, tz).strftime('%H:%M:%S') if active_break else None
                 } if active_break else None,
                 'recent_breaks': [
