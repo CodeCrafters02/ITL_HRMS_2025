@@ -51,7 +51,7 @@ const EditAssetModal: React.FC<EditAssetModalProps> = ({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
       <div className="bg-white dark:bg-gray-900 rounded-lg p-8 w-full max-w-lg shadow-lg">
         <h2 className="text-xl font-bold mb-4 text-gray-900 dark:text-white">Edit Asset</h2>
         <div className="space-y-4">

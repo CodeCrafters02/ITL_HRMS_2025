@@ -41,7 +41,7 @@ const EmployeeReporteesPage: React.FC = () => {
           <TableRow>
             <TableCell isHeader className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">S.No</TableCell>
             <TableCell isHeader className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">Full Name</TableCell>
-            <TableCell isHeader className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">Status</TableCell>
+            {/* <TableCell isHeader className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">Status</TableCell> */}
             <TableCell isHeader className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">Department</TableCell>
             <TableCell isHeader className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">Designation</TableCell>
           </TableRow>
@@ -58,7 +58,7 @@ const EmployeeReporteesPage: React.FC = () => {
               <TableRow key={rep.id}>
                 <TableCell className="px-5 py-4 sm:px-6 text-start dark:text-white">{idx + 1}</TableCell>
                 <TableCell className="px-5 py-4 sm:px-6 text-start dark:text-white">{rep.full_name}</TableCell>
-                <TableCell
+                {/* <TableCell
                   className={
                     rep.status === "online"
                       ? "text-green-600"
@@ -70,7 +70,7 @@ const EmployeeReporteesPage: React.FC = () => {
                   }
                 >
                   {rep.status}
-                </TableCell>
+                </TableCell> */}
                 <TableCell className="px-5 py-4 sm:px-6 text-start dark:text-white">{rep.department_name || "-"}</TableCell>
                 <TableCell className="px-5 py-4 sm:px-6 text-start dark:text-white">{rep.designation_name || "-"}</TableCell>
               </TableRow>

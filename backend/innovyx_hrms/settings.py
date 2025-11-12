@@ -27,8 +27,8 @@ SECRET_KEY = 'django-insecure-v++-2-a@y^9k1+kky5l^fg6#r1hc)hd(fwjox62c7@=ccvdkff
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['apihrms.innovyxtechlabs.com']
-# ALLOWED_HOSTS = ['apihrms.innovyxtechlabs.com', 'localhost', '127.0.0.1']
+# ALLOWED_HOSTS = ['apihrms.innovyxtechlabs.com']
+ALLOWED_HOSTS = ['apihrms.innovyxtechlabs.com', 'localhost', '127.0.0.1']
 
 # Application definition
 
@@ -116,26 +116,26 @@ FCM_CREDENTIALS_FILE = BASE_DIR / "firebase-service-account.json"
 
 FCM_PROJECT_ID = "hrms-de74c"
 
-SITE_URL = "https://apihrms.innovyxtechlabs.com/"
-# SITE_URL = "http://localhost:8000/"
+# SITE_URL = "https://apihrms.innovyxtechlabs.com/"
+SITE_URL = "http://localhost:8000/"
 
 
 # CORS_ALLOW_ALL_ORIGINS = True
 # CORS_ALLOW_ALL_HEADERS = True
 CORS_ALLOW_CREDENTIALS = True
 
-CORS_ALLOWED_ORIGINS = [
-    "https://hrms.innovyxtechlabs.com",
-]
-
-
-CSRF_TRUSTED_ORIGINS = [
-    "https://hrms.innovyxtechlabs.com",
-]
-
 # CORS_ALLOWED_ORIGINS = [
-#     "http://localhost:3000",
+#     "https://hrms.innovyxtechlabs.com",
 # ]
+
+
+# CSRF_TRUSTED_ORIGINS = [
+#     "https://hrms.innovyxtechlabs.com",
+# ]
+
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:3000",
+]
 
 
 CORS_ALLOW_HEADERS = [
@@ -158,8 +158,8 @@ CORS_ALLOW_METHODS = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS']
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        # 'NAME': 'innovyx_hrms_pr',
-        'NAME': 'hrms_db',
+        'NAME': 'innovyx_hrms_pr',
+        # 'NAME': 'hrms_db',
         'USER': 'postgres',
         'PASSWORD': '1234',
         'HOST': 'localhost',

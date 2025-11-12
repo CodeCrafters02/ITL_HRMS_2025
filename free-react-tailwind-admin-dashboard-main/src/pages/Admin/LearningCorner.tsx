@@ -188,7 +188,7 @@ const LearningCornerPage: React.FC = () => {
         </Table>
         {/* Modal for editing */}
         {showModal && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
             <div className="bg-white dark:bg-gray-900 rounded-lg shadow-lg p-8 w-full max-w-md">
               <h2 className="text-xl font-bold mb-4 text-gray-900 dark:text-white">Edit Learning Corner</h2>
               <div className="space-y-4">
@@ -246,7 +246,7 @@ const LearningCornerPage: React.FC = () => {
         )}
       {/* Delete Confirmation Modal */}
       {deleteId !== null && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-opacity-40">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
           <div className="bg-white dark:bg-gray-900 rounded-lg shadow-lg p-8 w-full max-w-md">
             <h2 className="text-xl font-bold mb-4 text-gray-900 dark:text-white">Confirm Delete</h2>
             <p className="mb-6 text-gray-700 dark:text-gray-300">Are you sure you want to delete the department <span className="font-semibold">{deleteName}</span>?</p>

@@ -199,7 +199,7 @@ const BreakConfigDisplay: React.FC = () => {
           </ComponentCard>
 
           {/* Don't Disturb */}
-          <ComponentCard title="Don't Disturb">
+          {/* <ComponentCard title="Don't Disturb">
             <div className="space-y-4">
               <p className="text-sm text-gray-600 dark:text-gray-300 mb-4">
                 Enable "Don't Disturb" mode to prevent interruptions. This setting has no fixed duration.
@@ -227,7 +227,7 @@ const BreakConfigDisplay: React.FC = () => {
                 </div>
               )}
             </div>
-          </ComponentCard>
+          </ComponentCard> */}
         </div>
       </div>
     </div>

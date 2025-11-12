@@ -808,11 +808,18 @@ class AttendanceSerializer(serializers.ModelSerializer):
 class PolicyConfigurationSerializer(serializers.ModelSerializer):
     class Meta:
         model = CompanyPolicies
-        fields = [
-            'id', 'company', 'name', 'document',
-            'is_active', 'created_at'
-        ]
+        fields = ['id', 'company', 'name', 'document', 'is_active', 'created_at']
         read_only_fields = ['company', 'created_at']
+
+    def update(self, instance, validated_data):
+        # Only update document if provided
+        document = validated_data.pop('document', None)
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+        if document:
+            instance.document = document
+        instance.save()
+        return instance
 
  
  

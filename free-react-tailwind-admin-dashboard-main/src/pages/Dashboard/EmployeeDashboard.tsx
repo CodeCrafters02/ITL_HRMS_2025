@@ -49,8 +49,8 @@ interface DashboardData {
   overtime: OvertimeData | null;
   latest_payroll: PayrollData | null;
   birthday_message?: string | null;
-  attendance_score?: number;
-  weekly_hours?: number;
+  total_work_duration_week?:string;
+  today_work_duration?:string;
 }
 
 interface NotificationState {
@@ -614,7 +614,7 @@ const [employeeStatus, setEmployeeStatus] = React.useState<string | null>(null);
             <div className="space-y-6">
               
               {/* Performance Card */}
-              <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
+              {/* <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
                 <div className="p-6 border-b border-gray-200 dark:border-gray-700">
                   <h2 className="text-xl font-semibold text-gray-900 dark:text-white flex items-center gap-2">
                     <FaChartLine className="text-green-600" />
@@ -623,7 +623,6 @@ const [employeeStatus, setEmployeeStatus] = React.useState<string | null>(null);
                 </div>
                 
                 <div className="p-6 space-y-6">
-                  {/* Weekly Hours Progress */}
                   <div>
                     <div className="flex justify-between mb-2">
                       <span className="text-sm text-gray-600 dark:text-gray-400">Weekly Hours</span>
@@ -639,7 +638,6 @@ const [employeeStatus, setEmployeeStatus] = React.useState<string | null>(null);
                     </div>
                   </div>
                   
-                  {/* Attendance Score */}
                   <div className="text-center py-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
                     <div className="text-sm text-gray-600 dark:text-gray-400 mb-1">Attendance Score</div>
                     <div className="text-3xl font-bold text-green-600 dark:text-green-400 mb-1">
@@ -650,7 +648,64 @@ const [employeeStatus, setEmployeeStatus] = React.useState<string | null>(null);
                     </div>
                   </div>
                 </div>
+              </div> */}
+
+
+              {/* Performance Card */}
+              {/* Performance Card */}
+              <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
+                <div className="p-6 border-b border-gray-200 dark:border-gray-700">
+                  <h2 className="text-xl font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+                    <FaChartLine className="text-green-600" />
+                    Performance
+                  </h2>
+                </div>
+
+                <div className="p-6 space-y-6">
+                  {/* Weekly Hours Progress */}
+                  <div>
+                    <div className="flex justify-between mb-2">
+                      <span className="text-sm text-gray-600 dark:text-gray-400">Weekly Hours</span>
+                      <span className="text-sm font-medium text-gray-900 dark:text-white">
+                        {dashboardData?.total_work_duration_week || "0h 0m"} / 48 hrs
+                      </span>
+                    </div>
+                    <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+                      {(() => {
+                        const week = dashboardData?.total_work_duration_week || "0h 0m";
+                        const [hoursPart, minutesPart] = week.split("h");
+                        const hours = parseInt(hoursPart) || 0;
+                        const percent = Math.min((hours / 48) * 100, 100);
+                        return (
+                          <div
+                            className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                            style={{ width: `${percent}%` }}
+                          ></div>
+                        );
+                      })()}
+                    </div>
+                  </div>
+
+                  {/* Replaces Attendance Score */}
+                  <div className="text-center py-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                    {/* Weekly Progress Percentage */}
+                    <div className="text-3xl font-bold text-green-600 dark:text-green-400 mb-1">
+                      {(() => {
+                        const week = dashboardData?.total_work_duration_week || "0h 0m";
+                        const [hoursPart] = week.split("h");
+                        const hours = parseInt(hoursPart) || 0;
+                        const percent = Math.min((hours / 48) * 100, 100);
+                        return `${percent.toFixed(1)}%`;
+                      })()}
+                    </div>
+                    <div className="text-xs text-gray-600 dark:text-gray-400">
+                      of Weekly Target
+                    </div>
+                  </div>
+                </div>
               </div>
+
+
 
               {/* Payroll Card */}
               {dashboardData?.latest_payroll && (

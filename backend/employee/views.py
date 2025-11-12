@@ -176,6 +176,150 @@ class CheckOutAPIView(APIView):
             "attendance": serializer.data
         })
 
+# class DashboardAPIView(APIView):
+#     permission_classes = [IsAuthenticated]
+
+#     def get(self, request):
+#         user = request.user
+#         if not hasattr(user, 'role') or user.role != 'employee':
+#             return Response({"detail": "Unauthorized. Employee role required."}, status=403)
+
+#         try:
+#             # Get employee
+#             employee = Employee.objects.get(email=user.email)
+#             today = timezone.localdate()
+#             tz = pytz.timezone('Asia/Kolkata')
+#             now = timezone.localtime(timezone.now(), tz)
+
+#             # Today's attendance
+#             attendance = Attendance.objects.filter(employee=employee, date=today).first()
+#             punch_in = attendance.check_in if attendance else None
+#             punch_out = attendance.check_out if attendance else None
+
+#             # Active break
+#             active_break = BreakLog.objects.filter(employee=employee, start__date=today, end__isnull=True).first()
+
+#             # Recent finished breaks
+#             recent_breaks = BreakLog.objects.filter(
+#                 employee=employee,
+#                 start__date=today,
+#                 end__isnull=False
+#             ).order_by('-start')[:5]
+
+#             # Total break minutes
+#             breaks = BreakLog.objects.filter(employee=employee, start__date=today, end__isnull=False)
+#             break_minutes = sum(int((b.end - b.start).total_seconds() // 60) for b in breaks)
+
+#             # Employee's assigned shift
+#             shift = getattr(employee, 'shift_assigned', None)
+
+#             # Late check-in
+#             is_late = False
+#             if attendance and punch_in and shift:
+#                 grace = shift.grace_period or timedelta(minutes=15)
+#                 shift_start_dt = datetime.combine(today, shift.checkin)
+#                 shift_start_aware = tz.localize(shift_start_dt)
+#                 if punch_in > (shift_start_aware + grace):
+#                     is_late = True
+
+#             # Overtime calculation
+#             overtime = None
+#             if attendance and punch_out and shift:
+#                 shift_start_dt = datetime.combine(today, shift.checkin)
+#                 shift_end_dt = datetime.combine(today, shift.checkout)
+#                 # Overnight shift
+#                 if shift.checkin > shift.checkout:
+#                     shift_end_dt += timedelta(days=1)
+#                 shift_end_aware = tz.localize(shift_end_dt)
+
+#                 if punch_out > shift_end_aware:
+#                     overtime_delta = punch_out - shift_end_aware
+#                     overtime_minutes = overtime_delta.total_seconds() // 60
+#                     overtime = {
+#                         'hours': int(overtime_minutes // 60),
+#                         'minutes': int(overtime_minutes % 60),
+#                         'total': round(overtime_minutes / 60, 2)
+#                     }
+
+#             # Latest payroll
+#             latest_payroll = Payroll.objects.filter(employee=employee).order_by('-payroll_date').first()
+#             latest_payroll_data = {
+#                 'amount': latest_payroll.net_pay,
+#                 'date': latest_payroll.payroll_date
+#             } if latest_payroll else None
+
+#             # Birthday message
+#             birthday_message = None
+#             if employee.date_of_birth:
+#                 if employee.date_of_birth.day == today.day and employee.date_of_birth.month == today.month:
+#                     birthday_message = f"Happy Birthday, {employee.first_name}! 🎉"
+
+#             # ------------------------
+#             # Attendance score calculation
+#             # ------------------------
+#             attendance_score = 100
+#             if not attendance or not punch_in:
+#                 attendance_score = 0  # absent
+#             else:
+#                 # Deduct for late check-in
+#                 if is_late:
+#                     attendance_score -= 10
+
+#                 # Deduct for short work duration (less than 8 hours)
+#                 if punch_in:
+#                     end_time = punch_out or now
+#                     worked_minutes = int((end_time - punch_in).total_seconds() // 60) - break_minutes
+#                     worked_hours = worked_minutes / 60
+#                     if worked_hours < 8:
+#                         missing_hours = 8 - worked_hours
+#                         attendance_score -= min((missing_hours / 0.5) * 2, 20)  # 2 points per 30 min short
+
+#                 # Deduct for long breaks (>60 minutes)
+#                 if break_minutes > 60:
+#                     attendance_score -= min((break_minutes - 60) / 10, 10)  # 1 point per 10 min extra
+
+#             attendance_score = max(int(round(attendance_score)), 0)
+
+#             # Dashboard response
+#             dashboard_data = {
+#                 'employee_name': f"{employee.first_name} {employee.last_name}",
+#                 'employee_photo': request.build_absolute_uri(employee.photo.url) if employee.photo else None,
+#                 'checkin_time': timezone.localtime(punch_in, tz).strftime('%H:%M:%S') if punch_in else None,
+#                 'checkout_time': timezone.localtime(punch_out, tz).strftime('%H:%M:%S') if punch_out else None,
+#                 'is_late': is_late,
+#                 'total_worked': calculate_worked_time(punch_in, punch_out, now)[0],
+#                 'effective_time': calculate_effective_time(punch_in, break_minutes, punch_out, now)['formatted'],
+#                 'total_break_minutes': break_minutes,
+#                 'attendance_score': attendance_score,  # ✅ New field added
+#                 'shift_name': shift.shift_type if shift else 'Not assigned',
+#                 'shift_timing': f"{shift.checkin.strftime('%H:%M')} - {shift.checkout.strftime('%H:%M')}" if shift else '--:--',
+#                 'server_time': now.strftime('%Y-%m-%d %H:%M:%S'),
+#                 'active_break': {
+#                     'type': active_break.break_config.get_break_choice_display() if active_break and active_break.break_config else None,
+#                     'break_config_id': active_break.break_config.id if active_break and active_break.break_config else None,
+#                     'start_time': timezone.localtime(active_break.start, tz).strftime('%H:%M:%S') if active_break else None
+#                 } if active_break else None,
+#                 'recent_breaks': [
+#                     {
+#                         'type': br.break_config.get_break_choice_display() if br.break_config else None,
+#                         'break_config_id': br.break_config.id if br.break_config else None,
+#                         'start_time': timezone.localtime(br.start, tz).strftime('%H:%M:%S'),
+#                         'end_time': timezone.localtime(br.end, tz).strftime('%H:%M:%S')
+#                     } for br in recent_breaks
+#                 ] if recent_breaks else None,
+#                 'overtime': overtime,
+#                 'latest_payroll': latest_payroll_data,
+#                 'birthday_message': birthday_message,
+#             }
+
+#             return Response({"dashboard_data": dashboard_data})
+
+#         except Employee.DoesNotExist:
+#             return Response({"detail": "Employee record not found."}, status=404)
+#         except Exception as e:
+#             return Response({"detail": f"Error: {str(e)}"}, status=500)
+
+
 class DashboardAPIView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -285,30 +429,34 @@ class DashboardAPIView(APIView):
                     birthday_message = f"Happy Birthday, {employee.first_name}! 🎉"
 
             # ------------------------
-            # Attendance score calculation
+            # ✅ Replace Attendance Score with Weekly Work Duration
             # ------------------------
-            attendance_score = 100
-            if not attendance or not punch_in:
-                attendance_score = 0  # absent
-            else:
-                # Deduct for late check-in
-                if is_late:
-                    attendance_score -= 10
+            today_work_duration = None
+            if punch_in:
+                end_time = punch_out or now
+                worked_minutes_today = int((end_time - punch_in).total_seconds() // 60)
+                worked_hours_today = worked_minutes_today // 60
+                worked_mins_today = worked_minutes_today % 60
+                today_work_duration = f"{worked_hours_today}h {worked_mins_today}m"
 
-                # Deduct for short work duration (less than 8 hours)
-                if punch_in:
-                    end_time = punch_out or now
-                    worked_minutes = int((end_time - punch_in).total_seconds() // 60) - break_minutes
-                    worked_hours = worked_minutes / 60
-                    if worked_hours < 8:
-                        missing_hours = 8 - worked_hours
-                        attendance_score -= min((missing_hours / 0.5) * 2, 20)  # 2 points per 30 min short
+            # Weekly total (Monday–Saturday)
+            week_start = today - timedelta(days=today.weekday())  # Monday
+            week_end = week_start + timedelta(days=5)  # Saturday
 
-                # Deduct for long breaks (>60 minutes)
-                if break_minutes > 60:
-                    attendance_score -= min((break_minutes - 60) / 10, 10)  # 1 point per 10 min extra
+            weekly_attendance = Attendance.objects.filter(
+                employee=employee,
+                date__range=[week_start, week_end]
+            )
 
-            attendance_score = max(int(round(attendance_score)), 0)
+            total_weekly_minutes = 0
+            for record in weekly_attendance:
+                if record.check_in:
+                    end_time = record.check_out or now
+                    total_weekly_minutes += int((end_time - record.check_in).total_seconds() // 60)
+
+            total_weekly_hours = total_weekly_minutes // 60
+            total_weekly_mins = total_weekly_minutes % 60
+            total_work_duration_week = f"{total_weekly_hours}h {total_weekly_mins}m"
 
             # Dashboard response
             dashboard_data = {
@@ -320,8 +468,8 @@ class DashboardAPIView(APIView):
                 'total_worked': calculate_worked_time(punch_in, punch_out, now)[0],
                 'effective_time': calculate_effective_time(punch_in, break_minutes, punch_out, now)['formatted'],
                 'total_break_minutes': break_minutes,
-                'attendance_score': attendance_score,  # ✅ New field added
-                'weekly_hours': weekly_hours,  # ✅ Weekly hours calculation
+                'today_work_duration': today_work_duration,
+                'total_work_duration_week': total_work_duration_week,
                 'shift_name': shift.shift_type if shift else 'Not assigned',
                 'shift_timing': f"{shift.checkin.strftime('%H:%M')} - {shift.checkout.strftime('%H:%M')}" if shift else '--:--',
                 'server_time': now.strftime('%Y-%m-%d %H:%M:%S'),

@@ -177,8 +177,8 @@ const ShiftPolicyList = () => {
     <div className="p-6">
       <ComponentCard title={`Shift Policies (${shifts.length} total)`}>
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-xl font-bold flex items-center gap-2">
-            <span className="text-primary">🕒</span>
+          <h2 className="text-xl font-bold flex items-center gap-2 dark:text-gray-400">
+            <span className="text-black  dark:text-white">🕒</span>
             Shift Policies
           </h2>
           <button

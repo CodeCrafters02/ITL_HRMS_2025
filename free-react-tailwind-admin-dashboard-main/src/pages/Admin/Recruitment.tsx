@@ -159,9 +159,9 @@ const RecruitmentPage: React.FC = () => {
   return (
     <div className="p-4 max-w-7xl mx-auto relative">
       <div className="flex items-center gap-10 mb-4">
-        <h1 className="text-2xl font-bold dark:text-gray-400">Recruitment List</h1>
+        <h1 className="text-2xl font-bold dark:text-gray-400 pl-6">Recruitment List</h1>
         <button
-          className="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-4 py-2 rounded flex items-center gap-2 shadow"
+          className="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-2 py-2 rounded flex items-center gap-2 shadow"
           onClick={() => navigate("/admin/form-recruitment")}
         >
           <FaPlus /> Add
@@ -172,23 +172,23 @@ const RecruitmentPage: React.FC = () => {
       {loading ? (
         <div className="text-center py-8 text-lg text-gray-500">Loading...</div>
       ) : (
-      <div className="overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-white/[0.05] dark:bg-white/[0.03] z-[1000] m-5">
+      <div className="overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-white/[0.05] dark:bg-white/[0.03] z-index-[100000000]">
         <div className="max-w-full overflow-x-auto">          
           <Table className="w-full border border-gray-200 rounded-lg shadow-lg bg-white">
               <TableRow className="bg-gray-100 text-sm font-semibold text-gray-700">
-                <TableCell isHeader className="px-4 py-3 border-b text-center dark:text-gray-400 dark:bg-gray-900 bg-white">S.no</TableCell>
-                <TableCell isHeader  className="px-4 py-3 border-b text-center dark:text-gray-400 dark:bg-gray-900 bg-white">Ref ID</TableCell>
-                <TableCell  isHeader className="px-4 py-3 border-b text-center dark:text-gray-400 dark:bg-gray-900 bg-white">Name</TableCell>
-                <TableCell  isHeader className="px-4 py-3 border-b text-center dark:text-gray-400 dark:bg-gray-900 bg-white">Email</TableCell>
-                <TableCell isHeader className="px-4 py-3 border-b text-center dark:text-gray-400 dark:bg-gray-900 bg-white">Job Title</TableCell>
-                <TableCell isHeader className="px-4 py-3 border-b text-center dark:text-gray-400 dark:bg-gray-900 bg-white">Salary</TableCell>
-                <TableCell isHeader className="px-4 py-3 border-b text-center dark:text-gray-400 dark:bg-gray-900 bg-white">Application Date</TableCell>
-                <TableCell isHeader className="px-4 py-3 border-b text-center dark:text-gray-400 dark:bg-gray-900 bg-white">Interview Date</TableCell>
-                <TableCell  isHeader className="px-4 py-3 border-b text-center dark:text-gray-400 dark:bg-gray-900 bg-white">Appointment Date</TableCell>
-                <TableCell isHeader className="px-4 py-3 border-b text-center dark:text-gray-400 dark:bg-gray-900 bg-white">Guardian</TableCell>
-                <TableCell isHeader className="px-4 py-3 border-b text-center dark:text-gray-400 dark:bg-gray-900 bg-white">Status</TableCell>
-                <TableCell isHeader className="px-4 py-3 border-b text-center dark:text-gray-400 dark:bg-gray-900 bg-white">Action</TableCell>
-                <TableCell isHeader className="px-4 py-3 border-b text-center dark:text-gray-400 dark:bg-gray-900 bg-white">Offer Letter</TableCell>
+                <TableCell isHeader className="px-2 py-3 border-b text-center dark:text-gray-400 dark:bg-gray-900 bg-white">S.no</TableCell>
+                <TableCell isHeader  className="px-2 py-3 border-b text-center dark:text-gray-400 dark:bg-gray-900 bg-white">Ref ID</TableCell>
+                <TableCell  isHeader className="px-2 py-3 border-b text-center dark:text-gray-400 dark:bg-gray-900 bg-white">Name</TableCell>
+                <TableCell  isHeader className="px-2 py-3 border-b text-center dark:text-gray-400 dark:bg-gray-900 bg-white">Email</TableCell>
+                <TableCell isHeader className="px-2 py-3 border-b text-center dark:text-gray-400 dark:bg-gray-900 bg-white">Job Title</TableCell>
+                <TableCell isHeader className="px-2 py-3 border-b text-center dark:text-gray-400 dark:bg-gray-900 bg-white">Salary</TableCell>
+                <TableCell isHeader className="px-2 py-3 border-b text-center dark:text-gray-400 dark:bg-gray-900 bg-white w-80">Application Date</TableCell>
+                <TableCell isHeader className="px-2 py-3 border-b text-center dark:text-gray-400 dark:bg-gray-900 bg-white w-80">Interview Date</TableCell>
+                <TableCell  isHeader className="px-2 py-3 border-b text-center dark:text-gray-400 dark:bg-gray-900 bg-white w-80">Appointment Date</TableCell>
+                <TableCell isHeader className="px-2 py-3 border-b text-center dark:text-gray-400 dark:bg-gray-900 bg-white w-80">Guardian</TableCell>
+                <TableCell isHeader className="px-2 py-3 border-b text-center dark:text-gray-400 dark:bg-gray-900 bg-white">Status</TableCell>
+                <TableCell isHeader className="px-2 py-3 border-b text-center dark:text-gray-400 dark:bg-gray-900 bg-white">Action</TableCell>
+                <TableCell isHeader className="px-2 py-3 border-b text-center dark:text-gray-400 dark:bg-gray-900 bg-white">Offer Letter</TableCell>
               </TableRow>
             <TableBody>
               {recruitments.length === 0 ? (
@@ -203,18 +203,18 @@ const RecruitmentPage: React.FC = () => {
                     key={r.id}
                     className={`${idx % 2 === 0 ? "bg-white" : "bg-gray-50"} hover:bg-blue-50 transition-colors`}
                   >
-                    <TableCell className="px-4 py-3 text-center dark:text-gray-400 dark:bg-gray-900 bg-white">{idx + 1}</TableCell>
-                    <TableCell className="px-4 py-3 text-center dark:text-gray-400 dark:bg-gray-900 bg-white">{r.reference_id}</TableCell>
-                    <TableCell className="px-4 py-3 text-center dark:text-gray-400 dark:bg-gray-900 bg-white">{r.name}</TableCell>
-                    <TableCell className="px-4 py-3 text-center dark:text-gray-400 dark:bg-gray-900 bg-white">{r.email}</TableCell>
-                    <TableCell className="px-4 py-3 text-center dark:text-gray-400 dark:bg-gray-900 bg-white">{r.job_title}</TableCell>
-                    <TableCell className="px-4 py-3 text-center dark:text-gray-400 dark:bg-gray-900 bg-white">{r.salary || "-"}</TableCell>
-                    <TableCell className="px-4 py-3 text-center dark:text-gray-400 dark:bg-gray-900 bg-white">{r.application_date}</TableCell>
-                    <TableCell className="px-4 py-3 text-center dark:text-gray-400 dark:bg-gray-900 bg-white">{r.interview_date}</TableCell>
-                    <TableCell className="px-4 py-3 text-center dark:text-gray-400 dark:bg-gray-900 bg-white">{r.appointment_date}</TableCell>
-                    <TableCell className="px-4 py-3 text-center dark:text-gray-400 dark:bg-gray-900 bg-white">{r.guardian_name}</TableCell>
+                    <TableCell className="px-2 py-3 text-center dark:text-gray-400 dark:bg-gray-900 bg-white">{idx + 1}</TableCell>
+                    <TableCell className="px-2 py-3 text-center dark:text-gray-400 dark:bg-gray-900 bg-white">{r.reference_id}</TableCell>
+                    <TableCell className="px-2 py-3 text-center dark:text-gray-400 dark:bg-gray-900 bg-white">{r.name}</TableCell>
+                    <TableCell className="px-2 py-3 text-center dark:text-gray-400 dark:bg-gray-900 bg-white">{r.email}</TableCell>
+                    <TableCell className="px-2 py-3 text-center dark:text-gray-400 dark:bg-gray-900 bg-white">{r.job_title}</TableCell>
+                    <TableCell className="px-2 py-3 text-center dark:text-gray-400 dark:bg-gray-900 bg-white">{r.salary || "-"}</TableCell>
+                    <TableCell className="px-2 py-3 text-center dark:text-gray-400 dark:bg-gray-900 bg-white w-80">{r.application_date}</TableCell>
+                    <TableCell className="px-2 py-3 text-center dark:text-gray-400 dark:bg-gray-900 bg-white w-80">{r.interview_date}</TableCell>
+                    <TableCell className="px-2 py-3 text-center dark:text-gray-400 dark:bg-gray-900 bg-white w-80">{r.appointment_date}</TableCell>
+                    <TableCell className="px-2 py-3 text-center dark:text-gray-400 dark:bg-gray-900 bg-white w-80">{r.guardian_name}</TableCell>
 
-                    <TableCell className="px-4 py-3 text-center dark:text-gray-400 dark:bg-gray-900 bg-white">
+                    <TableCell className="px-2 py-3 text-center dark:text-gray-400 dark:bg-gray-900 bg-white">
                       <span
                         className={`px-2 py-1 rounded capitalize text-xs font-medium ${
                           r.status === "waiting"
@@ -227,7 +227,7 @@ const RecruitmentPage: React.FC = () => {
                         {r.status}
                       </span>
                     </TableCell>
-                    <TableCell className="px-4 py-3 text-center dark:text-gray-400 dark:bg-gray-900 bg-white">
+                    <TableCell className="px-2 py-3 text-center dark:text-gray-400 dark:bg-gray-900 bg-white">
                       <div className="flex items-center gap-2">
                         <button
                           className="text-blue-600 hover:text-blue-800"
@@ -244,7 +244,7 @@ const RecruitmentPage: React.FC = () => {
                       </div>
                     </TableCell>
 
-                      <TableCell className="px-4 py-3 text-center dark:text-gray-400 dark:bg-gray-900 bg-white">
+                      <TableCell className="px-2 py-3 text-center dark:text-gray-400 dark:bg-gray-900 bg-white">
                         {r.status === 'selected' && (
                           <div className="flex gap-2">
                             <button
@@ -293,10 +293,10 @@ const RecruitmentPage: React.FC = () => {
             <h2 className="text-lg font-bold mb-4">Confirm Delete</h2>
             <p className="text-gray-600 mb-6">Are you sure you want to delete this record?</p>
             <div className="flex justify-end gap-3">
-              <button onClick={() => setDeleteId(null)} className="px-4 py-2 bg-gray-200 rounded">
+              <button onClick={() => setDeleteId(null)} className="px-2 py-2 bg-gray-200 rounded">
                 Cancel
               </button>
-              <button onClick={handleDelete} className="px-4 py-2 bg-red-600 text-white rounded">
+              <button onClick={handleDelete} className="px-2 py-2 bg-red-600 text-white rounded">
                 Delete
               </button>
             </div>

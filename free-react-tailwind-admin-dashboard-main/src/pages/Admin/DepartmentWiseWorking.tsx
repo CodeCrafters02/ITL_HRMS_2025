@@ -145,7 +145,7 @@ const DepartmentWorkingDays = () => {
     <div className="p-6">
       <ComponentCard title={`Department-wise Working Days (${workingDays.length} total)`}>
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-semibold">Department-wise Working Days</h2>
+          <h2 className="text-lg font-semibold dark:text-gray-400">Department-wise Working Days</h2>
           <button
             className="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-4 py-2 rounded flex items-center gap-2 shadow"
             onClick={handleAdd}
