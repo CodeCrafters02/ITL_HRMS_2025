@@ -306,6 +306,12 @@ class DesignationSerializer(serializers.ModelSerializer):
         
 
 
+class ShiftPolicySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ShiftPolicy
+        fields = '__all__'
+
+
        
 class EmployeeSerializer(serializers.ModelSerializer):
     department = serializers.PrimaryKeyRelatedField(queryset=Department.objects.all())
@@ -328,6 +334,7 @@ class EmployeeSerializer(serializers.ModelSerializer):
     designation_name = serializers.SerializerMethodField()
     asset_names = serializers.SerializerMethodField()
     source_choices = serializers.SerializerMethodField()
+    shift_assigned = ShiftPolicySerializer(read_only=True)
 
     class Meta:
         model = Employee
@@ -341,7 +348,7 @@ class EmployeeSerializer(serializers.ModelSerializer):
             'who_referred', 'date_of_joining', 'previous_employer', 'date_of_releaving',
             'previous_designation_name', 'previous_salary', 'ctc', 'gross_salary',
             'epf_status', 'uan', 'asset_details', 'asset_names', 'esic_status', 'esic_no',
-            'source_choices'
+            'source_choices', 'shift_assigned'
         ]
 
     def get_department_name(self, obj):
@@ -596,12 +603,6 @@ class NotificationSerializer(serializers.ModelSerializer):
         fields = '__all__'
         
         
-class ShiftPolicySerializer(serializers.ModelSerializer):
-    class Meta:
-        model = ShiftPolicy
-        fields = '__all__'
-
-
 class DepartmentWiseWorkingDaysSerializer(serializers.ModelSerializer):
     shifts = serializers.PrimaryKeyRelatedField(
         queryset=ShiftPolicy.objects.all(), many=True, required=False

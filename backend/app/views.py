@@ -362,7 +362,10 @@ class EmployeeViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         user = self.request.user
-        return Employee.objects.filter(company=user.company).order_by('employee_id')
+        return Employee.objects.filter(company=user.company).select_related(
+            'department', 'designation', 'level', 'reporting_manager', 
+            'reporting_level', 'shift_assigned'
+        ).order_by('employee_id')
 
     @action(detail=False, methods=['get'], url_path='get-reporting-manager-choices')
     def get_reporting_manager_choices(self, request):
