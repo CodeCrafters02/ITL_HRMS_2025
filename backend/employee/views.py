@@ -475,6 +475,7 @@ class DashboardAPIView(APIView):
                 'server_time': now.strftime('%Y-%m-%d %H:%M:%S'),
                 'active_break': {
                     'type': active_break.break_config.get_break_choice_display() if active_break and active_break.break_config else None,
+                    'break_choice': active_break.break_config.break_choice if active_break and active_break.break_config else None,
                     'break_config_id': active_break.break_config.id if active_break and active_break.break_config else None,
                     'duration_minutes': active_break.break_config.duration_minutes if active_break and active_break.break_config else None,
                     'start_time': timezone.localtime(active_break.start, tz).strftime('%H:%M:%S') if active_break else None
@@ -482,6 +483,7 @@ class DashboardAPIView(APIView):
                 'recent_breaks': [
                     {
                         'type': br.break_config.get_break_choice_display() if br.break_config else None,
+                        'break_choice': br.break_config.break_choice if br.break_config else None,
                         'break_config_id': br.break_config.id if br.break_config else None,
                         'start_time': timezone.localtime(br.start, tz).strftime('%H:%M:%S'),
                         'end_time': timezone.localtime(br.end, tz).strftime('%H:%M:%S')

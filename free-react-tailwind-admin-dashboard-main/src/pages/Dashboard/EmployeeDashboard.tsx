@@ -27,6 +27,7 @@ interface BreakData {
 
 interface ActiveBreakData {
   type: string;
+  break_choice: string;
   start_time: string;
   break_config_id: number;
   duration_minutes?: number;
@@ -506,7 +507,11 @@ const [employeeStatus, setEmployeeStatus] = React.useState<string | null>(null);
                           onBreakClick={handleBreakAction}
                           onStatusChange={handleStatusUpdate}
                           disabled={breakLoading || !!dashboardData?.active_break}
-                          activeBreak={dashboardData?.active_break?.type || null}
+                          activeBreak={
+                            dashboardData?.active_break?.break_choice === 'meal_break' ? 'meal' :
+                            dashboardData?.active_break?.break_choice === 'short_break' ? 'short' :
+                            null
+                          }
                           currentStatus={employeeStatus} 
                         />
                       )}
