@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../models/task_model.dart';
 import '../../services/employee_service.dart';
+import 'widgets/notification_button.dart';
 import '../../services/notification_service.dart';
 
 class MyTasksPage extends StatefulWidget {
@@ -178,7 +179,7 @@ class _MyTasksPageState extends State<MyTasksPage>
               }).toList();
             }
           });
-          
+
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: const Row(
@@ -297,20 +298,21 @@ class _MyTasksPageState extends State<MyTasksPage>
         backgroundColor: Colors.white,
         foregroundColor: const Color(0xFF111827),
         elevation: 0,
-        bottom: PreferredSize(
-          preferredSize: const Size.fromHeight(1),
-          child: Container(
-            height: 1,
-            color: const Color(0xFFE5E7EB),
-          ),
-        ),
         actions: [
+          const Padding(
+            padding: EdgeInsets.only(right: 8.0),
+            child: NotificationButton(),
+          ),
           IconButton(
             icon: const Icon(Icons.refresh),
             onPressed: _fetchTasks,
             tooltip: 'Refresh',
           ),
         ],
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(1),
+          child: Container(height: 1, color: const Color(0xFFE5E7EB)),
+        ),
       ),
       body: _isLoading
           ? const Center(
@@ -319,33 +321,31 @@ class _MyTasksPageState extends State<MyTasksPage>
               ),
             )
           : _error != null
-              ? _buildErrorState()
-              : _tasks.isEmpty
-                  ? _buildEmptyState()
-                  : RefreshIndicator(
-                      onRefresh: _fetchTasks,
-                      color: const Color(0xFF4F46E5),
-                      child: LayoutBuilder(
-                        builder: (context, constraints) {
-                          final crossAxisCount =
-                              constraints.maxWidth > 600 ? 2 : 1;
-                          return GridView.builder(
-                            padding: const EdgeInsets.all(16),
-                            gridDelegate:
-                                SliverGridDelegateWithFixedCrossAxisCount(
-                              crossAxisCount: crossAxisCount,
-                              crossAxisSpacing: 16,
-                              mainAxisSpacing: 16,
-                              childAspectRatio: 0.9,
-                            ),
-                            itemCount: _tasks.length,
-                            itemBuilder: (context, index) {
-                              return _buildTaskCard(_tasks[index], index);
-                            },
-                          );
-                        },
-                      ),
+          ? _buildErrorState()
+          : _tasks.isEmpty
+          ? _buildEmptyState()
+          : RefreshIndicator(
+              onRefresh: _fetchTasks,
+              color: const Color(0xFF4F46E5),
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  final crossAxisCount = constraints.maxWidth > 600 ? 2 : 1;
+                  return GridView.builder(
+                    padding: const EdgeInsets.all(16),
+                    gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: crossAxisCount,
+                      crossAxisSpacing: 16,
+                      mainAxisSpacing: 16,
+                      childAspectRatio: 0.9,
                     ),
+                    itemCount: _tasks.length,
+                    itemBuilder: (context, index) {
+                      return _buildTaskCard(_tasks[index], index);
+                    },
+                  );
+                },
+              ),
+            ),
     );
   }
 
@@ -432,10 +432,7 @@ class _MyTasksPageState extends State<MyTasksPage>
             const SizedBox(height: 8),
             const Text(
               'You don\'t have any tasks assigned to you yet.',
-              style: TextStyle(
-                fontSize: 14,
-                color: Color(0xFF6B7280),
-              ),
+              style: TextStyle(fontSize: 14, color: Color(0xFF6B7280)),
               textAlign: TextAlign.center,
             ),
           ],
@@ -458,10 +455,7 @@ class _MyTasksPageState extends State<MyTasksPage>
       builder: (context, value, child) {
         return Transform.scale(
           scale: value,
-          child: Opacity(
-            opacity: value,
-            child: child,
-          ),
+          child: Opacity(opacity: value, child: child),
         );
       },
       child: Card(
@@ -518,8 +512,9 @@ class _MyTasksPageState extends State<MyTasksPage>
                               Container(
                                 padding: const EdgeInsets.all(3),
                                 decoration: BoxDecoration(
-                                  color: _getPriorityColor(task.priority)
-                                      .withOpacity(0.1),
+                                  color: _getPriorityColor(
+                                    task.priority,
+                                  ).withOpacity(0.1),
                                   borderRadius: BorderRadius.circular(4),
                                 ),
                                 child: Icon(
@@ -581,9 +576,9 @@ class _MyTasksPageState extends State<MyTasksPage>
                         onTap: isDone
                             ? null
                             : () => _handleAssignmentStatusChange(
-                                  firstAssignment.id,
-                                  'done',
-                                ),
+                                firstAssignment.id,
+                                'done',
+                              ),
                         child: AnimatedContainer(
                           duration: const Duration(milliseconds: 200),
                           width: 24,
@@ -602,8 +597,9 @@ class _MyTasksPageState extends State<MyTasksPage>
                             boxShadow: isDone
                                 ? [
                                     BoxShadow(
-                                      color: const Color(0xFF10B981)
-                                          .withOpacity(0.3),
+                                      color: const Color(
+                                        0xFF10B981,
+                                      ).withOpacity(0.3),
                                       blurRadius: 8,
                                       spreadRadius: 0,
                                     ),
@@ -649,13 +645,14 @@ class _MyTasksPageState extends State<MyTasksPage>
                           vertical: 6,
                         ),
                         decoration: BoxDecoration(
-                          color: _getStatusColor(firstAssignment?.status ?? task.status)
-                              .withOpacity(0.1),
+                          color: _getStatusColor(
+                            firstAssignment?.status ?? task.status,
+                          ).withOpacity(0.1),
                           borderRadius: BorderRadius.circular(6),
                           border: Border.all(
                             color: _getStatusColor(
-                                    firstAssignment?.status ?? task.status)
-                                .withOpacity(0.3),
+                              firstAssignment?.status ?? task.status,
+                            ).withOpacity(0.3),
                             width: 1,
                           ),
                         ),
@@ -664,10 +661,12 @@ class _MyTasksPageState extends State<MyTasksPage>
                           children: [
                             Icon(
                               _getStatusIcon(
-                                  firstAssignment?.status ?? task.status),
+                                firstAssignment?.status ?? task.status,
+                              ),
                               size: 14,
                               color: _getStatusColor(
-                                  firstAssignment?.status ?? task.status),
+                                firstAssignment?.status ?? task.status,
+                              ),
                             ),
                             const SizedBox(width: 6),
                             if (firstAssignment != null)
@@ -676,12 +675,16 @@ class _MyTasksPageState extends State<MyTasksPage>
                                   child: DropdownButton<String>(
                                     value: firstAssignment.status,
                                     isDense: true,
-                                    icon: const Icon(Icons.arrow_drop_down,
-                                        size: 16),
+                                    icon: const Icon(
+                                      Icons.arrow_drop_down,
+                                      size: 16,
+                                    ),
                                     style: TextStyle(
                                       fontSize: 12,
                                       fontWeight: FontWeight.w500,
-                                      color: _getStatusColor(firstAssignment.status),
+                                      color: _getStatusColor(
+                                        firstAssignment.status,
+                                      ),
                                     ),
                                     items: _assignmentStatuses.map((status) {
                                       return DropdownMenuItem<String>(
@@ -708,14 +711,16 @@ class _MyTasksPageState extends State<MyTasksPage>
                                   _assignmentStatuses.firstWhere(
                                     (s) =>
                                         s['value'] ==
-                                        (firstAssignment?.status ?? task.status),
+                                        (firstAssignment?.status ??
+                                            task.status),
                                     orElse: () => _assignmentStatuses[0],
                                   )['label']!,
                                   style: TextStyle(
                                     fontSize: 12,
                                     fontWeight: FontWeight.w500,
                                     color: _getStatusColor(
-                                        firstAssignment?.status ?? task.status),
+                                      firstAssignment?.status ?? task.status,
+                                    ),
                                   ),
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
@@ -773,7 +778,8 @@ class _MyTasksPageState extends State<MyTasksPage>
                 ),
 
                 // Contributors and Assignments in compact row
-                if (task.contributors.isNotEmpty || task.assignments.isNotEmpty) ...[
+                if (task.contributors.isNotEmpty ||
+                    task.assignments.isNotEmpty) ...[
                   const SizedBox(height: 8),
                   Row(
                     crossAxisAlignment: CrossAxisAlignment.center,
@@ -846,17 +852,20 @@ class _MyTasksPageState extends State<MyTasksPage>
                                     if (assign.avatarUrl != null)
                                       CircleAvatar(
                                         radius: 10,
-                                        backgroundImage:
-                                            NetworkImage(assign.avatarUrl!),
+                                        backgroundImage: NetworkImage(
+                                          assign.avatarUrl!,
+                                        ),
                                       )
                                     else
                                       CircleAvatar(
                                         radius: 10,
-                                        backgroundColor: const Color(0xFFE5E7EB),
+                                        backgroundColor: const Color(
+                                          0xFFE5E7EB,
+                                        ),
                                         child: Text(
                                           assign.employeeName.isNotEmpty
                                               ? assign.employeeName[0]
-                                                  .toUpperCase()
+                                                    .toUpperCase()
                                               : '?',
                                           style: const TextStyle(
                                             fontSize: 9,
@@ -942,10 +951,7 @@ class _MyTasksPageState extends State<MyTasksPage>
       decoration: BoxDecoration(
         color: const Color(0xFFF9FAFB),
         borderRadius: BorderRadius.circular(10),
-        border: Border.all(
-          color: const Color(0xFFE5E7EB),
-          width: 1,
-        ),
+        border: Border.all(color: const Color(0xFFE5E7EB), width: 1),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -972,12 +978,14 @@ class _MyTasksPageState extends State<MyTasksPage>
                     vertical: 4,
                   ),
                   decoration: BoxDecoration(
-                    color: _getStatusColor(firstAssignment.status)
-                        .withOpacity(0.1),
+                    color: _getStatusColor(
+                      firstAssignment.status,
+                    ).withOpacity(0.1),
                     borderRadius: BorderRadius.circular(6),
                     border: Border.all(
-                      color: _getStatusColor(firstAssignment.status)
-                          .withOpacity(0.3),
+                      color: _getStatusColor(
+                        firstAssignment.status,
+                      ).withOpacity(0.3),
                       width: 1,
                     ),
                   ),
@@ -1119,17 +1127,18 @@ class _MyTasksPageState extends State<MyTasksPage>
     );
   }
 
-  Widget _buildInfoChip(IconData icon, String label, Color color,
-      {double size = 12}) {
+  Widget _buildInfoChip(
+    IconData icon,
+    String label,
+    Color color, {
+    double size = 12,
+  }) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
         color: color.withOpacity(0.1),
         borderRadius: BorderRadius.circular(6),
-        border: Border.all(
-          color: color.withOpacity(0.3),
-          width: 1,
-        ),
+        border: Border.all(color: color.withOpacity(0.3), width: 1),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,

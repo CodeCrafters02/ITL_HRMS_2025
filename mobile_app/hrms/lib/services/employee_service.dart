@@ -1,9 +1,14 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'package:intl/intl.dart';
 import '../config/api_config.dart';
 import '../models/dashboard_model.dart';
 import '../models/break_config_model.dart';
 import '../models/task_model.dart';
+import '../models/attendance_history_model.dart';
+import '../models/leave_model.dart';
+import '../models/notification_model.dart';
+import '../models/calendar_model.dart';
 import '../services/storage_service.dart';
 
 class ApiResponse<T> {
@@ -11,11 +16,7 @@ class ApiResponse<T> {
   final String? message;
   final T? data;
 
-  ApiResponse({
-    required this.success,
-    this.message,
-    this.data,
-  });
+  ApiResponse({required this.success, this.message, this.data});
 }
 
 class EmployeeService {
@@ -24,10 +25,7 @@ class EmployeeService {
     try {
       final token = await StorageService.getAccessToken();
       if (token == null) {
-        return ApiResponse(
-          success: false,
-          message: 'No access token found',
-        );
+        return ApiResponse(success: false, message: 'No access token found');
       }
 
       final response = await http.get(
@@ -70,10 +68,7 @@ class EmployeeService {
     try {
       final token = await StorageService.getAccessToken();
       if (token == null) {
-        return ApiResponse(
-          success: false,
-          message: 'No access token found',
-        );
+        return ApiResponse(success: false, message: 'No access token found');
       }
 
       final response = await http.post(
@@ -108,10 +103,7 @@ class EmployeeService {
     try {
       final token = await StorageService.getAccessToken();
       if (token == null) {
-        return ApiResponse(
-          success: false,
-          message: 'No access token found',
-        );
+        return ApiResponse(success: false, message: 'No access token found');
       }
 
       final response = await http.post(
@@ -142,23 +134,19 @@ class EmployeeService {
   }
 
   // Start break
-  static Future<ApiResponse<Map<String, dynamic>>> startBreak(int breakConfigId) async {
+  static Future<ApiResponse<Map<String, dynamic>>> startBreak(
+    int breakConfigId,
+  ) async {
     try {
       final token = await StorageService.getAccessToken();
       if (token == null) {
-        return ApiResponse(
-          success: false,
-          message: 'No access token found',
-        );
+        return ApiResponse(success: false, message: 'No access token found');
       }
 
       final response = await http.post(
         Uri.parse(ApiConfig.employeeBreakUrl),
         headers: ApiConfig.getAuthHeaders(token),
-        body: jsonEncode({
-          'break_config_id': breakConfigId,
-          'action': 'start',
-        }),
+        body: jsonEncode({'break_config_id': breakConfigId, 'action': 'start'}),
       );
 
       if (response.statusCode == 200 || response.statusCode == 201) {
@@ -184,23 +172,19 @@ class EmployeeService {
   }
 
   // End break
-  static Future<ApiResponse<Map<String, dynamic>>> endBreak(int breakConfigId) async {
+  static Future<ApiResponse<Map<String, dynamic>>> endBreak(
+    int breakConfigId,
+  ) async {
     try {
       final token = await StorageService.getAccessToken();
       if (token == null) {
-        return ApiResponse(
-          success: false,
-          message: 'No access token found',
-        );
+        return ApiResponse(success: false, message: 'No access token found');
       }
 
       final response = await http.post(
         Uri.parse(ApiConfig.employeeBreakUrl),
         headers: ApiConfig.getAuthHeaders(token),
-        body: jsonEncode({
-          'break_config_id': breakConfigId,
-          'action': 'end',
-        }),
+        body: jsonEncode({'break_config_id': breakConfigId, 'action': 'end'}),
       );
 
       if (response.statusCode == 200 || response.statusCode == 201) {
@@ -226,14 +210,13 @@ class EmployeeService {
   }
 
   // Update employee status
-  static Future<ApiResponse<Map<String, dynamic>>> updateEmployeeStatus(String status) async {
+  static Future<ApiResponse<Map<String, dynamic>>> updateEmployeeStatus(
+    String status,
+  ) async {
     try {
       final token = await StorageService.getAccessToken();
       if (token == null) {
-        return ApiResponse(
-          success: false,
-          message: 'No access token found',
-        );
+        return ApiResponse(success: false, message: 'No access token found');
       }
 
       // First, get employee ID
@@ -253,10 +236,7 @@ class EmployeeService {
       final employeeId = employeeIdData['employee_id'] ?? employeeIdData['id'];
 
       if (employeeId == null) {
-        return ApiResponse(
-          success: false,
-          message: 'Employee ID not found',
-        );
+        return ApiResponse(success: false, message: 'Employee ID not found');
       }
 
       // Get all employee statuses to find the current one
@@ -287,7 +267,9 @@ class EmployeeService {
 
       // Update the status
       final updateResponse = await http.patch(
-        Uri.parse('${ApiConfig.baseUrl}/app/employeestatus/${employeeStatus['id']}/'),
+        Uri.parse(
+          '${ApiConfig.baseUrl}/app/employeestatus/${employeeStatus['id']}/',
+        ),
         headers: ApiConfig.getAuthHeaders(token),
         body: jsonEncode({'status': status}),
       );
@@ -319,10 +301,7 @@ class EmployeeService {
     try {
       final token = await StorageService.getAccessToken();
       if (token == null) {
-        return ApiResponse(
-          success: false,
-          message: 'No access token found',
-        );
+        return ApiResponse(success: false, message: 'No access token found');
       }
 
       final response = await http.get(
@@ -383,13 +362,17 @@ class EmployeeService {
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
-        final managers = data is List ? data : (data['reporting_managers'] ?? []);
-        
+        final managers = data is List
+            ? data
+            : (data['reporting_managers'] ?? []);
+
         // Check if current employee ID is in the managers list
-        final isManager = managers.any((mgr) => 
-          (mgr['id']?.toString() ?? mgr['id']?.toString()) == employeeId.toString()
+        final isManager = managers.any(
+          (mgr) =>
+              (mgr['id']?.toString() ?? mgr['id']?.toString()) ==
+              employeeId.toString(),
         );
-        
+
         return isManager;
       }
       return false;
@@ -403,10 +386,7 @@ class EmployeeService {
     try {
       final token = await StorageService.getAccessToken();
       if (token == null) {
-        return ApiResponse(
-          success: false,
-          message: 'No access token found',
-        );
+        return ApiResponse(success: false, message: 'No access token found');
       }
 
       final response = await http.get(
@@ -443,10 +423,7 @@ class EmployeeService {
     try {
       final token = await StorageService.getAccessToken();
       if (token == null) {
-        return ApiResponse(
-          success: false,
-          message: 'No access token found',
-        );
+        return ApiResponse(success: false, message: 'No access token found');
       }
 
       final response = await http.get(
@@ -485,10 +462,7 @@ class EmployeeService {
     try {
       final token = await StorageService.getAccessToken();
       if (token == null) {
-        return ApiResponse(
-          success: false,
-          message: 'No access token found',
-        );
+        return ApiResponse(success: false, message: 'No access token found');
       }
 
       final response = await http.patch(
@@ -506,7 +480,7 @@ class EmployeeService {
             data: {'detail': 'Assignment status updated.'},
           );
         }
-        
+
         try {
           final data = jsonDecode(response.body);
           return ApiResponse(
@@ -542,29 +516,488 @@ class EmployeeService {
             errorMessage = 'Failed to update status (${response.statusCode})';
           }
         }
-        
-        return ApiResponse(
-          success: false,
-          message: errorMessage,
-        );
+
+        return ApiResponse(success: false, message: errorMessage);
       }
     } catch (e) {
       // Handle network errors and other exceptions
       String errorMsg = 'Network error occurred';
       if (e.toString().contains('FormatException')) {
         errorMsg = 'Invalid response from server. Please try again.';
-      } else if (e.toString().contains('SocketException') || 
-                 e.toString().contains('TimeoutException')) {
+      } else if (e.toString().contains('SocketException') ||
+          e.toString().contains('TimeoutException')) {
         errorMsg = 'Connection error. Please check your internet connection.';
       } else {
         errorMsg = 'Error: ${e.toString()}';
       }
-      
+
+      return ApiResponse(success: false, message: errorMsg);
+    }
+  }
+
+  // Get attendance history
+  static Future<ApiResponse<AttendanceHistoryData>> getAttendanceHistory({
+    int? month,
+    int? year,
+  }) async {
+    try {
+      final token = await StorageService.getAccessToken();
+      if (token == null) {
+        return ApiResponse(success: false, message: 'No access token found');
+      }
+
+      final now = DateTime.now();
+      final selectedMonth = month ?? now.month;
+      final selectedYear = year ?? now.year;
+
+      final response = await http.get(
+        Uri.parse(ApiConfig.attendanceHistoryUrl(selectedMonth, selectedYear)),
+        headers: ApiConfig.getAuthHeaders(token),
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        final attendanceHistory = AttendanceHistoryData.fromJson(data);
+        return ApiResponse(
+          success: true,
+          message: 'Attendance history loaded successfully',
+          data: attendanceHistory,
+        );
+      } else {
+        final error = jsonDecode(response.body);
+        return ApiResponse(
+          success: false,
+          message: error['detail'] ?? 'Failed to load attendance history',
+        );
+      }
+    } catch (e) {
       return ApiResponse(
         success: false,
-        message: errorMsg,
+        message: 'Network error: ${e.toString()}',
       );
     }
   }
-}
 
+  // Get leave types
+  static Future<ApiResponse<List<LeaveType>>> getLeaveTypes() async {
+    try {
+      final token = await StorageService.getAccessToken();
+      if (token == null) {
+        return ApiResponse(success: false, message: 'No access token found');
+      }
+
+      final response = await http.get(
+        Uri.parse(ApiConfig.leavesListUrl),
+        headers: ApiConfig.getAuthHeaders(token),
+      );
+
+      if (response.statusCode == 200) {
+        final List<dynamic> data = jsonDecode(response.body);
+        final leaveTypes = data
+            .map((item) => LeaveType.fromJson(item))
+            .toList();
+        return ApiResponse(
+          success: true,
+          message: 'Leave types loaded successfully',
+          data: leaveTypes,
+        );
+      } else {
+        final error = jsonDecode(response.body);
+        return ApiResponse(
+          success: false,
+          message: error['detail'] ?? 'Failed to load leave types',
+        );
+      }
+    } catch (e) {
+      return ApiResponse(
+        success: false,
+        message: 'Network error: ${e.toString()}',
+      );
+    }
+  }
+
+  // Get applied leaves
+  static Future<ApiResponse<List<AppliedLeave>>> getAppliedLeaves() async {
+    try {
+      final token = await StorageService.getAccessToken();
+      if (token == null) {
+        return ApiResponse(success: false, message: 'No access token found');
+      }
+
+      final response = await http.get(
+        Uri.parse(ApiConfig.employeeLeaveCreateUrl),
+        headers: ApiConfig.getAuthHeaders(token),
+      );
+
+      if (response.statusCode == 200) {
+        final List<dynamic> data = jsonDecode(response.body);
+        final appliedLeaves = data
+            .map((item) => AppliedLeave.fromJson(item))
+            .toList();
+        return ApiResponse(
+          success: true,
+          message: 'Applied leaves loaded successfully',
+          data: appliedLeaves,
+        );
+      } else {
+        final error = jsonDecode(response.body);
+        return ApiResponse(
+          success: false,
+          message: error['detail'] ?? 'Failed to load applied leaves',
+        );
+      }
+    } catch (e) {
+      return ApiResponse(
+        success: false,
+        message: 'Network error: ${e.toString()}',
+      );
+    }
+  }
+
+  // Create leave application
+  static Future<ApiResponse<Map<String, dynamic>>> createLeave({
+    required int leaveType,
+    required String fromDate,
+    required String toDate,
+    required String reason,
+  }) async {
+    try {
+      final token = await StorageService.getAccessToken();
+      if (token == null) {
+        return ApiResponse(success: false, message: 'No access token found');
+      }
+
+      final response = await http.post(
+        Uri.parse(ApiConfig.employeeLeaveCreateUrl),
+        headers: ApiConfig.getAuthHeaders(token),
+        body: jsonEncode({
+          'leave_type': leaveType,
+          'from_date': fromDate,
+          'to_date': toDate,
+          'reason': reason,
+        }),
+      );
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        try {
+          final data = jsonDecode(response.body);
+          return ApiResponse(
+            success: true,
+            message:
+                data['detail'] ?? 'Leave application submitted successfully',
+            data: data,
+          );
+        } catch (e) {
+          return ApiResponse(
+            success: true,
+            message: 'Leave application submitted successfully',
+            data: {},
+          );
+        }
+      } else {
+        final error = jsonDecode(response.body);
+        return ApiResponse(
+          success: false,
+          message: error['detail'] ?? 'Failed to submit leave application',
+        );
+      }
+    } catch (e) {
+      String errorMsg = 'Network error occurred';
+      if (e.toString().contains('FormatException')) {
+        errorMsg = 'Invalid response from server. Please try again.';
+      } else if (e.toString().contains('SocketException') ||
+          e.toString().contains('TimeoutException')) {
+        errorMsg = 'Connection error. Please check your internet connection.';
+      } else {
+        errorMsg = 'Error: ${e.toString()}';
+      }
+
+      return ApiResponse(success: false, message: errorMsg);
+    }
+  }
+
+  // Cancel leave
+  static Future<ApiResponse<Map<String, dynamic>>> cancelLeave(
+    int leaveId,
+  ) async {
+    try {
+      final token = await StorageService.getAccessToken();
+      if (token == null) {
+        return ApiResponse(success: false, message: 'No access token found');
+      }
+
+      final response = await http.post(
+        Uri.parse(ApiConfig.cancelLeaveUrl(leaveId)),
+        headers: ApiConfig.getAuthHeaders(token),
+      );
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        try {
+          final data = jsonDecode(response.body);
+          return ApiResponse(
+            success: true,
+            message: data['detail'] ?? 'Leave cancelled successfully',
+            data: data,
+          );
+        } catch (e) {
+          return ApiResponse(
+            success: true,
+            message: 'Leave cancelled successfully',
+            data: {},
+          );
+        }
+      } else {
+        final error = jsonDecode(response.body);
+        return ApiResponse(
+          success: false,
+          message: error['detail'] ?? 'Failed to cancel leave',
+        );
+      }
+    } catch (e) {
+      return ApiResponse(
+        success: false,
+        message: 'Network error: ${e.toString()}',
+      );
+    }
+  }
+
+  // Get all notifications
+  static Future<ApiResponse<List<NotificationModel>>> getAllNotifications() async {
+    try {
+      final token = await StorageService.getAccessToken();
+      if (token == null) {
+        return ApiResponse(success: false, message: 'No access token found');
+      }
+
+      final response = await http.get(
+        Uri.parse(ApiConfig.allNotificationsUrl),
+        headers: ApiConfig.getAuthHeaders(token),
+      );
+
+      if (response.statusCode == 200) {
+        final List<dynamic> data = jsonDecode(response.body);
+        final notifications = data
+            .map((item) => NotificationModel.fromJson(item))
+            .toList();
+        return ApiResponse(
+          success: true,
+          data: notifications,
+        );
+      } else {
+        final error = jsonDecode(response.body);
+        return ApiResponse(
+          success: false,
+          message: error['detail'] ?? 'Failed to fetch notifications',
+        );
+      }
+    } catch (e) {
+      String errorMsg = 'Network error occurred';
+      if (e.toString().contains('FormatException')) {
+        errorMsg = 'Invalid response from server. Please try again.';
+      } else if (e.toString().contains('SocketException') ||
+          e.toString().contains('TimeoutException')) {
+        errorMsg = 'Connection error. Please check your internet connection.';
+      } else {
+        errorMsg = 'Error: ${e.toString()}';
+      }
+
+      return ApiResponse(success: false, message: errorMsg);
+    }
+  }
+
+  // Get calendar data
+  static Future<ApiResponse<CalendarData>> getCalendarData({
+    int? year,
+    int? month,
+    int? day,
+  }) async {
+    try {
+      final token = await StorageService.getAccessToken();
+      if (token == null) {
+        return ApiResponse(success: false, message: 'No access token found');
+      }
+
+      final now = DateTime.now();
+      final url = ApiConfig.employeeCalendarUrl(
+        year ?? now.year,
+        month ?? now.month,
+        day ?? now.day,
+      );
+
+      final response = await http.get(
+        Uri.parse(url),
+        headers: ApiConfig.getAuthHeaders(token),
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        final calendarData = CalendarData.fromJson(data);
+        return ApiResponse(
+          success: true,
+          data: calendarData,
+        );
+      } else {
+        final error = jsonDecode(response.body);
+        return ApiResponse(
+          success: false,
+          message: error['detail'] ?? 'Failed to fetch calendar data',
+        );
+      }
+    } catch (e) {
+      String errorMsg = 'Network error occurred';
+      if (e.toString().contains('FormatException')) {
+        errorMsg = 'Invalid response from server. Please try again.';
+      } else if (e.toString().contains('SocketException') ||
+          e.toString().contains('TimeoutException')) {
+        errorMsg = 'Connection error. Please check your internet connection.';
+      } else {
+        errorMsg = 'Error: ${e.toString()}';
+      }
+
+      return ApiResponse(success: false, message: errorMsg);
+    }
+  }
+
+  // Create personal calendar event
+  static Future<ApiResponse<Map<String, dynamic>>> createCalendarEvent({
+    required String name,
+    required DateTime date,
+    String? description,
+  }) async {
+    try {
+      final token = await StorageService.getAccessToken();
+      if (token == null) {
+        return ApiResponse(success: false, message: 'No access token found');
+      }
+
+      final response = await http.post(
+        Uri.parse(ApiConfig.employeeCalendarBaseUrl),
+        headers: ApiConfig.getAuthHeaders(token),
+        body: jsonEncode({
+          'name': name,
+          'date': DateFormat('yyyy-MM-dd').format(date),
+          'description': description ?? '',
+        }),
+      );
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        final data = jsonDecode(response.body);
+        return ApiResponse(
+          success: true,
+          message: 'Event created successfully',
+          data: data,
+        );
+      } else {
+        final error = jsonDecode(response.body);
+        return ApiResponse(
+          success: false,
+          message: error['detail'] ?? 'Failed to create event',
+        );
+      }
+    } catch (e) {
+      String errorMsg = 'Network error occurred';
+      if (e.toString().contains('FormatException')) {
+        errorMsg = 'Invalid response from server. Please try again.';
+      } else if (e.toString().contains('SocketException') ||
+          e.toString().contains('TimeoutException')) {
+        errorMsg = 'Connection error. Please check your internet connection.';
+      } else {
+        errorMsg = 'Error: ${e.toString()}';
+      }
+
+      return ApiResponse(success: false, message: errorMsg);
+    }
+  }
+
+  // Update personal calendar event
+  static Future<ApiResponse<Map<String, dynamic>>> updateCalendarEvent({
+    required int eventId,
+    required String name,
+    required DateTime date,
+    String? description,
+  }) async {
+    try {
+      final token = await StorageService.getAccessToken();
+      if (token == null) {
+        return ApiResponse(success: false, message: 'No access token found');
+      }
+
+      final response = await http.put(
+        Uri.parse(ApiConfig.employeeCalendarEventUrl(eventId)),
+        headers: ApiConfig.getAuthHeaders(token),
+        body: jsonEncode({
+          'name': name,
+          'date': DateFormat('yyyy-MM-dd').format(date),
+          'description': description ?? '',
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        return ApiResponse(
+          success: true,
+          message: 'Event updated successfully',
+          data: data,
+        );
+      } else {
+        final error = jsonDecode(response.body);
+        return ApiResponse(
+          success: false,
+          message: error['detail'] ?? 'Failed to update event',
+        );
+      }
+    } catch (e) {
+      String errorMsg = 'Network error occurred';
+      if (e.toString().contains('FormatException')) {
+        errorMsg = 'Invalid response from server. Please try again.';
+      } else if (e.toString().contains('SocketException') ||
+          e.toString().contains('TimeoutException')) {
+        errorMsg = 'Connection error. Please check your internet connection.';
+      } else {
+        errorMsg = 'Error: ${e.toString()}';
+      }
+
+      return ApiResponse(success: false, message: errorMsg);
+    }
+  }
+
+  // Delete personal calendar event
+  static Future<ApiResponse<void>> deleteCalendarEvent(int eventId) async {
+    try {
+      final token = await StorageService.getAccessToken();
+      if (token == null) {
+        return ApiResponse(success: false, message: 'No access token found');
+      }
+
+      final response = await http.delete(
+        Uri.parse(ApiConfig.employeeCalendarEventUrl(eventId)),
+        headers: ApiConfig.getAuthHeaders(token),
+      );
+
+      if (response.statusCode == 200 || response.statusCode == 204) {
+        return ApiResponse(
+          success: true,
+          message: 'Event deleted successfully',
+        );
+      } else {
+        final error = jsonDecode(response.body);
+        return ApiResponse(
+          success: false,
+          message: error['detail'] ?? 'Failed to delete event',
+        );
+      }
+    } catch (e) {
+      String errorMsg = 'Network error occurred';
+      if (e.toString().contains('FormatException')) {
+        errorMsg = 'Invalid response from server. Please try again.';
+      } else if (e.toString().contains('SocketException') ||
+          e.toString().contains('TimeoutException')) {
+        errorMsg = 'Connection error. Please check your internet connection.';
+      } else {
+        errorMsg = 'Error: ${e.toString()}';
+      }
+
+      return ApiResponse(success: false, message: errorMsg);
+    }
+  }
+}

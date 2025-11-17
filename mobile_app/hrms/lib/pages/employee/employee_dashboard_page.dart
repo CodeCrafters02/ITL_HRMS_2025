@@ -8,6 +8,7 @@ import 'widgets/performance_card.dart';
 import 'widgets/payroll_card.dart';
 import 'widgets/recent_breaks_card.dart';
 import 'widgets/break_controls.dart';
+import 'widgets/notification_button.dart';
 
 class EmployeeDashboardPage extends StatefulWidget {
   const EmployeeDashboardPage({super.key});
@@ -241,6 +242,12 @@ class _EmployeeDashboardPageState extends State<EmployeeDashboardPage> {
         backgroundColor: Colors.white,
         elevation: 0,
         iconTheme: const IconThemeData(color: Color(0xFF111827)),
+        actions: const [
+          Padding(
+            padding: EdgeInsets.only(right: 8.0),
+            child: NotificationButton(),
+          ),
+        ],
       ),
       body: _isLoading && _dashboardData == null
           ? const Center(

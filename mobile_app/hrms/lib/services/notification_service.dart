@@ -58,10 +58,9 @@ class NotificationService {
       final token = await StorageService.getAccessToken();
       if (token == null) return;
 
-      // This endpoint should return notification count
-      // Adjust endpoint as per your API
+      // Use all-notifications endpoint to get total count
       final response = await http.get(
-        Uri.parse('${ApiConfig.baseUrl}/employee/notifications/'),
+        Uri.parse('${ApiConfig.baseUrl}/employee/all-notifications/'),
         headers: ApiConfig.getAuthHeaders(token),
       );
 
