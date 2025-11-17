@@ -5,6 +5,9 @@ from django.dispatch import receiver
 from employee.models import TaskAssignment, Task
 from app.models import Employee, EmpLeave, CalendarEvent, LearningCorner, Notification
 from notifications.models import UserNotification
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 def _company_user_ids(company):
@@ -25,16 +28,22 @@ def task_assigned_updated(sender, instance, created, **kwargs):
     body = f"{task.title} (deadline: {task.deadline})"
     data = {"type": "task", "task_id": task.id, "assignment_id": instance.id, "status": instance.status}
     default_sender = UserRegister.objects.filter(role='admin').first()
-    send_fcm_to_users([emp_user_id], "task", body, sender=default_sender, extra_data=data)
+    try:
+        send_fcm_to_users([emp_user_id], "task", body, sender=default_sender, extra_data=data)
+    except Exception as e:
+        logger.error(f"Failed to send FCM notification for task assignment: {e}")
     # Create UserNotification for live notification
     if created:
-        UserNotification.objects.create(
-            recipient=instance.employee,
-            title=f"Task Assigned: {task.title}",
-            message=f"You have been assigned a task: {task.title} (deadline: {task.deadline})",
-            related_object_id=task.id,
-            sender=default_sender
-        )
+        try:
+            UserNotification.objects.create(
+                recipient=instance.employee,
+                title=f"Task Assigned: {task.title}",
+                message=f"You have been assigned a task: {task.title} (deadline: {task.deadline})",
+                related_object_id=task.id,
+                sender=default_sender
+            )
+        except Exception as e:
+            logger.error(f"Failed to create UserNotification for task assignment: {e}")
 
 @receiver(post_save, sender=TaskAssignment)
 def notify_employees_on_assignment(sender, instance, created, **kwargs):
@@ -46,13 +55,16 @@ def notify_employees_on_assignment(sender, instance, created, **kwargs):
 
         
         default_sender = UserRegister.objects.filter(role="admin").first()
-        send_fcm_to_users(
-            assigned_user_ids,
-            "task",
-            f"{instance.task.title} assigned to you",
-            sender=default_sender,
-            extra_data={"type": "task", "task_id": instance.task.id},
-        )
+        try:
+            send_fcm_to_users(
+                assigned_user_ids,
+                "task",
+                f"{instance.task.title} assigned to you",
+                sender=default_sender,
+                extra_data={"type": "task", "task_id": instance.task.id},
+            )
+        except Exception as e:
+            logger.error(f"Failed to send FCM notification for task assignment: {e}")
        
 @receiver(post_save, sender=EmpLeave)
 def leave_created_notify_manager(sender, instance, created, **kwargs):
@@ -62,21 +74,27 @@ def leave_created_notify_manager(sender, instance, created, **kwargs):
     """
     if created and instance.reporting_manager and instance.reporting_manager.user and instance.reporting_manager.user.id:
         default_sender = UserRegister.objects.filter(role='admin').first()
-        send_fcm_to_users(
-            [instance.reporting_manager.user.id],
-            "leave",
-            f"{instance.employee} requested {instance.leave_type} ({instance.from_date} → {instance.to_date})",
-            sender=default_sender,
-            extra_data={"type": "leave_request", "leave_id": instance.id}
-        )
+        try:
+            send_fcm_to_users(
+                [instance.reporting_manager.user.id],
+                "leave",
+                f"{instance.employee} requested {instance.leave_type} ({instance.from_date} → {instance.to_date})",
+                sender=default_sender,
+                extra_data={"type": "leave_request", "leave_id": instance.id}
+            )
+        except Exception as e:
+            logger.error(f"Failed to send FCM notification for leave request: {e}")
         # Create UserNotification for manager, set sender to default_sender
-        UserNotification.objects.create(
-            recipient=instance.reporting_manager,
-            title=f"Leave Request from {instance.employee}",
-            message=f"{instance.employee} requested {instance.leave_type} ({instance.from_date} → {instance.to_date})",
-            related_object_id=instance.id,
-            sender=default_sender
-        )
+        try:
+            UserNotification.objects.create(
+                recipient=instance.reporting_manager,
+                title=f"Leave Request from {instance.employee}",
+                message=f"{instance.employee} requested {instance.leave_type} ({instance.from_date} → {instance.to_date})",
+                related_object_id=instance.id,
+                sender=default_sender
+            )
+        except Exception as e:
+            logger.error(f"Failed to create UserNotification for leave request: {e}")
 
 @receiver(pre_save, sender=EmpLeave)
 def leave_status_change(sender, instance, **kwargs):
@@ -89,21 +107,30 @@ def leave_status_change(sender, instance, **kwargs):
     if prev.status != instance.status:
         if instance.employee and instance.employee.user and instance.employee.user.id:
             default_sender = UserRegister.objects.filter(role='admin').first()
-            send_fcm_to_users(
-                [instance.employee.user.id],
-                "leave",
-                f"Your leave ({instance.from_date} → {instance.to_date}) is {instance.status}",
-                sender=default_sender,
-                extra_data={"type": "leave_status", "leave_id": instance.id, "status": instance.status}
-            )
-            # Create UserNotification for employee, set sender to default_sender
-            UserNotification.objects.create(
-                recipient=instance.employee,
-                title=f"Leave Status Updated",
-                message=f"Your leave ({instance.from_date} → {instance.to_date}) is {instance.status}",
-                related_object_id=instance.id,
-                sender=default_sender
-            )
+            try:
+                send_fcm_to_users(
+                    [instance.employee.user.id],
+                    "leave",
+                    f"Your leave ({instance.from_date} → {instance.to_date}) is {instance.status}",
+                    sender=default_sender,
+                    extra_data={"type": "leave_status", "leave_id": instance.id, "status": instance.status}
+                )
+            except Exception as e:
+                # Log but don't break the leave save operation
+                logger.error(f"Failed to send FCM notification for leave status change: {e}")
+            
+            # Always create UserNotification even if FCM fails
+            try:
+                UserNotification.objects.create(
+                    recipient=instance.employee,
+                    title=f"Leave Status Updated",
+                    message=f"Your leave ({instance.from_date} → {instance.to_date}) is {instance.status}",
+                    related_object_id=instance.id,
+                    sender=default_sender
+                )
+            except Exception as e:
+                # Log but don't break the leave save operation
+                logger.error(f"Failed to create UserNotification for leave status change: {e}")
 
 @receiver(post_save, sender=Notification)
 def admin_notification_broadcast(sender, instance, created, **kwargs):

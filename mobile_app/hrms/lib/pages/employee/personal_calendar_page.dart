@@ -265,6 +265,7 @@ class _PersonalCalendarPageState extends State<PersonalCalendarPage> {
       children: [
         _buildCalendarHeader(),
         Expanded(
+          flex: MediaQuery.of(context).size.width > 800 ? 1 : 2,
           child: Row(
             children: [
               Expanded(
@@ -279,7 +280,13 @@ class _PersonalCalendarPageState extends State<PersonalCalendarPage> {
             ],
           ),
         ),
-        if (MediaQuery.of(context).size.width <= 800) _buildEventsList(),
+        if (MediaQuery.of(context).size.width <= 800)
+          ConstrainedBox(
+            constraints: BoxConstraints(
+              maxHeight: MediaQuery.of(context).size.height * 0.35,
+            ),
+            child: _buildEventsList(),
+          ),
       ],
     );
   }
@@ -500,17 +507,21 @@ class _PersonalCalendarPageState extends State<PersonalCalendarPage> {
           ),
           const SizedBox(height: 16),
           if (_selectedDate == null)
-            const Center(
-              child: Text(
-                'Tap on a date to view events',
-                style: TextStyle(color: Color(0xFF6B7280)),
+            const Expanded(
+              child: Center(
+                child: Text(
+                  'Tap on a date to view events',
+                  style: TextStyle(color: Color(0xFF6B7280)),
+                ),
               ),
             )
           else if (_selectedDateEvents.isEmpty)
-            const Center(
-              child: Text(
-                'No events on this date',
-                style: TextStyle(color: Color(0xFF6B7280)),
+            const Expanded(
+              child: Center(
+                child: Text(
+                  'No events on this date',
+                  style: TextStyle(color: Color(0xFF6B7280)),
+                ),
               ),
             )
           else

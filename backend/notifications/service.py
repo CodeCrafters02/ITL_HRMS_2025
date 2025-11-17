@@ -2,10 +2,12 @@ from django.conf import settings
 from app.models import UserRegister
 import json
 import requests
-from django.conf import settings
+import logging
 from google.oauth2 import service_account
 from google.auth.transport.requests import Request
 from .models import UserNotification, UserDevice
+
+logger = logging.getLogger(__name__)
 
 # Helper to get absolute logo URL
 
@@ -36,36 +38,56 @@ def remove_unregistered_token(token):
 def send_fcm_push(token, title, body, data=None):
     """
     Send a push notification to a single device using FCM HTTP v1 API and service account JSON.
+    Returns (status_code, response_text) or (None, error_message) on failure.
     """
-    scopes = ["https://www.googleapis.com/auth/firebase.messaging"]
-    credentials = service_account.Credentials.from_service_account_file(
-        settings.FCM_CREDENTIALS_FILE, scopes=scopes
-    )
-    credentials.refresh(Request())
-    access_token = credentials.token
+    try:
+        # Check if FCM is configured
+        if not hasattr(settings, 'FCM_CREDENTIALS_FILE') or not settings.FCM_CREDENTIALS_FILE:
+            return None, "FCM credentials not configured"
+        
+        if not hasattr(settings, 'FCM_PROJECT_ID') or not settings.FCM_PROJECT_ID:
+            return None, "FCM project ID not configured"
+        
+        scopes = ["https://www.googleapis.com/auth/firebase.messaging"]
+        credentials = service_account.Credentials.from_service_account_file(
+            settings.FCM_CREDENTIALS_FILE, scopes=scopes
+        )
+        
+        # Try to refresh credentials with error handling
+        try:
+            credentials.refresh(Request())
+            access_token = credentials.token
+        except Exception as refresh_error:
+            # Log the error but don't break the workflow
+            logger.error(f"FCM credential refresh failed: {refresh_error}")
+            return None, f"FCM credential refresh failed: {str(refresh_error)}"
 
-    project_id = settings.FCM_PROJECT_ID
-    url = f"https://fcm.googleapis.com/v1/projects/{project_id}/messages:send"
-    headers = {
-        "Authorization": f"Bearer {access_token}",
-        "Content-Type": "application/json; UTF-8",
-    }
-    # Only send 'data' payload for full control in service worker
-    message = {
-        "message": {
-            "token": token,
-            "data": {
-                "title": title,
-                "body": body,
-                **(data or {})
-            },
+        project_id = settings.FCM_PROJECT_ID
+        url = f"https://fcm.googleapis.com/v1/projects/{project_id}/messages:send"
+        headers = {
+            "Authorization": f"Bearer {access_token}",
+            "Content-Type": "application/json; UTF-8",
         }
-    }
-    response = requests.post(url, headers=headers, data=json.dumps(message))
-       # If token is unregistered, remove it from DB
-    if response.status_code == 404 and 'UNREGISTERED' in response.text:
-        remove_unregistered_token(token)
-    return response.status_code, response.text
+        # Only send 'data' payload for full control in service worker
+        message = {
+            "message": {
+                "token": token,
+                "data": {
+                    "title": title,
+                    "body": body,
+                    **(data or {})
+                },
+            }
+        }
+        response = requests.post(url, headers=headers, data=json.dumps(message))
+        # If token is unregistered, remove it from DB
+        if response.status_code == 404 and 'UNREGISTERED' in response.text:
+            remove_unregistered_token(token)
+        return response.status_code, response.text
+    except Exception as e:
+        # Log but do not break the workflow
+        logger.error(f"FCM push failed: {e}")
+        return None, str(e)
 
 
 
@@ -141,7 +163,12 @@ def send_fcm_to_users(user_ids, notif_type, message, sender, title="", related_o
         this_extra_data = dict(base_extra_data)
         this_extra_data['company_logo'] = emp_logo_map.get(user_id, "")
         this_extra_data['company_name'] = emp_name_map.get(user_id, "")
-        send_fcm_push(tk, title or notif_type.capitalize(), message, this_extra_data)
+        try:
+            send_fcm_push(tk, title or notif_type.capitalize(), message, this_extra_data)
+        except Exception as e:
+            # Log but don't break the workflow
+            logger.error(f"Failed to send FCM push to user {user_id}: {e}")
+            continue
   
         
 def send_push_notification_to_all(title, message):

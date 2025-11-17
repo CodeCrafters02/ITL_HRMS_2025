@@ -9,7 +9,12 @@ import '../models/attendance_history_model.dart';
 import '../models/leave_model.dart';
 import '../models/notification_model.dart';
 import '../models/calendar_model.dart';
+import '../models/company_policy_model.dart';
+import '../models/reportee_model.dart';
+import '../models/leave_request_model.dart';
+import '../models/employee_reference_model.dart';
 import '../services/storage_service.dart';
+import 'dart:io';
 
 class ApiResponse<T> {
   final bool success;
@@ -762,7 +767,8 @@ class EmployeeService {
   }
 
   // Get all notifications
-  static Future<ApiResponse<List<NotificationModel>>> getAllNotifications() async {
+  static Future<ApiResponse<List<NotificationModel>>>
+  getAllNotifications() async {
     try {
       final token = await StorageService.getAccessToken();
       if (token == null) {
@@ -779,10 +785,7 @@ class EmployeeService {
         final notifications = data
             .map((item) => NotificationModel.fromJson(item))
             .toList();
-        return ApiResponse(
-          success: true,
-          data: notifications,
-        );
+        return ApiResponse(success: true, data: notifications);
       } else {
         final error = jsonDecode(response.body);
         return ApiResponse(
@@ -832,10 +835,7 @@ class EmployeeService {
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         final calendarData = CalendarData.fromJson(data);
-        return ApiResponse(
-          success: true,
-          data: calendarData,
-        );
+        return ApiResponse(success: true, data: calendarData);
       } else {
         final error = jsonDecode(response.body);
         return ApiResponse(
@@ -984,6 +984,721 @@ class EmployeeService {
         return ApiResponse(
           success: false,
           message: error['detail'] ?? 'Failed to delete event',
+        );
+      }
+    } catch (e) {
+      String errorMsg = 'Network error occurred';
+      if (e.toString().contains('FormatException')) {
+        errorMsg = 'Invalid response from server. Please try again.';
+      } else if (e.toString().contains('SocketException') ||
+          e.toString().contains('TimeoutException')) {
+        errorMsg = 'Connection error. Please check your internet connection.';
+      } else {
+        errorMsg = 'Error: ${e.toString()}';
+      }
+
+      return ApiResponse(success: false, message: errorMsg);
+    }
+  }
+
+  // Get company policies
+  static Future<ApiResponse<List<CompanyPolicy>>> getCompanyPolicies() async {
+    try {
+      final token = await StorageService.getAccessToken();
+      if (token == null) {
+        return ApiResponse(success: false, message: 'No access token found');
+      }
+
+      final response = await http.get(
+        Uri.parse(ApiConfig.employeeCompanyPoliciesUrl),
+        headers: ApiConfig.getAuthHeaders(token),
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        final policies = (data as List<dynamic>)
+            .map((json) => CompanyPolicy.fromJson(json))
+            .toList();
+        return ApiResponse(success: true, data: policies);
+      } else {
+        final error = jsonDecode(response.body);
+        return ApiResponse(
+          success: false,
+          message: error['detail'] ?? 'Failed to fetch company policies',
+        );
+      }
+    } catch (e) {
+      String errorMsg = 'Network error occurred';
+      if (e.toString().contains('FormatException')) {
+        errorMsg = 'Invalid response from server. Please try again.';
+      } else if (e.toString().contains('SocketException') ||
+          e.toString().contains('TimeoutException')) {
+        errorMsg = 'Connection error. Please check your internet connection.';
+      } else {
+        errorMsg = 'Error: ${e.toString()}';
+      }
+
+      return ApiResponse(success: false, message: errorMsg);
+    }
+  }
+
+  // Get reportees
+  static Future<ApiResponse<List<Reportee>>> getReportees(
+    int employeeId,
+  ) async {
+    try {
+      final token = await StorageService.getAccessToken();
+      if (token == null) {
+        return ApiResponse(success: false, message: 'No access token found');
+      }
+
+      final response = await http.post(
+        Uri.parse(ApiConfig.reporteesUrl),
+        headers: ApiConfig.getAuthHeaders(token),
+        body: jsonEncode({'employee_id': employeeId}),
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        final reportees = (data as List<dynamic>)
+            .map((json) => Reportee.fromJson(json))
+            .toList();
+        return ApiResponse(success: true, data: reportees);
+      } else {
+        final error = jsonDecode(response.body);
+        return ApiResponse(
+          success: false,
+          message:
+              error['error'] ?? error['detail'] ?? 'Failed to fetch reportees',
+        );
+      }
+    } catch (e) {
+      String errorMsg = 'Network error occurred';
+      if (e.toString().contains('FormatException')) {
+        errorMsg = 'Invalid response from server. Please try again.';
+      } else if (e.toString().contains('SocketException') ||
+          e.toString().contains('TimeoutException')) {
+        errorMsg = 'Connection error. Please check your internet connection.';
+      } else {
+        errorMsg = 'Error: ${e.toString()}';
+      }
+
+      return ApiResponse(success: false, message: errorMsg);
+    }
+  }
+
+  // Get all tasks (for manager)
+  static Future<ApiResponse<List<Task>>> getAllTasks() async {
+    try {
+      final token = await StorageService.getAccessToken();
+      if (token == null) {
+        return ApiResponse(success: false, message: 'No access token found');
+      }
+
+      final response = await http.get(
+        Uri.parse(ApiConfig.tasksUrl),
+        headers: ApiConfig.getAuthHeaders(token),
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        final tasks = (data as List<dynamic>)
+            .map((json) => Task.fromJson(json))
+            .toList();
+        return ApiResponse(success: true, data: tasks);
+      } else {
+        final error = jsonDecode(response.body);
+        return ApiResponse(
+          success: false,
+          message: error['detail'] ?? 'Failed to fetch tasks',
+        );
+      }
+    } catch (e) {
+      String errorMsg = 'Network error occurred';
+      if (e.toString().contains('FormatException')) {
+        errorMsg = 'Invalid response from server. Please try again.';
+      } else if (e.toString().contains('SocketException') ||
+          e.toString().contains('TimeoutException')) {
+        errorMsg = 'Connection error. Please check your internet connection.';
+      } else {
+        errorMsg = 'Error: ${e.toString()}';
+      }
+
+      return ApiResponse(success: false, message: errorMsg);
+    }
+  }
+
+  // Get task details
+  static Future<ApiResponse<Task>> getTaskDetails(int taskId) async {
+    try {
+      final token = await StorageService.getAccessToken();
+      if (token == null) {
+        return ApiResponse(success: false, message: 'No access token found');
+      }
+
+      final response = await http.get(
+        Uri.parse(ApiConfig.taskUrl(taskId)),
+        headers: ApiConfig.getAuthHeaders(token),
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        final task = Task.fromJson(data);
+        return ApiResponse(success: true, data: task);
+      } else {
+        final error = jsonDecode(response.body);
+        return ApiResponse(
+          success: false,
+          message: error['detail'] ?? 'Failed to fetch task details',
+        );
+      }
+    } catch (e) {
+      String errorMsg = 'Network error occurred';
+      if (e.toString().contains('FormatException')) {
+        errorMsg = 'Invalid response from server. Please try again.';
+      } else if (e.toString().contains('SocketException') ||
+          e.toString().contains('TimeoutException')) {
+        errorMsg = 'Connection error. Please check your internet connection.';
+      } else {
+        errorMsg = 'Error: ${e.toString()}';
+      }
+
+      return ApiResponse(success: false, message: errorMsg);
+    }
+  }
+
+  // Delete task
+  static Future<ApiResponse<void>> deleteTask(int taskId) async {
+    try {
+      final token = await StorageService.getAccessToken();
+      if (token == null) {
+        return ApiResponse(success: false, message: 'No access token found');
+      }
+
+      final response = await http.delete(
+        Uri.parse(ApiConfig.taskUrl(taskId)),
+        headers: ApiConfig.getAuthHeaders(token),
+      );
+
+      if (response.statusCode == 200 || response.statusCode == 204) {
+        return ApiResponse(success: true, message: 'Task deleted successfully');
+      } else {
+        final error = jsonDecode(response.body);
+        return ApiResponse(
+          success: false,
+          message: error['detail'] ?? 'Failed to delete task',
+        );
+      }
+    } catch (e) {
+      String errorMsg = 'Network error occurred';
+      if (e.toString().contains('FormatException')) {
+        errorMsg = 'Invalid response from server. Please try again.';
+      } else if (e.toString().contains('SocketException') ||
+          e.toString().contains('TimeoutException')) {
+        errorMsg = 'Connection error. Please check your internet connection.';
+      } else {
+        errorMsg = 'Error: ${e.toString()}';
+      }
+
+      return ApiResponse(success: false, message: errorMsg);
+    }
+  }
+
+  // Create task
+  static Future<ApiResponse<Task>> createTask({
+    required String title,
+    required String description,
+    required String deadline,
+    required String priority,
+    required String status,
+    List<Map<String, dynamic>>? subtasks,
+  }) async {
+    try {
+      final token = await StorageService.getAccessToken();
+      if (token == null) {
+        return ApiResponse(success: false, message: 'No access token found');
+      }
+
+      final body = {
+        'title': title,
+        'description': description,
+        'deadline': deadline,
+        'priority': priority,
+        'status': status,
+        if (subtasks != null && subtasks.isNotEmpty) 'subtasks': subtasks,
+      };
+
+      final response = await http.post(
+        Uri.parse(ApiConfig.tasksUrl),
+        headers: ApiConfig.getAuthHeaders(token),
+        body: jsonEncode(body),
+      );
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        final data = jsonDecode(response.body);
+        final task = Task.fromJson(data);
+        return ApiResponse(
+          success: true,
+          message: 'Task created successfully',
+          data: task,
+        );
+      } else {
+        final error = jsonDecode(response.body);
+        return ApiResponse(
+          success: false,
+          message:
+              error['detail'] ?? error['message'] ?? 'Failed to create task',
+        );
+      }
+    } catch (e) {
+      String errorMsg = 'Network error occurred';
+      if (e.toString().contains('FormatException')) {
+        errorMsg = 'Invalid response from server. Please try again.';
+      } else if (e.toString().contains('SocketException') ||
+          e.toString().contains('TimeoutException')) {
+        errorMsg = 'Connection error. Please check your internet connection.';
+      } else {
+        errorMsg = 'Error: ${e.toString()}';
+      }
+
+      return ApiResponse(success: false, message: errorMsg);
+    }
+  }
+
+  // Update task
+  static Future<ApiResponse<Task>> updateTask({
+    required int taskId,
+    String? title,
+    String? description,
+    String? deadline,
+    String? priority,
+    String? status,
+  }) async {
+    try {
+      final token = await StorageService.getAccessToken();
+      if (token == null) {
+        return ApiResponse(success: false, message: 'No access token found');
+      }
+
+      final body = <String, dynamic>{};
+      if (title != null) body['title'] = title;
+      if (description != null) body['description'] = description;
+      if (deadline != null) body['deadline'] = deadline;
+      if (priority != null) body['priority'] = priority;
+      if (status != null) body['status'] = status;
+
+      final response = await http.patch(
+        Uri.parse(ApiConfig.taskUrl(taskId)),
+        headers: ApiConfig.getAuthHeaders(token),
+        body: jsonEncode(body),
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        final task = Task.fromJson(data);
+        return ApiResponse(
+          success: true,
+          message: 'Task updated successfully',
+          data: task,
+        );
+      } else {
+        final error = jsonDecode(response.body);
+        return ApiResponse(
+          success: false,
+          message:
+              error['detail'] ?? error['message'] ?? 'Failed to update task',
+        );
+      }
+    } catch (e) {
+      String errorMsg = 'Network error occurred';
+      if (e.toString().contains('FormatException')) {
+        errorMsg = 'Invalid response from server. Please try again.';
+      } else if (e.toString().contains('SocketException') ||
+          e.toString().contains('TimeoutException')) {
+        errorMsg = 'Connection error. Please check your internet connection.';
+      } else {
+        errorMsg = 'Error: ${e.toString()}';
+      }
+
+      return ApiResponse(success: false, message: errorMsg);
+    }
+  }
+
+  // Assign task to employees
+  static Future<ApiResponse<void>> assignTask({
+    required int taskId,
+    required String owner,
+    required List<int> employees,
+  }) async {
+    try {
+      final token = await StorageService.getAccessToken();
+      if (token == null) {
+        return ApiResponse(success: false, message: 'No access token found');
+      }
+
+      final response = await http.post(
+        Uri.parse(ApiConfig.taskAssignUrl(taskId)),
+        headers: ApiConfig.getAuthHeaders(token),
+        body: jsonEncode({'owner': owner, 'employees': employees}),
+      );
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        return ApiResponse(
+          success: true,
+          message: 'Task assigned successfully',
+        );
+      } else {
+        final error = jsonDecode(response.body);
+        return ApiResponse(
+          success: false,
+          message: error['detail'] ?? 'Failed to assign task',
+        );
+      }
+    } catch (e) {
+      String errorMsg = 'Network error occurred';
+      if (e.toString().contains('FormatException')) {
+        errorMsg = 'Invalid response from server. Please try again.';
+      } else if (e.toString().contains('SocketException') ||
+          e.toString().contains('TimeoutException')) {
+        errorMsg = 'Connection error. Please check your internet connection.';
+      } else {
+        errorMsg = 'Error: ${e.toString()}';
+      }
+
+      return ApiResponse(success: false, message: errorMsg);
+    }
+  }
+
+  // Get leave requests (for manager)
+  static Future<ApiResponse<List<LeaveRequest>>> getLeaveRequests() async {
+    try {
+      final token = await StorageService.getAccessToken();
+      if (token == null) {
+        return ApiResponse(success: false, message: 'No access token found');
+      }
+
+      final response = await http.get(
+        Uri.parse(ApiConfig.leaveRequestsUrl),
+        headers: ApiConfig.getAuthHeaders(token),
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        final requests = (data as List<dynamic>)
+            .map((json) => LeaveRequest.fromJson(json))
+            .toList();
+        return ApiResponse(success: true, data: requests);
+      } else {
+        final error = jsonDecode(response.body);
+        return ApiResponse(
+          success: false,
+          message: error['detail'] ?? 'Failed to fetch leave requests',
+        );
+      }
+    } catch (e) {
+      String errorMsg = 'Network error occurred';
+      if (e.toString().contains('FormatException')) {
+        errorMsg = 'Invalid response from server. Please try again.';
+      } else if (e.toString().contains('SocketException') ||
+          e.toString().contains('TimeoutException')) {
+        errorMsg = 'Connection error. Please check your internet connection.';
+      } else {
+        errorMsg = 'Error: ${e.toString()}';
+      }
+
+      return ApiResponse(success: false, message: errorMsg);
+    }
+  }
+
+  // Approve leave request
+  static Future<ApiResponse<void>> approveLeave(int leaveId) async {
+    try {
+      final token = await StorageService.getAccessToken();
+      if (token == null) {
+        return ApiResponse(success: false, message: 'No access token found');
+      }
+
+      final response = await http.post(
+        Uri.parse(ApiConfig.approveLeaveUrl(leaveId)),
+        headers: ApiConfig.getAuthHeaders(token),
+      );
+
+      if (response.statusCode == 200) {
+        return ApiResponse(
+          success: true,
+          message: 'Leave approved successfully',
+        );
+      } else {
+        final error = jsonDecode(response.body);
+        return ApiResponse(
+          success: false,
+          message: error['detail'] ?? 'Failed to approve leave',
+        );
+      }
+    } catch (e) {
+      String errorMsg = 'Network error occurred';
+      if (e.toString().contains('FormatException')) {
+        errorMsg = 'Invalid response from server. Please try again.';
+      } else if (e.toString().contains('SocketException') ||
+          e.toString().contains('TimeoutException')) {
+        errorMsg = 'Connection error. Please check your internet connection.';
+      } else {
+        errorMsg = 'Error: ${e.toString()}';
+      }
+
+      return ApiResponse(success: false, message: errorMsg);
+    }
+  }
+
+  // Reject leave request
+  static Future<ApiResponse<void>> rejectLeave(int leaveId) async {
+    try {
+      final token = await StorageService.getAccessToken();
+      if (token == null) {
+        return ApiResponse(success: false, message: 'No access token found');
+      }
+
+      final response = await http.post(
+        Uri.parse(ApiConfig.rejectLeaveUrl(leaveId)),
+        headers: ApiConfig.getAuthHeaders(token),
+      );
+
+      if (response.statusCode == 200) {
+        return ApiResponse(
+          success: true,
+          message: 'Leave rejected successfully',
+        );
+      } else {
+        final error = jsonDecode(response.body);
+        return ApiResponse(
+          success: false,
+          message: error['detail'] ?? 'Failed to reject leave',
+        );
+      }
+    } catch (e) {
+      String errorMsg = 'Network error occurred';
+      if (e.toString().contains('FormatException')) {
+        errorMsg = 'Invalid response from server. Please try again.';
+      } else if (e.toString().contains('SocketException') ||
+          e.toString().contains('TimeoutException')) {
+        errorMsg = 'Connection error. Please check your internet connection.';
+      } else {
+        errorMsg = 'Error: ${e.toString()}';
+      }
+
+      return ApiResponse(success: false, message: errorMsg);
+    }
+  }
+
+  // Get employee references
+  static Future<ApiResponse<List<EmployeeReference>>>
+  getEmployeeReferences() async {
+    try {
+      final token = await StorageService.getAccessToken();
+      if (token == null) {
+        return ApiResponse(success: false, message: 'No access token found');
+      }
+
+      final response = await http.get(
+        Uri.parse(ApiConfig.employeeReferenceUrl),
+        headers: ApiConfig.getAuthHeaders(token),
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        final references = (data as List<dynamic>)
+            .map((json) => EmployeeReference.fromJson(json))
+            .toList();
+        return ApiResponse(success: true, data: references);
+      } else {
+        final error = jsonDecode(response.body);
+        return ApiResponse(
+          success: false,
+          message: error['detail'] ?? 'Failed to fetch references',
+        );
+      }
+    } catch (e) {
+      String errorMsg = 'Network error occurred';
+      if (e.toString().contains('FormatException')) {
+        errorMsg = 'Invalid response from server. Please try again.';
+      } else if (e.toString().contains('SocketException') ||
+          e.toString().contains('TimeoutException')) {
+        errorMsg = 'Connection error. Please check your internet connection.';
+      } else {
+        errorMsg = 'Error: ${e.toString()}';
+      }
+
+      return ApiResponse(success: false, message: errorMsg);
+    }
+  }
+
+  // Create employee reference
+  static Future<ApiResponse<EmployeeReference>> createEmployeeReference({
+    required String name,
+    required String designation,
+    required String contactNumber,
+    required String email,
+    File? resume,
+  }) async {
+    try {
+      final token = await StorageService.getAccessToken();
+      if (token == null) {
+        return ApiResponse(success: false, message: 'No access token found');
+      }
+
+      final request = http.MultipartRequest(
+        'POST',
+        Uri.parse(ApiConfig.employeeReferenceUrl),
+      );
+
+      request.headers.addAll({
+        'Authorization': 'Bearer $token',
+        'Accept': 'application/json',
+      });
+
+      request.fields['name'] = name;
+      request.fields['designation'] = designation;
+      request.fields['contact_number'] = contactNumber;
+      request.fields['email'] = email;
+
+      if (resume != null) {
+        final file = await http.MultipartFile.fromPath('resume', resume.path);
+        request.files.add(file);
+      }
+
+      final streamedResponse = await request.send();
+      final response = await http.Response.fromStream(streamedResponse);
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        final data = jsonDecode(response.body);
+        final reference = EmployeeReference.fromJson(data);
+        return ApiResponse(
+          success: true,
+          message: 'Reference created successfully',
+          data: reference,
+        );
+      } else {
+        final error = jsonDecode(response.body);
+        return ApiResponse(
+          success: false,
+          message:
+              error['detail'] ??
+              error['message'] ??
+              'Failed to create reference',
+        );
+      }
+    } catch (e) {
+      String errorMsg = 'Network error occurred';
+      if (e.toString().contains('FormatException')) {
+        errorMsg = 'Invalid response from server. Please try again.';
+      } else if (e.toString().contains('SocketException') ||
+          e.toString().contains('TimeoutException')) {
+        errorMsg = 'Connection error. Please check your internet connection.';
+      } else {
+        errorMsg = 'Error: ${e.toString()}';
+      }
+
+      return ApiResponse(success: false, message: errorMsg);
+    }
+  }
+
+  // Update employee reference
+  static Future<ApiResponse<EmployeeReference>> updateEmployeeReference({
+    required int referenceId,
+    String? name,
+    String? designation,
+    String? contactNumber,
+    String? email,
+    File? resume,
+  }) async {
+    try {
+      final token = await StorageService.getAccessToken();
+      if (token == null) {
+        return ApiResponse(success: false, message: 'No access token found');
+      }
+
+      final request = http.MultipartRequest(
+        'PATCH',
+        Uri.parse(ApiConfig.employeeReferenceDetailUrl(referenceId)),
+      );
+
+      request.headers.addAll({
+        'Authorization': 'Bearer $token',
+        'Accept': 'application/json',
+      });
+
+      if (name != null) request.fields['name'] = name;
+      if (designation != null) request.fields['designation'] = designation;
+      if (contactNumber != null)
+        request.fields['contact_number'] = contactNumber;
+      if (email != null) request.fields['email'] = email;
+
+      if (resume != null) {
+        final file = await http.MultipartFile.fromPath('resume', resume.path);
+        request.files.add(file);
+      }
+
+      final streamedResponse = await request.send();
+      final response = await http.Response.fromStream(streamedResponse);
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        final reference = EmployeeReference.fromJson(data);
+        return ApiResponse(
+          success: true,
+          message: 'Reference updated successfully',
+          data: reference,
+        );
+      } else {
+        final error = jsonDecode(response.body);
+        return ApiResponse(
+          success: false,
+          message:
+              error['detail'] ??
+              error['message'] ??
+              'Failed to update reference',
+        );
+      }
+    } catch (e) {
+      String errorMsg = 'Network error occurred';
+      if (e.toString().contains('FormatException')) {
+        errorMsg = 'Invalid response from server. Please try again.';
+      } else if (e.toString().contains('SocketException') ||
+          e.toString().contains('TimeoutException')) {
+        errorMsg = 'Connection error. Please check your internet connection.';
+      } else {
+        errorMsg = 'Error: ${e.toString()}';
+      }
+
+      return ApiResponse(success: false, message: errorMsg);
+    }
+  }
+
+  // Delete employee reference
+  static Future<ApiResponse<void>> deleteEmployeeReference(
+    int referenceId,
+  ) async {
+    try {
+      final token = await StorageService.getAccessToken();
+      if (token == null) {
+        return ApiResponse(success: false, message: 'No access token found');
+      }
+
+      final response = await http.delete(
+        Uri.parse(ApiConfig.employeeReferenceDetailUrl(referenceId)),
+        headers: ApiConfig.getAuthHeaders(token),
+      );
+
+      if (response.statusCode == 200 || response.statusCode == 204) {
+        return ApiResponse(
+          success: true,
+          message: 'Reference deleted successfully',
+        );
+      } else {
+        final error = jsonDecode(response.body);
+        return ApiResponse(
+          success: false,
+          message: error['detail'] ?? 'Failed to delete reference',
         );
       }
     } catch (e) {

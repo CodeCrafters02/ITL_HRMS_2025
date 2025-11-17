@@ -33,6 +33,14 @@ class ApiConfig {
   static const String empLeavesEndpoint = '/employee/emp-leaves/';
   static const String allNotificationsEndpoint = '/employee/all-notifications/';
   static const String employeeCalendarEndpoint = '/employee/employee-calendar/';
+  static const String employeeCompanyPoliciesEndpoint =
+      '/employee/employee-companypolicies/';
+  static const String reporteesEndpoint = '/app/getreportees/';
+  static const String tasksEndpoint = '/employee/tasks/';
+  static const String taskAssignEndpoint = '/employee/task-assign/';
+  static const String leaveRequestsEndpoint = '/employee/emp-leaves/';
+  static const String employeeReferenceEndpoint =
+      '/employee/employeereference/';
 
   // Full URLs
   static String get loginUrl => '$baseUrl$loginEndpoint';
@@ -62,9 +70,26 @@ class ApiConfig {
   static String get allNotificationsUrl => '$baseUrl$allNotificationsEndpoint';
   static String employeeCalendarUrl(int year, int month, int day) =>
       '$baseUrl${employeeCalendarEndpoint}?year=$year&month=$month&day=$day';
-  static String get employeeCalendarBaseUrl => '$baseUrl$employeeCalendarEndpoint';
+  static String get employeeCalendarBaseUrl =>
+      '$baseUrl$employeeCalendarEndpoint';
   static String employeeCalendarEventUrl(int eventId) =>
       '$baseUrl${employeeCalendarEndpoint}$eventId/';
+  static String get employeeCompanyPoliciesUrl =>
+      '$baseUrl$employeeCompanyPoliciesEndpoint';
+  static String get reporteesUrl => '$baseUrl$reporteesEndpoint';
+  static String get tasksUrl => '$baseUrl$tasksEndpoint';
+  static String taskUrl(int taskId) => '$baseUrl${tasksEndpoint}$taskId/';
+  static String taskAssignUrl(int taskId) =>
+      '$baseUrl${taskAssignEndpoint}$taskId/';
+  static String get leaveRequestsUrl => '$baseUrl$leaveRequestsEndpoint';
+  static String approveLeaveUrl(int leaveId) =>
+      '$baseUrl${leaveRequestsEndpoint}$leaveId/approve/';
+  static String rejectLeaveUrl(int leaveId) =>
+      '$baseUrl${leaveRequestsEndpoint}$leaveId/reject/';
+  static String get employeeReferenceUrl =>
+      '$baseUrl$employeeReferenceEndpoint';
+  static String employeeReferenceDetailUrl(int referenceId) =>
+      '$baseUrl${employeeReferenceEndpoint}$referenceId/';
 
   // API Headers
   static Map<String, String> get headers => {
