@@ -28,7 +28,7 @@ SECRET_KEY = 'django-insecure-v++-2-a@y^9k1+kky5l^fg6#r1hc)hd(fwjox62c7@=ccvdkff
 DEBUG = True
 
 # ALLOWED_HOSTS = ['apihrms.innovyxtechlabs.com']
-ALLOWED_HOSTS = ['apihrms.innovyxtechlabs.com', 'localhost', '127.0.0.1']
+ALLOWED_HOSTS = ['apihrms.innovyxtechlabs.com', 'localhost', '127.0.0.1', '10.209.43.199', '192.168.0.3']
 
 # Application definition
 
