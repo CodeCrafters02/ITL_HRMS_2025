@@ -65,7 +65,7 @@ class _NotificationsPageState extends State<NotificationsPage> {
     } else if (difference == 1) {
       return 'Yesterday';
     } else if (difference <= 7) {
-      return '${difference} days ago';
+      return '$difference days ago';
     } else {
       return DateFormat('MMM dd, yyyy').format(date);
     }

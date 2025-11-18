@@ -1,7 +1,7 @@
 class ApiConfig {
   // Base URL - Change this to your backend server URL
-  // static const String baseUrl = 'https://apihrms.innovyxtechlabs.com';
-  static const String baseUrl = 'http://192.168.0.3:8000';
+  static const String baseUrl = 'https://apihrms.innovyxtechlabs.com';
+  // static const String baseUrl = 'http://192.168.0.3:8000';
 
   // Alternative for local development:
   // static const String baseUrl = 'http://localhost:8000';
@@ -58,9 +58,9 @@ class ApiConfig {
   static String get companyInfoUrl => '$baseUrl$companyInfoEndpoint';
   static String get myTasksUrl => '$baseUrl$myTasksEndpoint';
   static String taskAssignmentStatusUrl(int assignmentId) =>
-      '$baseUrl${taskAssignmentStatusEndpoint}$assignmentId/status/';
+      '$baseUrl$taskAssignmentStatusEndpoint$assignmentId/status/';
   static String attendanceHistoryUrl(int month, int year) =>
-      '$baseUrl${attendanceHistoryEndpoint}?month=$month&year=$year';
+      '$baseUrl$attendanceHistoryEndpoint?month=$month&year=$year';
   static String get leavesListUrl => '$baseUrl$leavesListEndpoint';
   static String get employeeLeaveCreateUrl =>
       '$baseUrl$employeeLeaveCreateEndpoint';
@@ -69,27 +69,27 @@ class ApiConfig {
       '$baseUrl/employee/emp-leaves/$leaveId/cancel/';
   static String get allNotificationsUrl => '$baseUrl$allNotificationsEndpoint';
   static String employeeCalendarUrl(int year, int month, int day) =>
-      '$baseUrl${employeeCalendarEndpoint}?year=$year&month=$month&day=$day';
+      '$baseUrl$employeeCalendarEndpoint?year=$year&month=$month&day=$day';
   static String get employeeCalendarBaseUrl =>
       '$baseUrl$employeeCalendarEndpoint';
   static String employeeCalendarEventUrl(int eventId) =>
-      '$baseUrl${employeeCalendarEndpoint}$eventId/';
+      '$baseUrl$employeeCalendarEndpoint$eventId/';
   static String get employeeCompanyPoliciesUrl =>
       '$baseUrl$employeeCompanyPoliciesEndpoint';
   static String get reporteesUrl => '$baseUrl$reporteesEndpoint';
   static String get tasksUrl => '$baseUrl$tasksEndpoint';
-  static String taskUrl(int taskId) => '$baseUrl${tasksEndpoint}$taskId/';
+  static String taskUrl(int taskId) => '$baseUrl$tasksEndpoint$taskId/';
   static String taskAssignUrl(int taskId) =>
-      '$baseUrl${taskAssignEndpoint}$taskId/';
+      '$baseUrl$taskAssignEndpoint$taskId/';
   static String get leaveRequestsUrl => '$baseUrl$leaveRequestsEndpoint';
   static String approveLeaveUrl(int leaveId) =>
-      '$baseUrl${leaveRequestsEndpoint}$leaveId/approve/';
+      '$baseUrl$leaveRequestsEndpoint$leaveId/approve/';
   static String rejectLeaveUrl(int leaveId) =>
-      '$baseUrl${leaveRequestsEndpoint}$leaveId/reject/';
+      '$baseUrl$leaveRequestsEndpoint$leaveId/reject/';
   static String get employeeReferenceUrl =>
       '$baseUrl$employeeReferenceEndpoint';
   static String employeeReferenceDetailUrl(int referenceId) =>
-      '$baseUrl${employeeReferenceEndpoint}$referenceId/';
+      '$baseUrl$employeeReferenceEndpoint$referenceId/';
 
   // API Headers
   static Map<String, String> get headers => {

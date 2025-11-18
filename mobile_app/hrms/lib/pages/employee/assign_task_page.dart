@@ -927,7 +927,7 @@ class _AssignTaskDialogState extends State<_AssignTaskDialog> {
             ),
             const SizedBox(height: 8),
             DropdownButtonFormField<String>(
-              value: _selectedOwner,
+              initialValue: _selectedOwner,
               decoration: const InputDecoration(
                 border: OutlineInputBorder(),
                 hintText: 'Select task owner',
@@ -1209,7 +1209,7 @@ class _CreateTaskDialogState extends State<_CreateTaskDialog> {
                       const SizedBox(height: 16),
                       // Priority
                       DropdownButtonFormField<String>(
-                        value: _priority,
+                        initialValue: _priority,
                         decoration: const InputDecoration(
                           labelText: 'Priority',
                           border: OutlineInputBorder(),
@@ -1229,7 +1229,7 @@ class _CreateTaskDialogState extends State<_CreateTaskDialog> {
                       const SizedBox(height: 16),
                       // Status
                       DropdownButtonFormField<String>(
-                        value: _status,
+                        initialValue: _status,
                         decoration: const InputDecoration(
                           labelText: 'Status',
                           border: OutlineInputBorder(),
@@ -1292,7 +1292,7 @@ class _CreateTaskDialogState extends State<_CreateTaskDialog> {
                         ),
                         const SizedBox(height: 8),
                         DropdownButtonFormField<String>(
-                          value: _selectedOwner,
+                          initialValue: _selectedOwner,
                           decoration: const InputDecoration(
                             border: OutlineInputBorder(),
                             hintText: 'Select task owner',
@@ -1422,7 +1422,7 @@ class _CreateTaskDialogState extends State<_CreateTaskDialog> {
             children: [
               Expanded(
                 child: DropdownButtonFormField<String>(
-                  value: subtask['priority'] ?? 'medium',
+                  initialValue: subtask['priority'] ?? 'medium',
                   decoration: const InputDecoration(
                     labelText: 'Priority',
                     border: OutlineInputBorder(),
@@ -1444,7 +1444,7 @@ class _CreateTaskDialogState extends State<_CreateTaskDialog> {
               const SizedBox(width: 8),
               Expanded(
                 child: DropdownButtonFormField<String>(
-                  value: subtask['status'] ?? 'todo',
+                  initialValue: subtask['status'] ?? 'todo',
                   decoration: const InputDecoration(
                     labelText: 'Status',
                     border: OutlineInputBorder(),
@@ -1624,7 +1624,7 @@ class _EditTaskDialogState extends State<_EditTaskDialog> {
                       const SizedBox(height: 16),
                       // Priority
                       DropdownButtonFormField<String>(
-                        value: _priority,
+                        initialValue: _priority,
                         decoration: const InputDecoration(
                           labelText: 'Priority',
                           border: OutlineInputBorder(),
@@ -1644,7 +1644,7 @@ class _EditTaskDialogState extends State<_EditTaskDialog> {
                       const SizedBox(height: 16),
                       // Status
                       DropdownButtonFormField<String>(
-                        value: _status,
+                        initialValue: _status,
                         decoration: const InputDecoration(
                           labelText: 'Status',
                           border: OutlineInputBorder(),
