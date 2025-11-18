@@ -137,7 +137,9 @@ class _ReferencesPageState extends State<ReferencesPage> {
     );
 
     if (confirmed == true) {
-      final response = await EmployeeService.deleteEmployeeReference(referenceId);
+      final response = await EmployeeService.deleteEmployeeReference(
+        referenceId,
+      );
 
       if (response.success) {
         if (mounted) {
@@ -160,9 +162,9 @@ class _ReferencesPageState extends State<ReferencesPage> {
 
   Future<void> _viewResume(String? resumeUrl) async {
     if (resumeUrl == null || resumeUrl.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('No resume available')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('No resume available')));
       return;
     }
 
@@ -176,9 +178,9 @@ class _ReferencesPageState extends State<ReferencesPage> {
       await launchUrl(uri, mode: LaunchMode.externalApplication);
     } else {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Could not open resume')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Could not open resume')));
       }
     }
   }
@@ -222,10 +224,10 @@ class _ReferencesPageState extends State<ReferencesPage> {
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : _error != null
-              ? _buildErrorState()
-              : _references.isEmpty
-                  ? _buildEmptyState()
-                  : _buildReferencesList(),
+          ? _buildErrorState()
+          : _references.isEmpty
+          ? _buildEmptyState()
+          : _buildReferencesList(),
       floatingActionButton: FloatingActionButton(
         onPressed: _addReference,
         backgroundColor: const Color(0xFF4F46E5),
@@ -346,7 +348,10 @@ class _ReferencesPageState extends State<ReferencesPage> {
                   ),
                 ),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 4,
+                  ),
                   decoration: BoxDecoration(
                     color: _getStatusColor(reference.status).withOpacity(0.1),
                     borderRadius: BorderRadius.circular(6),
@@ -376,7 +381,11 @@ class _ReferencesPageState extends State<ReferencesPage> {
                 onTap: () => _viewResume(reference.resume),
                 child: Row(
                   children: [
-                    const Icon(Icons.description, size: 16, color: Color(0xFF4F46E5)),
+                    const Icon(
+                      Icons.description,
+                      size: 16,
+                      color: Color(0xFF4F46E5),
+                    ),
                     const SizedBox(width: 8),
                     const Text(
                       'View Resume',
@@ -441,7 +450,8 @@ class _ReferencesPageState extends State<ReferencesPage> {
                 IconButton(
                   icon: const Icon(Icons.delete_outline, size: 20),
                   color: Colors.red,
-                  onPressed: () => _deleteReference(reference.id, reference.name),
+                  onPressed: () =>
+                      _deleteReference(reference.id, reference.name),
                 ),
               ],
             ),
@@ -459,10 +469,7 @@ class _ReferencesPageState extends State<ReferencesPage> {
         Expanded(
           child: Text(
             text,
-            style: const TextStyle(
-              fontSize: 14,
-              color: Color(0xFF6B7280),
-            ),
+            style: const TextStyle(fontSize: 14, color: Color(0xFF6B7280)),
           ),
         ),
       ],
@@ -520,12 +527,24 @@ class _ReferenceDialogState extends State<_ReferenceDialog> {
         setState(() {
           _selectedFile = File(result.files.single.path!);
         });
+      } else if (result != null && result.files.single.bytes != null) {
+        // Handle case where path might be null but bytes are available
+        // For now, we'll just show a message
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text(
+                'File selected but path not available. Please try again.',
+              ),
+            ),
+          );
+        }
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error picking file: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error picking file: $e')));
       }
     }
   }
@@ -640,8 +659,8 @@ class _ReferenceDialogState extends State<_ReferenceDialog> {
                           _selectedFile != null
                               ? _selectedFile!.path.split('/').last
                               : _existingResumeUrl != null
-                                  ? 'Change Resume (Current: Resume uploaded)'
-                                  : 'Upload Resume (Optional)',
+                              ? 'Change Resume (Current: Resume uploaded)'
+                              : 'Upload Resume (Optional)',
                         ),
                       ),
                       if (_selectedFile != null) ...[
