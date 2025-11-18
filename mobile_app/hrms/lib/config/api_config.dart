@@ -1,7 +1,7 @@
 class ApiConfig {
   // Base URL - Change this to your backend server URL
-  // static const String baseUrl = 'https://apihrms.innovyxtechlabs.com';
-  static const String baseUrl = 'http://192.168.0.3:8000';
+  static const String baseUrl = 'https://apihrms.innovyxtechlabs.com';
+  //   static const String baseUrl = 'http://192.168.0.3:8000';
 
   // Alternative for local development:
   // static const String baseUrl = 'http://localhost:8000';
