@@ -114,28 +114,28 @@ WSGI_APPLICATION = 'innovyx_hrms.wsgi.application'
 
 FCM_CREDENTIALS_FILE = BASE_DIR / "firebase-service-account.json"
 
-FCM_PROJECT_ID = "hrms-de74c"
+FCM_PROJECT_ID = "hrms-54ea8"
 
-# SITE_URL = "https://apihrms.innovyxtechlabs.com/"
-SITE_URL = "http://localhost:8000/"
+SITE_URL = "https://apihrms.innovyxtechlabs.com/"
+# SITE_URL = "http://localhost:8000/"
 
 
 # CORS_ALLOW_ALL_ORIGINS = True
 # CORS_ALLOW_ALL_HEADERS = True
-CORS_ALLOW_CREDENTIALS = True
-
-# CORS_ALLOWED_ORIGINS = [
-#     "https://hrms.innovyxtechlabs.com",
-# ]
-
-
-# CSRF_TRUSTED_ORIGINS = [
-#     "https://hrms.innovyxtechlabs.com",
-# ]
+# CORS_ALLOW_CREDENTIALS = True
 
 CORS_ALLOWED_ORIGINS = [
-    "http://localhost:3000",
+    "https://hrms.innovyxtechlabs.com",
 ]
+
+
+CSRF_TRUSTED_ORIGINS = [
+    "https://hrms.innovyxtechlabs.com",
+]
+
+# CORS_ALLOWED_ORIGINS = [
+#     "http://localhost:3000",
+# ]
 
 
 CORS_ALLOW_HEADERS = [
