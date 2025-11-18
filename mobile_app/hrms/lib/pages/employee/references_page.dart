@@ -6,7 +6,6 @@ import 'dart:io';
 import '../../models/employee_reference_model.dart';
 import '../../services/employee_service.dart';
 import '../../config/api_config.dart';
-import 'widgets/notification_button.dart';
 
 class ReferencesPage extends StatefulWidget {
   const ReferencesPage({super.key});
@@ -201,26 +200,6 @@ class _ReferencesPageState extends State<ReferencesPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFF9FAFB),
-      appBar: AppBar(
-        title: const Text('References'),
-        backgroundColor: Colors.white,
-        foregroundColor: const Color(0xFF111827),
-        elevation: 0,
-        actions: [
-          Padding(
-            padding: const EdgeInsets.only(right: 8.0),
-            child: IconButton(
-              icon: const Icon(Icons.add),
-              onPressed: _addReference,
-              tooltip: 'Add Reference',
-            ),
-          ),
-          const Padding(
-            padding: EdgeInsets.only(right: 8.0),
-            child: NotificationButton(),
-          ),
-        ],
-      ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : _error != null

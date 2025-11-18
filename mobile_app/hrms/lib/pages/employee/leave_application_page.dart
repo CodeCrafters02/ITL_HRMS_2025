@@ -3,7 +3,6 @@ import 'package:intl/intl.dart';
 import '../../models/leave_model.dart';
 import '../../services/employee_service.dart';
 import 'widgets/leave_application_form_dialog.dart';
-import 'widgets/notification_button.dart';
 
 class LeaveApplicationPage extends StatefulWidget {
   const LeaveApplicationPage({super.key});
@@ -219,28 +218,6 @@ class _LeaveApplicationPageState extends State<LeaveApplicationPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFF9FAFB),
-      appBar: AppBar(
-        title: const Text('Leave Application'),
-        backgroundColor: Colors.white,
-        foregroundColor: const Color(0xFF111827),
-        elevation: 0,
-        actions: [
-          const Padding(
-            padding: EdgeInsets.only(right: 8.0),
-            child: NotificationButton(),
-          ),
-          IconButton(
-            icon: _isRefreshing
-                ? const SizedBox(
-                    width: 20,
-                    height: 20,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )
-                : const Icon(Icons.refresh),
-            onPressed: _isRefreshing ? null : _refreshAppliedLeaves,
-          ),
-        ],
-      ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : _error != null && _appliedLeaves.isEmpty

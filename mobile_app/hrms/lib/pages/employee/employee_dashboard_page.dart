@@ -8,7 +8,6 @@ import 'widgets/performance_card.dart';
 import 'widgets/payroll_card.dart';
 import 'widgets/recent_breaks_card.dart';
 import 'widgets/break_controls.dart';
-import 'widgets/notification_button.dart';
 
 class EmployeeDashboardPage extends StatefulWidget {
   const EmployeeDashboardPage({super.key});
@@ -57,10 +56,23 @@ class _EmployeeDashboardPageState extends State<EmployeeDashboardPage> {
           });
           _startTimers();
         } else {
-          _showNotification(
-            response.message ?? 'Failed to load dashboard',
-            isError: true,
-          );
+          // Check if session expired
+          if (response.message?.contains('Session expired') == true ||
+              response.message?.contains('login again') == true) {
+            // Navigate to login
+            if (mounted) {
+              Navigator.pushNamedAndRemoveUntil(
+                context,
+                '/login',
+                (route) => false,
+              );
+            }
+          } else {
+            _showNotification(
+              response.message ?? 'Failed to load dashboard',
+              isError: true,
+            );
+          }
         }
       }
     } catch (e) {
@@ -231,24 +243,6 @@ class _EmployeeDashboardPageState extends State<EmployeeDashboardPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFF9FAFB),
-      appBar: AppBar(
-        title: const Text(
-          'Employee Dashboard',
-          style: TextStyle(
-            color: Color(0xFF111827),
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-        backgroundColor: Colors.white,
-        elevation: 0,
-        iconTheme: const IconThemeData(color: Color(0xFF111827)),
-        actions: const [
-          Padding(
-            padding: EdgeInsets.only(right: 8.0),
-            child: NotificationButton(),
-          ),
-        ],
-      ),
       body: _isLoading && _dashboardData == null
           ? const Center(
               child: CircularProgressIndicator(

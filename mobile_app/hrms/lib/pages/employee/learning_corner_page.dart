@@ -6,12 +6,6 @@ class LearningCornerPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Learning Corner'),
-        backgroundColor: Colors.white,
-        foregroundColor: const Color(0xFF111827),
-        elevation: 0,
-      ),
       body: const Center(
         child: Text(
           'Learning Corner Page',

@@ -1,7 +1,7 @@
 class ApiConfig {
   // Base URL - Change this to your backend server URL
-  static const String baseUrl = 'https://apihrms.innovyxtechlabs.com';
-  // static const String baseUrl = 'http://192.168.0.3:8000';
+  // static const String baseUrl = 'https://apihrms.innovyxtechlabs.com';
+  static const String baseUrl = 'http://192.168.0.3:8000';
 
   // Alternative for local development:
   // static const String baseUrl = 'http://localhost:8000';
@@ -11,6 +11,7 @@ class ApiConfig {
   static const String loginEndpoint = '/app/login/';
   static const String registerEndpoint = '/app/master-register/';
   static const String tokenRefreshEndpoint = '/api/token/refresh/';
+  static const String changePasswordEndpoint = '/app/change-password/';
 
   // Employee Endpoints
   static const String employeeDashboardEndpoint = '/employee/dashboard/';
@@ -41,11 +42,15 @@ class ApiConfig {
   static const String leaveRequestsEndpoint = '/employee/emp-leaves/';
   static const String employeeReferenceEndpoint =
       '/employee/employeereference/';
+  static const String employeeProfileEndpoint = '/employee/employee-profile/';
+  static const String employeeHierarchyEndpoint =
+      '/employee/employee-hierarchy/';
 
   // Full URLs
   static String get loginUrl => '$baseUrl$loginEndpoint';
   static String get registerUrl => '$baseUrl$registerEndpoint';
   static String get tokenRefreshUrl => '$baseUrl$tokenRefreshEndpoint';
+  static String get changePasswordUrl => '$baseUrl$changePasswordEndpoint';
   static String get employeeDashboardUrl =>
       '$baseUrl$employeeDashboardEndpoint';
   static String get employeeCheckInUrl => '$baseUrl$employeeCheckInEndpoint';
@@ -90,6 +95,9 @@ class ApiConfig {
       '$baseUrl$employeeReferenceEndpoint';
   static String employeeReferenceDetailUrl(int referenceId) =>
       '$baseUrl${employeeReferenceEndpoint}$referenceId/';
+  static String get employeeProfileUrl => '$baseUrl$employeeProfileEndpoint';
+  static String get employeeHierarchyUrl =>
+      '$baseUrl$employeeHierarchyEndpoint';
 
   // API Headers
   static Map<String, String> get headers => {

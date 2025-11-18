@@ -1,9 +1,45 @@
 import 'package:flutter/material.dart';
 import '../../../services/auth_service.dart';
 import '../../../services/storage_service.dart';
+import '../../../services/employee_service.dart';
+import '../../../models/profile_model.dart';
 
-class DrawerUserSection extends StatelessWidget {
+class DrawerUserSection extends StatefulWidget {
   const DrawerUserSection({super.key});
+
+  @override
+  State<DrawerUserSection> createState() => _DrawerUserSectionState();
+}
+
+class _DrawerUserSectionState extends State<DrawerUserSection> {
+  EmployeeProfile? _profile;
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadProfile();
+  }
+
+  Future<void> _loadProfile() async {
+    try {
+      final response = await EmployeeService.getEmployeeProfile();
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+          if (response.success) {
+            _profile = response.data;
+          }
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
+  }
 
   Future<void> _handleLogout(BuildContext context) async {
     final confirm = await showDialog<bool>(
@@ -36,12 +72,20 @@ class DrawerUserSection extends StatelessWidget {
     }
   }
 
+  String _getInitials(String? firstName, String? lastName) {
+    final first = firstName?.isNotEmpty == true ? firstName![0] : '';
+    final last = lastName?.isNotEmpty == true ? lastName![0] : '';
+    return (first + last).toUpperCase();
+  }
+
   @override
   Widget build(BuildContext context) {
     return FutureBuilder<String?>(
       future: StorageService.getUsername(),
       builder: (context, snapshot) {
         final username = snapshot.data ?? 'Employee';
+        final displayName = _profile?.fullName ?? username;
+        final designation = _profile?.displayDesignation ?? 'Employee';
         
         return Container(
           padding: const EdgeInsets.all(16),
@@ -55,45 +99,106 @@ class DrawerUserSection extends StatelessWidget {
           ),
           child: Column(
             children: [
-              Row(
-                children: [
-                  CircleAvatar(
-                    radius: 20,
-                    backgroundColor: const Color(0xFF4F46E5),
-                    child: Text(
-                      username.isNotEmpty ? username[0].toUpperCase() : 'E',
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+              InkWell(
+                onTap: () {
+                  Navigator.pop(context); // Close drawer
+                  Navigator.pushNamed(context, '/employee/profile');
+                },
+                borderRadius: BorderRadius.circular(8),
+                child: Row(
+                  children: [
+                    Stack(
                       children: [
-                        Text(
-                          username,
-                          style: const TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w600,
-                            color: Color(0xFF111827),
+                        Container(
+                          width: 48,
+                          height: 48,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            gradient: const LinearGradient(
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                              colors: [Color(0xFF6366F1), Color(0xFFA5B4FC)],
+                            ),
                           ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
+                          child: _isLoading
+                              ? const Center(
+                                  child: SizedBox(
+                                    width: 20,
+                                    height: 20,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      valueColor: AlwaysStoppedAnimation<Color>(
+                                        Colors.white,
+                                      ),
+                                    ),
+                                  ),
+                                )
+                              : _profile?.photo != null &&
+                                      _profile!.photo!.isNotEmpty
+                                  ? ClipOval(
+                                      child: Image.network(
+                                        _profile!.photo!,
+                                        fit: BoxFit.cover,
+                                        errorBuilder:
+                                            (context, error, stackTrace) =>
+                                                _buildInitialsAvatar(),
+                                      ),
+                                    )
+                                  : _buildInitialsAvatar(),
                         ),
-                        const Text(
-                          'Employee',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: Color(0xFF6B7280),
+                        // Click indicator
+                        Positioned(
+                          bottom: 0,
+                          right: 0,
+                          child: Container(
+                            width: 16,
+                            height: 16,
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              shape: BoxShape.circle,
+                              border: Border.all(
+                                color: const Color(0xFF4F46E5),
+                                width: 2,
+                              ),
+                            ),
+                            child: const Icon(
+                              Icons.arrow_forward_ios,
+                              size: 8,
+                              color: Color(0xFF4F46E5),
+                            ),
                           ),
                         ),
                       ],
                     ),
-                  ),
-                ],
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            displayName,
+                            style: const TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                              color: Color(0xFF111827),
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          Text(
+                            designation,
+                            style: const TextStyle(
+                              fontSize: 12,
+                              color: Color(0xFF6B7280),
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
               ),
               const SizedBox(height: 12),
               InkWell(
@@ -133,6 +238,22 @@ class DrawerUserSection extends StatelessWidget {
           ),
         );
       },
+    );
+  }
+
+  Widget _buildInitialsAvatar() {
+    final initials = _profile != null
+        ? _getInitials(_profile!.firstName, _profile!.lastName)
+        : 'E';
+    return Center(
+      child: Text(
+        initials.isEmpty ? 'E' : initials,
+        style: const TextStyle(
+          color: Colors.white,
+          fontWeight: FontWeight.bold,
+          fontSize: 18,
+        ),
+      ),
     );
   }
 }

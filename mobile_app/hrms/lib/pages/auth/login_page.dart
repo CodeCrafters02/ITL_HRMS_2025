@@ -51,7 +51,11 @@ class _LoginPageState extends State<LoginPage> {
 
         if (response.success) {
           // Navigate to employee dashboard after successful login
-          Navigator.pushReplacementNamed(context, '/employee');
+          Navigator.pushNamedAndRemoveUntil(
+            context,
+            '/employee',
+            (route) => false,
+          );
         } else {
           _showErrorDialog(response.message ?? 'Login failed');
         }

@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../models/task_model.dart';
 import '../../services/employee_service.dart';
-import 'widgets/notification_button.dart';
 import '../../services/notification_service.dart';
 
 class MyTasksPage extends StatefulWidget {
@@ -286,34 +285,6 @@ class _MyTasksPageState extends State<MyTasksPage>
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFF9FAFB),
-      appBar: AppBar(
-        title: const Text(
-          'Assigned Tasks',
-          style: TextStyle(
-            fontSize: 20,
-            fontWeight: FontWeight.w600,
-            color: Color(0xFF111827),
-          ),
-        ),
-        backgroundColor: Colors.white,
-        foregroundColor: const Color(0xFF111827),
-        elevation: 0,
-        actions: [
-          const Padding(
-            padding: EdgeInsets.only(right: 8.0),
-            child: NotificationButton(),
-          ),
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: _fetchTasks,
-            tooltip: 'Refresh',
-          ),
-        ],
-        bottom: PreferredSize(
-          preferredSize: const Size.fromHeight(1),
-          child: Container(height: 1, color: const Color(0xFFE5E7EB)),
-        ),
-      ),
       body: _isLoading
           ? const Center(
               child: CircularProgressIndicator(

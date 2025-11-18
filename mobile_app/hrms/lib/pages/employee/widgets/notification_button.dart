@@ -56,41 +56,15 @@ class _NotificationButtonState extends State<NotificationButton> with WidgetsBin
     return Stack(
       clipBehavior: Clip.none,
       children: [
-        Container(
-          width: 40,
-          height: 40,
-          decoration: BoxDecoration(
-            color: Colors.white,
-            shape: BoxShape.circle,
-            border: Border.all(
-              color: const Color(0xFFE5E7EB),
-              width: 1,
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.05),
-                blurRadius: 4,
-                offset: const Offset(0, 2),
-              ),
-            ],
-          ),
-          child: Material(
-            color: Colors.transparent,
-            child: InkWell(
-              borderRadius: BorderRadius.circular(20),
-              onTap: () {
-                Navigator.pushNamed(context, '/employee/notifications');
-                // Update last seen when opened
-                NotificationService.updateLastSeen('notifications');
-                _updateBadgeCount();
-              },
-              child: const Icon(
-                Icons.notifications_outlined,
-                size: 20,
-                color: Color(0xFF374151),
-              ),
-            ),
-          ),
+        IconButton(
+          icon: const Icon(Icons.notifications_outlined),
+          onPressed: () {
+            Navigator.pushNamed(context, '/employee/notifications');
+            // Update last seen when opened
+            NotificationService.updateLastSeen('notifications');
+            _updateBadgeCount();
+          },
+          tooltip: 'Notifications',
         ),
         if (_badgeCount > 0)
           Positioned(

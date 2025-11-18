@@ -7,7 +7,6 @@ import '../../services/storage_service.dart';
 import '../../config/api_config.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
-import 'widgets/notification_button.dart';
 
 class AssignTaskPage extends StatefulWidget {
   const AssignTaskPage({super.key});
@@ -320,33 +319,6 @@ class _AssignTaskPageState extends State<AssignTaskPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFF9FAFB),
-      appBar: AppBar(
-        title: Text(_selectedTask != null ? 'Task Details' : 'Assign Tasks'),
-        backgroundColor: Colors.white,
-        foregroundColor: const Color(0xFF111827),
-        elevation: 0,
-        leading: _selectedTask != null
-            ? IconButton(
-                icon: const Icon(Icons.arrow_back),
-                onPressed: () => setState(() => _selectedTask = null),
-              )
-            : null,
-        actions: [
-          if (_selectedTask == null)
-            Padding(
-              padding: const EdgeInsets.only(right: 8.0),
-              child: IconButton(
-                icon: const Icon(Icons.add),
-                onPressed: () => _createTask(),
-                tooltip: 'Create Task',
-              ),
-            ),
-          const Padding(
-            padding: EdgeInsets.only(right: 8.0),
-            child: NotificationButton(),
-          ),
-        ],
-      ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : _error != null

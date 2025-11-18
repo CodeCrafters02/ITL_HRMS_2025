@@ -5,7 +5,6 @@ import '../../services/storage_service.dart';
 import '../../config/api_config.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
-import 'widgets/notification_button.dart';
 
 class ReporteesPage extends StatefulWidget {
   const ReporteesPage({super.key});
@@ -79,18 +78,6 @@ class _ReporteesPageState extends State<ReporteesPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFF9FAFB),
-      appBar: AppBar(
-        title: const Text('My Reportees'),
-        backgroundColor: Colors.white,
-        foregroundColor: const Color(0xFF111827),
-        elevation: 0,
-        actions: const [
-          Padding(
-            padding: EdgeInsets.only(right: 8.0),
-            child: NotificationButton(),
-          ),
-        ],
-      ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : _error != null

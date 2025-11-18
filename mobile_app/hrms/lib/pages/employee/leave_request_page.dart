@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../../models/leave_request_model.dart';
 import '../../services/employee_service.dart';
-import 'widgets/notification_button.dart';
 
 class LeaveRequestPage extends StatefulWidget {
   const LeaveRequestPage({super.key});
@@ -87,18 +86,6 @@ class _LeaveRequestPageState extends State<LeaveRequestPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFF9FAFB),
-      appBar: AppBar(
-        title: const Text('Leave Requests'),
-        backgroundColor: Colors.white,
-        foregroundColor: const Color(0xFF111827),
-        elevation: 0,
-        actions: const [
-          Padding(
-            padding: EdgeInsets.only(right: 8.0),
-            child: NotificationButton(),
-          ),
-        ],
-      ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : _error != null

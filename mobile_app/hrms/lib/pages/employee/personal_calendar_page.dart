@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../../models/calendar_model.dart';
 import '../../services/employee_service.dart';
-import 'widgets/notification_button.dart';
 import 'widgets/calendar_event_dialog.dart';
 
 class PersonalCalendarPage extends StatefulWidget {
@@ -208,18 +207,6 @@ class _PersonalCalendarPageState extends State<PersonalCalendarPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFF9FAFB),
-      appBar: AppBar(
-        title: const Text('Personal Calendar'),
-        backgroundColor: Colors.white,
-        foregroundColor: const Color(0xFF111827),
-        elevation: 0,
-        actions: const [
-          Padding(
-            padding: EdgeInsets.only(right: 8.0),
-            child: NotificationButton(),
-          ),
-        ],
-      ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : _error != null

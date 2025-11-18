@@ -13,6 +13,10 @@ import 'pages/employee/references_page.dart';
 import 'pages/employee/reportees_page.dart';
 import 'pages/employee/assign_task_page.dart';
 import 'pages/employee/leave_request_page.dart';
+import 'pages/employee/profile_page.dart';
+import 'pages/auth/change_password_page.dart';
+import 'widgets/auth_wrapper.dart';
+import 'widgets/auth_guard.dart';
 
 void main() {
   runApp(const MyApp());
@@ -31,27 +35,43 @@ class MyApp extends StatelessWidget {
         primaryColor: const Color(0xFF4F46E5),
         fontFamily: 'Roboto',
       ),
-      initialRoute: '/login',
+      home: AuthWrapper(
+        authenticatedChild: const EmployeeLayout(),
+        unauthenticatedChild: const LoginPage(),
+      ),
       routes: {
         '/login': (context) => const LoginPage(),
         '/signup': (context) => const SignupPage(),
-        '/employee': (context) => const EmployeeLayout(),
-        '/employee/dashboard': (context) => const EmployeeLayout(),
-        '/employee/my-tasks': (context) => const MyTasksPage(),
-        '/employee/attendance': (context) => const AttendanceHistoryPage(),
+        '/employee': (context) => const AuthGuard(child: EmployeeLayout()),
+        '/employee/dashboard': (context) =>
+            const AuthGuard(child: EmployeeLayout()),
+        '/employee/my-tasks': (context) =>
+            const AuthGuard(child: MyTasksPage()),
+        '/employee/attendance': (context) =>
+            const AuthGuard(child: AttendanceHistoryPage()),
         '/employee/attendance-history': (context) =>
-            const AttendanceHistoryPage(),
+            const AuthGuard(child: AttendanceHistoryPage()),
         '/employee/leave-application': (context) =>
-            const LeaveApplicationPage(),
-        '/employee/notifications': (context) => const NotificationsPage(),
-        '/employee/learning-corner': (context) => const LearningCornerPage(),
+            const AuthGuard(child: LeaveApplicationPage()),
+        '/employee/notifications': (context) =>
+            const AuthGuard(child: NotificationsPage()),
+        '/employee/learning-corner': (context) =>
+            const AuthGuard(child: LearningCornerPage()),
         '/employee/personal-calendar': (context) =>
-            const PersonalCalendarPage(),
-        '/employee/company-policy': (context) => const CompanyPolicyPage(),
-        '/employee/references': (context) => const ReferencesPage(),
-        '/employee/reportees': (context) => const ReporteesPage(),
-        '/employee/assign-task': (context) => const AssignTaskPage(),
-        '/employee/leave-request': (context) => const LeaveRequestPage(),
+            const AuthGuard(child: PersonalCalendarPage()),
+        '/employee/company-policy': (context) =>
+            const AuthGuard(child: CompanyPolicyPage()),
+        '/employee/references': (context) =>
+            const AuthGuard(child: ReferencesPage()),
+        '/employee/reportees': (context) =>
+            const AuthGuard(child: ReporteesPage()),
+        '/employee/assign-task': (context) =>
+            const AuthGuard(child: AssignTaskPage()),
+        '/employee/leave-request': (context) =>
+            const AuthGuard(child: LeaveRequestPage()),
+        '/employee/profile': (context) => const AuthGuard(child: ProfilePage()),
+        '/change-password': (context) =>
+            const AuthGuard(child: ChangePasswordPage()),
       },
     );
   }

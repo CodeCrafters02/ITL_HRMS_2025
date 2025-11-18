@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../../models/attendance_history_model.dart';
 import '../../services/employee_service.dart';
-import 'widgets/notification_button.dart';
 
 class AttendanceHistoryPage extends StatefulWidget {
   const AttendanceHistoryPage({super.key});
@@ -107,22 +106,6 @@ class _AttendanceHistoryPageState extends State<AttendanceHistoryPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFF9FAFB),
-      appBar: AppBar(
-        title: const Text('Attendance History'),
-        backgroundColor: Colors.white,
-        foregroundColor: const Color(0xFF111827),
-        elevation: 0,
-        actions: [
-          const Padding(
-            padding: EdgeInsets.only(right: 8.0),
-            child: NotificationButton(),
-          ),
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: _fetchAttendanceHistory,
-          ),
-        ],
-      ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : _error != null

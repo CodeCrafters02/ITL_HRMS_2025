@@ -13,7 +13,9 @@ import '../models/company_policy_model.dart';
 import '../models/reportee_model.dart';
 import '../models/leave_request_model.dart';
 import '../models/employee_reference_model.dart';
+import '../models/profile_model.dart';
 import '../services/storage_service.dart';
+import '../services/auth_service.dart';
 import 'dart:io';
 
 class ApiResponse<T> {
@@ -25,6 +27,41 @@ class ApiResponse<T> {
 }
 
 class EmployeeService {
+  /// Helper method to make HTTP requests with automatic token refresh on 401
+  static Future<http.Response> _makeAuthenticatedRequest(
+    Future<http.Response> Function() request, {
+    int retryCount = 0,
+  }) async {
+    try {
+      final response = await request();
+
+      // If we get 401 and haven't retried yet, try to refresh token and retry
+      if (response.statusCode == 401 && retryCount == 0) {
+        final refreshResponse = await AuthService.refreshToken();
+
+        if (refreshResponse.success) {
+          // Token refreshed successfully, retry the request with new token
+          return _makeAuthenticatedRequest(
+            request,
+            retryCount: retryCount + 1,
+          );
+        } else {
+          // Token refresh failed, return the 401 response
+          return response;
+        }
+      }
+
+      return response;
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  /// Helper to get auth headers with current token
+  static Future<Map<String, String>> _getAuthHeaders() async {
+    final token = await StorageService.getAccessToken();
+    return ApiConfig.getAuthHeaders(token ?? '');
+  }
   // Get dashboard data
   static Future<ApiResponse<DashboardData>> getDashboardData() async {
     try {
@@ -33,9 +70,11 @@ class EmployeeService {
         return ApiResponse(success: false, message: 'No access token found');
       }
 
-      final response = await http.get(
-        Uri.parse(ApiConfig.employeeDashboardUrl),
-        headers: ApiConfig.getAuthHeaders(token),
+      final response = await _makeAuthenticatedRequest(
+        () async => await http.get(
+          Uri.parse(ApiConfig.employeeDashboardUrl),
+          headers: await _getAuthHeaders(),
+        ),
       );
 
       if (response.statusCode == 200) {
@@ -53,6 +92,13 @@ class EmployeeService {
             message: 'Invalid dashboard data format',
           );
         }
+      } else if (response.statusCode == 401) {
+        // Token is invalid even after refresh, logout user
+        await AuthService.logout();
+        return ApiResponse(
+          success: false,
+          message: 'Session expired. Please login again.',
+        );
       } else {
         final error = jsonDecode(response.body);
         return ApiResponse(
@@ -76,9 +122,11 @@ class EmployeeService {
         return ApiResponse(success: false, message: 'No access token found');
       }
 
-      final response = await http.post(
-        Uri.parse(ApiConfig.employeeCheckInUrl),
-        headers: ApiConfig.getAuthHeaders(token),
+      final response = await _makeAuthenticatedRequest(
+        () async => await http.post(
+          Uri.parse(ApiConfig.employeeCheckInUrl),
+          headers: await _getAuthHeaders(),
+        ),
       );
 
       if (response.statusCode == 200 || response.statusCode == 201) {
@@ -87,6 +135,12 @@ class EmployeeService {
           success: true,
           message: data['message'] ?? 'Checked in successfully',
           data: data,
+        );
+      } else if (response.statusCode == 401) {
+        await AuthService.logout();
+        return ApiResponse(
+          success: false,
+          message: 'Session expired. Please login again.',
         );
       } else {
         final error = jsonDecode(response.body);
@@ -431,9 +485,11 @@ class EmployeeService {
         return ApiResponse(success: false, message: 'No access token found');
       }
 
-      final response = await http.get(
-        Uri.parse(ApiConfig.myTasksUrl),
-        headers: ApiConfig.getAuthHeaders(token),
+      final response = await _makeAuthenticatedRequest(
+        () async => await http.get(
+          Uri.parse(ApiConfig.myTasksUrl),
+          headers: await _getAuthHeaders(),
+        ),
       );
 
       if (response.statusCode == 200) {
@@ -443,6 +499,12 @@ class EmployeeService {
           success: true,
           message: 'Tasks loaded successfully',
           data: tasks,
+        );
+      } else if (response.statusCode == 401) {
+        await AuthService.logout();
+        return ApiResponse(
+          success: false,
+          message: 'Session expired. Please login again.',
         );
       } else {
         final error = jsonDecode(response.body);
@@ -775,9 +837,11 @@ class EmployeeService {
         return ApiResponse(success: false, message: 'No access token found');
       }
 
-      final response = await http.get(
-        Uri.parse(ApiConfig.allNotificationsUrl),
-        headers: ApiConfig.getAuthHeaders(token),
+      final response = await _makeAuthenticatedRequest(
+        () async => await http.get(
+          Uri.parse(ApiConfig.allNotificationsUrl),
+          headers: await _getAuthHeaders(),
+        ),
       );
 
       if (response.statusCode == 200) {
@@ -786,6 +850,12 @@ class EmployeeService {
             .map((item) => NotificationModel.fromJson(item))
             .toList();
         return ApiResponse(success: true, data: notifications);
+      } else if (response.statusCode == 401) {
+        await AuthService.logout();
+        return ApiResponse(
+          success: false,
+          message: 'Session expired. Please login again.',
+        );
       } else {
         final error = jsonDecode(response.body);
         return ApiResponse(
@@ -1699,6 +1769,167 @@ class EmployeeService {
         return ApiResponse(
           success: false,
           message: error['detail'] ?? 'Failed to delete reference',
+        );
+      }
+    } catch (e) {
+      String errorMsg = 'Network error occurred';
+      if (e.toString().contains('FormatException')) {
+        errorMsg = 'Invalid response from server. Please try again.';
+      } else if (e.toString().contains('SocketException') ||
+          e.toString().contains('TimeoutException')) {
+        errorMsg = 'Connection error. Please check your internet connection.';
+      } else {
+        errorMsg = 'Error: ${e.toString()}';
+      }
+
+      return ApiResponse(success: false, message: errorMsg);
+    }
+  }
+
+  // Get employee profile
+  static Future<ApiResponse<EmployeeProfile>> getEmployeeProfile() async {
+    try {
+      final token = await StorageService.getAccessToken();
+      if (token == null) {
+        return ApiResponse(success: false, message: 'No access token found');
+      }
+
+      final response = await _makeAuthenticatedRequest(
+        () async => await http.get(
+          Uri.parse(ApiConfig.employeeProfileUrl),
+          headers: await _getAuthHeaders(),
+        ),
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        final profile = EmployeeProfile.fromJson(data);
+        return ApiResponse(
+          success: true,
+          message: 'Profile loaded successfully',
+          data: profile,
+        );
+      } else if (response.statusCode == 401) {
+        await AuthService.logout();
+        return ApiResponse(
+          success: false,
+          message: 'Session expired. Please login again.',
+        );
+      } else {
+        final error = jsonDecode(response.body);
+        return ApiResponse(
+          success: false,
+          message: error['detail'] ?? 'Failed to load profile',
+        );
+      }
+    } catch (e) {
+      String errorMsg = 'Network error occurred';
+      if (e.toString().contains('FormatException')) {
+        errorMsg = 'Invalid response from server. Please try again.';
+      } else if (e.toString().contains('SocketException') ||
+          e.toString().contains('TimeoutException')) {
+        errorMsg = 'Connection error. Please check your internet connection.';
+      } else {
+        errorMsg = 'Error: ${e.toString()}';
+      }
+
+      return ApiResponse(success: false, message: errorMsg);
+    }
+  }
+
+  // Update employee profile photo
+  static Future<ApiResponse<EmployeeProfile>> updateProfilePhoto(
+    File photoFile,
+  ) async {
+    try {
+      final token = await StorageService.getAccessToken();
+      if (token == null) {
+        return ApiResponse(success: false, message: 'No access token found');
+      }
+
+      final request = http.MultipartRequest(
+        'PATCH',
+        Uri.parse(ApiConfig.employeeProfileUrl),
+      );
+
+      request.headers.addAll({
+        'Authorization': 'Bearer $token',
+        'Accept': 'application/json',
+      });
+
+      final file = await http.MultipartFile.fromPath('photo', photoFile.path);
+      request.files.add(file);
+
+      final streamedResponse = await request.send();
+      final response = await http.Response.fromStream(streamedResponse);
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        final profile = EmployeeProfile.fromJson(data);
+        return ApiResponse(
+          success: true,
+          message: 'Photo updated successfully',
+          data: profile,
+        );
+      } else {
+        final error = jsonDecode(response.body);
+        return ApiResponse(
+          success: false,
+          message:
+              error['detail'] ??
+              error['message'] ??
+              'Failed to update photo',
+        );
+      }
+    } catch (e) {
+      String errorMsg = 'Network error occurred';
+      if (e.toString().contains('FormatException')) {
+        errorMsg = 'Invalid response from server. Please try again.';
+      } else if (e.toString().contains('SocketException') ||
+          e.toString().contains('TimeoutException')) {
+        errorMsg = 'Connection error. Please check your internet connection.';
+      } else {
+        errorMsg = 'Error: ${e.toString()}';
+      }
+
+      return ApiResponse(success: false, message: errorMsg);
+    }
+  }
+
+  // Get employee hierarchy
+  static Future<ApiResponse<EmployeeHierarchy>> getEmployeeHierarchy() async {
+    try {
+      final token = await StorageService.getAccessToken();
+      if (token == null) {
+        return ApiResponse(success: false, message: 'No access token found');
+      }
+
+      final response = await _makeAuthenticatedRequest(
+        () async => await http.get(
+          Uri.parse(ApiConfig.employeeHierarchyUrl),
+          headers: await _getAuthHeaders(),
+        ),
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        final hierarchy = EmployeeHierarchy.fromJson(data);
+        return ApiResponse(
+          success: true,
+          message: 'Hierarchy loaded successfully',
+          data: hierarchy,
+        );
+      } else if (response.statusCode == 401) {
+        await AuthService.logout();
+        return ApiResponse(
+          success: false,
+          message: 'Session expired. Please login again.',
+        );
+      } else {
+        final error = jsonDecode(response.body);
+        return ApiResponse(
+          success: false,
+          message: error['detail'] ?? 'Failed to load hierarchy',
         );
       }
     } catch (e) {
