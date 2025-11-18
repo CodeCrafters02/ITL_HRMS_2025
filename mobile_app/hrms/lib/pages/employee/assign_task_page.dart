@@ -5,6 +5,7 @@ import '../../models/reportee_model.dart';
 import '../../services/employee_service.dart';
 import '../../services/storage_service.dart';
 import '../../config/api_config.dart';
+import '../../widgets/employee_app_bar.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 
@@ -319,6 +320,17 @@ class _AssignTaskPageState extends State<AssignTaskPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFF9FAFB),
+      appBar: EmployeeAppBar(
+        title: _selectedTask != null ? 'Task Details' : 'Assign Tasks',
+        actions: [
+          if (_selectedTask == null)
+            IconButton(
+              icon: const Icon(Icons.add),
+              onPressed: () => _createTask(),
+              tooltip: 'Create Task',
+            ),
+        ],
+      ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : _error != null

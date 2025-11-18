@@ -389,6 +389,8 @@ class EmployeeSerializer(serializers.ModelSerializer):
         company = request.user.company
         
         if self.instance is None:  # Means create, not update
+            if not email:
+                raise serializers.ValidationError({"email": "Email is required for employee creation."})
             if Employee.objects.filter(email=email, company=company).exists():
                 raise serializers.ValidationError({"email": "This email is already registered for this company."})
 
@@ -420,13 +422,47 @@ class EmployeeSerializer(serializers.ModelSerializer):
         username = self.generate_username(validated_data)
         password = get_random_string(8)
 
-        user = UserRegister.objects.create_user(
-            username=username,
-            email=validated_data['email'],
-            password=password,
-            role='employee',
-            company=admin_user.company
-        )
+        # Ensure email exists in validated_data
+        email = validated_data.get('email')
+        if not email:
+            raise serializers.ValidationError({"email": "Email is required for employee creation."})
+
+        # Check if email already exists in UserRegister (handles unique constraint)
+        if UserRegister.objects.filter(email=email).exists():
+            raise serializers.ValidationError({"email": "A user with this email already exists."})
+
+        # Check if username already exists (handles race conditions)
+        if UserRegister.objects.filter(username=username).exists():
+            # Regenerate username if it exists
+            username = self.generate_username(validated_data)
+
+        try:
+            user = UserRegister.objects.create_user(
+                username=username,
+                email=email,
+                password=password,
+                role='employee',
+                company=admin_user.company
+            )
+        except Exception as e:
+            # Handle any database constraint violations
+            if 'unique' in str(e).lower() or 'duplicate' in str(e).lower():
+                if 'email' in str(e).lower():
+                    raise serializers.ValidationError({"email": "A user with this email already exists."})
+                elif 'username' in str(e).lower():
+                    # Regenerate username and try again
+                    username = self.generate_username(validated_data)
+                    user = UserRegister.objects.create_user(
+                        username=username,
+                        email=email,
+                        password=password,
+                        role='employee',
+                        company=admin_user.company
+                    )
+                else:
+                    raise serializers.ValidationError({"error": f"Database constraint violation: {str(e)}"})
+            else:
+                raise
 
         validated_data['company'] = admin_user.company
         validated_data['user'] = user
@@ -436,7 +472,26 @@ class EmployeeSerializer(serializers.ModelSerializer):
         if designation and designation.level:
             validated_data['level'] = designation.level
 
-        employee = Employee.objects.create(**validated_data)
+        # Check if employee_id already exists before creating (handles race conditions)
+        if Employee.objects.filter(employee_id=employee_id).exists():
+            # Regenerate employee_id if it exists
+            employee_id = self.generate_employee_id()
+            validated_data['employee_id'] = employee_id
+
+        try:
+            employee = Employee.objects.create(**validated_data)
+        except Exception as e:
+            # Handle any database constraint violations
+            if 'unique' in str(e).lower() or 'duplicate' in str(e).lower():
+                if 'employee_id' in str(e).lower():
+                    # Regenerate employee_id and try again
+                    employee_id = self.generate_employee_id()
+                    validated_data['employee_id'] = employee_id
+                    employee = Employee.objects.create(**validated_data)
+                else:
+                    raise serializers.ValidationError({"error": f"Database constraint violation: {str(e)}"})
+            else:
+                raise
 
         # Convert asset IDs to AssetInventory instances if needed
         asset_instances = []
@@ -458,12 +513,83 @@ class EmployeeSerializer(serializers.ModelSerializer):
 
 
     def generate_employee_id(self):
-        last_employee = Employee.objects.order_by('id').last()
-        if last_employee and last_employee.employee_id:
-            last_id = int(last_employee.employee_id.split('-')[-1])
-        else:
-            last_id = 0
-        return f'EMP-{last_id + 1:04d}'
+        """Generate a unique employee ID in format EMP-XXXX (always 4-digit zero-padded).
+        Always continues from the highest existing employee ID to ensure sequential continuation.
+        """
+        # Always get the highest existing employee ID number to ensure continuation
+        max_id = self._get_highest_employee_id_number()
+        
+        # Start from max_id + 1 to ensure continuation (no gaps)
+        current_id = max_id + 1
+        
+        # Ensure we don't exceed 9999 (4-digit limit)
+        if current_id > 9999:
+            raise serializers.ValidationError(
+                {"employee_id": "Maximum employee ID limit reached (EMP-9999). Please contact administrator."}
+            )
+        
+        # Try to find an available ID (handles race conditions)
+        max_attempts = 1000
+        attempt = 0
+        
+        while attempt < max_attempts:
+            # Generate new ID in format EMP-XXXX (always 4-digit zero-padded)
+            new_id = f'EMP-{current_id:04d}'
+            
+            # Check if this ID already exists (handles race conditions)
+            if not Employee.objects.filter(employee_id=new_id).exists():
+                return new_id
+            
+            # If ID exists (race condition), increment and try next sequential number
+            current_id += 1
+            attempt += 1
+            
+            # Check limit again
+            if current_id > 9999:
+                raise serializers.ValidationError(
+                    {"employee_id": "Maximum employee ID limit reached (EMP-9999). Please contact administrator."}
+                )
+        
+        # If we've exhausted all attempts, do a final search for next available
+        # This ensures we always continue sequentially
+        for candidate_id in range(max_id + 1, 10000):
+            new_id = f'EMP-{candidate_id:04d}'
+            if not Employee.objects.filter(employee_id=new_id).exists():
+                return new_id
+        
+        # Last resort: should never reach here
+        raise serializers.ValidationError(
+            {"employee_id": "Unable to generate employee ID. Please contact administrator."}
+        )
+    
+    def _get_highest_employee_id_number(self):
+        """Get the highest numeric employee ID from existing employees.
+        This ensures we always continue from the highest existing ID.
+        """
+        try:
+            # Get all employees with valid EMP-XXXX format IDs
+            employees = Employee.objects.filter(
+                employee_id__isnull=False
+            ).exclude(employee_id='').filter(
+                employee_id__startswith='EMP-'
+            )
+            
+            max_id = 0
+            for emp in employees:
+                try:
+                    # Extract numeric part (format: EMP-XXXX)
+                    numeric_part = emp.employee_id.split('-')[-1]
+                    # Ensure it's exactly 4 digits
+                    if len(numeric_part) == 4 and numeric_part.isdigit():
+                        emp_id_num = int(numeric_part)
+                        if emp_id_num > max_id:
+                            max_id = emp_id_num
+                except (ValueError, IndexError):
+                    continue
+            
+            return max_id
+        except Exception:
+            return 0
 
     def generate_username(self, validated_data):
         first_name = validated_data.get('first_name', '').strip().lower()

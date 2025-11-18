@@ -6,10 +6,11 @@ importScripts('https://www.gstatic.com/firebasejs/10.0.0/firebase-app-compat.js'
 importScripts('https://www.gstatic.com/firebasejs/10.0.0/firebase-messaging-compat.js');
 
 firebase.initializeApp({
-  apiKey: "AIzaSyBVgxNPS0JbnJkFBKgsjnsImaTRzJyVg1c",
-  authDomain: "hrms-de74c.firebaseapp.com",
-  projectId: "hrms-de74c",
-  storageBucket: "hrms-de74c.appspot.com",
+  // apiKey: "AIzaSyBVgxNPS0JbnJkFBKgsjnsImaTRzJyVg1c",
+  apiKey: "BKVuy1PePM7IP63tuSxx_GzHdctYjJwyiAp8ZVZxNfT9eLCJBom6dZNG86oIwWqFFabteboSDBXErENXHe20Q6k",
+  authDomain: "hrms-54ea8.firebaseapp.com",
+  projectId: "hrms-54ea8",
+  storageBucket: "hrms-54ea8.appspot.com",
   messagingSenderId: "24720665780",
   appId: "1:24720665780:web:cd823119f32c84a5d53be1",
   measurementId: "G-PXEX7EJ2R0"

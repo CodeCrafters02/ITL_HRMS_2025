@@ -3,6 +3,7 @@ import 'package:http/http.dart' as http;
 import '../config/api_config.dart';
 import '../models/user_model.dart';
 import 'storage_service.dart';
+import 'fcm_service.dart';
 
 class AuthService {
   // Login
@@ -102,6 +103,12 @@ class AuthService {
   // Logout
   static Future<void> logout() async {
     await StorageService.clearAll();
+    // Clear FCM token on logout
+    try {
+      await FCMService.clearToken();
+    } catch (e) {
+      // Ignore errors during logout
+    }
   }
 
   // Check if user is authenticated

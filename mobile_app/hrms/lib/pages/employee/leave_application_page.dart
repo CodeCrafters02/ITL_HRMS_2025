@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../../models/leave_model.dart';
 import '../../services/employee_service.dart';
+import '../../widgets/employee_app_bar.dart';
 import 'widgets/leave_application_form_dialog.dart';
 
 class LeaveApplicationPage extends StatefulWidget {
@@ -218,6 +219,21 @@ class _LeaveApplicationPageState extends State<LeaveApplicationPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFF9FAFB),
+      appBar: EmployeeAppBar(
+        title: 'Leave Application',
+        actions: [
+          IconButton(
+            icon: _isRefreshing
+                ? const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const Icon(Icons.refresh),
+            onPressed: _isRefreshing ? null : _refreshAppliedLeaves,
+          ),
+        ],
+      ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : _error != null && _appliedLeaves.isEmpty

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../services/employee_service.dart';
 import '../../services/notification_service.dart';
 import '../../services/auth_service.dart';
+import '../../services/fcm_service.dart';
 import '../../models/profile_model.dart';
 import 'employee_dashboard_page.dart';
 import 'my_tasks_page.dart';
@@ -17,7 +18,7 @@ class EmployeeLayout extends StatefulWidget {
   State<EmployeeLayout> createState() => _EmployeeLayoutState();
 }
 
-class _EmployeeLayoutState extends State<EmployeeLayout> {
+class _EmployeeLayoutState extends State<EmployeeLayout> with WidgetsBindingObserver {
   int _currentIndex = 0;
   bool _isReportingManager = false;
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
@@ -27,7 +28,20 @@ class _EmployeeLayoutState extends State<EmployeeLayout> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _checkAuthAndInitialize();
+    // Check for pending notifications after a short delay to ensure context is ready
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _handlePendingNotifications();
+    });
+  }
+  
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      // Check for pending notifications when app resumes
+      _handlePendingNotifications();
+    }
   }
 
   Future<void> _checkAuthAndInitialize() async {
@@ -47,6 +61,40 @@ class _EmployeeLayoutState extends State<EmployeeLayout> {
     _loadProfile();
     // Start notification polling
     NotificationService.startPolling();
+    // Initialize FCM for push notifications
+    FCMService.initialize();
+    
+    // Check for pending notifications after initialization
+    _handlePendingNotifications();
+  }
+  
+  // Handle pending notifications from FCM
+  void _handlePendingNotifications() {
+    final pendingData = FCMService.getPendingNotificationData();
+    if (pendingData != null && mounted) {
+      _navigateFromNotification(pendingData);
+    }
+  }
+  
+  // Navigate based on notification type
+  void _navigateFromNotification(Map<String, dynamic> data) {
+    final type = data['type']?.toString().toLowerCase();
+    
+    if (type == 'leave_request') {
+      // Navigate to Leave Request page for managers
+      Navigator.pushNamed(context, '/employee/leave-request');
+    } else if (type == 'leave_status') {
+      // Navigate to Leave Application page for employees
+      Navigator.pushNamed(context, '/employee/leave-application');
+    } else if (type == 'task') {
+      // Navigate to My Tasks page
+      setState(() {
+        _currentIndex = 1; // My Tasks tab
+      });
+    } else {
+      // Default: Navigate to notifications page
+      Navigator.pushNamed(context, '/employee/notifications');
+    }
   }
 
   Future<void> _loadProfile() async {
@@ -77,6 +125,7 @@ class _EmployeeLayoutState extends State<EmployeeLayout> {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     NotificationService.stopPolling();
     super.dispose();
   }
@@ -217,7 +266,18 @@ class _EmployeeLayoutState extends State<EmployeeLayout> {
           icon: const Icon(Icons.menu),
           onPressed: () => _scaffoldKey.currentState?.openDrawer(),
         ),
-        title: Text(_getPageTitle()),
+        title: Row(
+          children: [
+            Image.asset(
+              'assets/logo/app_logo.png',
+              height: 32,
+              width: 32,
+              errorBuilder: (context, error, stackTrace) => const SizedBox(),
+            ),
+            const SizedBox(width: 12),
+            Text(_getPageTitle()),
+          ],
+        ),
         actions: [
           const Padding(
             padding: EdgeInsets.only(right: 8.0),

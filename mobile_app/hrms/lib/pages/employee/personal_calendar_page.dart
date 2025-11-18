@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../../models/calendar_model.dart';
 import '../../services/employee_service.dart';
+import '../../widgets/employee_app_bar.dart';
 import 'widgets/calendar_event_dialog.dart';
 
 class PersonalCalendarPage extends StatefulWidget {
@@ -207,6 +208,9 @@ class _PersonalCalendarPageState extends State<PersonalCalendarPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFF9FAFB),
+      appBar: EmployeeAppBar(
+        title: 'Personal Calendar',
+      ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : _error != null

@@ -6,6 +6,7 @@ import '../../models/company_policy_model.dart';
 import '../../services/employee_service.dart';
 import '../../services/storage_service.dart';
 import '../../config/api_config.dart';
+import '../../widgets/employee_app_bar.dart';
 import 'widgets/pdf_viewer_page.dart';
 
 class CompanyPolicyPage extends StatefulWidget {
@@ -213,6 +214,7 @@ class _CompanyPolicyPageState extends State<CompanyPolicyPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFF9FAFB),
+      appBar: EmployeeAppBar(title: 'Company Policies'),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : _error != null

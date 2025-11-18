@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../services/employee_service.dart';
 import '../../models/profile_model.dart';
+import '../../widgets/employee_app_bar.dart';
 import 'widgets/profile_meta_card.dart';
 import 'widgets/profile_info_card.dart';
 import 'widgets/profile_address_card.dart';
@@ -90,6 +91,18 @@ class _ProfilePageState extends State<ProfilePage>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      appBar: EmployeeAppBar(
+        title: 'Profile',
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.lock_outline),
+            tooltip: 'Change Password',
+            onPressed: () {
+              Navigator.pushNamed(context, '/change-password');
+            },
+          ),
+        ],
+      ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : _error != null
@@ -129,20 +142,6 @@ class _ProfilePageState extends State<ProfilePage>
                         physics: const AlwaysScrollableScrollPhysics(),
                         child: Column(
                           children: [
-                            // Change Password Button
-                            Padding(
-                              padding: const EdgeInsets.all(16.0),
-                              child: Align(
-                                alignment: Alignment.centerRight,
-                                child: IconButton(
-                                  icon: const Icon(Icons.lock_outline),
-                                  tooltip: 'Change Password',
-                                  onPressed: () {
-                                    Navigator.pushNamed(context, '/change-password');
-                                  },
-                                ),
-                              ),
-                            ),
                             // Profile Meta Card
                             ProfileMetaCard(
                               profile: _profile!,

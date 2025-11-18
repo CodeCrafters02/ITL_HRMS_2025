@@ -3,6 +3,7 @@ import '../../models/reportee_model.dart';
 import '../../services/employee_service.dart';
 import '../../services/storage_service.dart';
 import '../../config/api_config.dart';
+import '../../widgets/employee_app_bar.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 
@@ -78,13 +79,14 @@ class _ReporteesPageState extends State<ReporteesPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFF9FAFB),
+      appBar: EmployeeAppBar(title: 'My Reportees'),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : _error != null
-              ? _buildErrorState()
-              : _reportees.isEmpty
-                  ? _buildEmptyState()
-                  : _buildReporteesList(),
+          ? _buildErrorState()
+          : _reportees.isEmpty
+          ? _buildEmptyState()
+          : _buildReporteesList(),
     );
   }
 
@@ -124,8 +126,11 @@ class _ReporteesPageState extends State<ReporteesPage> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Icons.people_outline,
-                size: 64, color: Color(0xFF6B7280)),
+            const Icon(
+              Icons.people_outline,
+              size: 64,
+              color: Color(0xFF6B7280),
+            ),
             const SizedBox(height: 16),
             const Text(
               'No reportees found',

@@ -1,7 +1,7 @@
 class ApiConfig {
   // Base URL - Change this to your backend server URL
   static const String baseUrl = 'https://apihrms.innovyxtechlabs.com';
-  //   static const String baseUrl = 'http://192.168.0.3:8000';
+  // static const String baseUrl = 'http://192.168.0.3:8000';
 
   // Alternative for local development:
   // static const String baseUrl = 'http://localhost:8000';
@@ -45,6 +45,8 @@ class ApiConfig {
   static const String employeeProfileEndpoint = '/employee/employee-profile/';
   static const String employeeHierarchyEndpoint =
       '/employee/employee-hierarchy/';
+  static const String deviceTokenEndpoint = '/notifications/devices/';
+  static const String learningCornerEndpoint = '/employee/emp-learning-corner/';
 
   // Full URLs
   static String get loginUrl => '$baseUrl$loginEndpoint';
@@ -98,6 +100,8 @@ class ApiConfig {
   static String get employeeProfileUrl => '$baseUrl$employeeProfileEndpoint';
   static String get employeeHierarchyUrl =>
       '$baseUrl$employeeHierarchyEndpoint';
+  static String get deviceTokenUrl => '$baseUrl$deviceTokenEndpoint';
+  static String get learningCornerUrl => '$baseUrl$learningCornerEndpoint';
 
   // API Headers
   static Map<String, String> get headers => {

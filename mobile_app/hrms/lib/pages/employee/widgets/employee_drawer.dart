@@ -20,7 +20,6 @@ class EmployeeDrawer extends StatefulWidget {
 }
 
 class _EmployeeDrawerState extends State<EmployeeDrawer> {
-  String? _companyLogo;
   String? _companyName;
   bool _isLoadingCompanyInfo = true;
 
@@ -37,7 +36,6 @@ class _EmployeeDrawerState extends State<EmployeeDrawer> {
         setState(() {
           _isLoadingCompanyInfo = false;
           if (response.success && response.data != null) {
-            _companyLogo = response.data!['company_logo_url'];
             _companyName = response.data!['company_name'];
           }
         });
@@ -53,7 +51,7 @@ class _EmployeeDrawerState extends State<EmployeeDrawer> {
 
   Widget _buildBadge(int? count) {
     if (count == null || count <= 0) return const SizedBox.shrink();
-    
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
       decoration: BoxDecoration(
@@ -165,43 +163,29 @@ class _EmployeeDrawerState extends State<EmployeeDrawer> {
             padding: const EdgeInsets.all(24),
             decoration: BoxDecoration(
               border: Border(
-                bottom: BorderSide(
-                  color: Colors.grey.shade200,
-                  width: 1,
-                ),
+                bottom: BorderSide(color: Colors.grey.shade200, width: 1),
               ),
             ),
             child: _isLoadingCompanyInfo
                 ? const Center(child: CircularProgressIndicator())
-                : Row(
+                : _companyName != null
+                ? Row(
                     children: [
-                      if (_companyLogo != null)
-                        Image.network(
-                          _companyLogo!,
-                          width: 40,
-                          height: 40,
-                          errorBuilder: (context, error, stackTrace) =>
-                              const Icon(Icons.business, size: 40),
-                        )
-                      else
-                        const Icon(Icons.business, size: 40),
-                      if (_companyName != null) ...[
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Text(
-                            _companyName!,
-                            style: const TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                              color: Color(0xFF111827),
-                            ),
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
+                      Expanded(
+                        child: Text(
+                          _companyName!,
+                          style: const TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF111827),
                           ),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
                         ),
-                      ],
+                      ),
                     ],
-                  ),
+                  )
+                : const SizedBox.shrink(),
           ),
 
           // Menu header
@@ -229,7 +213,8 @@ class _EmployeeDrawerState extends State<EmployeeDrawer> {
               itemCount: itemsWithBadges.length,
               itemBuilder: (context, index) {
                 final item = itemsWithBadges[index];
-                final isActive = item.path != null &&
+                final isActive =
+                    item.path != null &&
                     (currentRoute == item.path ||
                         currentRoute.startsWith(item.path!));
                 return Padding(
@@ -247,4 +232,3 @@ class _EmployeeDrawerState extends State<EmployeeDrawer> {
     );
   }
 }
-

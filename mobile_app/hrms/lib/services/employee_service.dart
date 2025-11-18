@@ -14,6 +14,7 @@ import '../models/reportee_model.dart';
 import '../models/leave_request_model.dart';
 import '../models/employee_reference_model.dart';
 import '../models/profile_model.dart';
+import '../models/learning_corner_model.dart';
 import '../services/storage_service.dart';
 import '../services/auth_service.dart';
 import 'dart:io';
@@ -1931,6 +1932,45 @@ class EmployeeService {
         return ApiResponse(
           success: false,
           message: error['detail'] ?? 'Failed to load hierarchy',
+        );
+      }
+    } catch (e) {
+      String errorMsg = 'Network error occurred';
+      if (e.toString().contains('FormatException')) {
+        errorMsg = 'Invalid response from server. Please try again.';
+      } else if (e.toString().contains('SocketException') ||
+          e.toString().contains('TimeoutException')) {
+        errorMsg = 'Connection error. Please check your internet connection.';
+      } else {
+        errorMsg = 'Error: ${e.toString()}';
+      }
+
+      return ApiResponse(success: false, message: errorMsg);
+    }
+  }
+
+  // Get learning corner items
+  static Future<ApiResponse<List<LearningCornerItem>>>
+      getLearningCornerItems() async {
+    try {
+      final response = await _makeAuthenticatedRequest(() async {
+        return await http.get(
+          Uri.parse(ApiConfig.learningCornerUrl),
+          headers: await _getAuthHeaders(),
+        );
+      });
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        final items = (data as List<dynamic>)
+            .map((json) => LearningCornerItem.fromJson(json))
+            .toList();
+        return ApiResponse(success: true, data: items);
+      } else {
+        final error = jsonDecode(response.body);
+        return ApiResponse(
+          success: false,
+          message: error['detail'] ?? 'Failed to fetch learning corner items',
         );
       }
     } catch (e) {

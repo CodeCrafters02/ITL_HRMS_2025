@@ -67,11 +67,11 @@ class _EmployeeDashboardPageState extends State<EmployeeDashboardPage> {
                 (route) => false,
               );
             }
-          } else {
-            _showNotification(
-              response.message ?? 'Failed to load dashboard',
-              isError: true,
-            );
+        } else {
+          _showNotification(
+            response.message ?? 'Failed to load dashboard',
+            isError: true,
+          );
           }
         }
       }

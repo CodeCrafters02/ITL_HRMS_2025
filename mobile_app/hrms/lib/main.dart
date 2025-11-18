@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'pages/auth/login_page.dart';
 import 'pages/auth/signup_page.dart';
 import 'pages/employee/employee_layout.dart';
@@ -18,7 +20,22 @@ import 'pages/auth/change_password_page.dart';
 import 'widgets/auth_wrapper.dart';
 import 'widgets/auth_guard.dart';
 
-void main() {
+// Background message handler (must be top-level function)
+@pragma('vm:entry-point')
+Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
+  await Firebase.initializeApp();
+  // Badge updates will happen when app comes to foreground
+}
+
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+
+  // Initialize Firebase
+  await Firebase.initializeApp();
+
+  // Register background message handler
+  FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
+
   runApp(const MyApp());
 }
 

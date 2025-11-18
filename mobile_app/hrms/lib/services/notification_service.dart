@@ -40,7 +40,7 @@ class NotificationService {
     _pollingTimer = null;
   }
 
-  // Fetch all badge counts
+  // Fetch all badge counts (made public for FCM service)
   static Future<void> _fetchAllBadges() async {
     await Future.wait([
       _fetchNotificationsCount(),

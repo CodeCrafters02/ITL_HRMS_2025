@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../../models/notification_model.dart';
 import '../../services/employee_service.dart';
+import '../../widgets/employee_app_bar.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class NotificationsPage extends StatefulWidget {
@@ -71,7 +72,9 @@ class _NotificationsPageState extends State<NotificationsPage> {
     }
   }
 
-  List<Map<String, dynamic>> _groupByDate(List<NotificationModel> notifications) {
+  List<Map<String, dynamic>> _groupByDate(
+    List<NotificationModel> notifications,
+  ) {
     final Map<String, List<NotificationModel>> groups = {};
     final today = DateTime.now();
     final yesterday = DateTime(today.year, today.month, today.day - 1);
@@ -103,19 +106,20 @@ class _NotificationsPageState extends State<NotificationsPage> {
     }
 
     // Sort groups: Today first, then Yesterday, then by date descending
-    final sortedLabels = groups.keys.toList()..sort((a, b) {
-      if (a == 'Today') return -1;
-      if (b == 'Today') return 1;
-      if (a == 'Yesterday') return -1;
-      if (b == 'Yesterday') return 1;
-      try {
-        return DateFormat('MMM dd, yyyy').parse(b).compareTo(
-          DateFormat('MMM dd, yyyy').parse(a),
-        );
-      } catch (e) {
-        return b.compareTo(a);
-      }
-    });
+    final sortedLabels = groups.keys.toList()
+      ..sort((a, b) {
+        if (a == 'Today') return -1;
+        if (b == 'Today') return 1;
+        if (a == 'Yesterday') return -1;
+        if (b == 'Yesterday') return 1;
+        try {
+          return DateFormat(
+            'MMM dd, yyyy',
+          ).parse(b).compareTo(DateFormat('MMM dd, yyyy').parse(a));
+        } catch (e) {
+          return b.compareTo(a);
+        }
+      });
 
     return sortedLabels.map((label) {
       final items = groups[label]!;
@@ -136,10 +140,7 @@ class _NotificationsPageState extends State<NotificationsPage> {
             end: Alignment.bottomRight,
           ),
           shape: BoxShape.circle,
-          border: Border.all(
-            color: const Color(0xFFFCD34D),
-            width: 2,
-          ),
+          border: Border.all(color: const Color(0xFFFCD34D), width: 2),
         ),
         child: const Icon(
           Icons.access_time,
@@ -166,19 +167,15 @@ class _NotificationsPageState extends State<NotificationsPage> {
 
   Widget _buildNotificationCard(NotificationModel notification) {
     final isReminder = notification.isReminder;
-    
+
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: isReminder
-            ? const Color(0xFFFFFBEB)
-            : Colors.white,
+        color: isReminder ? const Color(0xFFFFFBEB) : Colors.white,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: isReminder
-              ? const Color(0xFFFCD34D)
-              : const Color(0xFFE5E7EB),
+          color: isReminder ? const Color(0xFFFCD34D) : const Color(0xFFE5E7EB),
           width: isReminder ? 2 : 1,
         ),
         boxShadow: [
@@ -253,13 +250,23 @@ class _NotificationsPageState extends State<NotificationsPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFF9FAFB),
+      appBar: EmployeeAppBar(
+        title: 'Notifications',
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh),
+            onPressed: _fetchNotifications,
+            tooltip: 'Refresh',
+          ),
+        ],
+      ),
       body: _loading
           ? _buildLoadingState()
           : _error != null
-              ? _buildErrorState()
-              : _notifications.isEmpty
-                  ? _buildEmptyState()
-                  : _buildNotificationsList(),
+          ? _buildErrorState()
+          : _notifications.isEmpty
+          ? _buildEmptyState()
+          : _buildNotificationsList(),
     );
   }
 
@@ -350,10 +357,7 @@ class _NotificationsPageState extends State<NotificationsPage> {
             Text(
               _error ?? 'Unknown error',
               textAlign: TextAlign.center,
-              style: const TextStyle(
-                fontSize: 14,
-                color: Color(0xFF6B7280),
-              ),
+              style: const TextStyle(fontSize: 14, color: Color(0xFF6B7280)),
             ),
             const SizedBox(height: 24),
             ElevatedButton.icon(
@@ -407,10 +411,7 @@ class _NotificationsPageState extends State<NotificationsPage> {
             const Text(
               'When you receive notifications, they\'ll appear here.',
               textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 14,
-                color: Color(0xFF6B7280),
-              ),
+              style: TextStyle(fontSize: 14, color: Color(0xFF6B7280)),
             ),
           ],
         ),
@@ -510,8 +511,9 @@ class _NotificationsPageState extends State<NotificationsPage> {
                     ),
                   ),
                 ),
-                ...(group['items'] as List<NotificationModel>)
-                    .map((notification) => _buildNotificationCard(notification)),
+                ...(group['items'] as List<NotificationModel>).map(
+                  (notification) => _buildNotificationCard(notification),
+                ),
                 const SizedBox(height: 8),
               ],
             );
