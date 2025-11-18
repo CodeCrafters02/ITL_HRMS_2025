@@ -1699,8 +1699,9 @@ class EmployeeService {
 
       if (name != null) request.fields['name'] = name;
       if (designation != null) request.fields['designation'] = designation;
-      if (contactNumber != null)
+      if (contactNumber != null) {
         request.fields['contact_number'] = contactNumber;
+      }
       if (email != null) request.fields['email'] = email;
 
       if (resume != null) {

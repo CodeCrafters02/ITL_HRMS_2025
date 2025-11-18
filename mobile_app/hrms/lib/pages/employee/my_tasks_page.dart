@@ -899,7 +899,7 @@ class _MyTasksPageState extends State<MyTasksPage>
                       const SizedBox(height: 10),
                       ...task.subtaskDetails.map((subtask) {
                         return _buildSubtaskCard(subtask, task.id);
-                      }).toList(),
+                      }),
                     ],
                   ),
               ],

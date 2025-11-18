@@ -291,7 +291,7 @@ class _BreakControlsState extends State<BreakControls> {
       }
     }
 
-    void _toggleStatusDropdown() {
+    void toggleStatusDropdown() {
       if (_statusDropdownOpen) {
         _removeStatusOverlay();
       } else {
@@ -302,7 +302,7 @@ class _BreakControlsState extends State<BreakControls> {
 
     return IconButton(
       key: _statusButtonKey,
-      onPressed: widget.isLoading || _breakLoading ? null : _toggleStatusDropdown,
+      onPressed: widget.isLoading || _breakLoading ? null : toggleStatusDropdown,
       icon: Icon(
         Icons.circle_outlined,
         color: getStatusColor(),
@@ -422,7 +422,7 @@ class _BreakControlsState extends State<BreakControls> {
   }
 
   Widget _buildTeaBreakButton(List<BreakConfig> shortBreaks) {
-    void _toggleTeaDropdown() {
+    void toggleTeaDropdown() {
       if (_teaDropdownOpen) {
         _removeTeaOverlay();
       } else {
@@ -433,7 +433,7 @@ class _BreakControlsState extends State<BreakControls> {
 
     return IconButton(
       key: _teaButtonKey,
-      onPressed: widget.isLoading || _breakLoading ? null : _toggleTeaDropdown,
+      onPressed: widget.isLoading || _breakLoading ? null : toggleTeaDropdown,
       icon: Icon(
         Icons.coffee,
         color: _teaDropdownOpen
