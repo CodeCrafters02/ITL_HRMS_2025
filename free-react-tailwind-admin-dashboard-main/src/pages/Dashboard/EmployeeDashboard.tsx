@@ -95,16 +95,21 @@ const [employeeStatus, setEmployeeStatus] = React.useState<string | null>(null);
   const calculateLiveWeeklyHours = React.useCallback((): number => {
     if (!dashboardData) return 0;
     
-    // Get base weekly hours from backend
+    // Get base weekly hours from backend (this includes previous days, not today)
     const baseWeeklyHours = parseTimeStringToHours(dashboardData.total_work_duration_week || "0h 0m");
     
-    // If checked in and not on break, add current session time
+    // Get today's work duration
+    const todayWorkHours = parseTimeStringToHours(dashboardData.today_work_duration || "0h 0m");
+    
+    // If checked in and not on break, use live timer for today
     if (dashboardData.checkin_time && !dashboardData.checkout_time && !dashboardData.active_break) {
       const currentSessionHours = localTimer / 3600; // Convert seconds to hours
+      // Base weekly hours + live today's work
       return baseWeeklyHours + currentSessionHours;
     }
     
-    return baseWeeklyHours;
+    // If checked out, use backend's calculated today work
+    return baseWeeklyHours + todayWorkHours;
   }, [dashboardData, localTimer]);
 
   // Show live notifications

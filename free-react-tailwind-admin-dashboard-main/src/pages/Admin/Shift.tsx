@@ -142,33 +142,49 @@ const ShiftPolicyList = () => {
     setLoading(false);
   };
 
+  // Generate hours options (0-23)
+  const hoursOptions = Array.from({ length: 24 }, (_, i) => 
+    i.toString().padStart(2, '0')
+  );
+
+  // Generate minutes/seconds options (0-59)
+  const minutesOptions = Array.from({ length: 60 }, (_, i) => 
+    i.toString().padStart(2, '0')
+  );
+
   const renderTimeInput = (label: string, h: string, m: string, s: string, prefix: string) => (
     <div className="mb-2">
-      <label className="block text-sm font-medium mb-1">{label}</label>
-      <div className="flex gap-1">
-        <input
-          type="text"
+      <label className="block text-sm font-medium mb-1 dark:text-gray-300">{label}</label>
+      <div className="flex gap-1 items-center">
+        <select
           value={h}
           onChange={(e) => handleEditChange(`${prefix}_h` as keyof EditShiftState, e.target.value)}
-          placeholder="HH"
-          className="w-12 border rounded px-1 py-1"
-        />
-        <span>:</span>
-        <input
-          type="text"
+          className="w-16 border dark:border-gray-600 rounded px-1 py-1 dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-blue-500"
+        >
+          {hoursOptions.map(hour => (
+            <option key={hour} value={hour}>{hour}</option>
+          ))}
+        </select>
+        <span className="text-gray-500 dark:text-gray-400">:</span>
+        <select
           value={m}
           onChange={(e) => handleEditChange(`${prefix}_m` as keyof EditShiftState, e.target.value)}
-          placeholder="MM"
-          className="w-12 border rounded px-1 py-1"
-        />
-        <span>:</span>
-        <input
-          type="text"
+          className="w-16 border dark:border-gray-600 rounded px-1 py-1 dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-blue-500"
+        >
+          {minutesOptions.map(min => (
+            <option key={min} value={min}>{min}</option>
+          ))}
+        </select>
+        <span className="text-gray-500 dark:text-gray-400">:</span>
+        <select
           value={s}
           onChange={(e) => handleEditChange(`${prefix}_s` as keyof EditShiftState, e.target.value)}
-          placeholder="SS"
-          className="w-12 border rounded px-1 py-1"
-        />
+          className="w-16 border dark:border-gray-600 rounded px-1 py-1 dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-blue-500"
+        >
+          {minutesOptions.map(sec => (
+            <option key={sec} value={sec}>{sec}</option>
+          ))}
+        </select>
       </div>
     </div>
   );
@@ -190,13 +206,13 @@ const ShiftPolicyList = () => {
         </div>
 
         {loading ? (
-          <div className="text-gray-500">Loading...</div>
+          <div className="text-gray-500 dark:text-gray-400">Loading...</div>
         ) : shifts.length === 0 ? (
-          <div className="text-gray-500">No shift policies available.</div>
+          <div className="text-gray-500 dark:text-gray-400">No shift policies available.</div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {shifts.map((shift) => (
-              <div key={shift.id} className="shadow-lg rounded-xl border border-gray-200 hover:shadow-2xl transition-shadow duration-200 bg-white">
+              <div key={shift.id} className="shadow-lg rounded-xl border border-gray-200 dark:border-gray-700 hover:shadow-2xl transition-shadow duration-200 bg-white dark:bg-gray-800">
                 <div className="p-6 space-y-3">
                   {editId === shift.id ? (
                     <>
@@ -204,7 +220,7 @@ const ShiftPolicyList = () => {
                         type="text"
                         value={editShift.shift_type || ""}
                         onChange={(e) => handleEditChange("shift_type", e.target.value)}
-                        className="text-xl font-semibold border rounded px-2 py-1 w-full mb-2"
+                        className="text-xl font-semibold border dark:border-gray-600 rounded px-2 py-1 w-full mb-2 dark:bg-gray-700 dark:text-white"
                         placeholder="Shift Type"
                       />
                       {renderTimeInput("Check-in", editShift.checkin_h || "", editShift.checkin_m || "", editShift.checkin_s || "", "checkin")}
@@ -213,10 +229,10 @@ const ShiftPolicyList = () => {
                       {renderTimeInput("Half Day", editShift.half_h || "", editShift.half_m || "", editShift.half_s || "", "half")}
                       {renderTimeInput("Full Day", editShift.full_h || "", editShift.full_m || "", editShift.full_s || "", "full")}
                       <div className="flex gap-2 justify-end mt-2">
-                        <button className="text-green-600 hover:text-green-800" title="Save" onClick={() => updateShift(shift.id)}>
+                        <button className="text-green-600 hover:text-green-800 dark:text-green-400 dark:hover:text-green-300" title="Save" onClick={() => updateShift(shift.id)}>
                           {/* <FaEdit /> */}Save 
                         </button>
-                        <button className="text-gray-500 hover:text-gray-700" title="Cancel" onClick={() => { setEditId(null); setEditShift({}); }}>
+                        <button className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300" title="Cancel" onClick={() => { setEditId(null); setEditShift({}); }}>
                           Cancel
                         </button>
                       </div>
@@ -224,18 +240,18 @@ const ShiftPolicyList = () => {
                   ) : (
                     <>
                       <div className="flex items-center justify-between mb-2">
-                        <h3 className="text-xl font-bold text-blue-900 flex-1 truncate">{shift.shift_type} Shift</h3>
+                        <h3 className="text-xl font-bold text-blue-900 dark:text-blue-400 flex-1 truncate">{shift.shift_type} Shift</h3>
                       </div>
-                      <div className="mb-2"><span className="font-semibold text-gray-700">Check-in:</span> {shift.checkin}</div>
-                      <div className="mb-2"><span className="font-semibold text-gray-700">Check-out:</span> {shift.checkout}</div>
-                      <div className="mb-2"><span className="font-semibold text-gray-700">Grace Period:</span> {shift.grace_period}</div>
-                      <div className="mb-2"><span className="font-semibold text-gray-700">Half Day:</span> {shift.half_day}</div>
-                      <div className="mb-2"><span className="font-semibold text-gray-700">Full Day:</span> {shift.full_day}</div>
+                      <div className="mb-2"><span className="font-semibold text-gray-700 dark:text-gray-300">Check-in:</span> <span className="dark:text-gray-400">{shift.checkin}</span></div>
+                      <div className="mb-2"><span className="font-semibold text-gray-700 dark:text-gray-300">Check-out:</span> <span className="dark:text-gray-400">{shift.checkout}</span></div>
+                      <div className="mb-2"><span className="font-semibold text-gray-700 dark:text-gray-300">Grace Period:</span> <span className="dark:text-gray-400">{shift.grace_period}</span></div>
+                      <div className="mb-2"><span className="font-semibold text-gray-700 dark:text-gray-300">Half Day:</span> <span className="dark:text-gray-400">{shift.half_day}</span></div>
+                      <div className="mb-2"><span className="font-semibold text-gray-700 dark:text-gray-300">Full Day:</span> <span className="dark:text-gray-400">{shift.full_day}</span></div>
                       <div className="flex gap-2 justify-end mt-2">
-                        <button className="text-blue-600 hover:text-blue-800" title="Edit" onClick={() => startEdit(shift)}>
+                        <button className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300" title="Edit" onClick={() => startEdit(shift)}>
                           <FaEdit />
                         </button>
-                        <button className="text-red-600 hover:text-red-800" title="Delete" onClick={() => handleDeleteClick(shift.id, shift.shift_type)}>
+                        <button className="text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300" title="Delete" onClick={() => handleDeleteClick(shift.id, shift.shift_type)}>
                           <FaTrash />
                         </button>
                       </div>
@@ -249,20 +265,20 @@ const ShiftPolicyList = () => {
 
         {/* Delete Confirmation Modal */}
         {deleteId !== null && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-opacity-40">
-            <div className="bg-white rounded-lg shadow-lg p-8 w-full max-w-md">
-              <h2 className="text-xl font-bold mb-4 text-gray-900">Confirm Delete</h2>
-              <p className="mb-6 text-gray-700">Are you sure you want to delete this department <span className="font-semibold">{deleteName}</span>?</p>
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40 dark:bg-opacity-60">
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-8 w-full max-w-md">
+              <h2 className="text-xl font-bold mb-4 text-gray-900 dark:text-white">Confirm Delete</h2>
+              <p className="mb-6 text-gray-700 dark:text-gray-300">Are you sure you want to delete this shift policy <span className="font-semibold dark:text-white">{deleteName}</span>?</p>
               <div className="flex justify-end gap-3">
                 <button
                   onClick={() => { setDeleteId(null); setDeleteName(""); }}
-                  className="px-4 py-2 rounded-lg bg-gray-200 text-gray-800 hover:bg-gray-300 font-medium"
+                  className="px-4 py-2 rounded-lg bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 hover:bg-gray-300 dark:hover:bg-gray-600 font-medium"
                 >
                   Cancel
                 </button>
                 <button
                   onClick={confirmDelete}
-                  className="px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 font-medium"
+                  className="px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600 font-medium"
                 >
                   Delete
                 </button>
