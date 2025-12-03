@@ -218,6 +218,22 @@ const EmployeeRegisterForm: React.FC = () => {
     setShowEsic(form.esic_status === 'yes');
   }, [form.payment_method, form.epf_status, form.esic_status]);
 
+// Helper function to validate age (must be 18+)
+const validateAge = (dateOfBirth: string): boolean => {
+  if (!dateOfBirth) return false; // Date of birth is required
+  const today = new Date();
+  const birthDate = new Date(dateOfBirth);
+  const age = today.getFullYear() - birthDate.getFullYear();
+  const monthDiff = today.getMonth() - birthDate.getMonth();
+  const dayDiff = today.getDate() - birthDate.getDate();
+  
+  // Adjust age if birthday hasn't occurred this year yet
+  if (monthDiff < 0 || (monthDiff === 0 && dayDiff < 0)) {
+    return age - 1 >= 18;
+  }
+  return age >= 18;
+};
+
 const handleSubmit = async (e: React.FormEvent) => {
   e.preventDefault();
   setError(null);
@@ -225,15 +241,29 @@ const handleSubmit = async (e: React.FormEvent) => {
   setLoading(true);
 
   try {
+    // Validate age
+    if (!validateAge(form.date_of_birth)) {
+      setError('Employee must be at least 18 years old');
+      setLoading(false);
+      return;
+    }
+    
     // Prepare payload: only include non-empty fields, convert PKs to int, handle file upload, and ensure date format
     const payload: Record<string, any> = { ...form };
 
     // Add asset IDs
     payload.asset_details = selectedAssets; // This is an array of numbers
 
-    // Remove empty string fields
+    // Define optional text fields that can be empty
+    const optionalTextFields = ['middle_name', 'temporary_address', 'permanent_address', 'aadhar_no', 'pan_no', 
+      'guardian_name', 'guardian_mobile', 'category', 'previous_employer', 'date_of_releaving', 
+      'previous_designation_name', 'previous_salary', 'ctc', 'gross_salary', 'uan', 'esic_no', 
+      'account_no', 'ifsc_code', 'bank_name', 'who_referred', 'aadhar_card', 'pan_card', 'photo'];
+    // Remove empty string fields except for optional text fields (which can be legitimately empty)
     Object.keys(payload).forEach((key) => {
-      if (payload[key] === '') delete payload[key];
+      if (payload[key] === '' && !optionalTextFields.includes(key)) {
+        delete payload[key];
+      }
     });
 
     // Convert PK fields to int if present and not empty, else remove

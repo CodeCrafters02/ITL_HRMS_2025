@@ -294,13 +294,13 @@ const PersonalCalendar: React.FC = () => {
 const renderEventContent = (eventInfo: { event: { title: string; extendedProps: { type: 'personal' | 'admin'; description?: string }; }; timeText: string; }) => {
   const isPersonal = eventInfo.event.extendedProps.type === 'personal';
   const colorClass = isPersonal ? 'fc-bg-primary' : 'fc-bg-success';
-  const textColor = isPersonal ? 'text-blue-700' : 'text-green-700';
+  const textColor = isPersonal ? 'text-blue-700 dark:text-blue-300' : 'text-green-700 dark:text-green-300';
   const description = eventInfo.event.extendedProps.description;
 
   return (
     <div className={`event-fc-color flex fc-event-main ${colorClass} p-1 rounded-sm flex-col`}>
       <div className="fc-daygrid-event-dot"></div>
-      <div className="fc-event-time">{eventInfo.timeText}</div>
+      <div className="fc-event-time dark:text-gray-200">{eventInfo.timeText}</div>
       <div className={`fc-event-title ${textColor} font-medium`}>
         {isPersonal ? '📅 ' : '🏢 '}{eventInfo.event.title}
       </div>

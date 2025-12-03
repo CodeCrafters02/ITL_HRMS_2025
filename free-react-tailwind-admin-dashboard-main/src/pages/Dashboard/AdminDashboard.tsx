@@ -46,10 +46,10 @@ const AdminDashboard: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
         <div className="flex items-center space-x-2">
           <div className="w-6 h-6 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
-          <span className="text-gray-600 font-medium">Loading dashboard...</span>
+          <span className="text-gray-600 dark:text-gray-300 font-medium">Loading dashboard...</span>
         </div>
       </div>
     );
@@ -57,10 +57,10 @@ const AdminDashboard: React.FC = () => {
 
   if (!data) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
         <div className="text-center">
-          <div className="text-red-500 text-xl font-semibold">Failed to load dashboard</div>
-          <div className="text-gray-600 mt-2">Please try refreshing the page</div>
+          <div className="text-red-500 dark:text-red-400 text-xl font-semibold">Failed to load dashboard</div>
+          <div className="text-gray-600 dark:text-gray-400 mt-2">Please try refreshing the page</div>
         </div>
       </div>
     );
@@ -144,16 +144,16 @@ const AdminDashboard: React.FC = () => {
   const presentPercentage = attendanceTotal > 0 ? Math.round((data.attendance_snapshot.present / attendanceTotal) * 100) : 0;
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       {/* Header */}
-      <div className="bg-white shadow-sm border-b border-gray-200 dark:bg-gray-900">
+      <div className="bg-white dark:bg-gray-800 shadow-sm border-b border-gray-200 dark:border-gray-700">
         <div className="max-w-7xl mx-auto px-6 py-6">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-400">Admin Dashboard</h1>
-              <p className="text-gray-600 mt-1">Welcome back! Here's what's happening with your organization.</p>
+              <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Admin Dashboard</h1>
+              <p className="text-gray-600 dark:text-gray-400 mt-1">Welcome back! Here's what's happening with your organization.</p>
             </div>
-            <div className="text-sm text-gray-500">
+            <div className="text-sm text-gray-500 dark:text-gray-400">
               Last updated: {new Date().toLocaleTimeString()}
             </div>
           </div>
@@ -249,13 +249,13 @@ const AdminDashboard: React.FC = () => {
               
               {/* Attendance Visual */}
               <div className="mt-4">
-                <div className="flex items-center justify-between text-xs text-gray-600 mb-2">
+                <div className="flex items-center justify-between text-xs text-gray-600 dark:text-gray-400 mb-2">
                   <span>Attendance Overview</span>
                   <span>{presentPercentage}% Present</span>
                 </div>
-                <div className="w-full bg-gray-200 rounded-full h-2">
+                <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
                   <div 
-                    className="bg-green-500 h-2 rounded-full transition-all duration-500"
+                    className="bg-green-500 dark:bg-green-600 h-2 rounded-full transition-all duration-500"
                     style={{ width: `${presentPercentage}%` }}
                   ></div>
                 </div>
@@ -267,23 +267,23 @@ const AdminDashboard: React.FC = () => {
           <InfoCard title="Payroll & Finance">
             <div className="space-y-4">
               <div className="flex items-center justify-between">
-                <span className="text-sm font-medium text-gray-600">Payroll Status</span>
+                <span className="text-sm font-medium text-gray-600 dark:text-gray-300">Payroll Status</span>
                 <span className={`px-3 py-1 rounded-full text-xs font-medium ${
                   data.payroll_status === "completed" 
-                    ? "bg-green-100 text-green-800" 
-                    : "bg-yellow-100 text-yellow-800"
+                    ? "bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200" 
+                    : "bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200"
                 }`}>
                   {data.payroll_status.charAt(0).toUpperCase() + data.payroll_status.slice(1)}
                 </span>
               </div>
               
-              <div className="border-t border-gray-100 pt-4">
+              <div className="border-t border-gray-100 dark:border-gray-700 pt-4">
                 <div className="flex items-center space-x-2 mb-2">
-                  <Clock className="w-4 h-4 text-gray-400" />
-                  <span className="text-sm font-medium text-gray-600">Next Salary Release</span>
+                  <Clock className="w-4 h-4 text-gray-400 dark:text-gray-500" />
+                  <span className="text-sm font-medium text-gray-600 dark:text-gray-300">Next Salary Release</span>
                 </div>
                 {data.next_salary_release_date ? (
-                  <p className="text-lg font-semibold text-gray-900">
+                  <p className="text-lg font-semibold text-gray-900 dark:text-white">
                     {new Date(data.next_salary_release_date).toLocaleDateString('en-US', {
                       month: 'long',
                       day: 'numeric',
@@ -291,7 +291,7 @@ const AdminDashboard: React.FC = () => {
                     })}
                   </p>
                 ) : (
-                  <p className="text-gray-500">No upcoming release</p>
+                  <p className="text-gray-500 dark:text-gray-400">No upcoming release</p>
                 )}
               </div>
             </div>
@@ -303,19 +303,19 @@ const AdminDashboard: React.FC = () => {
           <InfoCard title="Upcoming Birthdays">
             {data.upcoming_birthdays.length === 0 ? (
               <div className="text-center py-8">
-                <Gift className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-                <p className="text-gray-500">No upcoming birthdays</p>
+                <Gift className="w-12 h-12 text-gray-300 dark:text-gray-600 mx-auto mb-3" />
+                <p className="text-gray-500 dark:text-gray-400">No upcoming birthdays</p>
               </div>
             ) : (
               <div className="space-y-4">
                 {data.upcoming_birthdays.map((birthday: Birthday, idx: number) => (
-                  <div key={idx} className="flex items-center space-x-4 p-3 bg-gradient-to-r from-pink-50 to-purple-50 rounded-lg">
+                  <div key={idx} className="flex items-center space-x-4 p-3 bg-gradient-to-r from-pink-50 to-purple-50 dark:from-pink-900/20 dark:to-purple-900/20 rounded-lg">
                     <div className="w-10 h-10 bg-gradient-to-r from-pink-500 to-purple-500 rounded-full flex items-center justify-center">
                       <Gift className="w-5 h-5 text-white" />
                     </div>
                     <div className="flex-1">
-                      <p className="font-medium text-gray-900">{birthday.name}</p>
-                      <p className="text-sm text-gray-600">
+                      <p className="font-medium text-gray-900 dark:text-white">{birthday.name}</p>
+                      <p className="text-sm text-gray-600 dark:text-gray-400">
                         {new Date(birthday.date_of_birth).toLocaleDateString('en-US', {
                           month: 'long',
                           day: 'numeric'
@@ -333,31 +333,31 @@ const AdminDashboard: React.FC = () => {
             <div className="grid grid-cols-2 gap-4">
               <button 
                 onClick={() => navigate("/admin/employee-register")}
-                className="flex flex-col items-center p-4 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors"
+                className="flex flex-col items-center p-4 bg-blue-50 dark:bg-blue-900/20 hover:bg-blue-100 dark:hover:bg-blue-900/30 rounded-lg transition-colors"
               >
-                <Users className="w-6 h-6 text-blue-600 mb-2" />
-                <span className="text-sm font-medium text-blue-900">Manage Employees</span>
+                <Users className="w-6 h-6 text-blue-600 dark:text-blue-400 mb-2" />
+                <span className="text-sm font-medium text-blue-900 dark:text-blue-300">Manage Employees</span>
               </button>
               <button 
                 onClick={() => navigate("/admin/approved-leaves")}
-                className="flex flex-col items-center p-4 bg-green-50 hover:bg-green-100 rounded-lg transition-colors"
+                className="flex flex-col items-center p-4 bg-green-50 dark:bg-green-900/20 hover:bg-green-100 dark:hover:bg-green-900/30 rounded-lg transition-colors"
               >
-                <Calendar className="w-6 h-6 text-green-600 mb-2" />
-                <span className="text-sm font-medium text-green-900">Leave Requests</span>
+                <Calendar className="w-6 h-6 text-green-600 dark:text-green-400 mb-2" />
+                <span className="text-sm font-medium text-green-900 dark:text-green-300">Leave Requests</span>
               </button>
               <button 
                 onClick={() => navigate("/admin/branch-mgt/department")}
-                className="flex flex-col items-center p-4 bg-purple-50 hover:bg-purple-100 rounded-lg transition-colors"
+                className="flex flex-col items-center p-4 bg-purple-50 dark:bg-purple-900/20 hover:bg-purple-100 dark:hover:bg-purple-900/30 rounded-lg transition-colors"
               >
-                <Building2 className="w-6 h-6 text-purple-600 mb-2" />
-                <span className="text-sm font-medium text-purple-900">Departments</span>
+                <Building2 className="w-6 h-6 text-purple-600 dark:text-purple-400 mb-2" />
+                <span className="text-sm font-medium text-purple-900 dark:text-purple-300">Departments</span>
               </button>
               <button 
                onClick={() => navigate("/admin/payroll-batches")}
-               className="flex flex-col items-center p-4 bg-amber-50 hover:bg-amber-100 rounded-lg transition-colors"
+               className="flex flex-col items-center p-4 bg-amber-50 dark:bg-amber-900/20 hover:bg-amber-100 dark:hover:bg-amber-900/30 rounded-lg transition-colors"
                >
-                <DollarSign className="w-6 h-6 text-amber-600 mb-2" />
-                <span className="text-sm font-medium text-amber-900">Payroll</span>
+                <DollarSign className="w-6 h-6 text-amber-600 dark:text-amber-400 mb-2" />
+                <span className="text-sm font-medium text-amber-900 dark:text-amber-300">Payroll</span>
               </button>
             </div>
           </InfoCard>

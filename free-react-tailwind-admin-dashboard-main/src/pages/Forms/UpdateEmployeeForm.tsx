@@ -255,6 +255,22 @@ const UpdateEmployeeForm: React.FC = () => {
     setShowEsic(form.esic_status === 'yes');
   }, [form.epf_status, form.esic_status]);
 
+  // Helper function to validate age (must be 18+)
+  const validateAge = (dateOfBirth: string): boolean => {
+    if (!dateOfBirth) return true; // Skip validation if no date provided
+    const today = new Date();
+    const birthDate = new Date(dateOfBirth);
+    const age = today.getFullYear() - birthDate.getFullYear();
+    const monthDiff = today.getMonth() - birthDate.getMonth();
+    const dayDiff = today.getDate() - birthDate.getDate();
+    
+    // Adjust age if birthday hasn't occurred this year yet
+    if (monthDiff < 0 || (monthDiff === 0 && dayDiff < 0)) {
+      return age - 1 >= 18;
+    }
+    return age >= 18;
+  };
+
   // Submit handler for updating employee
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -263,10 +279,29 @@ const UpdateEmployeeForm: React.FC = () => {
     setLoading(true);
     try {
       if (!id) throw new Error('No employee ID provided');
+      
+      // Validate age
+      if (form.date_of_birth && !validateAge(form.date_of_birth)) {
+        setError('Employee must be at least 18 years old');
+        setLoading(false);
+        return;
+      }
       // Prepare payload: only include non-empty fields, convert PKs to int, handle file upload, and ensure date format
       const payload: Record<string, unknown> = { ...form, asset_details: selectedAssets };
+      // Define optional text fields that should be sent as empty string (or null) to clear them
+      const optionalTextFields = ['middle_name', 'temporary_address', 'permanent_address', 'aadhar_no', 'pan_no', 
+        'guardian_name', 'guardian_mobile', 'category', 'previous_employer', 'date_of_releaving', 
+        'previous_designation_name', 'previous_salary', 'ctc', 'gross_salary', 'uan', 'esic_no', 
+        'account_no', 'ifsc_code', 'bank_name', 'who_referred'];
       Object.keys(payload).forEach((key) => {
-        if (payload[key] === '') delete payload[key];
+        // For optional text fields, convert empty string to null (to explicitly clear in DB)
+        if (payload[key] === '' && optionalTextFields.includes(key)) {
+          payload[key] = null;
+        }
+        // For other fields (like required ones or file fields), remove empty strings
+        else if (payload[key] === '' && !optionalTextFields.includes(key)) {
+          delete payload[key];
+        }
       });
       const pkFields = ['department', 'designation', 'level', 'reporting_manager'];
       pkFields.forEach((field) => {

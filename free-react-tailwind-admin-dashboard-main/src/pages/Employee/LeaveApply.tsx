@@ -111,13 +111,13 @@ const LeaveApply: React.FC = () => {
           {leaveTypes.map((type) => (
             <div
               key={type.id}
-              className="bg-blue-400 shadow-lg rounded-xl px-7 py-5 w-full max-w-xs flex flex-col items-start border border-blue-300"
+              className="bg-blue-400 dark:bg-blue-600 shadow-lg rounded-xl px-7 py-5 w-full max-w-xs flex flex-col items-start border border-blue-300 dark:border-blue-500"
               style={{ fontFamily: 'Segoe UI, Arial, sans-serif' }}
             >
-              <div className="font-semibold text-white text-lg mb-2 tracking-wide">{type.leave_name}</div>
-              <div className="text-white text-base mb-1">Total: <span className="font-bold">{type.count}</span></div>
-              <div className="text-white text-base mb-1">Used: <span className="font-bold">{type.used_count}</span></div>
-              <div className="text-white text-base mb-3">Remaining: <span className="font-bold">{type.remaining_count}</span></div>
+              <div className="font-semibold text-white dark:text-white text-lg mb-2 tracking-wide">{type.leave_name}</div>
+              <div className="text-white dark:text-gray-100 text-base mb-1">Total: <span className="font-bold">{type.count}</span></div>
+              <div className="text-white dark:text-gray-100 text-base mb-1">Used: <span className="font-bold">{type.used_count}</span></div>
+              <div className="text-white dark:text-gray-100 text-base mb-3">Remaining: <span className="font-bold">{type.remaining_count}</span></div>
               <Badge variant="light" color={type.is_paid ? "success" : "error"}>
                 {type.is_paid ? "Paid" : "Unpaid"}
               </Badge>
@@ -141,23 +141,23 @@ const LeaveApply: React.FC = () => {
             Apply
           </Button>
         </div>
-        <h3 className="text-lg font-semibold mb-2 flex items-center justify-between">
+        <h3 className="text-lg font-semibold mb-2 flex items-center justify-between text-gray-900 dark:text-white">
           <span>My Applied Leaves</span>
-          <span className="text-sm text-gray-500">
+          <span className="text-sm text-gray-500 dark:text-gray-400">
             Last updated: {lastRefresh.toLocaleTimeString()}
           </span>
         </h3>
         <div className="overflow-x-auto">
           <Table className="min-w-full text-left align-middle">
-            <thead className="bg-gray-50">
+            <thead className="bg-gray-50 dark:bg-gray-700">
               <tr>
-                <th className="px-6 py-3 text-sm font-semibold text-gray-700">S.no</th>
-                <th className="px-6 py-3 text-sm font-semibold text-gray-700">Leave Type</th>
-                <th className="px-6 py-3 text-sm font-semibold text-gray-700">From</th>
-                <th className="px-6 py-3 text-sm font-semibold text-gray-700">To</th>
-                <th className="px-6 py-3 text-sm font-semibold text-gray-700">Reason</th>
-                <th className="px-6 py-3 text-sm font-semibold text-gray-700">Status</th>
-                <th className="px-6 py-3 text-sm font-semibold text-gray-700">Applied On</th>
+                <th className="px-6 py-3 text-sm font-semibold text-gray-700 dark:text-gray-200">S.no</th>
+                <th className="px-6 py-3 text-sm font-semibold text-gray-700 dark:text-gray-200">Leave Type</th>
+                <th className="px-6 py-3 text-sm font-semibold text-gray-700 dark:text-gray-200">From</th>
+                <th className="px-6 py-3 text-sm font-semibold text-gray-700 dark:text-gray-200">To</th>
+                <th className="px-6 py-3 text-sm font-semibold text-gray-700 dark:text-gray-200">Reason</th>
+                <th className="px-6 py-3 text-sm font-semibold text-gray-700 dark:text-gray-200">Status</th>
+                <th className="px-6 py-3 text-sm font-semibold text-gray-700 dark:text-gray-200">Applied On</th>
                
               </tr>
             </thead>
@@ -167,15 +167,15 @@ const LeaveApply: React.FC = () => {
                   key={idx}
                   className={
                     idx % 2 === 0
-                      ? "bg-white hover:bg-blue-50 transition"
-                      : "bg-gray-50 hover:bg-blue-100 transition"
+                      ? "bg-white dark:bg-gray-800 hover:bg-blue-50 dark:hover:bg-gray-700 transition"
+                      : "bg-gray-50 dark:bg-gray-750 hover:bg-blue-100 dark:hover:bg-gray-700 transition"
                   }
                 >
-                  <TableCell className="px-6 py-3 align-middle text-sm text-gray-800">{idx + 1}</TableCell>
-                  <TableCell className="px-6 py-3 align-middle text-sm text-gray-800">{leave.leave_type_name || leave.leave_type}</TableCell>
-                  <TableCell className="px-6 py-3 align-middle text-sm text-gray-800">{leave.from_date}</TableCell>
-                  <TableCell className="px-6 py-3 align-middle text-sm text-gray-800">{leave.to_date}</TableCell>
-                  <TableCell className="px-6 py-3 align-middle text-sm text-gray-800">{leave.reason}</TableCell>
+                  <TableCell className="px-6 py-3 align-middle text-sm text-gray-800 dark:text-gray-200">{idx + 1}</TableCell>
+                  <TableCell className="px-6 py-3 align-middle text-sm text-gray-800 dark:text-gray-200">{leave.leave_type_name || leave.leave_type}</TableCell>
+                  <TableCell className="px-6 py-3 align-middle text-sm text-gray-800 dark:text-gray-200">{leave.from_date}</TableCell>
+                  <TableCell className="px-6 py-3 align-middle text-sm text-gray-800 dark:text-gray-200">{leave.to_date}</TableCell>
+                  <TableCell className="px-6 py-3 align-middle text-sm text-gray-800 dark:text-gray-200">{leave.reason}</TableCell>
                   <TableCell className="px-6 py-3 align-middle">
                     <Badge variant="light" color={
                       leave.status === "Approved" ? "success"

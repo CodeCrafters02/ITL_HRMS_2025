@@ -120,7 +120,21 @@ const UpdateEmployeeProfile: React.FC = () => {
           <div><label htmlFor="mobile" className="block mb-1 font-medium">Mobile</label><InputField placeholder="Mobile" name="mobile" value={form.mobile} onChange={handleChange} required /></div>
           <div><label htmlFor="aadhar_no" className="block mb-1 font-medium">Aadhar No</label><InputField placeholder="Aadhar No" name="aadhar_no" value={form.aadhar_no || ''} onChange={handleChange} /></div>
           <div><label htmlFor="pan_no" className="block mb-1 font-medium">PAN No</label><InputField placeholder="PAN No" name="pan_no" value={form.pan_no || ''} onChange={handleChange} /></div>
-          <DatePicker id="date_of_birth" label="Date of Birth" defaultDate={form.date_of_birth} onChange={(dates: Date[]) => setForm(f => ({ ...f, date_of_birth: dates && dates[0] ? dates[0].toISOString().slice(0, 10) : '' }))} />
+          <DatePicker 
+            id="date_of_birth" 
+            label="Date of Birth" 
+            defaultDate={form.date_of_birth ? form.date_of_birth + 'T00:00:00' : undefined} 
+            onChange={(dates: Date[]) => {
+              if (dates && dates[0]) {
+                const year = dates[0].getFullYear();
+                const month = String(dates[0].getMonth() + 1).padStart(2, '0');
+                const day = String(dates[0].getDate()).padStart(2, '0');
+                setForm(f => ({ ...f, date_of_birth: `${year}-${month}-${day}` }));
+              } else {
+                setForm(f => ({ ...f, date_of_birth: '' }));
+              }
+            }} 
+          />
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div><label htmlFor="temporary_address" className="block mb-1 font-medium">Temporary Address</label><TextArea placeholder="Temporary Address" value={form.temporary_address || ''} onChange={val => setForm(f => ({ ...f, temporary_address: val }))} /></div>

@@ -79,30 +79,30 @@ export default function EmpCompanyPolicy() {
     <div className="p-6">
       <h2 className="text-xl font-semibold mb-4 dark:text-white">Company Policies</h2>
       {loading ? (
-        <p>Loading policies...</p>
+        <p className="dark:text-gray-300">Loading policies...</p>
       ) : error ? (
-        <p className="text-red-500">{error}</p>
+        <p className="text-red-500 dark:text-red-400">{error}</p>
       ) : policies.length === 0 ? (
-        <p>No policies available.</p>
+        <p className="dark:text-gray-400">No policies available.</p>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {policies.map((policy) => (
             <div
               key={policy.id}
-              className="p-4 border rounded shadow bg-white hover:shadow-md transition relative"
+              className="p-4 border dark:border-gray-700 rounded shadow dark:shadow-gray-900/50 bg-white dark:bg-gray-800 hover:shadow-md transition relative"
             >
-              <h3 className="font-bold text-lg mb-2">{policy.name}</h3>
+              <h3 className="font-bold text-lg mb-2 dark:text-gray-100">{policy.name}</h3>
               {policy.document ? (
                 <a
                   href={policy.document}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-blue-600 underline"
+                  className="text-blue-600 dark:text-blue-400 underline"
                 >
                   View Document
                 </a>
               ) : (
-                <span className="text-gray-400 text-xs">No document</span>
+                <span className="text-gray-400 dark:text-gray-500 text-xs">No document</span>
               )}
             </div>
           ))}

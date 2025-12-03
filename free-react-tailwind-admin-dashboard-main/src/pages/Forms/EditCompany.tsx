@@ -24,6 +24,7 @@ interface Company {
   logo: string | null;
   logo_url?: string;
   admin?: number;
+  admin_id?: number;
   admin_username?: string;
   admin_email?: string;
 }
@@ -172,7 +173,7 @@ const EditCompany: React.FC = () => {
             <label className="block font-medium mb-1 dark:text-white">Admin</label>
             <select
               className="border rounded px-3 py-2 w-full dark:text-white"
-              value={company.admin || ""}
+              value={company.admin || company.admin_id || ""}
               onChange={(e) =>
                 setCompany({ ...company, admin: Number(e.target.value) })
               }

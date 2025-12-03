@@ -101,23 +101,23 @@ const MyTask: React.FC = () => {
 
   return (
     <div className="max-w-5xl mx-auto py-8">
-      <h2 className="text-2xl font-bold mb-6 text-center">Assigned Tasks</h2>
+      <h2 className="text-2xl font-bold mb-6 text-center dark:text-gray-100">Assigned Tasks</h2>
       {loading ? (
-        <div className="text-center py-8">Loading...</div>
+        <div className="text-center py-8 dark:text-gray-300">Loading...</div>
       ) : error ? (
-        <div className="text-red-600 text-center py-8">{error}</div>
+        <div className="text-red-600 dark:text-red-400 text-center py-8">{error}</div>
       ) : tasks.length === 0 ? (
-        <div className="text-gray-500 text-center py-8">No assigned tasks found.</div>
+        <div className="text-gray-500 dark:text-gray-400 text-center py-8">No assigned tasks found.</div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {tasks.map((task) => (
-            <div key={task.id} className="bg-white rounded-lg shadow p-5 relative">
+            <div key={task.id} className="bg-white dark:bg-gray-800 rounded-lg shadow dark:shadow-gray-900/50 p-5 relative">
               <div className="flex justify-between items-center mb-2">
                 <div className="flex items-center gap-2">
-                  <h3 className="text-lg font-semibold text-gray-900">{task.title}</h3>
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">{task.title}</h3>
                   {/* Tick mark button for main task only */}
                   <button
-                    className={`inline-block focus:outline-none ${task.status === 'done' ? 'bg-green-50 border border-green-400' : 'bg-white border border-gray-300'} rounded-full p-0.5`}
+                    className={`inline-block focus:outline-none ${task.status === 'done' ? 'bg-green-50 dark:bg-green-900/30 border border-green-400' : 'bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600'} rounded-full p-0.5`}
                     title={task.status === 'done' ? 'Completed' : 'Mark as completed'}
                     onClick={() => handleAssignmentStatusChange(task.assignments[0]?.id, 'done')}
                     disabled={task.status === 'done' || !task.assignments.length}
@@ -130,7 +130,7 @@ const MyTask: React.FC = () => {
                   {/* Status dropdown for main task (first assignment) */}
                   {task.assignments.length > 0 && (
                     <select
-                      className="ml-2 text-xs border rounded px-1 py-0.5 bg-white"
+                      className="ml-2 text-xs border dark:border-gray-600 rounded px-1 py-0.5 bg-white dark:bg-gray-700 dark:text-gray-100"
                       value={task.assignments[0].status}
                       onChange={e => handleAssignmentStatusChange(task.assignments[0].id, e.target.value)}
                       disabled={task.assignments[0].status === 'done'}
@@ -143,53 +143,53 @@ const MyTask: React.FC = () => {
                 </div>
                 {task.subtask_details.length > 0 && (
                   <button
-                    className="text-blue-600 underline text-xs"
+                    className="text-blue-600 dark:text-blue-400 underline text-xs"
                     onClick={() => toggleExpand(task.id)}
                   >
                     {expandedTaskId === task.id ? "Hide Subtasks" : "Show Subtasks"}
                   </button>
                 )}
               </div>
-              <div className="text-sm text-gray-700 mb-2">{task.description}</div>
+              <div className="text-sm text-gray-700 dark:text-gray-300 mb-2">{task.description}</div>
               <div className="flex flex-wrap gap-2 mb-2">
-                <span className="bg-gray-100 px-2 py-1 rounded text-xs">Deadline: {task.deadline}</span>
-                <span className="bg-gray-100 px-2 py-1 rounded text-xs">Priority: {task.priority}</span>
-                <span className="bg-gray-100 px-2 py-1 rounded text-xs">Status: {task.status}</span>
-                <span className="bg-gray-100 px-2 py-1 rounded text-xs">Progress: {task.progress}%</span>
+                <span className="bg-gray-100 dark:bg-gray-700 dark:text-gray-200 px-2 py-1 rounded text-xs">Deadline: {task.deadline}</span>
+                <span className="bg-gray-100 dark:bg-gray-700 dark:text-gray-200 px-2 py-1 rounded text-xs">Priority: {task.priority}</span>
+                <span className="bg-gray-100 dark:bg-gray-700 dark:text-gray-200 px-2 py-1 rounded text-xs">Status: {task.status}</span>
+                <span className="bg-gray-100 dark:bg-gray-700 dark:text-gray-200 px-2 py-1 rounded text-xs">Progress: {task.progress}%</span>
               </div>
               <div className="mb-2">
-                <span className="font-semibold text-xs">Contributors: </span>
+                <span className="font-semibold text-xs dark:text-gray-200">Contributors: </span>
                 {task.contributors.map((name, i) => (
-                  <span key={i} className="inline-block bg-blue-100 text-blue-800 rounded px-2 py-1 mr-1 text-xs">{name}</span>
+                  <span key={i} className="inline-block bg-blue-100 dark:bg-blue-900/40 text-blue-800 dark:text-blue-300 rounded px-2 py-1 mr-1 text-xs">{name}</span>
                 ))}
               </div>
               <div className="mb-2">
-                <span className="font-semibold text-xs">Assignments:</span>
+                <span className="font-semibold text-xs dark:text-gray-200">Assignments:</span>
                 <div className="flex flex-wrap gap-2 mt-1">
                   {task.assignments.map(assign => (
-                    <div key={assign.id} className="flex items-center bg-gray-50 rounded px-2 py-1 mr-2 mb-1">
+                    <div key={assign.id} className="flex items-center bg-gray-50 dark:bg-gray-700 rounded px-2 py-1 mr-2 mb-1">
                       {assign.avatar_url && (
                         <img src={assign.avatar_url} alt={assign.employee_name} className="w-6 h-6 rounded-full mr-2" />
                       )}
-                      <span className="text-xs font-medium">{assign.employee_name}</span>
-                      <span className="ml-2 text-xs text-gray-500">({assign.role})</span>
+                      <span className="text-xs font-medium dark:text-gray-200">{assign.employee_name}</span>
+                      <span className="ml-2 text-xs text-gray-500 dark:text-gray-400">({assign.role})</span>
                     </div>
                   ))}
                 </div>
               </div>
               {expandedTaskId === task.id && task.subtask_details.length > 0 && (
                 <div className="mt-4">
-                  <div className="font-semibold mb-2 text-sm">Subtasks</div>
+                  <div className="font-semibold mb-2 text-sm dark:text-gray-200">Subtasks</div>
                   <div className="space-y-3">
                     {task.subtask_details.map(subtask => (
-                      <div key={subtask.id} className="bg-gray-50 rounded p-3">
+                      <div key={subtask.id} className="bg-gray-50 dark:bg-gray-700 rounded p-3">
                         <div className="flex justify-between items-center mb-1">
                           <div className="flex items-center gap-2">
-                            <span className="font-medium text-gray-800">{subtask.title}</span>
+                            <span className="font-medium text-gray-800 dark:text-gray-200">{subtask.title}</span>
                             {/* Status dropdown for subtask (first assignment) */}
                             {subtask.assignments.length > 0 && (
                               <select
-                                className="ml-2 text-xs border rounded px-1 py-0.5 bg-white"
+                                className="ml-2 text-xs border dark:border-gray-600 rounded px-1 py-0.5 bg-white dark:bg-gray-600 dark:text-gray-100"
                                 value={subtask.assignments[0].status}
                                 onChange={e => handleAssignmentStatusChange(subtask.assignments[0].id, e.target.value, task.id, true)}
                                 disabled={subtask.assignments[0].status === 'done'}
@@ -200,24 +200,24 @@ const MyTask: React.FC = () => {
                               </select>
                             )}
                           </div>
-                          <span className="bg-gray-200 px-2 py-1 rounded text-xs">Progress: {subtask.progress}%</span>
+                          <span className="bg-gray-200 dark:bg-gray-600 dark:text-gray-200 px-2 py-1 rounded text-xs">Progress: {subtask.progress}%</span>
                         </div>
-                        <div className="text-xs text-gray-700 mb-1">{subtask.description}</div>
+                        <div className="text-xs text-gray-700 dark:text-gray-300 mb-1">{subtask.description}</div>
                         <div className="flex flex-wrap gap-2 mb-1">
-                          <span className="bg-gray-100 px-2 py-1 rounded text-xs">Deadline: {subtask.deadline}</span>
-                          <span className="bg-gray-100 px-2 py-1 rounded text-xs">Priority: {subtask.priority}</span>
-                          <span className="bg-gray-100 px-2 py-1 rounded text-xs">Status: {subtask.status}</span>
+                          <span className="bg-gray-100 dark:bg-gray-600 dark:text-gray-200 px-2 py-1 rounded text-xs">Deadline: {subtask.deadline}</span>
+                          <span className="bg-gray-100 dark:bg-gray-600 dark:text-gray-200 px-2 py-1 rounded text-xs">Priority: {subtask.priority}</span>
+                          <span className="bg-gray-100 dark:bg-gray-600 dark:text-gray-200 px-2 py-1 rounded text-xs">Status: {subtask.status}</span>
                         </div>
                         <div>
-                          <span className="font-semibold text-xs">Assignments:</span>
+                          <span className="font-semibold text-xs dark:text-gray-200">Assignments:</span>
                           <div className="flex flex-wrap gap-2 mt-1">
                             {subtask.assignments.map(assign => (
-                              <div key={assign.id} className="flex items-center bg-gray-100 rounded px-2 py-1 mr-2 mb-1">
+                              <div key={assign.id} className="flex items-center bg-gray-100 dark:bg-gray-600 rounded px-2 py-1 mr-2 mb-1">
                                 {assign.avatar_url && (
                                   <img src={assign.avatar_url} alt={assign.employee_name} className="w-5 h-5 rounded-full mr-2" />
                                 )}
-                                <span className="text-xs font-medium">{assign.employee_name}</span>
-                                <span className="ml-2 text-xs text-gray-500">({assign.role})</span>
+                                <span className="text-xs font-medium dark:text-gray-200">{assign.employee_name}</span>
+                                <span className="ml-2 text-xs text-gray-500 dark:text-gray-400">({assign.role})</span>
                               </div>
                             ))}
                           </div>

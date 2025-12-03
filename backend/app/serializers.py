@@ -141,6 +141,7 @@ class MasterDashboardSerializer(serializers.ModelSerializer):
 
 class CompanyWithAdminSerializer(serializers.ModelSerializer):
     admin = serializers.IntegerField(write_only=True, required=False)
+    admin_id = serializers.SerializerMethodField(read_only=True)
     admin_username = serializers.SerializerMethodField(read_only=True)
     admin_email = serializers.SerializerMethodField(read_only=True)
     logo_url = serializers.SerializerMethodField()
@@ -149,11 +150,15 @@ class CompanyWithAdminSerializer(serializers.ModelSerializer):
         model = Company
         fields = [
             'id', 'name', 'address', 'location', 'email', 'phone_number',
-            'logo', 'logo_url', 'admin', 'admin_username', 'admin_email'
+            'logo', 'logo_url', 'admin', 'admin_id', 'admin_username', 'admin_email'
         ]
         extra_kwargs = {
             'admin': {'write_only': True}
         }
+
+    def get_admin_id(self, obj):
+        admin_user = UserRegister.objects.filter(company=obj, role='admin').first()
+        return admin_user.id if admin_user else None
 
     def get_admin_username(self, obj):
         admin_user = UserRegister.objects.filter(company=obj, role='admin').first()
@@ -179,9 +184,13 @@ class CompanyWithAdminSerializer(serializers.ModelSerializer):
             setattr(instance, attr, value)
         instance.save()
 
-        # If admin ID provided, assign company and role
+        # If admin ID provided, update the admin assignment
         if admin_id is not None:
             try:
+                # Clear previous admin assignments for this company
+                UserRegister.objects.filter(company=instance, role='admin').update(company=None)
+                
+                # Assign new admin
                 admin_user = UserRegister.objects.get(pk=admin_id)
                 admin_user.company = instance
                 admin_user.role = 'admin'

@@ -33,11 +33,11 @@ const EmployeeLearningCorner: React.FC = () => {
     <div className="max-w-4xl mx-auto py-8">
       <ComponentCard title="Learning Corner" desc="Company learning resources for employees.">
         {loading ? (
-          <div className="text-center py-8">Loading...</div>
+          <div className="text-center py-8 dark:text-gray-300">Loading...</div>
         ) : error ? (
-          <div className="text-red-600 text-center py-8">{error}</div>
+          <div className="text-red-600 dark:text-red-400 text-center py-8">{error}</div>
         ) : items.length === 0 ? (
-          <div className="text-gray-500 text-center py-8">No learning resources found.</div>
+          <div className="text-gray-500 dark:text-gray-400 text-center py-8">No learning resources found.</div>
         ) : (
           <Table>
             <thead>
@@ -61,17 +61,17 @@ const EmployeeLearningCorner: React.FC = () => {
                       <a href={item.image} target="_blank" rel="noopener noreferrer">
                         <img src={item.image} alt="Learning" className="h-12 w-12 object-cover rounded mx-auto" />
                       </a>
-                    ) : '—'}
+                    ) : <span className="dark:text-gray-400">—</span>}
                   </TableCell>
                   <TableCell className="px-4 py-2 text-center">
                     {item.document ? (
-                      <a href={item.document} target="_blank" rel="noopener noreferrer" className="text-blue-600 underline">Download</a>
-                    ) : '—'}
+                      <a href={item.document} target="_blank" rel="noopener noreferrer" className="text-blue-600 dark:text-blue-400 underline">Download</a>
+                    ) : <span className="dark:text-gray-400">—</span>}
                   </TableCell>
                   <TableCell className="px-4 py-2 text-center">
                     {item.video ? (
-                      <a href={item.video} target="_blank" rel="noopener noreferrer" className="text-blue-600 underline">View</a>
-                    ) : '—'}
+                      <a href={item.video} target="_blank" rel="noopener noreferrer" className="text-blue-600 dark:text-blue-400 underline">View</a>
+                    ) : <span className="dark:text-gray-400">—</span>}
                   </TableCell>
                 </TableRow>
               ))}

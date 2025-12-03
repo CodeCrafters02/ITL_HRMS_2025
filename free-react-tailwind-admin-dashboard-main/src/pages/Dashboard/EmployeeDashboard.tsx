@@ -67,8 +67,6 @@ export default function EmployeeDashboard(): React.JSX.Element {
   const [breakTimer, setBreakTimer] = React.useState<number>(0);
   const breakTimerRef = React.useRef<ReturnType<typeof setInterval> | null>(null);
   const [notification, setNotification] = React.useState<NotificationState | null>(null);
-  const [weeklyHours, setWeeklyHours] = React.useState<number>(0);
-  const [attendanceScore, setAttendanceScore] = React.useState<number>(100);
   const timerRef = React.useRef<ReturnType<typeof setInterval> | null>(null);
   // Birthday wishes state
   const [birthdayCards, setBirthdayCards] = React.useState<{id:number,title:string,description:string}[]>([]);
@@ -83,28 +81,31 @@ const [employeeStatus, setEmployeeStatus] = React.useState<string | null>(null);
     return ((parts[0][0] || '') + (parts[parts.length - 1][0] || '')).toUpperCase();
   };
 
-  // Calculate weekly hours from backend data
-  const calculateWeeklyHours = React.useCallback((data: DashboardData): void => {
-    if (data.weekly_hours !== undefined) {
-      setWeeklyHours(data.weekly_hours);
-    } else {
-      // Fallback to old calculation if backend doesn't provide weekly_hours
-      if (data.total_worked) {
-        const worked = data.total_worked.split(' ');
-        const hours = parseInt(worked[0]) || 0;
-        const minutes = parseInt(worked[1]) || 0;
-        setWeeklyHours(hours + (minutes / 60));
-      }
-    }
-  }, []);
+  // Helper function to convert time string (e.g., "8h 30m") to total hours
+  const parseTimeStringToHours = (timeStr: string): number => {
+    if (!timeStr) return 0;
+    const hourMatch = timeStr.match(/(\d+)h/);
+    const minuteMatch = timeStr.match(/(\d+)m/);
+    const hours = hourMatch ? parseInt(hourMatch[1]) : 0;
+    const minutes = minuteMatch ? parseInt(minuteMatch[1]) : 0;
+    return hours + (minutes / 60);
+  };
 
-  // Calculate attendance score
-  const calculateAttendanceScore = React.useCallback((data: DashboardData): void => {
-    let score = 100;
-    if (data.is_late) score -= 10;
-    if (data.total_break_minutes > 60) score -= 5; // Deduct for long breaks
-    setAttendanceScore(Math.max(score, 0));
-  }, []);
+  // Calculate live weekly hours including current session
+  const calculateLiveWeeklyHours = React.useCallback((): number => {
+    if (!dashboardData) return 0;
+    
+    // Get base weekly hours from backend
+    const baseWeeklyHours = parseTimeStringToHours(dashboardData.total_work_duration_week || "0h 0m");
+    
+    // If checked in and not on break, add current session time
+    if (dashboardData.checkin_time && !dashboardData.checkout_time && !dashboardData.active_break) {
+      const currentSessionHours = localTimer / 3600; // Convert seconds to hours
+      return baseWeeklyHours + currentSessionHours;
+    }
+    
+    return baseWeeklyHours;
+  }, [dashboardData, localTimer]);
 
   // Show live notifications
   const showNotification = React.useCallback((message: string, type: 'success' | 'info' | 'error'): void => {
@@ -121,11 +122,6 @@ const [employeeStatus, setEmployeeStatus] = React.useState<string | null>(null);
         const dashboardData = response.data.dashboard_data;
                
         setDashboardData(dashboardData);
-        // Calculate dynamic values
-        calculateWeeklyHours(dashboardData);
-        // calculateAttendanceScore(dashboardData);
-        setAttendanceScore(dashboardData.attendance_score || 0);
-
         
         // Do not show payment notification on dashboard refresh
       } else {
@@ -144,7 +140,7 @@ const [employeeStatus, setEmployeeStatus] = React.useState<string | null>(null);
         'error'
       );
     }
-  }, [calculateWeeklyHours, calculateAttendanceScore, showNotification]);
+  }, [showNotification]);
 
   React.useEffect(() => {
     fetchDashboardData();
@@ -357,17 +353,29 @@ const [employeeStatus, setEmployeeStatus] = React.useState<string | null>(null);
   const isCheckedIn = dashboardData?.checkin_time && !dashboardData?.checkout_time;
   const hasActiveBreak = dashboardData?.active_break;
 
+  // Calculate live weekly hours for display
+  const liveWeeklyHours = calculateLiveWeeklyHours();
+  const weeklyTargetHours = 48;
+  const weeklyProgress = Math.min((liveWeeklyHours / weeklyTargetHours) * 100, 100);
+
+  // Format weekly hours for display
+  const formatWeeklyHours = (hours: number): string => {
+    const h = Math.floor(hours);
+    const m = Math.floor((hours - h) * 60);
+    return `${h}h ${m}m`;
+  };
+
   return (
     <>
       {/* Birthday wishes cards */}
       {birthdayCards.length > 0 && (
         <div className="fixed bottom-10 left-1/2 transform -translate-x-1/2 z-50 flex flex-col gap-3 items-center">
           {birthdayCards.map(card => (
-            <div key={card.id} className="bg-yellow-100 border border-yellow-400 rounded-lg shadow px-6 py-3 flex items-center gap-3 animate-fade-in-out">
+            <div key={card.id} className="bg-yellow-100 dark:bg-yellow-900/90 border border-yellow-400 dark:border-yellow-600 rounded-lg shadow px-6 py-3 flex items-center gap-3 animate-fade-in-out">
             
               <div>
-                <div className="font-bold text-yellow-800">{card.title}</div>
-                <div className="text-yellow-700 text-sm">{card.description}</div>
+                <div className="font-bold text-yellow-800 dark:text-yellow-200">{card.title}</div>
+                <div className="text-yellow-700 dark:text-yellow-300 text-sm">{card.description}</div>
               </div>
             </div>
           ))}
@@ -418,7 +426,7 @@ const [employeeStatus, setEmployeeStatus] = React.useState<string | null>(null);
                         {getInitials(dashboardData?.employee_name ?? null)}
                       </div>
                     )}
-                    <div className={`absolute -bottom-1 -right-1 w-5 h-5 rounded-full border-2 border-white ${
+                    <div className={`absolute -bottom-1 -right-1 w-5 h-5 rounded-full border-2 border-white dark:border-gray-800 ${
                       isCheckedIn ? 'bg-green-500' : 'bg-gray-400'
                     }`}></div>
                   </div>
@@ -431,7 +439,7 @@ const [employeeStatus, setEmployeeStatus] = React.useState<string | null>(null);
                     </h1>
                     <p className="text-gray-600 dark:text-gray-400">{getCurrentDate()}</p>
                     {dashboardData?.birthday_message && (
-                      <div className="mt-2 px-4 py-2 rounded-lg bg-white/80 text-pink-700 font-semibold text-lg shadow animate-bounce border border-pink-300 flex items-center gap-2">
+                      <div className="mt-2 px-4 py-2 rounded-lg bg-white/80 dark:bg-pink-900/80 text-pink-700 dark:text-pink-200 font-semibold text-lg shadow animate-bounce border border-pink-300 dark:border-pink-600 flex items-center gap-2">
                         <span role="img" aria-label="party">🎉</span>
                         {dashboardData.birthday_message}
                         <span role="img" aria-label="party">🎉</span>
@@ -530,7 +538,7 @@ const [employeeStatus, setEmployeeStatus] = React.useState<string | null>(null);
               <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
                 <div className="p-6 border-b border-gray-200 dark:border-gray-700">
                   <h2 className="text-xl font-semibold text-gray-900 dark:text-white flex items-center gap-2">
-                    <FaCalendarAlt className="text-blue-600" />
+                    <FaCalendarAlt className="text-blue-600 dark:text-blue-400" />
                     Today's Status
                   </h2>
                 </div>
@@ -541,7 +549,7 @@ const [employeeStatus, setEmployeeStatus] = React.useState<string | null>(null);
                     {/* Shift Information */}
                     <div>
                      <h3 className="font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
-                          <FaUser className="text-indigo-600" />
+                          <FaUser className="text-indigo-600 dark:text-indigo-400" />
                           Shift Information
                         </h3>
                         <div className="space-y-3">
@@ -580,7 +588,7 @@ const [employeeStatus, setEmployeeStatus] = React.useState<string | null>(null);
                     {/* Time Tracking */}
                     <div>
                      <h3 className="font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
-                          <FaClock className="text-blue-600" />
+                          <FaClock className="text-blue-600 dark:text-blue-400" />
                           Time Tracking
                         </h3>
                       <div className="space-y-3">
@@ -622,7 +630,7 @@ const [employeeStatus, setEmployeeStatus] = React.useState<string | null>(null);
               {/* <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
                 <div className="p-6 border-b border-gray-200 dark:border-gray-700">
                   <h2 className="text-xl font-semibold text-gray-900 dark:text-white flex items-center gap-2">
-                    <FaChartLine className="text-green-600" />
+                    <FaChartLine className="text-green-600 dark:text-green-400" />
                     Performance
                   </h2>
                 </div>
@@ -661,7 +669,7 @@ const [employeeStatus, setEmployeeStatus] = React.useState<string | null>(null);
               <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
                 <div className="p-6 border-b border-gray-200 dark:border-gray-700">
                   <h2 className="text-xl font-semibold text-gray-900 dark:text-white flex items-center gap-2">
-                    <FaChartLine className="text-green-600" />
+                    <FaChartLine className="text-green-600 dark:text-green-400" />
                     Performance
                   </h2>
                 </div>
@@ -672,40 +680,31 @@ const [employeeStatus, setEmployeeStatus] = React.useState<string | null>(null);
                     <div className="flex justify-between mb-2">
                       <span className="text-sm text-gray-600 dark:text-gray-400">Weekly Hours</span>
                       <span className="text-sm font-medium text-gray-900 dark:text-white">
-                        {dashboardData?.total_work_duration_week || "0h 0m"} / 48 hrs
+                        {formatWeeklyHours(liveWeeklyHours)} / 48 hrs
                       </span>
                     </div>
                     <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
-                      {(() => {
-                        const week = dashboardData?.total_work_duration_week || "0h 0m";
-                        const [hoursPart, minutesPart] = week.split("h");
-                        const hours = parseInt(hoursPart) || 0;
-                        const percent = Math.min((hours / 48) * 100, 100);
-                        return (
-                          <div
-                            className="bg-blue-600 h-2 rounded-full transition-all duration-300"
-                            style={{ width: `${percent}%` }}
-                          ></div>
-                        );
-                      })()}
+                      <div
+                        className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                        style={{ width: `${weeklyProgress}%` }}
+                      ></div>
                     </div>
                   </div>
 
-                  {/* Replaces Attendance Score */}
+                  {/* Weekly Progress Percentage */}
                   <div className="text-center py-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
-                    {/* Weekly Progress Percentage */}
                     <div className="text-3xl font-bold text-green-600 dark:text-green-400 mb-1">
-                      {(() => {
-                        const week = dashboardData?.total_work_duration_week || "0h 0m";
-                        const [hoursPart] = week.split("h");
-                        const hours = parseInt(hoursPart) || 0;
-                        const percent = Math.min((hours / 48) * 100, 100);
-                        return `${percent.toFixed(1)}%`;
-                      })()}
+                      {weeklyProgress.toFixed(1)}%
                     </div>
                     <div className="text-xs text-gray-600 dark:text-gray-400">
                       of Weekly Target
                     </div>
+                    {isCheckedIn && !hasActiveBreak && (
+                      <div className="mt-2 text-xs text-blue-600 dark:text-blue-400 flex items-center justify-center gap-1">
+                        <span className="inline-block w-2 h-2 bg-blue-600 dark:bg-blue-400 rounded-full animate-pulse"></span>
+                        Live updating
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
@@ -717,7 +716,7 @@ const [employeeStatus, setEmployeeStatus] = React.useState<string | null>(null);
                 <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
                   <div className="p-6 border-b border-gray-200 dark:border-gray-700">
                     <h2 className="text-xl font-semibold text-gray-900 dark:text-white flex items-center gap-2">
-                      <FaMoneyBillWave className="text-green-600" />
+                      <FaMoneyBillWave className="text-green-600 dark:text-green-400" />
                       Latest Payroll
                     </h2>
                   </div>
@@ -742,7 +741,7 @@ const [employeeStatus, setEmployeeStatus] = React.useState<string | null>(null);
             <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
               <div className="p-6 border-b border-gray-200 dark:border-gray-700">
                 <h2 className="text-xl font-semibold text-gray-900 dark:text-white flex items-center gap-2">
-                  <FaCoffee className="text-orange-600" />
+                  <FaCoffee className="text-orange-600 dark:text-orange-400" />
                   Recent Break Activity
                 </h2>
               </div>
@@ -753,7 +752,7 @@ const [employeeStatus, setEmployeeStatus] = React.useState<string | null>(null);
                     {dashboardData.recent_breaks.slice(0, 6).map((breakItem: BreakData, index: number) => (
                       <div key={index} className="p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
                         <div className="flex items-center gap-3">
-                          <FaCoffee className="text-orange-600" />
+                          <FaCoffee className="text-orange-600 dark:text-orange-400" />
                           <div className="flex-1">
                             <div className="font-medium text-gray-900 dark:text-white capitalize">
                               {breakItem.type} Break
@@ -768,7 +767,7 @@ const [employeeStatus, setEmployeeStatus] = React.useState<string | null>(null);
                   </div>
                 ) : (
                   <div className="text-center py-8">
-                    <FaCoffee className="mx-auto text-gray-400 text-4xl mb-4" />
+                    <FaCoffee className="mx-auto text-gray-400 dark:text-gray-600 text-4xl mb-4" />
                     <p className="text-gray-600 dark:text-gray-400">No recent break activity</p>
                   </div>
                 )}

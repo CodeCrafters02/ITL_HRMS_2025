@@ -392,21 +392,21 @@ class DashboardAPIView(APIView):
                 'date': latest_payroll.payroll_date
             } if latest_payroll else None
 
-            # Weekly hours calculation (Monday to Sunday)
+            # Weekly hours calculation (Monday to Saturday for 6-day work week)
             week_start = today - timedelta(days=today.weekday())  # Monday
-            week_end = week_start + timedelta(days=6)  # Sunday
+            week_end = week_start + timedelta(days=5)  # Saturday (6-day work week)
             
             weekly_attendances = Attendance.objects.filter(
                 employee=employee,
                 date__range=[week_start, week_end],
-                check_in__isnull=False,
-                check_out__isnull=False
+                check_in__isnull=False
             )
             
             total_weekly_minutes = 0
             for att in weekly_attendances:
                 # Calculate worked time minus breaks for each day
-                worked_delta = att.check_out - att.check_in
+                end_time = att.check_out if att.check_out else now
+                worked_delta = end_time - att.check_in
                 worked_minutes = worked_delta.total_seconds() // 60
                 
                 # Subtract break time for that day
@@ -415,9 +415,9 @@ class DashboardAPIView(APIView):
                     start__date=att.date,
                     end__isnull=False
                 )
-                break_minutes = sum(int((b.end - b.start).total_seconds() // 60) for b in day_breaks)
+                day_break_minutes = sum(int((b.end - b.start).total_seconds() // 60) for b in day_breaks)
                 
-                effective_minutes = max(0, worked_minutes - break_minutes)
+                effective_minutes = max(0, worked_minutes - day_break_minutes)
                 total_weekly_minutes += effective_minutes
             
             weekly_hours = round(total_weekly_minutes / 60, 2)
@@ -429,31 +429,19 @@ class DashboardAPIView(APIView):
                     birthday_message = f"Happy Birthday, {employee.first_name}! 🎉"
 
             # ------------------------
-            # ✅ Replace Attendance Score with Weekly Work Duration
+            # ✅ Today's work duration (effective time - excludes breaks)
             # ------------------------
             today_work_duration = None
             if punch_in:
                 end_time = punch_out or now
                 worked_minutes_today = int((end_time - punch_in).total_seconds() // 60)
-                worked_hours_today = worked_minutes_today // 60
-                worked_mins_today = worked_minutes_today % 60
+                # Subtract today's break time
+                effective_minutes_today = max(0, worked_minutes_today - break_minutes)
+                worked_hours_today = effective_minutes_today // 60
+                worked_mins_today = effective_minutes_today % 60
                 today_work_duration = f"{worked_hours_today}h {worked_mins_today}m"
 
-            # Weekly total (Monday–Saturday)
-            week_start = today - timedelta(days=today.weekday())  # Monday
-            week_end = week_start + timedelta(days=5)  # Saturday
-
-            weekly_attendance = Attendance.objects.filter(
-                employee=employee,
-                date__range=[week_start, week_end]
-            )
-
-            total_weekly_minutes = 0
-            for record in weekly_attendance:
-                if record.check_in:
-                    end_time = record.check_out or now
-                    total_weekly_minutes += int((end_time - record.check_in).total_seconds() // 60)
-
+            # Weekly total (already calculated above with breaks subtracted)
             total_weekly_hours = total_weekly_minutes // 60
             total_weekly_mins = total_weekly_minutes % 60
             total_work_duration_week = f"{total_weekly_hours}h {total_weekly_mins}m"
