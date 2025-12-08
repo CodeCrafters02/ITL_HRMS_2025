@@ -2258,5 +2258,5 @@ class EmployeeReporteesView(APIView):
             return Response({"error": "Employee not found"})
         
         reportees = Employee.objects.filter(reporting_manager=manager)
-        serializer = ReportingEmployeesSerializer(reportees, many=True)
+        serializer = ReportingEmployeesSerializer(reportees, many=True, context={'request': request})
         return Response(serializer.data)

@@ -1,317 +1,387 @@
-import { useState, useRef, useEffect } from "react";
-import FullCalendar from "@fullcalendar/react";
-import dayGridPlugin from "@fullcalendar/daygrid";
-import timeGridPlugin from "@fullcalendar/timegrid";
-import interactionPlugin from "@fullcalendar/interaction";
-import { EventInput, DateSelectArg, EventClickArg } from "@fullcalendar/core";
-import { Modal } from "../../components/ui/modal";
-import { useModal } from "../../hooks/useModal";
+import React, { useState, useEffect } from "react";
 import PageMeta from "../../components/common/PageMeta";
-import DatePicker from "../../components/form/date-picker";
-import { axiosInstance } from "./api";
-
-interface CalendarEvent extends EventInput {
-  id: string;
-  title: string;
-  start: string;
-  end?: string;
-  extendedProps: {
-    description?: string;
-    type: 'personal' | 'admin';
-  };
-}
+import { FaCalendarAlt, FaGlobe, FaSync, FaBell, FaClock, FaUsers, FaChartLine, FaStar } from "react-icons/fa";
 
 const PersonalCalendar: React.FC = () => {
-  const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
-  const [eventName, setEventName] = useState("");
-  const [eventDate, setEventDate] = useState("");
-  const [eventDescription, setEventDescription] = useState("");
-  const [events, setEvents] = useState<CalendarEvent[]>([]);
-  const [loading, setLoading] = useState(false);
-  const calendarRef = useRef<FullCalendar>(null);
-  const { isOpen, openModal, closeModal } = useModal();
+  const [isDark, setIsDark] = useState(false);
+  const [currentTime, setCurrentTime] = useState(new Date());
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [selectedTimeZone, setSelectedTimeZone] = useState('Asia/Kolkata');
 
+  // Common time zones
+  const timeZones = [
+    { value: 'Asia/Kolkata', label: 'IST (Asia/Kolkata)', short: 'IST' },
+    { value: 'America/New_York', label: 'EST (America/New_York)', short: 'EST' },
+    { value: 'America/Los_Angeles', label: 'PST (America/Los_Angeles)', short: 'PST' },
+    { value: 'Europe/London', label: 'GMT (Europe/London)', short: 'GMT' },
+    { value: 'Europe/Paris', label: 'CET (Europe/Paris)', short: 'CET' },
+    { value: 'Asia/Tokyo', label: 'JST (Asia/Tokyo)', short: 'JST' },
+    { value: 'Australia/Sydney', label: 'AEST (Australia/Sydney)', short: 'AEST' },
+    { value: 'Asia/Dubai', label: 'GST (Asia/Dubai)', short: 'GST' },
+    { value: 'Asia/Shanghai', label: 'CST (Asia/Shanghai)', short: 'CST' },
+  ];
+
+  // Load saved time zone from localStorage
   useEffect(() => {
-    fetchCalendarData();
+    const savedTimeZone = localStorage.getItem('selectedTimeZone');
+    if (savedTimeZone) {
+      setSelectedTimeZone(savedTimeZone);
+    }
   }, []);
 
-  const fetchCalendarData = async () => {
-    try {
-      setLoading(true);
-      const today = new Date();
-      const response = await axiosInstance.get('/employee-calendar/', {
-        params: {
-          year: today.getFullYear(),
-          month: today.getMonth() + 1,
-          day: today.getDate()
-        }
-      });
+  // Save time zone to localStorage when changed
+  useEffect(() => {
+    localStorage.setItem('selectedTimeZone', selectedTimeZone);
+  }, [selectedTimeZone]);
 
-      const calendarEvents: CalendarEvent[] = [];
-      
-      response.data.weeks.forEach((week: { day: string; date: string; personal_events: { id: number; name?: string; title?: string; description?: string }[]; admin_events: { id: number; name?: string; title?: string,description?:string }[] }[]) => {
-        week.forEach((day) => {
-          if (day.day) {
-            // Add personal events
-            day.personal_events.forEach((event) => {
-              calendarEvents.push({
-                id: `personal-${event.id}`,
-                title: event.name || event.title || '',
-                start: day.date,
-                extendedProps: {
-                  type: 'personal',
-                  description: event.description
-                }
-              });
-            });
+  // Detect dark mode from document
+  useEffect(() => {
+    const checkDarkMode = () => {
+      const htmlElement = document.documentElement;
+      const hasDarkClass = htmlElement.classList.contains('dark');
+      setIsDark(hasDarkClass);
+    };
 
-            // Add admin events
-            day.admin_events.forEach((event) => {
-              calendarEvents.push({
-                id: `admin-${event.id}`,
-                title: event.name || event.title || '',
-                description:event.description || '',
-                start: day.date,
-                extendedProps: {
-                  type: 'admin',
-                  description:event.description || '',
-                }
-              });
-            });
-          }
-        });
-      });
+    // Initial check
+    checkDarkMode();
 
-      setEvents(calendarEvents);
-    } catch (error) {
-      console.error('Error fetching calendar data:', error);
-    } finally {
-      setLoading(false);
-    }
+    // Watch for changes
+    const observer = new MutationObserver(checkDarkMode);
+    observer.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ['class']
+    });
+
+    return () => observer.disconnect();
+  }, []);
+
+  // Update current time every second for live clock
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentTime(new Date());
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, []);
+
+  const handleRefresh = () => {
+    setIsRefreshing(true);
+    setTimeout(() => {
+      window.location.reload();
+    }, 500);
   };
 
-  const handleDateSelect = (selectInfo: DateSelectArg) => {
-    resetModalFields();
-    setEventDate(selectInfo.startStr);
-    openModal();
+  const formatTime = (date: Date) => {
+    return date.toLocaleTimeString('en-IN', {
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: false,
+      timeZone: selectedTimeZone
+    });
+  };
+  const formatDate = (date: Date) => {
+    return date.toLocaleDateString('en-IN', { 
+      weekday: 'long', 
+      year: 'numeric', 
+      month: 'long', 
+      day: 'numeric',
+      timeZone: selectedTimeZone
+    });
   };
 
-  const handleEventClick = (clickInfo: EventClickArg) => {
-    const event = clickInfo.event;
-    
-    // Only allow editing personal events
-    if (event.id && event.id.startsWith('personal-')) {
-      setSelectedEvent(event as unknown as CalendarEvent);
-      setEventName(event.title);
-      setEventDate(event.startStr || ""); // <-- use startStr instead of start.toISOString()
-      setEventDescription(event.extendedProps.description || "");
-      openModal();
-    }
-  };
-
-  const handleAddOrUpdateEvent = async () => {
-    if (!eventName.trim() || !eventDate.trim()) {
-      alert('Please fill in all required fields');
-      return;
-    }
-
-    try {
-      setLoading(true);
-      
-      if (selectedEvent && selectedEvent.id.startsWith('personal-')) {
-        // Update existing personal event
-        const eventId = selectedEvent.id.replace('personal-', '');
-        await axiosInstance.put(`/employee-calendar/${eventId}/`, {
-          name: eventName,
-          date: eventDate,
-          description: eventDescription
-        });
-
-        // Update local state
-        setEvents((prevEvents) =>
-          prevEvents.map((event) =>
-            event.id === selectedEvent.id
-              ? {
-                  ...event,
-                  title: eventName,
-                  start: eventDate,
-                  extendedProps: {
-                    type: 'personal' as const,
-                    description: eventDescription
-                  }
-                }
-              : event
-          )
-        );
-      } else {
-        // Add new personal event
-        const response = await axiosInstance.post('/employee-calendar/', {
-          name: eventName,
-          date: eventDate,
-          description: eventDescription
-        });
-
-        const newEvent: CalendarEvent = {
-          id: `personal-${response.data.id}`,
-          title: eventName,
-          start: eventDate,
-          extendedProps: {
-            type: 'personal' as const,
-            description: eventDescription
-          }
-        };
-        setEvents((prevEvents) => [...prevEvents, newEvent]);
-      }
-
-      closeModal();
-      resetModalFields();
-    } catch (error) {
-      console.error('Error saving event:', error);
-      alert('Error saving event. Please try again.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const resetModalFields = () => {
-    setEventName("");
-    setEventDate("");
-    setEventDescription("");
-    setSelectedEvent(null);
-  };
+  // Google Calendar embed URL
+  const calendarSrc = `https://calendar.google.com/calendar/embed?src=en.indian%23holiday%40group.v.calendar.google.com&ctz=${encodeURIComponent(selectedTimeZone)}&showTitle=0&showPrint=0&showTabs=1&showCalendars=0&mode=MONTH`;
 
   return (
     <>
       <PageMeta
         title="Personal Calendar | HRMS Employee Dashboard"
-        description="Manage your personal events, appointments, and schedule"
+        description="View holidays and important dates"
       />
-      <div className="rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03]">
-        <div className="custom-calendar">
-          <FullCalendar
-            ref={calendarRef}
-            plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
-            initialView="dayGridMonth"
-            headerToolbar={{
-              left: "prev,next addEventButton",
-              center: "title",
-              right: "dayGridMonth,timeGridWeek,timeGridDay",
-            }}
-            events={events}
-            selectable={true}
-            select={handleDateSelect}
-            eventClick={handleEventClick}
-            eventContent={renderEventContent}
-            customButtons={{
-              addEventButton: {
-                text: "Add Personal Event +",
-                click: openModal,
-              },
-            }}
-          />
-        </div>
-        <Modal
-          open={isOpen}
-          onClose={closeModal}
-        >
-          <div className="flex flex-col px-2 overflow-y-auto custom-scrollbar">
-            <div>
-              <h5 className="mb-2 font-semibold text-gray-800 modal-title text-theme-xl dark:text-gray-400 lg:text-2xl">
-                {selectedEvent ? "Edit Personal Event" : "Add Personal Event"}
-              </h5>
-              <p className="text-sm text-gray-500 dark:text-gray-400">
-                Manage your personal schedule: add appointments, reminders, and important dates
-              </p>
+      
+      <div className="space-y-6">
+        {/* Animated Header Section with Live Clock */}
+        <div className={`rounded-3xl shadow-2xl overflow-hidden transition-all duration-300 ${
+          isDark 
+            ? 'bg-gradient-to-r from-indigo-900 via-purple-900 to-pink-900' 
+            : 'bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600'
+        }`}>
+          <div className="relative p-8">
+            {/* Animated background pattern */}
+            <div className="absolute inset-0 opacity-10">
+              <div className="absolute inset-0" style={{
+                backgroundImage: `radial-gradient(circle at 2px 2px, white 1px, transparent 0)`,
+                backgroundSize: '40px 40px'
+              }}></div>
             </div>
-            <div className="mt-8">
-              <div>
-                <div>
-                  <label className="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">
-                    Event Title *
-                  </label>
-                  <input
-                    id="event-title"
-                    type="text"
-                    value={eventName}
-                    onChange={(e) => setEventName(e.target.value)}
-                    className="dark:bg-dark-900 h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800"
-                    placeholder="Enter event title..."
-                    required
-                  />
+            
+            <div className="relative">
+              {/* Top Section - Title and Clock */}
+              <div className="flex flex-col lg:flex-row items-center justify-between gap-6 mb-6">
+                {/* Left side - Title */}
+                <div className="flex items-center gap-4 flex-1">
+                  <div className={`p-4 rounded-2xl ${isDark ? 'bg-white/10' : 'bg-white/20'} backdrop-blur-sm shadow-lg animate-pulse`}>
+                    <FaCalendarAlt className="text-white text-4xl" />
+                  </div>
+                  <div>
+                    <h1 className="text-3xl sm:text-4xl font-bold text-white mb-2 tracking-tight">
+                      Team Calendar
+                    </h1>
+                    <p className="text-white/90 text-sm sm:text-base font-medium">
+                      Stay synced with company events and holidays
+                    </p>
+                  </div>
+                </div>
+
+                {/* Right side - Live Clock and Refresh */}
+                <div className="flex items-center gap-4">
+                  {/* Live Clock Card */}
+                  <div className={`p-4 rounded-2xl ${isDark ? 'bg-white/10' : 'bg-white/20'} backdrop-blur-sm shadow-lg min-w-[220px]`}>
+                    <div className="flex items-center gap-3">
+                      <FaClock className="text-white text-2xl" />
+                      <div>
+                        <div className="text-white font-bold text-xl tracking-wider">
+                          {formatTime(currentTime)}
+                        </div>
+                        <div className="text-white/80 text-xs mt-1">
+                          {timeZones.find(tz => tz.value === selectedTimeZone)?.short || 'IST'} ({selectedTimeZone})
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Refresh Button */}
+                  <button
+                    onClick={handleRefresh}
+                    disabled={isRefreshing}
+                    className={`p-4 rounded-2xl transition-all duration-300 hover:scale-110 shadow-lg ${
+                      isDark ? 'bg-white/10 hover:bg-white/20' : 'bg-white/20 hover:bg-white/30'
+                    } ${isRefreshing ? 'animate-spin' : ''}`}
+                    title="Refresh Calendar"
+                  >
+                    <FaSync className="text-white text-xl" />
+                  </button>
                 </div>
               </div>
 
-              <div className="mt-6">
-                <DatePicker
-                  id="event-date"
-                  label="Event Date *"
-                  placeholder="Select event date"
-                  defaultDate={eventDate || undefined}
-                  onChange={(_selectedDates, dateStr) => {
-                    setEventDate(dateStr);
+              {/* Bottom Section - Date banner */}
+              <div className={`pt-4 border-t ${isDark ? 'border-white/20' : 'border-white/30'}`}>
+                <div className="flex items-center justify-between">
+                  <p className="text-white/90 text-sm font-medium">
+                    {formatDate(currentTime)}
+                  </p>
+                  <div className="flex items-center gap-2">
+                    <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
+                      isDark ? 'bg-green-500/20 text-green-300' : 'bg-green-500/30 text-white'
+                    }`}>
+                      ● Live
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Quick Stats Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          {/* Upcoming Events */}
+          <div className={`group p-5 rounded-2xl shadow-xl transition-all duration-300 hover:scale-105 hover:shadow-2xl cursor-pointer ${
+            isDark 
+              ? 'bg-gradient-to-br from-blue-900 to-blue-800 border border-blue-700' 
+              : 'bg-gradient-to-br from-blue-500 to-blue-600'
+          }`}>
+            <div className="flex items-center gap-3 mb-2">
+              <FaBell className="text-white text-2xl group-hover:animate-bounce" />
+              <h3 className="text-white font-bold text-lg">Upcoming</h3>
+            </div>
+            <p className="text-white/90 text-sm">Track your upcoming events</p>
+            <div className="mt-3 pt-3 border-t border-white/20">
+              <span className="text-white/80 text-xs font-semibold">View Details →</span>
+            </div>
+          </div>
+
+          {/* Team Schedule */}
+          <div className={`group p-5 rounded-2xl shadow-xl transition-all duration-300 hover:scale-105 hover:shadow-2xl cursor-pointer ${
+            isDark 
+              ? 'bg-gradient-to-br from-purple-900 to-purple-800 border border-purple-700' 
+              : 'bg-gradient-to-br from-purple-500 to-purple-600'
+          }`}>
+            <div className="flex items-center gap-3 mb-2">
+              <FaUsers className="text-white text-2xl group-hover:animate-bounce" />
+              <h3 className="text-white font-bold text-lg">Team</h3>
+            </div>
+            <p className="text-white/90 text-sm">View team schedules</p>
+            <div className="mt-3 pt-3 border-t border-white/20">
+              <span className="text-white/80 text-xs font-semibold">Explore →</span>
+            </div>
+          </div>
+
+          {/* Holidays */}
+          <div className={`group p-5 rounded-2xl shadow-xl transition-all duration-300 hover:scale-105 hover:shadow-2xl cursor-pointer ${
+            isDark 
+              ? 'bg-gradient-to-br from-pink-900 to-pink-800 border border-pink-700' 
+              : 'bg-gradient-to-br from-pink-500 to-pink-600'
+          }`}>
+            <div className="flex items-center gap-3 mb-2">
+              <FaStar className="text-white text-2xl group-hover:animate-bounce" />
+              <h3 className="text-white font-bold text-lg">Holidays</h3>
+            </div>
+            <p className="text-white/90 text-sm">Official holidays listed</p>
+            <div className="mt-3 pt-3 border-t border-white/20">
+              <span className="text-white/80 text-xs font-semibold">See All →</span>
+            </div>
+          </div>
+
+          {/* Analytics */}
+          <div className={`group p-5 rounded-2xl shadow-xl transition-all duration-300 hover:scale-105 hover:shadow-2xl cursor-pointer ${
+            isDark 
+              ? 'bg-gradient-to-br from-indigo-900 to-indigo-800 border border-indigo-700' 
+              : 'bg-gradient-to-br from-indigo-500 to-indigo-600'
+          }`}>
+            <div className="flex items-center gap-3 mb-2">
+              <FaChartLine className="text-white text-2xl group-hover:animate-bounce" />
+              <h3 className="text-white font-bold text-lg">Insights</h3>
+            </div>
+            <p className="text-white/90 text-sm">Calendar analytics</p>
+            <div className="mt-3 pt-3 border-t border-white/20">
+              <span className="text-white/80 text-xs font-semibold">Learn More →</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Main Calendar Card with Glass Morphism */}
+        <div className={`rounded-3xl shadow-2xl overflow-hidden transition-all duration-300 ${
+          isDark 
+            ? 'bg-gray-800/50 backdrop-blur-xl border border-gray-700' 
+            : 'bg-white/80 backdrop-blur-xl border border-white/20 shadow-xl'
+        }`}>
+          {/* Enhanced Card Header */}
+          <div className={`px-6 py-5 border-b ${
+            isDark ? 'border-gray-700 bg-gray-800/80' : 'border-gray-200 bg-gradient-to-r from-gray-50 to-gray-100'
+          }`}>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <div className={`p-3 rounded-2xl shadow-lg ${
+                  isDark ? 'bg-blue-500/20' : 'bg-gradient-to-br from-blue-500 to-blue-600'
+                }`}>
+                  <FaCalendarAlt className={`text-2xl ${isDark ? 'text-blue-400' : 'text-white'}`} />
+                </div>
+                <div>
+                  <h2 className={`text-xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                    Indian Holidays Calendar
+                  </h2>
+                  <p className={`text-sm mt-1 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                    View official holidays and observances
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-3">
+                <select
+                  value={selectedTimeZone}
+                  onChange={(e) => setSelectedTimeZone(e.target.value)}
+                  className={`px-4 py-2 rounded-xl text-sm font-medium border transition-colors ${
+                    isDark 
+                      ? 'bg-gray-700 border-gray-600 text-white focus:border-blue-400' 
+                      : 'bg-white border-gray-300 text-gray-900 focus:border-blue-500'
+                  } focus:outline-none focus:ring-2 focus:ring-blue-500/20`}
+                >
+                  {timeZones.map((tz) => (
+                    <option key={tz.value} value={tz.value}>
+                      {tz.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+          </div>
+
+          {/* Calendar Content with Enhanced Loading */}
+          <div className="p-6">
+            <div className="relative">
+              {/* Enhanced Loading overlay */}
+              <div className={`absolute inset-0 rounded-2xl flex items-center justify-center z-0 ${
+                isDark ? 'bg-gray-900' : 'bg-gray-100'
+              } animate-pulse`}>
+                <div className="flex flex-col items-center gap-4">
+                  <div className="relative">
+                    <div className={`w-20 h-20 border-4 rounded-full ${
+                      isDark ? 'border-gray-700' : 'border-gray-300'
+                    }`}></div>
+                    <div className="w-20 h-20 border-4 border-purple-600 border-t-transparent rounded-full animate-spin absolute top-0"></div>
+                  </div>
+                  <p className={`font-bold text-lg ${isDark ? 'text-white' : 'text-gray-800'}`}>
+                    Loading Calendar...
+                  </p>
+                  <div className="flex gap-2">
+                    <span className="w-2 h-2 bg-purple-600 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></span>
+                    <span className="w-2 h-2 bg-purple-600 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></span>
+                    <span className="w-2 h-2 bg-purple-600 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></span>
+                  </div>
+                </div>
+              </div>
+              
+              {/* Calendar iframe with enhanced dark mode styling */}
+              <div className={`rounded-2xl overflow-hidden shadow-2xl ${isDark ? 'dark-calendar-wrapper' : ''}`}>
+                <style>
+                  {isDark && `
+                    .dark-calendar-wrapper iframe {
+                      filter: invert(0.85) hue-rotate(180deg) brightness(0.9) contrast(1.1);
+                    }
+                    .dark-calendar-wrapper {
+                      background: linear-gradient(135deg, #1f2937 0%, #374151 100%);
+                      border: 1px solid #4b5563;
+                    }
+                  `}
+                </style>
+                <iframe
+                  src={calendarSrc}
+                  style={{ border: 0, position: 'relative', zIndex: 1 }}
+                  width="100%"
+                  height="700"
+                  frameBorder="0"
+                  scrolling="no"
+                  className="rounded-2xl bg-white"
+                  title="Google Calendar"
+                  onLoad={(e) => {
+                    // Hide loading overlay when loaded
+                    const iframe = e.currentTarget;
+                    const container = iframe.parentElement;
+                    const loadingDiv = container?.previousElementSibling;
+                    if (loadingDiv) {
+                      (loadingDiv as HTMLElement).style.display = 'none';
+                    }
                   }}
                 />
               </div>
-
-              <div className="mt-6">
-                <label className="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">
-                  Description (Optional)
-                </label>
-                <textarea
-                  id="event-description"
-                  value={eventDescription}
-                  onChange={(e) => setEventDescription(e.target.value)}
-                  rows={3}
-                  className="dark:bg-dark-900 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800"
-                  placeholder="Enter event description..."
-                />
-              </div>
-            </div>
-            <div className="flex items-center gap-3 mt-6 modal-footer sm:justify-end">
-              <button
-                onClick={closeModal}
-                type="button"
-                className="flex w-full justify-center rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-white/[0.03] sm:w-auto"
-              >
-                Close
-              </button>
-              <button
-                onClick={handleAddOrUpdateEvent}
-                type="button"
-                disabled={loading}
-                className="btn btn-success btn-update-event flex w-full justify-center rounded-lg bg-brand-500 px-4 py-2.5 text-sm font-medium text-white hover:bg-brand-600 disabled:opacity-50 disabled:cursor-not-allowed sm:w-auto"
-              >
-                {loading ? 'Saving...' : (selectedEvent ? "Update Event" : "Add Event")}
-              </button>
             </div>
           </div>
-        </Modal>
+
+          {/* Enhanced Card Footer */}
+          <div className={`px-6 py-4 border-t ${
+            isDark ? 'border-gray-700 bg-gray-800/80' : 'border-gray-200 bg-gradient-to-r from-gray-50 to-gray-100'
+          }`}>
+            <div className="flex items-center justify-between text-sm">
+              <div className="flex items-center gap-3">
+                <div className="relative flex h-3 w-3">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-3 w-3 bg-green-500"></span>
+                </div>
+                <span className={isDark ? 'text-gray-300' : 'text-gray-700'}>
+                  <span className="font-semibold">Live calendar</span> - Auto-updates
+                </span>
+              </div>
+              <div className={`text-xs ${isDark ? 'text-gray-500' : 'text-gray-500'}`}>
+                Powered by Google Calendar
+              </div>
+            </div>
+          </div>
+        </div>
+
       </div>
     </>
   );
 };
-
-const renderEventContent = (eventInfo: { event: { title: string; extendedProps: { type: 'personal' | 'admin'; description?: string }; }; timeText: string; }) => {
-  const isPersonal = eventInfo.event.extendedProps.type === 'personal';
-  const colorClass = isPersonal ? 'fc-bg-primary' : 'fc-bg-success';
-  const textColor = isPersonal ? 'text-blue-700 dark:text-blue-300' : 'text-green-700 dark:text-green-300';
-  const description = eventInfo.event.extendedProps.description;
-
-  return (
-    <div className={`event-fc-color flex fc-event-main ${colorClass} p-1 rounded-sm flex-col`}>
-      <div className="fc-daygrid-event-dot"></div>
-      <div className="fc-event-time dark:text-gray-200">{eventInfo.timeText}</div>
-      <div className={`fc-event-title ${textColor} font-medium`}>
-        {isPersonal ? '📅 ' : '🏢 '}{eventInfo.event.title}
-      </div>
-      {description && (
-        <div className="text-xs text-gray-600 dark:text-gray-300 ml-1">
-          {description}
-        </div>
-      )}
-    </div>
-  );
-};
-
 
 export default PersonalCalendar;

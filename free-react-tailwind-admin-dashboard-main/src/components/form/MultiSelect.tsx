@@ -1,5 +1,5 @@
 import type React from "react";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 
 interface Option {
   value: string;
@@ -24,6 +24,8 @@ const MultiSelect: React.FC<MultiSelectProps> = ({
   disabled = false,
 }) => {
   const [selectedOptions, setSelectedOptions] = useState<string[]>(defaultSelected);
+  const [isOpen, setIsOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
 
   // Sync internal state if controlled via `value` prop
   useEffect(() => {
@@ -32,7 +34,22 @@ const MultiSelect: React.FC<MultiSelectProps> = ({
     }
   }, [value]);
 
-  const [isOpen, setIsOpen] = useState(false);
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsOpen(false);
+      }
+    };
+
+    if (isOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isOpen]);
 
   const toggleDropdown = () => {
     if (!disabled) setIsOpen((prev) => !prev);
@@ -60,7 +77,7 @@ const MultiSelect: React.FC<MultiSelectProps> = ({
     .filter(Boolean);
 
   return (
-    <div className="w-full">
+    <div className="w-full" ref={dropdownRef}>
       <label className="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">
         {label}
       </label>

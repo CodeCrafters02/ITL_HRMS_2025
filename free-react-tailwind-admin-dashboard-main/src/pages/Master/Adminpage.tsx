@@ -1,5 +1,5 @@
 import { useEffect, useState, useMemo } from "react";
-import { ToastContainer, toast } from "react-toastify";
+import { toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { useNavigate } from "react-router-dom";
 import { axiosInstance } from "../Dashboard/api";
@@ -95,7 +95,6 @@ const AdminPage: React.FC = () => {
 
   return (
     <>
-      <ToastContainer position="top-right" autoClose={3000} />
       <PageMeta title="Admin Management" description="Manage admins" />
       <PageBreadcrumb pageTitle="Admin Management" />
 

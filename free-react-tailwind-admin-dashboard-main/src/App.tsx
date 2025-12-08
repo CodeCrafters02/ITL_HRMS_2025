@@ -3,6 +3,8 @@ import { ScrollToTop } from "./components/common/ScrollToTop";
 import { FirebaseNotificationListener } from "./components/FirebaseNotificationListener";
 import { appRoutes } from "./appRoutes";
 import { NotificationProvider } from "./context/NotificationContext";
+import { ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 
 import { useState, useEffect } from "react";
 
@@ -25,6 +27,19 @@ export default function App() {
         <ScrollToTop />
         {accessToken && <FirebaseNotificationListener userToken={accessToken} />}
         {appRoutes()}
+        <ToastContainer
+          position="bottom-right"
+          autoClose={5000}
+          hideProgressBar={false}
+          newestOnTop={false}
+          closeOnClick
+          rtl={false}
+          pauseOnFocusLoss
+          draggable
+          pauseOnHover
+          theme="colored"
+          style={{ zIndex: 100001 }}
+        />
       </Router>
     </NotificationProvider>
   );

@@ -12,6 +12,8 @@ import MultiSelect from "../../components/form/MultiSelect";
 import Label from "../../components/form/Label";
 import Checkbox from "../../components/form/input/Checkbox";
 import Button from "../../components/ui/button/Button";
+import { motion } from "framer-motion";
+import { FaTasks, FaPlus, FaTimes, FaCheckCircle, FaClock, FaUsers, FaArrowLeft } from "react-icons/fa";
 
 import useGoBack from "../../hooks/useGoBack";
 
@@ -228,21 +230,79 @@ const CreateTask: React.FC = () => {
       setTimeout(() => {
         navigate("/employee/assign-task");
       }, 2000);
-    } catch (err) {
-      console.error(err);
-      setError("Error creating task. Please try again.");
+    } catch (err: any) {
+      console.error('Task creation error:', err);
+      console.error('Error response:', err.response?.data);
+      console.error('Error status:', err.response?.status);
+      
+      // Show detailed error message from backend
+      const errorMessage = err.response?.data?.detail 
+        || err.response?.data?.message
+        || (typeof err.response?.data === 'string' ? err.response.data : null)
+        || err.message
+        || "Error creating task. Please try again.";
+      
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="max-w-4xl mx-auto py-8">
-      <ComponentCard title="Create Task" desc="Fill in the details to create a new task for your team.">
-        <Form onSubmit={handleSubmit} className="space-y-6">
-          {/* Task Details Section */}
-          <div className="space-y-4">
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Task Details</h3>
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50/30 to-purple-50/30 dark:from-gray-900 dark:via-blue-950/20 dark:to-purple-950/20 p-3 sm:p-4 md:p-6">
+      <motion.div
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="max-w-5xl mx-auto"
+      >
+        {/* Header */}
+        <div className="mb-6">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent flex items-center gap-3">
+                <FaTasks className="text-blue-600" />
+                Create New Task
+              </h1>
+              <p className="text-gray-600 dark:text-gray-400 mt-1">Fill in the details to create a new task for your team</p>
+            </div>
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={goBack}
+              className="flex items-center gap-2 px-4 py-2.5 bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-xl font-medium shadow-md transition-all"
+            >
+              <FaArrowLeft />
+              Back
+            </motion.button>
+          </div>
+        </div>
+
+        {/* Main Form Card */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.1 }}
+          className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl border border-gray-200 dark:border-gray-700 overflow-hidden"
+        >
+          {/* Gradient Header */}
+          <div className="bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 p-6">
+            <h2 className="text-2xl font-bold text-white flex items-center gap-3">
+              <div className="w-10 h-10 bg-white/20 rounded-lg backdrop-blur-sm flex items-center justify-center">
+                <FaTasks className="text-white" />
+              </div>
+              Task Information
+            </h2>
+          </div>
+
+          <Form onSubmit={handleSubmit} className="p-6 space-y-8">
+            {/* Task Details Section */}
+            <div className="space-y-5">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center">
+                  <FaTasks className="text-white" size={14} />
+                </div>
+                <h3 className="text-xl font-bold text-gray-900 dark:text-white">Task Details</h3>
+              </div>
             
             <div>
               <Label htmlFor="title">Task Title *</Label>
@@ -306,9 +366,14 @@ const CreateTask: React.FC = () => {
               </div>
             </div>
 
-            {/* Reporting Manager Selection */}
-            <div className="space-y-4">
-              <h4 className="text-md font-medium text-gray-900 dark:text-white">Task Assignment</h4>
+            {/* Task Assignment Section */}
+            <div className="bg-gradient-to-br from-indigo-50 to-blue-50 dark:from-indigo-900/20 dark:to-blue-900/20 rounded-xl p-5 border border-indigo-200 dark:border-indigo-800 space-y-4">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-indigo-500 to-blue-500 flex items-center justify-center">
+                  <FaUsers className="text-white" size={14} />
+                </div>
+                <h4 className="text-lg font-bold text-gray-900 dark:text-white">Task Assignment</h4>
+              </div>
               
 
               {selectedManager && (
@@ -348,32 +413,63 @@ const CreateTask: React.FC = () => {
 
           {/* Subtasks Section */}
           <div className="space-y-4">
-            <div className="flex items-center space-x-3">
+            <motion.div
+              whileHover={{ scale: 1.01 }}
+              className="flex items-center space-x-3 bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20 p-4 rounded-xl border border-purple-200 dark:border-purple-800"
+            >
               <Checkbox
                 checked={hasSubtasks}
                 onChange={setHasSubtasks}
-                label="Add Subtasks"
+                label=""
               />
-            </div>
+              <div className="flex items-center gap-2">
+                <FaPlus className="text-purple-600 dark:text-purple-400" />
+                <span className="font-semibold text-gray-900 dark:text-white">Add Subtasks</span>
+              </div>
+            </motion.div>
 
             {hasSubtasks && (
-              <div className="border border-gray-200 dark:border-gray-700 rounded-lg p-4 space-y-4">
-                <h4 className="text-md font-medium text-gray-900 dark:text-white">Subtasks</h4>
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: "auto" }}
+                exit={{ opacity: 0, height: 0 }}
+                className="bg-gradient-to-br from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20 rounded-xl p-5 border border-purple-200 dark:border-purple-800 space-y-4"
+              >
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
+                    <FaTasks className="text-white" size={14} />
+                  </div>
+                  <h4 className="text-lg font-bold text-gray-900 dark:text-white">Subtasks</h4>
+                </div>
                 
                 {subtasks.map((subtask, index) => (
-                  <div key={index} className="border border-gray-100 dark:border-gray-800 rounded-lg p-4 space-y-3">
+                  <motion.div
+                    key={index}
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ delay: index * 0.1 }}
+                    className="bg-white dark:bg-gray-800 border-2 border-purple-200 dark:border-purple-700 rounded-xl p-5 space-y-4 shadow-md hover:shadow-lg transition-shadow"
+                  >
                     <div className="flex justify-between items-center">
-                      <h5 className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                        Subtask {index + 1}
-                      </h5>
+                      <div className="flex items-center gap-2">
+                        <div className="w-6 h-6 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center text-white text-xs font-bold">
+                          {index + 1}
+                        </div>
+                        <h5 className="text-base font-bold text-gray-900 dark:text-white">
+                          Subtask {index + 1}
+                        </h5>
+                      </div>
                       {subtasks.length > 1 && (
-                        <button
-                        
+                        <motion.button
+                          whileHover={{ scale: 1.1 }}
+                          whileTap={{ scale: 0.9 }}
+                          type="button"
                           onClick={() => removeSubtask(index)}
-                          className="text-red-500 hover:text-red-700 text-sm"
+                          className="flex items-center gap-1 px-3 py-1.5 bg-red-100 hover:bg-red-200 dark:bg-red-900/30 dark:hover:bg-red-900/50 text-red-600 dark:text-red-400 rounded-lg text-sm font-medium transition-colors"
                         >
+                          <FaTimes size={12} />
                           Remove
-                        </button>
+                        </motion.button>
                       )}
                     </div>
 
@@ -440,8 +536,11 @@ const CreateTask: React.FC = () => {
                     </div>
 
                     {/* Subtask Assignment Section */}
-                    <div className="space-y-4">
-                      <h5 className="text-sm font-medium text-gray-900 dark:text-white">Subtask Assignment</h5>
+                    <div className="bg-indigo-50 dark:bg-indigo-900/20 rounded-lg p-4 space-y-4 border border-indigo-200 dark:border-indigo-800">
+                      <div className="flex items-center gap-2">
+                        <FaUsers className="text-indigo-600 dark:text-indigo-400" size={14} />
+                        <h5 className="text-sm font-bold text-gray-900 dark:text-white">Subtask Assignment</h5>
+                      </div>
                       {selectedManager && (
                         loadingEmployees ? (
                           <div className="text-sm text-gray-500">Loading employees...</div>
@@ -480,52 +579,81 @@ const CreateTask: React.FC = () => {
                         )
                       )}
                     </div>
-                  </div>
+                  </motion.div>
                 ))}
 
-                <Button
+                <motion.button
+                  type="button"
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
                   onClick={addSubtask}
-                  variant="outline"
-                  size="sm"
-                  className="w-auto"
+                  className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white rounded-lg font-semibold shadow-md hover:shadow-lg transition-all"
                 >
-                  + Add Another Subtask
-                </Button>
-              </div>
+                  <FaPlus />
+                  Add Another Subtask
+                </motion.button>
+              </motion.div>
             )}
           </div>
 
           {/* Form Actions */}
-          <div className="flex justify-between items-center pt-6 border-t border-gray-200 dark:border-gray-700">
-            <Button
+          <div className="flex flex-col sm:flex-row justify-between items-center gap-4 pt-6 border-t-2 border-gray-200 dark:border-gray-700">
+            <motion.button
+              type="button"
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
               onClick={goBack}
-              variant="outline"
               disabled={loading}
+              className="w-full sm:w-auto px-6 py-3 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 rounded-xl font-semibold shadow-md transition-all disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Cancel
-            </Button>
+            </motion.button>
 
-            <Button
-              disabled={loading || !taskData.title || !taskData.deadline}
+            <motion.button
               type="submit"
+              whileHover={{ scale: loading ? 1 : 1.05 }}
+              whileTap={{ scale: loading ? 1 : 0.95 }}
+              disabled={loading || !taskData.title || !taskData.deadline}
+              className="w-full sm:w-auto px-8 py-3 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white rounded-xl font-bold shadow-lg hover:shadow-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
             >
-              {loading ? "Creating..." : "Create Task"}
-            </Button>
+              {loading ? (
+                <>
+                  <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                  Creating Task...
+                </>
+              ) : (
+                <>
+                  <FaCheckCircle />
+                  Create Task
+                </>
+              )}
+            </motion.button>
           </div>
 
           {/* Status Messages */}
           {error && (
-            <div className="text-red-600 bg-red-50 dark:bg-red-900/20 p-3 rounded-lg text-sm">
+            <motion.div
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="flex items-center gap-3 text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 p-4 rounded-xl border-2 border-red-200 dark:border-red-800 text-sm font-medium"
+            >
+              <FaTimes className="text-xl" />
               {error}
-            </div>
+            </motion.div>
           )}
           {success && (
-            <div className="text-green-600 bg-green-50 dark:bg-green-900/20 p-3 rounded-lg text-sm">
+            <motion.div
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="flex items-center gap-3 text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/20 p-4 rounded-xl border-2 border-green-200 dark:border-green-800 text-sm font-medium"
+            >
+              <FaCheckCircle className="text-xl" />
               {success}
-            </div>
+            </motion.div>
           )}
         </Form>
-      </ComponentCard>
+        </motion.div>
+      </motion.div>
     </div>
   );
 };

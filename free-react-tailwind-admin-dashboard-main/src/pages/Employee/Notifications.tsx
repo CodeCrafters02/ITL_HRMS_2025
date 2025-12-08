@@ -1,417 +1,276 @@
-import { useEffect } from "react";
+import { useEffect, useState, useMemo } from "react";
 import PageMeta from "../../components/common/PageMeta";
 import { useNotifications } from "../../context/NotificationContext";
+import { motion, AnimatePresence } from "framer-motion";
+import {
+    Bell,
+    Search,
+    Clock,
+    Info,
+    Calendar,
+    BookOpen,
+    AlertTriangle,
+    X,
+    RefreshCw,
+} from "lucide-react";
 
-interface Notification {
-  id: string | number; // Allow both string and number IDs to match backend
-  title: string;
-  description: string;
-  date: string;
-}
+const Notifications = () => {
+    const { notifications, loading, error, fetchNotifications, markAllAsRead } = useNotifications();
+    const [searchQuery, setSearchQuery] = useState("");
+    const [isRefreshing, setIsRefreshing] = useState(false);
 
-const Notifications: React.FC = () => {
-  const { notifications, loading, error, fetchNotifications, markAllAsRead } = useNotifications();
-
-  useEffect(() => {
-    // Mark all as read when the notifications page is visited
-    if (notifications.length > 0) {
-      markAllAsRead();
-    }
-  }, [notifications.length, markAllAsRead]);
-
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    const now = new Date();
-    const diffTime = Math.abs(now.getTime() - date.getTime());
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-
-    if (diffDays === 1) {
-      return "Today";
-    } else if (diffDays === 2) {
-      return "Yesterday";
-    } else if (diffDays <= 7) {
-      return `${diffDays - 1} days ago`;
-    } else {
-      return date.toLocaleDateString("en-US", {
-        year: "numeric",
-        month: "short",
-        day: "numeric",
-      });
-    }
-  };
-
-  const getNotificationIcon = (notification: Notification) => {
-    // Determine if it's a reminder based on title keywords
-    const isReminder = notification.title.toLowerCase().includes('reminder') || 
-                      notification.title.toLowerCase().includes('deadline') ||
-                      notification.title.toLowerCase().includes('due') ||
-                      notification.title.toLowerCase().includes('expire') ||
-                      notification.description.toLowerCase().includes('reminder');
-    
-    if (isReminder) {
-      return (
-        <div className="flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-r from-yellow-100 to-orange-100 dark:from-yellow-900/30 dark:to-orange-900/30 ring-2 ring-yellow-200 dark:ring-yellow-700">
-          <svg className="h-6 w-6 text-yellow-600 dark:text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-          </svg>
-        </div>
-      );
-    } else {
-      // Default to info notification
-      return (
-        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-100 dark:bg-blue-900/30">
-          <svg className="h-5 w-5 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-          </svg>
-        </div>
-      );
-    }
-  };
-
-  const getNotificationStyle = (notification: Notification) => {
-    const isReminder = notification.title.toLowerCase().includes('reminder') || 
-                      notification.title.toLowerCase().includes('deadline') ||
-                      notification.title.toLowerCase().includes('due') ||
-                      notification.title.toLowerCase().includes('expire') ||
-                      notification.description.toLowerCase().includes('reminder');
-    
-    if (isReminder) {
-      return "group rounded-lg border-2 border-yellow-300 bg-gradient-to-r from-yellow-50 to-orange-50 p-6 shadow-lg transition-all duration-200 hover:border-yellow-400 hover:shadow-xl dark:border-yellow-600 dark:from-yellow-900/20 dark:to-orange-900/20 dark:hover:border-yellow-500";
-    } else {
-      return "group rounded-lg border border-gray-200 bg-white p-6 shadow-sm transition-all duration-200 hover:border-gray-300 hover:shadow-md dark:border-gray-700 dark:bg-gray-800 dark:hover:border-gray-600";
-    }
-  };
-
-  const getNotificationBadge = (notification: Notification) => {
-    const isReminder = notification.title.toLowerCase().includes('reminder') || 
-                      notification.title.toLowerCase().includes('deadline') ||
-                      notification.title.toLowerCase().includes('due') ||
-                      notification.title.toLowerCase().includes('expire') ||
-                      notification.description.toLowerCase().includes('reminder');
-    
-    if (isReminder) {
-      return (
-        <div className="flex items-center space-x-2">
-         
-          <span className="inline-flex items-center rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-800 dark:bg-gray-700 dark:text-gray-300">
-            {formatDate(notification.date)}
-          </span>
-        </div>
-      );
-    } else {
-      return (
-        <div className="flex items-center space-x-2">
-          
-          <span className="inline-flex items-center rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-800 dark:bg-gray-700 dark:text-gray-300">
-            {formatDate(notification.date)}
-          </span>
-        </div>
-      );
-    }
-  };
-
-  // Group notifications by Today, Yesterday, or date
-  const groupByDate = (notifications: Notification[]) => {
-    const groups: { [label: string]: Notification[] } = {};
-    const today = new Date();
-    const yesterday = new Date();
-    yesterday.setDate(today.getDate() - 1);
-
-    // Enhanced deduplication logic - remove duplicates based on multiple criteria
-    const uniqueNotifications = notifications.filter((notification, index, self) => {
-      const isDuplicate = self.findIndex((n) => {
-        // Check for exact duplicates (same ID, title, description)
-        const exactMatch = n.id === notification.id && 
-                          n.title === notification.title && 
-                          n.description === notification.description;
-        
-        // Special handling for learning corner notifications
-        const isLearningCorner = notification.title.toLowerCase().includes('learning') || 
-                               notification.description.toLowerCase().includes('learning') ||
-                               String(notification.id).includes('learning');
-        
-        const otherIsLearningCorner = n.title.toLowerCase().includes('learning') || 
-                                    n.description.toLowerCase().includes('learning') ||
-                                    String(n.id).includes('learning');
-        
-        if (isLearningCorner && otherIsLearningCorner) {
-          // For learning corner notifications, check if they're about the same content
-          const sameTitle = n.title.trim().toLowerCase() === notification.title.trim().toLowerCase();
-          const sameDay = new Date(n.date).toDateString() === new Date(notification.date).toDateString();
-          
-          // If same title and same day, consider them duplicates regardless of description differences
-          if (sameTitle && sameDay) {
-            return true;
-          }
+    useEffect(() => {
+        if (notifications.length > 0) {
+            markAllAsRead();
         }
-        
-        // Standard content match for non-learning corner notifications
-        const contentMatch = n.title.trim().toLowerCase() === notification.title.trim().toLowerCase() && 
-                            n.description.trim().toLowerCase() === notification.description.trim().toLowerCase();
-        
-        return exactMatch || contentMatch;
-      });
-      
-      return isDuplicate === index; // Keep only the first occurrence
-    });
+    }, [notifications.length, markAllAsRead]);
 
-    uniqueNotifications.forEach((n: Notification) => {
-      const nDate = new Date(n.date);
-      let label = nDate.toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" });
-      if (
-        nDate.getDate() === today.getDate() &&
-        nDate.getMonth() === today.getMonth() &&
-        nDate.getFullYear() === today.getFullYear()
-      ) {
-        label = "Today";
-      } else if (
-        nDate.getDate() === yesterday.getDate() &&
-        nDate.getMonth() === yesterday.getMonth() &&
-        nDate.getFullYear() === yesterday.getFullYear()
-      ) {
-        label = "Yesterday";
-      }
-      if (!groups[label]) groups[label] = [];
-      groups[label].push(n);
-    });
+    const handleRefresh = async () => {
+        setIsRefreshing(true);
+        await fetchNotifications();
+        setTimeout(() => setIsRefreshing(false), 800);
+    };
 
-    // Sort groups by date descending
-    const sortedLabels = Object.keys(groups).sort((a, b) => {
-      if (a === "Today") return -1;
-      if (b === "Today") return 1;
-      if (a === "Yesterday") return -1;
-      if (b === "Yesterday") return 1;
-      return new Date(b).getTime() - new Date(a).getTime();
-    });
-    return sortedLabels.map(label => ({
-      label,
-      items: groups[label].sort((a: Notification, b: Notification) => new Date(b.date).getTime() - new Date(a.date).getTime())
-    }));
-  };
+    const formatDate = (dateString: string) => {
+        const date = new Date(dateString);
+        const now = new Date();
+        const diffTime = Math.abs(now.getTime() - date.getTime());
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 
-  const grouped = groupByDate(notifications);
+        if (diffDays === 1) return "Today";
+        if (diffDays === 2) return "Yesterday";
+        if (diffDays <= 7) return `${diffDays - 1} days ago`;
+        return date.toLocaleDateString("en-US", {
+            year: "numeric",
+            month: "short",
+            day: "numeric",
+        });
+    };
 
-  if (loading) {
+    const getIconForType = (type: string | undefined, title: string) => {
+        const lowerTitle = title.toLowerCase();
+        const lowerType = type?.toLowerCase() || "";
+
+        if (lowerType === 'calendar' || lowerTitle.includes('calendar')) return <Calendar className="w-5 h-5 text-green-500" />;
+        if (lowerType === 'learning_corner' || lowerTitle.includes('learning')) return <BookOpen className="w-5 h-5 text-purple-500" />;
+        if (lowerType === 'admin' || lowerTitle.includes('admin')) return <AlertTriangle className="w-5 h-5 text-orange-500" />;
+        if (lowerTitle.includes('reminder') || lowerTitle.includes('due') || lowerTitle.includes('deadline')) return <Clock className="w-5 h-5 text-yellow-500" />;
+
+        return <Info className="w-5 h-5 text-blue-500" />;
+    };
+
+    const getGradientForType = (type: string | undefined, title: string) => {
+        const lowerTitle = title.toLowerCase();
+        const lowerType = type?.toLowerCase() || "";
+
+        if (lowerType === 'calendar' || lowerTitle.includes('calendar')) return "from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 border-green-200 dark:border-green-800";
+        if (lowerType === 'learning_corner' || lowerTitle.includes('learning')) return "from-purple-50 to-fuchsia-50 dark:from-purple-900/20 dark:to-fuchsia-900/20 border-purple-200 dark:border-purple-800";
+        if (lowerType === 'admin' || lowerTitle.includes('admin')) return "from-orange-50 to-amber-50 dark:from-orange-900/20 dark:to-amber-900/20 border-orange-200 dark:border-orange-800";
+        if (lowerTitle.includes('reminder') || lowerTitle.includes('due') || lowerTitle.includes('deadline')) return "from-yellow-50 to-orange-50 dark:from-yellow-900/20 dark:to-orange-900/20 border-yellow-200 dark:border-yellow-800";
+
+        return "from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 border-blue-200 dark:border-blue-800";
+    };
+
+    const filteredNotifications = useMemo(() => {
+        return notifications.filter((notification) => {
+            const matchesSearch =
+                notification.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                notification.description.toLowerCase().includes(searchQuery.toLowerCase());
+
+            return matchesSearch;
+        });
+    }, [notifications, searchQuery]);
+
+    // Deduplicate for display
+    const uniqueNotifications = useMemo(() => {
+        return filteredNotifications.filter((notif, index, self) =>
+            index === self.findIndex(n =>
+                n.id === notif.id &&
+                n.title === notif.title &&
+                n.description === notif.description
+            )
+        );
+    }, [filteredNotifications]);
+
+    const containerVariants = {
+        hidden: { opacity: 0 },
+        visible: {
+            opacity: 1,
+            transition: {
+                staggerChildren: 0.05
+            }
+        }
+    };
+
+    const itemVariants = {
+        hidden: { y: 20, opacity: 0 },
+        visible: {
+            y: 0,
+            opacity: 1,
+            transition: {
+                type: "spring",
+                stiffness: 100,
+                damping: 15
+            }
+        },
+        exit: {
+            x: -20,
+            opacity: 0,
+            transition: { duration: 0.2 }
+        }
+    };
+
     return (
-      <div className="flex min-h-screen flex-col bg-gray-50 dark:bg-gray-900">
-        <PageMeta 
-          title="Notifications" 
-          description="Stay updated with company announcements and important information" 
-        />
-        
-        <div className="flex-1 p-6">
-          <div className="mx-auto max-w-4xl">
-            <div className="mb-8">
-              <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
-                Notifications
-              </h1>
-              <p className="mt-2 text-gray-600 dark:text-gray-400">
-                Stay updated with company announcements and important information
-              </p>
-            </div>
+        <div className="min-h-screen bg-gray-50/50 dark:bg-gray-900 p-4 md:p-6 lg:p-8">
+            <PageMeta
+                title="Notifications"
+                description="Stay updated with your latest activities and alerts"
+            />
 
-            {/* Loading Skeleton */}
-            <div className="space-y-4">
-              {[1, 2, 3, 4, 5].map((i) => (
-                <div
-                  key={i}
-                  className="animate-pulse rounded-lg border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-700 dark:bg-gray-800"
-                >
-                  <div className="flex items-start space-x-4">
-                    <div className="h-10 w-10 rounded-full bg-gray-200 dark:bg-gray-700"></div>
-                    <div className="flex-1 space-y-2">
-                      <div className="flex items-center justify-between">
-                        <div className="h-5 w-1/3 rounded bg-gray-200 dark:bg-gray-700"></div>
-                        <div className="h-4 w-20 rounded bg-gray-200 dark:bg-gray-700"></div>
-                      </div>
-                      <div className="space-y-1">
-                        <div className="h-4 w-full rounded bg-gray-200 dark:bg-gray-700"></div>
-                        <div className="h-4 w-2/3 rounded bg-gray-200 dark:bg-gray-700"></div>
-                      </div>
+            <div className="max-w-5xl mx-auto space-y-8">
+                {/* Header Section */}
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                    <div>
+                        <h1 className="text-3xl font-bold text-gray-900 dark:text-white flex items-center gap-3">
+                            <Bell className="w-8 h-8 text-brand-500" />
+                            Notifications
+                            <span className="text-sm font-medium bg-brand-100 text-brand-700 dark:bg-brand-900/30 dark:text-brand-300 px-3 py-1 rounded-full">
+                                {uniqueNotifications.length}
+                            </span>
+                        </h1>
+                        <p className="mt-2 text-gray-500 dark:text-gray-400">
+                            Manage your alerts and stay informed about important updates.
+                        </p>
                     </div>
-                  </div>
+
+                    <div className="flex items-center gap-3">
+                        <button
+                            onClick={handleRefresh}
+                            disabled={isRefreshing}
+                            className={`p-2.5 rounded-xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-all ${isRefreshing ? 'animate-spin' : ''}`}
+                            title="Refresh notifications"
+                        >
+                            <RefreshCw className="w-5 h-5" />
+                        </button>
+                    </div>
                 </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
 
-  if (error) {
-    return (
-      <div className="flex min-h-screen flex-col bg-gray-50 dark:bg-gray-900">
-        <PageMeta title="Notifications" description="Stay updated with company announcements" />
-        
-        <div className="flex-1 p-6">
-          <div className="mx-auto max-w-4xl">
-            <div className="mb-8">
-              <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
-                Notifications
-              </h1>
-            </div>
-
-            <div className="rounded-lg border border-red-200 bg-red-50 p-6 dark:border-red-800 dark:bg-red-900/20">
-              <div className="flex items-center space-x-3">
-                <svg className="h-6 w-6 text-red-600 dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                <div>
-                  <h3 className="text-sm font-medium text-red-800 dark:text-red-400">
-                    Error loading notifications
-                  </h3>
-                  <p className="mt-1 text-sm text-red-600 dark:text-red-300">{error}</p>
-                </div>
-              </div>
-              <div className="mt-4">
-                <button
-                  onClick={fetchNotifications}
-                  className="inline-flex items-center rounded-md bg-red-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-red-500 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 dark:focus:ring-offset-gray-900"
-                >
-                  Try Again
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div className="flex min-h-screen flex-col bg-gray-50 dark:bg-gray-900">
-      <PageMeta 
-        title="Notifications" 
-        description="Stay updated with company announcements and important information" 
-      />
-      
-      <div className="flex-1 p-6">
-        <div className="mx-auto max-w-4xl">
-          {/* Header */}
-          <div className="mb-8">
-            <div className="flex items-center justify-between">
-              <div>
-                <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
-                  Notifications
-                </h1>
-                <p className="mt-2 text-gray-600 dark:text-gray-400">
-                  Stay updated with important information and reminders
-                </p>
-              </div>
-              <button
-                onClick={fetchNotifications}
-                className="inline-flex items-center rounded-lg bg-white px-4 py-2.5 text-sm font-medium text-gray-700 shadow-sm ring-1 ring-gray-300 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2 dark:bg-gray-800 dark:text-gray-300 dark:ring-gray-600 dark:hover:bg-gray-700 dark:focus:ring-offset-gray-900"
-              >
-                <svg className="mr-2 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                </svg>
-                Refresh
-              </button>
-            </div>
-
-            {/* Legend */}
-            <div className="mt-4 flex items-center space-x-6 rounded-lg bg-white p-4 shadow-sm dark:bg-gray-800">
-              <div className="flex items-center space-x-2">
-                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-100 dark:bg-blue-900/30">
-                  <svg className="h-4 w-4 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                </div>
-                <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Information</span>
-              </div>
-              <div className="flex items-center space-x-2">
-                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-r from-yellow-100 to-orange-100 dark:from-yellow-900/30 dark:to-orange-900/30 ring-1 ring-yellow-200 dark:ring-yellow-700">
-                  <svg className="h-4 w-4 text-yellow-600 dark:text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                </div>
-                <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Reminders (Action Required)</span>
-              </div>
-            </div>
-          </div>
-
-          {/* Notifications List - Grouped by Today, Yesterday, Date */}
-          {notifications.length === 0 ? (
-            <div className="rounded-lg border border-gray-200 bg-white p-12 text-center shadow-sm dark:border-gray-700 dark:bg-gray-800">
-              <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M15 17h5l-5 5-5-5h5v-5a7.5 7.5 0 00-15 0v5h5l-5 5-5-5h5V7a9.966 9.966 0 0110-10z" />
-              </svg>
-              <h3 className="mt-4 text-lg font-medium text-gray-900 dark:text-white">
-                No notifications yet
-              </h3>
-              <p className="mt-2 text-gray-500 dark:text-gray-400">
-                When you receive notifications, they'll appear here.
-              </p>
-            </div>
-          ) : (
-            <div className="space-y-8">
-              {grouped.map((group) => (
-                <div key={group.label} className="space-y-1">
-                  {/* Date Header */}
-                  <div className="sticky top-0 bg-gray-50 dark:bg-gray-900 py-2 z-10">
-                    <h2 className="text-sm font-medium text-gray-600 dark:text-gray-300 uppercase tracking-wider">
-                      {group.label}
-                    </h2>
-                  </div>
-                  {/* Notifications for this group */}
-                  <div className="space-y-4">
-                    {group.items.map((notification: Notification, index: number) => (
-                      <div
-                        key={`${notification.id}-${index}`}
-                        className={getNotificationStyle(notification)}
-                      >
-                        <div className="flex items-start space-x-4">
-                          {/* Notification Icon */}
-                          {getNotificationIcon(notification)}
-                          {/* Notification Content */}
-                          <div className="min-w-0 flex-1">
-                            <div className="flex items-start justify-between">
-                              <div className="min-w-0 flex-1">
-                                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-                                  {notification.title}
-                                </h3>
-                                <p className="mt-1 text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
-                                  {notification.description}
-                                </p>
-                              </div>
-                              <div className="ml-4 flex-shrink-0">
-                                {getNotificationBadge(notification)}
-                              </div>
-                            </div>
-                          </div>
+                {/* Controls Section */}
+                <div className="bg-white dark:bg-gray-800 rounded-2xl p-4 shadow-sm border border-gray-100 dark:border-gray-700/50">
+                    <div className="flex flex-col md:flex-row gap-4 justify-between">
+                        {/* Search */}
+                        <div className="relative flex-1">
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                            <input
+                                type="text"
+                                placeholder="Search notifications..."
+                                value={searchQuery}
+                                onChange={(e) => setSearchQuery(e.target.value)}
+                                className="w-full pl-10 pr-4 py-2.5 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-all outline-none text-gray-900 dark:text-white placeholder-gray-400"
+                            />
+                            {searchQuery && (
+                                <button
+                                    onClick={() => setSearchQuery("")}
+                                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
+                                >
+                                    <X className="w-4 h-4" />
+                                </button>
+                            )}
                         </div>
-                      </div>
-                    ))}
-                  </div>
+                    </div>
                 </div>
-              ))}
-            </div>
-          )}
 
-          {/* Stats Footer */}
-          {notifications.length > 0 && (
-            <div className="mt-8 rounded-lg border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-gray-600 dark:text-gray-400">
-                  Total notifications: {notifications.length}
-                </span>
-                <span className="text-gray-600 dark:text-gray-400">
-                  Last updated: {new Date().toLocaleDateString("en-US", {
-                    year: "numeric",
-                    month: "short",
-                    day: "numeric",
-                    hour: "2-digit",
-                    minute: "2-digit",
-                  })}
-                </span>
-              </div>
+                {/* Content Section */}
+                <div className="relative min-h-[400px]">
+                    {loading && !isRefreshing ? (
+                        <div className="flex flex-col items-center justify-center h-64 space-y-4">
+                            <div className="w-12 h-12 border-4 border-brand-500/30 border-t-brand-500 rounded-full animate-spin" />
+                            <p className="text-gray-500 dark:text-gray-400 animate-pulse">Loading updates...</p>
+                        </div>
+                    ) : error ? (
+                        <div className="flex flex-col items-center justify-center h-64 text-center p-8 bg-red-50 dark:bg-red-900/10 rounded-2xl border border-red-100 dark:border-red-800">
+                            <AlertTriangle className="w-12 h-12 text-red-500 mb-4" />
+                            <h3 className="text-lg font-semibold text-red-700 dark:text-red-400">Unable to load notifications</h3>
+                            <p className="text-red-600 dark:text-red-300 mb-6">{error}</p>
+                            <button
+                                onClick={() => fetchNotifications()}
+                                className="px-6 py-2 bg-red-600 text-white rounded-xl hover:bg-red-700 transition-colors shadow-lg shadow-red-600/20"
+                            >
+                                Try Again
+                            </button>
+                        </div>
+                    ) : uniqueNotifications.length === 0 ? (
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.9 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            className="flex flex-col items-center justify-center h-96 text-center"
+                        >
+                            <div className="w-24 h-24 bg-gray-100 dark:bg-gray-800 rounded-full flex items-center justify-center mb-6">
+                                <Bell className="w-10 h-10 text-gray-400" />
+                            </div>
+                            <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
+                                All caught up!
+                            </h3>
+                            <p className="text-gray-500 dark:text-gray-400 max-w-sm">
+                                {searchQuery
+                                    ? "No notifications match your search criteria."
+                                    : "You have no new notifications at the moment."}
+                            </p>
+                            {searchQuery && (
+                                <button
+                                    onClick={() => setSearchQuery("")}
+                                    className="mt-6 text-brand-600 dark:text-brand-400 font-medium hover:underline"
+                                >
+                                    Clear search
+                                </button>
+                            )}
+                        </motion.div>
+                    ) : (
+                        <motion.div
+                            variants={containerVariants}
+                            initial="hidden"
+                            animate="visible"
+                            className="space-y-4"
+                        >
+                            <AnimatePresence mode="popLayout">
+                                {uniqueNotifications.map((notification, index) => (
+                                    <motion.div
+                                        key={`${notification.id}-${index}`}
+                                        layout
+                                        variants={itemVariants}
+                                        className={`group relative overflow-hidden bg-white dark:bg-gray-800 rounded-2xl p-5 border transition-all duration-300 hover:shadow-lg dark:hover:shadow-gray-900/50 ${getGradientForType(notification.type, notification.title)
+                                            } border-l-4`}
+                                    >
+                                        <div className="flex items-start gap-4">
+                                            {/* Icon Container */}
+                                            <div className="flex-shrink-0 p-3 bg-white/80 dark:bg-gray-700/50 backdrop-blur-sm rounded-xl shadow-sm">
+                                                {getIconForType(notification.type, notification.title)}
+                                            </div>
+
+                                            {/* Content */}
+                                            <div className="flex-1 min-w-0 pt-1">
+                                                <div className="flex items-start justify-between gap-4">
+                                                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white group-hover:text-brand-600 dark:group-hover:text-brand-400 transition-colors">
+                                                        {notification.title}
+                                                    </h3>
+                                                    <span className="flex-shrink-0 text-xs font-medium text-gray-500 dark:text-gray-400 bg-white/50 dark:bg-gray-700/50 px-2.5 py-1 rounded-full border border-gray-100 dark:border-gray-600">
+                                                        {formatDate(notification.date)}
+                                                    </span>
+                                                </div>
+                                                <p className="mt-1.5 text-gray-600 dark:text-gray-300 leading-relaxed">
+                                                    {notification.description}
+                                                </p>
+                                            </div>
+                                        </div>
+                                    </motion.div>
+                                ))}
+                            </AnimatePresence>
+                        </motion.div>
+                    )}
+                </div>
             </div>
-          )}
         </div>
-      </div>
-    </div>
-  );
+    );
 };
 
 export default Notifications;

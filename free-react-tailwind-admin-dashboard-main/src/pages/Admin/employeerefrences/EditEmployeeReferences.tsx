@@ -97,7 +97,7 @@ const AdminEditEmployeeReference: React.FC<AdminEditEmployeeReferenceProps> = ({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50">
+    <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-[100000]">
       <div className="bg-white dark:bg-gray-800 p-6 rounded shadow-lg w-full max-w-lg">
         <h2 className="text-2xl font-semibold mb-4 text-gray-900 dark:text-white">
           Review Employee Reference

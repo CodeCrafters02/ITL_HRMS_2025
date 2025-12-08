@@ -53,14 +53,39 @@ class Task(models.Model):
         return self.subtasks.filter(assignments__status='done').count()
 
     def progress(self):
+        # Status weight mapping: todo=0%, inprogress=33%, inreview=66%, done=100%
+        status_weights = {
+            'todo': 0,
+            'inprogress': 33,
+            'inreview': 66,
+            'done': 100
+        }
+        
         if self.subtasks.exists():
-            total = self.subtasks.count()
-            done = self.done_subtasks_count()
+            # Calculate progress based on subtask assignment statuses
+            subtasks = self.subtasks.all()
+            if not subtasks:
+                return 0
+            
+            total_progress = 0
+            for subtask in subtasks:
+                subtask_assignments = subtask.assignments.all()
+                if subtask_assignments:
+                    # Average progress of all assignments in this subtask
+                    subtask_progress = sum(status_weights.get(a.status, 0) for a in subtask_assignments) / len(subtask_assignments)
+                    total_progress += subtask_progress
+                else:
+                    total_progress += 0
+            
+            return int(total_progress / len(subtasks))
         else:
-            total = self.assignments.count()
-            done = self.assignments.filter(status='done').count()
-
-        return 0 if total == 0 else int((done / total) * 100)
+            # Calculate progress based on assignment statuses
+            assignments = self.assignments.all()
+            if not assignments:
+                return 0
+            
+            total_progress = sum(status_weights.get(a.status, 0) for a in assignments)
+            return int(total_progress / len(assignments))
 
     def compute_status_from_assignments(self):
         

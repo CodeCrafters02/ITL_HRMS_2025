@@ -1,6 +1,6 @@
 from rest_framework import viewsets, generics,permissions, status
 from rest_framework.permissions import IsAuthenticated
-from rest_framework.exceptions import PermissionDenied
+from rest_framework.exceptions import PermissionDenied, ValidationError
 from rest_framework.response import Response
 from django.shortcuts import get_object_or_404
 from rest_framework.decorators import action
@@ -392,10 +392,15 @@ class DashboardAPIView(APIView):
                 'date': latest_payroll.payroll_date
             } if latest_payroll else None
 
-            # Weekly hours calculation (Monday to Saturday for 6-day work week)
-            week_start = today - timedelta(days=today.weekday())  # Monday
-            week_end = week_start + timedelta(days=5)  # Saturday (6-day work week)
+            # Weekly hours calculation (Sunday to Saturday - current week only)
+            # Sunday is the start of the week, Saturday is the end
+            # Calculate days back to most recent Sunday
+            days_since_sunday = (today.weekday() + 1) % 7  # Mon=1 day back, Tue=2, ..., Sun=0
+            week_start = today - timedelta(days=days_since_sunday)  # Most recent Sunday
+            week_end = week_start + timedelta(days=6)  # Following Saturday (7-day week)
+
             
+            # Get all attendances for the week
             weekly_attendances = Attendance.objects.filter(
                 employee=employee,
                 date__range=[week_start, week_end],
@@ -404,21 +409,22 @@ class DashboardAPIView(APIView):
             
             total_weekly_minutes = 0
             for att in weekly_attendances:
-                # Calculate worked time minus breaks for each day
-                end_time = att.check_out if att.check_out else now
-                worked_delta = end_time - att.check_in
-                worked_minutes = worked_delta.total_seconds() // 60
-                
-                # Subtract break time for that day
-                day_breaks = BreakLog.objects.filter(
-                    employee=employee,
-                    start__date=att.date,
-                    end__isnull=False
-                )
-                day_break_minutes = sum(int((b.end - b.start).total_seconds() // 60) for b in day_breaks)
-                
-                effective_minutes = max(0, worked_minutes - day_break_minutes)
-                total_weekly_minutes += effective_minutes
+                # Only include completed attendances (checked out) in weekly total
+                # Today's ongoing work will be handled separately by frontend
+                if att.check_out:
+                    worked_delta = att.check_out - att.check_in
+                    worked_minutes = worked_delta.total_seconds() // 60
+                    
+                    # Subtract break time for that day
+                    day_breaks = BreakLog.objects.filter(
+                        employee=employee,
+                        start__date=att.date,
+                        end__isnull=False
+                    )
+                    day_break_minutes = sum(int((b.end - b.start).total_seconds() // 60) for b in day_breaks)
+                    
+                    effective_minutes = max(0, worked_minutes - day_break_minutes)
+                    total_weekly_minutes += effective_minutes
             
             weekly_hours = round(total_weekly_minutes / 60, 2)
 
@@ -442,8 +448,8 @@ class DashboardAPIView(APIView):
                 today_work_duration = f"{worked_hours_today}h {worked_mins_today}m"
 
             # Weekly total (already calculated above with breaks subtracted)
-            total_weekly_hours = total_weekly_minutes // 60
-            total_weekly_mins = total_weekly_minutes % 60
+            total_weekly_hours = int(total_weekly_minutes // 60)
+            total_weekly_mins = int(total_weekly_minutes % 60)
             total_work_duration_week = f"{total_weekly_hours}h {total_weekly_mins}m"
 
             # Dashboard response
@@ -566,8 +572,8 @@ class AttendanceHistoryAPIView(APIView):
 
         day = start_date
         while day <= end_date:
-            is_weekend = day.weekday() >= 6
-            status = 'absent'
+            is_weekend = day.weekday() >= 5  # Saturday (5) and Sunday (6)
+            status = None  # Don't initialize as 'absent' to avoid double counting
             is_late = False
             late_duration = None
             total_hours = None
@@ -648,20 +654,31 @@ class AttendanceHistoryAPIView(APIView):
                     break_time = f'{int(total_break // 60)} min' if total_break else '-'
 
                 else:
-                    status = 'checked_in'
-                    if shift:
-                        grace = shift.grace_period or timedelta(minutes=15)
-                        shift_start_naive = datetime.combine(day, shift.checkin)
-                        shift_start_aware = tz.localize(shift_start_naive)
-                        check_in_local = check_in.astimezone(tz)
-                        if check_in_local > (shift_start_aware + grace):
-                            is_late = True
-                            late_delta = check_in_local - (shift_start_aware + grace)
-                            late_duration = str(late_delta).split('.')[0]
+                    # Check if the day has passed (not today)
+                    if day < today:
+                        status = 'absent'
+                        stats['absent'] += 1
+                    else:
+                        status = 'checked_in'
+                        if shift:
+                            grace = shift.grace_period or timedelta(minutes=15)
+                            shift_start_naive = datetime.combine(day, shift.checkin)
+                            shift_start_aware = tz.localize(shift_start_naive)
+                            check_in_local = check_in.astimezone(tz)
+                            if check_in_local > (shift_start_aware + grace):
+                                is_late = True
+                                late_delta = check_in_local - (shift_start_aware + grace)
+                                late_duration = str(late_delta).split('.')[0]
             else:
-                if not is_weekend and status not in ['leave']:
-                    status = 'absent'
-                    stats['absent'] += 1
+                # No attendance record
+                if not is_weekend and day not in approved_leave_days:
+                    # Only mark as absent if it's a past working day or today
+                    if day <= today:
+                        status = 'absent'
+                        stats['absent'] += 1
+                    else:
+                        # Future date - no status yet
+                        status = 'no_data'
 
             if is_late and status in ['present', 'half_day', 'checked_in']:
                 stats['late'] += 1
@@ -1085,6 +1102,7 @@ class EmpLeaveListCreateAPIView(generics.ListCreateAPIView):
         emp = self.request.user.employee_profile
         start_date = serializer.validated_data.get("from_date")
         end_date = serializer.validated_data.get("to_date")
+        leave_type = serializer.validated_data.get("leave_type")
 
         # Check if leave already exists in the given date range
         exists = EmpLeave.objects.filter(
@@ -1094,7 +1112,36 @@ class EmpLeaveListCreateAPIView(generics.ListCreateAPIView):
         ).exists()
 
         if exists:
-            raise Exception("Leave already exists for the given dates.")
+            raise ValidationError("Leave already exists for the given dates.")
+
+        # Calculate requested leave days
+        days_requested = (end_date - start_date).days + 1
+
+        # Get approved leaves for this leave type
+        from datetime import datetime
+        current_year = datetime.now().year
+        approved_leaves = EmpLeave.objects.filter(
+            employee=emp,
+            leave_type=leave_type,
+            status='Approved',
+            from_date__year=current_year
+        )
+
+        # Calculate total approved days used
+        days_used = 0
+        for leave in approved_leaves:
+            days_used += (leave.to_date - leave.from_date).days + 1
+
+        # Get leave type count (available days per year)
+        available_days = leave_type.count if leave_type else 0
+        remaining_days = available_days - days_used
+
+        # Validate requested days against remaining balance
+        if days_requested > remaining_days:
+            raise ValidationError(
+                f"Insufficient leave balance. You have {remaining_days} days remaining "
+                f"for {leave_type.leave_name}, but requested {days_requested} days."
+            )
 
         serializer.save(
             company=emp.company,
@@ -1146,7 +1193,9 @@ class RejectEmpLeaveAPIView(APIView):
         manager = request.user.employee_profile
         leave = get_object_or_404(EmpLeave, id=leave_id, reporting_manager=manager)
         if leave.status != 'Rejected':
+            rejection_reason = request.data.get('rejection_reason', '')
             leave.status = 'Rejected'
+            leave.rejection_reason = rejection_reason
             leave.save()
             return Response({'detail': 'Leave rejected.'})
         return Response({'detail': 'Already rejected.'})
@@ -1189,14 +1238,26 @@ class EmployeeProfileAPIView(generics.RetrieveUpdateAPIView):
     permission_classes = [IsAuthenticated]
 
     def get_serializer_class(self):
-        if self.request.method in ['PUT', 'PATCH','GET']:
+        # Use detailed serializer for GET to return all fields
+        if self.request.method == 'GET':
+            return EmployeeDetailSerializer
+        # Use update serializer for PUT/PATCH to restrict editable fields
+        elif self.request.method in ['PUT', 'PATCH']:
             return EmployeeUpdateSerializer
         return EmployeeDetailSerializer
 
     def get_object(self):
         return Employee.objects.get(user=self.request.user)
-    
-    
+
+
+class EmployeeProfileByIdAPIView(generics.RetrieveAPIView):
+    queryset = Employee.objects.all()
+    serializer_class = EmployeeDetailSerializer
+    permission_classes = [IsAuthenticated]
+    lookup_field = 'employee_id'
+    lookup_url_kwarg = 'employee_id'
+
+
 class BreakLogAPIView(APIView):
     permission_classes = [IsAuthenticated]
 

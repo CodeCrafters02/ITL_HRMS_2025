@@ -299,6 +299,7 @@ export function appRoutes() {
 
             {/* Auth Routes */}
             <Route path="/" element={<SignIn />} />
+            <Route path="/signin" element={<SignIn />} />
             <Route path="/signup" element={<SignUp />} />
             <Route path="/resetpassword" element={<ForgotPassword />} />
             {/* <Route path="/" element={<MainPage />} /> */}

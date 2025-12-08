@@ -1,5 +1,5 @@
 import { useEffect, useState, useMemo } from "react";
-import { ToastContainer, toast } from "react-toastify";
+import { toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { axiosInstance } from "../Dashboard/api";
 import { AxiosError } from "axios";
@@ -110,7 +110,6 @@ const CompanyPage: React.FC = () => {
 
   return (
     <>
-      <ToastContainer position="top-right" autoClose={3000} />
       <PageMeta title="Company Management" description="Manage companies" />
       <PageBreadcrumb pageTitle="Company Management" />
 

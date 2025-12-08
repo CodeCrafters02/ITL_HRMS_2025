@@ -1116,16 +1116,47 @@ class ReportingEmployeesSerializer(serializers.ModelSerializer):
     full_name = serializers.CharField(read_only=True)
     department_name = serializers.SerializerMethodField()
     designation_name = serializers.SerializerMethodField()
+    photo = serializers.SerializerMethodField()
+    is_checked_in = serializers.SerializerMethodField()
  
     class Meta:
         model = Employee
-        fields = ['id', 'employee_id', 'full_name', 'status', 'department_name', 'designation_name']
+        fields = ['id', 'employee_id', 'full_name', 'status', 'department_name', 'designation_name', 'photo', 'is_checked_in']
  
     def get_department_name(self, obj):
         return obj.department.department_name if obj.department else None
  
     def get_designation_name(self, obj):
         return obj.designation.designation_name if obj.designation else None
+
+    def get_photo(self, obj):
+        if obj.photo:
+            request = self.context.get('request')
+            if request:
+                try:
+                    return request.build_absolute_uri(obj.photo.url)
+                except:
+                    # Fallback to relative URL if build_absolute_uri fails
+                    return obj.photo.url
+            return obj.photo.url
+        return None
+    
+    def get_is_checked_in(self, obj):
+        """Check if employee is currently checked in (has check_in but no check_out)"""
+        from datetime import date
+        from .models import Attendance
+        
+        today = date.today()
+        # Check if there's an attendance record for today with check_in but WITHOUT check_out
+        attendance = Attendance.objects.filter(
+            employee=obj,
+            date=today,
+            check_in__isnull=False,
+            check_out__isnull=True  # Only consider checked in if they haven't checked out
+        ).first()
+        
+        return attendance is not None
+
 
 
 

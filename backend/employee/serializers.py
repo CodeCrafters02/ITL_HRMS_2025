@@ -217,6 +217,7 @@ class EmpLeaveSerializer(serializers.ModelSerializer):
             'leave_type_name',
             'status',
             'reason',
+            'rejection_reason',
             'from_date',
             'to_date',
             'created_at',
@@ -299,12 +300,22 @@ class EmpLearningCornerSerializer(serializers.ModelSerializer):
 class EmployeeDetailSerializer(serializers.ModelSerializer):
     department_name = serializers.CharField(source='department.name', read_only=True)
     designation_name = serializers.CharField(source='designation.name', read_only=True)
+    shift_assigned = serializers.SerializerMethodField()
 
     class Meta:
         model = Employee
         fields = '__all__'
         # Add department_name and designation_name to the output
         extra_fields = ['department_name', 'designation_name']
+
+    def get_shift_assigned(self, obj):
+        """Return shift data with id and shift_type"""
+        if obj.shift_assigned:
+            return {
+                'id': obj.shift_assigned.id,
+                'shift_type': obj.shift_assigned.shift_type
+            }
+        return None
 
     def to_representation(self, instance):
         rep = super().to_representation(instance)

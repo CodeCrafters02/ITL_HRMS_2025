@@ -320,6 +320,7 @@ class EmpLeave(models.Model):
     ]
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='Pending')
     reason = models.TextField(blank=True, null=True)
+    rejection_reason = models.TextField(blank=True, null=True)
     from_date = models.DateField()
     to_date = models.DateField()
     created_at = models.DateTimeField(auto_now_add=True)

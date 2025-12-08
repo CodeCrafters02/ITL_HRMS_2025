@@ -34,6 +34,7 @@ urlpatterns = [
     path('emp-leaves/<int:leave_id>/cancel/', CancelEmpLeaveAPIView.as_view(), name='emp_leave_cancel'),
     path('emp-learning-corner/', EmpLearningCornerAPIView.as_view(), name='emp_learning_corner'),
     path('employee-profile/', EmployeeProfileAPIView.as_view(), name='employee_profile'),
+    path('employee-profile/<str:employee_id>/', EmployeeProfileByIdAPIView.as_view(), name='employee_profile_by_id'),
     path('employee-breaks/', BreakLogAPIView.as_view(), name='employee-breaks'),
     path('employee-companypolicies/', EmployeeCompanyPoliciesAPIView.as_view(), name='employee-company-policies'),
     path('employee-hierarchy/', EmployeeHierarchyAPIView.as_view(), name='employee-hierarchy'),
