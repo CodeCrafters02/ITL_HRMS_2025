@@ -15,7 +15,7 @@ import {
   PlugInIcon,
   TableIcon,
   UserCircleIcon,
- 
+
 } from "../../icons";
 import { useSidebar } from "../../context/SidebarContext";
 
@@ -52,7 +52,7 @@ const navItems: NavItem[] = [
       { name: "Recruitment", path: "/admin/recruitment", pro: false },
       { name: "Relieved Employees", path: "/admin/relieved-employees", pro: false },
       { name: "Letter Templates", path: `/admin/letter-templates`, pro: false },
-      ],
+    ],
   },
   {
     name: "Leave Mgt",
@@ -93,6 +93,7 @@ const navItems: NavItem[] = [
       { name: "Department Wise Working days", path: "/admin/configuration/department-wise-working-days", pro: false },
       { name: "Leave Count", path: "/admin/configuration/leave-count", pro: false },
       { name: "Company Policies", path: "/admin/configuration/company-policies", pro: false },
+      { name: "Office Structure", path: "/admin/configuration/office-structure", pro: false },
     ],
   },
   {
@@ -115,12 +116,12 @@ const navItems: NavItem[] = [
   //   icon: <PieChartIcon />,
   //   path: "/admin/system-tracking",
   // },
-    {
+  {
     name: "Employee References",
     icon: <PieChartIcon />,
     path: "/admin/employeerefrences",
   },
-   
+
 ];
 
 
@@ -139,7 +140,7 @@ const AdminSidebar: React.FC = () => {
   // Company info state
   const [companyLogo, setCompanyLogo] = useState<string>("");
   const [companyName, setCompanyName] = useState<string>("");
-  
+
 
   // Notification badge from context
   // Only one badge should be shown, overlapped on sidebar icon
@@ -148,9 +149,9 @@ const AdminSidebar: React.FC = () => {
 
   useEffect(() => {
     // Fetch company logo and name for admin
-   axiosInstance.get("app/company-logo/")
+    axiosInstance.get("app/company-logo/")
       .then(res => {
-        
+
         setCompanyLogo(res.data.logo_url || "");
         setCompanyName(res.data.name || "");
       })
@@ -222,22 +223,19 @@ const AdminSidebar: React.FC = () => {
           {nav.subItems ? (
             <button
               onClick={() => handleSubmenuToggle(index, menuType)}
-              className={`menu-item group ${
-                openSubmenu?.type === menuType && openSubmenu?.index === index
+              className={`menu-item group ${openSubmenu?.type === menuType && openSubmenu?.index === index
                   ? "menu-item-active"
                   : "menu-item-inactive"
-              } cursor-pointer ${
-                !isExpanded && !isHovered
+                } cursor-pointer ${!isExpanded && !isHovered
                   ? "lg:justify-center"
                   : "lg:justify-start"
-              }`}
+                }`}
             >
               <span
-                className={`menu-item-icon-size  ${
-                  openSubmenu?.type === menuType && openSubmenu?.index === index
+                className={`menu-item-icon-size  ${openSubmenu?.type === menuType && openSubmenu?.index === index
                     ? "menu-item-icon-active"
                     : "menu-item-icon-inactive"
-                }`}
+                  }`}
               >
                 {nav.icon}
                 {/* Only one notification badge, overlapped on sidebar icon */}
@@ -252,12 +250,11 @@ const AdminSidebar: React.FC = () => {
               )}
               {(isExpanded || isHovered || isMobileOpen) && (
                 <ChevronDownIcon
-                  className={`ml-auto w-5 h-5 transition-transform duration-200 ${
-                    openSubmenu?.type === menuType &&
-                    openSubmenu?.index === index
+                  className={`ml-auto w-5 h-5 transition-transform duration-200 ${openSubmenu?.type === menuType &&
+                      openSubmenu?.index === index
                       ? "rotate-180 text-brand-500"
                       : ""
-                  }`}
+                    }`}
                 />
               )}
             </button>
@@ -265,16 +262,14 @@ const AdminSidebar: React.FC = () => {
             nav.path && (
               <Link
                 to={nav.path}
-                className={`menu-item group ${
-                  isActive(nav.path) ? "menu-item-active" : "menu-item-inactive"
-                }`}
+                className={`menu-item group ${isActive(nav.path) ? "menu-item-active" : "menu-item-inactive"
+                  }`}
               >
                 <span
-                  className={`menu-item-icon-size ${
-                    isActive(nav.path)
+                  className={`menu-item-icon-size ${isActive(nav.path)
                       ? "menu-item-icon-active"
                       : "menu-item-icon-inactive"
-                  }`}
+                    }`}
                 >
                   {nav.icon}
                 </span>
@@ -302,32 +297,29 @@ const AdminSidebar: React.FC = () => {
                   <li key={subItem.name}>
                     <Link
                       to={subItem.path}
-                      className={`menu-dropdown-item ${
-                        isActive(subItem.path)
+                      className={`menu-dropdown-item ${isActive(subItem.path)
                           ? "menu-dropdown-item-active"
                           : "menu-dropdown-item-inactive"
-                      }`}
+                        }`}
                     >
                       {subItem.name}
                       <span className="flex items-center gap-1 ml-auto">
                         {subItem.new && (
                           <span
-                            className={`ml-auto ${
-                              isActive(subItem.path)
+                            className={`ml-auto ${isActive(subItem.path)
                                 ? "menu-dropdown-badge-active"
                                 : "menu-dropdown-badge-inactive"
-                            } menu-dropdown-badge`}
+                              } menu-dropdown-badge`}
                           >
                             new
                           </span>
                         )}
                         {subItem.pro && (
                           <span
-                            className={`ml-auto ${
-                              isActive(subItem.path)
+                            className={`ml-auto ${isActive(subItem.path)
                                 ? "menu-dropdown-badge-active"
                                 : "menu-dropdown-badge-inactive"
-                            } menu-dropdown-badge`}
+                              } menu-dropdown-badge`}
                           >
                             pro
                           </span>
@@ -347,10 +339,9 @@ const AdminSidebar: React.FC = () => {
   return (
     <aside
       className={`fixed mt-16 flex flex-col lg:mt-0 top-0 px-5 left-0 bg-white dark:bg-gray-900 dark:border-gray-800 text-gray-900 h-screen transition-all duration-300 ease-in-out z-50 border-r border-gray-200 
-        ${
-          isExpanded || isMobileOpen
-            ? "w-[290px]"
-            : isHovered
+        ${isExpanded || isMobileOpen
+          ? "w-[290px]"
+          : isHovered
             ? "w-[290px]"
             : "w-[90px]"
         }
@@ -360,9 +351,8 @@ const AdminSidebar: React.FC = () => {
       onMouseLeave={() => setIsHovered(false)}
     >
       <div
-        className={`py-8 flex ${
-          !isExpanded && !isHovered ? "lg:justify-center" : "justify-start"
-        }`}
+        className={`py-8 flex ${!isExpanded && !isHovered ? "lg:justify-center" : "justify-start"
+          }`}
       >
         {isExpanded || isHovered || isMobileOpen ? (
           <div className="flex items-center gap-3">
@@ -398,11 +388,10 @@ const AdminSidebar: React.FC = () => {
           <div className="flex flex-col gap-4">
             <div>
               <h2
-                className={`mb-4 text-xs uppercase flex leading-[20px] text-gray-400 ${
-                  !isExpanded && !isHovered
+                className={`mb-4 text-xs uppercase flex leading-[20px] text-gray-400 ${!isExpanded && !isHovered
                     ? "lg:justify-center"
                     : "justify-start"
-                }`}
+                  }`}
               >
                 {isExpanded || isHovered || isMobileOpen ? (
                   "Menu"

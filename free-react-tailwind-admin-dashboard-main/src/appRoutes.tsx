@@ -29,10 +29,10 @@ const AdminLayout = lazy(() => import("./layout/AdminLayout/AdminLayout"));
 const Department = lazy(() => import("./pages/Admin/Department"));
 const Level = lazy(() => import("./pages/Admin/Level"));
 const CreateAdmin = lazy(() => import("./pages/Forms/CreateAdmin"));
-const EditAdminPage =lazy(()=>import( "./pages/Master/EditAdmin"));
-const EditAdmin = lazy(() => import("./pages/Forms/EditAdmin"));
+const EditAdminPage = lazy(() => import("./pages/Master/EditAdmin"));
+// const EditAdmin = lazy(() => import("./pages/Forms/EditAdmin"));
 const CreateCompany = lazy(() => import("./pages/Forms/CreateCompany"));
-const EditCompany=lazy(()=> import ("./pages/Forms/EditCompany"))
+const EditCompany = lazy(() => import("./pages/Forms/EditCompany"))
 const EditCompanyProfile = lazy(() => import("./pages/Admin/EditProfile"));
 const Designation = lazy(() => import("./pages/Admin/Designation"));
 const AssetsInventory = lazy(() => import("./pages/Admin/Assets&Inventory"));
@@ -48,7 +48,7 @@ const DepartmentForm = lazy(() => import("./pages/Forms/DepartmentForm"));
 const LevelForm = lazy(() => import("./pages/Forms/LevelForm"));
 const DesignationForm = lazy(() => import("./pages/Forms/DesignationForm"));
 const SalaryStructureList = lazy(() => import("./pages/Admin/SalaryStructure"));
-const EditSalaryForm = lazy(()=>import("./pages/Forms/EditSalaryForm"))
+const EditSalaryForm = lazy(() => import("./pages/Forms/EditSalaryForm"))
 const SalaryStructureForm = lazy(() => import("./pages/Forms/SalaryStructureForm"));
 const IncomeTax = lazy(() => import("./pages/Admin/IncomeTax"));
 const IncomeTaxForm = lazy(() => import("./pages/Forms/IncomeTaxForm"));
@@ -64,13 +64,14 @@ const RejectedLeave = lazy(() => import("./pages/Admin/RejectedLeaves"));
 const Attendance = lazy(() => import("./pages/Admin/AttendanceDetails"));
 const AttendanceLog = lazy(() => import("./pages/Admin/Attendance_log"));
 const CompanyPolicy = lazy(() => import("./pages/Admin/CompanyPolicy"));
+const OfficeStructure = lazy(() => import("./pages/Admin/OfficeStructure"));
 const PayrollBatches = lazy(() => import("./pages/Admin/PayrollBatches"));
 const CompanyPolicyForm = lazy(() => import("./pages/Forms/CompanyPolicyForm"));
 const GeneratePayroll = lazy(() => import("./pages/Admin/GeneratePayroll"));
 const EmployeeDashboard = lazy(() => import("./pages/Dashboard/EmployeeDashboard"));
 const LeaveApply = lazy(() => import("./pages/Employee/LeaveApply"));
 const AttendanceHistory = lazy(() => import("./pages/Employee/AttendanceHistory"));
-const PersonalCalendar = lazy(() => import("./pages/Employee/Personalcalendar"));
+const PersonalCalendar = lazy(() => import("./pages/Employee/PersonalCalendar"));
 const Notifications = lazy(() => import("./pages/Employee/Notifications"));
 const ViewallNotification = lazy(() => import("./pages/Employee/ViewallNotification"));
 const LearningCorner = lazy(() => import("./pages/Employee/EmployeeLearningCorner"));
@@ -97,12 +98,13 @@ const UpdateAttendanceForm = lazy(() => import("./pages/Forms/UpdateAttendanceFo
 
 const EmployeeReferencePage = lazy(() => import("./pages/Employee/references"));
 const AddEmployeeReference = lazy(() => import("./pages/Employee/references/AddReference"));
-const EmployeeStatusList =lazy(() =>import("./pages/Admin/employeestatus") )
-const EmployeeReporteesPage=lazy(()=>import("./pages/Employee/reportees"))
+const EmployeeStatusList = lazy(() => import("./pages/Admin/employeestatus"))
+const EmployeeReporteesPage = lazy(() => import("./pages/Employee/reportees"))
+const DeskBooking = lazy(() => import("./pages/Employee/DeskBooking"));
 
 // Employee References (Admin side)
 const AdminEmployeeReferencePage = lazy(() => import("./pages/Admin/employeerefrences"));
-const AdminEditEmployeeReference = lazy(() => import("./pages/Admin/employeerefrences/EditEmployeeReferences"));
+// const AdminEditEmployeeReference = lazy(() => import("./pages/Admin/employeerefrences/EditEmployeeReferences"));
 
 const UserManagementPage = lazy(() => import("./pages/UserManagement/index"));
 const AddUserPage = lazy(() => import("./pages/UserManagement/AddUser"));
@@ -144,213 +146,215 @@ const LoadingSpinner = () => (
 export function appRoutes() {
   return (
 
-  <Suspense fallback={<LoadingSpinner />}>
+    <Suspense fallback={<LoadingSpinner />}>
 
-    <Routes>
-          {/* Dashboard Layout */}
-          <Route element={<MasterLayout />}>
-            <Route index path="/home" element={<Home />} />
+      <Routes>
+        {/* Dashboard Layout */}
+        <Route element={<MasterLayout />}>
+          <Route index path="/home" element={<Home />} />
 
-            <Route path="/master-dashboard" element={<MasterDashboard />} />
-            <Route path="/master/admin" element={<AdminPage />} />
-            <Route path="/master/admin/create" element={<CreateAdmin />} />
-            <Route path="/master/admin/edit/:id" element={<EditAdminPage />} />
-            {/* <Route path="/master/admin/edit/:id" element={<EditAdmin />} /> */}
-            <Route path="/master/company" element={<CompanyList />} />
-            <Route path="/master/company/create" element={<CreateCompany />} />
-            <Route path="/master/company/edit/:id" element={<EditCompany />} />
-            <Route path="/master/products" element={<ProductPage />} />
-            <Route path="/master/products/add" element={<AddProductPage />} />
-            <Route path="/master/services" element={<ServicePage />} />
-            <Route path="/master/subservices" element={<SubServicePage />} />
-            <Route path="/master/usermanagement" element={<UserManagementPage />} />
-            <Route path="/master/usermanagement/add" element={<AddUserPage />} />
-            <Route path="/master/demorequest" element={<DemoRequestPage />} />
-            <Route path="/master/contactrequest" element={<ContactRequestPage />} />
+          <Route path="/master-dashboard" element={<MasterDashboard />} />
+          <Route path="/master/admin" element={<AdminPage />} />
+          <Route path="/master/admin/create" element={<CreateAdmin />} />
+          <Route path="/master/admin/edit/:id" element={<EditAdminPage />} />
+          {/* <Route path="/master/admin/edit/:id" element={<EditAdmin />} /> */}
+          <Route path="/master/company" element={<CompanyList />} />
+          <Route path="/master/company/create" element={<CreateCompany />} />
+          <Route path="/master/company/edit/:id" element={<EditCompany />} />
+          <Route path="/master/products" element={<ProductPage />} />
+          <Route path="/master/products/add" element={<AddProductPage />} />
+          <Route path="/master/services" element={<ServicePage />} />
+          <Route path="/master/subservices" element={<SubServicePage />} />
+          <Route path="/master/usermanagement" element={<UserManagementPage />} />
+          <Route path="/master/usermanagement/add" element={<AddUserPage />} />
+          <Route path="/master/demorequest" element={<DemoRequestPage />} />
+          <Route path="/master/contactrequest" element={<ContactRequestPage />} />
 
-            {/* Letter Form (dynamic companyId) */}
-                                  {/* Others Page */}
-            <Route path="/profile" element={<UserProfiles />} />
-            <Route path="/calendar" element={<Calendar />} />
-            <Route path="/blank" element={<Blank />} />
+          {/* Letter Form (dynamic companyId) */}
+          {/* Others Page */}
+          <Route path="/profile" element={<UserProfiles />} />
+          <Route path="/calendar" element={<Calendar />} />
+          <Route path="/blank" element={<Blank />} />
 
-            {/* Forms */}
-            <Route path="/form-elements" element={<FormElements />} />
-            
-            {/* Tables */}
-            <Route path="/basic-tables" element={<BasicTables />} />
+          {/* Forms */}
+          <Route path="/form-elements" element={<FormElements />} />
 
-            {/* Ui Elements */}
-            <Route path="/alerts" element={<Alerts />} />
-            <Route path="/avatars" element={<Avatars />} />
-            <Route path="/badge" element={<Badges />} />
-            <Route path="/buttons" element={<Buttons />} />
-            <Route path="/images" element={<Images />} />
-            <Route path="/videos" element={<Videos />} />
+          {/* Tables */}
+          <Route path="/basic-tables" element={<BasicTables />} />
 
-            {/* Charts */}
-            <Route path="/line-chart" element={<LineChart />} />
-            <Route path="/bar-chart" element={<BarChart />} />
-          </Route>
+          {/* Ui Elements */}
+          <Route path="/alerts" element={<Alerts />} />
+          <Route path="/avatars" element={<Avatars />} />
+          <Route path="/badge" element={<Badges />} />
+          <Route path="/buttons" element={<Buttons />} />
+          <Route path="/images" element={<Images />} />
+          <Route path="/videos" element={<Videos />} />
+
+          {/* Charts */}
+          <Route path="/line-chart" element={<LineChart />} />
+          <Route path="/bar-chart" element={<BarChart />} />
+        </Route>
 
         {/* Admin Layout */}
         <Route path="/admin" element={<AdminLayout />}>
-          
-            <Route index element={<AdminDashboard />} />
-           
-            <Route path="branch-mgt/department" element={<Department />} />
-            <Route path="branch-mgt/level" element={<Level />} />
-            <Route path="branch-mgt/designation" element={<Designation />} />
-            <Route path="salary-structure" element={<SalaryStructureList />} />
-            <Route path="salary-structure/edit/:id" element={<EditSalaryForm />} />
-            <Route path="income-tax" element={<IncomeTax />} />
-            <Route path="payroll-batches" element={<PayrollBatches />} />
-            <Route path="generate-payroll" element={<GeneratePayroll />} />
-            <Route path="assets-inventory" element={<AssetsInventory />} />
-            <Route path="learning-corner" element={<LearningCornerPage />} />
-            <Route path="configuration/shift" element={<ShiftPolicyList />} />
-            <Route path="configuration/leave-count" element={<LeaveCountPage />} />
-            <Route path="configuration/department-wise-working-days" element={<DepartmentWorkingDays />} />
-            <Route path="employee-register" element={<EmployeeRegister />} />
-            <Route path="assignshifts" element={<AssignShift />} />
-            <Route path="assignshifts" element={<AssignShift />} />
-            <Route path="assignshifts/edit/:id" element={<EditShift />} />
-            <Route path="recruitment" element={<RecruitmentPage />} />
-            <Route path="approved-leaves" element={<ApprovedLeave/>} />
-            <Route path="rejected-leaves" element={<RejectedLeave/>} />
-            <Route path="calendar" element={<AdminCalendar />} />
-            <Route path="attendance-logs" element={<AttendanceLog />} />
-            <Route path="configuration/company-policies" element={<CompanyPolicy />} />
-            <Route path="attendance-details" element={<Attendance />} />
-            <Route path="admin-notifications" element={<AdminNotifications />} />
-            <Route path="configuration/break-config" element={<BreakConfig />} />
-            <Route path="relieved-employees" element={<RelievedEmployee />} />
-            <Route path="company-edit-profile" element={<EditCompanyProfile />} />
-            <Route path="letter" element={<Letter />} />
-            <Route path="letter-form" element={<LetterForm />} />
-            <Route path="letter-templates" element={<LetterTemplates />} />
-            <Route path="letter-pdf" element={<LetterDup />} />
-            <Route path="payslip" element={<PayslipPage />} />
-            <Route path="update-employee-form/:id" element={<UpdateEmployeeForm />} />
-            <Route path="update-attendance/:employee_id" element={<UpdateAttendanceForm />} />
 
-            <Route path="update-attendance/:employee_id" element={<UpdateAttendanceForm />} />
-            <Route path="update-attendance/:employee_id" element={<UpdateAttendanceForm />} />
+          <Route index element={<AdminDashboard />} />
 
-            <Route path="employeerefrences" element={<AdminEmployeeReferencePage />} />
+          <Route path="branch-mgt/department" element={<Department />} />
+          <Route path="branch-mgt/level" element={<Level />} />
+          <Route path="branch-mgt/designation" element={<Designation />} />
+          <Route path="salary-structure" element={<SalaryStructureList />} />
+          <Route path="salary-structure/edit/:id" element={<EditSalaryForm />} />
+          <Route path="income-tax" element={<IncomeTax />} />
+          <Route path="payroll-batches" element={<PayrollBatches />} />
+          <Route path="generate-payroll" element={<GeneratePayroll />} />
+          <Route path="assets-inventory" element={<AssetsInventory />} />
+          <Route path="learning-corner" element={<LearningCornerPage />} />
+          <Route path="configuration/shift" element={<ShiftPolicyList />} />
+          <Route path="configuration/leave-count" element={<LeaveCountPage />} />
+          <Route path="configuration/department-wise-working-days" element={<DepartmentWorkingDays />} />
+          <Route path="employee-register" element={<EmployeeRegister />} />
+          <Route path="assignshifts" element={<AssignShift />} />
+          <Route path="assignshifts" element={<AssignShift />} />
+          <Route path="assignshifts/edit/:id" element={<EditShift />} />
+          <Route path="recruitment" element={<RecruitmentPage />} />
+          <Route path="approved-leaves" element={<ApprovedLeave />} />
+          <Route path="rejected-leaves" element={<RejectedLeave />} />
+          <Route path="calendar" element={<AdminCalendar />} />
+          <Route path="attendance-logs" element={<AttendanceLog />} />
+          <Route path="configuration/company-policies" element={<CompanyPolicy />} />
+          <Route path="configuration/office-structure" element={<OfficeStructure />} />
+          <Route path="attendance-details" element={<Attendance />} />
+          <Route path="admin-notifications" element={<AdminNotifications />} />
+          <Route path="configuration/break-config" element={<BreakConfig />} />
+          <Route path="relieved-employees" element={<RelievedEmployee />} />
+          <Route path="company-edit-profile" element={<EditCompanyProfile />} />
+          <Route path="letter" element={<Letter />} />
+          <Route path="letter-form" element={<LetterForm />} />
+          <Route path="letter-templates" element={<LetterTemplates />} />
+          <Route path="letter-pdf" element={<LetterDup />} />
+          <Route path="payslip" element={<PayslipPage />} />
+          <Route path="update-employee-form/:id" element={<UpdateEmployeeForm />} />
+          <Route path="update-attendance/:employee_id" element={<UpdateAttendanceForm />} />
 
-            {/* Admin Change Password */}
-           <Route path="change-password" element={<ChangePasswordForm />} />
+          <Route path="update-attendance/:employee_id" element={<UpdateAttendanceForm />} />
+          <Route path="update-attendance/:employee_id" element={<UpdateAttendanceForm />} />
+
+          <Route path="employeerefrences" element={<AdminEmployeeReferencePage />} />
+
+          {/* Admin Change Password */}
+          <Route path="change-password" element={<ChangePasswordForm />} />
 
 
-            {/* Admin Forms */}
-            <Route path="form-department" element={<DepartmentForm />} />
-            <Route path="form-level" element={<LevelForm />} />
-            <Route path="form-designation" element={<DesignationForm />} />
-            <Route path="form-salary-structure" element={<SalaryStructureForm />} />
-            <Route path="form-income-tax" element={<IncomeTaxForm />} />
-            <Route path="form-learning-corner" element={<LearningCornerForm />} />
-            <Route path="form-assets-inventory" element={<AssetsInventoryForm />} />
-            <Route path="form-shift-config" element={<ShiftConfigForm />} />
-            <Route path="form-department-working" element={<DepartmentWorkingForm />} />
-            <Route path="form-recruitment" element={<RecruitmentForm />} />
-            <Route path="form-employee-register" element={<EmployeeRegisterForm />} />
-            <Route path="form-company-policy" element={<CompanyPolicyForm />} />
-            <Route path="form-company-policy/:id" element={<CompanyPolicyForm />} />
-                {/* Other Admin Pages */}
-            <Route path="profile" element={<UserProfiles />} />
-            <Route path="calendar" element={<Calendar />} />
-            <Route path="blank" element={<Blank />} />
-            <Route path="form-elements" element={<FormElements />} />
-            <Route path="userstatus" element={<EmployeeStatusList />} />
-           
+          {/* Admin Forms */}
+          <Route path="form-department" element={<DepartmentForm />} />
+          <Route path="form-level" element={<LevelForm />} />
+          <Route path="form-designation" element={<DesignationForm />} />
+          <Route path="form-salary-structure" element={<SalaryStructureForm />} />
+          <Route path="form-income-tax" element={<IncomeTaxForm />} />
+          <Route path="form-learning-corner" element={<LearningCornerForm />} />
+          <Route path="form-assets-inventory" element={<AssetsInventoryForm />} />
+          <Route path="form-shift-config" element={<ShiftConfigForm />} />
+          <Route path="form-department-working" element={<DepartmentWorkingForm />} />
+          <Route path="form-recruitment" element={<RecruitmentForm />} />
+          <Route path="form-employee-register" element={<EmployeeRegisterForm />} />
+          <Route path="form-company-policy" element={<CompanyPolicyForm />} />
+          <Route path="form-company-policy/:id" element={<CompanyPolicyForm />} />
+          {/* Other Admin Pages */}
+          <Route path="profile" element={<UserProfiles />} />
+          <Route path="calendar" element={<Calendar />} />
+          <Route path="blank" element={<Blank />} />
+          <Route path="form-elements" element={<FormElements />} />
+          <Route path="userstatus" element={<EmployeeStatusList />} />
+
         </Route>
-        
-         
-         <Route path="/update-form/:id" element={<UpdateTaskForm />} />
-         
+
+
+        <Route path="/update-form/:id" element={<UpdateTaskForm />} />
+
         {/* Direct Admin Dashboard Route with AdminLayout */}
         <Route path="/admin-dashboard" element={<AdminLayout />}>
-            <Route index element={<AdminDashboard />} />
+          <Route index element={<AdminDashboard />} />
         </Route>
 
-            {/* Admin Management */}
-            {/* Create Admin */}
+        {/* Admin Management */}
+        {/* Create Admin */}
 
-            {/* Tables */}
+        {/* Tables */}
 
-            {/* Admin Management */}
-            {/* Create Admin */}
+        {/* Admin Management */}
+        {/* Create Admin */}
 
-            {/* Tables */}
-            <Route path="basic-tables" element={<BasicTables />} />
+        {/* Tables */}
+        <Route path="basic-tables" element={<BasicTables />} />
 
-            {/* Ui Elements */}
-            <Route path="alerts" element={<Alerts />} />
-            <Route path="avatars" element={<Avatars />} />
-            <Route path="badge" element={<Badges />} />
-            <Route path="buttons" element={<Buttons />} />
-            <Route path="images" element={<Images />} />
-            <Route path="videos" element={<Videos />} />
+        {/* Ui Elements */}
+        <Route path="alerts" element={<Alerts />} />
+        <Route path="avatars" element={<Avatars />} />
+        <Route path="badge" element={<Badges />} />
+        <Route path="buttons" element={<Buttons />} />
+        <Route path="images" element={<Images />} />
+        <Route path="videos" element={<Videos />} />
 
-            {/* Charts */}
-            <Route path="/line-chart" element={<LineChart />} />
-            <Route path="/bar-chart" element={<BarChart />} />
+        {/* Charts */}
+        <Route path="/line-chart" element={<LineChart />} />
+        <Route path="/bar-chart" element={<BarChart />} />
 
-            {/* Auth Routes */}
-            <Route path="/" element={<SignIn />} />
-            <Route path="/signin" element={<SignIn />} />
-            <Route path="/signup" element={<SignUp />} />
-            <Route path="/resetpassword" element={<ForgotPassword />} />
-            {/* <Route path="/" element={<MainPage />} /> */}
-            {/* <Route path="/" element={<MainPage hasPreloaderShown={hasPreloaderShown} />} /> */}
-            <Route path="/service" element={<Service />} />
-            <Route path="/contact" element={<Contact />} />
-            <Route path="/about" element={<AboutUs />} />
-            <Route path="/service" element={<Service />} />
-            <Route path="/services" element={<Services />} />
-            <Route path="/team" element={<Team />} />
-            <Route path="/products" element={<Products />} />
-            <Route path="/digitalmarketing" element={<DigitalMarketing />} />
-            <Route path="/softwaresolution" element={<SoftwareSolutions />} />
-            <Route path="/analyticssolution" element={<AnalyticsSolution />} />
-            <Route path="/bookdemo" element={<BookDemo/>} />  
-            <Route path="/product/:id" element={<ProductDetailsPage />} />
-            <Route path="/privacypolicy" element={<PrivacyPolicy/>} />  
-            <Route path="/terms" element={<Terms/>} />  
-
-
-            {/* Employee Routes */}
-            <Route path="/employee" element={<EmployeeLayout />}>
-                <Route index element={<EmployeeDashboard />} />
-                <Route path="/employee/leave-application" element={<LeaveApply />} />
-                <Route path="/employee/attendance-history" element={<AttendanceHistory />} />
-                <Route path="/employee/personal-calendar" element={<PersonalCalendar />} />
-                <Route path="/employee/notifications" element={<Notifications />} />
-                <Route path="/employee/view-all-notifications" element={<ViewallNotification />} />
-                <Route path="/employee/learning-corner" element={<LearningCorner />} />
-                <Route path="/employee/my-tasks" element={<MyTask />} />
-                <Route path="/employee/assign-task" element={<AssignTask />} />
-                <Route path="/employee/create-tasks" element={<CreateTask />} />
-                <Route path="/employee/profile" element={<EmployeeProfiles />} />
-                <Route path="update-profile" element={<UpdateEmployeeProfile />} />
-                <Route path="/employee/company-policy" element={<EmpCompanyPolicy />} />
-                <Route path="/employee/leave-request" element={<LeaveRequests />} />
-                <Route path="form-leave" element={<EmpLeaveForm />} />
-                {/* Employee Change Password */}
-                <Route path="change-password" element={<ChangePasswordForm />} />
-                <Route path="/employee/references" element={<EmployeeReferencePage />} />
-                <Route path="/employee/reference/add" element={<AddEmployeeReference />} />
-                <Route path="/employee/userstatus" element={<EmployeeStatusList />} />
-                <Route path="/employee/reportees" element={<EmployeeReporteesPage />} />
+        {/* Auth Routes */}
+        <Route path="/" element={<SignIn />} />
+        <Route path="/signin" element={<SignIn />} />
+        <Route path="/signup" element={<SignUp />} />
+        <Route path="/resetpassword" element={<ForgotPassword />} />
+        {/* <Route path="/" element={<MainPage />} /> */}
+        {/* <Route path="/" element={<MainPage hasPreloaderShown={hasPreloaderShown} />} /> */}
+        <Route path="/service" element={<Service />} />
+        <Route path="/contact" element={<Contact />} />
+        <Route path="/about" element={<AboutUs />} />
+        <Route path="/service" element={<Service />} />
+        <Route path="/services" element={<Services />} />
+        <Route path="/team" element={<Team />} />
+        <Route path="/products" element={<Products />} />
+        <Route path="/digitalmarketing" element={<DigitalMarketing />} />
+        <Route path="/softwaresolution" element={<SoftwareSolutions />} />
+        <Route path="/analyticssolution" element={<AnalyticsSolution />} />
+        <Route path="/bookdemo" element={<BookDemo />} />
+        <Route path="/product/:id" element={<ProductDetailsPage />} />
+        <Route path="/privacypolicy" element={<PrivacyPolicy />} />
+        <Route path="/terms" element={<Terms />} />
 
 
-            </Route>
+        {/* Employee Routes */}
+        <Route path="/employee" element={<EmployeeLayout />}>
+          <Route index element={<EmployeeDashboard />} />
+          <Route path="/employee/leave-application" element={<LeaveApply />} />
+          <Route path="/employee/attendance-history" element={<AttendanceHistory />} />
+          <Route path="/employee/personal-calendar" element={<PersonalCalendar />} />
+          <Route path="/employee/notifications" element={<Notifications />} />
+          <Route path="/employee/view-all-notifications" element={<ViewallNotification />} />
+          <Route path="/employee/learning-corner" element={<LearningCorner />} />
+          <Route path="/employee/desk-booking" element={<DeskBooking />} />
+          <Route path="/employee/my-tasks" element={<MyTask />} />
+          <Route path="/employee/assign-task" element={<AssignTask />} />
+          <Route path="/employee/create-tasks" element={<CreateTask />} />
+          <Route path="/employee/profile" element={<EmployeeProfiles />} />
+          <Route path="update-profile" element={<UpdateEmployeeProfile />} />
+          <Route path="/employee/company-policy" element={<EmpCompanyPolicy />} />
+          <Route path="/employee/leave-request" element={<LeaveRequests />} />
+          <Route path="form-leave" element={<EmpLeaveForm />} />
+          {/* Employee Change Password */}
+          <Route path="change-password" element={<ChangePasswordForm />} />
+          <Route path="/employee/references" element={<EmployeeReferencePage />} />
+          <Route path="/employee/reference/add" element={<AddEmployeeReference />} />
+          <Route path="/employee/userstatus" element={<EmployeeStatusList />} />
+          <Route path="/employee/reportees" element={<EmployeeReporteesPage />} />
 
-            {/* Fallback Route */}
-            <Route path="*" element={<NotFound />} />
-    </Routes>
-  </Suspense>
+
+        </Route>
+
+        {/* Fallback Route */}
+        <Route path="*" element={<NotFound />} />
+      </Routes>
+    </Suspense>
 
   );
 }

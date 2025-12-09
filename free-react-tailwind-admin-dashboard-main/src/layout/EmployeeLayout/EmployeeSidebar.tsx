@@ -8,13 +8,13 @@ import {
   TaskIcon,
   FileIcon,
   ListIcon,
-  PieChartIcon,UserIcon
+  PieChartIcon, UserIcon
 } from "../../icons";
 import { useSidebar } from "../../context/SidebarContext";
 import { useNotifications } from "../../context/NotificationContext";
 import NotificationBadge from "../../components/ui/NotificationBadge";
 import { axiosInstance } from "../../pages/Employee/api";
-import { FolderCheckIcon,  LucideChevronUpSquare, SendIcon } from "lucide-react";
+import { FolderCheckIcon, LucideChevronUpSquare, SendIcon } from "lucide-react";
 
 type NavItem = {
   name: string;
@@ -66,15 +66,20 @@ const navItems: NavItem[] = [
     name: "Company policies",
     path: "/employee/company-policy",
   },
-    {
+  {
     icon: <FolderCheckIcon />,
     name: "References",
     path: "/employee/references",
   },
-    {
+  {
     icon: <UserIcon />,
     name: "Reportees",
     path: "/employee/reportees",
+  },
+  {
+    icon: <GridIcon />,
+    name: "Desk Booking",
+    path: "/employee/desk-booking",
   },
 ];
 
@@ -280,8 +285,8 @@ const EmployeeSidebar: React.FC = () => {
   }, [lcCount]);
 
   const handleLearningCornerClick = () => {
-  localStorage.setItem("lc_last_seen_count", String(lcCount));
-  setLcBadge(0);
+    localStorage.setItem("lc_last_seen_count", String(lcCount));
+    setLcBadge(0);
   };
 
   const renderMenuItems = (items: NavItem[]) => (
@@ -291,29 +296,27 @@ const EmployeeSidebar: React.FC = () => {
           <li key={nav.name}>
             <Link
               to={nav.path}
-              className={`menu-item group ${
-                isActive(nav.path) ? "menu-item-active" : "menu-item-inactive"
-              }`}
+              className={`menu-item group ${isActive(nav.path) ? "menu-item-active" : "menu-item-inactive"
+                }`}
               onClick={
                 nav.onClick
                   ? nav.onClick
                   : nav.name === "Learning Corner"
-                  ? handleLearningCornerClick
-                  : nav.name === "My Tasks"
-                  ? handleMyTasksClick
-                  : nav.name === "Calendar"
-                  ? handleCalendarClick
-                  : nav.name === "Leave Application"
-                  ? handleLeaveClick
-                  : undefined
+                    ? handleLearningCornerClick
+                    : nav.name === "My Tasks"
+                      ? handleMyTasksClick
+                      : nav.name === "Calendar"
+                        ? handleCalendarClick
+                        : nav.name === "Leave Application"
+                          ? handleLeaveClick
+                          : undefined
               }
             >
               <span
-                className={`menu-item-icon-size relative ${
-                  isActive(nav.path)
+                className={`menu-item-icon-size relative ${isActive(nav.path)
                     ? "menu-item-icon-active"
                     : "menu-item-icon-inactive"
-                }`}
+                  }`}
               >
                 {nav.icon}
                 {/* Learning Corner badge */}
@@ -374,10 +377,10 @@ const EmployeeSidebar: React.FC = () => {
     // Use employeeId from state (set by employee-id/ endpoint)
     if (!employeeId) return;
     axiosInstance.get("reporting-managers/").then((res) => {
-      
+
       const managers = Array.isArray(res.data) ? res.data : res.data.reporting_managers || [];
-     
-      const isManager = managers.some((mgr: {id: string|number, full_name?: string}) => String(mgr.id) === String(employeeId));
+
+      const isManager = managers.some((mgr: { id: string | number, full_name?: string }) => String(mgr.id) === String(employeeId));
       setIsReportingManager(isManager);
     });
   }, [employeeId]);
@@ -385,29 +388,28 @@ const EmployeeSidebar: React.FC = () => {
   // Add Assign Task nav item if reporting manager
   const navItemsWithManager = isReportingManager
     ? [
-        ...navItems,
-        {
-          icon: <TaskIcon />, 
-          name: 'Assign Task',
-          path: '/employee/assign-task',
-        },
-        {
-          icon: <SendIcon />, 
-          name: 'Leave Request',
-          path: '/employee/leave-request',
-          badge: leaveRequestBadge,
-          onClick: handleLeaveRequestClick,
-        },
-      ]
+      ...navItems,
+      {
+        icon: <TaskIcon />,
+        name: 'Assign Task',
+        path: '/employee/assign-task',
+      },
+      {
+        icon: <SendIcon />,
+        name: 'Leave Request',
+        path: '/employee/leave-request',
+        badge: leaveRequestBadge,
+        onClick: handleLeaveRequestClick,
+      },
+    ]
     : navItems;
 
   return (
     <aside
       className={`fixed mt-16 flex flex-col lg:mt-0 top-0 px-5 left-0 bg-white dark:bg-gray-900 dark:border-gray-800 text-gray-900 h-screen transition-all duration-300 ease-in-out z-50 border-r border-gray-200 
-        ${
-          isExpanded || isMobileOpen
-            ? "w-[290px]"
-            : isHovered
+        ${isExpanded || isMobileOpen
+          ? "w-[290px]"
+          : isHovered
             ? "w-[290px]"
             : "w-[90px]"
         }
@@ -417,20 +419,19 @@ const EmployeeSidebar: React.FC = () => {
       onMouseLeave={() => setIsHovered(false)}
     >
       <div
-        className={`py-8 flex ${
-          !isExpanded && !isHovered ? "lg:justify-center" : "justify-start"
-        }`}
+        className={`py-8 flex ${!isExpanded && !isHovered ? "lg:justify-center" : "justify-start"
+          }`}
       >
         <Link to="/">
           {isExpanded || isHovered || isMobileOpen ? (
-            <div className="flex items-center p-0 m-0" style={{gap: 0, width: '100%'}}>
+            <div className="flex items-center p-0 m-0" style={{ gap: 0, width: '100%' }}>
               {companyLogo ? (
                 <img
                   src={companyLogo}
                   alt={companyName || "Company Logo"}
                   width={40}
                   height={40}
-                  style={{objectFit: 'contain', maxHeight: 40, marginRight: 0, paddingRight: 0, display: 'block'}}
+                  style={{ objectFit: 'contain', maxHeight: 40, marginRight: 0, paddingRight: 0, display: 'block' }}
                 />
               ) : (
                 <img
@@ -438,13 +439,13 @@ const EmployeeSidebar: React.FC = () => {
                   alt="Logo"
                   width={40}
                   height={40}
-                  style={{display: 'block'}}
+                  style={{ display: 'block' }}
                 />
               )}
               {companyName && (
                 <span
                   className="font-bold text-lg text-gray-900 dark:text-white whitespace-normal break-words"
-                  style={{marginLeft: 0, paddingLeft: 0, maxWidth: 'calc(100% - 40px)', lineHeight: '1.1', wordBreak: 'break-word', display: 'block'}}
+                  style={{ marginLeft: 0, paddingLeft: 0, maxWidth: 'calc(100% - 40px)', lineHeight: '1.1', wordBreak: 'break-word', display: 'block' }}
                 >
                   {companyName}
                 </span>
@@ -457,7 +458,7 @@ const EmployeeSidebar: React.FC = () => {
                 alt={companyName || "Company Logo"}
                 width={32}
                 height={32}
-                style={{objectFit: 'contain', maxHeight: 32}}
+                style={{ objectFit: 'contain', maxHeight: 32 }}
               />
             ) : (
               <img
@@ -474,11 +475,10 @@ const EmployeeSidebar: React.FC = () => {
         <nav className="mb-6">
           <div>
             <h2
-              className={`mb-4 text-xs uppercase flex leading-[20px] text-gray-400 ${
-                !isExpanded && !isHovered
+              className={`mb-4 text-xs uppercase flex leading-[20px] text-gray-400 ${!isExpanded && !isHovered
                   ? "lg:justify-center"
                   : "justify-start"
-              }`}
+                }`}
             >
               {isExpanded || isHovered || isMobileOpen ? (
                 "Menu"

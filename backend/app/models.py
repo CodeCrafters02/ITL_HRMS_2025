@@ -600,6 +600,60 @@ class GeneratedLetter(models.Model):
         who = self.employee or self.candidate or self.relieved_employee
         return f"Letter for {who} ({self.template.title})"
 
+# Office Structure Models
+class OfficeFloor(models.Model):
+    company = models.ForeignKey(Company, on_delete=models.CASCADE, related_name='office_floors')
+    name = models.CharField(max_length=100)
+    floor_number = models.IntegerField()
+    description = models.TextField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['floor_number']
+        unique_together = ['company', 'floor_number']
+
+    def __str__(self):
+        return f"{self.name} - Floor {self.floor_number}"
+
+
+class OfficeSection(models.Model):
+    floor = models.ForeignKey(OfficeFloor, on_delete=models.CASCADE, related_name='sections')
+    department = models.ForeignKey(Department, on_delete=models.SET_NULL, null=True, blank=True, related_name='office_sections')
+    name = models.CharField(max_length=100)
+    position_x = models.FloatField(default=0)  # X coordinate for visual layout
+    position_y = models.FloatField(default=0)  # Y coordinate for visual layout
+    width = models.FloatField(default=200)     # Width in pixels
+    height = models.FloatField(default=150)    # Height in pixels
+    rotation = models.FloatField(default=0)    # Rotation angle in degrees (0, 90, 180, 270)
+    color = models.CharField(max_length=7, default='#3B82F6')  # Hex color for team coding
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        dept_name = self.department.department_name if self.department else "Unassigned"
+        return f"{self.name} ({dept_name}) - {self.floor.name}"
+
+
+class OfficeSeat(models.Model):
+    section = models.ForeignKey(OfficeSection, on_delete=models.CASCADE, related_name='seats')
+    seat_number = models.CharField(max_length=20)
+    employee = models.ForeignKey(Employee, on_delete=models.SET_NULL, null=True, blank=True, related_name='assigned_seat')
+    position_x = models.FloatField(default=0)  # X coordinate within section
+    position_y = models.FloatField(default=0)  # Y coordinate within section
+    rotation = models.FloatField(default=0)  # Rotation angle in degrees (0, 90, 180, 270)
+    is_available = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        unique_together = ['section', 'seat_number']
+
+    def __str__(self):
+        emp_name = f"{self.employee.full_name}" if self.employee else "Vacant"
+        return f"Seat {self.seat_number} - {emp_name}"
+
+
 class EmailOTP(models.Model):
     email = models.EmailField(unique=True)
     otp = models.CharField(max_length=6)
@@ -608,3 +662,16 @@ class EmailOTP(models.Model):
 
     def is_expired(self):
         return timezone.now() > self.created_at + timedelta(minutes=5)  
+
+class SeatBooking(models.Model):
+    seat = models.ForeignKey(OfficeSeat, on_delete=models.CASCADE, related_name='bookings')
+    employee = models.ForeignKey(Employee, on_delete=models.CASCADE, related_name='seat_bookings')
+    booking_date = models.DateField()
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ['seat', 'booking_date']
+        ordering = ['-booking_date']
+
+    def __str__(self):
+        return f"{self.employee} booked {self.seat} on {self.booking_date}"

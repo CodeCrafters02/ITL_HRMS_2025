@@ -237,7 +237,7 @@ const Notifications = () => {
                                     <motion.div
                                         key={`${notification.id}-${index}`}
                                         layout
-                                        variants={itemVariants}
+                                        variants={itemVariants as any}
                                         className={`group relative overflow-hidden bg-white dark:bg-gray-800 rounded-2xl p-5 border transition-all duration-300 hover:shadow-lg dark:hover:shadow-gray-900/50 ${getGradientForType(notification.type, notification.title)
                                             } border-l-4`}
                                     >
