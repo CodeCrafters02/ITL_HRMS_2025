@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import PageMeta from "../../components/common/PageMeta";
 import { FaCalendarAlt, FaGlobe, FaSync, FaBell, FaClock, FaUsers, FaChartLine, FaStar } from "react-icons/fa";
 
-const PersonalCalendar: React.FC = () => {
+const PersonalCalendarPage: React.FC = () => {
   const [isDark, setIsDark] = useState(false);
   const [currentTime, setCurrentTime] = useState(new Date());
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -81,10 +81,10 @@ const PersonalCalendar: React.FC = () => {
     });
   };
   const formatDate = (date: Date) => {
-    return date.toLocaleDateString('en-IN', { 
-      weekday: 'long', 
-      year: 'numeric', 
-      month: 'long', 
+    return date.toLocaleDateString('en-IN', {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
       day: 'numeric',
       timeZone: selectedTimeZone
     });
@@ -99,14 +99,13 @@ const PersonalCalendar: React.FC = () => {
         title="Personal Calendar | HRMS Employee Dashboard"
         description="View holidays and important dates"
       />
-      
+
       <div className="space-y-6">
         {/* Animated Header Section with Live Clock */}
-        <div className={`rounded-3xl shadow-2xl overflow-hidden transition-all duration-300 ${
-          isDark 
-            ? 'bg-gradient-to-r from-indigo-900 via-purple-900 to-pink-900' 
-            : 'bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600'
-        }`}>
+        <div className={`rounded-3xl shadow-2xl overflow-hidden transition-all duration-300 ${isDark
+          ? 'bg-gradient-to-r from-indigo-900 via-purple-900 to-pink-900'
+          : 'bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600'
+          }`}>
           <div className="relative p-8">
             {/* Animated background pattern */}
             <div className="absolute inset-0 opacity-10">
@@ -115,7 +114,7 @@ const PersonalCalendar: React.FC = () => {
                 backgroundSize: '40px 40px'
               }}></div>
             </div>
-            
+
             <div className="relative">
               {/* Top Section - Title and Clock */}
               <div className="flex flex-col lg:flex-row items-center justify-between gap-6 mb-6">
@@ -155,9 +154,8 @@ const PersonalCalendar: React.FC = () => {
                   <button
                     onClick={handleRefresh}
                     disabled={isRefreshing}
-                    className={`p-4 rounded-2xl transition-all duration-300 hover:scale-110 shadow-lg ${
-                      isDark ? 'bg-white/10 hover:bg-white/20' : 'bg-white/20 hover:bg-white/30'
-                    } ${isRefreshing ? 'animate-spin' : ''}`}
+                    className={`p-4 rounded-2xl transition-all duration-300 hover:scale-110 shadow-lg ${isDark ? 'bg-white/10 hover:bg-white/20' : 'bg-white/20 hover:bg-white/30'
+                      } ${isRefreshing ? 'animate-spin' : ''}`}
                     title="Refresh Calendar"
                   >
                     <FaSync className="text-white text-xl" />
@@ -172,9 +170,8 @@ const PersonalCalendar: React.FC = () => {
                     {formatDate(currentTime)}
                   </p>
                   <div className="flex items-center gap-2">
-                    <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
-                      isDark ? 'bg-green-500/20 text-green-300' : 'bg-green-500/30 text-white'
-                    }`}>
+                    <span className={`px-3 py-1 rounded-full text-xs font-semibold ${isDark ? 'bg-green-500/20 text-green-300' : 'bg-green-500/30 text-white'
+                      }`}>
                       ● Live
                     </span>
                   </div>
@@ -187,11 +184,10 @@ const PersonalCalendar: React.FC = () => {
         {/* Quick Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           {/* Upcoming Events */}
-          <div className={`group p-5 rounded-2xl shadow-xl transition-all duration-300 hover:scale-105 hover:shadow-2xl cursor-pointer ${
-            isDark 
-              ? 'bg-gradient-to-br from-blue-900 to-blue-800 border border-blue-700' 
-              : 'bg-gradient-to-br from-blue-500 to-blue-600'
-          }`}>
+          <div className={`group p-5 rounded-2xl shadow-xl transition-all duration-300 hover:scale-105 hover:shadow-2xl cursor-pointer ${isDark
+            ? 'bg-gradient-to-br from-blue-900 to-blue-800 border border-blue-700'
+            : 'bg-gradient-to-br from-blue-500 to-blue-600'
+            }`}>
             <div className="flex items-center gap-3 mb-2">
               <FaBell className="text-white text-2xl group-hover:animate-bounce" />
               <h3 className="text-white font-bold text-lg">Upcoming</h3>
@@ -203,11 +199,10 @@ const PersonalCalendar: React.FC = () => {
           </div>
 
           {/* Team Schedule */}
-          <div className={`group p-5 rounded-2xl shadow-xl transition-all duration-300 hover:scale-105 hover:shadow-2xl cursor-pointer ${
-            isDark 
-              ? 'bg-gradient-to-br from-purple-900 to-purple-800 border border-purple-700' 
-              : 'bg-gradient-to-br from-purple-500 to-purple-600'
-          }`}>
+          <div className={`group p-5 rounded-2xl shadow-xl transition-all duration-300 hover:scale-105 hover:shadow-2xl cursor-pointer ${isDark
+            ? 'bg-gradient-to-br from-purple-900 to-purple-800 border border-purple-700'
+            : 'bg-gradient-to-br from-purple-500 to-purple-600'
+            }`}>
             <div className="flex items-center gap-3 mb-2">
               <FaUsers className="text-white text-2xl group-hover:animate-bounce" />
               <h3 className="text-white font-bold text-lg">Team</h3>
@@ -219,11 +214,10 @@ const PersonalCalendar: React.FC = () => {
           </div>
 
           {/* Holidays */}
-          <div className={`group p-5 rounded-2xl shadow-xl transition-all duration-300 hover:scale-105 hover:shadow-2xl cursor-pointer ${
-            isDark 
-              ? 'bg-gradient-to-br from-pink-900 to-pink-800 border border-pink-700' 
-              : 'bg-gradient-to-br from-pink-500 to-pink-600'
-          }`}>
+          <div className={`group p-5 rounded-2xl shadow-xl transition-all duration-300 hover:scale-105 hover:shadow-2xl cursor-pointer ${isDark
+            ? 'bg-gradient-to-br from-pink-900 to-pink-800 border border-pink-700'
+            : 'bg-gradient-to-br from-pink-500 to-pink-600'
+            }`}>
             <div className="flex items-center gap-3 mb-2">
               <FaStar className="text-white text-2xl group-hover:animate-bounce" />
               <h3 className="text-white font-bold text-lg">Holidays</h3>
@@ -235,11 +229,10 @@ const PersonalCalendar: React.FC = () => {
           </div>
 
           {/* Analytics */}
-          <div className={`group p-5 rounded-2xl shadow-xl transition-all duration-300 hover:scale-105 hover:shadow-2xl cursor-pointer ${
-            isDark 
-              ? 'bg-gradient-to-br from-indigo-900 to-indigo-800 border border-indigo-700' 
-              : 'bg-gradient-to-br from-indigo-500 to-indigo-600'
-          }`}>
+          <div className={`group p-5 rounded-2xl shadow-xl transition-all duration-300 hover:scale-105 hover:shadow-2xl cursor-pointer ${isDark
+            ? 'bg-gradient-to-br from-indigo-900 to-indigo-800 border border-indigo-700'
+            : 'bg-gradient-to-br from-indigo-500 to-indigo-600'
+            }`}>
             <div className="flex items-center gap-3 mb-2">
               <FaChartLine className="text-white text-2xl group-hover:animate-bounce" />
               <h3 className="text-white font-bold text-lg">Insights</h3>
@@ -252,20 +245,17 @@ const PersonalCalendar: React.FC = () => {
         </div>
 
         {/* Main Calendar Card with Glass Morphism */}
-        <div className={`rounded-3xl shadow-2xl overflow-hidden transition-all duration-300 ${
-          isDark 
-            ? 'bg-gray-800/50 backdrop-blur-xl border border-gray-700' 
-            : 'bg-white/80 backdrop-blur-xl border border-white/20 shadow-xl'
-        }`}>
-          {/* Enhanced Card Header */}
-          <div className={`px-6 py-5 border-b ${
-            isDark ? 'border-gray-700 bg-gray-800/80' : 'border-gray-200 bg-gradient-to-r from-gray-50 to-gray-100'
+        <div className={`rounded-3xl shadow-2xl overflow-hidden transition-all duration-300 ${isDark
+          ? 'bg-gray-800/50 backdrop-blur-xl border border-gray-700'
+          : 'bg-white/80 backdrop-blur-xl border border-white/20 shadow-xl'
           }`}>
+          {/* Enhanced Card Header */}
+          <div className={`px-6 py-5 border-b ${isDark ? 'border-gray-700 bg-gray-800/80' : 'border-gray-200 bg-gradient-to-r from-gray-50 to-gray-100'
+            }`}>
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-4">
-                <div className={`p-3 rounded-2xl shadow-lg ${
-                  isDark ? 'bg-blue-500/20' : 'bg-gradient-to-br from-blue-500 to-blue-600'
-                }`}>
+                <div className={`p-3 rounded-2xl shadow-lg ${isDark ? 'bg-blue-500/20' : 'bg-gradient-to-br from-blue-500 to-blue-600'
+                  }`}>
                   <FaCalendarAlt className={`text-2xl ${isDark ? 'text-blue-400' : 'text-white'}`} />
                 </div>
                 <div>
@@ -281,11 +271,10 @@ const PersonalCalendar: React.FC = () => {
                 <select
                   value={selectedTimeZone}
                   onChange={(e) => setSelectedTimeZone(e.target.value)}
-                  className={`px-4 py-2 rounded-xl text-sm font-medium border transition-colors ${
-                    isDark 
-                      ? 'bg-gray-700 border-gray-600 text-white focus:border-blue-400' 
-                      : 'bg-white border-gray-300 text-gray-900 focus:border-blue-500'
-                  } focus:outline-none focus:ring-2 focus:ring-blue-500/20`}
+                  className={`px-4 py-2 rounded-xl text-sm font-medium border transition-colors ${isDark
+                    ? 'bg-gray-700 border-gray-600 text-white focus:border-blue-400'
+                    : 'bg-white border-gray-300 text-gray-900 focus:border-blue-500'
+                    } focus:outline-none focus:ring-2 focus:ring-blue-500/20`}
                 >
                   {timeZones.map((tz) => (
                     <option key={tz.value} value={tz.value}>
@@ -301,14 +290,12 @@ const PersonalCalendar: React.FC = () => {
           <div className="p-6">
             <div className="relative">
               {/* Enhanced Loading overlay */}
-              <div className={`absolute inset-0 rounded-2xl flex items-center justify-center z-0 ${
-                isDark ? 'bg-gray-900' : 'bg-gray-100'
-              } animate-pulse`}>
+              <div className={`absolute inset-0 rounded-2xl flex items-center justify-center z-0 ${isDark ? 'bg-gray-900' : 'bg-gray-100'
+                } animate-pulse`}>
                 <div className="flex flex-col items-center gap-4">
                   <div className="relative">
-                    <div className={`w-20 h-20 border-4 rounded-full ${
-                      isDark ? 'border-gray-700' : 'border-gray-300'
-                    }`}></div>
+                    <div className={`w-20 h-20 border-4 rounded-full ${isDark ? 'border-gray-700' : 'border-gray-300'
+                      }`}></div>
                     <div className="w-20 h-20 border-4 border-purple-600 border-t-transparent rounded-full animate-spin absolute top-0"></div>
                   </div>
                   <p className={`font-bold text-lg ${isDark ? 'text-white' : 'text-gray-800'}`}>
@@ -321,7 +308,7 @@ const PersonalCalendar: React.FC = () => {
                   </div>
                 </div>
               </div>
-              
+
               {/* Calendar iframe with enhanced dark mode styling */}
               <div className={`rounded-2xl overflow-hidden shadow-2xl ${isDark ? 'dark-calendar-wrapper' : ''}`}>
                 <style>
@@ -359,9 +346,8 @@ const PersonalCalendar: React.FC = () => {
           </div>
 
           {/* Enhanced Card Footer */}
-          <div className={`px-6 py-4 border-t ${
-            isDark ? 'border-gray-700 bg-gray-800/80' : 'border-gray-200 bg-gradient-to-r from-gray-50 to-gray-100'
-          }`}>
+          <div className={`px-6 py-4 border-t ${isDark ? 'border-gray-700 bg-gray-800/80' : 'border-gray-200 bg-gradient-to-r from-gray-50 to-gray-100'
+            }`}>
             <div className="flex items-center justify-between text-sm">
               <div className="flex items-center gap-3">
                 <div className="relative flex h-3 w-3">
@@ -384,4 +370,4 @@ const PersonalCalendar: React.FC = () => {
   );
 };
 
-export default PersonalCalendar;
+export default PersonalCalendarPage;
