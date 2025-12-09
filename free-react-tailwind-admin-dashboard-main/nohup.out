@@ -82,3 +82,36 @@ sh: 1: vite: Permission denied
 > vite
 
 sh: 1: vite: Permission denied
+
+> tailadmin-react@2.0.2 dev
+> vite
+
+Port 3000 is in use, trying another one...
+
+  VITE v6.3.6  ready in 494 ms
+
+  ➜  Local:   http://localhost:3001/
+  ➜  Network: http://69.62.80.231:3001/
+
+> tailadmin-react@2.0.2 dev
+> vite
+
+Port 3000 is in use, trying another one...
+Port 3001 is in use, trying another one...
+
+  VITE v6.3.6  ready in 610 ms
+
+  ➜  Local:   http://localhost:3002/
+  ➜  Network: http://69.62.80.231:3002/
+
+> tailadmin-react@2.0.2 dev
+> vite
+
+Port 3000 is in use, trying another one...
+Port 3001 is in use, trying another one...
+Port 3002 is in use, trying another one...
+
+  VITE v6.3.6  ready in 741 ms
+
+  ➜  Local:   http://localhost:3003/
+  ➜  Network: http://69.62.80.231:3003/
