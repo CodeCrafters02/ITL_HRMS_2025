@@ -2260,3 +2260,70 @@ class EmployeeReporteesView(APIView):
         reportees = Employee.objects.filter(reporting_manager=manager)
         serializer = ReportingEmployeesSerializer(reportees, many=True, context={'request': request})
         return Response(serializer.data)
+
+
+# Office Structure ViewSets
+class OfficeFloorViewSet(viewsets.ModelViewSet):
+    serializer_class = OfficeFloorSerializer
+    
+    def get_permissions(self):
+        if self.action in ['list', 'retrieve']:
+            permission_classes = [IsAuthenticated]
+        else:
+            permission_classes = [IsAuthenticated, IsAdminUser]
+        return [permission() for permission in permission_classes]
+    
+    def get_queryset(self):
+        return OfficeFloor.objects.filter(company=self.request.user.company).prefetch_related('sections__seats__employee')
+    
+    def get_serializer_context(self):
+        return {'request': self.request}
+
+
+class OfficeSectionViewSet(viewsets.ModelViewSet):
+    serializer_class = OfficeSectionSerializer
+    
+    def get_permissions(self):
+        if self.action in ['list', 'retrieve']:
+            permission_classes = [IsAuthenticated]
+        else:
+            permission_classes = [IsAuthenticated, IsAdminUser]
+        return [permission() for permission in permission_classes]
+    
+    def get_queryset(self):
+        floor_id = self.request.query_params.get('floor')
+        queryset = OfficeSection.objects.filter(floor__company=self.request.user.company).select_related('department', 'floor').prefetch_related('seats__employee')
+        if floor_id:
+            queryset = queryset.filter(floor_id=floor_id)
+        return queryset
+
+
+class OfficeSeatViewSet(viewsets.ModelViewSet):
+    serializer_class = OfficeSeatSerializer
+    
+    def get_permissions(self):
+        if self.action in ['list', 'retrieve']:
+            permission_classes = [IsAuthenticated]
+        else:
+            permission_classes = [IsAuthenticated, IsAdminUser]
+        return [permission() for permission in permission_classes]
+    
+    def get_queryset(self):
+        section_id = self.request.query_params.get('section')
+        queryset = OfficeSeat.objects.filter(section__floor__company=self.request.user.company).select_related('employee', 'section')
+        if section_id:
+            queryset = queryset.filter(section_id=section_id)
+        return queryset
+
+
+class SeatBookingViewSet(viewsets.ModelViewSet):
+    queryset = SeatBooking.objects.all()
+    serializer_class = SeatBookingSerializer
+    permission_classes = [permissions.IsAuthenticated]
+    
+    def get_queryset(self):
+        queryset = SeatBooking.objects.all()
+        booking_date = self.request.query_params.get('booking_date', None)
+        if booking_date:
+            queryset = queryset.filter(booking_date=booking_date)
+        return queryset

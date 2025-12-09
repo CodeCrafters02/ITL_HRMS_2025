@@ -9,6 +9,7 @@ from django.contrib.auth import get_user_model
 from django.utils import timezone
 from rest_framework_simplejwt.tokens import RefreshToken
 from .models import *
+from rest_framework import viewsets, permissions
 
 User = get_user_model()
 
@@ -1197,3 +1198,82 @@ class RefreshTokenSerializer(serializers.Serializer):
             }
         except Exception as e:
             raise serializers.ValidationError("Invalid refresh token.")
+
+
+# Office Structure Serializers
+class OfficeSeatSerializer(serializers.ModelSerializer):
+    employee_details = serializers.SerializerMethodField()
+    bookings_details = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = OfficeSeat
+        fields = ['id', 'section', 'seat_number', 'employee', 'employee_details', 'bookings_details', 'position_x', 'position_y', 'rotation', 'is_available', 'created_at', 'updated_at']
+        read_only_fields = ['created_at', 'updated_at']
+    
+    def get_employee_details(self, obj):
+        if obj.employee:
+            return {
+                'id': obj.employee.id,
+                'employee_id': obj.employee.employee_id,
+                'name': obj.employee.full_name,
+                'designation': obj.employee.designation.designation_name if obj.employee.designation else None,
+                'photo': obj.employee.photo.url if obj.employee.photo else None
+            }
+        return None
+
+    def get_bookings_details(self, obj):
+        try:
+            return SeatBookingSerializer(obj.bookings.filter(booking_date__gte=timezone.now().date()), many=True).data
+        except NameError:
+             # Handle circular dependency if SeatBookingSerializer isn't defined yet
+             return []
+
+class SeatBookingSerializer(serializers.ModelSerializer):
+    employee_details = serializers.SerializerMethodField()
+    seat_details = serializers.SerializerMethodField()
+
+    class Meta:
+        model = SeatBooking
+        fields = ['id', 'seat', 'employee', 'booking_date', 'created_at', 'employee_details', 'seat_details']
+        read_only_fields = ['created_at']
+
+    def get_employee_details(self, obj):
+        return {
+            'id': obj.employee.id,
+            'name': obj.employee.full_name,
+            'employee_id': obj.employee.employee_id
+        }
+
+    def get_seat_details(self, obj):
+        return {
+            "seat_number": obj.seat.seat_number,
+            "section": obj.seat.section.name,
+            "floor": obj.seat.section.floor.name,
+            "floor_id": obj.seat.section.floor.id
+        }
+
+
+class OfficeSectionSerializer(serializers.ModelSerializer):
+    seats = OfficeSeatSerializer(many=True, read_only=True)
+    department_name = serializers.CharField(source='department.department_name', read_only=True)
+    
+    class Meta:
+        model = OfficeSection
+        fields = ['id', 'floor', 'name', 'department', 'department_name', 'position_x', 'position_y', 'width', 'height', 'rotation', 'color', 'seats', 'created_at', 'updated_at']
+        read_only_fields = ['created_at', 'updated_at']
+
+
+class OfficeFloorSerializer(serializers.ModelSerializer):
+    sections = OfficeSectionSerializer(many=True, read_only=True)
+    
+    class Meta:
+        model = OfficeFloor
+        fields = ['id', 'name', 'floor_number', 'description', 'sections', 'created_at', 'updated_at']
+        read_only_fields = ['created_at', 'updated_at', 'company']
+    
+    def create(self, validated_data):
+        request = self.context.get('request')
+        if request and request.user.company:
+            validated_data['company'] = request.user.company
+        return super().create(validated_data)
+

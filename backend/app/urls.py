@@ -30,6 +30,11 @@ router.register(r'break-config', BreakConfigViewSet, basename='break-config')
 router.register(r"letter-templates", LetterTemplateViewSet, basename="lettertemplate")
 router.register(r'generated-letters', GeneratedLetterViewSet, basename='generatedletter')
 router.register(r'employeestatus', EmployeeStatusViewSet, basename='employeestatus')
+router.register(r'office-floors', OfficeFloorViewSet, basename='office-floors')
+router.register(r'office-sections', OfficeSectionViewSet, basename='office-sections')
+router.register(r'office-seats', OfficeSeatViewSet, basename='office-seats')
+router.register(r'seat-bookings', SeatBookingViewSet, basename='seat-bookings')
+
 
 
 urlpatterns = [
