@@ -71,7 +71,7 @@ const GeneratePayroll = lazy(() => import("./pages/Admin/GeneratePayroll"));
 const EmployeeDashboard = lazy(() => import("./pages/Dashboard/EmployeeDashboard"));
 const LeaveApply = lazy(() => import("./pages/Employee/LeaveApply"));
 const AttendanceHistory = lazy(() => import("./pages/Employee/AttendanceHistory"));
-const PersonalCalendar = lazy(() => import("./pages/Employee/PersonalCalendar"));
+const PersonalCalendar = lazy(() => import("./pages/Employee/PersonalCalendarPage"));
 const Notifications = lazy(() => import("./pages/Employee/Notifications"));
 const ViewallNotification = lazy(() => import("./pages/Employee/ViewallNotification"));
 const LearningCorner = lazy(() => import("./pages/Employee/EmployeeLearningCorner"));
