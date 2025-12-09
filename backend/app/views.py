@@ -2324,6 +2324,48 @@ class SeatBookingViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         queryset = SeatBooking.objects.all()
         booking_date = self.request.query_params.get('booking_date', None)
+        
         if booking_date:
+            # When fetching bookings for a specific date, show ALL bookings (not filtered by employee)
+            # This is needed so users can see which seats are booked by others
             queryset = queryset.filter(booking_date=booking_date)
+        elif hasattr(self.request.user, 'employee'):
+            # When no date is specified, show only the current user's bookings (for "My Bookings" section)
+            queryset = queryset.filter(employee=self.request.user.employee)
+        
         return queryset
+    
+    def perform_create(self, serializer):
+        # Automatically set the employee from the authenticated user
+        if hasattr(self.request.user, 'employee'):
+            employee = self.request.user.employee
+            booking_date = serializer.validated_data.get('booking_date')
+            seat = serializer.validated_data.get('seat')
+            
+            # Check 1: Prevent same seat being booked twice on the same day
+            seat_already_booked = SeatBooking.objects.filter(
+                seat=seat,
+                booking_date=booking_date
+            ).first()
+            
+            if seat_already_booked:
+                raise serializers.ValidationError({
+                    "detail": f"This seat is already booked by {seat_already_booked.employee.full_name} for {booking_date}."
+                })
+            
+            # Check 2: Prevent user from booking multiple seats on the same day
+            existing_booking = SeatBooking.objects.filter(
+                employee=employee,
+                booking_date=booking_date
+            ).first()
+            
+            if existing_booking:
+                raise serializers.ValidationError({
+                    "detail": f"You have already booked seat {existing_booking.seat.seat_number} for {booking_date}. You can only book one seat per day."
+                })
+            
+            serializer.save(employee=employee)
+        else:
+            # If user doesn't have an employee record, raise error
+            raise serializers.ValidationError("User must have an employee record to book a seat")
+

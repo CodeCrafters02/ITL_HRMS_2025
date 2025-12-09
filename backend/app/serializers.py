@@ -1235,7 +1235,7 @@ class SeatBookingSerializer(serializers.ModelSerializer):
     class Meta:
         model = SeatBooking
         fields = ['id', 'seat', 'employee', 'booking_date', 'created_at', 'employee_details', 'seat_details']
-        read_only_fields = ['created_at']
+        read_only_fields = ['created_at', 'employee']  # employee set automatically by viewset
 
     def get_employee_details(self, obj):
         return {
