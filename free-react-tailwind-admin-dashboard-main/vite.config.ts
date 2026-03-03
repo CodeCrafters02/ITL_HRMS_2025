@@ -16,9 +16,9 @@ export default defineConfig({
     }),
   ],
   define: {
-    // Global API URL variable
-    // __API_URL__: '"https://apihrms.innovyxtechlabs.com/"',
-    __API_URL__: '"http://apihrms.innovyxtechlabs.com/"',
+    // In development, we use the proxy set up in the server section.
+    // In production, you would typically use the full URL.
+    __API_URL__: '"/api/"',
   },
   server: {
     // Set the port you want to use
@@ -27,11 +27,18 @@ export default defineConfig({
     // Bind to 0.0.0.0 to allow external devices to connect
     host: '0.0.0.0',
 
-    // Allow access from specific domains or IPs (optional)
-    // allowedHosts: ['hrms.innovyxtechlabs.com'],
-    allowedHosts: ['hrms.innovyxtechlabs.com', 'localhost'],
+    // Proxy API requests to bypass CORS during development
+    proxy: {
+      '/api': {
+        target: 'https://apihrms.innovyxtechlabs.com',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/api/, ''),
+      },
+    },
 
-    // Alternatively, you can allow all hosts (use with caution)
-    // allowedHosts: 'all',
+    // Allow access from specific domains or IPs (optional)
+    // allowedHosts: ['hrms.innovyxtechlabs.com', 'localhost'],
+    allowedHosts: ['hrms.innovyxtechlabs.com'],
+
   },
 });

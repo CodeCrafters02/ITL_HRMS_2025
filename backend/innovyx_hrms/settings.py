@@ -128,12 +128,14 @@ CORS_ALLOWED_ORIGINS = [
     "https://hrms.innovyxtechlabs.com",
     "http://localhost:3000",
     "http://127.0.0.1:3000",
+    "http://localhost:3009",
 ]
 
 
 CSRF_TRUSTED_ORIGINS = [
     "https://hrms.innovyxtechlabs.com",
     "http://localhost:3000",
+    "http://localhost:3009",
 ]
 
 # CORS_ALLOWED_ORIGINS = [
