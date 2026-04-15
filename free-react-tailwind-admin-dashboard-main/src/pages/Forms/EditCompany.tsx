@@ -58,7 +58,12 @@ const EditCompany: React.FC = () => {
   useEffect(() => {
     const fetchAdmins = async () => {
       try {
-        const res = await axiosInstance.get(`${__API_URL__}/app/admin-register/`);
+        const res = await axiosInstance.get(`app/admin-register/`, {
+          params: { 
+            unassigned: 'true',
+            include_id: company?.admin_id || company?.admin 
+          }
+        });
         if (Array.isArray(res.data)) setAdmins(res.data);
       } catch {
         toast.error("Failed to load admin users");

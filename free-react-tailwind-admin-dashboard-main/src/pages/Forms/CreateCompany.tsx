@@ -30,7 +30,9 @@ export default function CreateCompany() {
   useEffect(() => {
     const fetchAdmins = async () => {
       try {
-        const res = await axiosInstance.get(`${__API_URL__}/app/admin-register/`);
+        const res = await axiosInstance.get(`app/admin-register/`, {
+          params: { unassigned: 'true' }
+        });
         if (Array.isArray(res.data)) {
           setAdmins(res.data.map((a) => ({ id: a.id, username: a.username })));
         } else {
@@ -177,7 +179,16 @@ export default function CreateCompany() {
             defaultValue={form.admin_id}
           />
           {admins.length === 0 && (
-            <div className="text-red-500 text-xs mt-1">No admin users found. Please register an admin first.</div>
+            <div className="text-red-500 text-xs mt-2 p-2 bg-red-50 dark:bg-red-900/20 rounded border border-red-200 dark:border-red-800 flex items-center justify-between">
+              <span>No admin users found. Please register an admin first.</span>
+              <button 
+                type="button"
+                onClick={() => navigate("/master/admin/create")}
+                className="bg-blue-600 text-white px-2 py-1 rounded text-[10px] hover:bg-blue-700 transition-colors"
+              >
+                Register Admin
+              </button>
+            </div>
           )}
         </div>
 
