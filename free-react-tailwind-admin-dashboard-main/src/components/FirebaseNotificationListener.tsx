@@ -55,7 +55,7 @@ export const FirebaseNotificationListener = ({ userToken }: { userToken: string 
       updateToken();
     }
 
-    const unsubscribe = onMessage(messaging, (payload) => {
+    const unsubscribe = onMessage(messaging, (payload: any) => {
       console.log("Message received in foreground:", payload);
       const { title, body } = payload.notification || {};
 
