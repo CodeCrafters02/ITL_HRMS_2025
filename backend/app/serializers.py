@@ -3,6 +3,7 @@ from datetime import datetime, timedelta
 from django.core.mail import send_mail
 from django.conf import settings
 from django.utils.crypto import get_random_string
+import threading
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ObjectDoesNotExist
 from django.contrib.auth import get_user_model
@@ -224,13 +225,13 @@ class CompanyWithAdminSerializer(serializers.ModelSerializer):
                     f"Regards,\n"
                     f"{company.name} Team"
                 )
-                send_mail(
-                    subject,
-                    message,
-                    None,  # uses DEFAULT_FROM_EMAIL
-                    [admin_user.email],
-                    fail_silently=False,
+                # Send welcome email in the background to avoid blocking the response
+                email_thread = threading.Thread(
+                    target=send_mail,
+                    args=(subject, message, None, [admin_user.email]),
+                    kwargs={'fail_silently': False}
                 )
+                email_thread.start()
             except UserRegister.DoesNotExist:
                 raise serializers.ValidationError({"admin": "Admin user not found."})
 
