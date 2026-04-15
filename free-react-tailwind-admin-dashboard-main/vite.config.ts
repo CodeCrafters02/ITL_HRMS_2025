@@ -16,9 +16,10 @@ export default defineConfig({
     }),
   ],
   define: {
-    // In development, we use the proxy set up in the server section.
-    // In production, you would typically use the full URL.
-    __API_URL__: '"/api/"',
+    // This ensures that in production, it hits the correct subdomain
+    __API_URL__: process.env.NODE_ENV === 'production' 
+      ? '"https://apihrms.innovyxtechlabs.com/api/"' 
+      : '"/api/"',
   },
   server: {
     // Set the port you want to use

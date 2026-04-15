@@ -25,10 +25,15 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = 'django-insecure-v++-2-a@y^9k1+kky5l^fg6#r1hc)hd(fwjox62c7@=ccvdkff'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = False
 
 # ALLOWED_HOSTS = ['apihrms.innovyxtechlabs.com']
-ALLOWED_HOSTS = ['apihrms.innovyxtechlabs.com', 'localhost', '127.0.0.1', '10.209.43.199', '192.168.0.3']
+ALLOWED_HOSTS = [
+    'apihrms.innovyxtechlabs.com', 
+    'hrms.innovyxtechlabs.com',
+    'localhost', 
+    '127.0.0.1'
+]
 
 # Application definition
 
@@ -127,16 +132,14 @@ SITE_URL = "https://apihrms.innovyxtechlabs.com/"
 CORS_ALLOWED_ORIGINS = [
     "https://hrms.innovyxtechlabs.com",
     "http://localhost:3000",
-    "http://127.0.0.1:3000",
     "http://localhost:3009",
 ]
-
 
 CSRF_TRUSTED_ORIGINS = [
     "https://hrms.innovyxtechlabs.com",
-    "http://localhost:3000",
-    "http://localhost:3009",
+    "https://apihrms.innovyxtechlabs.com",
 ]
+
 
 # CORS_ALLOWED_ORIGINS = [
 #     "http://localhost:3000",
@@ -220,6 +223,9 @@ TIME_ZONE = 'Asia/Kolkata'
 # https://docs.djangoproject.com/en/5.2/howto/static-files/
 
 STATIC_URL = 'static/'
+STATIC_ROOT = BASE_DIR / 'staticfiles'
+STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')  # Add this line
+
 
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
@@ -228,3 +234,15 @@ MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+
+if not DEBUG:
+    SECURE_SSL_REDIRECT = True
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
+    SECURE_BROWSER_XSS_FILTER = True
+    SECURE_CONTENT_TYPE_NOSNIFF = True
+
+
+
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
