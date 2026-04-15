@@ -37,8 +37,6 @@ export default defineConfig({
     },
 
     // Allow access from specific domains or IPs (optional)
-    // allowedHosts: ['hrms.innovyxtechlabs.com', 'localhost'],
     allowedHosts: ['hrms.innovyxtechlabs.com'],
-
   },
 });
