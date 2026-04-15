@@ -41,7 +41,7 @@ const MasterHeader: React.FC = () => {
 
   // ✅ Listen for foreground messages from Firebase
   useEffect(() => {
-    const unsubscribe = onMessage(messaging, (payload) => {
+    const unsubscribe = onMessage(messaging, (payload: any) => {
       console.log("📩 New FCM message:", payload);
       if (payload.notification) {
         setNotifications((prev) => [
