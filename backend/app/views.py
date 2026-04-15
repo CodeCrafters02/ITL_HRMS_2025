@@ -96,7 +96,21 @@ class AdminRegisterViewSet(viewsets.ModelViewSet):
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 
     def list(self, request):
-        admins = UserRegister.objects.filter(role='admin')
+        # Default to showing all admins
+        # Support 'unassigned=true' to show only admins without a company
+        # Support 'include_id' to ensure a specific admin is in the list
+        unassigned = request.query_params.get('unassigned') == 'true'
+        include_id = request.query_params.get('include_id')
+        
+        queryset_filter = Q(role='admin')
+        
+        if unassigned:
+            if include_id:
+                queryset_filter &= (Q(company__isnull=True) | Q(id=include_id))
+            else:
+                queryset_filter &= Q(company__isnull=True)
+            
+        admins = UserRegister.objects.filter(queryset_filter)
         serializer = AdminRegisterSerializer(admins, many=True)
         return Response(serializer.data)
 class PasswordChangeView(generics.UpdateAPIView):

@@ -18,7 +18,7 @@ export default defineConfig({
   define: {
     // In development, we use the proxy set up in the server section.
     // In production, you would typically use the full URL.
-    __API_URL__: '"/api/"',
+    __API_URL__: JSON.stringify('/api/'),
   },
   server: {
     // Set the port you want to use
