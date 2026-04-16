@@ -43,11 +43,11 @@ const LoginBoxed = () => {
                 localStorage.setItem('user_role', data.role);
                 localStorage.setItem('username', data.username);
                 
-                // Navigate based on role or fallback to Master Company
+                // Navigate based on role
                 if (data.role === 'master') {
                     navigate('/master/dashboard');
                 } else if (data.role === 'admin') {
-                    navigate('/master/dashboard'); // update this later when admin routing is finalized
+                    navigate('/admin/dashboard');
                 } else {
                     navigate('/master/dashboard');
                 }
@@ -83,7 +83,7 @@ const LoginBoxed = () => {
                 if (data.role === 'master') {
                     navigate('/master/dashboard');
                 } else if (data.role === 'admin') {
-                    navigate('/master/dashboard');
+                    navigate('/admin/dashboard');
                 } else {
                     navigate('/master/dashboard');
                 }

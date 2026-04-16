@@ -5,6 +5,7 @@ import { Dialog, Transition } from '@headlessui/react';
 import Swal from 'sweetalert2';
 import IconX from '../../components/Icon/IconX';
 import IconPlus from '../../components/Icon/IconPlus';
+import IconTrashLines from '../../components/Icon/IconTrashLines';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000';
 const API_URL = `${API_BASE_URL}/app/usermanagement/`;
@@ -169,6 +170,42 @@ const MasterUserManagement = () => {
         }
     };
 
+    const handleDeleteUser = async (user: any) => {
+        const result = await Swal.fire({
+            title: 'Are you sure?',
+            text: `Delete user "${user.username}"? This action cannot be undone!`,
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonText: 'Yes, delete!',
+            cancelButtonText: 'Cancel',
+            customClass: { popup: 'sweet-alerts' },
+            padding: '2em',
+        });
+
+        if (result.isConfirmed) {
+            try {
+                const token = localStorage.getItem('access_token');
+                const headers: any = {};
+                if (token) headers['Authorization'] = `Bearer ${token}`;
+
+                const response = await fetch(`${API_URL}${user.id}/`, {
+                    method: 'DELETE',
+                    headers,
+                });
+
+                if (response.ok || response.status === 204) {
+                    Swal.fire({ title: 'Deleted!', text: 'User has been deleted.', icon: 'success', customClass: { popup: 'sweet-alerts' } });
+                    fetchUsers();
+                } else {
+                    const err = await response.json().catch(() => null);
+                    Swal.fire({ title: 'Error!', text: err ? JSON.stringify(err) : 'Failed to delete user.', icon: 'error', customClass: { popup: 'sweet-alerts' } });
+                }
+            } catch (error) {
+                Swal.fire({ title: 'Error!', text: 'Failed to delete user.', icon: 'error', customClass: { popup: 'sweet-alerts' } });
+            }
+        }
+    };
+
     return (
         <div>
             <div className="bg-gradient-to-r from-[#064e3b] to-[#10b981] p-6 rounded-xl shadow-lg mb-6 relative overflow-hidden">
@@ -210,12 +247,13 @@ const MasterUserManagement = () => {
                                 <th>Username</th>
                                 <th>Email</th>
                                 <th>Designation / Role</th>
+                                <th className="text-center">Actions</th>
                             </tr>
                         </thead>
                         <tbody>
                             {loading ? (
                                 <tr>
-                                    <td colSpan={4} className="text-center py-5">Loading...</td>
+                                    <td colSpan={5} className="text-center py-5">Loading...</td>
                                 </tr>
                             ) : users.length > 0 ? (
                                 users.map((user) => (
@@ -226,11 +264,16 @@ const MasterUserManagement = () => {
                                         <td>
                                             <span className="badge badge-outline-primary">{user.designation || user.role}</span>
                                         </td>
+                                        <td className="text-center">
+                                            <button type="button" className="text-danger hover:text-red-700" onClick={() => handleDeleteUser(user)}>
+                                                <IconTrashLines className="w-5 h-5" />
+                                            </button>
+                                        </td>
                                     </tr>
                                 ))
                             ) : (
                                 <tr>
-                                    <td colSpan={4} className="text-center py-5">No users found.</td>
+                                    <td colSpan={5} className="text-center py-5">No users found.</td>
                                 </tr>
                             )}
                         </tbody>

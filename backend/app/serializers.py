@@ -293,7 +293,7 @@ class CompanySerializer(serializers.ModelSerializer):
 class DepartmentSerializer(serializers.ModelSerializer):
     class Meta:
         model = Department
-        fields = ['id', 'department_name']
+        fields = ['id', 'department_name', 'creation_date']
         
 class LevelSerializer(serializers.ModelSerializer):
     class Meta:
@@ -302,9 +302,18 @@ class LevelSerializer(serializers.ModelSerializer):
         read_only_fields = ['company']
 
 class DesignationSerializer(serializers.ModelSerializer):
+    department_name = serializers.SerializerMethodField(read_only=True)
+    level_name = serializers.SerializerMethodField(read_only=True)
+
     class Meta:
         model = Designation
-        fields = ['id', 'designation_name', 'department', 'level']
+        fields = ['id', 'designation_name', 'department', 'department_name', 'level', 'level_name']
+
+    def get_department_name(self, obj):
+        return obj.department.department_name if obj.department else None
+
+    def get_level_name(self, obj):
+        return obj.level.level_name if obj.level else None
 
     def validate(self, attrs):
         designation_name = attrs.get('designation_name', '').strip()

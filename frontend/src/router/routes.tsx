@@ -106,6 +106,14 @@ const MasterAdministration = lazy(() => import('../pages/Master/Administration')
 const MasterCompany = lazy(() => import('../pages/Master/Company'));
 const MasterUserManagement = lazy(() => import('../pages/Master/UserManagement'));
 const MasterEmployee = lazy(() => import('../pages/Master/Employee'));
+
+// Admin Pages
+const AdminDashboard = lazy(() => import('../pages/Admin/Dashboard'));
+const AdminComingSoon = lazy(() => import('../pages/Admin/ComingSoon'));
+const AdminDepartment = lazy(() => import('../pages/Admin/Department'));
+const AdminLevel = lazy(() => import('../pages/Admin/Level'));
+const AdminDesignation = lazy(() => import('../pages/Admin/Designation'));
+
 const routes = [
     // dashboard
     {
@@ -565,6 +573,115 @@ const routes = [
     {
         path: '/master/user-management',
         element: <MasterUserManagement />,
+    },
+    // Admin Dashboard Routes
+    {
+        path: '/admin/dashboard',
+        element: <AdminDashboard />,
+    },
+    {
+        path: '/admin/branch-mgt/department',
+        element: <AdminDepartment />,
+    },
+    {
+        path: '/admin/branch-mgt/level',
+        element: <AdminLevel />,
+    },
+    {
+        path: '/admin/branch-mgt/designation',
+        element: <AdminDesignation />,
+    },
+    {
+        path: '/admin/employee-register',
+        element: <AdminComingSoon />,
+    },
+    {
+        path: '/admin/assign-shifts',
+        element: <AdminComingSoon />,
+    },
+    {
+        path: '/admin/recruitment',
+        element: <AdminComingSoon />,
+    },
+    {
+        path: '/admin/relieved-employees',
+        element: <AdminComingSoon />,
+    },
+    {
+        path: '/admin/letter-templates',
+        element: <AdminComingSoon />,
+    },
+    {
+        path: '/admin/approved-leaves',
+        element: <AdminComingSoon />,
+    },
+    {
+        path: '/admin/rejected-leaves',
+        element: <AdminComingSoon />,
+    },
+    {
+        path: '/admin/attendance-logs',
+        element: <AdminComingSoon />,
+    },
+    {
+        path: '/admin/attendance-details',
+        element: <AdminComingSoon />,
+    },
+    {
+        path: '/admin/salary-structure',
+        element: <AdminComingSoon />,
+    },
+    {
+        path: '/admin/payroll-batches',
+        element: <AdminComingSoon />,
+    },
+    {
+        path: '/admin/income-tax',
+        element: <AdminComingSoon />,
+    },
+    {
+        path: '/admin/assets-inventory',
+        element: <AdminComingSoon />,
+    },
+    {
+        path: '/admin/configuration/break-config',
+        element: <AdminComingSoon />,
+    },
+    {
+        path: '/admin/configuration/shift',
+        element: <AdminComingSoon />,
+    },
+    {
+        path: '/admin/configuration/department-wise-working-days',
+        element: <AdminComingSoon />,
+    },
+    {
+        path: '/admin/configuration/leave-count',
+        element: <AdminComingSoon />,
+    },
+    {
+        path: '/admin/configuration/company-policies',
+        element: <AdminComingSoon />,
+    },
+    {
+        path: '/admin/configuration/office-structure',
+        element: <AdminComingSoon />,
+    },
+    {
+        path: '/admin/calendar',
+        element: <AdminComingSoon />,
+    },
+    {
+        path: '/admin/notifications',
+        element: <AdminComingSoon />,
+    },
+    {
+        path: '/admin/learning-corner',
+        element: <AdminComingSoon />,
+    },
+    {
+        path: '/admin/employee-references',
+        element: <AdminComingSoon />,
     },
 ];
 

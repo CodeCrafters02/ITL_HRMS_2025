@@ -495,12 +495,15 @@ class AdminDashboardAPIView(APIView):
 class DepartmentViewSet(viewsets.ModelViewSet):
     serializer_class = DepartmentSerializer
     permission_classes = [IsAuthenticated, IsAdminUser | IsMaster]
+    pagination_class = CustomPagination
+    filter_backends = [filters.SearchFilter]
+    search_fields = ['department_name']
     
     def get_queryset(self):
         user = self.request.user
         if user.role == 'master':
-            return Department.objects.all()
-        return Department.objects.filter(company=user.company)
+            return Department.objects.all().order_by('id')
+        return Department.objects.filter(company=user.company).order_by('id')
 
     def perform_create(self, serializer):
         serializer.save(company=self.request.user.company)
@@ -509,12 +512,15 @@ class DepartmentViewSet(viewsets.ModelViewSet):
 class LevelViewSet(viewsets.ModelViewSet):
     serializer_class = LevelSerializer
     permission_classes = [IsAuthenticated, IsAdminUser | IsMaster]
+    pagination_class = CustomPagination
+    filter_backends = [filters.SearchFilter]
+    search_fields = ['level_name', 'description']
    
     def get_queryset(self):
         user = self.request.user
         if user.role == 'master':
-            return Level.objects.all()
-        return Level.objects.filter(company=user.company)
+            return Level.objects.all().order_by('id')
+        return Level.objects.filter(company=user.company).order_by('id')
 
     def perform_create(self, serializer):
         serializer.save(company=self.request.user.company)
@@ -523,12 +529,15 @@ class LevelViewSet(viewsets.ModelViewSet):
 class DesignationViewSet(viewsets.ModelViewSet):
     serializer_class = DesignationSerializer
     permission_classes = [IsAuthenticated, IsAdminUser | IsMaster]
+    pagination_class = CustomPagination
+    filter_backends = [filters.SearchFilter]
+    search_fields = ['designation_name', 'department__department_name', 'level__level_name']
    
     def get_queryset(self):
         user = self.request.user
         if user.role == 'master':
-            return Designation.objects.all()
-        return Designation.objects.filter(company=user.company)
+            return Designation.objects.select_related('department', 'level').order_by('id')
+        return Designation.objects.filter(company=user.company).select_related('department', 'level').order_by('id')
 
     def perform_create(self, serializer):
         serializer.save(company=self.request.user.company)        
