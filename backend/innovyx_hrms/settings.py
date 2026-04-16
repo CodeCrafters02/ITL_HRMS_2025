@@ -13,9 +13,13 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 from pathlib import Path
 from datetime import timedelta
 import os
+from dotenv import load_dotenv
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
+
+load_dotenv(BASE_DIR / '.env', override=True)
+GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID") or os.getenv("GMAIL_CLIENT_ID")
 
 
 # Quick-start development settings - unsuitable for production
@@ -116,19 +120,23 @@ FCM_CREDENTIALS_FILE = BASE_DIR / "firebase-service-account.json"
 
 FCM_PROJECT_ID = "hrms-54ea8"
 
-SITE_URL = "https://apihrms.innovyxtechlabs.com/"
-# SITE_URL = "http://localhost:8000/"
+# SITE_URL = "https://apihrms.innovyxtechlabs.com/"
+SITE_URL = "http://localhost:8000/"
 
 
 # CORS_ALLOW_ALL_ORIGINS = True
 # CORS_ALLOW_ALL_HEADERS = True
 # CORS_ALLOW_CREDENTIALS = True
 
+SECURE_CROSS_ORIGIN_OPENER_POLICY = 'same-origin-allow-popups'
+
 CORS_ALLOWED_ORIGINS = [
     "https://hrms.innovyxtechlabs.com",
     "http://localhost:3000",
     "http://127.0.0.1:3000",
     "http://localhost:3009",
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
 ]
 
 
@@ -136,6 +144,8 @@ CSRF_TRUSTED_ORIGINS = [
     "https://hrms.innovyxtechlabs.com",
     "http://localhost:3000",
     "http://localhost:3009",
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
 ]
 
 # CORS_ALLOWED_ORIGINS = [

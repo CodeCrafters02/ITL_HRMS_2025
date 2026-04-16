@@ -68,14 +68,21 @@ class UserSerializer(serializers.ModelSerializer):
         allow_null=True
     )
     company_name = serializers.SerializerMethodField(read_only=True)
+    designation = serializers.SerializerMethodField(read_only=True)
 
     class Meta:
         model = UserRegister
-        fields = ['id', 'username', 'email', 'password', 'role', 'is_active', 'first_name', 'last_name', 'company', 'company_name']
+        fields = ['id', 'username', 'email', 'password', 'role', 'is_active', 'first_name', 'last_name', 'company', 'company_name', 'designation']
         read_only_fields = ['created_by'] 
 
     def get_company_name(self, obj):
         return obj.company.name if obj.company else None
+
+    def get_designation(self, obj):
+        try:
+            return obj.employee_profile.designation.name if obj.employee_profile and obj.employee_profile.designation else obj.role.capitalize()
+        except:
+            return obj.role.capitalize()
 
     def validate_role(self, value):
         if value not in ['master', 'admin', 'employee']:
@@ -124,7 +131,7 @@ class AdminRegisterSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = UserRegister
-        fields = ['id', 'username', 'email', 'password']
+        fields = ['id', 'username', 'email', 'password', 'first_name', 'last_name']
 
     def create(self, validated_data):
         validated_data['role'] = 'admin'
@@ -134,6 +141,9 @@ class AdminRegisterSerializer(serializers.ModelSerializer):
             password=validated_data['password'],
             role='admin'
         )
+        user.first_name = validated_data.get('first_name', '')
+        user.last_name = validated_data.get('last_name', '')
+        user.save()
         return user
 
 class MasterDashboardSerializer(serializers.ModelSerializer):
@@ -347,6 +357,7 @@ class EmployeeSerializer(serializers.ModelSerializer):
     asset_names = serializers.SerializerMethodField()
     source_choices = serializers.SerializerMethodField()
     shift_assigned = ShiftPolicySerializer(read_only=True)
+    company_name = serializers.SerializerMethodField()
 
     class Meta:
         model = Employee
@@ -354,7 +365,7 @@ class EmployeeSerializer(serializers.ModelSerializer):
             'id', 'employee_id', 'first_name', 'middle_name', 'last_name', 'gender',
             'email', 'date_of_birth', 'mobile', 'temporary_address', 'permanent_address', 'photo',
             'aadhar_no', 'aadhar_card', 'pan_no', 'pan_card', 'guardian_name', 'guardian_mobile',
-            'category', 'department', 'department_name', 'designation', 'designation_name',
+            'category', 'company', 'company_name', 'department', 'department_name', 'designation', 'designation_name',
             'level', 'reporting_manager', 'reporting_level', 'reporting_level_name', 'reporting_manager_name',
             'payment_method', 'account_no', 'ifsc_code', 'bank_name', 'source_of_employment',
             'who_referred', 'date_of_joining', 'previous_employer', 'date_of_releaving',
@@ -365,6 +376,9 @@ class EmployeeSerializer(serializers.ModelSerializer):
 
     def get_department_name(self, obj):
         return obj.department.department_name if obj.department else None
+
+    def get_company_name(self, obj):
+        return obj.company.name if obj.company else None
 
     def get_designation_name(self, obj):
         return obj.designation.designation_name if obj.designation else None
@@ -397,7 +411,13 @@ class EmployeeSerializer(serializers.ModelSerializer):
         if not request:
             raise serializers.ValidationError("Request context is required.")
 
-        company = request.user.company
+        company_id = self.initial_data.get('company')
+        if request.user.role == 'master' and company_id:
+            company = Company.objects.filter(id=company_id).first()
+            if not company:
+                raise serializers.ValidationError({"company": "Invalid company provided."})
+        else:
+            company = request.user.company
         
         if self.instance is None:  # Means create, not update
             if not email:
@@ -428,6 +448,12 @@ class EmployeeSerializer(serializers.ModelSerializer):
         assets = validated_data.pop('asset_details', [])
         request = self.context['request']
         admin_user = request.user
+        
+        company_id = self.initial_data.get('company')
+        if admin_user.role == 'master' and company_id:
+            assigned_company = Company.objects.get(id=company_id)
+        else:
+            assigned_company = admin_user.company
 
         employee_id = self.generate_employee_id()
         username = self.generate_username(validated_data)
@@ -453,7 +479,7 @@ class EmployeeSerializer(serializers.ModelSerializer):
                 email=email,
                 password=password,
                 role='employee',
-                company=admin_user.company
+                company=assigned_company
             )
         except Exception as e:
             # Handle any database constraint violations
@@ -468,14 +494,14 @@ class EmployeeSerializer(serializers.ModelSerializer):
                         email=email,
                         password=password,
                         role='employee',
-                        company=admin_user.company
+                        company=assigned_company
                     )
                 else:
                     raise serializers.ValidationError({"error": f"Database constraint violation: {str(e)}"})
             else:
                 raise
 
-        validated_data['company'] = admin_user.company
+        validated_data['company'] = assigned_company
         validated_data['user'] = user
         validated_data['employee_id'] = employee_id
 

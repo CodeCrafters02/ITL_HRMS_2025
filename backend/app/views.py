@@ -27,7 +27,13 @@ from .permissions import IsMaster,IsAdminUser
 from .serializers import *
 from .models import *
 
+from rest_framework import filters
+from rest_framework.pagination import PageNumberPagination
 
+class CustomPagination(PageNumberPagination):
+    page_size = 10
+    page_size_query_param = 'page_size'
+    max_page_size = 100
 class CustomPasswordChangeAPIView(generics.UpdateAPIView):
     serializer_class = CustomPasswordChangeSerializer
     permission_classes = [IsAuthenticated]
@@ -59,9 +65,12 @@ class UserManagementViewSet(viewsets.ModelViewSet):
     serializer_class = UserSerializer
     # permission_classes = [permissions.IsAuthenticated, IsMaster]
     permission_classes = [permissions.AllowAny]
+    pagination_class = CustomPagination
+    filter_backends = [filters.SearchFilter]
+    search_fields = ['username', 'email', 'role']
 
     def get_queryset(self):
-        queryset = UserRegister.objects.all()
+        queryset = UserRegister.objects.all().order_by('id')
         created_by = self.request.query_params.get('created_by')
         if created_by:
             queryset = queryset.filter(created_by=created_by)
@@ -74,9 +83,25 @@ class UserManagementViewSet(viewsets.ModelViewSet):
         else:
             serializer.save()
 class AdminRegisterViewSet(viewsets.ModelViewSet):
-    queryset = UserRegister.objects.filter(role='admin')
     serializer_class = AdminRegisterSerializer
     permission_classes = [IsAuthenticated, IsMaster]
+    pagination_class = CustomPagination
+    filter_backends = [filters.SearchFilter]
+    search_fields = ['username', 'email']
+
+    def get_queryset(self):
+        unassigned = self.request.query_params.get('unassigned') == 'true'
+        include_id = self.request.query_params.get('include_id')
+        
+        queryset_filter = Q(role='admin')
+        
+        if unassigned:
+            if include_id:
+                queryset_filter &= (Q(company__isnull=True) | Q(id=include_id))
+            else:
+                queryset_filter &= Q(company__isnull=True)
+            
+        return UserRegister.objects.filter(queryset_filter).order_by('id')
 
     def update(self, request, pk=None):
         try:
@@ -94,25 +119,6 @@ class AdminRegisterViewSet(viewsets.ModelViewSet):
         serializer.is_valid(raise_exception=True)
         serializer.save()
         return Response(serializer.data, status=status.HTTP_201_CREATED)
-
-    def list(self, request):
-        # Default to showing all admins
-        # Support 'unassigned=true' to show only admins without a company
-        # Support 'include_id' to ensure a specific admin is in the list
-        unassigned = request.query_params.get('unassigned') == 'true'
-        include_id = request.query_params.get('include_id')
-        
-        queryset_filter = Q(role='admin')
-        
-        if unassigned:
-            if include_id:
-                queryset_filter &= (Q(company__isnull=True) | Q(id=include_id))
-            else:
-                queryset_filter &= Q(company__isnull=True)
-            
-        admins = UserRegister.objects.filter(queryset_filter)
-        serializer = AdminRegisterSerializer(admins, many=True)
-        return Response(serializer.data)
 class PasswordChangeView(generics.UpdateAPIView):
     serializer_class = PasswordChangeSerializer
     permission_classes = [IsAuthenticated]
@@ -167,7 +173,9 @@ class MasterDashboardView(APIView):
         return Response({
             "companies": companies_data,
             "total_companies": companies.count(),
-            "total_admins": UserRegister.objects.filter(role='admin').count()
+            "total_admins": UserRegister.objects.filter(role='admin').count(),
+            "total_masters": UserRegister.objects.filter(role='master').count(),
+            "total_employees": UserRegister.objects.filter(role='employee').count()
         })
 
 class LoginAPIView(APIView):
@@ -190,15 +198,27 @@ class LoginAPIView(APIView):
             return Response({
                 "access": access_token,
                 "refresh": refresh_token,
+                "username": user.username,
                 "role": user.role  # ✅ This lets frontend redirect properly!
             }, status=status.HTTP_200_OK)
 
         return Response({"detail": "Invalid credentials"}, status=status.HTTP_401_UNAUTHORIZED)
      
+from rest_framework import filters
+from rest_framework.pagination import PageNumberPagination
+
+class CustomPagination(PageNumberPagination):
+    page_size = 10
+    page_size_query_param = 'page_size'
+    max_page_size = 100
+
 class CompanyWithAdminViewSet(viewsets.ModelViewSet):
-    queryset = Company.objects.all()
+    queryset = Company.objects.all().order_by('id')
     serializer_class = CompanyWithAdminSerializer
     permission_classes = [IsAuthenticated, IsMaster]
+    pagination_class = CustomPagination
+    filter_backends = [filters.SearchFilter]
+    search_fields = ['name', 'email', 'location', 'phone_number']
 
     def get_serializer_context(self):
         return {'request': self.request}
@@ -474,10 +494,13 @@ class AdminDashboardAPIView(APIView):
 
 class DepartmentViewSet(viewsets.ModelViewSet):
     serializer_class = DepartmentSerializer
-    permission_classes = [IsAuthenticated,IsAdminUser]
+    permission_classes = [IsAuthenticated, IsAdminUser | IsMaster]
     
     def get_queryset(self):
-        return Department.objects.filter(company=self.request.user.company)
+        user = self.request.user
+        if user.role == 'master':
+            return Department.objects.all()
+        return Department.objects.filter(company=user.company)
 
     def perform_create(self, serializer):
         serializer.save(company=self.request.user.company)
@@ -485,10 +508,13 @@ class DepartmentViewSet(viewsets.ModelViewSet):
 
 class LevelViewSet(viewsets.ModelViewSet):
     serializer_class = LevelSerializer
-    permission_classes = [IsAuthenticated,IsAdminUser]
+    permission_classes = [IsAuthenticated, IsAdminUser | IsMaster]
    
     def get_queryset(self):
-        return Level.objects.filter(company=self.request.user.company)
+        user = self.request.user
+        if user.role == 'master':
+            return Level.objects.all()
+        return Level.objects.filter(company=user.company)
 
     def perform_create(self, serializer):
         serializer.save(company=self.request.user.company)
@@ -496,10 +522,13 @@ class LevelViewSet(viewsets.ModelViewSet):
 
 class DesignationViewSet(viewsets.ModelViewSet):
     serializer_class = DesignationSerializer
-    permission_classes = [IsAuthenticated,IsAdminUser]
+    permission_classes = [IsAuthenticated, IsAdminUser | IsMaster]
    
     def get_queryset(self):
-        return Designation.objects.filter(company=self.request.user.company)
+        user = self.request.user
+        if user.role == 'master':
+            return Designation.objects.all()
+        return Designation.objects.filter(company=user.company)
 
     def perform_create(self, serializer):
         serializer.save(company=self.request.user.company)        
@@ -507,11 +536,15 @@ class DesignationViewSet(viewsets.ModelViewSet):
 class EmployeeViewSet(viewsets.ModelViewSet):
     queryset = Employee.objects.all()
     serializer_class = EmployeeSerializer
-    permission_classes = [IsAuthenticated, IsAdminUser]
+    permission_classes = [IsAuthenticated, IsAdminUser | IsMaster]
 
     def get_queryset(self):
         user = self.request.user
-        return Employee.objects.filter(company=user.company).select_related(
+        qs = Employee.objects.all()
+        if user.role != 'master':
+            qs = qs.filter(company=user.company)
+            
+        return qs.select_related(
             'department', 'designation', 'level', 'reporting_manager', 
             'reporting_level', 'shift_assigned'
         ).order_by('employee_id')
@@ -2382,4 +2415,60 @@ class SeatBookingViewSet(viewsets.ModelViewSet):
         else:
             # If user doesn't have an employee record, raise error
             raise serializers.ValidationError("User must have an employee record to book a seat")
+
+
+from google.oauth2 import id_token
+from google.auth.transport import requests as google_requests
+from django.conf import settings
+from rest_framework.permissions import AllowAny
+
+class GoogleLoginAPIView(APIView):
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        token = request.data.get("credential")
+        if not token:
+            return Response({"detail": "Credential missing"}, status=status.HTTP_400_BAD_REQUEST)
+        
+        try:
+            # Verify Google Token
+            idinfo = id_token.verify_oauth2_token(
+                token, 
+                google_requests.Request(), 
+                settings.GOOGLE_CLIENT_ID
+            )
+            
+            email = idinfo.get("email")
+            first_name = idinfo.get("given_name", "")
+            last_name = idinfo.get("family_name", "")
+            
+            # Find or Create User
+            user, created = UserRegister.objects.get_or_create(
+                email=email,
+                defaults={
+                    "username": email,
+                    "first_name": first_name,
+                    "last_name": last_name,
+                    "role": "master", # Auto-assign 'master' for initial setup
+                    "is_active": True
+                }
+            )
+            if created:
+                user.set_unusable_password()
+                user.save()
+
+            # Return tokens
+            refresh = RefreshToken.for_user(user)
+            return Response({
+                "access": str(refresh.access_token),
+                "refresh": str(refresh),
+                "username": user.username,
+                "role": user.role
+            }, status=status.HTTP_200_OK)
+
+        except ValueError as e:
+            print("Google verify error:", str(e))
+            return Response({"detail": f"Invalid Google token: {str(e)}"}, status=status.HTTP_401_UNAUTHORIZED)
+        except Exception as e:
+            return Response({"detail": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
