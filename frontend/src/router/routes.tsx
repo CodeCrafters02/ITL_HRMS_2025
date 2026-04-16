@@ -566,10 +566,6 @@ const routes = [
         path: '/master/user-management',
         element: <MasterUserManagement />,
     },
-    {
-        path: '/master/employee-management',
-        element: <MasterEmployee />,
-    },
 ];
 
 export { routes };
