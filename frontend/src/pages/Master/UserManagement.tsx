@@ -246,6 +246,7 @@ const MasterUserManagement = () => {
                                 <th>ID</th>
                                 <th>Username</th>
                                 <th>Email</th>
+                                <th>Company</th>
                                 <th>Designation / Role</th>
                                 <th className="text-center">Actions</th>
                             </tr>
@@ -253,7 +254,7 @@ const MasterUserManagement = () => {
                         <tbody>
                             {loading ? (
                                 <tr>
-                                    <td colSpan={5} className="text-center py-5">Loading...</td>
+                                    <td colSpan={6} className="text-center py-5">Loading...</td>
                                 </tr>
                             ) : users.length > 0 ? (
                                 users.map((user) => (
@@ -261,6 +262,7 @@ const MasterUserManagement = () => {
                                         <td>{user.id}</td>
                                         <td className="font-semibold">{user.username}</td>
                                         <td>{user.email}</td>
+                                        <td>{user.company_name || '-'}</td>
                                         <td>
                                             <span className="badge badge-outline-primary">{user.designation || user.role}</span>
                                         </td>
@@ -273,7 +275,7 @@ const MasterUserManagement = () => {
                                 ))
                             ) : (
                                 <tr>
-                                    <td colSpan={5} className="text-center py-5">No users found.</td>
+                                    <td colSpan={6} className="text-center py-5">No users found.</td>
                                 </tr>
                             )}
                         </tbody>

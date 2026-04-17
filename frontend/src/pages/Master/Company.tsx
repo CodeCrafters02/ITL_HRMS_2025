@@ -32,6 +32,7 @@ const MasterCompany = () => {
         phone_number: '',
         address: '',
         location: '',
+        gmail_domains: '',
         admin: '',
         admin_username_input: '',
         admin_email_input: '',
@@ -182,6 +183,7 @@ const MasterCompany = () => {
             submitData.append('phone_number', formData.phone_number);
             submitData.append('address', formData.address);
             submitData.append('location', formData.location);
+            submitData.append('gmail_domains', formData.gmail_domains);
             // Step 2: create admin + assign to this company (backend will create admin if `admin` not provided)
             submitData.append('admin_username_input', formData.admin_username_input);
             submitData.append('admin_email_input', formData.admin_email_input);
@@ -251,6 +253,7 @@ const MasterCompany = () => {
             submitData.append('phone_number', formData.phone_number);
             submitData.append('address', formData.address);
             submitData.append('location', formData.location);
+            submitData.append('gmail_domains', formData.gmail_domains);
             if (formData.admin) {
                 submitData.append('admin', formData.admin);
             }
@@ -296,6 +299,7 @@ const MasterCompany = () => {
             phone_number: company.phone_number || '',
             address: company.address || '',
             location: company.location || '',
+            gmail_domains: company.gmail_domains || '',
             admin: company.admin_id || '',
             admin_username_input: company.admin_username || '',
             admin_email_input: company.admin_email || '',
@@ -317,6 +321,7 @@ const MasterCompany = () => {
             phone_number: '',
             address: '',
             location: '',
+            gmail_domains: '',
             admin: '',
             admin_username_input: '',
             admin_email_input: '',
@@ -551,6 +556,18 @@ const MasterCompany = () => {
                                                             <input id="phone_number" type="text" name="phone_number" className="form-input" required value={formData.phone_number} onChange={handleInputChange} />
                                                         </div>
                                                     </div>
+                                                    <div>
+                                                        <label htmlFor="gmail_domains">Allowed Gmail Domains</label>
+                                                        <input
+                                                            id="gmail_domains"
+                                                            type="text"
+                                                            name="gmail_domains"
+                                                            className="form-input"
+                                                            placeholder="example.com, sub.example.com"
+                                                            value={formData.gmail_domains}
+                                                            onChange={handleInputChange}
+                                                        />
+                                                    </div>
                                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                                         <div>
                                                             <label htmlFor="location">Location</label>
@@ -745,6 +762,18 @@ const MasterCompany = () => {
                                                             <label htmlFor="edit_phone_number">Phone Number</label>
                                                             <input id="edit_phone_number" type="text" name="phone_number" className="form-input" required value={formData.phone_number} onChange={handleInputChange} />
                                                         </div>
+                                                    </div>
+                                                    <div>
+                                                        <label htmlFor="edit_gmail_domains">Allowed Gmail Domains</label>
+                                                        <input
+                                                            id="edit_gmail_domains"
+                                                            type="text"
+                                                            name="gmail_domains"
+                                                            className="form-input"
+                                                            placeholder="example.com, sub.example.com"
+                                                            value={formData.gmail_domains}
+                                                            onChange={handleInputChange}
+                                                        />
                                                     </div>
                                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                                         <div>

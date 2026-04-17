@@ -47,6 +47,7 @@ INSTALLED_APPS = [
     'rest_framework_simplejwt',
     'drf_yasg',
     'corsheaders',
+    'channels',
     'app',
     'employee',
     'notifications',
@@ -114,6 +115,15 @@ TEMPLATES = [
 ASGI_APPLICATION = 'innovyx_hrms.asgi.application'
 
 WSGI_APPLICATION = 'innovyx_hrms.wsgi.application'
+
+# Channels / WebSocket (Redis)
+REDIS_URL = os.getenv("REDIS_URL", "redis://127.0.0.1:6379/0")
+CHANNEL_LAYERS = {
+    "default": {
+        "BACKEND": "channels_redis.core.RedisChannelLayer",
+        "CONFIG": {"hosts": [REDIS_URL]},
+    }
+}
 
 
 FCM_CREDENTIALS_FILE = BASE_DIR / "firebase-service-account.json"

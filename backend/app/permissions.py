@@ -16,3 +16,12 @@ class IsMaster(permissions.BasePermission):
 
     def has_permission(self, request, view):
         return request.user.is_authenticated and request.user.role == 'master'
+
+
+class IsCompanyChatUser(permissions.BasePermission):
+    """
+    Allows access to chat features for users in roles: admin, employee.
+    """
+
+    def has_permission(self, request, view):
+        return request.user.is_authenticated and request.user.role in ("admin", "employee")

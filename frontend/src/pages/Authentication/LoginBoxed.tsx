@@ -48,6 +48,8 @@ const LoginBoxed = () => {
                     navigate('/master/dashboard');
                 } else if (data.role === 'admin') {
                     navigate('/admin/dashboard');
+                } else if (data.role === 'employee') {
+                    navigate('/employee/dashboard');
                 } else {
                     navigate('/master/dashboard');
                 }
@@ -84,6 +86,8 @@ const LoginBoxed = () => {
                     navigate('/master/dashboard');
                 } else if (data.role === 'admin') {
                     navigate('/admin/dashboard');
+                } else if (data.role === 'employee') {
+                    navigate('/employee/dashboard');
                 } else {
                     navigate('/master/dashboard');
                 }

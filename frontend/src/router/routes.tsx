@@ -120,6 +120,11 @@ const AdminRelievedEmployees = lazy(() => import('../pages/Admin/RelievedEmploye
 const AdminLetterTemplates = lazy(() => import('../pages/Admin/LetterTemplates'));
 const AdminEmployeeReferences = lazy(() => import('../pages/Admin/EmployeeReferences'));
 const AdminLearningCorner = lazy(() => import('../pages/Admin/LearningCorner'));
+const AdminChat = lazy(() => import('../pages/Admin/Chat'));
+
+// Employee Pages
+const EmployeeDashboard = lazy(() => import('../pages/Employee/Dashboard'));
+const EmployeeChat = lazy(() => import('../pages/Employee/Chat'));
 
 const routes = [
     // dashboard
@@ -689,6 +694,18 @@ const routes = [
     {
         path: '/admin/employee-references',
         element: <AdminEmployeeReferences />,
+    },
+    {
+        path: '/admin/chat',
+        element: <AdminChat />,
+    },
+    {
+        path: '/employee/dashboard',
+        element: <EmployeeDashboard />,
+    },
+    {
+        path: '/employee/chat',
+        element: <EmployeeChat />,
     },
 ];
 

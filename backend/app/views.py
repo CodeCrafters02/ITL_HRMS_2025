@@ -23,13 +23,18 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 import re
 from rest_framework.permissions import IsAuthenticated
-from .permissions import IsMaster,IsAdminUser
+from .permissions import IsMaster,IsAdminUser, IsCompanyChatUser
 from .serializers import *
 from .models import *
 
 from rest_framework import filters
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
+from .chat_serializers import (
+    ChatConversationSerializer,
+    ChatMessageSerializer,
+)
+
 
 class CustomPagination(PageNumberPagination):
     page_size = 10
@@ -556,7 +561,7 @@ class DesignationViewSet(viewsets.ModelViewSet):
 class EmployeeViewSet(viewsets.ModelViewSet):
     queryset = Employee.objects.all()
     serializer_class = EmployeeSerializer
-    permission_classes = [IsAuthenticated, IsAdminUser | IsMaster]
+    permission_classes = [IsAuthenticated]
     pagination_class = CustomPagination
     filter_backends = [filters.SearchFilter]
     search_fields = [
@@ -572,11 +577,77 @@ class EmployeeViewSet(viewsets.ModelViewSet):
     ]
     parser_classes = [MultiPartParser, FormParser, JSONParser]
 
+    def _ensure_employee_profiles_for_company(self, company):
+        """
+        Ensure every employee `UserRegister` in this company has an `Employee` profile.
+        This fixes mismatches where SSO-created users exist without an Employee record,
+        causing Admin "Employee Register" to appear incomplete.
+        """
+        if not company:
+            return
+
+        # Users with role=employee but no Employee profile (OneToOne reverse is `employee` by default)
+        missing_profile_users = (
+            UserRegister.objects.filter(role="employee", company=company, employee__isnull=True)
+            .only("id", "first_name", "last_name", "email", "company_id")
+        )
+
+        for u in missing_profile_users:
+            if not u.email:
+                continue
+
+            # Prefer linking an existing Employee row (created earlier via HR) by email+company
+            existing = (
+                Employee.objects.filter(company=company, email__iexact=u.email)
+                .select_related("company")
+                .first()
+            )
+            if existing:
+                if not existing.user_id:
+                    existing.user_id = u.id
+                    # Backfill basic fields if empty
+                    if not existing.first_name:
+                        existing.first_name = u.first_name or existing.first_name
+                    if not existing.last_name:
+                        existing.last_name = u.last_name or existing.last_name
+                    if not existing.email:
+                        existing.email = u.email
+                    existing.save(update_fields=["user", "first_name", "last_name", "email"])
+                continue
+
+            # Otherwise create a lightweight Employee profile
+            Employee.objects.create(
+                user_id=u.id,
+                company=company,
+                first_name=u.first_name or None,
+                last_name=u.last_name or None,
+                email=u.email,
+            )
+
+    def get_permissions(self):
+        # Employees can view (list/retrieve) employees from their company,
+        # but cannot create/update/delete.
+        if self.action in ['list', 'retrieve', 'get_reporting_manager_choices']:
+            permission_classes = [IsAuthenticated]
+        else:
+            permission_classes = [IsAuthenticated, IsAdminUser | IsMaster]
+        return [permission() for permission in permission_classes]
+
     def get_queryset(self):
         user = self.request.user
         qs = Employee.objects.all()
         if user.role != 'master':
-            qs = qs.filter(company=user.company)
+            company = getattr(user, 'company', None)
+            if not company:
+                # Fallback (SSO/legacy): infer company from linked employee profile
+                emp = Employee.objects.filter(user=user).select_related('company').first()
+                company = emp.company if emp else None
+            if company:
+                # Keep the Employee register complete for this company
+                self._ensure_employee_profiles_for_company(company)
+                qs = qs.filter(company=company)
+            else:
+                qs = qs.none()
             
         return qs.select_related(
             'department', 'designation', 'level', 'reporting_manager', 
@@ -786,6 +857,291 @@ class CalendarEventViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         serializer.save(company=self.request.user.company)
 
+
+class ChatConversationViewSet(viewsets.ModelViewSet):
+    permission_classes = [IsAuthenticated, IsCompanyChatUser]
+    pagination_class = CustomPagination
+    filter_backends = [filters.SearchFilter]
+    search_fields = ["name", "members__user__username", "members__user__email"]
+    serializer_class = ChatConversationSerializer
+
+    def get_queryset(self):
+        user = self.request.user
+        return (
+            ChatConversation.objects.filter(company=user.company, members__user=user)
+            .distinct()
+            .order_by("-updated_at")
+        )
+
+    def perform_create(self, serializer):
+        # Only group conversations created via REST; DMs can be created via action below
+        user = self.request.user
+        company = user.company
+        conv_type = self.request.data.get("type") or "group"
+        if conv_type != "group":
+            raise serializers.ValidationError({"type": "Only group conversations can be created here."})
+        name = (self.request.data.get("name") or "").strip()
+        if not name:
+            raise serializers.ValidationError({"name": "Group name is required."})
+
+        conversation = serializer.save(company=company, created_by=user, type="group", name=name)
+        # creator becomes owner with full permissions
+        ChatConversationMember.objects.create(
+            conversation=conversation,
+            user=user,
+            role="owner",
+            can_add_members=True,
+            can_remove_members=True,
+            can_revoke_roles=True,
+        )
+
+        # optional initial members
+        member_ids = self.request.data.get("member_ids") or []
+        if isinstance(member_ids, str):
+            member_ids = [x for x in member_ids.split(",") if x.strip()]
+        for uid in member_ids:
+            try:
+                uid_int = int(uid)
+            except Exception:
+                continue
+            if uid_int == user.id:
+                continue
+            target = UserRegister.objects.filter(id=uid_int, company=company).first()
+            if not target:
+                continue
+            ChatConversationMember.objects.get_or_create(conversation=conversation, user=target, defaults={"role": "member"})
+
+    @action(detail=False, methods=["post"], url_path="dm")
+    def create_dm(self, request):
+        """Create (or get) a DM conversation between current user and another user in same company."""
+        user = request.user
+        company = user.company
+        other_id = request.data.get("user_id")
+        if not other_id:
+            return Response({"detail": "user_id is required."}, status=400)
+        company_id = company.id
+        other = UserRegister.objects.filter(
+            Q(id=other_id),
+            Q(company_id=company_id) | Q(employee__company_id=company_id),
+            Q(role__in=["admin", "employee"]),
+        ).first()
+        if not other:
+            return Response({"detail": "User not found in your company."}, status=404)
+        if other.id == user.id:
+            return Response({"detail": "Cannot DM yourself."}, status=400)
+
+        # find existing dm with exactly these two members
+        existing = (
+            ChatConversation.objects.filter(company=company, type="dm", members__user=user)
+            .filter(members__user=other)
+            .distinct()
+            .first()
+        )
+        if existing:
+            ser = self.get_serializer(existing)
+            return Response(ser.data, status=200)
+
+        conv = ChatConversation.objects.create(company=company, type="dm", created_by=user, name=None)
+        ChatConversationMember.objects.create(conversation=conv, user=user, role="member")
+        ChatConversationMember.objects.create(conversation=conv, user=other, role="member")
+        ser = self.get_serializer(conv)
+        return Response(ser.data, status=201)
+
+    @action(detail=True, methods=["post"], url_path="members/add")
+    def add_member(self, request, pk=None):
+        user = request.user
+        conv = self.get_object()
+        if conv.type != "group":
+            return Response({"detail": "Members can only be managed for groups."}, status=400)
+        actor = ChatConversationMember.objects.filter(conversation=conv, user=user).first()
+        if not actor or not actor.can_add_members:
+            return Response({"detail": "Not allowed."}, status=403)
+
+        member_id = request.data.get("user_id")
+        target = UserRegister.objects.filter(id=member_id, company=user.company).first()
+        if not target:
+            return Response({"detail": "User not found in your company."}, status=404)
+        ChatConversationMember.objects.get_or_create(conversation=conv, user=target, defaults={"role": "member"})
+        conv.save(update_fields=["updated_at"])
+        return Response({"detail": "Member added."}, status=200)
+
+    @action(detail=True, methods=["post"], url_path="members/remove")
+    def remove_member(self, request, pk=None):
+        user = request.user
+        conv = self.get_object()
+        if conv.type != "group":
+            return Response({"detail": "Members can only be managed for groups."}, status=400)
+        actor = ChatConversationMember.objects.filter(conversation=conv, user=user).first()
+        if not actor or not actor.can_remove_members:
+            return Response({"detail": "Not allowed."}, status=403)
+
+        member_id = request.data.get("user_id")
+        target_member = ChatConversationMember.objects.filter(conversation=conv, user_id=member_id).first()
+        if not target_member:
+            return Response({"detail": "Member not found."}, status=404)
+        if target_member.role == "owner":
+            return Response({"detail": "Cannot remove the owner."}, status=400)
+        target_member.delete()
+        conv.save(update_fields=["updated_at"])
+        return Response({"detail": "Member removed."}, status=200)
+
+    @action(detail=True, methods=["patch"], url_path="members/permissions")
+    def update_member_permissions(self, request, pk=None):
+        user = request.user
+        conv = self.get_object()
+        actor = ChatConversationMember.objects.filter(conversation=conv, user=user).first()
+        if not actor or not actor.can_revoke_roles:
+            return Response({"detail": "Not allowed."}, status=403)
+
+        member_id = request.data.get("user_id")
+        target = ChatConversationMember.objects.filter(conversation=conv, user_id=member_id).first()
+        if not target:
+            return Response({"detail": "Member not found."}, status=404)
+        if target.role == "owner":
+            return Response({"detail": "Cannot modify owner permissions."}, status=400)
+
+        for f in ["can_add_members", "can_remove_members", "can_revoke_roles", "role"]:
+            if f in request.data:
+                setattr(target, f, request.data.get(f))
+        target.save()
+        return Response({"detail": "Permissions updated."}, status=200)
+
+
+class ChatMessageViewSet(viewsets.ModelViewSet):
+    permission_classes = [IsAuthenticated, IsCompanyChatUser]
+    pagination_class = CustomPagination
+    serializer_class = ChatMessageSerializer
+    parser_classes = [MultiPartParser, FormParser, JSONParser]
+
+    def get_queryset(self):
+        user = self.request.user
+        qs = ChatMessage.objects.filter(company=user.company, conversation__members__user=user).distinct()
+        conversation_id = self.request.query_params.get("conversation")
+        if conversation_id:
+            qs = qs.filter(conversation_id=conversation_id)
+        return qs.order_by("-created_at")
+
+    def list(self, request, *args, **kwargs):
+        resp = super().list(request, *args, **kwargs)
+        # Mark conversation as seen when messages are fetched.
+        conversation_id = request.query_params.get("conversation")
+        if conversation_id:
+            ChatConversationMember.objects.filter(conversation_id=conversation_id, user_id=request.user.id).update(last_seen_at=timezone.now())
+        return resp
+
+    def perform_create(self, serializer):
+        user = self.request.user
+        # For multipart/form-data uploads, some clients omit/rename keys; prefer validated_data when present.
+        conv_obj = serializer.validated_data.get("conversation") if hasattr(serializer, "validated_data") else None
+        conv_id = (
+            getattr(conv_obj, "id", None)
+            or self.request.data.get("conversation")
+            or self.request.data.get("conversation_id")
+        )
+        if not conv_id:
+            raise serializers.ValidationError({"conversation": "conversation (or conversation_id) is required."})
+
+        conv = ChatConversation.objects.filter(id=conv_id, company=user.company, members__user=user).first()
+        if not conv:
+            raise serializers.ValidationError({"conversation": "Conversation not found or not allowed."})
+        msg = serializer.save(company=user.company, sender=user, conversation=conv)
+        # Sender has "seen" their own message
+        ChatConversationMember.objects.filter(conversation_id=conv.id, user_id=user.id).update(last_seen_at=timezone.now())
+        # bump conversation updated_at
+        ChatConversation.objects.filter(id=conv.id).update(updated_at=timezone.now())
+        return msg
+
+
+class ChatCompanyUsersAPIView(APIView):
+    """
+    List users in the current admin's company (admins + employees) for starting DMs.
+    """
+
+    permission_classes = [IsAuthenticated, IsCompanyChatUser]
+
+    def _ensure_employee_profiles_for_company(self, company):
+        """
+        Ensure `UserRegister(role='employee')` users are represented in chat user picker
+        even if they were created via SSO and don't yet have an Employee profile.
+        """
+        if not company:
+            return
+
+        missing_profile_users = (
+            UserRegister.objects.filter(role="employee", company=company, employee__isnull=True)
+            .only("id", "first_name", "last_name", "email", "company_id")
+        )
+        for u in missing_profile_users:
+            if not u.email:
+                continue
+            existing = Employee.objects.filter(company=company, email__iexact=u.email).first()
+            if existing:
+                if not existing.user_id:
+                    existing.user_id = u.id
+                    if not existing.first_name:
+                        existing.first_name = u.first_name or existing.first_name
+                    if not existing.last_name:
+                        existing.last_name = u.last_name or existing.last_name
+                    if not existing.email:
+                        existing.email = u.email
+                    existing.save(update_fields=["user", "first_name", "last_name", "email"])
+                continue
+            Employee.objects.create(
+                user_id=u.id,
+                company=company,
+                first_name=u.first_name or None,
+                last_name=u.last_name or None,
+                email=u.email,
+            )
+
+    def get(self, request):
+        user = request.user
+        company = getattr(user, "company", None)
+        if not company:
+            # fallback for employee accounts missing UserRegister.company
+            emp = Employee.objects.filter(user=user).select_related("company").first()
+            company = emp.company if emp else None
+        if not company:
+            return Response({"results": []}, status=200)
+
+        # Keep chat picker complete for this company
+        self._ensure_employee_profiles_for_company(company)
+
+        q = (request.query_params.get("q") or "").strip()
+        # Include:
+        # - users where UserRegister.company == company
+        # - employee-linked users where Employee.company == company
+        company_id = company.id
+        qs = (
+            UserRegister.objects.filter(Q(company_id=company_id) | Q(employee__company_id=company_id))
+            .exclude(id=user.id)
+            .filter(role__in=["admin", "employee"])
+            .select_related("employee")
+            .distinct()
+        )
+        if q:
+            qs = qs.filter(
+                Q(username__icontains=q)
+                | Q(email__icontains=q)
+                | Q(first_name__icontains=q)
+                | Q(last_name__icontains=q)
+            )
+        qs = qs.order_by("username")[:50]
+
+        results = [
+            {
+                "id": u.id,
+                "username": u.username,
+                # Prefer Employee profile data when available (SSO/legacy users sometimes
+                # have incorrect/missing fields on UserRegister).
+                "email": (getattr(getattr(u, "employee", None), "email", None) or u.email or u.username),
+                "first_name": (getattr(getattr(u, "employee", None), "first_name", None) or u.first_name),
+                "last_name": (getattr(getattr(u, "employee", None), "last_name", None) or u.last_name),
+                "role": u.role,
+            }
+            for u in qs
+        ]
+        return Response({"results": results}, status=200)
 
 class RelievedEmployeeViewSet(viewsets.ModelViewSet):
 
@@ -2496,7 +2852,7 @@ class GoogleLoginAPIView(APIView):
                 settings.GOOGLE_CLIENT_ID
             )
             
-            email = idinfo.get("email")
+            email = (idinfo.get("email") or "").strip().lower()
             first_name = idinfo.get("given_name", "")
             last_name = idinfo.get("family_name", "")
             
@@ -2507,13 +2863,25 @@ class GoogleLoginAPIView(APIView):
                     "username": email,
                     "first_name": first_name,
                     "last_name": last_name,
-                    "role": "master", # Auto-assign 'master' for initial setup
+                    # IMPORTANT: Never auto-assign master on Google SSO.
+                    # New Google users default to employee; role management happens via master/admin flows.
+                    "role": "employee",
                     "is_active": True
                 }
             )
             if created:
                 user.set_unusable_password()
                 user.save()
+
+            # If this is an employee login and company is missing, try to link by Employee.email
+            if user.role == "employee" and not getattr(user, "company_id", None):
+                emp = Employee.objects.filter(email__iexact=email).select_related("company").first()
+                if emp and emp.company_id:
+                    user.company_id = emp.company_id
+                    user.save(update_fields=["company"])
+                    if not emp.user_id:
+                        emp.user_id = user.id
+                        emp.save(update_fields=["user"])
 
             # Return tokens
             refresh = RefreshToken.for_user(user)

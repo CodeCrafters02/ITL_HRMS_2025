@@ -195,7 +195,7 @@ class CompanyWithAdminSerializer(serializers.ModelSerializer):
     class Meta:
         model = Company
         fields = [
-            'id', 'name', 'address', 'location', 'email', 'phone_number',
+            'id', 'name', 'address', 'location', 'email', 'phone_number', 'gmail_domains',
             'logo', 'logo_url',
             'admin',
             'admin_username_input', 'admin_email_input', 'admin_first_name', 'admin_last_name', 'admin_password',
@@ -378,6 +378,7 @@ class CompanySerializer(serializers.ModelSerializer):
             'location',
             'email',
             'phone_number',
+            'gmail_domains',
             'logo',
             'logo_url',
             'created_at',

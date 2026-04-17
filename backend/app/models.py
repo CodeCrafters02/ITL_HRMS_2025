@@ -20,6 +20,7 @@ class Company(models.Model):
     email = models.EmailField(unique=True)
     phone_number = models.CharField(max_length=20)
     logo = models.ImageField(upload_to='company_logos/', blank=True, null=True)
+    gmail_domains = models.TextField(blank=True, null=True)  # comma-separated domains
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -677,3 +678,63 @@ class SeatBooking(models.Model):
 
     def __str__(self):
         return f"{self.employee} booked {self.seat} on {self.booking_date}"
+
+
+# --------------------------- CHAT ---------------------------------
+class ChatConversation(models.Model):
+    TYPE_CHOICES = [
+        ("dm", "Direct Message"),
+        ("group", "Group"),
+    ]
+
+    company = models.ForeignKey(Company, on_delete=models.CASCADE, related_name="chat_conversations")
+    type = models.CharField(max_length=10, choices=TYPE_CHOICES)
+    name = models.CharField(max_length=255, blank=True, null=True)  # required for group
+    created_by = models.ForeignKey(UserRegister, on_delete=models.SET_NULL, null=True, related_name="created_chat_conversations")
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"{self.company_id}:{self.type}:{self.name or self.id}"
+
+
+class ChatConversationMember(models.Model):
+    ROLE_CHOICES = [
+        ("owner", "Owner"),
+        ("admin", "Admin"),
+        ("member", "Member"),
+    ]
+
+    conversation = models.ForeignKey(ChatConversation, on_delete=models.CASCADE, related_name="members")
+    user = models.ForeignKey(UserRegister, on_delete=models.CASCADE, related_name="chat_memberships")
+    role = models.CharField(max_length=10, choices=ROLE_CHOICES, default="member")
+
+    can_add_members = models.BooleanField(default=False)
+    can_remove_members = models.BooleanField(default=False)
+    can_revoke_roles = models.BooleanField(default=False)
+
+    joined_at = models.DateTimeField(auto_now_add=True)
+    last_seen_at = models.DateTimeField(blank=True, null=True)
+
+    class Meta:
+        unique_together = [("conversation", "user")]
+
+    def __str__(self):
+        return f"{self.conversation_id}:{self.user_id}:{self.role}"
+
+
+class ChatMessage(models.Model):
+    conversation = models.ForeignKey(ChatConversation, on_delete=models.CASCADE, related_name="messages")
+    company = models.ForeignKey(Company, on_delete=models.CASCADE, related_name="chat_messages")
+    sender = models.ForeignKey(UserRegister, on_delete=models.SET_NULL, null=True, related_name="sent_chat_messages")
+    content = models.TextField()
+    attachment = models.FileField(upload_to="chat_attachments/", null=True, blank=True)
+    attachment_name = models.CharField(max_length=255, null=True, blank=True)
+    attachment_mime = models.CharField(max_length=150, null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return f"{self.conversation_id}:{self.sender_id}:{self.created_at}"

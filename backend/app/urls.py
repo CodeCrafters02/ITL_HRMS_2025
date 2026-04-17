@@ -34,11 +34,14 @@ router.register(r'office-floors', OfficeFloorViewSet, basename='office-floors')
 router.register(r'office-sections', OfficeSectionViewSet, basename='office-sections')
 router.register(r'office-seats', OfficeSeatViewSet, basename='office-seats')
 router.register(r'seat-bookings', SeatBookingViewSet, basename='seat-bookings')
+router.register(r'chat-conversations', ChatConversationViewSet, basename='chat-conversations')
+router.register(r'chat-messages', ChatMessageViewSet, basename='chat-messages')
 
 
 
 urlpatterns = [
     path('', include(router.urls)),
+    path('chat/users/', ChatCompanyUsersAPIView.as_view(), name='chat-company-users'),
     path('company-update/', CompanyUpdateAPIView.as_view(), name='company_get'),
     path('company-update/<int:pk>/', CompanyUpdateAPIView.as_view(), name='company_update'),
     path('change-password/', CustomPasswordChangeAPIView.as_view(), name='custom-password-change'),
