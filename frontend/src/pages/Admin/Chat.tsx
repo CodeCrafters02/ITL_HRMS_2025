@@ -139,7 +139,6 @@ const AdminChat = () => {
         setLoading(true);
         try {
             const url = new URL(`${API_BASE_URL}/app/chat-conversations/`);
-            if (search.trim()) url.searchParams.set('search', search.trim());
             const resp = await fetch(url.toString(), { headers: headers() });
             const data = await resp.json();
             if (!resp.ok) throw new Error(data?.detail || 'Failed to load conversations');
@@ -167,6 +166,42 @@ const AdminChat = () => {
             setLoading(false);
         }
     };
+
+    const conversationSearchText = (c: Conversation): string => {
+        const parts: string[] = [];
+        // IMPORTANT: don't reference `displayName` here because it's declared later in the file
+        // (const/let are not hoisted and can crash with TDZ in React render).
+        const n =
+            c.type === 'group'
+                ? (c.name || '').trim()
+                : (() => {
+                      const other = (c.members || []).find((m) => Number(m.user?.id) !== myUserId) || (c.members || [])[0];
+                      const u = other?.user;
+                      if (!u) return '';
+                      const full = `${u.first_name || ''} ${u.last_name || ''}`.trim();
+                      return (full || u.username || u.email || '').trim();
+                  })();
+        if (n) parts.push(n);
+        if (c.type) parts.push(c.type);
+        // include members for DM/group search (username/email/fullname)
+        for (const m of c.members || []) {
+            const u = m?.user;
+            if (!u) continue;
+            parts.push(u.username || '');
+            parts.push(u.email || '');
+            parts.push(`${u.first_name || ''} ${u.last_name || ''}`.trim());
+        }
+        const last = c.last_message?.content || '';
+        if (last) parts.push(last);
+        return parts.filter(Boolean).join(' ').toLowerCase();
+    };
+
+    const filteredConversations = useMemo(() => {
+        const q = search.trim().toLowerCase();
+        if (!q) return conversations;
+        return conversations.filter((c) => conversationSearchText(c).includes(q));
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [conversations, search]);
 
     const fetchPeople = async (q: string): Promise<ChatUser[]> => {
         try {
@@ -801,7 +836,7 @@ ${filtered
                     </div>
                     <PerfectScrollbar className="flex-1">
                         <div className="space-y-1 p-2">
-                            {conversations.map((c) => (
+                            {filteredConversations.map((c) => (
                                 <button
                                     key={c.id}
                                     type="button"
@@ -821,7 +856,9 @@ ${filtered
                                     <div className="text-xs text-white-dark truncate">{c.last_message?.content || 'No messages yet'}</div>
                                 </button>
                             ))}
-                            {!conversations.length && <div className="p-4 text-sm text-white-dark">No conversations.</div>}
+                            {!filteredConversations.length && (
+                                <div className="p-4 text-sm text-white-dark">{search.trim() ? 'No matches.' : 'No conversations.'}</div>
+                            )}
                         </div>
                     </PerfectScrollbar>
                 </div>

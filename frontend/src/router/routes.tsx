@@ -121,6 +121,15 @@ const AdminLetterTemplates = lazy(() => import('../pages/Admin/LetterTemplates')
 const AdminEmployeeReferences = lazy(() => import('../pages/Admin/EmployeeReferences'));
 const AdminLearningCorner = lazy(() => import('../pages/Admin/LearningCorner'));
 const AdminChat = lazy(() => import('../pages/Admin/Chat'));
+const AdminApprovedLeaves = lazy(() => import('../pages/Admin/ApprovedLeaves'));
+const AdminRejectedLeaves = lazy(() => import('../pages/Admin/RejectedLeaves'));
+const AdminAttendanceLogs = lazy(() => import('../pages/Admin/AttendanceLogs'));
+const AdminAttendanceDetails = lazy(() => import('../pages/Admin/AttendanceDetails'));
+const AdminBreakConfig = lazy(() => import('../pages/Admin/BreakConfig'));
+const AdminShift = lazy(() => import('../pages/Admin/Shift'));
+const AdminDeptWorkingDays = lazy(() => import('../pages/Admin/DeptWorkingDays'));
+const AdminLeaveCount = lazy(() => import('../pages/Admin/LeaveCount'));
+const AdminCompanyPolicies = lazy(() => import('../pages/Admin/CompanyPolicies'));
 
 // Employee Pages
 const EmployeeDashboard = lazy(() => import('../pages/Employee/Dashboard'));
@@ -625,19 +634,19 @@ const routes = [
     },
     {
         path: '/admin/approved-leaves',
-        element: <AdminComingSoon />,
+        element: <AdminApprovedLeaves />,
     },
     {
         path: '/admin/rejected-leaves',
-        element: <AdminComingSoon />,
+        element: <AdminRejectedLeaves />,
     },
     {
         path: '/admin/attendance-logs',
-        element: <AdminComingSoon />,
+        element: <AdminAttendanceLogs />,
     },
     {
         path: '/admin/attendance-details',
-        element: <AdminComingSoon />,
+        element: <AdminAttendanceDetails />,
     },
     {
         path: '/admin/salary-structure',
@@ -657,23 +666,23 @@ const routes = [
     },
     {
         path: '/admin/configuration/break-config',
-        element: <AdminComingSoon />,
+        element: <AdminBreakConfig />,
     },
     {
         path: '/admin/configuration/shift',
-        element: <AdminComingSoon />,
+        element: <AdminShift />,
     },
     {
         path: '/admin/configuration/department-wise-working-days',
-        element: <AdminComingSoon />,
+        element: <AdminDeptWorkingDays />,
     },
     {
         path: '/admin/configuration/leave-count',
-        element: <AdminComingSoon />,
+        element: <AdminLeaveCount />,
     },
     {
         path: '/admin/configuration/company-policies',
-        element: <AdminComingSoon />,
+        element: <AdminCompanyPolicies />,
     },
     {
         path: '/admin/configuration/office-structure',

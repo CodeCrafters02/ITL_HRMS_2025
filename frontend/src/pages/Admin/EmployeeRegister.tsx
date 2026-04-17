@@ -488,8 +488,12 @@ const AdminEmployeeRegister = () => {
         try {
             const res = await fetch(`${API_URL}${emp.id}/`, { method: 'DELETE', headers: getHeaders() });
             if (res.ok || res.status === 204) {
+                // Optimistic UI update so it feels instant
+                setEmployees((prev) => prev.filter((e) => e.id !== emp.id));
+                setTotalCount((prev) => Math.max(0, prev - 1));
                 Swal.fire({ title: 'Deleted!', text: 'Employee has been deleted.', icon: 'success', customClass: { popup: 'sweet-alerts' } });
-                fetchEmployees();
+                // Re-fetch to ensure pagination counts are consistent
+                await fetchEmployees();
             } else {
                 const err = await res.json().catch(() => null);
                 Swal.fire({ title: 'Error!', text: err ? JSON.stringify(err) : 'Failed to delete employee.', icon: 'error', customClass: { popup: 'sweet-alerts' } });

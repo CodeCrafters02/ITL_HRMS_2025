@@ -2221,34 +2221,63 @@ class CompanyPoliciesViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         serializer.save(company=self.request.user.company)
  
-class ApprovedLeaveLogView(APIView):
-    def get(self, request):
-        
+class ApprovedLeaveLogView(generics.ListAPIView):
+    """
+    Admin approved leave logs with backend pagination + search.
+    """
+    serializer_class = LeaveLogSerializer
+    permission_classes = [IsAuthenticated, IsAdminUser]
+    pagination_class = CustomPagination
+    filter_backends = [filters.SearchFilter]
+    search_fields = [
+        "employee__first_name",
+        "employee__last_name",
+        "employee__email",
+        "reporting_manager__first_name",
+        "reporting_manager__last_name",
+        "reason",
+        "leave_type__leave_name",
+    ]
+
+    def get_queryset(self):
         qs = EmpLeave.objects.filter(
-            status='Approved',
-            company=request.user.company
-        ).select_related('employee__user', 'reporting_manager')
+            status="Approved",
+            company=self.request.user.company,
+        ).select_related("employee", "reporting_manager", "leave_type")
 
-        if employee_id := request.GET.get("employee_id"):
+        employee_id = self.request.query_params.get("employee_id")
+        from_date = self.request.query_params.get("from_date")
+        to_date = self.request.query_params.get("to_date")
+
+        if employee_id:
             qs = qs.filter(employee__id=employee_id)
-        if from_date := request.GET.get("from_date"):
+        if from_date:
             qs = qs.filter(from_date__gte=from_date)
-        if to_date := request.GET.get("to_date"):
+        if to_date:
             qs = qs.filter(from_date__lte=to_date)
-
-        serializer = LeaveLogSerializer(qs, many=True)
-        return Response(serializer.data)
+        return qs.order_by("-from_date", "-id")
 
 
 class RejectedLeaveLogView(generics.ListAPIView):
     serializer_class = LeaveLogSerializer
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsAdminUser]
+    pagination_class = CustomPagination
+    filter_backends = [filters.SearchFilter]
+    search_fields = [
+        "employee__first_name",
+        "employee__last_name",
+        "employee__email",
+        "reporting_manager__first_name",
+        "reporting_manager__last_name",
+        "reason",
+        "leave_type__leave_name",
+    ]
 
     def get_queryset(self):
         qs = EmpLeave.objects.filter(
             status='Rejected',
             company=self.request.user.company
-        ).select_related('employee', 'reporting_manager')
+        ).select_related('employee', 'reporting_manager', 'leave_type')
 
         from_date = self.request.query_params.get('from_date')
         to_date = self.request.query_params.get('to_date')
@@ -2261,7 +2290,7 @@ class RejectedLeaveLogView(generics.ListAPIView):
         if employee_id:
             qs = qs.filter(employee__id=employee_id)
 
-        return qs
+        return qs.order_by("-from_date", "-id")
    
 class UserLogListView(generics.ListAPIView):
     serializer_class = UserLogSerializer
