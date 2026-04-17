@@ -113,6 +113,13 @@ const AdminComingSoon = lazy(() => import('../pages/Admin/ComingSoon'));
 const AdminDepartment = lazy(() => import('../pages/Admin/Department'));
 const AdminLevel = lazy(() => import('../pages/Admin/Level'));
 const AdminDesignation = lazy(() => import('../pages/Admin/Designation'));
+const AdminEmployeeRegister = lazy(() => import('../pages/Admin/EmployeeRegister'));
+const AdminAssignShifts = lazy(() => import('../pages/Admin/AssignShifts'));
+const AdminRecruitment = lazy(() => import('../pages/Admin/Recruitment'));
+const AdminRelievedEmployees = lazy(() => import('../pages/Admin/RelievedEmployees'));
+const AdminLetterTemplates = lazy(() => import('../pages/Admin/LetterTemplates'));
+const AdminEmployeeReferences = lazy(() => import('../pages/Admin/EmployeeReferences'));
+const AdminLearningCorner = lazy(() => import('../pages/Admin/LearningCorner'));
 
 const routes = [
     // dashboard
@@ -593,23 +600,23 @@ const routes = [
     },
     {
         path: '/admin/employee-register',
-        element: <AdminComingSoon />,
+        element: <AdminEmployeeRegister />,
     },
     {
         path: '/admin/assign-shifts',
-        element: <AdminComingSoon />,
+        element: <AdminAssignShifts />,
     },
     {
         path: '/admin/recruitment',
-        element: <AdminComingSoon />,
+        element: <AdminRecruitment />,
     },
     {
         path: '/admin/relieved-employees',
-        element: <AdminComingSoon />,
+        element: <AdminRelievedEmployees />,
     },
     {
         path: '/admin/letter-templates',
-        element: <AdminComingSoon />,
+        element: <AdminLetterTemplates />,
     },
     {
         path: '/admin/approved-leaves',
@@ -677,11 +684,11 @@ const routes = [
     },
     {
         path: '/admin/learning-corner',
-        element: <AdminComingSoon />,
+        element: <AdminLearningCorner />,
     },
     {
         path: '/admin/employee-references',
-        element: <AdminComingSoon />,
+        element: <AdminEmployeeReferences />,
     },
 ];
 

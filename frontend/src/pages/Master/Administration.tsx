@@ -353,11 +353,11 @@ const MasterAdministration = () => {
                                                         <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-5 mt-2">
                                                             <div>
                                                                 <label htmlFor="password">Password *</label>
-                                                                <input id="password" type="password" name="password" className="form-input bg-blue-50 dark:bg-gray-800" placeholder="********" required value={formData.password} onChange={handleInputChange} />
+                                                                <input id="password" type="password" name="password" className="form-input bg-blue-50 dark:bg-gray-800" placeholder="********" autoComplete="new-password" required value={formData.password} onChange={handleInputChange} />
                                                             </div>
                                                             <div>
                                                                 <label htmlFor="confirmPassword">Confirm Password *</label>
-                                                                <input id="confirmPassword" type="password" name="confirmPassword" className="form-input bg-blue-50 dark:bg-gray-800" placeholder="********" required value={formData.confirmPassword} onChange={handleInputChange} />
+                                                                <input id="confirmPassword" type="password" name="confirmPassword" className="form-input bg-blue-50 dark:bg-gray-800" placeholder="********" autoComplete="new-password" required value={formData.confirmPassword} onChange={handleInputChange} />
                                                             </div>
                                                         </div>
                                                     )}

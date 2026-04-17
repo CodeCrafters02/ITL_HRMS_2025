@@ -29,6 +29,7 @@ from .models import *
 
 from rest_framework import filters
 from rest_framework.pagination import PageNumberPagination
+from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 
 class CustomPagination(PageNumberPagination):
     page_size = 10
@@ -103,13 +104,14 @@ class AdminRegisterViewSet(viewsets.ModelViewSet):
             
         return UserRegister.objects.filter(queryset_filter).order_by('id')
 
-    def update(self, request, pk=None):
+    def update(self, request, pk=None, *args, **kwargs):
+        partial = kwargs.pop('partial', False)
         try:
             admin = UserRegister.objects.get(pk=pk, role='admin')
         except UserRegister.DoesNotExist:
             return Response({'detail': 'Admin not found.'}, status=status.HTTP_404_NOT_FOUND)
 
-        serializer = AdminRegisterSerializer(admin, data=request.data, partial=True)
+        serializer = AdminRegisterSerializer(admin, data=request.data, partial=partial)
         serializer.is_valid(raise_exception=True)
         serializer.save()
         return Response(serializer.data, status=status.HTTP_200_OK)
@@ -506,7 +508,10 @@ class DepartmentViewSet(viewsets.ModelViewSet):
         return Department.objects.filter(company=user.company).order_by('id')
 
     def perform_create(self, serializer):
-        serializer.save(company=self.request.user.company)
+        company = self.request.user.company
+        if not company:
+            raise serializers.ValidationError({"company": "No company found for the current user."})
+        serializer.save(company=company)
 
 
 class LevelViewSet(viewsets.ModelViewSet):
@@ -523,7 +528,10 @@ class LevelViewSet(viewsets.ModelViewSet):
         return Level.objects.filter(company=user.company).order_by('id')
 
     def perform_create(self, serializer):
-        serializer.save(company=self.request.user.company)
+        company = self.request.user.company
+        if not company:
+            raise serializers.ValidationError({"company": "No company found for the current user."})
+        serializer.save(company=company)
 
 
 class DesignationViewSet(viewsets.ModelViewSet):
@@ -540,12 +548,29 @@ class DesignationViewSet(viewsets.ModelViewSet):
         return Designation.objects.filter(company=user.company).select_related('department', 'level').order_by('id')
 
     def perform_create(self, serializer):
-        serializer.save(company=self.request.user.company)        
+        company = self.request.user.company
+        if not company:
+            raise serializers.ValidationError({"company": "No company found for the current user."})
+        serializer.save(company=company)        
 
 class EmployeeViewSet(viewsets.ModelViewSet):
     queryset = Employee.objects.all()
     serializer_class = EmployeeSerializer
     permission_classes = [IsAuthenticated, IsAdminUser | IsMaster]
+    pagination_class = CustomPagination
+    filter_backends = [filters.SearchFilter]
+    search_fields = [
+        'employee_id',
+        'first_name',
+        'middle_name',
+        'last_name',
+        'email',
+        'mobile',
+        'department__department_name',
+        'designation__designation_name',
+        'level__level_name',
+    ]
+    parser_classes = [MultiPartParser, FormParser, JSONParser]
 
     def get_queryset(self):
         user = self.request.user
@@ -613,6 +638,10 @@ class AssetInventoryViewSet(viewsets.ModelViewSet):
 class RecruitmentViewSet(viewsets.ModelViewSet):
     queryset = Recruitment.objects.all()
     serializer_class = RecruitmentSerializer
+    permission_classes = [IsAuthenticated, IsAdminUser | IsMaster]
+    pagination_class = CustomPagination
+    filter_backends = [filters.SearchFilter]
+    search_fields = ['reference_id', 'name', 'email', 'job_title', 'status', 'guardian_name']
 
     def perform_update(self, serializer):
         instance = serializer.save()
@@ -652,10 +681,13 @@ class LearningCornerViewSet(viewsets.ModelViewSet):
     queryset = LearningCorner.objects.all()
     serializer_class = LearningCornerSerializer
     permission_classes = [IsAuthenticated,IsAdminUser]
+    pagination_class = CustomPagination
+    filter_backends = [filters.SearchFilter]
+    search_fields = ['title', 'description']
 
     def get_queryset(self):
         user = self.request.user
-        return LearningCorner.objects.filter(company=user.company)
+        return LearningCorner.objects.filter(company=user.company).order_by('id')
 
     def perform_create(self, serializer):
         serializer.save(company=self.request.user.company)
@@ -676,6 +708,9 @@ class NotificationViewSet(viewsets.ModelViewSet):
 class ShiftPolicyViewSet(viewsets.ModelViewSet):
     serializer_class = ShiftPolicySerializer
     permission_classes = [IsAuthenticated,IsAdminUser]
+    pagination_class = CustomPagination
+    filter_backends = [filters.SearchFilter]
+    search_fields = ['shift_type']
 
     def get_queryset(self):
         return ShiftPolicy.objects.filter(company=self.request.user.company)
@@ -780,6 +815,17 @@ class RelievedEmployeeViewSet(viewsets.ModelViewSet):
     queryset = RelievedEmployee.objects.all()
     serializer_class = RelievedEmployeeSerializer
     permission_classes = [IsAuthenticated, IsAdminUser]
+    pagination_class = CustomPagination
+    filter_backends = [filters.SearchFilter]
+    search_fields = [
+        'employee__employee_id',
+        'employee__first_name',
+        'employee__middle_name',
+        'employee__last_name',
+        'employee__full_name',
+        'employee__department__department_name',
+        'employee__designation__designation_name',
+    ]
 
     def get_queryset(self):
         return RelievedEmployee.objects.filter(employee__company=self.request.user.company)
@@ -1857,6 +1903,9 @@ class BreakConfigViewSet(viewsets.ModelViewSet):
 class LetterTemplateViewSet(viewsets.ModelViewSet):
     serializer_class = LetterTemplateSerializer
     permission_classes = [IsAuthenticated, IsAdminUser]
+    pagination_class = CustomPagination
+    filter_backends = [filters.SearchFilter]
+    search_fields = ['title', 'content', 'email_content']
 
     def get_queryset(self):
         return LetterTemplate.objects.filter(

@@ -367,8 +367,8 @@ class EmployeeReferenceSerializer(serializers.ModelSerializer):
     employee_name = serializers.CharField(source='employee.full_name', read_only=True)
     employee_id = serializers.CharField(source='employee.employee_id', read_only=True)
     employee_email = serializers.CharField(source='employee.email', read_only=True)
-    employee_designation = serializers.CharField(source='employee.designation.name', read_only=True)
-    employee_department = serializers.CharField(source='employee.department.name', read_only=True)
+    employee_designation = serializers.CharField(source='employee.designation.designation_name', read_only=True)
+    employee_department = serializers.CharField(source='employee.department.department_name', read_only=True)
 
     class Meta:
         model = EmployeeReference

@@ -33,6 +33,7 @@ class UserRegister(AbstractUser):
         ('employee', 'Employee'),
     ]
     role = models.CharField(max_length=50, choices=ROLE_CHOICES)
+    email = models.EmailField(unique=True)
     company = models.ForeignKey(Company, on_delete=models.CASCADE, related_name='users', null=True, blank=True)
     created_by = models.ForeignKey('self', null=True,blank=True,related_name='created_userregister',on_delete=models.SET_NULL)
 
@@ -216,6 +217,7 @@ class Employee(models.Model):
     esic_no = models.CharField(max_length=50, null=True, blank=True)
     
     is_active = models.BooleanField(default=True)
+    gmail_connected = models.BooleanField(default=False)
 
     STATUS_CHOICES = [
         ('online', 'Online'),

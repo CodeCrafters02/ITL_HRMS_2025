@@ -51,6 +51,15 @@ class UserRegisterSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError("Role must be master, admin, or employee.")
         return value
 
+    def validate_email(self, value):
+        email = value.strip().lower()
+        queryset = UserRegister.objects.filter(email__iexact=email)
+        if self.instance:
+            queryset = queryset.exclude(pk=self.instance.pk)
+        if queryset.exists():
+            raise serializers.ValidationError("A user with this email already exists.")
+        return email
+
     def create(self, validated_data):
         user = UserRegister.objects.create_user(
             username=validated_data['username'],
@@ -88,6 +97,15 @@ class UserSerializer(serializers.ModelSerializer):
         if value not in ['master', 'admin', 'employee']:
             raise serializers.ValidationError("Role must be master, admin, or employee.")
         return value
+
+    def validate_email(self, value):
+        email = value.strip().lower()
+        queryset = UserRegister.objects.filter(email__iexact=email)
+        if self.instance:
+            queryset = queryset.exclude(pk=self.instance.pk)
+        if queryset.exists():
+            raise serializers.ValidationError("A user with this email already exists.")
+        return email
 
     def validate(self, data):
         role = data.get('role')
@@ -132,6 +150,15 @@ class AdminRegisterSerializer(serializers.ModelSerializer):
     class Meta:
         model = UserRegister
         fields = ['id', 'username', 'email', 'password', 'first_name', 'last_name']
+
+    def validate_email(self, value):
+        email = value.strip().lower()
+        queryset = UserRegister.objects.filter(email__iexact=email)
+        if self.instance:
+            queryset = queryset.exclude(pk=self.instance.pk)
+        if queryset.exists():
+            raise serializers.ValidationError("A user with this email already exists.")
+        return email
 
     def create(self, validated_data):
         validated_data['role'] = 'admin'
@@ -345,9 +372,11 @@ class ShiftPolicySerializer(serializers.ModelSerializer):
 
        
 class EmployeeSerializer(serializers.ModelSerializer):
-    department = serializers.PrimaryKeyRelatedField(queryset=Department.objects.all())
-    designation = serializers.PrimaryKeyRelatedField(queryset=Designation.objects.all())
-    level = serializers.PrimaryKeyRelatedField(queryset=Level.objects.all(), required=False)
+    company = serializers.PrimaryKeyRelatedField(queryset=Company.objects.all(), required=False, allow_null=True)
+    department = serializers.PrimaryKeyRelatedField(queryset=Department.objects.all(), required=False, allow_null=True)
+    designation = serializers.PrimaryKeyRelatedField(queryset=Designation.objects.all(), required=False, allow_null=True)
+    level = serializers.PrimaryKeyRelatedField(queryset=Level.objects.all(), required=False, allow_null=True)
+    password = serializers.CharField(write_only=True, required=False, allow_blank=True)
 
     reporting_level = serializers.PrimaryKeyRelatedField(
         queryset=Level.objects.all(), write_only=True, required=False, allow_null=True
@@ -380,7 +409,7 @@ class EmployeeSerializer(serializers.ModelSerializer):
             'who_referred', 'date_of_joining', 'previous_employer', 'date_of_releaving',
             'previous_designation_name', 'previous_salary', 'ctc', 'gross_salary',
             'epf_status', 'uan', 'asset_details', 'asset_names', 'esic_status', 'esic_no',
-            'source_choices', 'shift_assigned'
+            'source_choices', 'shift_assigned', 'password'
         ]
 
     def get_department_name(self, obj):
@@ -428,11 +457,18 @@ class EmployeeSerializer(serializers.ModelSerializer):
         else:
             company = request.user.company
         
+        if email:
+            email = email.strip().lower()
+            data['email'] = email
+            existing_users = UserRegister.objects.filter(email__iexact=email)
+            if self.instance and getattr(self.instance, 'user_id', None):
+                existing_users = existing_users.exclude(pk=self.instance.user_id)
+            if existing_users.exists():
+                raise serializers.ValidationError({"email": "A user with this email already exists."})
+
         if self.instance is None:  # Means create, not update
             if not email:
                 raise serializers.ValidationError({"email": "Email is required for employee creation."})
-            if Employee.objects.filter(email=email, company=company).exists():
-                raise serializers.ValidationError({"email": "This email is already registered for this company."})
 
 
         if source != 'internalreference' and ref:
@@ -450,11 +486,16 @@ class EmployeeSerializer(serializers.ModelSerializer):
             if reporting_level and reporting_manager.level_id != reporting_level.id:
                 raise serializers.ValidationError("Reporting manager is not assigned to the selected reporting level.")
 
+        # Non-master users can only create/update employees in their own company.
+        if request.user.role != 'master':
+            data['company'] = company
+
         return data
 
     def create(self, validated_data):
         reporting_level = validated_data.pop('reporting_level', None)
         assets = validated_data.pop('asset_details', [])
+        raw_password = validated_data.pop('password', '').strip()
         request = self.context['request']
         admin_user = request.user
         
@@ -466,7 +507,7 @@ class EmployeeSerializer(serializers.ModelSerializer):
 
         employee_id = self.generate_employee_id()
         username = self.generate_username(validated_data)
-        password = get_random_string(8)
+        password = raw_password or get_random_string(8)
 
         # Ensure email exists in validated_data
         email = validated_data.get('email')
@@ -553,6 +594,25 @@ class EmployeeSerializer(serializers.ModelSerializer):
             EmployeeAssetDetails.objects.create(employee=employee, assetinventory=asset_obj)
 
         self.send_welcome_email(user, password)
+
+        return employee
+
+    def update(self, instance, validated_data):
+        request = self.context.get('request')
+        if not request:
+            raise serializers.ValidationError("Request context is required.")
+
+        # Admins cannot move employees across companies.
+        if request.user.role != 'master':
+            validated_data['company'] = request.user.company
+
+        employee = super().update(instance, validated_data)
+
+        # Linked auth user must always remain an employee and match employee company.
+        if employee.user:
+            employee.user.role = 'employee'
+            employee.user.company = employee.company
+            employee.user.save(update_fields=['role', 'company'])
 
         return employee
 

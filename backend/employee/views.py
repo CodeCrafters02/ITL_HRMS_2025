@@ -1429,11 +1429,33 @@ class EmployeeHierarchyAPIView(APIView):
 from rest_framework import viewsets, permissions, serializers, decorators, response, status
 from .models import EmployeeReference, Employee
 from .serializers import EmployeeReferenceSerializer
+from rest_framework import filters
+from rest_framework.pagination import PageNumberPagination
+
+
+class EmployeeReferencePagination(PageNumberPagination):
+    page_size = 10
+    page_size_query_param = "page_size"
+    max_page_size = 100
 
 
 class EmployeeReferenceViewSet(viewsets.ModelViewSet):
     serializer_class = EmployeeReferenceSerializer
     queryset = EmployeeReference.objects.all().order_by('-submitted_at')
+    pagination_class = EmployeeReferencePagination
+    filter_backends = [filters.SearchFilter]
+    search_fields = [
+        'employee__employee_id',
+        'employee__first_name',
+        'employee__middle_name',
+        'employee__last_name',
+        'name',
+        'designation',
+        'email',
+        'contact_number',
+        'status',
+        'admin_comment',
+    ]
 
     def get_permissions(self):
         return [permissions.IsAuthenticated()]
@@ -1443,13 +1465,21 @@ class EmployeeReferenceViewSet(viewsets.ModelViewSet):
 
         # Admin: only see references from employees in the same company
         if user.role == "admin" and user.company:
-            return EmployeeReference.objects.filter(
+            queryset = EmployeeReference.objects.filter(
                 employee__company=user.company
-            ).order_by('-submitted_at')
+            ).select_related('employee', 'employee__department', 'employee__designation').order_by('-submitted_at')
+            status_filter = self.request.query_params.get("status")
+            if status_filter and status_filter != "All":
+                queryset = queryset.filter(status=status_filter)
+            return queryset
 
         # Superuser sees all
         if user.is_superuser:
-            return EmployeeReference.objects.all().order_by('-submitted_at')
+            queryset = EmployeeReference.objects.all().select_related('employee', 'employee__department', 'employee__designation').order_by('-submitted_at')
+            status_filter = self.request.query_params.get("status")
+            if status_filter and status_filter != "All":
+                queryset = queryset.filter(status=status_filter)
+            return queryset
 
         # Regular employee: only own references
         try:
@@ -1457,7 +1487,11 @@ class EmployeeReferenceViewSet(viewsets.ModelViewSet):
         except Employee.DoesNotExist:
             return EmployeeReference.objects.none()
 
-        return EmployeeReference.objects.filter(employee=employee).order_by('-submitted_at')
+        queryset = EmployeeReference.objects.filter(employee=employee).select_related('employee', 'employee__department', 'employee__designation').order_by('-submitted_at')
+        status_filter = self.request.query_params.get("status")
+        if status_filter and status_filter != "All":
+            queryset = queryset.filter(status=status_filter)
+        return queryset
 
     def perform_create(self, serializer):
         """Attach logged-in employee automatically"""
@@ -1470,7 +1504,7 @@ class EmployeeReferenceViewSet(viewsets.ModelViewSet):
     @decorators.action(
         detail=True,
         methods=["patch"],
-        permission_classes=[permissions.IsAdminUser],
+        permission_classes=[permissions.IsAuthenticated],
         url_path="review",
     )
     def review(self, request, pk=None):
@@ -1479,6 +1513,11 @@ class EmployeeReferenceViewSet(viewsets.ModelViewSet):
 
         # Ensure admin and employee are in same company
         admin_user = request.user
+        if not (admin_user.role == "admin" or admin_user.is_superuser):
+            return response.Response(
+                {"error": "Only admins can review employee references."},
+                status=status.HTTP_403_FORBIDDEN
+            )
         if reference.employee.company != admin_user.company:
             return response.Response(
                 {"error": "You are not allowed to review references from another company."},
