@@ -206,6 +206,8 @@ class LoginAPIView(APIView):
                 "access": access_token,
                 "refresh": refresh_token,
                 "username": user.username,
+                "first_name": user.first_name,
+                "last_name": user.last_name,
                 "role": user.role  # ✅ This lets frontend redirect properly!
             }, status=status.HTTP_200_OK)
 
@@ -2994,6 +2996,8 @@ class GoogleLoginAPIView(APIView):
                 "access": str(refresh.access_token),
                 "refresh": str(refresh),
                 "username": user.username,
+                "first_name": user.first_name,
+                "last_name": user.last_name,
                 "role": user.role
             }, status=status.HTTP_200_OK)
 

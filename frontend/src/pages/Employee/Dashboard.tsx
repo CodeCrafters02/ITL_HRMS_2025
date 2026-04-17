@@ -7,8 +7,11 @@ import IconMenuChat from '../../components/Icon/Menu/IconMenuChat';
 
 const EmployeeDashboard = () => {
     const dispatch = useDispatch();
-    const userName = localStorage.getItem('username') || 'Employee';
-    const formattedName = userName.charAt(0).toUpperCase() + userName.slice(1);
+    const first = (localStorage.getItem('first_name') || '').trim();
+    const last = (localStorage.getItem('last_name') || '').trim();
+    const fallback = localStorage.getItem('username') || 'Employee';
+    const display = `${first} ${last}`.trim() || fallback;
+    const formattedName = display.charAt(0).toUpperCase() + display.slice(1);
 
     useEffect(() => {
         dispatch(setPageTitle('Employee Dashboard'));

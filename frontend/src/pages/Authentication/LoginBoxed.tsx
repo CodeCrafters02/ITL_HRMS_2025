@@ -42,6 +42,8 @@ const LoginBoxed = () => {
                 localStorage.setItem('refresh_token', data.refresh);
                 localStorage.setItem('user_role', data.role);
                 localStorage.setItem('username', data.username);
+                if (data.first_name !== undefined) localStorage.setItem('first_name', data.first_name || '');
+                if (data.last_name !== undefined) localStorage.setItem('last_name', data.last_name || '');
                 
                 // Navigate based on role
                 if (data.role === 'master') {
@@ -81,6 +83,8 @@ const LoginBoxed = () => {
                 localStorage.setItem('refresh_token', data.refresh);
                 localStorage.setItem('user_role', data.role);
                 localStorage.setItem('username', data.username);
+                if (data.first_name !== undefined) localStorage.setItem('first_name', data.first_name || '');
+                if (data.last_name !== undefined) localStorage.setItem('last_name', data.last_name || '');
                 
                 if (data.role === 'master') {
                     navigate('/master/dashboard');
