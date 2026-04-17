@@ -703,6 +703,7 @@ class ChatConversationMember(models.Model):
         ("owner", "Owner"),
         ("admin", "Admin"),
         ("member", "Member"),
+        ("viewer", "Viewer"),
     ]
 
     conversation = models.ForeignKey(ChatConversation, on_delete=models.CASCADE, related_name="members")

@@ -14,7 +14,7 @@ type ChatUser = { id: number; username: string; email: string; first_name?: stri
 type ChatMember = {
     id: number;
     user: ChatUser;
-    role: 'owner' | 'admin' | 'member';
+    role: 'owner' | 'admin' | 'member' | 'viewer';
     can_add_members: boolean;
     can_remove_members: boolean;
     can_revoke_roles: boolean;
@@ -102,6 +102,16 @@ const AdminChat = () => {
         return h;
     };
 
+    const activeConv = useMemo(() => conversations.find((c) => c.id === activeId) || null, [conversations, activeId]);
+
+    const myMembership = useMemo(() => {
+        if (!activeConv?.members?.length) return null;
+        const byId = myUserId ? activeConv.members.find((m) => Number(m.user?.id) === myUserId) : null;
+        if (byId) return byId;
+        if (myUsername) return activeConv.members.find((m) => (m.user?.username || '') === myUsername) || null;
+        return null;
+    }, [activeConv, myUserId, myUsername]);
+
     const resolveFileUrl = (u?: string | null) => {
         if (!u) return null;
         if (String(u).startsWith('http')) return u;
@@ -125,7 +135,7 @@ const AdminChat = () => {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
-    const fetchConversations = async () => {
+    const fetchConversations = async (): Promise<Conversation[]> => {
         setLoading(true);
         try {
             const url = new URL(`${API_BASE_URL}/app/chat-conversations/`);
@@ -149,8 +159,10 @@ const AdminChat = () => {
                 return next;
             });
             if (!activeId && Array.isArray(list) && list.length) setActiveId(list[0].id);
+            return arr;
         } catch (e: any) {
             Swal.fire('Error', e?.message || 'Failed to load conversations', 'error');
+            return [];
         } finally {
             setLoading(false);
         }
@@ -170,6 +182,213 @@ const AdminChat = () => {
             Swal.fire('Error', e?.message || 'Failed to load users', 'error');
             return [];
         }
+    };
+
+    const manageGroup = async () => {
+        if (!activeConv || activeConv.type !== 'group') return;
+        const convId = activeConv.id;
+        const canAdd = !!myMembership?.can_add_members;
+        const canRemove = !!myMembership?.can_remove_members;
+        const canRevoke = !!myMembership?.can_revoke_roles;
+
+        const renderMembersHtml = (members: ChatMember[]) => {
+            return members
+                .map((m) => {
+                    const me = myUserId ? Number(m.user?.id) === myUserId : (m.user?.username || '') === myUsername;
+                    const title = `${(m.user?.first_name || '')} ${(m.user?.last_name || '')}`.trim() || m.user?.username || 'User';
+                    const subtitle = m.user?.email || '';
+                    const disabled = !canRevoke;
+                    return `
+<div class="border border-[#e0e6ed] rounded-md p-3 mb-2">
+  <div class="flex items-start justify-between gap-3">
+    <div class="min-w-0">
+      <div class="font-semibold truncate">${title}${me ? ' (You)' : ''}</div>
+      <div class="text-xs text-gray-500 truncate">${subtitle}</div>
+    </div>
+    ${canRemove ? `<button type="button" class="btn btn-outline-danger btn-sm" data-remove="${m.user?.id}">Remove</button>` : ''}
+  </div>
+  <div class="mt-2 grid grid-cols-2 gap-2">
+    <label class="text-xs font-semibold">Role</label>
+    <select class="form-select text-sm" data-role="${m.user?.id}" ${disabled ? 'disabled' : ''}>
+      <option value="member" ${m.role === 'member' ? 'selected' : ''}>member</option>
+      <option value="admin" ${m.role === 'admin' ? 'selected' : ''}>admin</option>
+      <option value="viewer" ${m.role === 'viewer' ? 'selected' : ''}>viewer</option>
+    </select>
+  </div>
+  ${canRevoke ? `<div class="mt-2"><button type="button" class="btn btn-primary btn-sm" data-save="${m.user?.id}">Save</button></div>` : ''}
+</div>`;
+                })
+                .join('');
+        };
+
+        const open = async () => {
+            // refresh conversation list so members are up to date
+            const fresh = await fetchConversations();
+            const latest = fresh.find((c) => c.id === convId) || activeConv;
+            const members = latest.members || [];
+            const memberIdSet = new Set<number>(members.map((m) => Number(m.user?.id)).filter(Boolean));
+
+            const searchId = 'group_add_search';
+            const listId = 'group_add_list';
+            const membersId = 'group_members_list';
+
+            await Swal.fire({
+                title: 'Manage group',
+                width: 760,
+                html: `
+<div class="space-y-4 text-left">
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+    <div>
+      <div class="font-semibold mb-2">Members</div>
+      <div id="${membersId}" style="max-height:360px; overflow:auto;"></div>
+    </div>
+    <div>
+      <div class="font-semibold mb-2">Add member</div>
+      ${
+          canAdd
+              ? `<input id="${searchId}" class="swal2-input" placeholder="Search users..." />
+         <div id="${listId}" style="max-height:320px; overflow:auto;"></div>`
+              : `<div class="text-sm text-gray-500">You don't have permission to add members.</div>`
+      }
+    </div>
+  </div>
+</div>`,
+                showConfirmButton: false,
+                showCancelButton: true,
+                didOpen: async () => {
+                    const membersEl = document.getElementById(membersId);
+                    if (membersEl) membersEl.innerHTML = renderMembersHtml(members);
+
+                    // bind save/remove handlers
+                    membersEl?.querySelectorAll('button[data-save]').forEach((btn) => {
+                        btn.addEventListener('click', async () => {
+                            const uid = Number((btn as any).getAttribute('data-save') || 0);
+                            if (!uid) return;
+                            const role = (membersEl.querySelector(`select[data-role="${uid}"]`) as HTMLSelectElement | null)?.value || 'member';
+                            try {
+                                const resp = await fetch(`${API_BASE_URL}/app/chat-conversations/${convId}/members/permissions/`, {
+                                    method: 'PATCH',
+                                    headers: { ...headers(), 'Content-Type': 'application/json' } as any,
+                                    body: JSON.stringify({
+                                        user_id: uid,
+                                        role,
+                                    }),
+                                });
+                                const data = await resp.json();
+                                if (!resp.ok) throw new Error(data?.detail || 'Failed to update permissions');
+                                Swal.fire('Updated', 'Member permissions updated.', 'success');
+                                await fetchConversations();
+                                setActiveId(convId);
+                            } catch (e: any) {
+                                Swal.fire('Error', e?.message || 'Failed to update permissions', 'error');
+                            }
+                        });
+                    });
+
+                    membersEl?.querySelectorAll('button[data-remove]').forEach((btn) => {
+                        btn.addEventListener('click', async () => {
+                            const uid = Number((btn as any).getAttribute('data-remove') || 0);
+                            if (!uid) return;
+                            const ok = await Swal.fire({ title: 'Remove member?', showCancelButton: true, confirmButtonText: 'Remove' });
+                            if (!ok.isConfirmed) return;
+                            try {
+                                const resp = await fetch(`${API_BASE_URL}/app/chat-conversations/${convId}/members/remove/`, {
+                                    method: 'POST',
+                                    headers: { ...headers(), 'Content-Type': 'application/json' } as any,
+                                    body: JSON.stringify({ user_id: uid }),
+                                });
+                                const data = await resp.json();
+                                if (!resp.ok) throw new Error(data?.detail || 'Failed to remove member');
+                                Swal.fire('Removed', 'Member removed.', 'success');
+                                await fetchConversations();
+                                setActiveId(convId);
+                                Swal.close();
+                                open();
+                            } catch (e: any) {
+                                Swal.fire('Error', e?.message || 'Failed to remove member', 'error');
+                            }
+                        });
+                    });
+
+                    if (!canAdd) return;
+                    const input = document.getElementById(searchId) as HTMLInputElement | null;
+                    const listEl = document.getElementById(listId);
+
+                    const renderAddList = (items: ChatUser[]) => {
+                        if (!listEl) return;
+                        const filtered = (items || []).filter((u) => !memberIdSet.has(Number(u.id)));
+                        if (!filtered.length) {
+                            listEl.innerHTML = `<div class="text-sm text-gray-500">No users found.</div>`;
+                            return;
+                        }
+                        listEl.innerHTML = `
+<div class="mb-2">
+  <button type="button" class="btn btn-primary btn-sm" id="group_add_selected_btn">Add selected</button>
+</div>
+${filtered
+    .map((u) => {
+        const name = `${u.first_name || ''} ${u.last_name || ''}`.trim();
+        const title = name ? `${name} (${u.username})` : u.username;
+        return `<label class="w-full flex items-start gap-2 px-3 py-2 rounded-md border border-[#e0e6ed] hover:bg-[#f5f5f5] mb-2 cursor-pointer">
+  <input type="checkbox" data-add-check="${u.id}" class="mt-1" />
+  <div class="min-w-0">
+    <div class="font-semibold">${title}</div>
+    <div class="text-xs text-gray-500">${u.email}</div>
+  </div>
+</label>`;
+    })
+    .join('')}
+`;
+
+                        const addBtn = document.getElementById('group_add_selected_btn');
+                        addBtn?.addEventListener('click', async () => {
+                            const ids: number[] = [];
+                            listEl.querySelectorAll('input[data-add-check]').forEach((el) => {
+                                const inp = el as HTMLInputElement;
+                                if (!inp.checked) return;
+                                const idStr = inp.getAttribute('data-add-check') || '';
+                                const id = Number(idStr);
+                                if (id) ids.push(id);
+                            });
+                            if (!ids.length) {
+                                Swal.fire('Select users', 'Please select one or more users to add.', 'info');
+                                return;
+                            }
+                            try {
+                                const resp = await fetch(`${API_BASE_URL}/app/chat-conversations/${convId}/members/add/`, {
+                                    method: 'POST',
+                                    headers: { ...headers(), 'Content-Type': 'application/json' } as any,
+                                    body: JSON.stringify({ member_ids: ids }),
+                                });
+                                const data = await resp.json();
+                                if (!resp.ok) throw new Error(data?.detail || 'Failed to add members');
+                                Swal.fire('Added', data?.detail || 'Members added to group.', 'success');
+                                await fetchConversations();
+                                setActiveId(convId);
+                                Swal.close();
+                                open();
+                            } catch (e: any) {
+                                Swal.fire('Error', e?.message || 'Failed to add members', 'error');
+                            }
+                        });
+                    };
+
+                    const initial = await fetchPeople('');
+                    renderAddList(initial);
+                    let t: any;
+                    input?.addEventListener('input', async () => {
+                        clearTimeout(t);
+                        t = setTimeout(async () => {
+                            const q = input.value || '';
+                            const next = await fetchPeople(q);
+                            renderAddList(next);
+                        }, 250);
+                    });
+                },
+            });
+        };
+
+        await open();
     };
 
     const startDm = async (userId: number) => {
@@ -444,8 +663,6 @@ const AdminChat = () => {
         return () => clearTimeout(t);
     }, [activeId, messages.length]);
 
-    const activeConversation = useMemo(() => conversations.find((c) => c.id === activeId) || null, [conversations, activeId]);
-
     const displayName = (c: Conversation) => {
         if (c.type === 'group') return c.name || 'Group';
         // DM: show other member name
@@ -612,9 +829,19 @@ const AdminChat = () => {
                 {/* Right: messages */}
                 <div className="flex-1 flex flex-col">
                     <div className="p-4 border-b border-[#e0e6ed] dark:border-[#1b2e4b]">
-                        <div className="font-bold">{activeConversation ? displayName(activeConversation) : 'Chat'}</div>
-                        <div className="text-xs text-white-dark">
-                            {activeConversation?.type === 'group' ? 'Group chat' : 'Direct message'}
+                        <div className="flex items-center justify-between gap-3">
+                            <div className="min-w-0">
+                                <div className="font-bold truncate">{activeConv ? displayName(activeConv) : 'Chat'}</div>
+                                <div className="text-xs text-white-dark">
+                                    {activeConv?.type === 'group' ? 'Group chat' : 'Direct message'}
+                                </div>
+                            </div>
+                            {/* Everyone can open Manage to view members; actions inside are permission-gated */}
+                            {activeConv?.type === 'group' && (
+                                <button type="button" className="btn btn-outline-primary btn-sm" onClick={manageGroup}>
+                                    Manage
+                                </button>
+                            )}
                         </div>
                     </div>
                     <PerfectScrollbar className="flex-1 p-4" containerRef={(ref) => (messagesScrollElRef.current = ref)}>
@@ -665,7 +892,12 @@ const AdminChat = () => {
                             <div ref={messagesEndRef} />
                         </div>
                     </PerfectScrollbar>
-                    <div className="p-4 border-t border-[#e0e6ed] dark:border-[#1b2e4b] flex items-center gap-2">
+                    {myMembership?.role === 'viewer' ? (
+                        <div className="p-4 border-t border-[#e0e6ed] dark:border-[#1b2e4b]">
+                            <div className="text-sm text-white-dark">You are a viewer in this group. Messaging is disabled.</div>
+                        </div>
+                    ) : (
+                        <div className="p-4 border-t border-[#e0e6ed] dark:border-[#1b2e4b] flex items-center gap-2">
                         <input
                             ref={fileInputRef}
                             type="file"
@@ -711,7 +943,8 @@ const AdminChat = () => {
                         <button type="button" className="btn btn-primary px-4" onClick={handleSend} disabled={!activeId}>
                             <IconSend className="w-5 h-5" />
                         </button>
-                    </div>
+                        </div>
+                    )}
                     {(pendingFile || pendingPreviewUrl) && (
                         <div className="px-4 pb-4">
                             <div className="p-3 rounded-lg border border-[#e0e6ed] dark:border-[#1b2e4b] flex items-center gap-3">

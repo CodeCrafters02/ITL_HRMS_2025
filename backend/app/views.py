@@ -885,11 +885,11 @@ class ChatConversationViewSet(viewsets.ModelViewSet):
             raise serializers.ValidationError({"name": "Group name is required."})
 
         conversation = serializer.save(company=company, created_by=user, type="group", name=name)
-        # creator becomes owner with full permissions
+        # creator becomes admin with full permissions
         ChatConversationMember.objects.create(
             conversation=conversation,
             user=user,
-            role="owner",
+            role="admin",
             can_add_members=True,
             can_remove_members=True,
             can_revoke_roles=True,
@@ -957,13 +957,30 @@ class ChatConversationViewSet(viewsets.ModelViewSet):
         if not actor or not actor.can_add_members:
             return Response({"detail": "Not allowed."}, status=403)
 
-        member_id = request.data.get("user_id")
-        target = UserRegister.objects.filter(id=member_id, company=user.company).first()
-        if not target:
-            return Response({"detail": "User not found in your company."}, status=404)
-        ChatConversationMember.objects.get_or_create(conversation=conv, user=target, defaults={"role": "member"})
+        # Support adding a single user_id OR multiple member_ids
+        ids = request.data.get("member_ids") or request.data.get("user_ids") or request.data.get("user_id")
+        if isinstance(ids, str):
+            ids = [x for x in ids.split(",") if x.strip()]
+        if isinstance(ids, (int, float)):
+            ids = [int(ids)]
+        if not isinstance(ids, list):
+            ids = [ids] if ids else []
+
+        added = 0
+        for member_id in ids:
+            try:
+                mid = int(member_id)
+            except Exception:
+                continue
+            if mid == user.id:
+                continue
+            target = UserRegister.objects.filter(id=mid, company=user.company).first()
+            if not target:
+                continue
+            ChatConversationMember.objects.get_or_create(conversation=conv, user=target, defaults={"role": "member"})
+            added += 1
         conv.save(update_fields=["updated_at"])
-        return Response({"detail": "Member added."}, status=200)
+        return Response({"detail": f"Members added: {added}."}, status=200)
 
     @action(detail=True, methods=["post"], url_path="members/remove")
     def remove_member(self, request, pk=None):
@@ -979,8 +996,6 @@ class ChatConversationViewSet(viewsets.ModelViewSet):
         target_member = ChatConversationMember.objects.filter(conversation=conv, user_id=member_id).first()
         if not target_member:
             return Response({"detail": "Member not found."}, status=404)
-        if target_member.role == "owner":
-            return Response({"detail": "Cannot remove the owner."}, status=400)
         target_member.delete()
         conv.save(update_fields=["updated_at"])
         return Response({"detail": "Member removed."}, status=200)
@@ -997,12 +1012,30 @@ class ChatConversationViewSet(viewsets.ModelViewSet):
         target = ChatConversationMember.objects.filter(conversation=conv, user_id=member_id).first()
         if not target:
             return Response({"detail": "Member not found."}, status=404)
-        if target.role == "owner":
-            return Response({"detail": "Cannot modify owner permissions."}, status=400)
 
-        for f in ["can_add_members", "can_remove_members", "can_revoke_roles", "role"]:
-            if f in request.data:
-                setattr(target, f, request.data.get(f))
+        # Normalize roles and permissions:
+        # - admin: full access
+        # - member: message only (no member management)
+        # - viewer: read-only (no sending messages enforced elsewhere)
+        new_role = request.data.get("role", target.role)
+        if new_role not in ("admin", "member", "viewer"):
+            new_role = target.role
+
+        if new_role == "admin":
+            target.role = "admin"
+            target.can_add_members = True
+            target.can_remove_members = True
+            target.can_revoke_roles = True
+        elif new_role == "viewer":
+            target.role = "viewer"
+            target.can_add_members = False
+            target.can_remove_members = False
+            target.can_revoke_roles = False
+        else:
+            target.role = "member"
+            target.can_add_members = False
+            target.can_remove_members = False
+            target.can_revoke_roles = False
         target.save()
         return Response({"detail": "Permissions updated."}, status=200)
 
@@ -1044,6 +1077,10 @@ class ChatMessageViewSet(viewsets.ModelViewSet):
         conv = ChatConversation.objects.filter(id=conv_id, company=user.company, members__user=user).first()
         if not conv:
             raise serializers.ValidationError({"conversation": "Conversation not found or not allowed."})
+        if conv.type == "group":
+            member = ChatConversationMember.objects.filter(conversation_id=conv.id, user_id=user.id).only("role").first()
+            if member and member.role == "viewer":
+                raise serializers.ValidationError({"detail": "View-only members cannot send messages."})
         msg = serializer.save(company=user.company, sender=user, conversation=conv)
         # Sender has "seen" their own message
         ChatConversationMember.objects.filter(conversation_id=conv.id, user_id=user.id).update(last_seen_at=timezone.now())
@@ -2836,6 +2873,71 @@ from google.auth.transport import requests as google_requests
 from django.conf import settings
 from rest_framework.permissions import AllowAny
 
+def _normalize_domain_list(raw: str | None) -> list[str]:
+    if not raw:
+        return []
+    parts = []
+    for x in str(raw).split(","):
+        d = (x or "").strip().lower()
+        if d.startswith("@"):
+            d = d[1:]
+        if d:
+            parts.append(d)
+    return parts
+
+
+def _company_for_email_domain(email: str):
+    domain = (email.split("@")[-1] if "@" in email else "").strip().lower()
+    if not domain:
+        return None
+    # gmail_domains is comma-separated; easiest safe match is to scan companies.
+    for c in Company.objects.exclude(gmail_domains__isnull=True).exclude(gmail_domains__exact="").only("id", "gmail_domains"):
+        if domain in _normalize_domain_list(c.gmail_domains):
+            return c
+    return None
+
+
+def _ensure_employee_for_company_user(*, user: UserRegister, email: str, first_name: str = "", last_name: str = ""):
+    """
+    If user logs in via SSO for the first time and their email domain matches a company's allowed domains,
+    auto-create/link an Employee profile under that company.
+    """
+    if user.role != "employee":
+        return
+    if getattr(user, "company_id", None):
+        return
+
+    company = _company_for_email_domain(email)
+    if not company:
+        return
+
+    # Link user to company
+    user.company_id = company.id
+    user.save(update_fields=["company"])
+
+    # Link or create Employee
+    emp = Employee.objects.filter(email__iexact=email).select_related("company").first()
+    if emp:
+        if not emp.company_id:
+            emp.company_id = company.id
+        if not emp.user_id:
+            emp.user_id = user.id
+        if not emp.first_name and first_name:
+            emp.first_name = first_name
+        if not emp.last_name and last_name:
+            emp.last_name = last_name
+        emp.save()
+        return
+
+    Employee.objects.create(
+        user_id=user.id,
+        company_id=company.id,
+        email=email,
+        first_name=first_name or None,
+        last_name=last_name or None,
+    )
+
+
 class GoogleLoginAPIView(APIView):
     permission_classes = [AllowAny]
 
@@ -2882,6 +2984,9 @@ class GoogleLoginAPIView(APIView):
                     if not emp.user_id:
                         emp.user_id = user.id
                         emp.save(update_fields=["user"])
+                else:
+                    # If no Employee exists yet, try auto-registering by allowed company domains
+                    _ensure_employee_for_company_user(user=user, email=email, first_name=first_name, last_name=last_name)
 
             # Return tokens
             refresh = RefreshToken.for_user(user)

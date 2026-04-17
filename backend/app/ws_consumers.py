@@ -62,6 +62,9 @@ class ChatConsumer(AsyncJsonWebsocketConsumer):
         if not member:
             await self.send_json({"type": "error", "detail": "Not allowed."})
             return
+        if getattr(member, "role", None) == "viewer":
+            await self.send_json({"type": "error", "detail": "View-only members cannot send messages."})
+            return
 
         conv = await ChatConversation.objects.filter(id=conversation_id, company=user.company).afirst()
         if not conv:
