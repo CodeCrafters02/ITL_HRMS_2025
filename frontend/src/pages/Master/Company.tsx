@@ -33,8 +33,17 @@ const MasterCompany = () => {
         address: '',
         location: '',
         admin: '',
+        admin_username_input: '',
+        admin_email_input: '',
+        admin_first_name: '',
+        admin_last_name: '',
+        admin_password: '',
+        admin_confirm_password: '',
         logo: null as File | null,
     });
+
+    const [addStep, setAddStep] = useState<1 | 2>(1);
+    const [editStep, setEditStep] = useState<1 | 2>(1);
 
     useEffect(() => {
         dispatch(setPageTitle('Company Management'));
@@ -98,6 +107,33 @@ const MasterCompany = () => {
         }
     };
 
+    const fetchAdminDetails = async (adminId: string) => {
+        try {
+            if (!adminId) return;
+            const token = localStorage.getItem('access_token');
+            const headers: any = {};
+            if (token) headers['Authorization'] = `Bearer ${token}`;
+
+            const response = await fetch(`${API_BASE_URL}/app/admin-register/${adminId}/`, { headers });
+            if (!response.ok) {
+                const err = await response.json().catch(() => ({}));
+                throw new Error(err?.detail || 'Failed to fetch admin details.');
+            }
+            const data = await response.json();
+            setFormData((prev) => ({
+                ...prev,
+                admin_username_input: data.username || '',
+                admin_email_input: data.email || '',
+                admin_first_name: data.first_name || '',
+                admin_last_name: data.last_name || '',
+                admin_password: '',
+                admin_confirm_password: '',
+            }));
+        } catch (error: any) {
+            Swal.fire({ title: 'Error!', text: error?.message || 'Failed to fetch admin details.', icon: 'error', customClass: { popup: 'sweet-alerts' } });
+        }
+    };
+
     const handleInputChange = (e: any) => {
         const { name, value, files } = e.target;
         if (name === 'logo') {
@@ -107,8 +143,34 @@ const MasterCompany = () => {
         }
     };
 
+    const validateStep1 = () => {
+        if (!formData.name.trim()) return 'Company name is required.';
+        if (!formData.email.trim()) return 'Company email is required.';
+        if (!formData.phone_number.trim()) return 'Company phone number is required.';
+        if (!formData.address.trim()) return 'Company address is required.';
+        return '';
+    };
+
+    const validateStep2 = () => {
+        if (!formData.admin_username_input.trim()) return 'Admin username is required.';
+        if (!formData.admin_email_input.trim()) return 'Admin email is required.';
+        if (!formData.admin_password) return 'Admin password is required.';
+        if (formData.admin_password !== formData.admin_confirm_password) return 'Admin password and confirm password do not match.';
+        return '';
+    };
+
     const handleAddCompany = async (e: any) => {
         e.preventDefault();
+        const step1Err = validateStep1();
+        if (step1Err) {
+            Swal.fire({ title: 'Error!', text: step1Err, icon: 'error', customClass: { popup: 'sweet-alerts' } });
+            return;
+        }
+        const step2Err = validateStep2();
+        if (step2Err) {
+            Swal.fire({ title: 'Error!', text: step2Err, icon: 'error', customClass: { popup: 'sweet-alerts' } });
+            return;
+        }
         try {
             const token = localStorage.getItem('access_token');
             const headers: any = {};
@@ -120,9 +182,12 @@ const MasterCompany = () => {
             submitData.append('phone_number', formData.phone_number);
             submitData.append('address', formData.address);
             submitData.append('location', formData.location);
-            if (formData.admin) {
-                submitData.append('admin', formData.admin);
-            }
+            // Step 2: create admin + assign to this company (backend will create admin if `admin` not provided)
+            submitData.append('admin_username_input', formData.admin_username_input);
+            submitData.append('admin_email_input', formData.admin_email_input);
+            submitData.append('admin_first_name', formData.admin_first_name);
+            submitData.append('admin_last_name', formData.admin_last_name);
+            submitData.append('admin_password', formData.admin_password);
             if (formData.logo) {
                 submitData.append('logo', formData.logo);
             }
@@ -149,6 +214,32 @@ const MasterCompany = () => {
 
     const handleEditCompany = async (e: any) => {
         e.preventDefault();
+        const step1Err = validateStep1();
+        if (step1Err) {
+            Swal.fire({ title: 'Error!', text: step1Err, icon: 'error', customClass: { popup: 'sweet-alerts' } });
+            return;
+        }
+        if (editStep === 2) {
+            // On edit, password is optional (only reset if provided)
+            if (!formData.admin_username_input.trim()) {
+                Swal.fire({ title: 'Error!', text: 'Admin username is required.', icon: 'error', customClass: { popup: 'sweet-alerts' } });
+                return;
+            }
+            if (!formData.admin_email_input.trim()) {
+                Swal.fire({ title: 'Error!', text: 'Admin email is required.', icon: 'error', customClass: { popup: 'sweet-alerts' } });
+                return;
+            }
+            if (formData.admin_password || formData.admin_confirm_password) {
+                if (!formData.admin_password) {
+                    Swal.fire({ title: 'Error!', text: 'Admin password is required.', icon: 'error', customClass: { popup: 'sweet-alerts' } });
+                    return;
+                }
+                if (formData.admin_password !== formData.admin_confirm_password) {
+                    Swal.fire({ title: 'Error!', text: 'Admin password and confirm password do not match.', icon: 'error', customClass: { popup: 'sweet-alerts' } });
+                    return;
+                }
+            }
+        }
         try {
             const token = localStorage.getItem('access_token');
             const headers: any = {};
@@ -162,6 +253,16 @@ const MasterCompany = () => {
             submitData.append('location', formData.location);
             if (formData.admin) {
                 submitData.append('admin', formData.admin);
+            }
+            // Admin detail edits (if Step 2 visited)
+            if (editStep === 2) {
+                submitData.append('admin_username_input', formData.admin_username_input);
+                submitData.append('admin_email_input', formData.admin_email_input);
+                submitData.append('admin_first_name', formData.admin_first_name);
+                submitData.append('admin_last_name', formData.admin_last_name);
+                if (formData.admin_password) {
+                    submitData.append('admin_password', formData.admin_password);
+                }
             }
             if (formData.logo) {
                 submitData.append('logo', formData.logo);
@@ -196,9 +297,16 @@ const MasterCompany = () => {
             address: company.address || '',
             location: company.location || '',
             admin: company.admin_id || '',
+            admin_username_input: company.admin_username || '',
+            admin_email_input: company.admin_email || '',
+            admin_first_name: company.admin_first_name_value || '',
+            admin_last_name: company.admin_last_name_value || '',
+            admin_password: '',
+            admin_confirm_password: '',
             logo: null,
         });
         fetchAvailableAdmins(company.admin_id);
+        setEditStep(1);
         setIsEditModalOpen(true);
     };
 
@@ -210,9 +318,17 @@ const MasterCompany = () => {
             address: '',
             location: '',
             admin: '',
+            admin_username_input: '',
+            admin_email_input: '',
+            admin_first_name: '',
+            admin_last_name: '',
+            admin_password: '',
+            admin_confirm_password: '',
             logo: null,
         });
         setSelectedCompany(null);
+        setAddStep(1);
+        setEditStep(1);
     };
 
     return (
@@ -409,50 +525,156 @@ const MasterCompany = () => {
                                     </div>
                                     <div className="p-5">
                                         <form onSubmit={handleAddCompany} className="space-y-4">
-                                            <div>
-                                                <label htmlFor="name">Company Name</label>
-                                                <input id="name" type="text" name="name" className="form-input" required value={formData.name} onChange={handleInputChange} />
-                                            </div>
-                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                                <div>
-                                                    <label htmlFor="email">Email</label>
-                                                    <input id="email" type="email" name="email" className="form-input" required value={formData.email} onChange={handleInputChange} />
+                                            <div className="flex items-center justify-between mb-2">
+                                                <div className="text-sm font-semibold">
+                                                    Step {addStep} of 2
                                                 </div>
-                                                <div>
-                                                    <label htmlFor="phone_number">Phone Number</label>
-                                                    <input id="phone_number" type="text" name="phone_number" className="form-input" required value={formData.phone_number} onChange={handleInputChange} />
+                                                <div className="flex items-center gap-2">
+                                                    <span className={`h-2.5 w-2.5 rounded-full ${addStep === 1 ? 'bg-primary' : 'bg-gray-300 dark:bg-gray-700'}`}></span>
+                                                    <span className={`h-2.5 w-2.5 rounded-full ${addStep === 2 ? 'bg-primary' : 'bg-gray-300 dark:bg-gray-700'}`}></span>
                                                 </div>
                                             </div>
-                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                                <div>
-                                                    <label htmlFor="location">Location</label>
-                                                    <input id="location" type="text" name="location" className="form-input" value={formData.location} onChange={handleInputChange} />
-                                                </div>
-                                                <div>
-                                                    <label htmlFor="logo">Company Logo</label>
-                                                    <input id="logo" type="file" name="logo" className="form-input file:py-2 file:px-4 file:border-0 file:text-sm file:font-semibold file:bg-primary/10 file:text-primary hover:file:bg-primary/20" accept="image/*" onChange={handleInputChange} />
-                                                </div>
-                                            </div>
-                                            <div>
-                                                <label htmlFor="admin">Assign Administrator (Optional)</label>
-                                                <select id="admin" name="admin" className="form-select" value={formData.admin} onChange={handleInputChange}>
-                                                    <option value="">Select an Admin</option>
-                                                    {availableAdmins.map((admin: any) => (
-                                                        <option key={admin.id} value={admin.id}>
-                                                            {admin.username} ({admin.email})
-                                                        </option>
-                                                    ))}
-                                                </select>
-                                                <p className="text-xs text-white-dark mt-1">Only showing admins not yet assigned to a company.</p>
-                                            </div>
-                                            <div>
-                                                <label htmlFor="address">Address</label>
-                                                <textarea id="address" name="address" className="form-textarea min-h-[80px]" required value={formData.address} onChange={handleInputChange} />
-                                            </div>
-                                            <div className="flex justify-end items-center mt-8 space-x-3">
-                                                <button type="button" className="btn btn-outline-danger" onClick={() => setIsAddModalOpen(false)}>Cancel</button>
-                                                <button type="submit" className="btn btn-primary">Add Company</button>
-                                            </div>
+
+                                            {addStep === 1 ? (
+                                                <>
+                                                    <div>
+                                                        <label htmlFor="name">Company Name</label>
+                                                        <input id="name" type="text" name="name" className="form-input" required value={formData.name} onChange={handleInputChange} />
+                                                    </div>
+                                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                        <div>
+                                                            <label htmlFor="email">Email</label>
+                                                            <input id="email" type="email" name="email" className="form-input" required value={formData.email} onChange={handleInputChange} />
+                                                        </div>
+                                                        <div>
+                                                            <label htmlFor="phone_number">Phone Number</label>
+                                                            <input id="phone_number" type="text" name="phone_number" className="form-input" required value={formData.phone_number} onChange={handleInputChange} />
+                                                        </div>
+                                                    </div>
+                                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                        <div>
+                                                            <label htmlFor="location">Location</label>
+                                                            <input id="location" type="text" name="location" className="form-input" value={formData.location} onChange={handleInputChange} />
+                                                        </div>
+                                                        <div>
+                                                            <label htmlFor="logo">Company Logo</label>
+                                                            <input
+                                                                id="logo"
+                                                                type="file"
+                                                                name="logo"
+                                                                className="form-input file:py-2 file:px-4 file:border-0 file:text-sm file:font-semibold file:bg-primary/10 file:text-primary hover:file:bg-primary/20"
+                                                                accept="image/*"
+                                                                onChange={handleInputChange}
+                                                            />
+                                                        </div>
+                                                    </div>
+                                                    <div>
+                                                        <label htmlFor="address">Address</label>
+                                                        <textarea id="address" name="address" className="form-textarea min-h-[80px]" required value={formData.address} onChange={handleInputChange} />
+                                                    </div>
+
+                                                    <div className="flex justify-end items-center mt-8 space-x-3">
+                                                        <button type="button" className="btn btn-outline-danger" onClick={() => setIsAddModalOpen(false)}>
+                                                            Cancel
+                                                        </button>
+                                                        <button
+                                                            type="button"
+                                                            className="btn btn-primary"
+                                                            onClick={() => {
+                                                                const err = validateStep1();
+                                                                if (err) {
+                                                                    Swal.fire({ title: 'Error!', text: err, icon: 'error', customClass: { popup: 'sweet-alerts' } });
+                                                                    return;
+                                                                }
+                                                                setAddStep(2);
+                                                            }}
+                                                        >
+                                                            Next
+                                                        </button>
+                                                    </div>
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                        <div>
+                                                            <label htmlFor="admin_first_name">Admin First Name</label>
+                                                            <input id="admin_first_name" type="text" name="admin_first_name" className="form-input" value={formData.admin_first_name} onChange={handleInputChange} />
+                                                        </div>
+                                                        <div>
+                                                            <label htmlFor="admin_last_name">Admin Last Name</label>
+                                                            <input id="admin_last_name" type="text" name="admin_last_name" className="form-input" value={formData.admin_last_name} onChange={handleInputChange} />
+                                                        </div>
+                                                    </div>
+                                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                        <div>
+                                                            <label htmlFor="admin_username_input">Admin Username</label>
+                                                            <input
+                                                                id="admin_username_input"
+                                                                type="text"
+                                                                name="admin_username_input"
+                                                                className="form-input"
+                                                                required
+                                                                value={formData.admin_username_input}
+                                                                onChange={handleInputChange}
+                                                            />
+                                                        </div>
+                                                        <div>
+                                                            <label htmlFor="admin_email_input">Admin Email</label>
+                                                            <input
+                                                                id="admin_email_input"
+                                                                type="email"
+                                                                name="admin_email_input"
+                                                                className="form-input"
+                                                                required
+                                                                value={formData.admin_email_input}
+                                                                onChange={handleInputChange}
+                                                            />
+                                                        </div>
+                                                    </div>
+                                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                        <div>
+                                                            <label htmlFor="admin_password">Password</label>
+                                                            <input
+                                                                id="admin_password"
+                                                                type="password"
+                                                                name="admin_password"
+                                                                className="form-input"
+                                                                required
+                                                                autoComplete="new-password"
+                                                                value={formData.admin_password}
+                                                                onChange={handleInputChange}
+                                                            />
+                                                        </div>
+                                                        <div>
+                                                            <label htmlFor="admin_confirm_password">Confirm Password</label>
+                                                            <input
+                                                                id="admin_confirm_password"
+                                                                type="password"
+                                                                name="admin_confirm_password"
+                                                                className="form-input"
+                                                                required
+                                                                autoComplete="new-password"
+                                                                value={formData.admin_confirm_password}
+                                                                onChange={handleInputChange}
+                                                            />
+                                                        </div>
+                                                    </div>
+
+                                                    <div className="flex justify-between items-center mt-8">
+                                                        <button type="button" className="btn btn-outline-primary" onClick={() => setAddStep(1)}>
+                                                            Back
+                                                        </button>
+                                                        <div className="flex items-center gap-3">
+                                                            <button type="button" className="btn btn-outline-danger" onClick={() => setIsAddModalOpen(false)}>
+                                                                Cancel
+                                                            </button>
+                                                            <button type="submit" className="btn btn-primary">
+                                                                Save
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                </>
+                                            )}
                                         </form>
                                     </div>
                                 </Dialog.Panel>
@@ -500,57 +722,179 @@ const MasterCompany = () => {
                                     </div>
                                     <div className="p-5">
                                         <form onSubmit={handleEditCompany} className="space-y-4">
-                                            <div>
-                                                <label htmlFor="edit_name">Company Name</label>
-                                                <input id="edit_name" type="text" name="name" className="form-input" required value={formData.name} onChange={handleInputChange} />
-                                            </div>
-                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                                <div>
-                                                    <label htmlFor="edit_email">Email</label>
-                                                    <input id="edit_email" type="email" name="email" className="form-input" required value={formData.email} onChange={handleInputChange} />
-                                                </div>
-                                                <div>
-                                                    <label htmlFor="edit_phone_number">Phone Number</label>
-                                                    <input id="edit_phone_number" type="text" name="phone_number" className="form-input" required value={formData.phone_number} onChange={handleInputChange} />
+                                            <div className="flex items-center justify-between mb-2">
+                                                <div className="text-sm font-semibold">Step {editStep} of 2</div>
+                                                <div className="flex items-center gap-2">
+                                                    <span className={`h-2.5 w-2.5 rounded-full ${editStep === 1 ? 'bg-primary' : 'bg-gray-300 dark:bg-gray-700'}`}></span>
+                                                    <span className={`h-2.5 w-2.5 rounded-full ${editStep === 2 ? 'bg-primary' : 'bg-gray-300 dark:bg-gray-700'}`}></span>
                                                 </div>
                                             </div>
-                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                                <div>
-                                                    <label htmlFor="edit_location">Location</label>
-                                                    <input id="edit_location" type="text" name="location" className="form-input" value={formData.location} onChange={handleInputChange} />
-                                                </div>
-                                                <div>
-                                                    <label htmlFor="edit_logo">Update Logo (Optional)</label>
-                                                    {selectedCompany?.logo_url && (
-                                                        <div className="mb-2 flex items-center gap-3 bg-gray-50 dark:bg-[#1b2e4b] p-2 rounded border border-[#e0e6ed] dark:border-[#1b2e4b]">
-                                                            <div className="w-10 h-10 rounded overflow-hidden flex-shrink-0">
-                                                                <img src={selectedCompany.logo_url} alt="Current Logo" className="w-full h-full object-cover" />
-                                                            </div>
-                                                            <span className="text-xs text-gray-500 font-semibold">Current Logo Active</span>
+
+                                            {editStep === 1 ? (
+                                                <>
+                                                    <div>
+                                                        <label htmlFor="edit_name">Company Name</label>
+                                                        <input id="edit_name" type="text" name="name" className="form-input" required value={formData.name} onChange={handleInputChange} />
+                                                    </div>
+                                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                        <div>
+                                                            <label htmlFor="edit_email">Email</label>
+                                                            <input id="edit_email" type="email" name="email" className="form-input" required value={formData.email} onChange={handleInputChange} />
                                                         </div>
-                                                    )}
-                                                    <input id="edit_logo" type="file" name="logo" className="form-input file:py-2 file:px-4 file:border-0 file:text-sm file:font-semibold file:bg-primary/10 file:text-primary hover:file:bg-primary/20" accept="image/*" onChange={handleInputChange} />
-                                                </div>
-                                            </div>
-                                            <div>
-                                                <label htmlFor="edit_admin">Change Administrator</label>
-                                                <select id="edit_admin" name="admin" className="form-select" value={formData.admin} onChange={handleInputChange}>
-                                                    <option value="">No Admin Assigned</option>
-                                                    {availableAdmins.map((admin: any) => (
-                                                        <option key={admin.id} value={admin.id}>
-                                                            {admin.username} ({admin.email})
-                                                        </option>
-                                                    ))}
-                                                </select>
-                                            </div>
-                                            <div>
-                                                <label htmlFor="edit_address">Address</label>
-                                                <textarea id="edit_address" name="address" className="form-textarea min-h-[80px]" required value={formData.address} onChange={handleInputChange} />
-                                            </div>
-                                            <div className="flex justify-end items-center mt-8 space-x-3">
-                                                <button type="button" className="btn btn-outline-danger" onClick={() => setIsEditModalOpen(false)}>Cancel</button>
-                                                <button type="submit" className="btn btn-primary">Save Changes</button>
-                                            </div>
+                                                        <div>
+                                                            <label htmlFor="edit_phone_number">Phone Number</label>
+                                                            <input id="edit_phone_number" type="text" name="phone_number" className="form-input" required value={formData.phone_number} onChange={handleInputChange} />
+                                                        </div>
+                                                    </div>
+                                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                        <div>
+                                                            <label htmlFor="edit_location">Location</label>
+                                                            <input id="edit_location" type="text" name="location" className="form-input" value={formData.location} onChange={handleInputChange} />
+                                                        </div>
+                                                        <div>
+                                                            <label htmlFor="edit_logo">Update Logo (Optional)</label>
+                                                            {selectedCompany?.logo_url && (
+                                                                <div className="mb-2 flex items-center gap-3 bg-gray-50 dark:bg-[#1b2e4b] p-2 rounded border border-[#e0e6ed] dark:border-[#1b2e4b]">
+                                                                    <div className="w-10 h-10 rounded overflow-hidden flex-shrink-0">
+                                                                        <img src={selectedCompany.logo_url} alt="Current Logo" className="w-full h-full object-cover" />
+                                                                    </div>
+                                                                    <span className="text-xs text-gray-500 font-semibold">Current Logo Active</span>
+                                                                </div>
+                                                            )}
+                                                            <input
+                                                                id="edit_logo"
+                                                                type="file"
+                                                                name="logo"
+                                                                className="form-input file:py-2 file:px-4 file:border-0 file:text-sm file:font-semibold file:bg-primary/10 file:text-primary hover:file:bg-primary/20"
+                                                                accept="image/*"
+                                                                onChange={handleInputChange}
+                                                            />
+                                                        </div>
+                                                    </div>
+                                                    <div>
+                                                        <label>Administrator</label>
+                                                        {selectedCompany?.admin_username ? (
+                                                            <div className="flex items-center gap-2">
+                                                                <span className="badge badge-outline-primary">{selectedCompany.admin_username}</span>
+                                                                <span className="text-xs text-white-dark">({selectedCompany.admin_email})</span>
+                                                            </div>
+                                                        ) : (
+                                                            <div className="text-xs text-white-dark italic">No admin assigned to this company.</div>
+                                                        )}
+                                                    </div>
+                                                    <div>
+                                                        <label htmlFor="edit_address">Address</label>
+                                                        <textarea id="edit_address" name="address" className="form-textarea min-h-[80px]" required value={formData.address} onChange={handleInputChange} />
+                                                    </div>
+
+                                                    <div className="flex justify-end items-center mt-8 space-x-3">
+                                                        <button type="button" className="btn btn-outline-danger" onClick={() => setIsEditModalOpen(false)}>
+                                                            Cancel
+                                                        </button>
+                                                        <button
+                                                            type="button"
+                                                            className="btn btn-primary"
+                                                            onClick={async () => {
+                                                                const err = validateStep1();
+                                                                if (err) {
+                                                                    Swal.fire({ title: 'Error!', text: err, icon: 'error', customClass: { popup: 'sweet-alerts' } });
+                                                                    return;
+                                                                }
+                                                                if (!formData.admin) {
+                                                                    Swal.fire({ title: 'Error!', text: 'No administrator is assigned to this company.', icon: 'error', customClass: { popup: 'sweet-alerts' } });
+                                                                    return;
+                                                                }
+                                                                await fetchAdminDetails(formData.admin);
+                                                                setEditStep(2);
+                                                            }}
+                                                        >
+                                                            Next
+                                                        </button>
+                                                    </div>
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                        <div>
+                                                            <label htmlFor="edit_admin_first_name">Admin First Name</label>
+                                                            <input id="edit_admin_first_name" type="text" name="admin_first_name" className="form-input" value={formData.admin_first_name} onChange={handleInputChange} />
+                                                        </div>
+                                                        <div>
+                                                            <label htmlFor="edit_admin_last_name">Admin Last Name</label>
+                                                            <input id="edit_admin_last_name" type="text" name="admin_last_name" className="form-input" value={formData.admin_last_name} onChange={handleInputChange} />
+                                                        </div>
+                                                    </div>
+                                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                        <div>
+                                                            <label htmlFor="edit_admin_username_input">Admin Username</label>
+                                                            <input
+                                                                id="edit_admin_username_input"
+                                                                type="text"
+                                                                name="admin_username_input"
+                                                                className="form-input"
+                                                                required
+                                                                value={formData.admin_username_input}
+                                                                onChange={handleInputChange}
+                                                            />
+                                                        </div>
+                                                        <div>
+                                                            <label htmlFor="edit_admin_email_input">Admin Email</label>
+                                                            <input
+                                                                id="edit_admin_email_input"
+                                                                type="email"
+                                                                name="admin_email_input"
+                                                                className="form-input"
+                                                                required
+                                                                value={formData.admin_email_input}
+                                                                onChange={handleInputChange}
+                                                            />
+                                                        </div>
+                                                    </div>
+                                                    <div className="text-xs text-white-dark">
+                                                        Leave password empty to keep the current password.
+                                                    </div>
+                                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                        <div>
+                                                            <label htmlFor="edit_admin_password">New Password (Optional)</label>
+                                                            <input
+                                                                id="edit_admin_password"
+                                                                type="password"
+                                                                name="admin_password"
+                                                                className="form-input"
+                                                                autoComplete="new-password"
+                                                                value={formData.admin_password}
+                                                                onChange={handleInputChange}
+                                                            />
+                                                        </div>
+                                                        <div>
+                                                            <label htmlFor="edit_admin_confirm_password">Confirm New Password</label>
+                                                            <input
+                                                                id="edit_admin_confirm_password"
+                                                                type="password"
+                                                                name="admin_confirm_password"
+                                                                className="form-input"
+                                                                autoComplete="new-password"
+                                                                value={formData.admin_confirm_password}
+                                                                onChange={handleInputChange}
+                                                            />
+                                                        </div>
+                                                    </div>
+
+                                                    <div className="flex justify-between items-center mt-8">
+                                                        <button type="button" className="btn btn-outline-primary" onClick={() => setEditStep(1)}>
+                                                            Back
+                                                        </button>
+                                                        <div className="flex items-center gap-3">
+                                                            <button type="button" className="btn btn-outline-danger" onClick={() => setIsEditModalOpen(false)}>
+                                                                Cancel
+                                                            </button>
+                                                            <button type="submit" className="btn btn-primary">
+                                                                Save Changes
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                </>
+                                            )}
                                         </form>
                                     </div>
                                 </Dialog.Panel>

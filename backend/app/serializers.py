@@ -180,16 +180,26 @@ class MasterDashboardSerializer(serializers.ModelSerializer):
 
 class CompanyWithAdminSerializer(serializers.ModelSerializer):
     admin = serializers.IntegerField(write_only=True, required=False)
+    admin_username_input = serializers.CharField(write_only=True, required=False)
+    admin_email_input = serializers.EmailField(write_only=True, required=False)
+    admin_first_name = serializers.CharField(write_only=True, required=False, allow_blank=True)
+    admin_last_name = serializers.CharField(write_only=True, required=False, allow_blank=True)
+    admin_password = serializers.CharField(write_only=True, required=False)
     admin_id = serializers.SerializerMethodField(read_only=True)
     admin_username = serializers.SerializerMethodField(read_only=True)
     admin_email = serializers.SerializerMethodField(read_only=True)
+    admin_first_name_value = serializers.SerializerMethodField(read_only=True)
+    admin_last_name_value = serializers.SerializerMethodField(read_only=True)
     logo_url = serializers.SerializerMethodField()
 
     class Meta:
         model = Company
         fields = [
             'id', 'name', 'address', 'location', 'email', 'phone_number',
-            'logo', 'logo_url', 'admin', 'admin_id', 'admin_username', 'admin_email'
+            'logo', 'logo_url',
+            'admin',
+            'admin_username_input', 'admin_email_input', 'admin_first_name', 'admin_last_name', 'admin_password',
+            'admin_id', 'admin_username', 'admin_email', 'admin_first_name_value', 'admin_last_name_value'
         ]
         extra_kwargs = {
             'admin': {'write_only': True}
@@ -206,6 +216,14 @@ class CompanyWithAdminSerializer(serializers.ModelSerializer):
     def get_admin_email(self, obj):
         admin_user = UserRegister.objects.filter(company=obj, role='admin').first()
         return admin_user.email if admin_user else None
+
+    def get_admin_first_name_value(self, obj):
+        admin_user = UserRegister.objects.filter(company=obj, role='admin').first()
+        return admin_user.first_name if admin_user else ''
+
+    def get_admin_last_name_value(self, obj):
+        admin_user = UserRegister.objects.filter(company=obj, role='admin').first()
+        return admin_user.last_name if admin_user else ''
     
     def get_logo_url(self, obj):
         request = self.context.get('request')
@@ -217,6 +235,11 @@ class CompanyWithAdminSerializer(serializers.ModelSerializer):
     
     def update(self, instance, validated_data):
         admin_id = validated_data.pop('admin', None)
+        admin_username_input = (validated_data.pop('admin_username_input', None) or '').strip()
+        admin_email_input = (validated_data.pop('admin_email_input', None) or '').strip().lower()
+        admin_first_name = validated_data.pop('admin_first_name', None)
+        admin_last_name = validated_data.pop('admin_last_name', None)
+        admin_password = validated_data.pop('admin_password', None)
 
         # Update basic fields
         for attr, value in validated_data.items():
@@ -236,12 +259,43 @@ class CompanyWithAdminSerializer(serializers.ModelSerializer):
                 admin_user.save()
             except UserRegister.DoesNotExist:
                 raise serializers.ValidationError({"admin": "Admin user not found."})
+
+        # Update existing admin details (if any fields provided)
+        if admin_username_input or admin_email_input or admin_first_name is not None or admin_last_name is not None or admin_password:
+            admin_user = UserRegister.objects.filter(company=instance, role='admin').first()
+            if not admin_user:
+                raise serializers.ValidationError({"detail": "No admin is assigned to this company."})
+
+            if admin_username_input and UserRegister.objects.filter(username__iexact=admin_username_input).exclude(pk=admin_user.pk).exists():
+                raise serializers.ValidationError({"admin_username_input": "A user with this username already exists."})
+            if admin_email_input and UserRegister.objects.filter(email__iexact=admin_email_input).exclude(pk=admin_user.pk).exists():
+                raise serializers.ValidationError({"admin_email_input": "A user with this email already exists."})
+
+            if admin_username_input:
+                admin_user.username = admin_username_input
+            if admin_email_input:
+                admin_user.email = admin_email_input
+            if admin_first_name is not None:
+                admin_user.first_name = admin_first_name
+            if admin_last_name is not None:
+                admin_user.last_name = admin_last_name
+            if admin_password:
+                admin_user.set_password(admin_password)
+
+            admin_user.role = 'admin'
+            admin_user.company = instance
+            admin_user.save()
         
         return instance
 
 
     def create(self, validated_data):
         admin_id = validated_data.pop('admin', None)
+        admin_username_input = (validated_data.pop('admin_username_input', None) or '').strip()
+        admin_email_input = (validated_data.pop('admin_email_input', None) or '').strip().lower()
+        admin_first_name = validated_data.pop('admin_first_name', '') or ''
+        admin_last_name = validated_data.pop('admin_last_name', '') or ''
+        admin_password = validated_data.pop('admin_password', None)
         company = Company.objects.create(**validated_data)
 
         if admin_id is not None:
@@ -271,6 +325,28 @@ class CompanyWithAdminSerializer(serializers.ModelSerializer):
                 email_thread.start()
             except UserRegister.DoesNotExist:
                 raise serializers.ValidationError({"admin": "Admin user not found."})
+        else:
+            # Create a new admin user along with company
+            if not admin_username_input or not admin_email_input or not admin_password:
+                raise serializers.ValidationError(
+                    {"detail": "Admin details are required (admin_username_input, admin_email_input, admin_password) when admin is not provided."}
+                )
+
+            if UserRegister.objects.filter(username__iexact=admin_username_input).exists():
+                raise serializers.ValidationError({"admin_username_input": "A user with this username already exists."})
+            if UserRegister.objects.filter(email__iexact=admin_email_input).exists():
+                raise serializers.ValidationError({"admin_email_input": "A user with this email already exists."})
+
+            admin_user = UserRegister.objects.create_user(
+                username=admin_username_input,
+                email=admin_email_input,
+                password=admin_password,
+                role='admin',
+                company=company,
+                first_name=admin_first_name,
+                last_name=admin_last_name,
+                is_active=True,
+            )
 
         return company
     

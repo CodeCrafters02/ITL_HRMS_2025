@@ -4,7 +4,6 @@ import { setPageTitle } from '../../store/themeConfigSlice';
 import { Link } from 'react-router-dom';
 import IconUsersGroup from '../../components/Icon/IconUsersGroup';
 import IconMenuAuthentication from '../../components/Icon/Menu/IconMenuAuthentication';
-import IconSettings from '../../components/Icon/IconSettings';
 import IconServer from '../../components/Icon/IconServer';
 import IconUser from '../../components/Icon/IconUser';
 import IconListCheck from '../../components/Icon/IconListCheck';
@@ -86,7 +85,7 @@ const MasterDashboard = () => {
 
                 <div className="panel bg-white dark:bg-[#1b2e4b] border-none shadow-md rounded-xl p-5 flex items-center">
                     <div className="w-12 h-12 rounded-lg bg-purple-100 dark:bg-purple-500/20 flex items-center justify-center text-purple-600 dark:text-purple-400 mb-0">
-                        <IconSettings className="w-6 h-6" />
+                        <IconListCheck className="w-6 h-6" />
                     </div>
                     <div className="ltr:ml-4 rtl:mr-4">
                         <h4 className="text-[#515365] dark:text-white-dark text-sm font-semibold">Total Admins</h4>
@@ -129,20 +128,6 @@ const MasterDashboard = () => {
                             <div>
                                 <h3 className="text-xl font-bold text-gray-800 dark:text-gray-100 group-hover:text-blue-500 transition-colors">Company Management</h3>
                                 <p className="text-gray-500 text-sm mt-1">Manage global enterprise clients</p>
-                            </div>
-                        </div>
-                    </Link>
-
-                    {/* Administration Card */}
-                    <Link to="/master/administration" className="group rounded-2xl p-6 bg-white dark:bg-[#1b2e4b] shadow-[0_4px_20px_-10px_rgba(0,0,0,0.1)] hover:shadow-lg transition-all duration-300 hover:-translate-y-1 relative overflow-hidden border border-gray-100 dark:border-[#191e3a]">
-                        <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-[#4c1d95] to-[#8b5cf6]"></div>
-                        <div className="flex items-center space-x-4">
-                            <div className="flex-shrink-0 w-14 h-14 bg-purple-50 dark:bg-[#0e1726] rounded-full flex items-center justify-center text-purple-500 group-hover:bg-purple-500 group-hover:text-white transition-colors duration-300">
-                                <IconSettings className="w-7 h-7" />
-                            </div>
-                            <div>
-                                <h3 className="text-xl font-bold text-gray-800 dark:text-gray-100 group-hover:text-purple-500 transition-colors">Administration</h3>
-                                <p className="text-gray-500 text-sm mt-1">Configure level access & settings</p>
                             </div>
                         </div>
                     </Link>
