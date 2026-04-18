@@ -1,33 +1,76 @@
 import 'dart:convert';
+
+import 'package:flutter/services.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 import 'package:http/http.dart' as http;
 import '../config/api_config.dart';
+import '../config/google_oauth_config.dart';
 import '../models/user_model.dart';
 import 'storage_service.dart';
 import 'fcm_service.dart';
 
 class AuthService {
-  // Login
-  static Future<ApiResponse<LoginResponse>> login({
-    required String username,
-    required String password,
-  }) async {
+  static GoogleSignIn? _googleSignIn;
+
+  static GoogleSignIn _ensureGoogleSignIn() {
+    if (kGoogleServerClientId.isEmpty) {
+      throw StateError(
+        'Missing GOOGLE_SERVER_CLIENT_ID. Pass --dart-define=GOOGLE_SERVER_CLIENT_ID='
+        '<your-web-client-id>.apps.googleusercontent.com (same as Django GOOGLE_CLIENT_ID).',
+      );
+    }
+    return _googleSignIn ??= GoogleSignIn(
+      scopes: const ['email', 'profile'],
+      serverClientId: kGoogleServerClientId,
+    );
+  }
+
+  /// Google SSO: obtains ID token, posts to `/app/google-login/` as `credential`.
+  static Future<ApiResponse<LoginResponse>> loginWithGoogle() async {
+    if (kGoogleServerClientId.isEmpty) {
+      return ApiResponse(
+        success: false,
+        message:
+            'Google sign-in is not configured. Build with --dart-define=GOOGLE_SERVER_CLIENT_ID='
+            '<web-client-id>.apps.googleusercontent.com',
+      );
+    }
+
     try {
+      final gsi = _ensureGoogleSignIn();
+      final account = await gsi.signIn();
+      if (account == null) {
+        return ApiResponse(success: false, message: 'Sign in cancelled');
+      }
+
+      final auth = await account.authentication;
+      final idToken = auth.idToken;
+      if (idToken == null || idToken.isEmpty) {
+        return ApiResponse(
+          success: false,
+          message:
+              'No ID token from Google. Check serverClientId matches Django GOOGLE_CLIENT_ID.',
+        );
+      }
+
       final response = await http.post(
-        Uri.parse(ApiConfig.loginUrl),
+        Uri.parse(ApiConfig.googleLoginUrl),
         headers: ApiConfig.headers,
-        body: jsonEncode({'username': username, 'password': password}),
+        body: jsonEncode({'credential': idToken}),
       );
 
       if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
+        final data = jsonDecode(response.body) as Map<String, dynamic>;
         final loginResponse = LoginResponse.fromJson(data);
-
-        // Save tokens to local storage
+        final storedName = (data['username'] as String?)?.trim();
+        final email = account.email.trim();
         await StorageService.saveTokens(
           accessToken: loginResponse.accessToken,
           refreshToken: loginResponse.refreshToken,
           role: loginResponse.role,
-          username: username,
+          username: (storedName != null && storedName.isNotEmpty)
+              ? storedName
+              : email,
         );
 
         return ApiResponse(
@@ -35,13 +78,56 @@ class AuthService {
           message: 'Login successful',
           data: loginResponse,
         );
-      } else {
+      }
+
+      try {
         final error = jsonDecode(response.body);
+        final detail = error is Map ? error['detail'] : null;
         return ApiResponse(
           success: false,
-          message: error['detail'] ?? 'Login failed',
+          message: detail != null ? detail.toString() : 'Google login failed',
+        );
+      } catch (_) {
+        return ApiResponse(
+          success: false,
+          message: response.body.isNotEmpty ? response.body : 'Google login failed',
         );
       }
+    } on StateError catch (e) {
+      return ApiResponse(success: false, message: e.message);
+    } on PlatformException catch (e) {
+      final msg = e.message ?? '';
+      if (e.code == 'channel-error' &&
+          msg.contains('GoogleSignInApi')) {
+        return ApiResponse(
+          success: false,
+          message:
+              'Google Sign-In could not start on this device. Stop the app, run '
+              '`flutter clean` then `flutter run`, and ensure Google Play services '
+              'is updated. If it persists, add your debug SHA-1 in Firebase and '
+              're-download android/app/google-services.json.',
+        );
+      }
+      // ApiException 10 = DEVELOPER_ERROR: SHA-1 / package name mismatch in Firebase or GCP.
+      if (e.code == 'sign_in_failed' ||
+          RegExp(r'ApiException:\s*10\b').hasMatch(msg) ||
+          RegExp(r':\s*10\s*:').hasMatch(msg)) {
+        return ApiResponse(
+          success: false,
+          message:
+              'Google Sign-In setup (error 10): Firebase does not trust this build yet. '
+              'In Firebase Console → Project settings → Your apps → Android '
+              '(com.innovyx.peoplesuite), add the SHA-1 fingerprint of the keystore '
+              'you use to run the app (debug: from ~/.android/debug.keystore). '
+              'Then download a fresh google-services.json. '
+              'In Google Cloud Console → APIs & Services → Credentials, ensure an '
+              'Android OAuth client exists for this package + SHA-1.',
+        );
+      }
+      return ApiResponse(
+        success: false,
+        message: 'Sign in error: ${e.message ?? e.code}',
+      );
     } catch (e) {
       return ApiResponse(
         success: false,
@@ -102,6 +188,11 @@ class AuthService {
 
   // Logout
   static Future<void> logout() async {
+    try {
+      await _googleSignIn?.signOut();
+    } catch (_) {
+      // Ignore sign-out errors (e.g. not signed in with Google)
+    }
     await StorageService.clearAll();
     // Clear FCM token on logout
     try {

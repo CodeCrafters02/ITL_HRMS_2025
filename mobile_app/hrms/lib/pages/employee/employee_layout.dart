@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../theme/app_stitch_theme.dart';
 import '../../services/employee_service.dart';
 import '../../services/notification_service.dart';
 import '../../services/auth_service.dart';
@@ -205,7 +206,7 @@ class _EmployeeLayoutState extends State<EmployeeLayout> with WidgetsBindingObse
           gradient: const LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
-            colors: [Color(0xFF6366F1), Color(0xFFA5B4FC)],
+            colors: [AppStitchTheme.primary, Color(0xFF8B5CF6)],
           ),
           border: Border.all(color: Colors.white, width: 2),
           boxShadow: [
@@ -286,7 +287,7 @@ class _EmployeeLayoutState extends State<EmployeeLayout> with WidgetsBindingObse
           _buildProfileAvatar(),
           const SizedBox(width: 8),
         ],
-        backgroundColor: const Color(0xFF4F46E5),
+        backgroundColor: AppStitchTheme.primary,
         foregroundColor: Colors.white,
         elevation: 0,
       ),

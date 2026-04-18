@@ -20,6 +20,12 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 load_dotenv(BASE_DIR / '.env', override=True)
 GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID") or os.getenv("GMAIL_CLIENT_ID")
+if not GOOGLE_CLIENT_ID and DEBUG:
+    import warnings
+    warnings.warn(
+        "GOOGLE_CLIENT_ID is not set in .env — POST /app/google-login/ will fail token verification.",
+        stacklevel=1,
+    )
 
 
 # Quick-start development settings - unsuitable for production
@@ -32,7 +38,7 @@ SECRET_KEY = 'django-insecure-v++-2-a@y^9k1+kky5l^fg6#r1hc)hd(fwjox62c7@=ccvdkff
 DEBUG = True
 
 # ALLOWED_HOSTS = ['apihrms.innovyxtechlabs.com']
-ALLOWED_HOSTS = ['apihrms.innovyxtechlabs.com', 'localhost', '127.0.0.1', '10.209.43.199', '192.168.0.3']
+ALLOWED_HOSTS = ['apihrms.innovyxtechlabs.com', 'localhost', '127.0.0.1', '10.209.43.199', '192.168.0.3', '192.168.1.4']
 
 # Application definition
 
