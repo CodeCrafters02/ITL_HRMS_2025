@@ -13,6 +13,8 @@ const API_URL = `${API_BASE_URL}/app/department-working-days/`;
 const API_DEPTS = `${API_BASE_URL}/app/departments/?page_size=1000`;
 const API_SHIFTS = `${API_BASE_URL}/app/shift-policies/`;
 
+const DAYS_OF_WEEK = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+
 type Department = { id: number; department_name: string };
 type Shift = { id: number; shift_type: string; checkin: string; checkout: string };
 
@@ -21,8 +23,10 @@ type WorkingDay = {
     department: Department | number;
     shifts: Shift[] | number[];
     working_days_count: number;
-    week_start_day: string;
-    week_end_day: string;
+    working_days?: string[];
+    weekend_days?: string[];
+    week_start_day?: string;
+    week_end_day?: string;
 };
 
 const AdminDeptWorkingDays = () => {
@@ -36,9 +40,8 @@ const AdminDeptWorkingDays = () => {
         id: null,
         department_id: '',
         shift_id: '',
-        working_days_count: 6,
-        week_start_day: 'Monday',
-        week_end_day: 'Saturday',
+        working_days_count: 5,
+        working_days: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'],
     });
 
     useEffect(() => {
@@ -87,9 +90,16 @@ const AdminDeptWorkingDays = () => {
     };
 
     const openAdd = () => {
-        setForm({ id: null, department_id: '', shift_id: '', working_days_count: 6, week_start_day: 'Monday', week_end_day: 'Saturday' });
+        setForm({ 
+            id: null, 
+            department_id: '', 
+            shift_id: '', 
+            working_days_count: 5, 
+            working_days: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'] 
+        });
         setModalOpen(true);
     };
+
     const openEdit = (it: WorkingDay) => {
         const department_id = typeof it.department === 'object' ? it.department.id : it.department;
         const firstShift = Array.isArray(it.shifts) && it.shifts.length ? (typeof it.shifts[0] === 'object' ? (it.shifts[0] as any).id : (it.shifts[0] as any)) : '';
@@ -97,26 +107,49 @@ const AdminDeptWorkingDays = () => {
             id: it.id,
             department_id: String(department_id || ''),
             shift_id: String(firstShift || ''),
-            working_days_count: it.working_days_count,
-            week_start_day: it.week_start_day,
-            week_end_day: it.week_end_day,
+            working_days_count: it.working_days_count || 5,
+            working_days: Array.isArray(it.working_days) && it.working_days.length > 0 ? it.working_days : [],
         });
         setModalOpen(true);
     };
 
+    const toggleDay = (day: string) => {
+        let newWorkingDays = [...(form.working_days || [])];
+        if (newWorkingDays.includes(day)) {
+            newWorkingDays = newWorkingDays.filter(d => d !== day);
+        } else {
+            if (newWorkingDays.length >= form.working_days_count) {
+                Swal.fire('Limit Reached', `You can only select up to ${form.working_days_count} working days.`, 'warning');
+                return;
+            }
+            newWorkingDays.push(day);
+        }
+        setForm({ ...form, working_days: newWorkingDays });
+    };
+
     const save = async () => {
         try {
+            const selectedWorkingDays = form.working_days || [];
+            if (selectedWorkingDays.length !== Number(form.working_days_count)) {
+                Swal.fire('Validation Error', `Please select exactly ${form.working_days_count} working days. You have selected ${selectedWorkingDays.length} so far.`, 'warning');
+                return;
+            }
+
+            const weekendDays = DAYS_OF_WEEK.filter(d => !selectedWorkingDays.includes(d));
+
             const payload: any = {
                 department: Number(form.department_id),
                 working_days_count: Number(form.working_days_count || 0),
-                week_start_day: (form.week_start_day || '').trim(),
-                week_end_day: (form.week_end_day || '').trim(),
+                working_days: selectedWorkingDays,
+                weekend_days: weekendDays,
                 shifts: form.shift_id ? [Number(form.shift_id)] : [],
             };
+            
             if (!payload.department) {
                 Swal.fire('Required', 'Department is required.', 'warning');
                 return;
             }
+            
             const isEdit = !!form.id;
             const resp = await fetch(isEdit ? `${API_URL}${form.id}/` : API_URL, {
                 method: isEdit ? 'PUT' : 'POST',
@@ -150,16 +183,22 @@ const AdminDeptWorkingDays = () => {
     const rows = useMemo(() => items, [items]);
 
     return (
-        <div className="panel">
-            <div className="flex items-center justify-between mb-4">
-                <div>
-                    <div className="text-xl font-bold">Dept Working Days</div>
-                    <div className="text-sm text-white-dark">Configure department-wise working days and default shift.</div>
+        <div className="space-y-6">
+            {/* Gradient Banner Header */}
+            <div className="bg-gradient-to-r from-[#0f172a] to-[#3b82f6] p-6 rounded-xl shadow-lg relative overflow-hidden">
+                <div className="relative z-10">
+                    <h1 className="text-3xl font-extrabold text-white tracking-tight">Dept Working Days</h1>
+                    <p className="text-white/80 mt-1 text-sm font-medium">Configure department-wise working days and default shift.</p>
                 </div>
-                <button type="button" className="btn btn-primary gap-2" onClick={openAdd}>
-                    <IconPlus /> Add
-                </button>
+                <div className="absolute top-0 right-0 -mt-10 -mr-10 w-48 h-48 bg-white opacity-10 rounded-full blur-2xl"></div>
             </div>
+
+            <div className="panel">
+                <div className="flex flex-wrap items-center justify-end gap-3 mb-4">
+                    <button type="button" className="btn btn-primary gap-2" onClick={openAdd}>
+                        <IconPlus /> Add
+                    </button>
+                </div>
 
             <div className="table-responsive">
                 <table className="table-hover">
@@ -168,16 +207,15 @@ const AdminDeptWorkingDays = () => {
                             <th>#</th>
                             <th>Department</th>
                             <th>Shift</th>
-                            <th>Working days</th>
-                            <th>Week start</th>
-                            <th>Week end</th>
+                            <th>Count</th>
+                            <th>Active Working Days</th>
                             <th className="text-center">Actions</th>
                         </tr>
                     </thead>
                     <tbody>
                         {loading ? (
                             <tr>
-                                <td colSpan={7} className="text-center py-6 text-white-dark">
+                                <td colSpan={6} className="text-center py-6 text-white-dark">
                                     Loading...
                                 </td>
                             </tr>
@@ -188,8 +226,11 @@ const AdminDeptWorkingDays = () => {
                                     <td className="font-semibold">{deptName(it.department)}</td>
                                     <td>{Array.isArray(it.shifts) && it.shifts.length ? shiftLabel((it.shifts as any)[0]) : '-'}</td>
                                     <td>{it.working_days_count}</td>
-                                    <td>{it.week_start_day}</td>
-                                    <td>{it.week_end_day}</td>
+                                    <td>
+                                        {Array.isArray(it.working_days) && it.working_days.length > 0 
+                                            ? it.working_days.map(d => d.substring(0,3)).join(', ') 
+                                            : `${it.week_start_day || ''} to ${it.week_end_day || ''}`}
+                                    </td>
                                     <td className="text-center">
                                         <div className="flex items-center justify-center gap-3">
                                             <button type="button" className="text-primary" onClick={() => openEdit(it)} title="Edit">
@@ -204,7 +245,7 @@ const AdminDeptWorkingDays = () => {
                             ))
                         ) : (
                             <tr>
-                                <td colSpan={7} className="text-center py-6 text-white-dark">
+                                <td colSpan={6} className="text-center py-6 text-white-dark">
                                     No configurations found.
                                 </td>
                             </tr>
@@ -240,32 +281,55 @@ const AdminDeptWorkingDays = () => {
                                                 ))}
                                             </select>
                                         </div>
-                                        <div>
-                                            <label className="font-semibold">Shift (optional)</label>
-                                            <select className="form-select" value={form.shift_id} onChange={(e) => setForm({ ...form, shift_id: e.target.value })}>
-                                                <option value="">All / None</option>
-                                                {shifts.map((s) => (
-                                                    <option key={s.id} value={s.id}>
-                                                        {shiftLabel(s)}
-                                                    </option>
-                                                ))}
-                                            </select>
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                            <div>
+                                                <label className="font-semibold">Shift (optional)</label>
+                                                <select className="form-select" value={form.shift_id} onChange={(e) => setForm({ ...form, shift_id: e.target.value })}>
+                                                    <option value="">All / None</option>
+                                                    {shifts.map((s) => (
+                                                        <option key={s.id} value={s.id}>
+                                                            {shiftLabel(s)}
+                                                        </option>
+                                                    ))}
+                                                </select>
+                                            </div>
+                                            <div>
+                                                <label className="font-semibold">Working Days Count</label>
+                                                <input className="form-input" type="number" min={1} max={7} value={form.working_days_count} onChange={(e) => {
+                                                    const count = Number(e.target.value);
+                                                    let currentDays = [...(form.working_days || [])];
+                                                    // Truncate if we lower the count
+                                                    if (currentDays.length > count) {
+                                                        currentDays = currentDays.slice(0, count);
+                                                    }
+                                                    setForm({ ...form, working_days_count: count, working_days: currentDays });
+                                                }} />
+                                            </div>
                                         </div>
-                                        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                                            <div>
-                                                <label className="font-semibold">Working days</label>
-                                                <input className="form-input" type="number" min={0} value={form.working_days_count} onChange={(e) => setForm({ ...form, working_days_count: Number(e.target.value) })} />
+                                        
+                                        <div className="mt-4">
+                                            <label className="font-semibold">Select Specific Working Days</label>
+                                            <div className="flex flex-wrap gap-2 mt-2">
+                                                {DAYS_OF_WEEK.map(day => {
+                                                    const isSelected = (form.working_days || []).includes(day);
+                                                    return (
+                                                        <button 
+                                                        key={day} 
+                                                        type="button" 
+                                                        onClick={() => toggleDay(day)}
+                                                        className={`btn btn-sm ${isSelected ? 'btn-primary' : 'btn-outline-primary'}`}
+                                                        >
+                                                            {day.substring(0,3)}
+                                                        </button>
+                                                    )
+                                                })}
                                             </div>
-                                            <div>
-                                                <label className="font-semibold">Week start</label>
-                                                <input className="form-input" value={form.week_start_day} onChange={(e) => setForm({ ...form, week_start_day: e.target.value })} />
-                                            </div>
-                                            <div>
-                                                <label className="font-semibold">Week end</label>
-                                                <input className="form-input" value={form.week_end_day} onChange={(e) => setForm({ ...form, week_end_day: e.target.value })} />
+                                            <div className="text-xs text-white-dark mt-2">
+                                                Selected <strong>{(form.working_days || []).length} / {form.working_days_count}</strong> days. Unselected days will automatically be evaluated as weekends.
                                             </div>
                                         </div>
-                                        <div className="flex justify-end gap-3 pt-2">
+
+                                        <div className="flex justify-end gap-3 pt-4">
                                             <button type="button" className="btn btn-outline-danger" onClick={() => setModalOpen(false)}>
                                                 Cancel
                                             </button>
@@ -280,6 +344,7 @@ const AdminDeptWorkingDays = () => {
                     </div>
                 </Dialog>
             </Transition>
+        </div>
         </div>
     );
 };

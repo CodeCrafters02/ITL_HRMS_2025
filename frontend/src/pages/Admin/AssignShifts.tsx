@@ -157,7 +157,6 @@ const AdminAssignShifts = () => {
                         <thead>
                             <tr>
                                 <th>#</th>
-                                <th>Employee ID</th>
                                 <th>Name</th>
                                 <th>Current Shift</th>
                                 <th>Assign Shift</th>
@@ -167,7 +166,7 @@ const AdminAssignShifts = () => {
                         <tbody>
                             {loading ? (
                                 <tr>
-                                    <td colSpan={6} className="text-center py-5">
+                                    <td colSpan={5} className="text-center py-5">
                                         <span className="animate-pulse text-gray-400">Loading employees...</span>
                                     </td>
                                 </tr>
@@ -175,7 +174,6 @@ const AdminAssignShifts = () => {
                                 displayEmployees.map((emp, index) => (
                                     <tr key={emp.id}>
                                         <td>{(page - 1) * pageSize + index + 1}</td>
-                                        <td className="font-mono">{emp.employee_id || '-'}</td>
                                         <td className="font-semibold">{`${emp.first_name || ''} ${emp.last_name || ''}`.trim() || '-'}</td>
                                         <td className="text-gray-500">
                                             {emp.shift_assigned ? `${emp.shift_assigned.shift_type} (${emp.shift_assigned.checkin} - ${emp.shift_assigned.checkout})` : 'No Shift'}
@@ -203,7 +201,7 @@ const AdminAssignShifts = () => {
                                 ))
                             ) : (
                                 <tr>
-                                    <td colSpan={6} className="text-center py-5 text-gray-400">No employees found.</td>
+                                    <td colSpan={5} className="text-center py-5 text-gray-400">No employees found.</td>
                                 </tr>
                             )}
                         </tbody>

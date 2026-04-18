@@ -138,10 +138,98 @@ const Sidebar = () => {
                                         </NavLink>
                                     </li>
                                     <li className="menu nav-item">
+                                        <NavLink to="/employee/my-tasks" className="group">
+                                            <div className="flex items-center">
+                                                <IconMenuNotes className="group-hover:!text-primary shrink-0" />
+                                                <span className="ltr:pl-3 rtl:pr-3 text-black dark:text-[#506690] dark:group-hover:text-white-dark">{t('My Tasks')}</span>
+                                            </div>
+                                        </NavLink>
+                                    </li>
+                                    <li className="menu nav-item">
+                                        <NavLink to="/employee/leave-application" className="group">
+                                            <div className="flex items-center">
+                                                <IconMenuCalendar className="group-hover:!text-primary shrink-0" />
+                                                <span className="ltr:pl-3 rtl:pr-3 text-black dark:text-[#506690] dark:group-hover:text-white-dark">{t('Leave Application')}</span>
+                                            </div>
+                                        </NavLink>
+                                    </li>
+                                    <li className="menu nav-item">
+                                        <NavLink to="/employee/attendance-history" className="group">
+                                            <div className="flex items-center">
+                                                <IconMenuCharts className="group-hover:!text-primary shrink-0" />
+                                                <span className="ltr:pl-3 rtl:pr-3 text-black dark:text-[#506690] dark:group-hover:text-white-dark">{t('Attendance History')}</span>
+                                            </div>
+                                        </NavLink>
+                                    </li>
+                                    <li className="menu nav-item">
+                                        <NavLink to="/employee/notifications" className="group">
+                                            <div className="flex items-center">
+                                                <IconMenuPages className="group-hover:!text-primary shrink-0" />
+                                                <span className="ltr:pl-3 rtl:pr-3 text-black dark:text-[#506690] dark:group-hover:text-white-dark">{t('Notifications')}</span>
+                                            </div>
+                                        </NavLink>
+                                    </li>
+                                    <li className="menu nav-item">
+                                        <NavLink to="/employee/learning-corner" className="group">
+                                            <div className="flex items-center">
+                                                <IconMenuTables className="group-hover:!text-primary shrink-0" />
+                                                <span className="ltr:pl-3 rtl:pr-3 text-black dark:text-[#506690] dark:group-hover:text-white-dark">{t('Learning Corner')}</span>
+                                            </div>
+                                        </NavLink>
+                                    </li>
+                                    <li className="menu nav-item">
+                                        <NavLink to="/employee/personal-calendar" className="group">
+                                            <div className="flex items-center">
+                                                <IconMenuCalendar className="group-hover:!text-primary shrink-0" />
+                                                <span className="ltr:pl-3 rtl:pr-3 text-black dark:text-[#506690] dark:group-hover:text-white-dark">{t('Calendar')}</span>
+                                            </div>
+                                        </NavLink>
+                                    </li>
+                                    <li className="menu nav-item">
+                                        <NavLink to="/employee/company-policy" className="group">
+                                            <div className="flex items-center">
+                                                <IconMenuDocumentation className="group-hover:!text-primary shrink-0" />
+                                                <span className="ltr:pl-3 rtl:pr-3 text-black dark:text-[#506690] dark:group-hover:text-white-dark">{t('Company policies')}</span>
+                                            </div>
+                                        </NavLink>
+                                    </li>
+                                    <li className="menu nav-item">
+                                        <NavLink to="/employee/references" className="group">
+                                            <div className="flex items-center">
+                                                <IconMenuForms className="group-hover:!text-primary shrink-0" />
+                                                <span className="ltr:pl-3 rtl:pr-3 text-black dark:text-[#506690] dark:group-hover:text-white-dark">{t('References')}</span>
+                                            </div>
+                                        </NavLink>
+                                    </li>
+                                    <li className="menu nav-item">
+                                        <NavLink to="/employee/reportees" className="group">
+                                            <div className="flex items-center">
+                                                <IconMenuUsers className="group-hover:!text-primary shrink-0" />
+                                                <span className="ltr:pl-3 rtl:pr-3 text-black dark:text-[#506690] dark:group-hover:text-white-dark">{t('Reportees')}</span>
+                                            </div>
+                                        </NavLink>
+                                    </li>
+                                    <li className="menu nav-item">
+                                        <NavLink to="/employee/desk-booking" className="group">
+                                            <div className="flex items-center">
+                                                <IconMenuComponents className="group-hover:!text-primary shrink-0" />
+                                                <span className="ltr:pl-3 rtl:pr-3 text-black dark:text-[#506690] dark:group-hover:text-white-dark">{t('Desk Booking')}</span>
+                                            </div>
+                                        </NavLink>
+                                    </li>
+                                    <li className="menu nav-item">
                                         <NavLink to="/employee/chat" className="group">
                                             <div className="flex items-center">
                                                 <IconMenuChat className="group-hover:!text-primary shrink-0" />
                                                 <span className="ltr:pl-3 rtl:pr-3 text-black dark:text-[#506690] dark:group-hover:text-white-dark">{t('Chat')}</span>
+                                            </div>
+                                        </NavLink>
+                                    </li>
+                                    <li className="menu nav-item">
+                                        <NavLink to="/employee/calendar" className="group">
+                                            <div className="flex items-center">
+                                                <IconMenuCalendar className="group-hover:!text-primary shrink-0" />
+                                                <span className="ltr:pl-3 rtl:pr-3 text-black dark:text-[#506690] dark:group-hover:text-white-dark">{t('Calendar')}</span>
                                             </div>
                                         </NavLink>
                                     </li>
@@ -166,22 +254,28 @@ const Sidebar = () => {
                                         </NavLink>
                                     </li>
 
-                                    {/* Branch Management */}
+                                    {/* Configurator */}
                                     <li className="menu nav-item">
-                                        <button type="button" className={`${currentMenu === 'branch-mgt' ? 'active' : ''} nav-link group w-full`} onClick={() => toggleMenu('branch-mgt')}>
+                                        <button type="button" className={`${currentMenu === 'configurator' ? 'active' : ''} nav-link group w-full`} onClick={() => toggleMenu('configurator')}>
                                             <div className="flex items-center">
-                                                <IconMenuComponents className="group-hover:!text-primary shrink-0" />
-                                                <span className="ltr:pl-3 rtl:pr-3 text-black dark:text-[#506690] dark:group-hover:text-white-dark">{t('Branch Mgt')}</span>
+                                                <IconMenuElements className="group-hover:!text-primary shrink-0" />
+                                                <span className="ltr:pl-3 rtl:pr-3 text-black dark:text-[#506690] dark:group-hover:text-white-dark">{t('Configurator')}</span>
                                             </div>
-                                            <div className={currentMenu !== 'branch-mgt' ? 'rtl:rotate-90 -rotate-90' : ''}>
+                                            <div className={currentMenu !== 'configurator' ? 'rtl:rotate-90 -rotate-90' : ''}>
                                                 <IconCaretDown />
                                             </div>
                                         </button>
-                                        <AnimateHeight duration={300} height={currentMenu === 'branch-mgt' ? 'auto' : 0}>
+                                        <AnimateHeight duration={300} height={currentMenu === 'configurator' ? 'auto' : 0}>
                                             <ul className="sub-menu text-gray-500">
                                                 <li><NavLink to="/admin/branch-mgt/department">{t('Department')}</NavLink></li>
                                                 <li><NavLink to="/admin/branch-mgt/level">{t('Level')}</NavLink></li>
                                                 <li><NavLink to="/admin/branch-mgt/designation">{t('Designation')}</NavLink></li>
+                                                <li><NavLink to="/admin/configuration/break-config">{t('Break Config')}</NavLink></li>
+                                                <li><NavLink to="/admin/configuration/shift">{t('Shift')}</NavLink></li>
+                                                <li><NavLink to="/admin/configuration/department-wise-working-days">{t('Dept Working Days')}</NavLink></li>
+                                                <li><NavLink to="/admin/configuration/leave-count">{t('Leave Count')}</NavLink></li>
+                                                <li><NavLink to="/admin/configuration/company-policies">{t('Company Policies')}</NavLink></li>
+                                                <li><NavLink to="/admin/configuration/office-structure">{t('Office Structure')}</NavLink></li>
                                             </ul>
                                         </AnimateHeight>
                                     </li>
@@ -276,28 +370,6 @@ const Sidebar = () => {
                                         </NavLink>
                                     </li>
 
-                                    {/* Configuration */}
-                                    <li className="menu nav-item">
-                                        <button type="button" className={`${currentMenu === 'configuration' ? 'active' : ''} nav-link group w-full`} onClick={() => toggleMenu('configuration')}>
-                                            <div className="flex items-center">
-                                                <IconMenuElements className="group-hover:!text-primary shrink-0" />
-                                                <span className="ltr:pl-3 rtl:pr-3 text-black dark:text-[#506690] dark:group-hover:text-white-dark">{t('Configuration')}</span>
-                                            </div>
-                                            <div className={currentMenu !== 'configuration' ? 'rtl:rotate-90 -rotate-90' : ''}>
-                                                <IconCaretDown />
-                                            </div>
-                                        </button>
-                                        <AnimateHeight duration={300} height={currentMenu === 'configuration' ? 'auto' : 0}>
-                                            <ul className="sub-menu text-gray-500">
-                                                <li><NavLink to="/admin/configuration/break-config">{t('Break Config')}</NavLink></li>
-                                                <li><NavLink to="/admin/configuration/shift">{t('Shift')}</NavLink></li>
-                                                <li><NavLink to="/admin/configuration/department-wise-working-days">{t('Dept Working Days')}</NavLink></li>
-                                                <li><NavLink to="/admin/configuration/leave-count">{t('Leave Count')}</NavLink></li>
-                                                <li><NavLink to="/admin/configuration/company-policies">{t('Company Policies')}</NavLink></li>
-                                                <li><NavLink to="/admin/configuration/office-structure">{t('Office Structure')}</NavLink></li>
-                                            </ul>
-                                        </AnimateHeight>
-                                    </li>
 
                                     {/* Calendar */}
                                     <li className="menu nav-item">
