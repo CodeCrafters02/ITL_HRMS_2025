@@ -3085,6 +3085,14 @@ class GoogleLoginAPIView(APIView):
             first_name = idinfo.get("given_name", "")
             last_name = idinfo.get("family_name", "")
             
+            # Determine role for new user:
+            # If NO users exist on the platform yet, the first SSO user becomes 'master'.
+            # All subsequent users default to 'employee'.
+            if UserRegister.objects.count() == 0:
+                default_role = "master"
+            else:
+                default_role = "employee"
+
             # Find or Create User
             user, created = UserRegister.objects.get_or_create(
                 email=email,
@@ -3092,9 +3100,7 @@ class GoogleLoginAPIView(APIView):
                     "username": email,
                     "first_name": first_name,
                     "last_name": last_name,
-                    # IMPORTANT: Never auto-assign master on Google SSO.
-                    # New Google users default to employee; role management happens via master/admin flows.
-                    "role": "employee",
+                    "role": default_role,
                     "is_active": True
                 }
             )
