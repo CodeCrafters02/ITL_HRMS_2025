@@ -136,16 +136,22 @@ const AdminCompanyPolicies = () => {
     };
 
     return (
-        <div className="panel">
-            <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
-                <div>
-                    <div className="text-xl font-bold">Company Policies</div>
-                    <div className="text-sm text-white-dark">Upload policy documents and control visibility.</div>
+        <div className="space-y-6">
+            {/* Gradient Banner Header */}
+            <div className="bg-gradient-to-r from-[#4c0519] to-[#e11d48] p-6 rounded-xl shadow-lg relative overflow-hidden">
+                <div className="relative z-10">
+                    <h1 className="text-3xl font-extrabold text-white tracking-tight">Company Policies</h1>
+                    <p className="text-white/80 mt-1 text-sm font-medium">Upload policy documents and control visibility.</p>
                 </div>
-                <button type="button" className="btn btn-primary gap-2" onClick={openAdd}>
-                    <IconPlus /> Add Policy
-                </button>
+                <div className="absolute top-0 right-0 -mt-10 -mr-10 w-48 h-48 bg-white opacity-10 rounded-full blur-2xl"></div>
             </div>
+
+            <div className="panel">
+                <div className="flex flex-wrap items-center justify-end gap-3 mb-4">
+                    <button type="button" className="btn btn-primary gap-2" onClick={openAdd}>
+                        <IconPlus /> Add Policy
+                    </button>
+                </div>
 
             <div className="flex flex-wrap items-center gap-3 mb-4">
                 <div className="relative flex-1 min-w-[220px]">
@@ -275,6 +281,7 @@ const AdminCompanyPolicies = () => {
                     </div>
                 </Dialog>
             </Transition>
+        </div>
         </div>
     );
 };

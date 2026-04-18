@@ -359,8 +359,13 @@ class DepartmentWiseWorkingDays(models.Model):
     department = models.ForeignKey(Department, on_delete=models.CASCADE)
     shifts = models.ManyToManyField(ShiftPolicy, blank=True)
     working_days_count = models.PositiveSmallIntegerField()
-    week_start_day = models.CharField(max_length=10)
-    week_end_day = models.CharField(max_length=10)
+    
+    week_start_day = models.CharField(max_length=10, null=True, blank=True)
+    week_end_day = models.CharField(max_length=10, null=True, blank=True)
+    
+    working_days = models.JSONField(default=list, blank=True, null=True)
+    weekend_days = models.JSONField(default=list, blank=True, null=True)
+    
     company = models.ForeignKey(Company, on_delete=models.CASCADE,null=True,blank=True)
 
     def __str__(self):

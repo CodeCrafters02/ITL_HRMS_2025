@@ -47,6 +47,23 @@ const IconClock = ({ className = 'w-5 h-5' }: { className?: string }) => (
     </svg>
 );
 
+const InlineDurationInput = ({ value, min, max, onSave }: { value: number; min: number; max: number; onSave: (val: number) => void }) => {
+    const [localVal, setLocalVal] = useState(String(value));
+    useEffect(() => setLocalVal(String(value)), [value]);
+    return (
+        <input
+            className="form-input w-24"
+            type="number"
+            min={min}
+            max={max}
+            value={localVal}
+            onChange={(e) => setLocalVal(e.target.value)}
+            onBlur={() => onSave(Math.max(min, Math.min(max, Number(localVal) || 0)))}
+            onKeyDown={(e) => e.key === 'Enter' && e.currentTarget.blur()}
+        />
+    );
+};
+
 const AdminBreakConfig = () => {
     const dispatch = useDispatch();
     const [items, setItems] = useState<BreakConfig[]>([]);
@@ -82,12 +99,27 @@ const AdminBreakConfig = () => {
     };
 
     useEffect(() => {
-        fetchAll();
+        // Load break config and auto-ensure Don't Disturb exists
+        (async () => {
+            const loaded = await fetchAll();
+            // Auto-create Do Not Disturb if it doesn't exist
+            const hasDnd = loaded.some((b) => b.break_choice === 'dont_disturb');
+            if (!hasDnd) {
+                try {
+                    const resp = await fetch(API_URL, {
+                        method: 'POST',
+                        headers: headers(),
+                        body: JSON.stringify({ break_choice: 'dont_disturb', duration_minutes: null, enabled: true }),
+                    });
+                    if (resp.ok) await fetchAll();
+                } catch { /* ignore */ }
+            }
+        })();
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
     const shortBreaks = useMemo(() => items.filter((b) => b.break_choice === 'short_break'), [items]);
-    const mealBreak = useMemo(() => items.find((b) => b.break_choice === 'meal_break') || null, [items]);
+    const mealBreaks = useMemo(() => items.filter((b) => b.break_choice === 'meal_break'), [items]);
     const dontDisturb = useMemo(() => items.find((b) => b.break_choice === 'dont_disturb') || null, [items]);
 
     const patch = async (id: number, payload: Partial<BreakConfig>) => {
@@ -161,31 +193,15 @@ const AdminBreakConfig = () => {
             const resp = await fetch(API_URL, {
                 method: 'POST',
                 headers: headers(),
-                body: JSON.stringify({ break_choice: 'meal_break', duration_minutes: 30, enabled: true }),
+                body: JSON.stringify({ break_choice: 'meal_break', duration_minutes: 30, enabled: false }),
             });
             const data = await resp.json();
             if (!resp.ok) throw new Error(data?.detail || 'Failed to add');
             const fresh = await fetchAll();
-            // Make the newly created meal break the active one
+            // Make the newly created meal break the active one (disables others)
             if (data?.id) {
                 await setEnabledExclusive(Number(data.id), true, fresh);
             }
-        } catch (e: any) {
-            Swal.fire('Error', e?.message || 'Failed to add', 'error');
-        }
-    };
-
-    const ensureDontDisturb = async () => {
-        if (dontDisturb) return;
-        try {
-            const resp = await fetch(API_URL, {
-                method: 'POST',
-                headers: headers(),
-                body: JSON.stringify({ break_choice: 'dont_disturb', duration_minutes: null, enabled: true }),
-            });
-            const data = await resp.json();
-            if (!resp.ok) throw new Error(data?.detail || 'Failed to add');
-            await fetchAll();
         } catch (e: any) {
             Swal.fire('Error', e?.message || 'Failed to add', 'error');
         }
@@ -201,14 +217,17 @@ const AdminBreakConfig = () => {
 
     return (
         <div className="space-y-6">
+            {/* Gradient Banner Header */}
+            <div className="bg-gradient-to-r from-[#1e1b4b] to-[#7c3aed] p-6 rounded-xl shadow-lg relative overflow-hidden">
+                <div className="relative z-10">
+                    <h1 className="text-3xl font-extrabold text-white tracking-tight">Break Configuration</h1>
+                    <p className="text-white/80 mt-1 text-sm font-medium">Set which breaks appear for employees, and control default durations.</p>
+                </div>
+                <div className="absolute top-0 right-0 -mt-10 -mr-10 w-48 h-48 bg-white opacity-10 rounded-full blur-2xl"></div>
+            </div>
+
             <div className="panel">
                 <div className="flex flex-wrap items-center justify-between gap-3">
-                    <div>
-                        <div className="text-xl font-bold">Break Configuration</div>
-                        <div className="text-sm text-white-dark">
-                            Set which breaks appear for employees, and control default durations.
-                        </div>
-                    </div>
                     <div className="flex items-center gap-2">
                         <button type="button" className="btn btn-outline-primary" onClick={fetchAll}>
                             Refresh
@@ -243,13 +262,11 @@ const AdminBreakConfig = () => {
                                 <div className="min-w-[140px]">
                                     <div className="text-xs text-white-dark">Duration</div>
                                     <div className="flex items-center gap-2">
-                                        <input
-                                            className="form-input w-24"
-                                            type="number"
+                                        <InlineDurationInput
+                                            value={b.duration_minutes ?? 5}
                                             min={1}
                                             max={180}
-                                            value={b.duration_minutes ?? 5}
-                                            onChange={(e) => patch(b.id, { duration_minutes: Math.max(1, Math.min(180, Number(e.target.value) || 0)) })}
+                                            onSave={(val) => patch(b.id, { duration_minutes: val })}
                                         />
                                         <span className="text-sm text-white-dark">min</span>
                                     </div>
@@ -277,79 +294,91 @@ const AdminBreakConfig = () => {
             </div>
 
             <div className="panel">
-                <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center justify-between gap-3 mb-2">
                     <div>
                         <div className="text-lg font-bold flex items-center gap-2">
-                            <IconCoffee className="w-5 h-5 text-warning" /> Meal Break
+                            <IconCoffee className="w-5 h-5 text-warning" /> Meal Breaks
                         </div>
-                        <div className="text-sm text-white-dark">Add a new meal break duration; it will become the active one.</div>
+                        <div className="text-sm text-white-dark">Add multiple meal breaks — only <strong>one</strong> can be enabled at a time.</div>
                     </div>
                     <button type="button" className="btn btn-primary gap-2" onClick={addMealBreak}>
                         <IconPlus /> Add Meal Break
                     </button>
                 </div>
-                {mealBreak ? (
-                    <div className="flex flex-wrap items-center gap-3 p-4 rounded-lg border border-[#e0e6ed] dark:border-[#1b2e4b] bg-white dark:bg-[#0e1726]">
-                        <div className="min-w-[140px]">
-                            <div className="text-xs text-white-dark">Duration</div>
-                            <div className="flex items-center gap-2">
-                                <input
-                                    className="form-input w-24"
-                                    type="number"
-                                    min={1}
-                                    max={240}
-                                    value={mealBreak.duration_minutes ?? 30}
-                                    onChange={(e) => patch(mealBreak.id, { duration_minutes: Math.max(1, Math.min(240, Number(e.target.value) || 0)) })}
-                                />
-                                <span className="text-sm text-white-dark">min</span>
-                            </div>
-                        </div>
-                        <div className="min-w-[140px]">
-                            <div className="text-xs text-white-dark">Status</div>
-                            <label className="inline-flex items-center gap-2 cursor-pointer select-none">
-                                <input type="checkbox" checked={!!mealBreak.enabled} onChange={(e) => setEnabledExclusive(mealBreak.id, e.target.checked)} />
-                                <span className={`text-sm font-semibold ${mealBreak.enabled ? 'text-success' : 'text-danger'}`}>{mealBreak.enabled ? 'Enabled' : 'Disabled'}</span>
-                            </label>
-                        </div>
-                        <div className="flex-1" />
-                        <div className="flex items-center gap-2">
-                            {savingId === mealBreak.id && <span className="text-xs text-white-dark">Saving…</span>}
-                            <button type="button" className="btn btn-outline-danger gap-2" onClick={() => remove(mealBreak.id)}>
-                                <IconTrashLines /> Remove
-                            </button>
-                        </div>
+                {!mealBreaks.length ? (
+                    <div className="p-6 rounded-lg border border-dashed border-[#e0e6ed] dark:border-[#1b2e4b] text-white-dark">
+                        No meal breaks configured yet.
                     </div>
                 ) : (
-                    <div className="text-white-dark">No meal break configured.</div>
+                    <div className="space-y-3">
+                        {mealBreaks.map((b) => (
+                            <div
+                                key={b.id}
+                                className="flex flex-wrap items-center gap-3 p-4 rounded-lg border border-[#e0e6ed] dark:border-[#1b2e4b] bg-white dark:bg-[#0e1726]"
+                            >
+                                <div className="min-w-[140px]">
+                                    <div className="text-xs text-white-dark">Duration</div>
+                                    <div className="flex items-center gap-2">
+                                        <InlineDurationInput
+                                            value={b.duration_minutes ?? 30}
+                                            min={1}
+                                            max={240}
+                                            onSave={(val) => patch(b.id, { duration_minutes: val })}
+                                        />
+                                        <span className="text-sm text-white-dark">min</span>
+                                    </div>
+                                </div>
+                                <div className="min-w-[140px]">
+                                    <div className="text-xs text-white-dark">Status</div>
+                                    <label className="inline-flex items-center gap-2 cursor-pointer select-none">
+                                        <input type="checkbox" checked={!!b.enabled} onChange={(e) => setEnabledExclusive(b.id, e.target.checked)} />
+                                        <span className={`text-sm font-semibold ${b.enabled ? 'text-success' : 'text-danger'}`}>{b.enabled ? 'Enabled' : 'Disabled'}</span>
+                                    </label>
+                                </div>
+                                <div className="flex-1" />
+                                <div className="flex items-center gap-2">
+                                    {savingId === b.id && <span className="text-xs text-white-dark">Saving…</span>}
+                                    <button type="button" className="btn btn-outline-danger gap-2" onClick={() => remove(b.id)}>
+                                        <IconTrashLines /> Remove
+                                    </button>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
                 )}
             </div>
 
             <div className="panel">
-                <div className="flex items-center justify-between gap-3 mb-2">
-                    <div>
-                        <div className="text-lg font-bold flex items-center gap-2">
-                            <IconMoon className="w-5 h-5 text-info" /> Do Not Disturb
-                        </div>
-                        <div className="text-sm text-white-dark">When enabled, employees can mark themselves as unavailable.</div>
+                <div className="mb-2">
+                    <div className="text-lg font-bold flex items-center gap-2">
+                        <IconMoon className="w-5 h-5 text-info" /> Do Not Disturb
                     </div>
-                    <button type="button" className={`btn gap-2 ${dontDisturb ? 'btn-outline-primary' : 'btn btn-primary'}`} onClick={ensureDontDisturb} disabled={!!dontDisturb}>
-                        <IconPlus /> {dontDisturb ? 'Do Not Disturb Added' : 'Add Do Not Disturb'}
-                    </button>
+                    <div className="text-sm text-white-dark">When enabled, employees can mark themselves as unavailable.</div>
                 </div>
                 {dontDisturb ? (
                     <div className="flex flex-wrap items-center gap-3 p-4 rounded-lg border border-[#e0e6ed] dark:border-[#1b2e4b] bg-white dark:bg-[#0e1726]">
                         <div className="min-w-[140px]">
                             <div className="text-xs text-white-dark">Status</div>
-                            <label className="inline-flex items-center gap-2 cursor-pointer select-none">
-                                <input type="checkbox" checked={!!dontDisturb.enabled} onChange={(e) => setEnabledExclusive(dontDisturb.id, e.target.checked)} />
-                                <span className={`text-sm font-semibold ${dontDisturb.enabled ? 'text-success' : 'text-danger'}`}>{dontDisturb.enabled ? 'Enabled' : 'Disabled'}</span>
+                            <label className="w-12 h-6 relative">
+                                <input
+                                    type="checkbox"
+                                    className="custom_switch absolute w-full h-full opacity-0 z-10 cursor-pointer peer"
+                                    checked={!!dontDisturb.enabled}
+                                    onChange={(e) => patch(dontDisturb.id, { enabled: e.target.checked })}
+                                />
+                                <span className="bg-[#ebedf2] dark:bg-dark block h-full rounded-full before:absolute before:left-1 before:bg-white dark:before:bg-white-dark before:bottom-1 before:w-4 before:h-4 before:rounded-full peer-checked:before:left-7 peer-checked:bg-primary before:transition-all before:duration-300"></span>
                             </label>
                         </div>
+                        <span className={`text-sm font-semibold ${dontDisturb.enabled ? 'text-success' : 'text-danger'}`}>
+                            {dontDisturb.enabled ? 'Enabled' : 'Disabled'}
+                        </span>
                         <div className="flex-1" />
                         {savingId === dontDisturb.id && <span className="text-xs text-white-dark">Saving…</span>}
                     </div>
                 ) : (
-                    <div className="p-6 rounded-lg border border-dashed border-[#e0e6ed] dark:border-[#1b2e4b] text-white-dark">Not configured.</div>
+                    <div className="p-4 rounded-lg border border-dashed border-[#e0e6ed] dark:border-[#1b2e4b] text-white-dark flex items-center gap-2">
+                        <span className="animate-pulse">Setting up…</span>
+                    </div>
                 )}
             </div>
         </div>

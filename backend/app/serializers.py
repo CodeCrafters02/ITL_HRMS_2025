@@ -922,7 +922,7 @@ class DepartmentWiseWorkingDaysSerializer(serializers.ModelSerializer):
         model = DepartmentWiseWorkingDays
         fields = [
             'id', 'department', 'shifts', 'working_days_count',
-            'week_start_day', 'week_end_day', 'company'
+            'week_start_day', 'week_end_day', 'working_days', 'weekend_days', 'company'
         ]
 
 

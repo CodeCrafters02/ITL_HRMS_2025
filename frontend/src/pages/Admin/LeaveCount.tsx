@@ -107,16 +107,22 @@ const AdminLeaveCount = () => {
     };
 
     return (
-        <div className="panel">
-            <div className="flex items-center justify-between mb-4">
-                <div>
-                    <div className="text-xl font-bold">Leave Count</div>
-                    <div className="text-sm text-white-dark">Configure leave types and counts.</div>
+        <div className="space-y-6">
+            {/* Gradient Banner Header */}
+            <div className="bg-gradient-to-r from-[#022c22] to-[#10b981] p-6 rounded-xl shadow-lg relative overflow-hidden">
+                <div className="relative z-10">
+                    <h1 className="text-3xl font-extrabold text-white tracking-tight">Leave Count</h1>
+                    <p className="text-white/80 mt-1 text-sm font-medium">Configure leave types and counts.</p>
                 </div>
-                <button type="button" className="btn btn-primary gap-2" onClick={openAdd}>
-                    <IconPlus /> Add Leave
-                </button>
+                <div className="absolute top-0 right-0 -mt-10 -mr-10 w-48 h-48 bg-white opacity-10 rounded-full blur-2xl"></div>
             </div>
+
+            <div className="panel">
+                <div className="flex flex-wrap items-center justify-end gap-3 mb-4">
+                    <button type="button" className="btn btn-primary gap-2" onClick={openAdd}>
+                        <IconPlus /> Add Leave
+                    </button>
+                </div>
 
             <div className="table-responsive">
                 <table className="table-hover">
@@ -212,6 +218,7 @@ const AdminLeaveCount = () => {
                     </div>
                 </Dialog>
             </Transition>
+        </div>
         </div>
     );
 };

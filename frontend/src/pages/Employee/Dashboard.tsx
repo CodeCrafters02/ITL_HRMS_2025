@@ -2,7 +2,7 @@ import { useEffect } from 'react';
 import { useDispatch } from 'react-redux';
 import { Link } from 'react-router-dom';
 import { setPageTitle } from '../../store/themeConfigSlice';
-import IconUsersGroup from '../../components/Icon/IconUsersGroup';
+import IconMenuCalendar from '../../components/Icon/Menu/IconMenuCalendar';
 import IconMenuChat from '../../components/Icon/Menu/IconMenuChat';
 
 const EmployeeDashboard = () => {
@@ -50,17 +50,21 @@ const EmployeeDashboard = () => {
                         </div>
                     </Link>
 
-                    <div className="rounded-2xl p-6 bg-white dark:bg-[#1b2e4b] border border-gray-100 dark:border-[#191e3a]">
+                    <Link
+                        to="/employee/calendar"
+                        className="group rounded-2xl p-6 bg-white dark:bg-[#1b2e4b] shadow-[0_4px_20px_-10px_rgba(0,0,0,0.1)] hover:shadow-lg transition-all duration-300 hover:-translate-y-1 relative overflow-hidden border border-gray-100 dark:border-[#191e3a]"
+                    >
+                        <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-violet-500 to-fuchsia-500"></div>
                         <div className="flex items-center space-x-4">
-                            <div className="flex-shrink-0 w-14 h-14 bg-emerald-50 dark:bg-[#0e1726] rounded-full flex items-center justify-center text-emerald-500">
-                                <IconUsersGroup className="w-7 h-7" />
+                            <div className="flex-shrink-0 w-14 h-14 bg-violet-50 dark:bg-[#0e1726] rounded-full flex items-center justify-center text-violet-500 group-hover:bg-violet-500 group-hover:text-white transition-colors duration-300">
+                                <IconMenuCalendar className="w-7 h-7" />
                             </div>
                             <div>
-                                <h3 className="text-xl font-bold text-gray-800 dark:text-gray-100">More modules</h3>
-                                <p className="text-gray-500 text-sm mt-1">We can add more employee modules here next.</p>
+                                <h3 className="text-xl font-bold text-gray-800 dark:text-gray-100 group-hover:text-violet-500 transition-colors">Calendar</h3>
+                                <p className="text-gray-500 text-sm mt-1">Company holidays and your Google Calendar</p>
                             </div>
                         </div>
-                    </div>
+                    </Link>
                 </div>
             </div>
         </div>

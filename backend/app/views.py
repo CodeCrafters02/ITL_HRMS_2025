@@ -23,7 +23,7 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 import re
 from rest_framework.permissions import IsAuthenticated
-from .permissions import IsMaster,IsAdminUser, IsCompanyChatUser
+from .permissions import IsMaster, IsAdminUser, IsCompanyChatUser, CanReadCompanyCalendar
 from .serializers import *
 from .models import *
 
@@ -816,53 +816,81 @@ class DepartmentWiseWorkingDaysViewSet(viewsets.ModelViewSet):
             qs = qs.filter(company=company)
         return qs
 
-    def create(self, request, *args, **kwargs):
-        department_id = request.data.get('department')
-        shift_ids = request.data.get('shifts', [])
-        company_id = request.data.get('company')
-
-        if not department_id:
-            return Response({'detail': 'Department is required.'}, status=400)
-
+    def _check_duplicate(self, department_id, shift_ids, company_id, current_id=None):
         existing_qs = DepartmentWiseWorkingDays.objects.filter(department_id=department_id)
-
         if company_id:
             existing_qs = existing_qs.filter(company_id=company_id)
         else:
             existing_qs = existing_qs.filter(company__isnull=True)
+            
+        if current_id:
+            existing_qs = existing_qs.exclude(id=current_id)
 
         if not shift_ids:
-            # Adding for all shifts
             if existing_qs.filter(shifts__isnull=False).exists():
-                return Response({'detail': 'Shift-specific records already exist. Cannot add "All Shifts" record.'}, status=400)
+                return 'Shift-specific records already exist. Cannot add "All Shifts" record.'
         else:
-            # Adding for specific shifts
-            if existing_qs.filter(shifts=None).exists():
-                return Response({'detail': 'An "All Shifts" record exists. Cannot add shift-specific records.'}, status=400)
+            if existing_qs.filter(shifts__isnull=True).exists():
+                return 'An "All Shifts" record exists. Cannot add shift-specific records.'
 
-            for obj in existing_qs:
-                existing_shifts = set(obj.shifts.values_list('id', flat=True))
-                if set(shift_ids) == existing_shifts:
-                    return Response({'detail': 'Duplicate shift combination exists for this department.'}, status=400)
+            # If any requested shift is already assigned in another record for this department
+            conflicting = existing_qs.filter(shifts__id__in=shift_ids).distinct()
+            if conflicting.exists():
+                return 'One or more of the selected shifts are already configured for this department.'
+        return None
 
-        # Always save with the current user's company, and only pass expected fields
+    def create(self, request, *args, **kwargs):
+        department_id = request.data.get('department')
+        shift_ids = request.data.get('shifts', [])
+        company_id = self.request.user.company.id
+
+        if not department_id:
+            return Response({'detail': 'Department is required.'}, status=400)
+
+        err = self._check_duplicate(department_id, shift_ids, company_id)
+        if err:
+            return Response({'detail': err}, status=400)
+
         serializer = self.get_serializer(data={
             'department': department_id,
             'shifts': shift_ids,
             'working_days_count': request.data.get('working_days_count'),
             'week_start_day': request.data.get('week_start_day'),
             'week_end_day': request.data.get('week_end_day'),
-            'company': self.request.user.company.id
+            'working_days': request.data.get('working_days', []),
+            'weekend_days': request.data.get('weekend_days', []),
+            'company': company_id
         })
         serializer.is_valid(raise_exception=True)
         self.perform_create(serializer)
         headers = self.get_success_headers(serializer.data)
         return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
 
+    def update(self, request, *args, **kwargs):
+        partial = kwargs.pop('partial', False)
+        instance = self.get_object()
+        
+        department_id = request.data.get('department', instance.department_id)
+        shift_ids = request.data.get('shifts')
+        if shift_ids is None:
+            shift_ids = list(instance.shifts.values_list('id', flat=True))
+            
+        company_id = getattr(self.request.user.company, 'id', None)
+        
+        err = self._check_duplicate(department_id, shift_ids, company_id, current_id=instance.id)
+        if err:
+            return Response({'detail': err}, status=400)
+            
+        return super().update(request, *args, **kwargs)
+
 
 class CalendarEventViewSet(viewsets.ModelViewSet):
     serializer_class = CalendarEventSerializer
-    permission_classes = [IsAuthenticated, IsAdminUser]
+
+    def get_permissions(self):
+        if self.action in ("list", "retrieve"):
+            return [IsAuthenticated(), CanReadCompanyCalendar()]
+        return [IsAuthenticated(), IsAdminUser()]
 
     def get_queryset(self):
         return CalendarEvent.objects.filter(company=self.request.user.company)
@@ -1915,6 +1943,8 @@ class AttendanceLogView(APIView):
                 department=emp.department,
                 company=request.user.company
             ).first()
+
+            valid_weekday_names = self._valid_weekday_names(dept_working_days)
             
             # Determine working days for this employee (full month for reference)
             all_working_days = self._get_working_days_for_month(
@@ -1930,8 +1960,13 @@ class AttendanceLogView(APIView):
             total_worked_hours = 0.0
             leave_summary = {}
 
-            # Process each attendance record
+            # Process each attendance record (only days that are working days for this department)
             for att in attendance_qs:
+                ad = att.date
+                if ad in holidays_dict:
+                    continue
+                if ad.strftime('%A').lower() not in valid_weekday_names:
+                    continue
                 daily_record = self._process_attendance_record(att, emp.company)
                 daily_data.append(daily_record)
                 
@@ -2031,6 +2066,48 @@ class AttendanceLogView(APIView):
                         "remarks": "",
                         "shift_type": None
                     })
+
+            # Department off-days (weekdays not in working_days / weekend_days) show as Holiday (★)
+            by_date = {d["date"]: i for i, d in enumerate(daily_data)}
+            wd_list = (dept_working_days.weekend_days or []) if dept_working_days else []
+            off_cursor = start_date
+            while off_cursor <= end_date:
+                if off_cursor in holidays_dict:
+                    off_cursor += timedelta(days=1)
+                    continue
+                day_key = off_cursor.strftime('%A').lower()
+                if day_key in valid_weekday_names:
+                    off_cursor += timedelta(days=1)
+                    continue
+                iso = str(off_cursor)
+                remark = self._off_day_remark(off_cursor, wd_list)
+                rec = {
+                    "date": iso,
+                    "status": "Holiday",
+                    "check_in": None,
+                    "check_out": None,
+                    "worked_hours": 0.0,
+                    "scheduled_hours": 0.0,
+                    "break_time": 0.0,
+                    "overtime_hours": 0.0,
+                    "is_late": False,
+                    "late_by_minutes": 0,
+                    "early_departure": False,
+                    "early_departure_minutes": 0,
+                    "leave_type": None,
+                    "leave_type_initials": None,
+                    "half_day": False,
+                    "remarks": remark,
+                    "shift_type": None
+                }
+                if iso in by_date:
+                    daily_data[by_date[iso]] = rec
+                else:
+                    daily_data.append(rec)
+                    by_date[iso] = len(daily_data) - 1
+                off_cursor += timedelta(days=1)
+
+            daily_data.sort(key=lambda x: x["date"])
 
             # Calculate totals and percentages
             total_working_days = len(all_working_days)
@@ -2166,36 +2243,44 @@ class AttendanceLogView(APIView):
             "results": paginated_result
         })
 
+    def _valid_weekday_names(self, dept_working_days):
+        """Lowercase weekday names that count as working days for the department."""
+        weekdays = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday']
+        if dept_working_days:
+            wd = dept_working_days.working_days
+            if isinstance(wd, list) and len(wd) > 0:
+                return [str(x).lower() for x in wd]
+            ws = (dept_working_days.week_start_day or '').strip().lower()
+            we = (dept_working_days.week_end_day or '').strip().lower()
+            if ws in weekdays and we in weekdays:
+                si, ei = weekdays.index(ws), weekdays.index(we)
+                if si <= ei:
+                    return weekdays[si : ei + 1]
+                return weekdays[si:] + weekdays[: ei + 1]
+        # No department row: match prior behavior (Mon–Sat as working; Sunday off)
+        return ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday']
+
+    def _off_day_remark(self, d, weekend_days_list):
+        """Tooltip text for a non-working weekday (dept schedule)."""
+        long_name = d.strftime('%A')
+        if isinstance(weekend_days_list, list):
+            for entry in weekend_days_list:
+                if str(entry).lower() == long_name.lower():
+                    return f'Off day ({entry})'
+        return 'Off day (non-working)'
+
     def _get_working_days_for_month(self, start_date, end_date, dept_working_days, holidays):
-        """Get all working days for the month excluding weekends and holidays"""
+        """Dates in range that are working days for the department (excludes company holidays)."""
         working_days = []
         current_date = start_date
-        
-        # Define weekday mapping
-        weekdays = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday']
-        
-        if dept_working_days:
-            # Get valid working days based on department configuration
-            start_idx = weekdays.index(dept_working_days.week_start_day.lower())
-            end_idx = weekdays.index(dept_working_days.week_end_day.lower())
-            
-            if start_idx <= end_idx:
-                valid_weekdays = weekdays[start_idx:end_idx + 1]
-            else:
-                valid_weekdays = weekdays[start_idx:] + weekdays[:end_idx + 1]
-        else:
-            # Default to Monday-Friday saturday
-            valid_weekdays = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday','saturday']
-        
+        valid_weekdays = self._valid_weekday_names(dept_working_days)
+
         while current_date <= end_date:
             day_name = current_date.strftime('%A').lower()
-            
-            # Include if it's a valid working day and not a holiday
             if day_name in valid_weekdays and current_date not in holidays:
                 working_days.append(current_date)
-            
             current_date += timedelta(days=1)
-        
+
         return working_days
 
     def _process_attendance_record(self, attendance, company):
