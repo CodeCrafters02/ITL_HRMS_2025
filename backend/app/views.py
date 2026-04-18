@@ -656,6 +656,17 @@ class EmployeeViewSet(viewsets.ModelViewSet):
             'reporting_level', 'shift_assigned'
         ).order_by('employee_id')
 
+    def perform_destroy(self, instance):
+        """
+        When deleting an Employee, also delete the linked UserRegister account.
+        The OneToOneField CASCADE only works UserRegister→Employee (not reverse),
+        so we must manually clean up the UserRegister to avoid orphaned login accounts.
+        """
+        linked_user = instance.user
+        instance.delete()
+        if linked_user:
+            linked_user.delete()
+
     @action(detail=False, methods=['get'], url_path='get-reporting-manager-choices')
     def get_reporting_manager_choices(self, request):
         company = getattr(request.user, 'company', None)
