@@ -134,21 +134,23 @@ const AdminAttendanceLogs = () => {
         return Array.from({ length: n }, (_, i) => {
             const iso = dateISO(year, month0, i + 1);
             const dayOfWeek = new Date(year, month0, i + 1).getDay();
-            return { iso, dayName: DAY_NAMES_SHORT[dayOfWeek], dayNum: i + 1, isSunday: dayOfWeek === 0 };
+            return { iso, dayName: DAY_NAMES_SHORT[dayOfWeek], dayNum: i + 1 };
         });
     }, [year, month0]);
 
     const statusChip = (status: string, isFuture: boolean) => {
         const base = 'w-7 h-7 rounded-md text-[10px] font-bold flex items-center justify-center cursor-default select-none transition-all duration-200';
+        const s = (status || '-').toLowerCase();
+        if (s === 'holiday') {
+            return { cls: `${base} bg-purple-500/15 text-purple-600 dark:text-purple-400 ring-1 ring-purple-500/30`, label: '★' };
+        }
         if (isFuture || status === 'Upcoming') {
             return { cls: `${base} bg-gray-100 dark:bg-gray-800 text-gray-300 dark:text-gray-600 border border-dashed border-gray-200 dark:border-gray-700`, label: '—' };
         }
-        const s = (status || '-').toLowerCase();
         if (s === 'present') return { cls: `${base} bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 ring-1 ring-emerald-500/30`, label: 'P' };
         if (s === 'absent') return { cls: `${base} bg-red-500/15 text-red-600 dark:text-red-400 ring-1 ring-red-500/30`, label: 'A' };
         if (s === 'leave') return { cls: `${base} bg-blue-500/15 text-blue-600 dark:text-blue-400 ring-1 ring-blue-500/30`, label: 'L' };
         if (s === 'half day') return { cls: `${base} bg-amber-500/15 text-amber-600 dark:text-amber-400 ring-1 ring-amber-500/30`, label: 'H' };
-        if (s === 'holiday') return { cls: `${base} bg-purple-500/15 text-purple-600 dark:text-purple-400 ring-1 ring-purple-500/30`, label: '★' };
         return { cls: `${base} bg-gray-200 dark:bg-gray-700 text-gray-500`, label: '-' };
     };
 
@@ -158,17 +160,18 @@ const AdminAttendanceLogs = () => {
     };
     const hideTip = () => setTooltip(null);
 
-    const renderDayCell = (r: AttendanceRecord, day: { iso: string; dayName: string; dayNum: number; isSunday: boolean }) => {
+    const renderDayCell = (r: AttendanceRecord, day: { iso: string; dayName: string; dayNum: number }) => {
         const isFuture = day.iso > todayISO;
         const d = r.daily_attendance?.find((x) => x.date === day.iso);
         const s = d?.status || (isFuture ? 'Upcoming' : '-');
-        const chip = statusChip(s, isFuture);
+        const isHolidayCell = (s || '').toLowerCase() === 'holiday';
+        const chip = statusChip(s, isFuture && !isHolidayCell);
 
         const dateObj = new Date(day.iso + 'T00:00:00');
         const fullDayName = dateObj.toLocaleDateString('en-US', { weekday: 'long' });
         const tipParts: string[] = [`${fullDayName}, ${dateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`];
 
-        if (isFuture) {
+        if (isFuture && !isHolidayCell) {
             tipParts.push('Status: Upcoming');
         } else {
             tipParts.push(`Status: ${s}`);
@@ -183,7 +186,7 @@ const AdminAttendanceLogs = () => {
         }
 
         return (
-            <td key={day.iso} className={`px-0.5 py-1.5 text-center ${isFuture ? 'opacity-35' : ''}`}>
+            <td key={day.iso} className={`px-0.5 py-1.5 text-center ${isFuture && !isHolidayCell ? 'opacity-35' : ''}`}>
                 <div
                     className={`${chip.cls} mx-auto hover:scale-110 hover:shadow-sm`}
                     onMouseEnter={(ev) => showTip(ev, tipParts.join('\n'))}
@@ -316,7 +319,7 @@ const AdminAttendanceLogs = () => {
                         { label: 'Absent', cls: 'bg-red-500/15 text-red-600 ring-1 ring-red-500/30', char: 'A' },
                         { label: 'Leave', cls: 'bg-blue-500/15 text-blue-600 ring-1 ring-blue-500/30', char: 'L' },
                         { label: 'Half Day', cls: 'bg-amber-500/15 text-amber-600 ring-1 ring-amber-500/30', char: 'H' },
-                        { label: 'Holiday', cls: 'bg-purple-500/15 text-purple-600 ring-1 ring-purple-500/30', char: '★' },
+                        { label: 'Holiday / off day', cls: 'bg-purple-500/15 text-purple-600 ring-1 ring-purple-500/30', char: '★' },
                         ...(isCurrentOrFutureMonth ? [{ label: 'Upcoming', cls: 'bg-gray-100 text-gray-300 border border-dashed border-gray-200', char: '—' }] : []),
                     ].map((item) => (
                         <div key={item.label} className="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400">
@@ -362,11 +365,11 @@ const AdminAttendanceLogs = () => {
                                             key={d.iso}
                                             className={`!py-2 text-center min-w-[36px] ${d.iso > todayISO ? 'opacity-35' : ''} ${
                                                 d.iso === todayISO ? 'bg-blue-50 dark:bg-blue-900/20' : ''
-                                            } ${d.isSunday ? 'bg-red-50/50 dark:bg-red-900/10' : ''}`}
+                                            }`}
                                         >
                                             <div className="flex flex-col items-center leading-none gap-0.5">
                                                 <span className={`text-[9px] font-semibold uppercase tracking-wider ${
-                                                    d.isSunday ? 'text-red-400' : d.iso === todayISO ? 'text-blue-500' : 'text-gray-400 dark:text-gray-500'
+                                                    d.iso === todayISO ? 'text-blue-500' : 'text-gray-400 dark:text-gray-500'
                                                 }`}>
                                                     {d.dayName}
                                                 </span>

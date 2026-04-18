@@ -494,7 +494,7 @@ const MasterCompany = () => {
 
             {/* Add Company Modal */}
             <Transition appear show={isAddModalOpen} as={Fragment}>
-                <Dialog as="div" open={isAddModalOpen} onClose={() => setIsAddModalOpen(false)} className="relative z-50">
+                <Dialog as="div" open={isAddModalOpen} onClose={() => {}} className="relative z-50">
                     <Transition.Child
                         as={Fragment}
                         enter="ease-out duration-300"
@@ -703,7 +703,7 @@ const MasterCompany = () => {
 
             {/* Edit Company Modal */}
             <Transition appear show={isEditModalOpen} as={Fragment}>
-                <Dialog as="div" open={isEditModalOpen} onClose={() => setIsEditModalOpen(false)} className="relative z-50">
+                <Dialog as="div" open={isEditModalOpen} onClose={() => {}} className="relative z-50">
                     <Transition.Child
                         as={Fragment}
                         enter="ease-out duration-300"

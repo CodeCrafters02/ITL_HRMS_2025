@@ -130,10 +130,12 @@ const AdminShift = lazy(() => import('../pages/Admin/Shift'));
 const AdminDeptWorkingDays = lazy(() => import('../pages/Admin/DeptWorkingDays'));
 const AdminLeaveCount = lazy(() => import('../pages/Admin/LeaveCount'));
 const AdminCompanyPolicies = lazy(() => import('../pages/Admin/CompanyPolicies'));
+const AdminCalendar = lazy(() => import('../pages/Admin/Calendar'));
 
 // Employee Pages
 const EmployeeDashboard = lazy(() => import('../pages/Employee/Dashboard'));
 const EmployeeChat = lazy(() => import('../pages/Employee/Chat'));
+const EmployeeCalendar = lazy(() => import('../pages/Employee/Calendar'));
 
 const routes = [
     // dashboard
@@ -690,7 +692,7 @@ const routes = [
     },
     {
         path: '/admin/calendar',
-        element: <AdminComingSoon />,
+        element: <AdminCalendar />,
     },
     {
         path: '/admin/notifications',
@@ -715,6 +717,10 @@ const routes = [
     {
         path: '/employee/chat',
         element: <EmployeeChat />,
+    },
+    {
+        path: '/employee/calendar',
+        element: <EmployeeCalendar />,
     },
 ];
 

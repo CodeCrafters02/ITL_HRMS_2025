@@ -542,7 +542,6 @@ const AdminEmployeeRegister = () => {
                         <thead>
                             <tr>
                                 <th>#</th>
-                                <th>Employee ID</th>
                                 <th>Name</th>
                                 <th>Email</th>
                                 <th>Mobile</th>
@@ -555,7 +554,7 @@ const AdminEmployeeRegister = () => {
                         <tbody>
                             {loading ? (
                                 <tr>
-                                    <td colSpan={9} className="text-center py-5">
+                                    <td colSpan={8} className="text-center py-5">
                                         <span className="animate-pulse text-gray-400">Loading employees...</span>
                                     </td>
                                 </tr>
@@ -563,7 +562,6 @@ const AdminEmployeeRegister = () => {
                                 displayEmployees.map((emp, index) => (
                                     <tr key={emp.id}>
                                         <td>{(page - 1) * pageSize + index + 1}</td>
-                                        <td className="font-mono">{emp.employee_id || '-'}</td>
                                         <td className="font-semibold">{fullName(emp)}</td>
                                         <td className="text-gray-500">{emp.email || '-'}</td>
                                         <td className="text-gray-500">{emp.mobile || '-'}</td>
@@ -601,7 +599,7 @@ const AdminEmployeeRegister = () => {
                                 ))
                             ) : (
                                 <tr>
-                                    <td colSpan={9} className="text-center py-5 text-gray-400">No employees found.</td>
+                                    <td colSpan={8} className="text-center py-5 text-gray-400">No employees found.</td>
                                 </tr>
                             )}
                         </tbody>
@@ -692,7 +690,6 @@ const AdminEmployeeRegister = () => {
                                                         </div>
                                                         <div>
                                                             <div className="text-xl font-bold">{fullName(selectedEmployee)}</div>
-                                                            <div className="text-sm text-gray-500">{selectedEmployee.employee_id || '-'}</div>
                                                         </div>
                                                     </div>
                                                     <button type="button" className="btn btn-primary" onClick={() => { setProfileModalOpen(false); openEditModal(selectedEmployee.id); }}>
