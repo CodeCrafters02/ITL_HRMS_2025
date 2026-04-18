@@ -1848,9 +1848,18 @@ class AttendanceLogView(APIView):
         try:
             year, month_num = map(int, month.split('-'))
             start_date = datetime(year, month_num, 1).date()
-            end_date = datetime(year, month_num, monthrange(year, month_num)[1]).date()
+            month_end_date = datetime(year, month_num, monthrange(year, month_num)[1]).date()
+            today = timezone.localdate()
+            # For attendance calculation, only consider up to today if viewing current/future month
+            effective_end_date = min(month_end_date, today)
+            end_date = month_end_date  # Still use full month for holidays/reference
         except (ValueError, IndexError):
             return Response({"error": "Invalid month format. Use YYYY-MM"}, status=400)
+
+        # ── Backend search & filter on Employee queryset ──
+        search_query = request.query_params.get('search', '').strip()
+        department_filter = request.query_params.get('department', '').strip()
+        status_filter = request.query_params.get('status', '').strip()  # Present/Absent/Leave/Half Day
 
         # Get holidays for the month
         holidays = CalendarEvent.objects.filter(
@@ -1865,7 +1874,22 @@ class AttendanceLogView(APIView):
             company=request.user.company,
             is_active=True
         ).select_related('department').prefetch_related('attendances')
-        
+
+        # Apply search filter on employees
+        if search_query:
+            employees = employees.filter(
+                Q(first_name__icontains=search_query) |
+                Q(last_name__icontains=search_query) |
+                Q(employee_id__icontains=search_query) |
+                Q(email__icontains=search_query)
+            )
+
+        # Apply department filter
+        if department_filter:
+            employees = employees.filter(department__department_name__iexact=department_filter)
+
+        employees = employees.order_by('first_name', 'last_name')
+
         result = []
         
         for emp in employees:
@@ -1881,9 +1905,13 @@ class AttendanceLogView(APIView):
                 company=request.user.company
             ).first()
             
-            # Determine working days for this employee
-            working_days = self._get_working_days_for_month(
+            # Determine working days for this employee (full month for reference)
+            all_working_days = self._get_working_days_for_month(
                 start_date, end_date, dept_working_days, holidays_dict
+            )
+            # Working days only up to today (for absent marking & percentage calculation)
+            elapsed_working_days = self._get_working_days_for_month(
+                start_date, effective_end_date, dept_working_days, holidays_dict
             )
             
             daily_data = []
@@ -1897,26 +1925,26 @@ class AttendanceLogView(APIView):
                 daily_data.append(daily_record)
                 
                 # Count status types
-                status = daily_record["status"]
+                att_status = daily_record["status"]
                 worked_hours = daily_record["worked_hours"]
                 
-                if status == "Present":
+                if att_status == "Present":
                     present_days += 1
                     total_worked_hours += worked_hours
                     if daily_record["is_late"]:
                         late_days += 1
-                elif status == "Half Day":
+                elif att_status == "Half Day":
                     half_days += 1
                     present_days += 0.5
                     total_worked_hours += worked_hours
                     if daily_record["is_late"]:
                         late_days += 1
-                elif status == "Leave":
+                elif att_status == "Leave":
                     leave_days += 1
                     leave_type = daily_record["leave_type"]
                     if leave_type:
                         leave_summary[leave_type] = leave_summary.get(leave_type, 0) + 1
-                elif status == "Absent":
+                elif att_status == "Absent":
                     absent_days += 1
                 # Note: Holidays are not counted in any category as they're non-working days
 
@@ -1943,11 +1971,11 @@ class AttendanceLogView(APIView):
                         "shift_type": None
                     })
 
-            # Fill missing days as Absent (only for working days)
+            # Fill missing days as Absent (only for elapsed working days, not future)
             all_dates = {att.date for att in attendance_qs}
             all_dates.update(holidays_dict.keys())
             
-            for single_date in working_days:
+            for single_date in elapsed_working_days:
                 if single_date not in all_dates:
                     daily_data.append({
                         "date": str(single_date),
@@ -1970,12 +1998,36 @@ class AttendanceLogView(APIView):
                     })
                     absent_days += 1
 
+            # Add future working days as "Upcoming" (no absent marking)
+            for single_date in all_working_days:
+                if single_date > effective_end_date and single_date not in all_dates:
+                    daily_data.append({
+                        "date": str(single_date),
+                        "status": "Upcoming",
+                        "check_in": None,
+                        "check_out": None,
+                        "worked_hours": 0.0,
+                        "scheduled_hours": 0.0,
+                        "break_time": 0.0,
+                        "overtime_hours": 0.0,
+                        "is_late": False,
+                        "late_by_minutes": 0,
+                        "early_departure": False,
+                        "early_departure_minutes": 0,
+                        "leave_type": None,
+                        "leave_type_initials": None,
+                        "half_day": False,
+                        "remarks": "",
+                        "shift_type": None
+                    })
+
             # Calculate totals and percentages
-            total_working_days = len(working_days)
+            total_working_days = len(all_working_days)
+            elapsed_working_day_count = len(elapsed_working_days)
             total_days_present = present_days  # This includes half days as 0.5
             
-            # Attendance percentage based on working days only
-            attendance_percentage = (total_days_present / total_working_days * 100) if total_working_days > 0 else 0
+            # Attendance percentage based on elapsed working days only (not future)
+            attendance_percentage = (total_days_present / elapsed_working_day_count * 100) if elapsed_working_day_count > 0 else 0
             
             # Average working hours per present day
             avg_hours_per_day = total_worked_hours / present_days if present_days > 0 else 0
@@ -2012,11 +2064,17 @@ class AttendanceLogView(APIView):
                 for shift in company_shifts
             ]
 
+            # Determine today's status for this employee (for status filter)
+            today_iso = str(today)
+            today_record = next((d for d in daily_data if d["date"] == today_iso), None)
+            today_status = today_record["status"] if today_record else "Absent"
+
             result.append({
                 "employee_id": emp.employee_id,
                 "employee_name": emp.full_name,
                 "department": emp.department.department_name if emp.department else None,
                 "month": month,
+                "today_status": today_status,
                 
                 # Monthly Working Days Statistics
                 "total_working_days": total_working_days,
@@ -2057,7 +2115,45 @@ class AttendanceLogView(APIView):
                 "daily_attendance": sorted(daily_data, key=lambda x: x["date"])
             })
 
-        return Response(result)
+        # ── Apply today's status filter after building result ──
+        if status_filter and status_filter.lower() != 'all':
+            result = [r for r in result if r.get("today_status", "").lower() == status_filter.lower()]
+
+        # ── Pagination ──
+        total_count = len(result)
+        try:
+            page = int(request.query_params.get('page', 1))
+        except (ValueError, TypeError):
+            page = 1
+        try:
+            page_size = int(request.query_params.get('page_size', 10))
+        except (ValueError, TypeError):
+            page_size = 10
+        page_size = min(page_size, 100)  # Max 100
+
+        total_pages = max(1, -(-total_count // page_size))  # ceil division
+        page = max(1, min(page, total_pages))
+        start_idx = (page - 1) * page_size
+        end_idx = start_idx + page_size
+        paginated_result = result[start_idx:end_idx]
+
+        # Collect unique departments for filter dropdown
+        all_departments = list(
+            Employee.objects.filter(
+                company=request.user.company,
+                is_active=True,
+                department__isnull=False
+            ).values_list('department__department_name', flat=True).distinct().order_by('department__department_name')
+        )
+
+        return Response({
+            "count": total_count,
+            "page": page,
+            "page_size": page_size,
+            "total_pages": total_pages,
+            "departments": all_departments,
+            "results": paginated_result
+        })
 
     def _get_working_days_for_month(self, start_date, end_date, dept_working_days, holidays):
         """Get all working days for the month excluding weekends and holidays"""
