@@ -20,6 +20,7 @@ import IconBarChart from '../../components/Icon/IconBarChart';
 import IconSun from '../../components/Icon/IconSun';
 import IconMoon from '../../components/Icon/IconMoon';
 import IconListCheck from '../../components/Icon/IconListCheck';
+import CompanyGoogleCalendar from '../../components/Calendar/CompanyGoogleCalendar';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000';
 
@@ -607,6 +608,7 @@ const AdminDashboard = () => {
 
                     <div className="grid grid-cols-2 gap-3">
                         {[
+                            { label: 'Calendar', icon: <IconCalendar className="w-5 h-5" />, to: '/admin/calendar', color: 'text-indigo-500', bg: 'bg-indigo-500/10 dark:bg-indigo-500/20', hoverBg: 'hover:bg-indigo-500/20 dark:hover:bg-indigo-500/30', border: 'border-indigo-500/20' },
                             { label: 'Employees', icon: <IconMenuUsers className="w-5 h-5" />, to: '/admin/employee-register', color: 'text-primary', bg: 'bg-primary/10 dark:bg-primary/20', hoverBg: 'hover:bg-primary/20 dark:hover:bg-primary/30', border: 'border-primary/20' },
                             { label: 'Leaves', icon: <IconMenuCalendar className="w-5 h-5" />, to: '/admin/approved-leaves', color: 'text-success', bg: 'bg-success/10 dark:bg-success/20', hoverBg: 'hover:bg-success/20 dark:hover:bg-success/30', border: 'border-success/20' },
                             { label: 'Attendance', icon: <IconBarChart className="w-5 h-5" />, to: '/admin/attendance-logs', color: 'text-secondary', bg: 'bg-secondary/10 dark:bg-secondary/20', hoverBg: 'hover:bg-secondary/20 dark:hover:bg-secondary/30', border: 'border-secondary/20' },
@@ -689,6 +691,17 @@ const AdminDashboard = () => {
                         </div>
                     )}
                 </div>
+            </div>
+
+            {/* ─── Calendar: company events + Google (same as /admin/calendar) ─── */}
+            <div className="space-y-3">
+                <div className="flex flex-wrap items-center justify-between gap-2 px-0.5">
+                    <h2 className="text-lg font-bold text-gray-800 dark:text-white">Calendar</h2>
+                    <Link to="/admin/calendar" className="text-sm text-primary hover:underline font-medium">
+                        Full-screen calendar
+                    </Link>
+                </div>
+                <CompanyGoogleCalendar variant="embedded" />
             </div>
         </div>
     );
