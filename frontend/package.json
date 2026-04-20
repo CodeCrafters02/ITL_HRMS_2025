@@ -57,6 +57,7 @@
         "sweetalert2-react-content": "^5.0.7",
         "swiper": "^11.1.9",
         "web-vitals": "^4.2.3",
+        "xlsx": "^0.18.5",
         "yup": "^1.4.0"
     },
     "devDependencies": {

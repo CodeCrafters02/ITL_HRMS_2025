@@ -5,6 +5,7 @@ import timeGridPlugin from '@fullcalendar/timegrid';
 import { FormEvent, useCallback, useEffect, useMemo, useState } from 'react';
 import { hasGrantedAllScopesGoogle, useGoogleLogin } from '@react-oauth/google';
 import type { TokenResponse } from '@react-oauth/google';
+import * as XLSX from 'xlsx';
 import Swal from 'sweetalert2';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000';
@@ -425,6 +426,10 @@ const CompanyGoogleCalendar = ({ variant = 'page' }: CompanyGoogleCalendarProps)
     const [coIsHoliday, setCoIsHoliday] = useState(true);
     const [coSaving, setCoSaving] = useState(false);
 
+    /** Admin: Excel import → bulk create / update company holidays */
+    const [importFile, setImportFile] = useState<File | null>(null);
+    const [importBusy, setImportBusy] = useState(false);
+
     const userEmail = localStorage.getItem('user_email') || localStorage.getItem('username') || '';
     const isAdmin = (localStorage.getItem('user_role') || '') === 'admin';
     const embedded = variant === 'embedded';
@@ -654,6 +659,122 @@ const CompanyGoogleCalendar = ({ variant = 'page' }: CompanyGoogleCalendarProps)
             Swal.fire('Could not save', err?.message || 'Unknown error', 'error');
         } finally {
             setCoSaving(false);
+        }
+    };
+
+    const ddmmyyyyToIso = (s: string) => {
+        const m = String(s || '')
+            .trim()
+            .match(/^(\d{1,2})-(\d{1,2})-(\d{4})$/);
+        if (!m) return null;
+        const dd = m[1].padStart(2, '0');
+        const mm = m[2].padStart(2, '0');
+        const yyyy = m[3];
+        return `${yyyy}-${mm}-${dd}`;
+    };
+
+    const excelCellToIso = (v: any) => {
+        if (v == null || v === '') return null;
+        if (v instanceof Date && !isNaN(v.getTime())) {
+            return v.toISOString().slice(0, 10);
+        }
+        if (typeof v === 'number') {
+            const d = XLSX.SSF.parse_date_code(v);
+            if (!d || !d.y || !d.m || !d.d) return null;
+            const mm = String(d.m).padStart(2, '0');
+            const dd = String(d.d).padStart(2, '0');
+            return `${d.y}-${mm}-${dd}`;
+        }
+        const s = String(v).trim();
+        if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+        return ddmmyyyyToIso(s);
+    };
+
+    const extractHolidayRowsFromWorkbook = async (file: File) => {
+        const buf = await file.arrayBuffer();
+        const wb = XLSX.read(buf, { type: 'array' });
+        const sheetName = wb.SheetNames?.[0];
+        if (!sheetName) return [];
+        const ws = wb.Sheets[sheetName];
+        const matrix = XLSX.utils.sheet_to_json(ws, { header: 1, raw: true, defval: '' }) as any[][];
+        if (!Array.isArray(matrix) || matrix.length === 0) return [];
+
+        let headerRow = 0;
+        let dateIdx = 0;
+        let eventIdx = 1;
+        for (let i = 0; i < Math.min(15, matrix.length); i++) {
+            const row = matrix[i] || [];
+            const joined = row.map((x) => String(x || '').toLowerCase()).join(' | ');
+            if (joined.includes('date') && (joined.includes('event') || joined.includes('holiday') || joined.includes('name'))) {
+                headerRow = i;
+                const lower = row.map((x) => String(x || '').toLowerCase());
+                const di = lower.findIndex((c) => c.includes('date'));
+                const ei = lower.findIndex((c) => c.includes('event') || c.includes('holiday') || c.includes('name'));
+                dateIdx = di >= 0 ? di : 0;
+                eventIdx = ei >= 0 ? ei : dateIdx + 1;
+                break;
+            }
+        }
+
+        const rows: { date: string; name: string; description: string; is_holiday: boolean }[] = [];
+        for (let r = headerRow + 1; r < matrix.length; r++) {
+            const row = matrix[r] || [];
+            const dateIso = excelCellToIso(row[dateIdx]);
+            const name = String(row[eventIdx] || '').trim();
+            if (!dateIso || !name) continue;
+            rows.push({ date: dateIso, name, description: '', is_holiday: true });
+        }
+        return rows;
+    };
+
+    const importHolidaysFromExcel = async () => {
+        if (!isAdmin) return;
+        if (!importFile) {
+            Swal.fire('Select an Excel file', 'Upload a sheet with Date + Event columns.', 'warning');
+            return;
+        }
+        setImportBusy(true);
+        try {
+            const rows = await extractHolidayRowsFromWorkbook(importFile);
+            if (rows.length === 0) {
+                Swal.fire(
+                    'No rows found',
+                    'Could not find any Date/Event rows. Ensure format is DD-MM-YYYY with an event name column.',
+                    'warning'
+                );
+                return;
+            }
+            const uniq = new Map<string, (typeof rows)[number]>();
+            for (const r of rows) uniq.set(`${r.date}__${r.name.toLowerCase()}`, r);
+            const payload = { rows: Array.from(uniq.values()) };
+
+            const res = await fetch(`${API_BASE_URL}/app/calendar-events/bulk-import/`, {
+                method: 'POST',
+                headers: { ...headers(), 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload),
+            });
+            const data = await res.json().catch(() => ({}));
+            if (!res.ok) throw new Error(data?.detail || 'Import failed');
+
+            // Refresh in-memory list; Google sync effect will push holidays into admin Google automatically.
+            setCompanyEvents((prev) => {
+                const merged = [...prev];
+                for (const it of data?.results || []) {
+                    const existing = merged.find((x: any) => x.id === it.id);
+                    if (!existing) merged.push(it);
+                }
+                return merged.sort((a: any, b: any) => String(a.date || '').localeCompare(String(b.date || '')));
+            });
+            setImportFile(null);
+            Swal.fire({
+                icon: 'success',
+                title: 'Imported',
+                text: `Created ${data.created || 0}, updated ${data.updated || 0}, skipped ${data.skipped || 0}.`,
+            });
+        } catch (err: any) {
+            Swal.fire('Import failed', err?.message || 'Unknown error', 'error');
+        } finally {
+            setImportBusy(false);
         }
     };
 
@@ -1036,6 +1157,33 @@ const CompanyGoogleCalendar = ({ variant = 'page' }: CompanyGoogleCalendarProps)
                             />
                         </div>
                     </form>
+
+                    <div className="mt-4 border-t border-primary/20 pt-4">
+                        <h4 className="text-xs font-bold text-gray-800 dark:text-white mb-1">Import holidays from Excel</h4>
+                        <p className="text-[11px] text-gray-600 dark:text-gray-400 mb-2">
+                            Upload a sheet where one row contains headers like <strong>Date</strong> and <strong>Event</strong>. Dates can be
+                            <strong> DD-MM-YYYY</strong> (recommended) or Excel date cells.
+                        </p>
+                        <div className="flex flex-col sm:flex-row gap-2 items-start sm:items-end">
+                            <div className="flex-1 w-full">
+                                <label className="block text-xs font-medium mb-1 text-gray-700 dark:text-gray-300">Excel file</label>
+                                <input
+                                    type="file"
+                                    accept=".xlsx,.xls,.csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel,text/csv"
+                                    className="form-input py-1.5 text-sm"
+                                    onChange={(e) => setImportFile(e.target.files?.[0] || null)}
+                                />
+                            </div>
+                            <button
+                                type="button"
+                                className="btn btn-outline-primary btn-sm shrink-0"
+                                onClick={importHolidaysFromExcel}
+                                disabled={importBusy}
+                            >
+                                {importBusy ? 'Importing…' : 'Import holidays'}
+                            </button>
+                        </div>
+                    </div>
                 </div>
             )}
 

@@ -137,6 +137,7 @@ const AdminAssetsInventory = lazy(() => import('../pages/Admin/AssetsInventory')
 const EmployeeDashboard = lazy(() => import('../pages/Employee/Dashboard'));
 const EmployeeChat = lazy(() => import('../pages/Employee/Chat'));
 const EmployeeCalendar = lazy(() => import('../pages/Employee/Calendar'));
+const EmployeeAssetRequests = lazy(() => import('../pages/Employee/AssetRequests'));
 
 const routes = [
     // dashboard
@@ -722,6 +723,10 @@ const routes = [
     {
         path: '/employee/calendar',
         element: <EmployeeCalendar />,
+    },
+    {
+        path: '/employee/asset-requests',
+        element: <EmployeeAssetRequests />,
     },
 ];
 

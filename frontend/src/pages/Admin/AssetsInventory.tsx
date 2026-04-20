@@ -678,21 +678,26 @@ const AdminAssetsInventory = () => {
                                         <tr>
                                             <th>Code</th>
                                             <th>Name</th>
+                                            <th>Sub-category</th>
                                             <th>Avail / Total</th>
                                             <th>Reorder</th>
+                                            <th>Unit price</th>
+                                            <th>Last restocked</th>
+                                            <th>Vendor</th>
+                                            <th>UoM</th>
                                             <th className="text-end">Actions</th>
                                         </tr>
                                     </thead>
                                     <tbody>
                                         {siLoading ? (
                                             <tr>
-                                                <td colSpan={5} className="text-center py-8">
+                                                <td colSpan={10} className="text-center py-8">
                                                     Loading…
                                                 </td>
                                             </tr>
                                         ) : siList.length === 0 ? (
                                             <tr>
-                                                <td colSpan={5} className="text-center py-8 text-gray-500">
+                                                <td colSpan={10} className="text-center py-8 text-gray-500">
                                                     No supply items.
                                                 </td>
                                             </tr>
@@ -701,6 +706,7 @@ const AdminAssetsInventory = () => {
                                                 <tr key={row.id}>
                                                     <td className="font-semibold">{row.item_code}</td>
                                                     <td>{row.item_name}</td>
+                                                    <td className="text-sm text-gray-600 dark:text-gray-400">{row.sub_category || '—'}</td>
                                                     <td>
                                                         {row.available_quantity} / {row.total_stock}
                                                         {row.reorder_level > 0 && row.available_quantity <= row.reorder_level ? (
@@ -708,6 +714,12 @@ const AdminAssetsInventory = () => {
                                                         ) : null}
                                                     </td>
                                                     <td>{row.reorder_level}</td>
+                                                    <td>{row.unit_price ?? '—'}</td>
+                                                    <td className="text-sm text-gray-600 dark:text-gray-400">{row.last_restocked || '—'}</td>
+                                                    <td className="max-w-[180px] truncate text-sm text-gray-600 dark:text-gray-400" title={row.vendor_details || ''}>
+                                                        {row.vendor_details || '—'}
+                                                    </td>
+                                                    <td className="text-sm text-gray-600 dark:text-gray-400">{row.unit_of_measure || '—'}</td>
                                                     <td className="text-end">
                                                         <div className="flex justify-end gap-2">
                                                             <button
