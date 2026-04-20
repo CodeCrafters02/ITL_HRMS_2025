@@ -303,16 +303,28 @@ class AdminDashboardAPIView(APIView):
             relieved_info__relieving_date__year=today.year,
             relieved_info__relieving_date__month=today.month
         ).count()
-        # Upcoming Birthdays/Anniversaries (next 30 days)
+        # Upcoming Birthdays (next 30 days)
+        # NOTE: month/day range filtering breaks across month/year boundaries.
+        # Compute each employee's next birthday date and filter in Python (company sizes are typically manageable).
         next_30 = today + timezone.timedelta(days=30)
-        upcoming_birthdays = Employee.objects.filter(
-            company=company,
-            date_of_birth__month__gte=today.month,
-            date_of_birth__day__gte=today.day,
-            date_of_birth__month__lte=next_30.month,
-            date_of_birth__day__lte=next_30.day,
-            is_active=True
-        ).order_by('date_of_birth')
+        upcoming_birthdays = []
+        for e in Employee.objects.filter(company=company, is_active=True).only('id', 'first_name', 'last_name', 'date_of_birth'):
+            dob = e.date_of_birth
+            if not dob:
+                continue
+            try:
+                next_bday = dob.replace(year=today.year)
+            except ValueError:
+                # Handle Feb 29 in non-leap years: treat as Feb 28
+                next_bday = timezone.datetime(today.year, 2, 28).date()
+            if next_bday < today:
+                try:
+                    next_bday = next_bday.replace(year=today.year + 1)
+                except ValueError:
+                    next_bday = timezone.datetime(today.year + 1, 2, 28).date()
+            if today <= next_bday <= next_30:
+                upcoming_birthdays.append((next_bday, e))
+        upcoming_birthdays.sort(key=lambda x: x[0])
         
 
         # Attendance Snapshot - Calculate based on shift timing
@@ -347,7 +359,11 @@ class AdminDashboardAPIView(APIView):
                 "exits_this_month": exits_this_month,
             },
             "upcoming_birthdays": [
-                {"name": e.full_name, "date_of_birth": e.date_of_birth} for e in upcoming_birthdays
+                {
+                    "name": f"{(e.first_name or '').strip()} {(e.last_name or '').strip()}".strip() or str(e.employee_id or e.id),
+                    "date_of_birth": e.date_of_birth,
+                }
+                for _, e in upcoming_birthdays
             ],
            
             "attendance_snapshot": attendance_snapshot,
@@ -709,15 +725,89 @@ class EmployeeViewSet(viewsets.ModelViewSet):
         return Response(response_data, status=status.HTTP_200_OK)
 
     
-class AssetInventoryViewSet(viewsets.ModelViewSet):
-    serializer_class = AssetInventorySerializer
+class SupplyItemViewSet(viewsets.ModelViewSet):
+    serializer_class = SupplyItemSerializer
     permission_classes = [IsAuthenticated, IsAdminUser]
+    pagination_class = CustomPagination
+    filter_backends = [filters.SearchFilter]
+    search_fields = ['item_code', 'item_name', 'vendor_details', 'sub_category']
 
     def get_queryset(self):
-        """ Limit to assets belonging to  company """
-        company = self.request.user.company
-        return AssetInventory.objects.filter(company=company)
-    
+        return SupplyItem.objects.filter(company=self.request.user.company).order_by('item_code')
+
+
+class FixedAssetViewSet(viewsets.ModelViewSet):
+    serializer_class = FixedAssetSerializer
+    permission_classes = [IsAuthenticated, IsAdminUser]
+    pagination_class = CustomPagination
+    parser_classes = [JSONParser, MultiPartParser, FormParser]
+    filter_backends = [filters.SearchFilter]
+    search_fields = ['asset_tag', 'serial_number', 'model_brand', 'category', 'status']
+
+    def get_queryset(self):
+        return FixedAsset.objects.filter(company=self.request.user.company).select_related(
+            'assigned_to', 'variable_supply_item'
+        )
+
+    def perform_destroy(self, instance):
+        instance.delete()
+
+
+class AssetRequestViewSet(viewsets.ModelViewSet):
+    serializer_class = AssetRequestSerializer
+    pagination_class = CustomPagination
+    parser_classes = [JSONParser, MultiPartParser, FormParser]
+    filter_backends = [filters.SearchFilter]
+    search_fields = ['remarks', 'approval_status', 'requested_by__first_name', 'requested_by__last_name']
+
+    def get_permissions(self):
+        # Employees can create requests and view their own.
+        if self.action in ("create", "list", "retrieve"):
+            return [IsAuthenticated()]
+        # Only admins can approve/edit/delete requests
+        return [IsAuthenticated(), IsAdminUser()]
+
+    def get_queryset(self):
+        qs = AssetRequest.objects.filter(company=self.request.user.company).select_related(
+            'requested_by', 'related_fixed_asset', 'related_supply_item'
+        )
+        if getattr(self.request.user, 'role', None) == 'employee':
+            emp = getattr(self.request.user, 'employee_profile', None)
+            if emp:
+                qs = qs.filter(requested_by=emp)
+            else:
+                qs = qs.none()
+        return qs
+    def perform_create(self, serializer):
+        u = self.request.user
+        if getattr(u, 'role', None) == 'employee':
+            emp = getattr(u, 'employee_profile', None)
+            serializer.save(company=u.company, requested_by=emp)
+        else:
+            serializer.save(company=u.company)
+
+class AssetSupportingDocumentViewSet(viewsets.ModelViewSet):
+    serializer_class = AssetSupportingDocumentSerializer
+    permission_classes = [IsAuthenticated, IsAdminUser]
+    pagination_class = CustomPagination
+    parser_classes = [JSONParser, MultiPartParser, FormParser]
+
+    def get_queryset(self):
+        qs = AssetSupportingDocument.objects.filter(company=self.request.user.company)
+        fa = self.request.query_params.get('fixed_asset')
+        si = self.request.query_params.get('supply_item')
+        ar = self.request.query_params.get('asset_request')
+        if fa:
+            qs = qs.filter(fixed_asset_id=fa)
+        if si:
+            qs = qs.filter(supply_item_id=si)
+        if ar:
+            qs = qs.filter(asset_request_id=ar)
+        return qs.order_by('-uploaded_at')
+
+    def perform_create(self, serializer):
+        serializer.save(company=self.request.user.company, uploaded_by=self.request.user)
+
     
 class RecruitmentViewSet(viewsets.ModelViewSet):
     queryset = Recruitment.objects.all()
@@ -897,6 +987,68 @@ class CalendarEventViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         serializer.save(company=self.request.user.company)
+
+    @action(detail=False, methods=['post'], url_path='bulk-import')
+    def bulk_import(self, request):
+        """
+        Bulk import company holidays/events.
+
+        Expected JSON body:
+        {
+          "rows": [
+            { "date": "2026-03-03", "name": "Holiday name", "description": "", "is_holiday": true }
+          ]
+        }
+        """
+        company = request.user.company
+        rows = request.data.get('rows')
+        if not isinstance(rows, list):
+            return Response({'detail': 'rows must be a list'}, status=status.HTTP_400_BAD_REQUEST)
+
+        created = 0
+        updated = 0
+        skipped = 0
+        out = []
+
+        for r in rows:
+            if not isinstance(r, dict):
+                skipped += 1
+                continue
+            name = (r.get('name') or '').strip()
+            date_val = r.get('date')
+            if not name or not date_val:
+                skipped += 1
+                continue
+            desc = (r.get('description') or '').strip()
+            is_holiday = bool(r.get('is_holiday', True))
+
+            obj, was_created = CalendarEvent.objects.get_or_create(
+                company=company,
+                date=date_val,
+                name=name,
+                defaults={'description': desc, 'is_holiday': is_holiday},
+            )
+            if was_created:
+                created += 1
+            else:
+                changed = False
+                if desc and obj.description != desc:
+                    obj.description = desc
+                    changed = True
+                if obj.is_holiday != is_holiday:
+                    obj.is_holiday = is_holiday
+                    changed = True
+                if changed:
+                    obj.save(update_fields=['description', 'is_holiday', 'updated_at'])
+                    updated += 1
+                else:
+                    skipped += 1
+            out.append({'id': obj.id, 'name': obj.name, 'date': str(obj.date), 'is_holiday': obj.is_holiday})
+
+        return Response(
+            {'created': created, 'updated': updated, 'skipped': skipped, 'results': out},
+            status=status.HTTP_200_OK,
+        )
 
 
 class ChatConversationViewSet(viewsets.ModelViewSet):
@@ -1271,13 +1423,12 @@ class RelievedEmployeeViewSet(viewsets.ModelViewSet):
         employee = relieved_instance.employee
         if employee:
            
-            assigned_assets = EmployeeAssetDetails.objects.filter(employee=employee)
-            if assigned_assets.exists():
-                for asset_detail in assigned_assets:
-                    asset = asset_detail.asset
-                    if asset:
-                        asset.quantity += asset_detail.quantity
-                        asset.save()
+            assigned_supply = EmployeeSupplyAssignment.objects.filter(employee=employee)
+            for row in assigned_supply:
+                si = row.supply_item
+                si.available_quantity += 1
+                si.save(update_fields=['available_quantity', 'updated_at'])
+            assigned_supply.delete()
             # Mark employee as inactive
             employee.is_active = False
             employee.save()

@@ -1,4 +1,6 @@
 from django.db import models
+from django.db.models import Q
+from django.core.exceptions import ValidationError
 from datetime import timedelta
 from django.utils import timezone
 from django.contrib.auth.models import AbstractUser
@@ -196,8 +198,8 @@ class Employee(models.Model):
     who_referred = models.CharField(max_length=100, null=True, blank=True)
     shift_assigned=models.ForeignKey(ShiftPolicy,on_delete=models.SET_NULL,null=True,blank=True,related_name='shift_employee')
     
-    # Assets
-    asset_details = models.ManyToManyField('AssetInventory', through='EmployeeAssetDetails', blank=True)
+    # Consumable supply items (joiner kits, peripherals) — see SupplyItem / EmployeeSupplyAssignment
+    supply_items = models.ManyToManyField('SupplyItem', through='EmployeeSupplyAssignment', blank=True, related_name='employees_assigned')
 
     # Bank & payment
     PAYMENT_CHOICES = (
@@ -248,23 +250,212 @@ class RelievedEmployee(models.Model):
     def __str__(self):
         return f"Relieved: {self.employee}"
       
-class AssetInventory(models.Model):
-    company = models.ForeignKey(Company, on_delete=models.CASCADE, related_name='assets')
-    name = models.CharField(max_length=50)
-    description = models.TextField(null=True, blank=True)
-    quantity = models.IntegerField(default=0)
-    icon_image = models.ImageField(upload_to='company/assets/', null=True, blank=True)
+class FixedAsset(models.Model):
+    """Serialized IT / furniture (core assets).
+
+    Optional link to a variable (SKU) row in :class:`SupplyItem` when this physical unit
+    corresponds to a catalog line (e.g. same model as tracked stock / reorder).
+    """
+
+    STATUS_CHOICES = [
+        ('in_use', 'In-Use'),
+        ('repair', 'Repair'),
+        ('available', 'Available'),
+        ('scrapped', 'Scrapped'),
+    ]
+    CATEGORY_CHOICES = [
+        ('laptop', 'Laptop'),
+        ('monitor', 'Monitor'),
+        ('server', 'Server'),
+        ('furniture', 'Furniture'),
+        ('other', 'Other'),
+    ]
+
+    company = models.ForeignKey(Company, on_delete=models.CASCADE, related_name='fixed_assets')
+    variable_supply_item = models.ForeignKey(
+        'SupplyItem',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='core_asset_instances',
+        help_text='Variable (SKU) catalog row this core unit is tied to, if applicable.',
+    )
+    asset_tag = models.CharField(max_length=64)
+    serial_number = models.CharField(max_length=128, blank=True, null=True)
+    category = models.CharField(max_length=32, choices=CATEGORY_CHOICES, default='other')
+    model_brand = models.CharField(max_length=255, blank=True, null=True)
+    purchase_date = models.DateField(null=True, blank=True)
+    cost_price = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
+    assigned_to = models.ForeignKey(
+        'Employee',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='fixed_assets_assigned',
+    )
+    assignment_date = models.DateField(null=True, blank=True)
+    warranty_expiry = models.DateField(null=True, blank=True)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='available')
+    notes = models.TextField(blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['asset_tag']
+        constraints = [
+            models.UniqueConstraint(fields=['company', 'asset_tag'], name='uniq_fixed_asset_tag_per_company'),
+        ]
 
     def __str__(self):
-        return self.name
+        return f"{self.asset_tag} ({self.company_id})"
+
+    def clean(self):
+        if self.status == 'available':
+            if self.assigned_to_id or self.assignment_date:
+                raise ValidationError('Available assets must not have assignee or assignment date.')
+        if self.status == 'in_use' and not self.assigned_to_id:
+            raise ValidationError('In-use assets must have an assignee.')
+        super().clean()
+
+    def save(self, *args, **kwargs):
+        if self.status == 'available':
+            self.assigned_to = None
+            self.assignment_date = None
+        super().save(*args, **kwargs)
 
 
-class EmployeeAssetDetails(models.Model):
-    employee = models.ForeignKey(Employee, on_delete=models.CASCADE, related_name='asset_assignments')
-    assetinventory = models.ForeignKey(AssetInventory, on_delete=models.CASCADE, related_name='assigned_employees')
+class SupplyItem(models.Model):
+    """Variable assets: SKU / cabinet stock (supply stack).
+
+    Item code, name, sub-category, stock levels, reorder, pricing, vendor, UoM — the
+    canonical catalog for consumables; core :class:`FixedAsset` rows may optionally
+    reference one row here when a serialized unit maps to that SKU.
+    """
+
+    SUBCATEGORY_CHOICES = [
+        ('peripherals', 'Peripherals'),
+        ('stationery', 'Stationery'),
+        ('swag', 'Swag'),
+        ('cables', 'Cables'),
+        ('other', 'Other'),
+    ]
+    UOM_CHOICES = [
+        ('pcs', 'Pcs'),
+        ('box', 'Box'),
+        ('pack', 'Pack'),
+        ('meters', 'Meters'),
+    ]
+
+    company = models.ForeignKey(Company, on_delete=models.CASCADE, related_name='supply_items')
+    item_code = models.CharField(max_length=64)
+    item_name = models.CharField(max_length=255)
+    sub_category = models.CharField(max_length=32, choices=SUBCATEGORY_CHOICES, default='other')
+    total_stock = models.PositiveIntegerField(default=0)
+    available_quantity = models.PositiveIntegerField(default=0)
+    reorder_level = models.PositiveIntegerField(default=0)
+    unit_price = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
+    last_restocked = models.DateField(null=True, blank=True)
+    vendor_details = models.TextField(blank=True, null=True)
+    unit_of_measure = models.CharField(max_length=16, choices=UOM_CHOICES, default='pcs')
+    notes = models.TextField(blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['item_code']
+        constraints = [
+            models.UniqueConstraint(fields=['company', 'item_code'], name='uniq_supply_item_code_per_company'),
+        ]
 
     def __str__(self):
-        return f"{self.assetinventory.name} → {self.employee.first_name}"
+        return f"{self.item_code} — {self.item_name}"
+
+    def clean(self):
+        if self.available_quantity > self.total_stock:
+            raise ValidationError('Available quantity cannot exceed total stock.')
+        super().clean()
+
+
+class EmployeeSupplyAssignment(models.Model):
+    """One row = one unit of a supply item issued to an employee."""
+
+    employee = models.ForeignKey(Employee, on_delete=models.CASCADE, related_name='supply_assignments')
+    supply_item = models.ForeignKey(SupplyItem, on_delete=models.CASCADE, related_name='supply_assignments')
+
+    class Meta:
+        ordering = ['id']
+
+    def __str__(self):
+        return f"{self.supply_item.item_code} → {self.employee_id}"
+
+
+class AssetRequest(models.Model):
+    """Intake / approval for asset or supply needs."""
+
+    APPROVAL_CHOICES = [
+        ('pending', 'Pending'),
+        ('approved', 'Approved'),
+        ('rejected', 'Rejected'),
+    ]
+
+    company = models.ForeignKey(Company, on_delete=models.CASCADE, related_name='asset_requests')
+    requested_by = models.ForeignKey(Employee, on_delete=models.CASCADE, related_name='asset_requests_submitted')
+    approval_status = models.CharField(max_length=16, choices=APPROVAL_CHOICES, default='pending')
+    remarks = models.TextField(blank=True, null=True)
+    image = models.ImageField(upload_to='asset_requests/', null=True, blank=True)
+    related_fixed_asset = models.ForeignKey(
+        FixedAsset, on_delete=models.SET_NULL, null=True, blank=True, related_name='requests'
+    )
+    related_supply_item = models.ForeignKey(
+        SupplyItem, on_delete=models.SET_NULL, null=True, blank=True, related_name='requests'
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+
+class AssetSupportingDocument(models.Model):
+    """Optional file attached to a fixed asset, supply item, or request (exactly one parent)."""
+
+    company = models.ForeignKey(Company, on_delete=models.CASCADE, related_name='asset_documents')
+    title = models.CharField(max_length=255, blank=True, null=True)
+    file = models.FileField(upload_to='asset_documents/%Y/%m/')
+    uploaded_at = models.DateTimeField(auto_now_add=True)
+    uploaded_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='uploaded_asset_documents',
+    )
+    fixed_asset = models.ForeignKey(FixedAsset, on_delete=models.CASCADE, null=True, blank=True, related_name='documents')
+    supply_item = models.ForeignKey(SupplyItem, on_delete=models.CASCADE, null=True, blank=True, related_name='documents')
+    asset_request = models.ForeignKey(AssetRequest, on_delete=models.CASCADE, null=True, blank=True, related_name='documents')
+
+    class Meta:
+        ordering = ['-uploaded_at']
+        constraints = [
+            models.CheckConstraint(
+                check=(
+                    Q(fixed_asset__isnull=False, supply_item__isnull=True, asset_request__isnull=True)
+                    | Q(fixed_asset__isnull=True, supply_item__isnull=False, asset_request__isnull=True)
+                    | Q(fixed_asset__isnull=True, supply_item__isnull=True, asset_request__isnull=False)
+                ),
+                name='asset_doc_exactly_one_parent',
+            ),
+        ]
+
+    def clean(self):
+        parents = sum(
+            1
+            for p in (self.fixed_asset_id, self.supply_item_id, self.asset_request_id)
+            if p
+        )
+        if parents != 1:
+            raise ValidationError('Document must be linked to exactly one of fixed asset, supply item, or request.')
+        super().clean()
 
 
 class Recruitment(models.Model):
