@@ -131,6 +131,7 @@ const AdminDeptWorkingDays = lazy(() => import('../pages/Admin/DeptWorkingDays')
 const AdminLeaveCount = lazy(() => import('../pages/Admin/LeaveCount'));
 const AdminCompanyPolicies = lazy(() => import('../pages/Admin/CompanyPolicies'));
 const AdminCalendar = lazy(() => import('../pages/Admin/Calendar'));
+const AdminAssetsInventory = lazy(() => import('../pages/Admin/AssetsInventory'));
 
 // Employee Pages
 const EmployeeDashboard = lazy(() => import('../pages/Employee/Dashboard'));
@@ -664,7 +665,7 @@ const routes = [
     },
     {
         path: '/admin/assets-inventory',
-        element: <AdminComingSoon />,
+        element: <AdminAssetsInventory />,
     },
     {
         path: '/admin/configuration/break-config',

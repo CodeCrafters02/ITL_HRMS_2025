@@ -1047,9 +1047,9 @@ const CompanyGoogleCalendar = ({ variant = 'page' }: CompanyGoogleCalendarProps)
                 <FullCalendar
                     plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
                     initialView="dayGridMonth"
-                    height={embedded ? 480 : 'auto'}
+                    height={embedded ? 320 : 'auto'}
                     headerToolbar={{
-                        left: 'prev,next today',
+                        left: embedded ? 'prev,next' : 'prev,next today',
                         center: 'title',
                         right: embedded ? 'dayGridMonth,timeGridWeek' : 'dayGridMonth,timeGridWeek,timeGridDay',
                     }}
@@ -1267,14 +1267,14 @@ const CompanyGoogleCalendar = ({ variant = 'page' }: CompanyGoogleCalendarProps)
 
     if (embedded) {
         return (
-            <div className="rounded-2xl bg-white dark:bg-[#1b2e4b] shadow-[0_4px_20px_-10px_rgba(0,0,0,0.1)] border border-gray-100 dark:border-[#191e3a] overflow-hidden">
-                <div className="px-6 py-4 border-b border-gray-100 dark:border-[#191e3a] bg-[#fbfbfb] dark:bg-[#121c2c]">
-                    <h3 className="text-lg font-bold text-gray-800 dark:text-white">Calendar</h3>
-                    <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                        Company holidays and your Google Calendar (connect with the same account as Google sign-in).
+            <div className="rounded-xl bg-white dark:bg-[#1b2e4b] shadow-[0_4px_20px_-10px_rgba(0,0,0,0.1)] border border-gray-100 dark:border-[#191e3a] overflow-hidden">
+                <div className="px-4 py-2.5 border-b border-gray-100 dark:border-[#191e3a] bg-[#fbfbfb] dark:bg-[#121c2c]">
+                    <h3 className="text-base font-bold text-gray-800 dark:text-white">Calendar</h3>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 leading-snug">
+                        Company holidays and Google Calendar (same account as sign-in).
                     </p>
                 </div>
-                <div className="p-4 sm:p-6">{panelInner}</div>
+                <div className="p-3 sm:p-4">{panelInner}</div>
             </div>
         );
     }

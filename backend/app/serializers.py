@@ -464,7 +464,7 @@ class EmployeeSerializer(serializers.ModelSerializer):
     reporting_manager_name = serializers.SerializerMethodField()
     reporting_level_name = serializers.SerializerMethodField()
     asset_details = serializers.PrimaryKeyRelatedField(
-        queryset=AssetInventory.objects.all(), many=True, required=False, allow_null=True
+        queryset=SupplyItem.objects.all(), many=True, required=False, allow_null=True
     )
 
     department_name = serializers.SerializerMethodField()
@@ -501,7 +501,7 @@ class EmployeeSerializer(serializers.ModelSerializer):
     def get_asset_names(self, obj):
         if not obj.id:
             return []
-        return [asset.name for asset in obj.asset_details.all()]
+        return [item.item_name for item in obj.supply_items.all()]
 
     def get_source_choices(self, obj):
         return [{'value': key, 'label': label} for key, label in Employee.SOURCE_CHOICES]
@@ -657,18 +657,16 @@ class EmployeeSerializer(serializers.ModelSerializer):
             else:
                 raise
 
-        # Convert asset IDs to AssetInventory instances if needed
-        asset_instances = []
-        for asset in assets:
-            if isinstance(asset, int):
-                asset_obj = AssetInventory.objects.get(pk=asset)
-            else:
-                asset_obj = asset
-            if asset_obj.quantity <= 0:
-                raise serializers.ValidationError(f"Asset '{asset_obj.name}' is out of stock.")
-            asset_obj.quantity -= 1
-            asset_obj.save()
-            EmployeeAssetDetails.objects.create(employee=employee, assetinventory=asset_obj)
+        for item in assets:
+            pk = item if isinstance(item, int) else getattr(item, 'pk', item)
+            supply = SupplyItem.objects.get(pk=pk)
+            if supply.company_id != assigned_company.id:
+                raise serializers.ValidationError('Supply item does not belong to your company.')
+            if supply.available_quantity <= 0:
+                raise serializers.ValidationError(f"Supply item '{supply.item_name}' is out of stock.")
+            supply.available_quantity -= 1
+            supply.save(update_fields=['available_quantity', 'updated_at'])
+            EmployeeSupplyAssignment.objects.create(employee=employee, supply_item=supply)
 
         self.send_welcome_email(user, password)
 
@@ -819,37 +817,130 @@ class EmployeeSerializer(serializers.ModelSerializer):
         send_mail(subject, message, settings.DEFAULT_FROM_EMAIL, [user.email])
     
     
-class AssetInventorySerializer(serializers.ModelSerializer):
+class SupplyItemSerializer(serializers.ModelSerializer):
     class Meta:
-        model = AssetInventory
-        fields = [
-            'id',
-            'name',
-            'description',
-            'quantity',
-            'icon_image',
-            
-        ]
+        model = SupplyItem
+        fields = '__all__'
+        read_only_fields = ('company', 'created_at', 'updated_at')
+
+    def validate(self, attrs):
+        inst = self.instance
+        total = attrs.get('total_stock', inst.total_stock if inst else None)
+        avail = attrs.get('available_quantity', inst.available_quantity if inst else None)
+        if total is None:
+            total = 0
+        if avail is None:
+            avail = 0
+        if avail > total:
+            raise serializers.ValidationError({'available_quantity': 'Cannot exceed total stock.'})
+        return attrs
 
     def create(self, validated_data):
         request = self.context['request']
-        admin_user = request.user
-        company = admin_user.company
-
-        validated_data['company'] = company
-        return AssetInventory.objects.create(**validated_data)
-
-    def update(self, instance, validated_data):
-        return super().update(instance, validated_data)
+        validated_data['company'] = request.user.company
+        return super().create(validated_data)
 
 
-class EmployeeAssetDetailsSerializer(serializers.ModelSerializer):
-    employee_name = serializers.CharField(source='employee.__str__', read_only=True)
-    asset_name = serializers.CharField(source='assetinventory.name', read_only=True)
+class FixedAssetSerializer(serializers.ModelSerializer):
+    assigned_to_name = serializers.SerializerMethodField(read_only=True)
+    variable_catalog_code = serializers.SerializerMethodField(read_only=True)
+    variable_catalog_name = serializers.SerializerMethodField(read_only=True)
 
     class Meta:
-        model = EmployeeAssetDetails
-        fields = ['id', 'employee', 'employee_name', 'assetinventory', 'asset_name']
+        model = FixedAsset
+        fields = '__all__'
+        read_only_fields = ('company', 'created_at', 'updated_at')
+
+    def get_assigned_to_name(self, obj):
+        if not obj.assigned_to_id:
+            return None
+        e = obj.assigned_to
+        return f"{(e.first_name or '').strip()} {(e.last_name or '').strip()}".strip() or str(e.employee_id)
+
+    def get_variable_catalog_code(self, obj):
+        return obj.variable_supply_item.item_code if obj.variable_supply_item_id else None
+
+    def get_variable_catalog_name(self, obj):
+        return obj.variable_supply_item.item_name if obj.variable_supply_item_id else None
+
+    def create(self, validated_data):
+        request = self.context['request']
+        validated_data['company'] = request.user.company
+        return super().create(validated_data)
+
+    def validate(self, attrs):
+        request = self.context['request']
+        company = getattr(request.user, 'company', None)
+        inst = self.instance
+        if 'variable_supply_item' in attrs:
+            vs = attrs.get('variable_supply_item')
+        else:
+            vs = inst.variable_supply_item if inst else None
+        if vs is not None and company and vs.company_id != company.id:
+            raise serializers.ValidationError({'variable_supply_item': 'Supply item must belong to your company.'})
+        assigned = attrs.get('assigned_to', inst.assigned_to if inst else None)
+        status = attrs.get('status', inst.status if inst else None)
+        if status == 'in_use' and not assigned:
+            raise serializers.ValidationError({'assigned_to': 'Required when status is In-Use.'})
+        return attrs
+
+
+class AssetRequestSerializer(serializers.ModelSerializer):
+    requested_by_name = serializers.SerializerMethodField(read_only=True)
+    image_url = serializers.SerializerMethodField(read_only=True)
+
+    class Meta:
+        model = AssetRequest
+        fields = '__all__'
+        read_only_fields = ('company', 'created_at', 'updated_at')
+
+    def get_requested_by_name(self, obj):
+        e = obj.requested_by
+        return f"{(e.first_name or '').strip()} {(e.last_name or '').strip()}".strip() or str(e.employee_id)
+
+    def get_image_url(self, obj):
+        request = self.context.get('request')
+        if obj.image and request:
+            return request.build_absolute_uri(obj.image.url)
+        return None
+
+    def create(self, validated_data):
+        request = self.context['request']
+        validated_data['company'] = request.user.company
+        return super().create(validated_data)
+
+
+class AssetSupportingDocumentSerializer(serializers.ModelSerializer):
+    file_url = serializers.SerializerMethodField(read_only=True)
+    uploaded_by_username = serializers.CharField(source='uploaded_by.username', read_only=True)
+
+    class Meta:
+        model = AssetSupportingDocument
+        fields = '__all__'
+        read_only_fields = ('company', 'uploaded_at', 'uploaded_by')
+
+    def get_file_url(self, obj):
+        request = self.context.get('request')
+        if obj.file and request:
+            return request.build_absolute_uri(obj.file.url)
+        return None
+
+    def validate(self, attrs):
+        fa = attrs.get('fixed_asset_id') or attrs.get('fixed_asset')
+        si = attrs.get('supply_item_id') or attrs.get('supply_item')
+        ar = attrs.get('asset_request_id') or attrs.get('asset_request')
+        if self.instance:
+            fa = fa or self.instance.fixed_asset_id
+            si = si or self.instance.supply_item_id
+            ar = ar or self.instance.asset_request_id
+        ids = sum(1 for x in (fa, si, ar) if x)
+        if ids != 1:
+            raise serializers.ValidationError('Link exactly one of fixed_asset, supply_item, or asset_request.')
+        return attrs
+
+    def create(self, validated_data):
+        # company / uploaded_by set in view perform_create
+        return super().create(validated_data)
 
 
 class RecruitmentSerializer(serializers.ModelSerializer):

@@ -709,15 +709,70 @@ class EmployeeViewSet(viewsets.ModelViewSet):
         return Response(response_data, status=status.HTTP_200_OK)
 
     
-class AssetInventoryViewSet(viewsets.ModelViewSet):
-    serializer_class = AssetInventorySerializer
+class SupplyItemViewSet(viewsets.ModelViewSet):
+    serializer_class = SupplyItemSerializer
     permission_classes = [IsAuthenticated, IsAdminUser]
+    pagination_class = CustomPagination
+    filter_backends = [filters.SearchFilter]
+    search_fields = ['item_code', 'item_name', 'vendor_details', 'sub_category']
 
     def get_queryset(self):
-        """ Limit to assets belonging to  company """
-        company = self.request.user.company
-        return AssetInventory.objects.filter(company=company)
-    
+        return SupplyItem.objects.filter(company=self.request.user.company).order_by('item_code')
+
+
+class FixedAssetViewSet(viewsets.ModelViewSet):
+    serializer_class = FixedAssetSerializer
+    permission_classes = [IsAuthenticated, IsAdminUser]
+    pagination_class = CustomPagination
+    parser_classes = [JSONParser, MultiPartParser, FormParser]
+    filter_backends = [filters.SearchFilter]
+    search_fields = ['asset_tag', 'serial_number', 'model_brand', 'category', 'status']
+
+    def get_queryset(self):
+        return FixedAsset.objects.filter(company=self.request.user.company).select_related(
+            'assigned_to', 'variable_supply_item'
+        )
+
+    def perform_destroy(self, instance):
+        instance.delete()
+
+
+class AssetRequestViewSet(viewsets.ModelViewSet):
+    serializer_class = AssetRequestSerializer
+    permission_classes = [IsAuthenticated, IsAdminUser]
+    pagination_class = CustomPagination
+    parser_classes = [JSONParser, MultiPartParser, FormParser]
+    filter_backends = [filters.SearchFilter]
+    search_fields = ['remarks', 'approval_status', 'requested_by__first_name', 'requested_by__last_name']
+
+    def get_queryset(self):
+        return AssetRequest.objects.filter(company=self.request.user.company).select_related(
+            'requested_by', 'related_fixed_asset', 'related_supply_item'
+        )
+
+
+class AssetSupportingDocumentViewSet(viewsets.ModelViewSet):
+    serializer_class = AssetSupportingDocumentSerializer
+    permission_classes = [IsAuthenticated, IsAdminUser]
+    pagination_class = CustomPagination
+    parser_classes = [JSONParser, MultiPartParser, FormParser]
+
+    def get_queryset(self):
+        qs = AssetSupportingDocument.objects.filter(company=self.request.user.company)
+        fa = self.request.query_params.get('fixed_asset')
+        si = self.request.query_params.get('supply_item')
+        ar = self.request.query_params.get('asset_request')
+        if fa:
+            qs = qs.filter(fixed_asset_id=fa)
+        if si:
+            qs = qs.filter(supply_item_id=si)
+        if ar:
+            qs = qs.filter(asset_request_id=ar)
+        return qs.order_by('-uploaded_at')
+
+    def perform_create(self, serializer):
+        serializer.save(company=self.request.user.company, uploaded_by=self.request.user)
+
     
 class RecruitmentViewSet(viewsets.ModelViewSet):
     queryset = Recruitment.objects.all()
@@ -1271,13 +1326,12 @@ class RelievedEmployeeViewSet(viewsets.ModelViewSet):
         employee = relieved_instance.employee
         if employee:
            
-            assigned_assets = EmployeeAssetDetails.objects.filter(employee=employee)
-            if assigned_assets.exists():
-                for asset_detail in assigned_assets:
-                    asset = asset_detail.asset
-                    if asset:
-                        asset.quantity += asset_detail.quantity
-                        asset.save()
+            assigned_supply = EmployeeSupplyAssignment.objects.filter(employee=employee)
+            for row in assigned_supply:
+                si = row.supply_item
+                si.available_quantity += 1
+                si.save(update_fields=['available_quantity', 'updated_at'])
+            assigned_supply.delete()
             # Mark employee as inactive
             employee.is_active = False
             employee.save()

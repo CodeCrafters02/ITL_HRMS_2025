@@ -693,16 +693,6 @@ const AdminDashboard = () => {
                 </div>
             </div>
 
-            {/* ─── Calendar: company events + Google (same as /admin/calendar) ─── */}
-            <div className="space-y-3">
-                <div className="flex flex-wrap items-center justify-between gap-2 px-0.5">
-                    <h2 className="text-lg font-bold text-gray-800 dark:text-white">Calendar</h2>
-                    <Link to="/admin/calendar" className="text-sm text-primary hover:underline font-medium">
-                        Full-screen calendar
-                    </Link>
-                </div>
-                <CompanyGoogleCalendar variant="embedded" />
-            </div>
         </div>
     );
 };
