@@ -111,7 +111,7 @@ class ApiConfig {
   static String get employeeReferenceUrl =>
       '$baseUrl$employeeReferenceEndpoint';
   static String employeeReferenceDetailUrl(int referenceId) =>
-      '$baseUrl${employeeReferenceEndpoint}$referenceId/';
+      '$baseUrl$employeeReferenceEndpoint$referenceId/';
   static String get employeeProfileUrl => '$baseUrl$employeeProfileEndpoint';
   static String get employeeHierarchyUrl =>
       '$baseUrl$employeeHierarchyEndpoint';

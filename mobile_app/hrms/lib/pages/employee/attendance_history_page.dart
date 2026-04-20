@@ -295,7 +295,7 @@ class _AttendanceHistoryPageState extends State<AttendanceHistoryPage> {
               const SizedBox(height: 4),
               Text(
                 _attendanceData!.selectedMonthName.isNotEmpty
-                    ? '${_attendanceData!.selectedMonthName} ${_selectedYear}'
+                    ? '${_attendanceData!.selectedMonthName} $_selectedYear'
                     : DateFormat('MMMM yyyy').format(DateTime(_selectedYear, _selectedMonth)),
                 style: const TextStyle(
                   fontSize: 14,

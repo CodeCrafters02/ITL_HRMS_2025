@@ -212,7 +212,7 @@ class ProfileHierarchyCard extends StatelessWidget {
               isLast: item['isLast'] as bool,
               reportees: item['reportees'] as List<HierarchyEmployee>?,
             );
-          }).toList(),
+          }),
 
           // Own Reportees
           if (hierarchy.reportees != null && hierarchy.reportees!.isNotEmpty) ...[
