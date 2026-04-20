@@ -14,7 +14,7 @@ from rest_framework.views import APIView
 from calendar import month_name
 from .utils import calculate_worked_time, calculate_effective_time
 import re
-from app.models import Attendance,Notification,LearningCorner, ShiftPolicy, Employee, BreakLog,Payroll,CalendarEvent,EmpLeave,CompanyPolicies,Level,Designation
+from app.models import Attendance,Notification,LearningCorner, ShiftPolicy, Employee, BreakLog,Payroll,CalendarEvent,EmpLeave,CompanyPolicies,Level,Designation,DepartmentWiseWorkingDays
 from .models import *
 from .serializers import *
 
@@ -65,6 +65,88 @@ class ReportingManagerAPIView(APIView):
 
         serializer = ReportingManagerSerializer(employees, many=True)
         return Response(serializer.data)
+
+
+class EmployeeAnnouncementsAPIView(generics.ListAPIView):
+    serializer_class = AnnouncementSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        employee = getattr(self.request.user, "employee_profile", None)
+        if not employee or not employee.company_id:
+            return Announcement.objects.none()
+        qs = Announcement.objects.filter(company_id=employee.company_id, is_active=True)
+        limit = self.request.query_params.get("limit")
+        if limit:
+            try:
+                limit_i = int(limit)
+                if 0 < limit_i <= 50:
+                    return qs[:limit_i]
+            except Exception:
+                pass
+        return qs
+
+
+class TimeLogMetaAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        employee = getattr(request.user, "employee_profile", None)
+        if not employee or not employee.company_id:
+            return Response({"detail": "No company linked."}, status=404)
+        projects = Project.objects.filter(company_id=employee.company_id, is_active=True).order_by("name")
+        return Response(
+            {
+                "projects": ProjectSerializer(projects, many=True).data,
+            }
+        )
+
+
+class TimeLogListCreateAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        employee = getattr(request.user, "employee_profile", None)
+        if not employee:
+            return Response({"detail": "Employee not found."}, status=404)
+        date_str = request.query_params.get("date")
+        if date_str:
+            try:
+                target_date = datetime.strptime(date_str, "%Y-%m-%d").date()
+            except Exception:
+                return Response({"detail": "Invalid date format. Use YYYY-MM-DD."}, status=400)
+        else:
+            target_date = timezone.localdate()
+
+        qs = TimeEntry.objects.filter(employee_id=employee.id, date=target_date).select_related("project")
+        return Response({"date": str(target_date), "entries": TimeEntrySerializer(qs, many=True).data})
+
+    def post(self, request):
+        employee = getattr(request.user, "employee_profile", None)
+        if not employee or not employee.company_id:
+            return Response({"detail": "Employee not found."}, status=404)
+
+        ser = TimeEntryCreateSerializer(data=request.data)
+        ser.is_valid(raise_exception=True)
+        data = ser.validated_data
+
+        entry_date = data.get("date") or timezone.localdate()
+        project_id = data["project_id"]
+        try:
+            project = Project.objects.get(id=project_id, company_id=employee.company_id, is_active=True)
+        except Project.DoesNotExist:
+            return Response({"detail": "Invalid project."}, status=400)
+
+        entry = TimeEntry.objects.create(
+            employee_id=employee.id,
+            date=entry_date,
+            project=project,
+            job_name=data.get("job_name", ""),
+            description=data.get("description", ""),
+            minutes=data["minutes"],
+        )
+
+        return Response(TimeEntrySerializer(entry).data, status=201)
 
 
 class CheckInAPIView(APIView):
@@ -338,9 +420,9 @@ class DashboardAPIView(APIView):
         try:
             # Get employee
             employee = Employee.objects.get(email=user.email)
-            today = timezone.localdate()
             tz = pytz.timezone('Asia/Kolkata')
             now = timezone.localtime(timezone.now(), tz)
+            today = now.date()
 
             # Today's attendance
             attendance = Attendance.objects.filter(employee=employee, date=today).first()
@@ -1275,19 +1357,21 @@ class BreakLogAPIView(APIView):
         return Response(serializer.data)
 
     def post(self, request):
-        
         employee = request.user.employee_profile
-        break_config_id = request.data.get("break_config_id")
         action = request.data.get("action")  # "start" or "end"
 
-        break_config = get_object_or_404(
-            BreakConfig, 
-            id=break_config_id, 
-            company=employee.company, 
-            enabled=True
-        )
-
         if action == "start":
+            break_config_id = request.data.get("break_config_id")
+            if not break_config_id:
+                return Response({"detail": "break_config_id is required to start a break."}, status=400)
+                
+            break_config = get_object_or_404(
+                BreakConfig, 
+                id=break_config_id, 
+                company=employee.company, 
+                enabled=True
+            )
+
             # Prevent starting a new break if one is active
             active_break = BreakLog.objects.filter(
                 employee=employee, 
@@ -1297,20 +1381,21 @@ class BreakLogAPIView(APIView):
                 return Response({"detail": "You already have an active break."}, status=400)
 
             break_log = BreakLog.objects.create(
-                    employee=employee,
-                    break_config=break_config,  
-                    start=timezone.now()
-                )
+                employee=employee,
+                break_config=break_config,  
+                start=timezone.now()
+            )
             return Response(EmployeeBreakLogSerializer(break_log).data, status=201)
 
         elif action == "end":
+            # Find any active break regardless of config ID
             active_break = BreakLog.objects.filter(
                 employee=employee, 
-                break_config=break_config, 
                 end__isnull=True
-            ).first()
+            ).last() # Use last() to get the most recent active one if multiple exist (though shouldn't)
+            
             if not active_break:
-                return Response({"detail": "No active break found."}, status=400)
+                return Response({"detail": "No active break found for you."}, status=400)
 
             active_break.end = timezone.now()
             if active_break.start:
@@ -1548,3 +1633,157 @@ class EmployeeReferenceViewSet(viewsets.ModelViewSet):
             {"message": "Reference reviewed successfully."},
             status=status.HTTP_200_OK
         )
+
+class AttendanceChartDataAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        range_type = request.GET.get('range', 'week')
+        try:
+            offset = int(request.GET.get('offset', 0))
+        except ValueError:
+            offset = 0
+
+        employee = getattr(request.user, 'employee_profile', None)
+        if not employee:
+            return Response({"detail": "Employee profile not found."}, status=404)
+
+        tz = pytz.timezone('Asia/Kolkata')
+        now = timezone.localtime(timezone.now(), tz)
+        today = now.date()
+
+        series_data = [] # Hours worked
+        labels = []
+        holidays_flags = []
+
+        # Get company holidays
+        holidays = set(CalendarEvent.objects.filter(
+            company=employee.company, 
+            is_holiday=True
+        ).values_list('date', flat=True))
+        
+        # Get weekend config
+        working_days_config = DepartmentWiseWorkingDays.objects.filter(
+            department=employee.department, 
+            company=employee.company
+        ).first()
+        weekend_days = working_days_config.weekend_days if working_days_config else ['Saturday', 'Sunday']
+
+        period_label = ""
+
+        if range_type == 'week':
+            # Offset shifts the 7-day window
+            base_end = today - timedelta(days=7 * offset)
+            base_start = base_end - timedelta(days=6)
+            period_label = f"{base_start.strftime('%b %d')} - {base_end.strftime('%b %d, %Y')}"
+
+            for i in range(6, -1, -1):
+                d = base_end - timedelta(days=i)
+                att = Attendance.objects.filter(employee=employee, date=d).first()
+                hours = 0
+                if att:
+                    if att.total_work_duration:
+                        hours = round(att.total_work_duration.total_seconds() / 3600, 2)
+                    elif d == today and att.check_in and not att.check_out:
+                         # Live calculation for today
+                        now_dt = timezone.now()
+                        total_breaks_secs = sum(
+                            [(b.end - b.start).total_seconds() for b in att.break_logs.filter(start__isnull=False, end__isnull=False)],
+                            0
+                        )
+                        # Active break?
+                        active_b = att.break_logs.filter(end__isnull=True, start__isnull=False).first()
+                        if active_b:
+                            total_breaks_secs += (now_dt - active_b.start).total_seconds()
+                        
+                        live_secs = (now_dt - att.check_in).total_seconds() - total_breaks_secs
+                        hours = round(max(0, live_secs) / 3600, 2)
+
+                day_name = d.strftime('%a')
+                day_full_name = d.strftime('%A')
+                
+                series_data.append(hours)
+                labels.append(day_name)
+                holidays_flags.append(d in holidays or day_full_name in weekend_days)
+
+        elif range_type == 'month':
+            # Offset shifts by 30-day buckets
+            base_end = today - timedelta(days=30 * offset)
+            base_start = base_end - timedelta(days=29)
+            period_label = f"{base_start.strftime('%b %d')} - {base_end.strftime('%b %d, %Y')}"
+
+            for i in range(29, -1, -1):
+                d = base_end - timedelta(days=i)
+                att = Attendance.objects.filter(employee=employee, date=d).first()
+                hours = 0
+                if att:
+                    if att.total_work_duration:
+                        hours = round(att.total_work_duration.total_seconds() / 3600, 2)
+                    elif d == today and att.check_in and not att.check_out:
+                        # Live calculation
+                        now_dt = timezone.now()
+                        total_breaks_secs = sum(
+                            [(b.end - b.start).total_seconds() for b in att.break_logs.filter(start__isnull=False, end__isnull=False)],
+                            0
+                        )
+                        active_b = att.break_logs.filter(end__isnull=True, start__isnull=False).first()
+                        if active_b:
+                            total_breaks_secs += (now_dt - active_b.start).total_seconds()
+                        
+                        live_secs = (now_dt - att.check_in).total_seconds() - total_breaks_secs
+                        hours = round(max(0, live_secs) / 3600, 2)
+
+                series_data.append(hours)
+                labels.append(str(d.day))
+                holidays_flags.append(d in holidays or d.strftime('%A') in weekend_days)
+
+        elif range_type == 'year':
+            # Offset shifts by 12-month buckets
+            current_month_start = today.replace(day=1)
+            # Find the starting month for the 12-month window based on offset
+            # (month - offset*12)
+            base_end_month = (current_month_start.month - (offset * 12) - 1) % 12 + 1
+            base_end_year = current_month_start.year + (current_month_start.month - (offset * 12) - 1) // 12
+            base_end_date = current_month_start.replace(year=base_end_year, month=base_end_month)
+
+            # Period label for year
+            start_month_idx = (base_end_month - 11 - 1) % 12 + 1
+            start_year = base_end_year + (base_end_month - 11 - 1) // 12
+            start_date = current_month_start.replace(year=start_year, month=start_month_idx)
+            period_label = f"{start_date.strftime('%b %Y')} - {base_end_date.strftime('%b %Y')}"
+
+            for i in range(11, -1, -1):
+                # Calculate the year and month accurately
+                m = (base_end_month - i - 1) % 12 + 1
+                y = base_end_year + (base_end_month - i - 1) // 12
+                
+                monthly_atts = Attendance.objects.filter(
+                    employee=employee, 
+                    date__year=y, 
+                    date__month=m
+                )
+                
+                total_seconds = 0
+                for a in monthly_atts:
+                    if a.total_work_duration:
+                        total_seconds += a.total_work_duration.total_seconds()
+                    elif a.date == today and a.check_in and not a.check_out:
+                        now_dt = timezone.now()
+                        brk_secs = sum([(b.end - b.start).total_seconds() for b in a.break_logs.filter(start__isnull=False, end__isnull=False)], 0)
+                        active_b = a.break_logs.filter(end__isnull=True, start__isnull=False).first()
+                        if active_b:
+                            brk_secs += (now_dt - active_b.start).total_seconds()
+                        total_seconds += max(0, (now_dt - a.check_in).total_seconds() - brk_secs)
+                
+                series_data.append(round(total_seconds / 3600, 2))
+                labels.append(month_name[m][:3])
+                holidays_flags.append(False)
+
+        return Response({
+            "series": series_data,
+            "labels": labels,
+            "holidays": holidays_flags,
+            "range": range_type,
+            "period_label": period_label,
+            "offset": offset
+        })

@@ -226,6 +226,14 @@ const Sidebar = () => {
                                             </div>
                                         </NavLink>
                                     </li>
+                                    <li className="menu nav-item">
+                                        <NavLink to="/employee/asset-requests" className="group">
+                                            <div className="flex items-center">
+                                                <IconMenuNotes className="group-hover:!text-primary shrink-0" />
+                                                <span className="ltr:pl-3 rtl:pr-3 text-black dark:text-[#506690] dark:group-hover:text-white-dark">{t('Asset Requests')}</span>
+                                            </div>
+                                        </NavLink>
+                                    </li>
                                 </>
                             )}
 

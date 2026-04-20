@@ -24,11 +24,13 @@
         "@testing-library/react": "^16.0.0",
         "@testing-library/user-event": "^14.5.2",
         "@tippyjs/react": "^4.2.6",
+        "@types/canvas-confetti": "^1.9.0",
         "@types/jest": "^29.5.12",
         "@types/node": "^22.4.0",
         "@types/react-text-mask": "^5.4.11",
         "@x1mrdonut1x/nouislider-react": "^3.4.3",
         "apexcharts": "^3.54.0",
+        "canvas-confetti": "^1.9.4",
         "easymde": "^2.18.0",
         "formik": "^2.2.9",
         "highlight.js": "^11.6.0",
@@ -57,6 +59,7 @@
         "sweetalert2-react-content": "^5.0.7",
         "swiper": "^11.1.9",
         "web-vitals": "^4.2.3",
+        "xlsx": "^0.18.5",
         "yup": "^1.4.0"
     },
     "devDependencies": {

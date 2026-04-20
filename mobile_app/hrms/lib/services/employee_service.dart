@@ -15,6 +15,8 @@ import '../models/leave_request_model.dart';
 import '../models/employee_reference_model.dart';
 import '../models/profile_model.dart';
 import '../models/learning_corner_model.dart';
+import '../models/announcement_model.dart';
+import '../models/time_log_model.dart';
 import '../services/storage_service.dart';
 import '../services/auth_service.dart';
 import 'dart:io';
@@ -519,6 +521,134 @@ class EmployeeService {
         success: false,
         message: 'Network error: ${e.toString()}',
       );
+    }
+  }
+
+  static Future<ApiResponse<List<Announcement>>> getAnnouncements({int limit = 3}) async {
+    try {
+      final token = await StorageService.getAccessToken();
+      if (token == null) {
+        return ApiResponse(success: false, message: 'No access token found');
+      }
+
+      final url = Uri.parse('${ApiConfig.announcementsUrl}?limit=$limit');
+      final response = await _makeAuthenticatedRequest(
+        () async => await http.get(url, headers: await _getAuthHeaders()),
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body) as List<dynamic>;
+        final items = data.map((e) => Announcement.fromJson(e)).toList();
+        return ApiResponse(success: true, data: items);
+      } else if (response.statusCode == 401) {
+        await AuthService.logout();
+        return ApiResponse(success: false, message: 'Session expired. Please login again.');
+      } else {
+        final error = jsonDecode(response.body);
+        return ApiResponse(success: false, message: error['detail'] ?? 'Failed to load announcements');
+      }
+    } catch (e) {
+      return ApiResponse(success: false, message: 'Network error: ${e.toString()}');
+    }
+  }
+
+  static Future<ApiResponse<List<Project>>> getTimeLogProjects() async {
+    try {
+      final token = await StorageService.getAccessToken();
+      if (token == null) {
+        return ApiResponse(success: false, message: 'No access token found');
+      }
+      final response = await _makeAuthenticatedRequest(
+        () async => await http.get(
+          Uri.parse(ApiConfig.timeLogMetaUrl),
+          headers: await _getAuthHeaders(),
+        ),
+      );
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body) as Map<String, dynamic>;
+        final projectsRaw = (data['projects'] as List<dynamic>? ?? []);
+        final projects = projectsRaw.map((e) => Project.fromJson(e)).toList();
+        return ApiResponse(success: true, data: projects);
+      } else if (response.statusCode == 401) {
+        await AuthService.logout();
+        return ApiResponse(success: false, message: 'Session expired. Please login again.');
+      } else {
+        final error = jsonDecode(response.body);
+        return ApiResponse(success: false, message: error['detail'] ?? 'Failed to load projects');
+      }
+    } catch (e) {
+      return ApiResponse(success: false, message: 'Network error: ${e.toString()}');
+    }
+  }
+
+  static Future<ApiResponse<List<TimeEntry>>> getTimeEntries({String? date}) async {
+    try {
+      final token = await StorageService.getAccessToken();
+      if (token == null) {
+        return ApiResponse(success: false, message: 'No access token found');
+      }
+      final q = date != null ? '?date=$date' : '';
+      final response = await _makeAuthenticatedRequest(
+        () async => await http.get(
+          Uri.parse('${ApiConfig.timeLogUrl}$q'),
+          headers: await _getAuthHeaders(),
+        ),
+      );
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body) as Map<String, dynamic>;
+        final entriesRaw = (data['entries'] as List<dynamic>? ?? []);
+        final entries = entriesRaw.map((e) => TimeEntry.fromJson(e)).toList();
+        return ApiResponse(success: true, data: entries);
+      } else if (response.statusCode == 401) {
+        await AuthService.logout();
+        return ApiResponse(success: false, message: 'Session expired. Please login again.');
+      } else {
+        final error = jsonDecode(response.body);
+        return ApiResponse(success: false, message: error['detail'] ?? 'Failed to load time entries');
+      }
+    } catch (e) {
+      return ApiResponse(success: false, message: 'Network error: ${e.toString()}');
+    }
+  }
+
+  static Future<ApiResponse<TimeEntry>> createTimeEntry({
+    required int projectId,
+    required int minutes,
+    String? date,
+    String? jobName,
+    String? description,
+  }) async {
+    try {
+      final token = await StorageService.getAccessToken();
+      if (token == null) {
+        return ApiResponse(success: false, message: 'No access token found');
+      }
+      final body = <String, dynamic>{
+        'project_id': projectId,
+        'minutes': minutes,
+        if (date != null) 'date': date,
+        if (jobName != null) 'job_name': jobName,
+        if (description != null) 'description': description,
+      };
+      final response = await _makeAuthenticatedRequest(
+        () async => await http.post(
+          Uri.parse(ApiConfig.timeLogUrl),
+          headers: await _getAuthHeaders(),
+          body: jsonEncode(body),
+        ),
+      );
+      if (response.statusCode == 201) {
+        final data = jsonDecode(response.body) as Map<String, dynamic>;
+        return ApiResponse(success: true, data: TimeEntry.fromJson(data));
+      } else if (response.statusCode == 401) {
+        await AuthService.logout();
+        return ApiResponse(success: false, message: 'Session expired. Please login again.');
+      } else {
+        final error = jsonDecode(response.body);
+        return ApiResponse(success: false, message: error['detail'] ?? 'Failed to create time entry');
+      }
+    } catch (e) {
+      return ApiResponse(success: false, message: 'Network error: ${e.toString()}');
     }
   }
 

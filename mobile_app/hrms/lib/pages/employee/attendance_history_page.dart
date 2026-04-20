@@ -318,7 +318,7 @@ class _AttendanceHistoryPageState extends State<AttendanceHistoryPage> {
         border: Border.all(color: const Color(0xFFE5E7EB)),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 4,
             offset: const Offset(0, 2),
           ),
@@ -528,12 +528,12 @@ class _AttendanceHistoryPageState extends State<AttendanceHistoryPage> {
         color: bgColor,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: textColor.withOpacity(0.2),
+          color: textColor.withValues(alpha: 0.2),
           width: 1,
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 4,
             offset: const Offset(0, 2),
           ),
@@ -544,7 +544,7 @@ class _AttendanceHistoryPageState extends State<AttendanceHistoryPage> {
           Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: textColor.withOpacity(0.1),
+              color: textColor.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(8),
             ),
             child: Icon(icon, color: textColor, size: 24),
@@ -821,7 +821,7 @@ class _AttendanceHistoryPageState extends State<AttendanceHistoryPage> {
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 4,
             offset: const Offset(0, 2),
           ),
@@ -1026,7 +1026,7 @@ class _AttendanceHistoryPageState extends State<AttendanceHistoryPage> {
         color: _getStatusBgColor(status),
         borderRadius: BorderRadius.circular(8),
         border: Border.all(
-          color: _getStatusColor(status).withOpacity(0.3),
+          color: _getStatusColor(status).withValues(alpha: 0.3),
           width: 1,
         ),
       ),

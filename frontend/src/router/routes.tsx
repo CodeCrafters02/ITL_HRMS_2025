@@ -143,6 +143,7 @@ const EmployeeAttendanceHistory = lazy(() => import('../pages/Employee/Attendanc
 const EmployeeLearningCorner = lazy(() => import('../pages/Employee/LearningCorner/LearningCorner'));
 const EmployeeNotifications = lazy(() => import('../pages/Employee/Notifications/Notifications'));
 const EmployeeCompanyPolicy = lazy(() => import('../pages/Employee/CompanyPolicy/CompanyPolicy'));
+const EmployeeAssetRequests = lazy(() => import('../pages/Employee/AssetRequests'));
 
 const routes = [
     // dashboard
@@ -752,6 +753,10 @@ const routes = [
     {
         path: '/employee/company-policy',
         element: <EmployeeCompanyPolicy />,
+    },
+    {
+        path: '/employee/asset-requests',
+        element: <EmployeeAssetRequests />,
     },
 ];
 

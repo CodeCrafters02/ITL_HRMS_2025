@@ -21,6 +21,7 @@ import IconSun from '../../components/Icon/IconSun';
 import IconMoon from '../../components/Icon/IconMoon';
 import IconListCheck from '../../components/Icon/IconListCheck';
 import CompanyGoogleCalendar from '../../components/Calendar/CompanyGoogleCalendar';
+import confetti from 'canvas-confetti';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000';
 
@@ -45,6 +46,7 @@ interface DashboardData {
     pending_leave_requests: number;
     payroll_status: string;
     next_salary_release_date: string | null;
+    birthday_message: string | null;
 }
 
 interface CalendarEventType {
@@ -125,6 +127,23 @@ const AdminDashboard = () => {
             ? Math.round((data.attendance_snapshot.present / data.employee_overview.total) * 100)
             : 0;
 
+    useEffect(() => {
+        if (data?.birthday_message) {
+            const duration = 5 * 1000;
+            const animationEnd = Date.now() + duration;
+            const defaults = { startVelocity: 30, spread: 360, ticks: 60, zIndex: 0 };
+            const randomInRange = (min: number, max: number) => Math.random() * (max - min) + min;
+
+            const interval: any = setInterval(function () {
+                const timeLeft = animationEnd - Date.now();
+                if (timeLeft <= 0) return clearInterval(interval);
+                const particleCount = 50 * (timeLeft / duration);
+                confetti({ ...defaults, particleCount, origin: { x: randomInRange(0.1, 0.3), y: Math.random() - 0.2 } });
+                confetti({ ...defaults, particleCount, origin: { x: randomInRange(0.7, 0.9), y: Math.random() - 0.2 } });
+            }, 250);
+        }
+    }, [data?.birthday_message]);
+
     const absentPercentage =
         data && data.employee_overview.total > 0
             ? Math.round((data.attendance_snapshot.absent / data.employee_overview.total) * 100)
@@ -198,6 +217,11 @@ const AdminDashboard = () => {
                             {greeting} <span className="text-3xl">{GreetingEmoji}</span>
                         </h1>
                         <p className="text-sm text-white/60 mt-1">{todayFormatted}</p>
+                        {data.birthday_message && (
+                            <p className="mt-3 inline-flex items-center gap-2 px-3 py-1 bg-gradient-to-r from-pink-500 to-rose-500 rounded-full text-xs font-bold shadow-lg animate-bounce border border-white/20">
+                                🎂 {data.birthday_message}
+                            </p>
+                        )}
                     </div>
 
                     {/* Top stat pills */}

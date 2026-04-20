@@ -49,8 +49,8 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      theme: AppStitchTheme.darkTheme(),
-      themeMode: ThemeMode.dark,
+      theme: AppStitchTheme.lightTheme(),
+      themeMode: ThemeMode.light,
       home: AuthWrapper(
         authenticatedChild: const EmployeeLayout(),
         unauthenticatedChild: const LoginPage(),
