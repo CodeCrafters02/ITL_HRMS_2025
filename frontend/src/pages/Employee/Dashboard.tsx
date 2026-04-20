@@ -12,6 +12,7 @@ import IconCalendar from '../../components/Icon/IconCalendar';
 import IconMenuChat from '../../components/Icon/Menu/IconMenuChat';
 import IconListCheck from '../../components/Icon/IconListCheck';
 import IconTrendingUp from '../../components/Icon/IconTrendingUp';
+import IconSun from '../../components/Icon/IconSun';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000';
 
@@ -45,10 +46,19 @@ interface BreakConfig {
     duration_minutes: number;
 }
 
+interface CalendarEventType {
+    id: number;
+    name: string;
+    date: string;
+    description: string;
+    is_holiday: boolean;
+}
+
 const EmployeeDashboard = () => {
     const dispatch = useDispatch();
     const [data, setData] = useState<DashboardData | null>(null);
     const [breakConfigs, setBreakConfigs] = useState<BreakConfig[]>([]);
+    const [events, setEvents] = useState<CalendarEventType[]>([]);
     const [loading, setLoading] = useState(true);
 
     // Chart State
@@ -112,14 +122,37 @@ const EmployeeDashboard = () => {
             const breakRes = await fetch(`${API_BASE_URL}/employee/employee-breaks/`, { headers: authHeaders });
             if (breakRes.ok) {
                 const breakJson = await breakRes.json();
-                // Extract break configs if wrapped, or use directly if it's an array
                 setBreakConfigs(Array.isArray(breakJson) ? breakJson : breakJson.results || []);
+            }
+
+            // Fetch calendar events
+            const eventsRes = await fetch(`${API_BASE_URL}/app/calendar-events/`, { headers: authHeaders });
+            if (eventsRes.ok) {
+                const evResult = await eventsRes.json();
+                const evList = Array.isArray(evResult) ? evResult : evResult?.results || [];
+                const todayStr = new Date().toISOString().split('T')[0];
+                const upcoming = evList
+                    .filter((e: CalendarEventType) => e.date >= todayStr)
+                    .sort((a: CalendarEventType, b: CalendarEventType) => a.date.localeCompare(b.date))
+                    .slice(0, 5);
+                setEvents(upcoming);
             }
         } catch (error) {
             console.error('Error fetching dashboard data:', error);
         } finally {
             setLoading(false);
         }
+    };
+
+    const getDaysUntil = (dateStr: string) => {
+        const now = new Date();
+        now.setHours(0, 0, 0, 0);
+        const target = new Date(dateStr);
+        target.setHours(0, 0, 0, 0);
+        const diff = Math.ceil((target.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+        if (diff === 0) return 'Today';
+        if (diff === 1) return 'Tomorrow';
+        return `in ${diff} days`;
     };
 
     useEffect(() => {
@@ -634,36 +667,87 @@ const EmployeeDashboard = () => {
                 </div>
 
                 {/* Today's Timeline */}
-                <div className="panel shadow-lg border-0 bg-white dark:bg-[#0e1726]">
-                    <div className="flex items-center justify-between mb-5">
-                        <h5 className="font-bold text-lg dark:text-white">Today's Timeline</h5>
-                        <div className="p-2 bg-warning/10 rounded-lg">
-                            <IconClock className="w-5 h-5 text-warning" />
+                <div className="space-y-6">
+                    <div className="panel shadow-lg border-0 bg-white dark:bg-[#0e1726]">
+                        <div className="flex items-center justify-between mb-5">
+                            <h5 className="font-bold text-lg dark:text-white">Today's Timeline</h5>
+                            <div className="p-2 bg-warning/10 rounded-lg">
+                                <IconClock className="w-5 h-5 text-warning" />
+                            </div>
+                        </div>
+                        <div className="space-y-4">
+                            {data?.recent_breaks && data.recent_breaks.length > 0 ? (
+                                data.recent_breaks.map((b, i) => (
+                                    <div key={i} className="flex gap-4 relative">
+                                        {i !== data.recent_breaks!.length - 1 && (
+                                            <div className="absolute left-[11px] top-6 bottom-0 w-0.5 bg-gray-100 dark:bg-gray-800"></div>
+                                        )}
+                                        <div
+                                            className={`w-6 h-6 rounded-full border-4 ${
+                                                b.end ? 'border-primary bg-primary' : 'border-warning bg-warning animate-pulse'
+                                            } z-10`}
+                                        ></div>
+                                        <div className="flex-1 pb-4">
+                                            <p className="text-sm font-bold text-gray-900 dark:text-white capitalize">{b.type?.replace(/_/g, ' ')}</p>
+                                            <p className="text-xs text-gray-500">
+                                                {b.start_time} - {b.end_time || 'Active'}
+                                            </p>
+                                            <p className="text-[10px] text-primary font-bold mt-1 bg-primary/5 inline-block px-2 py-0.5 rounded uppercase tracking-tighter">
+                                                {b.duration || 'Running...'}
+                                            </p>
+                                        </div>
+                                    </div>
+                                ))
+                            ) : (
+                                <div className="text-center py-10 bg-gray-50/50 dark:bg-black/10 rounded-2xl border border-dashed border-gray-200 dark:border-gray-800">
+                                    <IconClock className="w-10 h-10 text-gray-300 dark:text-gray-700 mx-auto mb-3" />
+                                    <p className="text-sm text-gray-500">No activity logged yet today.</p>
+                                </div>
+                            )}
                         </div>
                     </div>
-                    <div className="space-y-4">
-                        {data?.recent_breaks && data.recent_breaks.length > 0 ? (
-                            data.recent_breaks.map((b, i) => (
-                                <div key={i} className="flex gap-4 relative">
-                                    {i !== data.recent_breaks!.length - 1 && (
-                                        <div className="absolute left-[11px] top-6 bottom-0 w-0.5 bg-gray-100 dark:bg-gray-800"></div>
-                                    )}
-                                    <div className={`w-6 h-6 rounded-full border-4 ${b.end ? 'border-primary bg-primary' : 'border-warning bg-warning animate-pulse'} z-10`}></div>
-                                    <div className="flex-1 pb-4">
-                                        <p className="text-sm font-bold text-gray-900 dark:text-white capitalize">{b.type?.replace(/_/g, ' ')}</p>
-                                        <p className="text-xs text-gray-500">{b.start_time} - {b.end_time || 'Active'}</p>
-                                        <p className="text-[10px] text-primary font-bold mt-1 bg-primary/5 inline-block px-2 py-0.5 rounded uppercase tracking-tighter">
-                                            {b.duration || 'Running...'}
-                                        </p>
-                                    </div>
-                                </div>
-                            ))
-                        ) : (
-                            <div className="text-center py-10 bg-gray-50/50 dark:bg-black/10 rounded-2xl border border-dashed border-gray-200 dark:border-gray-800">
-                                <IconClock className="w-10 h-10 text-gray-300 dark:text-gray-700 mx-auto mb-3" />
-                                <p className="text-sm text-gray-500">No activity logged yet today.</p>
+
+                    {/* Upcoming Events */}
+                    <div className="panel shadow-lg border-0 bg-white dark:bg-[#0e1726]">
+                        <div className="flex items-center justify-between mb-5">
+                            <h5 className="font-bold text-lg dark:text-white">Upcoming Holidays & Events</h5>
+                            <div className="p-2 bg-primary/10 rounded-lg">
+                                <IconCalendar className="w-5 h-5 text-primary" />
                             </div>
-                        )}
+                        </div>
+                        <div className="space-y-4">
+                            {events.length > 0 ? (
+                                events.map((event) => (
+                                    <div key={event.id} className="flex items-start gap-3 p-3 bg-gray-50 dark:bg-black/20 rounded-xl hover:bg-primary/5 transition-colors">
+                                        <div
+                                            className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${
+                                                event.is_holiday ? 'bg-gradient-to-br from-warning to-orange-500' : 'bg-gradient-to-br from-primary to-purple-500'
+                                            }`}
+                                        >
+                                            {event.is_holiday ? <IconSun className="w-5 h-5 text-white" /> : <IconCalendar className="w-5 h-5 text-white" />}
+                                        </div>
+                                        <div className="flex-1 min-w-0">
+                                            <p className="text-sm font-bold text-gray-800 dark:text-white truncate">{event.name}</p>
+                                            <p className="text-[10px] text-gray-500 dark:text-gray-400 font-medium">
+                                                {new Date(event.date).toLocaleDateString('en-US', {
+                                                    weekday: 'short',
+                                                    month: 'short',
+                                                    day: 'numeric',
+                                                })}
+                                                <span className="ml-2 py-0.5 px-1.5 bg-gray-100 dark:bg-gray-800 rounded text-[9px] uppercase tracking-wider">
+                                                    {getDaysUntil(event.date)}
+                                                </span>
+                                            </p>
+                                        </div>
+                                    </div>
+                                ))
+                            ) : (
+                                <div className="text-center py-8 bg-gray-50/50 dark:bg-black/10 rounded-2xl border border-dashed border-gray-200 dark:border-gray-800">
+                                    <IconCalendar className="w-8 h-8 text-gray-300 dark:text-gray-700 mx-auto mb-2" />
+                                    <p className="text-xs text-gray-500">No upcoming events</p>
+                                </div>
+                            )}
+                        </div>
                     </div>
                 </div>
             </div>
