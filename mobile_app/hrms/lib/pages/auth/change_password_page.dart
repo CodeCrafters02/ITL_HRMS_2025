@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import '../../services/auth_service.dart';
+import '../../theme/app_stitch_theme.dart';
+import '../../widgets/glass_card.dart';
+import '../../widgets/stitch_background.dart';
 
 class ChangePasswordPage extends StatefulWidget {
   const ChangePasswordPage({super.key});
@@ -71,40 +74,65 @@ class _ChangePasswordPageState extends State<ChangePasswordPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Change Password'),
-        backgroundColor: const Color(0xFF4F46E5),
-        foregroundColor: Colors.white,
-        elevation: 0,
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(24),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              const SizedBox(height: 16),
-              // Header
-              const Text(
-                'Update Password',
-                style: TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                  color: Color(0xFF111827),
+      backgroundColor: Colors.transparent,
+      body: StitchBackground(
+        child: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+            child: Column(
+              children: [
+                GlassCard(
+                  padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
+                  child: Row(
+                    children: [
+                      IconButton(
+                        onPressed: () => Navigator.pop(context),
+                        icon: const Icon(Icons.arrow_back_ios_new_rounded),
+                      ),
+                      const SizedBox(width: 6),
+                      Expanded(
+                        child: Text(
+                          'Change password',
+                          style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                                fontWeight: FontWeight.w900,
+                                color: AppStitchTheme.lightOnSurface,
+                              ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 8),
-              const Text(
-                'Enter your current password and choose a new one',
-                style: TextStyle(
-                  fontSize: 14,
-                  color: Color(0xFF6B7280),
-                ),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 32),
+                const SizedBox(height: 12),
+                Expanded(
+                  child: SingleChildScrollView(
+                    padding: EdgeInsets.only(
+                      bottom: 16 + MediaQuery.of(context).viewInsets.bottom,
+                    ),
+                    child: Form(
+                      key: _formKey,
+                      child: GlassCard(
+                        padding: const EdgeInsets.all(18),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            Text(
+                              'Update password',
+                              textAlign: TextAlign.center,
+                              style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                                    fontWeight: FontWeight.w900,
+                                    color: AppStitchTheme.lightOnSurface,
+                                  ),
+                            ),
+                            const SizedBox(height: 6),
+                            Text(
+                              'Enter your current password and choose a new one.',
+                              textAlign: TextAlign.center,
+                              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                    fontWeight: FontWeight.w600,
+                                    color: AppStitchTheme.lightOnSurfaceMuted,
+                                  ),
+                            ),
+                            const SizedBox(height: 18),
 
               // Old Password Field
               TextFormField(
@@ -130,7 +158,7 @@ class _ChangePasswordPageState extends State<ChangePasswordPage> {
                     borderRadius: BorderRadius.circular(12),
                   ),
                   filled: true,
-                  fillColor: Colors.grey.shade50,
+                  fillColor: Colors.white.withValues(alpha: 0.55),
                 ),
                 validator: (value) {
                   if (value == null || value.isEmpty) {
@@ -165,7 +193,7 @@ class _ChangePasswordPageState extends State<ChangePasswordPage> {
                     borderRadius: BorderRadius.circular(12),
                   ),
                   filled: true,
-                  fillColor: Colors.grey.shade50,
+                  fillColor: Colors.white.withValues(alpha: 0.55),
                 ),
                 validator: (value) {
                   if (value == null || value.isEmpty) {
@@ -206,7 +234,7 @@ class _ChangePasswordPageState extends State<ChangePasswordPage> {
                     borderRadius: BorderRadius.circular(12),
                   ),
                   filled: true,
-                  fillColor: Colors.grey.shade50,
+                  fillColor: Colors.white.withValues(alpha: 0.55),
                 ),
                 validator: (value) {
                   if (value == null || value.isEmpty) {
@@ -222,24 +250,19 @@ class _ChangePasswordPageState extends State<ChangePasswordPage> {
 
               // Error Message
               if (_errorMessage != null)
-                Container(
+                GlassCard(
                   padding: const EdgeInsets.all(12),
-                  margin: const EdgeInsets.only(bottom: 16),
-                  decoration: BoxDecoration(
-                    color: Colors.red.shade50,
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: Colors.red.shade200),
-                  ),
                   child: Row(
                     children: [
-                      Icon(Icons.error_outline, color: Colors.red.shade700),
+                      const Icon(Icons.error_outline_rounded, color: Color(0xFFEF4444)),
                       const SizedBox(width: 8),
                       Expanded(
                         child: Text(
                           _errorMessage!,
                           style: TextStyle(
-                            color: Colors.red.shade700,
+                            color: AppStitchTheme.lightOnSurface,
                             fontSize: 14,
+                            fontWeight: FontWeight.w600,
                           ),
                         ),
                       ),
@@ -249,25 +272,19 @@ class _ChangePasswordPageState extends State<ChangePasswordPage> {
 
               // Success Message
               if (_successMessage != null)
-                Container(
+                GlassCard(
                   padding: const EdgeInsets.all(12),
-                  margin: const EdgeInsets.only(bottom: 16),
-                  decoration: BoxDecoration(
-                    color: Colors.green.shade50,
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: Colors.green.shade200),
-                  ),
                   child: Row(
                     children: [
-                      Icon(Icons.check_circle_outline,
-                          color: Colors.green.shade700),
+                      const Icon(Icons.check_circle_outline_rounded, color: Color(0xFF10B981)),
                       const SizedBox(width: 8),
                       Expanded(
                         child: Text(
                           _successMessage!,
                           style: TextStyle(
-                            color: Colors.green.shade700,
+                            color: AppStitchTheme.lightOnSurface,
                             fontSize: 14,
+                            fontWeight: FontWeight.w600,
                           ),
                         ),
                       ),
@@ -278,15 +295,6 @@ class _ChangePasswordPageState extends State<ChangePasswordPage> {
               // Submit Button
               ElevatedButton(
                 onPressed: _isLoading ? null : _handleSubmit,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF4F46E5),
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  elevation: 0,
-                ),
                 child: _isLoading
                     ? const SizedBox(
                         height: 20,
@@ -313,14 +321,6 @@ class _ChangePasswordPageState extends State<ChangePasswordPage> {
                     : () {
                         Navigator.pop(context);
                       },
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: const Color(0xFF6B7280),
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  side: BorderSide(color: Colors.grey.shade300),
-                ),
                 child: const Text(
                   'Cancel',
                   style: TextStyle(
@@ -329,7 +329,14 @@ class _ChangePasswordPageState extends State<ChangePasswordPage> {
                   ),
                 ),
               ),
-            ],
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),

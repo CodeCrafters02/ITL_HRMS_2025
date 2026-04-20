@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../../models/attendance_history_model.dart';
 import '../../services/employee_service.dart';
+import '../../theme/app_stitch_theme.dart';
+import '../../widgets/glass_card.dart';
+import '../../widgets/stitch_background.dart';
 
 class AttendanceHistoryPage extends StatefulWidget {
   const AttendanceHistoryPage({super.key});
@@ -98,23 +101,6 @@ class _AttendanceHistoryPageState extends State<AttendanceHistoryPage> {
     }
   }
 
-  Color _getStatusBgColor(String status) {
-    switch (status.toLowerCase()) {
-      case 'present':
-        return const Color(0xFFD1FAE5);
-      case 'leave':
-        return const Color(0xFFFEF3C7);
-      case 'half_day':
-        return const Color(0xFFE9D5FF);
-      case 'absent':
-        return const Color(0xFFFEE2E2);
-      case 'weekend':
-        return const Color(0xFFF3F4F6);
-      default:
-        return const Color(0xFFF3F4F6);
-    }
-  }
-
   IconData _getStatusIcon(String status) {
     switch (status.toLowerCase()) {
       case 'present':
@@ -165,51 +151,86 @@ class _AttendanceHistoryPageState extends State<AttendanceHistoryPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF9FAFB),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : _error != null
-              ? _buildErrorState()
-              : _attendanceData == null
-                  ? _buildEmptyState()
-                  : _buildContent(),
+      backgroundColor: Colors.transparent,
+      body: StitchBackground(
+        child: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+            child: Column(
+              children: [
+                _FrostHeader(
+                  title: 'Attendance',
+                  subtitle: _attendanceData == null
+                      ? 'History'
+                      : (_attendanceData!.selectedMonthName.isNotEmpty
+                          ? '${_attendanceData!.selectedMonthName} $_selectedYear'
+                          : DateFormat('MMMM yyyy')
+                              .format(DateTime(_selectedYear, _selectedMonth))),
+                ),
+                const SizedBox(height: 12),
+                Expanded(
+                  child: _isLoading
+                      ? const Center(child: CircularProgressIndicator())
+                      : _error != null
+                          ? _buildErrorState()
+                          : _attendanceData == null
+                              ? _buildEmptyState()
+                              : _buildContent(),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
     );
   }
 
   Widget _buildErrorState() {
     return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(24),
+      child: GlassCard(
+        padding: const EdgeInsets.all(18),
         child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(
-              Icons.error_outline,
-              color: Colors.red.shade400,
-              size: 64,
+            Container(
+              width: 56,
+              height: 56,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: const Color(0xFFEF4444).withValues(alpha: 0.10),
+                border: Border.all(
+                  color: const Color(0xFFEF4444).withValues(alpha: 0.20),
+                ),
+              ),
+              child: const Icon(
+                Icons.error_outline_rounded,
+                color: Color(0xFFEF4444),
+              ),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 12),
+            Text(
+              'Couldn’t load attendance',
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w900,
+                    color: AppStitchTheme.lightOnSurface,
+                  ),
+            ),
+            const SizedBox(height: 6),
             Text(
               _error!,
               textAlign: TextAlign.center,
-              style: const TextStyle(
-                color: Color(0xFFEF4444),
-                fontSize: 16,
-                fontWeight: FontWeight.w500,
-              ),
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: AppStitchTheme.lightOnSurfaceMuted,
+                    fontWeight: FontWeight.w600,
+                  ),
             ),
-            const SizedBox(height: 24),
-            ElevatedButton.icon(
-              onPressed: _fetchAttendanceHistory,
-              icon: const Icon(Icons.refresh),
-              label: const Text('Retry'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF4F46E5),
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8),
-                ),
+            const SizedBox(height: 14),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: _fetchAttendanceHistory,
+                icon: const Icon(Icons.refresh_rounded),
+                label: const Text('Retry'),
               ),
             ),
           ],
@@ -220,32 +241,43 @@ class _AttendanceHistoryPageState extends State<AttendanceHistoryPage> {
 
   Widget _buildEmptyState() {
     return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(24),
+      child: GlassCard(
+        padding: const EdgeInsets.all(18),
         child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(
-              Icons.calendar_today_outlined,
-              size: 64,
-              color: Colors.grey.shade400,
-            ),
-            const SizedBox(height: 16),
-            const Text(
-              'No attendance data available',
-              style: TextStyle(
-                fontSize: 16,
-                color: Color(0xFF6B7280),
-                fontWeight: FontWeight.w500,
+            Container(
+              width: 64,
+              height: 64,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: AppStitchTheme.primary.withValues(alpha: 0.10),
+                border: Border.all(
+                  color: AppStitchTheme.primary.withValues(alpha: 0.22),
+                ),
+              ),
+              child: const Icon(
+                Icons.calendar_today_rounded,
+                color: AppStitchTheme.primary,
+                size: 28,
               ),
             ),
-            const SizedBox(height: 8),
-            const Text(
-              'Your attendance records will appear here',
-              style: TextStyle(
-                fontSize: 14,
-                color: Color(0xFF9CA3AF),
-              ),
+            const SizedBox(height: 12),
+            Text(
+              'No attendance data',
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w900,
+                    color: AppStitchTheme.lightOnSurface,
+                  ),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              'Your records will appear here once available.',
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: AppStitchTheme.lightOnSurfaceMuted,
+                    fontWeight: FontWeight.w600,
+                  ),
+              textAlign: TextAlign.center,
             ),
           ],
         ),
@@ -256,14 +288,12 @@ class _AttendanceHistoryPageState extends State<AttendanceHistoryPage> {
   Widget _buildContent() {
     return RefreshIndicator(
       onRefresh: _fetchAttendanceHistory,
-      color: const Color(0xFF4F46E5),
+      color: AppStitchTheme.primary,
       child: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
+        padding: EdgeInsets.zero,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _buildHeader(),
-            const SizedBox(height: 16),
             _buildMonthYearSelector(),
             const SizedBox(height: 16),
             _buildSummaryCards(),
@@ -277,53 +307,9 @@ class _AttendanceHistoryPageState extends State<AttendanceHistoryPage> {
     );
   }
 
-  Widget _buildHeader() {
-    return Row(
-      children: [
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text(
-                'Attendance History',
-                style: TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                  color: Color(0xFF111827),
-                ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                _attendanceData!.selectedMonthName.isNotEmpty
-                    ? '${_attendanceData!.selectedMonthName} $_selectedYear'
-                    : DateFormat('MMMM yyyy').format(DateTime(_selectedYear, _selectedMonth)),
-                style: const TextStyle(
-                  fontSize: 14,
-                  color: Color(0xFF6B7280),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-
   Widget _buildMonthYearSelector() {
-    return Container(
+    return GlassCard(
       padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFFE5E7EB)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
-            blurRadius: 4,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
       child: Column(
         children: [
           Row(
@@ -332,8 +318,8 @@ class _AttendanceHistoryPageState extends State<AttendanceHistoryPage> {
                 onPressed: () => _navigateMonth(-1),
                 icon: const Icon(Icons.chevron_left),
                 style: IconButton.styleFrom(
-                  backgroundColor: const Color(0xFFF3F4F6),
-                  foregroundColor: const Color(0xFF111827),
+                  backgroundColor: Colors.white.withValues(alpha: 0.60),
+                  foregroundColor: AppStitchTheme.lightOnSurface,
                 ),
               ),
               const SizedBox(width: 12),
@@ -346,14 +332,16 @@ class _AttendanceHistoryPageState extends State<AttendanceHistoryPage> {
                       style: TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.w500,
-                        color: Color(0xFF6B7280),
+                        color: AppStitchTheme.lightOnSurfaceMuted,
                       ),
                     ),
                     const SizedBox(height: 8),
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                       decoration: BoxDecoration(
-                        border: Border.all(color: const Color(0xFFE5E7EB)),
+                        border: Border.all(
+                          color: AppStitchTheme.lightOutline.withValues(alpha: 0.70),
+                        ),
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: DropdownButton<int>(
@@ -389,14 +377,16 @@ class _AttendanceHistoryPageState extends State<AttendanceHistoryPage> {
                       style: TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.w500,
-                        color: Color(0xFF6B7280),
+                        color: AppStitchTheme.lightOnSurfaceMuted,
                       ),
                     ),
                     const SizedBox(height: 8),
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                       decoration: BoxDecoration(
-                        border: Border.all(color: const Color(0xFFE5E7EB)),
+                        border: Border.all(
+                          color: AppStitchTheme.lightOutline.withValues(alpha: 0.70),
+                        ),
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: DropdownButton<int>(
@@ -427,8 +417,8 @@ class _AttendanceHistoryPageState extends State<AttendanceHistoryPage> {
                 onPressed: () => _navigateMonth(1),
                 icon: const Icon(Icons.chevron_right),
                 style: IconButton.styleFrom(
-                  backgroundColor: const Color(0xFFF3F4F6),
-                  foregroundColor: const Color(0xFF111827),
+                  backgroundColor: Colors.white.withValues(alpha: 0.60),
+                  foregroundColor: AppStitchTheme.lightOnSurface,
                 ),
               ),
             ],
@@ -445,14 +435,6 @@ class _AttendanceHistoryPageState extends State<AttendanceHistoryPage> {
             },
             icon: const Icon(Icons.today, size: 18),
             label: const Text('Go to Current Month'),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF4F46E5),
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
-              ),
-            ),
           ),
         ],
       ),
@@ -522,30 +504,18 @@ class _AttendanceHistoryPageState extends State<AttendanceHistoryPage> {
     Color bgColor,
     IconData icon,
   ) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: bgColor,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: textColor.withValues(alpha: 0.2),
-          width: 1,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
-            blurRadius: 4,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
+    return GlassCard(
+      padding: const EdgeInsets.all(14),
       child: Row(
         children: [
           Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: textColor.withValues(alpha: 0.1),
+              color: Colors.white.withValues(alpha: 0.60),
               borderRadius: BorderRadius.circular(8),
+              border: Border.all(
+                color: AppStitchTheme.lightOutline.withValues(alpha: 0.70),
+              ),
             ),
             child: Icon(icon, color: textColor, size: 24),
           ),
@@ -560,7 +530,7 @@ class _AttendanceHistoryPageState extends State<AttendanceHistoryPage> {
                   style: TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.w600,
-                    color: textColor,
+                    color: AppStitchTheme.lightOnSurfaceMuted,
                   ),
                 ),
                 const SizedBox(height: 4),
@@ -569,7 +539,7 @@ class _AttendanceHistoryPageState extends State<AttendanceHistoryPage> {
                   style: TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.bold,
-                    color: textColor,
+                    color: AppStitchTheme.lightOnSurface,
                   ),
                 ),
               ],
@@ -581,13 +551,8 @@ class _AttendanceHistoryPageState extends State<AttendanceHistoryPage> {
   }
 
   Widget _buildViewToggle() {
-    return Container(
-      padding: const EdgeInsets.all(4),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: const Color(0xFFE5E7EB)),
-      ),
+    return GlassCard(
+      padding: const EdgeInsets.all(6),
       child: Row(
         children: [
           Expanded(
@@ -615,7 +580,9 @@ class _AttendanceHistoryPageState extends State<AttendanceHistoryPage> {
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 10),
         decoration: BoxDecoration(
-          color: isActive ? const Color(0xFF4F46E5) : Colors.transparent,
+          color: isActive
+              ? AppStitchTheme.primary
+              : Colors.white.withValues(alpha: 0.0),
           borderRadius: BorderRadius.circular(8),
         ),
         child: Center(
@@ -624,7 +591,7 @@ class _AttendanceHistoryPageState extends State<AttendanceHistoryPage> {
             style: TextStyle(
               fontSize: 14,
               fontWeight: FontWeight.w600,
-              color: isActive ? Colors.white : const Color(0xFF6B7280),
+              color: isActive ? Colors.white : AppStitchTheme.lightOnSurfaceMuted,
             ),
           ),
         ),
@@ -634,20 +601,15 @@ class _AttendanceHistoryPageState extends State<AttendanceHistoryPage> {
 
   Widget _buildCalendarView() {
     if (_attendanceData!.monthlyData.isEmpty) {
-      return Container(
-        padding: const EdgeInsets.all(24),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: const Color(0xFFE5E7EB)),
-        ),
-        child: const Center(
+      return GlassCard(
+        padding: const EdgeInsets.all(18),
+        child: Center(
           child: Text(
             'No attendance records for this month',
-            style: TextStyle(
-              fontSize: 14,
-              color: Color(0xFF6B7280),
-            ),
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: AppStitchTheme.lightOnSurfaceMuted,
+                  fontWeight: FontWeight.w600,
+                ),
           ),
         ),
       );
@@ -665,13 +627,8 @@ class _AttendanceHistoryPageState extends State<AttendanceHistoryPage> {
     final daysInMonth = lastDay.day;
     final startWeekday = firstDay.weekday;
 
-    return Container(
+    return GlassCard(
       padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFFE5E7EB)),
-      ),
       child: Column(
         children: [
           // Weekday headers
@@ -681,11 +638,10 @@ class _AttendanceHistoryPageState extends State<AttendanceHistoryPage> {
                       child: Center(
                         child: Text(
                           day,
-                          style: const TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                            color: Color(0xFF6B7280),
-                          ),
+                          style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                                fontWeight: FontWeight.w800,
+                                color: AppStitchTheme.lightOnSurfaceMuted,
+                              ),
                         ),
                       ),
                     ))
@@ -718,13 +674,17 @@ class _AttendanceHistoryPageState extends State<AttendanceHistoryPage> {
                       padding: const EdgeInsets.all(8),
                       decoration: BoxDecoration(
                         color: record != null
-                            ? _getStatusBgColor(record.status)
+                            ? _getStatusColor(record.status)
+                                .withValues(alpha: 0.08)
                             : Colors.transparent,
                         borderRadius: BorderRadius.circular(8),
                         border: Border.all(
                           color: isToday
-                              ? const Color(0xFF4F46E5)
-                              : Colors.transparent,
+                              ? AppStitchTheme.primary
+                              : (record != null
+                                  ? _getStatusColor(record.status)
+                                      .withValues(alpha: 0.18)
+                                  : Colors.transparent),
                           width: 2,
                         ),
                       ),
@@ -737,8 +697,8 @@ class _AttendanceHistoryPageState extends State<AttendanceHistoryPage> {
                               fontSize: 12,
                               fontWeight: isToday ? FontWeight.bold : FontWeight.normal,
                               color: isToday
-                                  ? const Color(0xFF4F46E5)
-                                  : const Color(0xFF111827),
+                                  ? AppStitchTheme.primary
+                                  : AppStitchTheme.lightOnSurface,
                             ),
                           ),
                           if (record != null) ...[
@@ -764,20 +724,15 @@ class _AttendanceHistoryPageState extends State<AttendanceHistoryPage> {
 
   Widget _buildRecordsList() {
     if (_attendanceData!.monthlyData.isEmpty) {
-      return Container(
-        padding: const EdgeInsets.all(24),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: const Color(0xFFE5E7EB)),
-        ),
-        child: const Center(
+      return GlassCard(
+        padding: const EdgeInsets.all(18),
+        child: Center(
           child: Text(
             'No attendance records for this month',
-            style: TextStyle(
-              fontSize: 14,
-              color: Color(0xFF6B7280),
-            ),
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: AppStitchTheme.lightOnSurfaceMuted,
+                  fontWeight: FontWeight.w600,
+                ),
           ),
         ),
       );
@@ -786,13 +741,12 @@ class _AttendanceHistoryPageState extends State<AttendanceHistoryPage> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
-          'Daily Records',
-          style: TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.w600,
-            color: Color(0xFF111827),
-          ),
+        Text(
+          'Daily records',
+          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.w900,
+                color: AppStitchTheme.lightOnSurface,
+              ),
         ),
         const SizedBox(height: 12),
         ..._attendanceData!.monthlyData.map((record) => _buildRecordCard(record)),
@@ -808,153 +762,178 @@ class _AttendanceHistoryPageState extends State<AttendanceHistoryPage> {
         DateTime.now().month == date.month &&
         DateTime.now().day == date.day;
 
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      decoration: BoxDecoration(
-        color: isWeekend ? const Color(0xFFF3F4F6) : Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: isToday
-              ? const Color(0xFF4F46E5)
-              : const Color(0xFFE5E7EB),
-          width: isToday ? 2 : 1,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
-            blurRadius: 4,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: () => _showRecordDetails(record),
-          borderRadius: BorderRadius.circular(12),
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: _getStatusBgColor(record.status),
-                        borderRadius: BorderRadius.circular(8),
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: GlassCard(
+        padding: EdgeInsets.zero,
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
+            onTap: () => _showRecordDetails(record),
+            borderRadius: BorderRadius.circular(28),
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: _getStatusColor(record.status)
+                              .withValues(alpha: 0.10),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(
+                            color: _getStatusColor(record.status)
+                                .withValues(alpha: 0.18),
+                          ),
+                        ),
+                        child: Icon(
+                          _getStatusIcon(record.status),
+                          color: _getStatusColor(record.status),
+                          size: 20,
+                        ),
                       ),
-                      child: Icon(
-                        _getStatusIcon(record.status),
-                        color: _getStatusColor(record.status),
-                        size: 20,
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: [
-                              Text(
-                                _formatDate(record.date),
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w600,
-                                  color: const Color(0xFF111827),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Text(
+                                  _formatDate(record.date),
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w600,
+                                    color: AppStitchTheme.lightOnSurface,
+                                  ),
                                 ),
-                              ),
-                              if (isToday) ...[
-                                const SizedBox(width: 8),
-                                Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 6,
-                                    vertical: 2,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: const Color(0xFF4F46E5),
-                                    borderRadius: BorderRadius.circular(4),
-                                  ),
-                                  child: const Text(
-                                    'Today',
-                                    style: TextStyle(
-                                      fontSize: 10,
-                                      fontWeight: FontWeight.w600,
-                                      color: Colors.white,
+                                if (isToday) ...[
+                                  const SizedBox(width: 8),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 6,
+                                      vertical: 2,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: AppStitchTheme.primary,
+                                      borderRadius: BorderRadius.circular(4),
+                                    ),
+                                    child: const Text(
+                                      'Today',
+                                      style: TextStyle(
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.w600,
+                                        color: Colors.white,
+                                      ),
                                     ),
                                   ),
-                                ),
+                                ],
+                                if (isWeekend) ...[
+                                  const SizedBox(width: 8),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 6,
+                                      vertical: 2,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: Colors.white.withValues(alpha: 0.60),
+                                      borderRadius: BorderRadius.circular(4),
+                                      border: Border.all(
+                                        color: AppStitchTheme.lightOutline
+                                            .withValues(alpha: 0.60),
+                                      ),
+                                    ),
+                                    child: const Text(
+                                      'Weekend',
+                                      style: TextStyle(
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.w700,
+                                        color: AppStitchTheme.lightOnSurfaceMuted,
+                                      ),
+                                    ),
+                                  ),
+                                ],
                               ],
-                            ],
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              record.dayName,
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .bodySmall
+                                  ?.copyWith(
+                                    color: AppStitchTheme.lightOnSurfaceMuted,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      _buildStatusBadge(record.status, isFutureDate),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _buildInfoChip(
+                          Icons.login,
+                          'Check In',
+                          record.checkIn,
+                          record.isLate && record.status == 'present',
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: _buildInfoChip(
+                          Icons.logout,
+                          'Check Out',
+                          record.checkOut,
+                          false,
+                        ),
+                      ),
+                    ],
+                  ),
+                  if (record.isLate && record.lateDuration != null) ...[
+                    const SizedBox(height: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 8,
+                      ),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFEE2E2).withValues(alpha: 0.65),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(
+                          color: const Color(0xFFEF4444).withValues(alpha: 0.18),
+                        ),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(
+                            Icons.access_time,
+                            size: 16,
+                            color: Color(0xFFEF4444),
                           ),
-                          const SizedBox(height: 2),
+                          const SizedBox(width: 6),
                           Text(
-                            record.dayName,
+                            'Late: ${record.lateDuration}',
                             style: const TextStyle(
                               fontSize: 12,
-                              color: Color(0xFF6B7280),
+                              fontWeight: FontWeight.w700,
+                              color: Color(0xFFEF4444),
                             ),
                           ),
                         ],
                       ),
                     ),
-                    _buildStatusBadge(record.status, isFutureDate),
                   ],
-                ),
-                const SizedBox(height: 12),
-                Row(
-                  children: [
-                    Expanded(
-                      child: _buildInfoChip(
-                        Icons.login,
-                        'Check In',
-                        record.checkIn,
-                        record.isLate && record.status == 'present',
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: _buildInfoChip(
-                        Icons.logout,
-                        'Check Out',
-                        record.checkOut,
-                        false,
-                      ),
-                    ),
-                  ],
-                ),
-                if (record.isLate && record.lateDuration != null) ...[
-                  const SizedBox(height: 8),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFFEE2E2),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Icon(
-                          Icons.access_time,
-                          size: 16,
-                          color: Color(0xFFEF4444),
-                        ),
-                        const SizedBox(width: 6),
-                        Text(
-                          'Late: ${record.lateDuration}',
-                          style: const TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                            color: Color(0xFFEF4444),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
                 ],
-              ],
+              ),
             ),
           ),
         ),
@@ -1023,7 +1002,7 @@ class _AttendanceHistoryPageState extends State<AttendanceHistoryPage> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
-        color: _getStatusBgColor(status),
+        color: _getStatusColor(status).withValues(alpha: 0.10),
         borderRadius: BorderRadius.circular(8),
         border: Border.all(
           color: _getStatusColor(status).withValues(alpha: 0.3),
@@ -1056,6 +1035,7 @@ class _AttendanceHistoryPageState extends State<AttendanceHistoryPage> {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
+      backgroundColor: Colors.transparent,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
@@ -1067,8 +1047,10 @@ class _AttendanceHistoryPageState extends State<AttendanceHistoryPage> {
         builder: (context, scrollController) => SingleChildScrollView(
           controller: scrollController,
           child: Padding(
-            padding: const EdgeInsets.all(24),
-            child: Column(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+            child: GlassCard(
+              padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
+              child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Center(
@@ -1077,7 +1059,7 @@ class _AttendanceHistoryPageState extends State<AttendanceHistoryPage> {
                     height: 4,
                     margin: const EdgeInsets.only(bottom: 24),
                     decoration: BoxDecoration(
-                      color: Colors.grey[300],
+                      color: AppStitchTheme.lightOutline.withValues(alpha: 0.85),
                       borderRadius: BorderRadius.circular(2),
                     ),
                   ),
@@ -1087,8 +1069,12 @@ class _AttendanceHistoryPageState extends State<AttendanceHistoryPage> {
                     Container(
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
-                        color: _getStatusBgColor(record.status),
+                        color: _getStatusColor(record.status)
+                            .withValues(alpha: 0.10),
                         borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: _getStatusColor(record.status).withValues(alpha: 0.18),
+                        ),
                       ),
                       child: Icon(
                         _getStatusIcon(record.status),
@@ -1103,19 +1089,18 @@ class _AttendanceHistoryPageState extends State<AttendanceHistoryPage> {
                         children: [
                           Text(
                             _formatDate(record.date),
-                            style: const TextStyle(
-                              fontSize: 20,
-                              fontWeight: FontWeight.bold,
-                              color: Color(0xFF111827),
-                            ),
+                            style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                                  fontWeight: FontWeight.w900,
+                                  color: AppStitchTheme.lightOnSurface,
+                                ),
                           ),
                           const SizedBox(height: 4),
                           Text(
                             record.dayName,
-                            style: const TextStyle(
-                              fontSize: 14,
-                              color: Color(0xFF6B7280),
-                            ),
+                            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                  color: AppStitchTheme.lightOnSurfaceMuted,
+                                  fontWeight: FontWeight.w600,
+                                ),
                           ),
                         ],
                       ),
@@ -1145,6 +1130,7 @@ class _AttendanceHistoryPageState extends State<AttendanceHistoryPage> {
                 ],
               ],
             ),
+            ),
           ),
         ),
       ),
@@ -1152,16 +1138,11 @@ class _AttendanceHistoryPageState extends State<AttendanceHistoryPage> {
   }
 
   Widget _buildDetailRow(String label, String value, IconData icon) {
-    return Container(
+    return GlassCard(
       padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: const Color(0xFFF9FAFB),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFFE5E7EB)),
-      ),
       child: Row(
         children: [
-          Icon(icon, size: 20, color: const Color(0xFF6B7280)),
+          Icon(icon, size: 20, color: AppStitchTheme.lightOnSurfaceMuted),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
@@ -1169,22 +1150,67 @@ class _AttendanceHistoryPageState extends State<AttendanceHistoryPage> {
               children: [
                 Text(
                   label,
-                  style: const TextStyle(
-                    fontSize: 12,
-                    color: Color(0xFF6B7280),
-                  ),
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: AppStitchTheme.lightOnSurfaceMuted,
+                        fontWeight: FontWeight.w700,
+                      ),
                 ),
                 const SizedBox(height: 4),
                 Text(
                   value,
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                    color: Color(0xFF111827),
-                  ),
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w900,
+                        color: AppStitchTheme.lightOnSurface,
+                      ),
                 ),
               ],
             ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _FrostHeader extends StatelessWidget {
+  const _FrostHeader({required this.title, required this.subtitle});
+
+  final String title;
+  final String subtitle;
+
+  @override
+  Widget build(BuildContext context) {
+    return GlassCard(
+      padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                        fontWeight: FontWeight.w900,
+                        color: AppStitchTheme.lightOnSurface,
+                      ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  subtitle,
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: AppStitchTheme.lightOnSurfaceMuted,
+                        fontWeight: FontWeight.w600,
+                      ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 10),
+          IconButton(
+            onPressed: null,
+            icon: const Icon(Icons.event_note_rounded),
+            color: AppStitchTheme.primary,
           ),
         ],
       ),

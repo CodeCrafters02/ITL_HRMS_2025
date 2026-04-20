@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../../models/leave_model.dart';
 import '../../services/employee_service.dart';
-import '../../widgets/employee_app_bar.dart';
+import '../../theme/app_stitch_theme.dart';
+import '../../widgets/glass_card.dart';
+import '../../widgets/stitch_background.dart';
 import 'widgets/leave_application_form_dialog.dart';
 
 class LeaveApplicationPage extends StatefulWidget {
@@ -200,62 +202,75 @@ class _LeaveApplicationPageState extends State<LeaveApplicationPage> {
     }
   }
 
-  Color _getStatusBgColor(String status) {
-    switch (status.toLowerCase()) {
-      case 'approved':
-        return const Color(0xFFD1FAE5);
-      case 'rejected':
-        return const Color(0xFFFEE2E2);
-      case 'pending':
-        return const Color(0xFFDBEAFE);
-      case 'cancelled':
-        return const Color(0xFFFEF3C7);
-      default:
-        return const Color(0xFFF3F4F6);
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF9FAFB),
-      appBar: EmployeeAppBar(
-        title: 'Leave Application',
-        actions: [
-          IconButton(
-            icon: _isRefreshing
-                ? const SizedBox(
-                    width: 20,
-                    height: 20,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )
-                : const Icon(Icons.refresh),
-            onPressed: _isRefreshing ? null : _refreshAppliedLeaves,
-          ),
-        ],
-      ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : _error != null && _appliedLeaves.isEmpty
-              ? _buildErrorState()
-              : RefreshIndicator(
-                  onRefresh: _fetchData,
-                  color: const Color(0xFF4F46E5),
-                  child: SingleChildScrollView(
-                    padding: const EdgeInsets.all(16),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        _buildLeaveTypesSection(),
-                        const SizedBox(height: 24),
-                        _buildAppliedLeavesSection(),
-                      ],
-                    ),
+      backgroundColor: Colors.transparent,
+      body: StitchBackground(
+        child: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+            child: Column(
+              children: [
+                GlassCard(
+                  padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
+                  child: Row(
+                    children: [
+                      IconButton(
+                        onPressed: () => Navigator.pop(context),
+                        icon: const Icon(Icons.arrow_back_ios_new_rounded),
+                      ),
+                      const SizedBox(width: 6),
+                      Expanded(
+                        child: Text(
+                          'Leave Application',
+                          style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                                fontWeight: FontWeight.w900,
+                                color: AppStitchTheme.lightOnSurface,
+                              ),
+                        ),
+                      ),
+                      IconButton(
+                        onPressed: _isRefreshing ? null : _refreshAppliedLeaves,
+                        icon: _isRefreshing
+                            ? const SizedBox(
+                                width: 18,
+                                height: 18,
+                                child: CircularProgressIndicator(strokeWidth: 2),
+                              )
+                            : const Icon(Icons.refresh_rounded),
+                      ),
+                    ],
                   ),
                 ),
+                const SizedBox(height: 12),
+                Expanded(
+                  child: _isLoading
+                      ? const Center(child: CircularProgressIndicator())
+                      : _error != null && _appliedLeaves.isEmpty
+                          ? _buildErrorState()
+                          : RefreshIndicator(
+                              onRefresh: _fetchData,
+                              color: AppStitchTheme.primary,
+                              child: ListView(
+                                padding: EdgeInsets.zero,
+                                children: [
+                                  _buildLeaveTypesSection(),
+                                  const SizedBox(height: 16),
+                                  _buildAppliedLeavesSection(),
+                                  const SizedBox(height: 90),
+                                ],
+                              ),
+                            ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: _handleApplyLeave,
-        backgroundColor: const Color(0xFF4F46E5),
+        backgroundColor: AppStitchTheme.primary,
         icon: const Icon(Icons.add, color: Colors.white),
         label: const Text(
           'Apply',
@@ -267,38 +282,42 @@ class _LeaveApplicationPageState extends State<LeaveApplicationPage> {
 
   Widget _buildErrorState() {
     return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(24),
+      child: GlassCard(
+        padding: const EdgeInsets.all(18),
         child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(
-              Icons.error_outline,
-              color: Colors.red.shade400,
-              size: 48,
+            Container(
+              width: 56,
+              height: 56,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: const Color(0xFFEF4444).withValues(alpha: 0.10),
+                border: Border.all(
+                  color: const Color(0xFFEF4444).withValues(alpha: 0.20),
+                ),
+              ),
+              child: const Icon(
+                Icons.error_outline_rounded,
+                color: Color(0xFFEF4444),
+              ),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 10),
             Text(
               _error!,
               textAlign: TextAlign.center,
-              style: const TextStyle(
-                color: Color(0xFFEF4444),
-                fontSize: 16,
-                fontWeight: FontWeight.w500,
-              ),
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: AppStitchTheme.lightOnSurfaceMuted,
+                    fontWeight: FontWeight.w600,
+                  ),
             ),
-            const SizedBox(height: 16),
-            ElevatedButton(
-              onPressed: _fetchData,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF4F46E5),
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8),
-                ),
+            const SizedBox(height: 12),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: _fetchData,
+                child: const Text('Retry'),
               ),
-              child: const Text('Retry'),
             ),
           ],
         ),
@@ -314,13 +333,12 @@ class _LeaveApplicationPageState extends State<LeaveApplicationPage> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
-          'Available Leave Types',
-          style: TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.w600,
-            color: Color(0xFF111827),
-          ),
+        Text(
+          'Available leave types',
+          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.w900,
+                color: AppStitchTheme.lightOnSurface,
+              ),
         ),
         const SizedBox(height: 12),
         GridView.builder(
@@ -342,48 +360,32 @@ class _LeaveApplicationPageState extends State<LeaveApplicationPage> {
   }
 
   Widget _buildLeaveTypeCard(LeaveType leaveType) {
-    return Container(
+    return GlassCard(
       padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: const Color(0xFF60A5FA), // Blue-400
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: const Color(0xFF93C5FD), // Blue-300
-          width: 1,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.1),
-            blurRadius: 4,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.max,
         children: [
           Text(
             leaveType.leaveName,
-            style: const TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w600,
-              color: Colors.white,
-              letterSpacing: 0.5,
-            ),
+            style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                  fontWeight: FontWeight.w900,
+                  color: AppStitchTheme.lightOnSurface,
+                ),
           ),
           const SizedBox(height: 6),
-          _buildLeaveInfoRow('Total', leaveType.count.toString(), Colors.white),
-          _buildLeaveInfoRow('Used', leaveType.usedCount.toString(), Colors.white),
-          _buildLeaveInfoRow('Remaining', leaveType.remainingCount.toString(), Colors.white),
+          _buildLeaveInfoRow('Total', leaveType.count.toString()),
+          _buildLeaveInfoRow('Used', leaveType.usedCount.toString()),
+          _buildLeaveInfoRow('Remaining', leaveType.remainingCount.toString()),
           const Spacer(),
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
             decoration: BoxDecoration(
-              color: leaveType.isPaid
-                  ? const Color(0xFF10B981).withValues(alpha: 0.2)
-                  : const Color(0xFFEF4444).withValues(alpha: 0.2),
+              color: Colors.white.withValues(alpha: 0.55),
               borderRadius: BorderRadius.circular(6),
+              border: Border.all(
+                color: AppStitchTheme.lightOutline.withValues(alpha: 0.65),
+              ),
             ),
             child: Text(
               leaveType.isPaid ? 'Paid' : 'Unpaid',
@@ -401,7 +403,7 @@ class _LeaveApplicationPageState extends State<LeaveApplicationPage> {
     );
   }
 
-  Widget _buildLeaveInfoRow(String label, String value, Color textColor) {
+  Widget _buildLeaveInfoRow(String label, String value) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 3),
       child: Row(
@@ -411,7 +413,7 @@ class _LeaveApplicationPageState extends State<LeaveApplicationPage> {
             '$label:',
             style: TextStyle(
               fontSize: 13,
-              color: textColor,
+              color: AppStitchTheme.lightOnSurfaceMuted,
             ),
           ),
           Text(
@@ -419,7 +421,7 @@ class _LeaveApplicationPageState extends State<LeaveApplicationPage> {
             style: TextStyle(
               fontSize: 13,
               fontWeight: FontWeight.bold,
-              color: textColor,
+              color: AppStitchTheme.lightOnSurface,
             ),
           ),
         ],
@@ -434,39 +436,33 @@ class _LeaveApplicationPageState extends State<LeaveApplicationPage> {
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            const Text(
-              'My Applied Leaves',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.w600,
-                color: Color(0xFF111827),
-              ),
+            Text(
+              'My applied leaves',
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w900,
+                    color: AppStitchTheme.lightOnSurface,
+                  ),
             ),
             Text(
               'Last updated: ${DateFormat('HH:mm:ss').format(_lastRefresh)}',
-              style: const TextStyle(
-                fontSize: 12,
-                color: Color(0xFF6B7280),
-              ),
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    fontWeight: FontWeight.w600,
+                    color: AppStitchTheme.lightOnSurfaceMuted,
+                  ),
             ),
           ],
         ),
         const SizedBox(height: 12),
         if (_appliedLeaves.isEmpty)
-          Container(
-            padding: const EdgeInsets.all(24),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: const Color(0xFFE5E7EB)),
-            ),
-            child: const Center(
+          GlassCard(
+            padding: const EdgeInsets.all(18),
+            child: Center(
               child: Text(
                 'No leave applications yet',
-                style: TextStyle(
-                  fontSize: 14,
-                  color: Color(0xFF6B7280),
-                ),
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      fontWeight: FontWeight.w600,
+                      color: AppStitchTheme.lightOnSurfaceMuted,
+                    ),
               ),
             ),
           )
@@ -481,14 +477,10 @@ class _LeaveApplicationPageState extends State<LeaveApplicationPage> {
   }
 
   Widget _buildAppliedLeaveCard(AppliedLeave leave, int index) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFFE5E7EB)),
-      ),
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: GlassCard(
+        padding: const EdgeInsets.all(16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -498,8 +490,11 @@ class _LeaveApplicationPageState extends State<LeaveApplicationPage> {
                 width: 32,
                 height: 32,
                 decoration: BoxDecoration(
-                  color: const Color(0xFFF3F4F6),
+                  color: Colors.white.withValues(alpha: 0.60),
                   borderRadius: BorderRadius.circular(8),
+                  border: Border.all(
+                    color: AppStitchTheme.lightOutline.withValues(alpha: 0.65),
+                  ),
                 ),
                 child: Center(
                   child: Text(
@@ -507,7 +502,7 @@ class _LeaveApplicationPageState extends State<LeaveApplicationPage> {
                     style: const TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.w600,
-                      color: Color(0xFF111827),
+                      color: AppStitchTheme.lightOnSurface,
                     ),
                   ),
                 ),
@@ -519,19 +514,18 @@ class _LeaveApplicationPageState extends State<LeaveApplicationPage> {
                   children: [
                     Text(
                       leave.leaveTypeName ?? 'Leave Type #${leave.leaveType}',
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                        color: Color(0xFF111827),
-                      ),
+                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                            fontWeight: FontWeight.w900,
+                            color: AppStitchTheme.lightOnSurface,
+                          ),
                     ),
                     const SizedBox(height: 4),
                     Text(
                       '${leave.fromDate} - ${leave.toDate}',
-                      style: const TextStyle(
-                        fontSize: 13,
-                        color: Color(0xFF6B7280),
-                      ),
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            fontWeight: FontWeight.w600,
+                            color: AppStitchTheme.lightOnSurfaceMuted,
+                          ),
                     ),
                   ],
                 ),
@@ -539,7 +533,7 @@ class _LeaveApplicationPageState extends State<LeaveApplicationPage> {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                 decoration: BoxDecoration(
-                  color: _getStatusBgColor(leave.status),
+                  color: _getStatusColor(leave.status).withValues(alpha: 0.10),
                   borderRadius: BorderRadius.circular(6),
                   border: Border.all(
                     color: _getStatusColor(leave.status).withValues(alpha: 0.3),
@@ -609,6 +603,7 @@ class _LeaveApplicationPageState extends State<LeaveApplicationPage> {
             ],
           ),
         ],
+      ),
       ),
     );
   }
