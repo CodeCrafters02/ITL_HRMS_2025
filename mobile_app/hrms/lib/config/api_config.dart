@@ -1,7 +1,20 @@
 class ApiConfig {
   // Base URL - Change this to your backend server URL
-  static const String baseUrl = 'https://apihrms.innovyxtechlabs.com';
-  // static const String baseUrl = 'http://192.168.0.3:8000';
+  // static const String baseUrl = 'https://apihrms.innovyxtechlabs.com';
+  static const String baseUrl = 'http://192.168.1.4:8000';
+
+  /// Login footer "Contact IT Support" mailto. Override at build:
+  /// `--dart-define=IT_SUPPORT_EMAIL=help@company.com`
+  static const String itSupportEmail = String.fromEnvironment(
+    'IT_SUPPORT_EMAIL',
+    defaultValue: 'it-support@company.local',
+  );
+
+  static Uri get itSupportMailtoUri => Uri(
+        scheme: 'mailto',
+        path: itSupportEmail,
+        queryParameters: const {'subject': 'HRMS access help'},
+      );
 
   // Alternative for local development:
   // static const String baseUrl = 'http://localhost:8000';
@@ -9,6 +22,7 @@ class ApiConfig {
 
   // API Endpoints
   static const String loginEndpoint = '/app/login/';
+  static const String googleLoginEndpoint = '/app/google-login/';
   static const String registerEndpoint = '/app/master-register/';
   static const String tokenRefreshEndpoint = '/api/token/refresh/';
   static const String changePasswordEndpoint = '/app/change-password/';
@@ -50,6 +64,7 @@ class ApiConfig {
 
   // Full URLs
   static String get loginUrl => '$baseUrl$loginEndpoint';
+  static String get googleLoginUrl => '$baseUrl$googleLoginEndpoint';
   static String get registerUrl => '$baseUrl$registerEndpoint';
   static String get tokenRefreshUrl => '$baseUrl$tokenRefreshEndpoint';
   static String get changePasswordUrl => '$baseUrl$changePasswordEndpoint';
@@ -96,7 +111,7 @@ class ApiConfig {
   static String get employeeReferenceUrl =>
       '$baseUrl$employeeReferenceEndpoint';
   static String employeeReferenceDetailUrl(int referenceId) =>
-      '$baseUrl${employeeReferenceEndpoint}$referenceId/';
+      '$baseUrl$employeeReferenceEndpoint$referenceId/';
   static String get employeeProfileUrl => '$baseUrl$employeeProfileEndpoint';
   static String get employeeHierarchyUrl =>
       '$baseUrl$employeeHierarchyEndpoint';

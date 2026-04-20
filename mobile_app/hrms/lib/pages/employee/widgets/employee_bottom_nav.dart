@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../constants/nav_constants.dart';
+import '../../../theme/app_stitch_theme.dart';
 
 class EmployeeBottomNav extends StatelessWidget {
   final int currentIndex;
@@ -17,8 +18,9 @@ class EmployeeBottomNav extends StatelessWidget {
       currentIndex: currentIndex,
       onTap: onTap,
       type: BottomNavigationBarType.fixed,
-      selectedItemColor: const Color(0xFF4F46E5),
-      unselectedItemColor: const Color(0xFF6B7280),
+      backgroundColor: AppStitchTheme.surface,
+      selectedItemColor: AppStitchTheme.primary,
+      unselectedItemColor: AppStitchTheme.onSurfaceMuted,
       selectedFontSize: 12,
       unselectedFontSize: 12,
       items: BottomNavItems.items.map((item) {

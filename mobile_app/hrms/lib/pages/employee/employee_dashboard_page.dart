@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import '../../models/dashboard_model.dart';
+import '../../theme/app_stitch_theme.dart';
 import '../../services/employee_service.dart';
 import 'widgets/dashboard_header.dart';
 import 'widgets/today_status_card.dart';
@@ -232,7 +233,7 @@ class _EmployeeDashboardPageState extends State<EmployeeDashboardPage> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(message),
-        backgroundColor: isError ? const Color(0xFFEF4444) : const Color(0xFF10B981),
+        backgroundColor: isError ? const Color(0xFFEF4444) : const Color(0xFF059669),
         duration: const Duration(seconds: 5),
         behavior: SnackBarBehavior.floating,
       ),
@@ -242,11 +243,11 @@ class _EmployeeDashboardPageState extends State<EmployeeDashboardPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF9FAFB),
+      backgroundColor: AppStitchTheme.scaffoldBackground,
       body: _isLoading && _dashboardData == null
           ? const Center(
               child: CircularProgressIndicator(
-                valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF4F46E5)),
+                valueColor: AlwaysStoppedAnimation<Color>(AppStitchTheme.primary),
               ),
             )
           : _dashboardData == null
@@ -254,26 +255,22 @@ class _EmployeeDashboardPageState extends State<EmployeeDashboardPage> {
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      const Icon(
+                      Icon(
                         Icons.error_outline,
                         size: 64,
-                        color: Color(0xFF9CA3AF),
+                        color: AppStitchTheme.onSurfaceMuted,
                       ),
                       const SizedBox(height: 16),
-                      const Text(
+                      Text(
                         'Failed to load dashboard',
                         style: TextStyle(
                           fontSize: 18,
-                          color: Color(0xFF6B7280),
+                          color: AppStitchTheme.onSurfaceVariant,
                         ),
                       ),
                       const SizedBox(height: 16),
                       ElevatedButton(
                         onPressed: _fetchDashboardData,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF4F46E5),
-                          foregroundColor: Colors.white,
-                        ),
                         child: const Text('Retry'),
                       ),
                     ],
@@ -281,7 +278,7 @@ class _EmployeeDashboardPageState extends State<EmployeeDashboardPage> {
                 )
               : RefreshIndicator(
                   onRefresh: _fetchDashboardData,
-                  color: const Color(0xFF4F46E5),
+                  color: AppStitchTheme.primary,
                   child: SingleChildScrollView(
                     physics: const AlwaysScrollableScrollPhysics(),
                     padding: const EdgeInsets.all(24.0),
@@ -304,12 +301,12 @@ class _EmployeeDashboardPageState extends State<EmployeeDashboardPage> {
                           Card(
                             elevation: 0,
                             shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(8),
+                              borderRadius: BorderRadius.circular(20),
                               side: const BorderSide(
-                                color: Color(0xFFE5E7EB),
+                                color: AppStitchTheme.outline,
                               ),
                             ),
-                            color: Colors.white,
+                            color: AppStitchTheme.surface,
                             child: Padding(
                               padding: const EdgeInsets.all(24.0),
                               child: BreakControls(

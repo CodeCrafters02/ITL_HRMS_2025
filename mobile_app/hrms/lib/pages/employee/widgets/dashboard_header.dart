@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../../../models/dashboard_model.dart';
+import '../../../theme/app_stitch_theme.dart';
 import 'timer_widget.dart';
 
 class DashboardHeader extends StatelessWidget {
@@ -43,12 +44,12 @@ class DashboardHeader extends StatelessWidget {
     return Card(
       elevation: 0,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(20),
         side: BorderSide(
-          color: isBirthday ? const Color(0xFFFCD34D) : const Color(0xFFE5E7EB),
+          color: isBirthday ? const Color(0xFFF59E0B) : AppStitchTheme.outline,
         ),
       ),
-      color: isBirthday ? const Color(0xFFFEF3C7) : Colors.white,
+      color: isBirthday ? const Color(0xFF422006) : AppStitchTheme.surface,
       child: Padding(
         padding: const EdgeInsets.all(24.0),
         child: LayoutBuilder(
@@ -69,7 +70,7 @@ class DashboardHeader extends StatelessWidget {
                               decoration: BoxDecoration(
                                 shape: BoxShape.circle,
                                 border: Border.all(
-                                  color: const Color(0xFFE5E7EB),
+                                  color: AppStitchTheme.outline,
                                   width: 2,
                                 ),
                               ),
@@ -81,7 +82,7 @@ class DashboardHeader extends StatelessWidget {
                                         errorBuilder:
                                             (context, error, stackTrace) {
                                               return Container(
-                                                color: const Color(0xFF4F46E5),
+                                                color: AppStitchTheme.primary,
                                                 child: Center(
                                                   child: Text(
                                                     _getInitials(
@@ -101,7 +102,7 @@ class DashboardHeader extends StatelessWidget {
                                       ),
                                     )
                                   : Container(
-                                      color: const Color(0xFF4F46E5),
+                                      color: AppStitchTheme.primary,
                                       child: Center(
                                         child: Text(
                                           _getInitials(
@@ -149,8 +150,8 @@ class DashboardHeader extends StatelessWidget {
                                       fontSize: 24,
                                       fontWeight: FontWeight.bold,
                                       color: isBirthday
-                                          ? const Color(0xFF92400E)
-                                          : const Color(0xFF111827),
+                                          ? const Color(0xFFFBBF24)
+                                          : AppStitchTheme.onSurface,
                                     ),
                                   ),
                                   if (isBirthday) ...[
@@ -168,8 +169,8 @@ class DashboardHeader extends StatelessWidget {
                                 style: TextStyle(
                                   fontSize: 14,
                                   color: isBirthday
-                                      ? const Color(0xFF92400E)
-                                      : const Color(0xFF6B7280),
+                                      ? const Color(0xFFFBBF24)
+                                      : AppStitchTheme.onSurfaceMuted,
                                 ),
                               ),
                               if (isBirthday &&
@@ -181,8 +182,8 @@ class DashboardHeader extends StatelessWidget {
                                     vertical: 8,
                                   ),
                                   decoration: BoxDecoration(
-                                    color: Colors.white.withOpacity(0.8),
-                                    borderRadius: BorderRadius.circular(8),
+                                    color: AppStitchTheme.surfaceHighlight.withValues(alpha: 0.92),
+                                    borderRadius: BorderRadius.circular(16),
                                     border: Border.all(
                                       color: const Color(0xFFFCD34D),
                                     ),
@@ -200,7 +201,7 @@ class DashboardHeader extends StatelessWidget {
                                         style: const TextStyle(
                                           fontSize: 16,
                                           fontWeight: FontWeight.w600,
-                                          color: Color(0xFF92400E),
+                                          color: Color(0xFFFBBF24),
                                         ),
                                       ),
                                       const SizedBox(width: 8),
@@ -230,8 +231,8 @@ class DashboardHeader extends StatelessWidget {
                               fontWeight: FontWeight.bold,
                               fontFamily: 'monospace',
                               color: isBirthday
-                                  ? const Color(0xFF92400E)
-                                  : const Color(0xFF374151),
+                                  ? const Color(0xFFFBBF24)
+                                  : AppStitchTheme.onSurfaceVariant,
                             ),
                           ),
                           const SizedBox(height: 4),
@@ -244,8 +245,8 @@ class DashboardHeader extends StatelessWidget {
                             style: TextStyle(
                               fontSize: 14,
                               color: isBirthday
-                                  ? const Color(0xFF92400E)
-                                  : const Color(0xFF6B7280),
+                                  ? const Color(0xFFFBBF24)
+                                  : AppStitchTheme.onSurfaceMuted,
                             ),
                           ),
                         ],
@@ -257,7 +258,7 @@ class DashboardHeader extends StatelessWidget {
                             onPressed: onRefresh,
                             icon: const Icon(
                               Icons.refresh,
-                              color: Color(0xFF6B7280),
+                              color: AppStitchTheme.onSurfaceMuted,
                               size: 20,
                             ),
                             tooltip: 'Refresh',
@@ -274,7 +275,7 @@ class DashboardHeader extends StatelessWidget {
                                 vertical: 12,
                               ),
                               shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(8),
+                                borderRadius: BorderRadius.circular(16),
                               ),
                               elevation: 0,
                             ),
@@ -318,7 +319,7 @@ class DashboardHeader extends StatelessWidget {
                             decoration: BoxDecoration(
                               shape: BoxShape.circle,
                               border: Border.all(
-                                color: const Color(0xFFE5E7EB),
+                                color: AppStitchTheme.outline,
                                 width: 2,
                               ),
                             ),
@@ -330,7 +331,7 @@ class DashboardHeader extends StatelessWidget {
                                       errorBuilder:
                                           (context, error, stackTrace) {
                                             return Container(
-                                              color: const Color(0xFF4F46E5),
+                                              color: AppStitchTheme.primary,
                                               child: Center(
                                                 child: Text(
                                                   _getInitials(
@@ -348,7 +349,7 @@ class DashboardHeader extends StatelessWidget {
                                     ),
                                   )
                                 : Container(
-                                    color: const Color(0xFF4F46E5),
+                                    color: AppStitchTheme.primary,
                                     child: Center(
                                       child: Text(
                                         _getInitials(
@@ -397,8 +398,8 @@ class DashboardHeader extends StatelessWidget {
                                       fontSize: 20,
                                       fontWeight: FontWeight.bold,
                                       color: isBirthday
-                                          ? const Color(0xFF92400E)
-                                          : const Color(0xFF111827),
+                                          ? const Color(0xFFFBBF24)
+                                          : AppStitchTheme.onSurface,
                                     ),
                                   ),
                                 ),
@@ -415,8 +416,8 @@ class DashboardHeader extends StatelessWidget {
                               style: TextStyle(
                                 fontSize: 14,
                                 color: isBirthday
-                                    ? const Color(0xFF92400E)
-                                    : const Color(0xFF6B7280),
+                                    ? const Color(0xFFFBBF24)
+                                    : AppStitchTheme.onSurfaceMuted,
                               ),
                             ),
                             if (isBirthday &&
@@ -428,8 +429,8 @@ class DashboardHeader extends StatelessWidget {
                                   vertical: 8,
                                 ),
                                 decoration: BoxDecoration(
-                                  color: Colors.white.withOpacity(0.8),
-                                  borderRadius: BorderRadius.circular(8),
+                                  color: AppStitchTheme.surfaceHighlight.withValues(alpha: 0.92),
+                                  borderRadius: BorderRadius.circular(16),
                                   border: Border.all(
                                     color: const Color(0xFFFCD34D),
                                   ),
@@ -448,7 +449,7 @@ class DashboardHeader extends StatelessWidget {
                                         style: const TextStyle(
                                           fontSize: 14,
                                           fontWeight: FontWeight.w600,
-                                          color: Color(0xFF92400E),
+                                          color: Color(0xFFFBBF24),
                                         ),
                                       ),
                                     ),
@@ -481,8 +482,8 @@ class DashboardHeader extends StatelessWidget {
                               fontWeight: FontWeight.bold,
                               fontFamily: 'monospace',
                               color: isBirthday
-                                  ? const Color(0xFF92400E)
-                                  : const Color(0xFF374151),
+                                  ? const Color(0xFFFBBF24)
+                                  : AppStitchTheme.onSurfaceVariant,
                             ),
                           ),
                           const SizedBox(height: 4),
@@ -495,8 +496,8 @@ class DashboardHeader extends StatelessWidget {
                             style: TextStyle(
                               fontSize: 14,
                               color: isBirthday
-                                  ? const Color(0xFF92400E)
-                                  : const Color(0xFF6B7280),
+                                  ? const Color(0xFFFBBF24)
+                                  : AppStitchTheme.onSurfaceMuted,
                             ),
                           ),
                         ],
@@ -507,7 +508,7 @@ class DashboardHeader extends StatelessWidget {
                             onPressed: onRefresh,
                             icon: const Icon(
                               Icons.refresh,
-                              color: Color(0xFF6B7280),
+                              color: AppStitchTheme.onSurfaceMuted,
                               size: 20,
                             ),
                             tooltip: 'Refresh',
@@ -524,7 +525,7 @@ class DashboardHeader extends StatelessWidget {
                                 vertical: 12,
                               ),
                               shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(8),
+                                borderRadius: BorderRadius.circular(16),
                               ),
                               elevation: 0,
                             ),

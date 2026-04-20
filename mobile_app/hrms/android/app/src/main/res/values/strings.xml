@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Same Web client ID as Django GOOGLE_CLIENT_ID / Flutter serverClientId (public). -->
+    <string name="default_web_client_id" translatable="false">998707069942-p768bcp5kgfivsjk1jbhrb4upq8kfqda.apps.googleusercontent.com</string>
+</resources>

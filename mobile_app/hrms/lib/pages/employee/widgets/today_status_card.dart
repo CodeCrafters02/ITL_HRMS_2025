@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../models/dashboard_model.dart';
+import '../../../theme/app_stitch_theme.dart';
 
 class TodayStatusCard extends StatelessWidget {
   final DashboardData dashboardData;
@@ -11,10 +12,10 @@ class TodayStatusCard extends StatelessWidget {
     return Card(
       elevation: 0,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(8),
-        side: const BorderSide(color: Color(0xFFE5E7EB)),
+        borderRadius: BorderRadius.circular(20),
+        side: const BorderSide(color: AppStitchTheme.outline),
       ),
-      color: Colors.white,
+      color: AppStitchTheme.surface,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -28,12 +29,12 @@ class TodayStatusCard extends StatelessWidget {
                   size: 20,
                 ),
                 const SizedBox(width: 8),
-                const Text(
+                Text(
                   "Today's Status",
                   style: TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.w600,
-                    color: Color(0xFF111827),
+                    color: AppStitchTheme.onSurface,
                   ),
                 ),
               ],
@@ -172,13 +173,14 @@ class TodayStatusCard extends StatelessWidget {
                               vertical: 8,
                             ),
                             decoration: BoxDecoration(
-                              color: const Color(0xFFFEE2E2),
-                              borderRadius: BorderRadius.circular(6),
+                              color: const Color(0xFF450A0A),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: const Color(0xFFEF4444).withValues(alpha: 0.5)),
                             ),
                             child: const Text(
                               'Late arrival detected',
                               style: TextStyle(
-                                color: Color(0xFF991B1B),
+                                color: Color(0xFFFCA5A5),
                                 fontSize: 14,
                               ),
                             ),
@@ -210,10 +212,10 @@ class TodayStatusCard extends StatelessWidget {
             const SizedBox(width: 8),
             Text(
               title,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.bold,
-                color: Color(0xFF111827),
+                color: AppStitchTheme.onSurface,
               ),
             ),
           ],
@@ -227,9 +229,9 @@ class TodayStatusCard extends StatelessWidget {
               children: [
                 Text(
                   item.label,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 14,
-                    color: Color(0xFF6B7280),
+                    color: AppStitchTheme.onSurfaceMuted,
                   ),
                 ),
                 Text(
@@ -237,7 +239,7 @@ class TodayStatusCard extends StatelessWidget {
                   style: TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w500,
-                    color: item.valueColor ?? const Color(0xFF111827),
+                    color: item.valueColor ?? AppStitchTheme.onSurface,
                   ),
                 ),
               ],

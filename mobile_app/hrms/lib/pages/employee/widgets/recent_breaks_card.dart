@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../models/break_model.dart';
+import '../../../theme/app_stitch_theme.dart';
 
 class RecentBreaksCard extends StatelessWidget {
   final List<BreakData>? recentBreaks;
@@ -16,10 +17,10 @@ class RecentBreaksCard extends StatelessWidget {
     return Card(
       elevation: 0,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(8),
-        side: const BorderSide(color: Color(0xFFE5E7EB)),
+        borderRadius: BorderRadius.circular(20),
+        side: const BorderSide(color: AppStitchTheme.outline),
       ),
-      color: Colors.white,
+      color: AppStitchTheme.surface,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -33,12 +34,12 @@ class RecentBreaksCard extends StatelessWidget {
                   size: 20,
                 ),
                 const SizedBox(width: 8),
-                const Text(
+                Text(
                   'Recent Break Activity',
                   style: TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.w600,
-                    color: Color(0xFF111827),
+                    color: AppStitchTheme.onSurface,
                   ),
                 ),
               ],
@@ -61,17 +62,17 @@ class RecentBreaksCard extends StatelessWidget {
         padding: const EdgeInsets.all(32.0),
         child: Column(
           children: [
-            const Icon(
+            Icon(
               Icons.coffee_outlined,
               size: 48,
-              color: Color(0xFF9CA3AF),
+              color: AppStitchTheme.onSurfaceMuted,
             ),
             const SizedBox(height: 16),
-            const Text(
+            Text(
               'No recent break activity',
               style: TextStyle(
                 fontSize: 14,
-                color: Color(0xFF6B7280),
+                color: AppStitchTheme.onSurfaceMuted,
               ),
             ),
           ],
@@ -106,8 +107,8 @@ class RecentBreaksCard extends StatelessWidget {
                 vertical: 10,
               ),
               decoration: BoxDecoration(
-                color: const Color(0xFFF9FAFB),
-                borderRadius: BorderRadius.circular(8),
+                color: AppStitchTheme.surfaceElevated,
+                borderRadius: BorderRadius.circular(16),
               ),
               child: Row(
                 children: [
@@ -126,10 +127,10 @@ class RecentBreaksCard extends StatelessWidget {
                         Flexible(
                           child: Text(
                             '${breakItem.type} Break',
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 13,
                               fontWeight: FontWeight.w500,
-                              color: Color(0xFF111827),
+                              color: AppStitchTheme.onSurface,
                             ),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
@@ -139,9 +140,9 @@ class RecentBreaksCard extends StatelessWidget {
                         Flexible(
                           child: Text(
                             '${breakItem.startTime} - ${breakItem.endTime ?? 'Active'}',
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 11,
-                              color: Color(0xFF6B7280),
+                              color: AppStitchTheme.onSurfaceMuted,
                             ),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,

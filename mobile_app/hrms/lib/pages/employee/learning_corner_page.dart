@@ -195,7 +195,7 @@ class _LearningCornerPageState extends State<LearningCornerPage> {
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
       child: DataTable(
-        headingRowColor: MaterialStateProperty.all(const Color(0xFFF3F4F6)),
+        headingRowColor: WidgetStateProperty.all(const Color(0xFFF3F4F6)),
         columns: const [
           DataColumn(
             label: Text('S.No', style: TextStyle(fontWeight: FontWeight.bold)),

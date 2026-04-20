@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../models/payroll_model.dart';
+import '../../../theme/app_stitch_theme.dart';
 
 class PayrollCard extends StatelessWidget {
   final PayrollData payrollData;
@@ -14,10 +15,10 @@ class PayrollCard extends StatelessWidget {
     return Card(
       elevation: 0,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(8),
-        side: const BorderSide(color: Color(0xFFE5E7EB)),
+        borderRadius: BorderRadius.circular(20),
+        side: const BorderSide(color: AppStitchTheme.outline),
       ),
-      color: Colors.white,
+      color: AppStitchTheme.surface,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -31,12 +32,12 @@ class PayrollCard extends StatelessWidget {
                   size: 20,
                 ),
                 const SizedBox(width: 8),
-                const Text(
+                Text(
                   'Latest Payroll',
                   style: TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.w600,
-                    color: Color(0xFF111827),
+                    color: AppStitchTheme.onSurface,
                   ),
                 ),
               ],
@@ -58,9 +59,9 @@ class PayrollCard extends StatelessWidget {
                   const SizedBox(height: 8),
                   Text(
                     'Processed on ${payrollData.date}',
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 14,
-                      color: Color(0xFF6B7280),
+                      color: AppStitchTheme.onSurfaceMuted,
                     ),
                   ),
                 ],

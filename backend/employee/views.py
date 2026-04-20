@@ -90,7 +90,14 @@ class CheckInAPIView(APIView):
                 "detail": f"Already checked in at {existing.check_in.astimezone(tz).strftime('%H:%M:%S')}"
             }, status=400)
 
-        shifts = ShiftPolicy.objects.all()
+        shifts_qs = ShiftPolicy.objects.all()
+        if not shifts_qs.exists():
+            return Response(
+                {"detail": "No shift policy configured. Please contact HR/admin."},
+                status=status.HTTP_409_CONFLICT,
+            )
+
+        shifts = list(shifts_qs)
         selected_shift = None
         early_checkin_buffer = timedelta(hours=2)
         min_work_time = timedelta(hours=2)

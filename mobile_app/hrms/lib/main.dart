@@ -19,6 +19,7 @@ import 'pages/employee/profile_page.dart';
 import 'pages/auth/change_password_page.dart';
 import 'widgets/auth_wrapper.dart';
 import 'widgets/auth_guard.dart';
+import 'theme/app_stitch_theme.dart';
 
 // Background message handler (must be top-level function)
 @pragma('vm:entry-point')
@@ -48,10 +49,8 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        primaryColor: const Color(0xFF4F46E5),
-        fontFamily: 'Roboto',
-      ),
+      theme: AppStitchTheme.darkTheme(),
+      themeMode: ThemeMode.dark,
       home: AuthWrapper(
         authenticatedChild: const EmployeeLayout(),
         unauthenticatedChild: const LoginPage(),
