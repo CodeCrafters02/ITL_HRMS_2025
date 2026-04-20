@@ -137,6 +137,12 @@ const AdminAssetsInventory = lazy(() => import('../pages/Admin/AssetsInventory')
 const EmployeeDashboard = lazy(() => import('../pages/Employee/Dashboard'));
 const EmployeeChat = lazy(() => import('../pages/Employee/Chat'));
 const EmployeeCalendar = lazy(() => import('../pages/Employee/Calendar'));
+const EmployeeMyTasks = lazy(() => import('../pages/Employee/MyTasks/Mytasks'));
+const EmployeeApplyLeave = lazy(() => import('../pages/Employee/LeaveApplication/ApplyLeave'));
+const EmployeeAttendanceHistory = lazy(() => import('../pages/Employee/AttendanceHistory/AttendanceHistory'));
+const EmployeeLearningCorner = lazy(() => import('../pages/Employee/LearningCorner/LearningCorner'));
+const EmployeeNotifications = lazy(() => import('../pages/Employee/Notifications/Notifications'));
+const EmployeeCompanyPolicy = lazy(() => import('../pages/Employee/CompanyPolicy/CompanyPolicy'));
 const EmployeeAssetRequests = lazy(() => import('../pages/Employee/AssetRequests'));
 
 const routes = [
@@ -723,6 +729,30 @@ const routes = [
     {
         path: '/employee/calendar',
         element: <EmployeeCalendar />,
+    },
+    {
+        path: '/employee/my-tasks',
+        element: <EmployeeMyTasks />,
+    },
+    {
+        path: '/employee/leave-application',
+        element: <EmployeeApplyLeave />,
+    },
+    {
+        path: '/employee/attendance-history',
+        element: <EmployeeAttendanceHistory />,
+    },
+    {
+        path: '/employee/learning-corner',
+        element: <EmployeeLearningCorner />,
+    },
+    {
+        path: '/employee/notifications',
+        element: <EmployeeNotifications />,
+    },
+    {
+        path: '/employee/company-policy',
+        element: <EmployeeCompanyPolicy />,
     },
     {
         path: '/employee/asset-requests',
