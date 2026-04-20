@@ -1,8 +1,10 @@
 import { useEffect, useState, useMemo } from 'react';
-import { useDispatch } from 'react-redux';
+import { useDispatch, useSelector } from 'react-redux';
 import { setPageTitle } from '../../store/themeConfigSlice';
 import { Link } from 'react-router-dom';
 import Swal from 'sweetalert2';
+import ReactApexChart from 'react-apexcharts';
+import { IRootState } from '../../store';
 
 import IconClock from '../../components/Icon/IconClock';
 import IconCalendar from '../../components/Icon/IconCalendar';
@@ -47,6 +49,22 @@ const EmployeeDashboard = () => {
     const [data, setData] = useState<DashboardData | null>(null);
     const [breakConfigs, setBreakConfigs] = useState<BreakConfig[]>([]);
     const [loading, setLoading] = useState(true);
+
+    // Chart State
+    const [chartRange, setChartRange] = useState('week');
+    const [chartData, setChartData] = useState<{ 
+        series: number[]; 
+        labels: string[]; 
+        holidays: boolean[]; 
+        period_label?: string; 
+        range?: string; 
+        offset?: number 
+    } | null>(null);
+    const [chartLoading, setChartLoading] = useState(false);
+
+    const isDark = useSelector((state: IRootState) => state.themeConfig.theme === 'dark' || state.themeConfig.isDarkMode);
+    const [navOffset, setNavOffset] = useState(0);
+
     const [liveTime, setLiveTime] = useState('0h 0m');
     const [liveRawSeconds, setLiveRawSeconds] = useState('--:--:--');
 
@@ -151,6 +169,36 @@ const EmployeeDashboard = () => {
             if (interval) clearInterval(interval);
         };
     }, [data]);
+
+    const fetchChartData = async (range: string, background = false, offset = 0) => {
+        if (!background) setChartLoading(true);
+        try {
+            const res = await fetch(`${API_BASE_URL}/employee/attendance-chart/?range=${range}&offset=${offset}`, {
+                headers: authHeaders,
+            });
+            const d = await res.json();
+            if (res.ok) {
+                setChartData(d);
+            }
+        } catch (error) {
+            console.error('Error fetching chart data:', error);
+        } finally {
+            if (!background) setChartLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        fetchChartData(chartRange, false, navOffset);
+        
+        // Refresh chart every minute if active/current period
+        const interval = setInterval(() => {
+            if (data?.checkin_time && !data.checkout_time && navOffset === 0) {
+                fetchChartData(chartRange, true, 0);
+            }
+        }, 60000); // 1 minute
+
+        return () => clearInterval(interval);
+    }, [chartRange, navOffset, data?.checkin_time, data?.checkout_time]);
 
     const handleCheckIn = async () => {
         try {
@@ -408,102 +456,245 @@ const EmployeeDashboard = () => {
                 </div>
             </div>
 
-            {/* ─── Main Content Grid ─── */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                
-                {/* Break Timeline / Summary */}
-                <div className="panel p-6 shadow-sm border-0">
-                    <h3 className="text-lg font-bold text-gray-800 dark:text-white mb-5 flex items-center gap-3">
-                        <span className="w-1.5 h-6 bg-gradient-to-b from-warning to-orange-500 rounded-full"></span>
-                        Break History (Today)
-                    </h3>
-                    
-                    {data.recent_breaks == null || data.recent_breaks.length === 0 ? (
-                        <div className="text-center py-10 bg-gray-50 dark:bg-[#1a2941] rounded-2xl border border-dashed border-gray-200 dark:border-gray-700">
-                            <IconClock className="w-12 h-12 text-gray-300 dark:text-gray-600 mx-auto mb-3" />
-                            <p className="text-gray-500 dark:text-gray-400 font-medium tracking-wide">No completed breaks yet today.</p>
+            {/* ─── Trend Analytics & Timeline ─── */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                {/* Working Hours Trend */}
+                <div className="panel lg:col-span-2 shadow-lg border-0 bg-white dark:bg-[#0e1726]">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+                        <div className="flex items-center gap-3">
+                            <div className="flex items-center gap-1 bg-gray-100 dark:bg-gray-800 p-1 rounded-xl">
+                                <button
+                                    className="p-1.5 hover:bg-white dark:hover:bg-gray-700 rounded-lg transition-all text-gray-500 disabled:opacity-30 disabled:cursor-not-allowed"
+                                    onClick={() => setNavOffset((prev) => prev + 1)}
+                                    title="Previous Period"
+                                >
+                                    <svg className="w-5 h-5 rtl:rotate-180" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                        <path d="M15 18l-6-6 6-6" />
+                                    </svg>
+                                </button>
+                                <button
+                                    className="p-1.5 hover:bg-white dark:hover:bg-gray-700 rounded-lg transition-all text-gray-500 disabled:opacity-30 disabled:cursor-not-allowed"
+                                    onClick={() => setNavOffset((prev) => Math.max(0, prev - 1))}
+                                    disabled={navOffset === 0}
+                                    title="Next Period"
+                                >
+                                    <svg className="w-5 h-5 rtl:rotate-180" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                        <path d="M9 18l6-6-6-6" />
+                                    </svg>
+                                </button>
+                            </div>
+                            <div>
+                                <h5 className="font-bold text-lg dark:text-white leading-none">Working Hours Trend</h5>
+                                <p className="text-xs text-primary font-bold mt-1.5 bg-primary/10 px-2 py-0.5 rounded-md inline-block">
+                                    {chartData?.period_label || 'Loading...'}
+                                </p>
+                            </div>
                         </div>
-                    ) : (
-                        <div className="space-y-3">
-                            {data.recent_breaks.map((b, i) => (
-                                <div key={i} className="flex flex-col sm:flex-row sm:items-center justify-between p-4 bg-gray-50 dark:bg-[#1a2941] rounded-2xl hover:bg-warning/5 transition-colors border border-gray-100 dark:border-gray-800">
-                                    <div className="flex items-center gap-4">
-                                        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-warning to-orange-400 flex items-center justify-center shadow-sm flex-shrink-0">
-                                            <IconClock className="w-5 h-5 text-white" />
-                                        </div>
-                                        <div>
-                                            <h4 className="font-bold text-gray-900 dark:text-white text-base">
-                                                {b.type || b.break_choice}
-                                            </h4>
-                                            <p className="text-xs text-gray-500 mt-0.5 max-w-[200px] truncate">
-                                                Ended successfully
-                                            </p>
-                                        </div>
-                                    </div>
-                                    <div className="mt-2 sm:mt-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-gray-200 dark:border-gray-700 flex sm:flex-col items-center sm:items-end justify-between sm:justify-center">
-                                        <span className="text-sm font-semibold text-gray-700 dark:text-gray-300 sm:mb-1 bg-white dark:bg-[#0e1726] px-2 py-0.5 rounded-md shadow-sm border border-gray-100 dark:border-gray-800">
-                                            {b.start_time} - {b.end_time}
-                                        </span>
-                                    </div>
-                                </div>
+                        <div className="flex items-center gap-1 bg-gray-100 dark:bg-gray-800 p-1 rounded-xl">
+                            {['week', 'month', 'year'].map((r) => (
+                                <button
+                                    key={r}
+                                    className={`px-4 py-1.5 text-xs font-bold rounded-lg transition-all ${
+                                        chartRange === r
+                                            ? 'bg-primary text-white shadow-md'
+                                            : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
+                                    }`}
+                                    onClick={() => {
+                                        setChartRange(r);
+                                        setNavOffset(0);
+                                    }}
+                                >
+                                    {r.charAt(0).toUpperCase() + r.slice(1)}
+                                </button>
                             ))}
                         </div>
-                    )}
+                    </div>
+
+                    <div className="relative min-h-[350px]">
+                        {chartLoading && (
+                            <div className="absolute inset-0 z-10 bg-white/50 dark:bg-[#0e1726]/50 flex items-center justify-center backdrop-blur-[1px] rounded-xl">
+                                <span className="animate-spin border-2 border-primary border-t-transparent rounded-full w-8 h-8"></span>
+                            </div>
+                        )}
+
+                        <ReactApexChart
+                            series={[{ name: 'Work Hours', data: chartData?.series || [] }]}
+                            options={{
+                                chart: {
+                                    height: 350,
+                                    type: 'area',
+                                    fontFamily: 'Nunito, sans-serif',
+                                    toolbar: { show: false },
+                                    zoom: { enabled: false },
+                                },
+                                colors: ['#4361ee'],
+                                dataLabels: { enabled: false },
+                                stroke: { curve: 'smooth', width: 3 },
+                                fill: {
+                                    type: 'gradient',
+                                    gradient: {
+                                        shadeIntensity: 1,
+                                        inverseColors: false,
+                                        opacityFrom: 0.45,
+                                        opacityTo: 0.05,
+                                        stops: [20, 100],
+                                    },
+                                },
+                                grid: {
+                                    borderColor: isDark ? '#191e3a' : '#e0e6ed',
+                                    strokeDashArray: 5,
+                                    xaxis: { lines: { show: false } },
+                                    yaxis: { lines: { show: true } },
+                                },
+                                xaxis: {
+                                    categories: chartData?.labels || [],
+                                    axisBorder: { show: false },
+                                    axisTicks: { show: false },
+                                    labels: {
+                                        style: {
+                                            colors: isDark ? '#bfc9d4' : '#888ea8',
+                                            fontSize: '11px',
+                                            fontWeight: 700,
+                                        },
+                                    },
+                                },
+                                yaxis: {
+                                    labels: {
+                                        formatter: (val: any) => `${val}h`,
+                                        style: {
+                                            colors: isDark ? '#bfc9d4' : '#888ea8',
+                                            fontSize: '11px',
+                                            fontWeight: 700,
+                                        },
+                                    },
+                                },
+                                annotations: {
+                                    xaxis: (chartData?.holidays || [])
+                                        .map((isHol, idx) =>
+                                            isHol
+                                                ? {
+                                                      x: chartData?.labels[idx],
+                                                      strokeDashArray: 0,
+                                                      borderColor: 'transparent',
+                                                      label: {
+                                                          borderColor: 'transparent',
+                                                          style: {
+                                                              color: '#e7515a',
+                                                              background: isDark ? '#e7515a22' : '#e7515a11',
+                                                              fontSize: '9px',
+                                                              fontWeight: 800,
+                                                              padding: { left: 4, right: 4, top: 2, bottom: 2 },
+                                                          },
+                                                          text: chartRange === 'year' ? '' : 'OFF',
+                                                          orientation: 'horizontal',
+                                                          position: 'top',
+                                                          offsetY: 10,
+                                                      },
+                                                  }
+                                                : null
+                                        )
+                                        .filter(Boolean) as any[],
+                                },
+                                tooltip: {
+                                    theme: isDark ? 'dark' : 'light',
+                                    x: { show: true },
+                                    y: {
+                                        formatter: (val: any) => `${val} hours`,
+                                    },
+                                },
+                            }}
+                            type="area"
+                            height={350}
+                        />
+                    </div>
                 </div>
 
-                {/* Quick Shortcuts */}
-                <div className="panel p-6 shadow-sm border-0">
-                    <h3 className="text-lg font-bold text-gray-800 dark:text-white mb-5 flex items-center gap-3">
-                        <span className="w-1.5 h-6 bg-gradient-to-b from-primary to-indigo-500 rounded-full"></span>
-                        Quick Navigations
-                    </h3>
-                    
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <Link
-                            to="/employee/chat"
-                            className="group p-5 bg-gradient-to-br from-[#f8fafc] to-[#f1f5f9] dark:from-[#1b2e4b] dark:to-[#1a2941] rounded-2xl border border-gray-100 dark:border-gray-800 hover:shadow-lg transition-all duration-300 hover:scale-[1.02]"
-                        >
-                            <div className="flex items-center gap-4">
-                                <div className="w-12 h-12 bg-white dark:bg-[#0e1726] rounded-xl shadow-sm flex items-center justify-center text-primary group-hover:bg-primary group-hover:text-white transition-colors duration-300">
-                                    <IconMenuChat className="w-6 h-6" />
-                                </div>
-                                <div>
-                                    <h4 className="font-bold text-gray-800 dark:text-gray-100 text-base">Chat System</h4>
-                                    <p className="text-xs text-gray-500 mt-1">Message your team</p>
-                                </div>
-                            </div>
-                        </Link>
-
-                        <Link
-                            to="/employee/calendar"
-                            className="group p-5 bg-gradient-to-br from-[#f8fafc] to-[#f1f5f9] dark:from-[#1b2e4b] dark:to-[#1a2941] rounded-2xl border border-gray-100 dark:border-gray-800 hover:shadow-lg transition-all duration-300 hover:scale-[1.02]"
-                        >
-                            <div className="flex items-center gap-4">
-                                <div className="w-12 h-12 bg-white dark:bg-[#0e1726] rounded-xl shadow-sm flex items-center justify-center text-violet-500 group-hover:bg-violet-500 group-hover:text-white transition-colors duration-300">
-                                    <IconCalendar className="w-6 h-6" />
-                                </div>
-                                <div>
-                                    <h4 className="font-bold text-gray-800 dark:text-gray-100 text-base">Calendar</h4>
-                                    <p className="text-xs text-gray-500 mt-1">View holidays & events</p>
-                                </div>
-                            </div>
-                        </Link>
-                        
-                        <Link
-                            to="/employee/asset-requests"
-                            className="group p-5 bg-gradient-to-br from-[#f8fafc] to-[#f1f5f9] dark:from-[#1b2e4b] dark:to-[#1a2941] rounded-2xl border border-gray-100 dark:border-gray-800 hover:shadow-lg transition-all duration-300 hover:scale-[1.02] sm:col-span-2"
-                        >
-                            <div className="flex items-center gap-4">
-                                <div className="w-12 h-12 bg-white dark:bg-[#0e1726] rounded-xl shadow-sm flex items-center justify-center text-success group-hover:bg-success group-hover:text-white transition-colors duration-300">
-                                    <IconListCheck className="w-6 h-6" />
-                                </div>
-                                <div>
-                                    <h4 className="font-bold text-gray-800 dark:text-gray-100 text-base">Asset Requests</h4>
-                                    <p className="text-xs text-gray-500 mt-1">Request supplies or report core asset damages directly from the IT catalog.</p>
-                                </div>
-                            </div>
-                        </Link>
+                {/* Today's Timeline */}
+                <div className="panel shadow-lg border-0 bg-white dark:bg-[#0e1726]">
+                    <div className="flex items-center justify-between mb-5">
+                        <h5 className="font-bold text-lg dark:text-white">Today's Timeline</h5>
+                        <div className="p-2 bg-warning/10 rounded-lg">
+                            <IconClock className="w-5 h-5 text-warning" />
+                        </div>
                     </div>
+                    <div className="space-y-4">
+                        {data?.recent_breaks && data.recent_breaks.length > 0 ? (
+                            data.recent_breaks.map((b, i) => (
+                                <div key={i} className="flex gap-4 relative">
+                                    {i !== data.recent_breaks!.length - 1 && (
+                                        <div className="absolute left-[11px] top-6 bottom-0 w-0.5 bg-gray-100 dark:bg-gray-800"></div>
+                                    )}
+                                    <div className={`w-6 h-6 rounded-full border-4 ${b.end ? 'border-primary bg-primary' : 'border-warning bg-warning animate-pulse'} z-10`}></div>
+                                    <div className="flex-1 pb-4">
+                                        <p className="text-sm font-bold text-gray-900 dark:text-white capitalize">{b.type?.replace(/_/g, ' ')}</p>
+                                        <p className="text-xs text-gray-500">{b.start_time} - {b.end_time || 'Active'}</p>
+                                        <p className="text-[10px] text-primary font-bold mt-1 bg-primary/5 inline-block px-2 py-0.5 rounded uppercase tracking-tighter">
+                                            {b.duration || 'Running...'}
+                                        </p>
+                                    </div>
+                                </div>
+                            ))
+                        ) : (
+                            <div className="text-center py-10 bg-gray-50/50 dark:bg-black/10 rounded-2xl border border-dashed border-gray-200 dark:border-gray-800">
+                                <IconClock className="w-10 h-10 text-gray-300 dark:text-gray-700 mx-auto mb-3" />
+                                <p className="text-sm text-gray-500">No activity logged yet today.</p>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            </div>
+
+            {/* Quick Shortcuts */}
+            <div className="panel p-6 shadow-lg border-0 bg-white dark:bg-[#0e1726]">
+                <div className="flex items-center justify-between mb-5">
+                    <h5 className="font-bold text-lg dark:text-white">Quick Navigations</h5>
+                </div>
+                
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <Link
+                        to="/employee/chat"
+                        className="group p-5 bg-gradient-to-br from-[#f8fafc] to-[#f1f5f9] dark:from-[#1b2e4b] dark:to-[#1a2941] rounded-2xl border border-gray-100 dark:border-gray-800 hover:shadow-lg transition-all duration-300 hover:scale-[1.02]"
+                    >
+                        <div className="flex items-center gap-4">
+                            <div className="w-12 h-12 bg-white dark:bg-[#0e1726] rounded-xl shadow-sm flex items-center justify-center text-primary group-hover:bg-primary group-hover:text-white transition-colors duration-300 border border-gray-100 dark:border-gray-800">
+                                <IconMenuChat className="w-6 h-6" />
+                            </div>
+                            <div>
+                                <h4 className="font-bold text-gray-800 dark:text-gray-100 text-base">Chat System</h4>
+                                <p className="text-xs text-gray-500 mt-1">Message your team</p>
+                            </div>
+                        </div>
+                    </Link>
+
+                    <Link
+                        to="/employee/calendar"
+                        className="group p-5 bg-gradient-to-br from-[#f8fafc] to-[#f1f5f9] dark:from-[#1b2e4b] dark:to-[#1a2941] rounded-2xl border border-gray-100 dark:border-gray-800 hover:shadow-lg transition-all duration-300 hover:scale-[1.02]"
+                    >
+                        <div className="flex items-center gap-4">
+                            <div className="w-12 h-12 bg-white dark:bg-[#0e1726] rounded-xl shadow-sm flex items-center justify-center text-violet-500 group-hover:bg-violet-500 group-hover:text-white transition-colors duration-300 border border-gray-100 dark:border-gray-800">
+                                <IconCalendar className="w-6 h-6" />
+                            </div>
+                            <div>
+                                <h4 className="font-bold text-gray-800 dark:text-gray-100 text-base">Calendar</h4>
+                                <p className="text-xs text-gray-500 mt-1">View holidays & events</p>
+                            </div>
+                        </div>
+                    </Link>
+                    
+                    <Link
+                        to="/employee/asset-requests"
+                        className="group p-5 bg-gradient-to-br from-[#f8fafc] to-[#f1f5f9] dark:from-[#1b2e4b] dark:to-[#1a2941] rounded-2xl border border-gray-100 dark:border-gray-800 hover:shadow-lg transition-all duration-300 hover:scale-[1.02] lg:col-span-1"
+                    >
+                        <div className="flex items-center gap-4">
+                            <div className="w-12 h-12 bg-white dark:bg-[#0e1726] rounded-xl shadow-sm flex items-center justify-center text-success group-hover:bg-success group-hover:text-white transition-colors duration-300 border border-gray-100 dark:border-gray-800">
+                                <IconListCheck className="w-6 h-6" />
+                            </div>
+                            <div>
+                                <h4 className="font-bold text-gray-800 dark:text-gray-100 text-base">Asset Requests</h4>
+                                <p className="text-xs text-gray-500 mt-1">Request supplies or report damages.</p>
+                            </div>
+                        </div>
+                    </Link>
                 </div>
             </div>
         </div>
