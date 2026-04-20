@@ -420,9 +420,9 @@ class DashboardAPIView(APIView):
         try:
             # Get employee
             employee = Employee.objects.get(email=user.email)
-            today = timezone.localdate()
             tz = pytz.timezone('Asia/Kolkata')
             now = timezone.localtime(timezone.now(), tz)
+            today = now.date()
 
             # Today's attendance
             attendance = Attendance.objects.filter(employee=employee, date=today).first()
@@ -1357,19 +1357,21 @@ class BreakLogAPIView(APIView):
         return Response(serializer.data)
 
     def post(self, request):
-        
         employee = request.user.employee_profile
-        break_config_id = request.data.get("break_config_id")
         action = request.data.get("action")  # "start" or "end"
 
-        break_config = get_object_or_404(
-            BreakConfig, 
-            id=break_config_id, 
-            company=employee.company, 
-            enabled=True
-        )
-
         if action == "start":
+            break_config_id = request.data.get("break_config_id")
+            if not break_config_id:
+                return Response({"detail": "break_config_id is required to start a break."}, status=400)
+                
+            break_config = get_object_or_404(
+                BreakConfig, 
+                id=break_config_id, 
+                company=employee.company, 
+                enabled=True
+            )
+
             # Prevent starting a new break if one is active
             active_break = BreakLog.objects.filter(
                 employee=employee, 
@@ -1379,20 +1381,21 @@ class BreakLogAPIView(APIView):
                 return Response({"detail": "You already have an active break."}, status=400)
 
             break_log = BreakLog.objects.create(
-                    employee=employee,
-                    break_config=break_config,  
-                    start=timezone.now()
-                )
+                employee=employee,
+                break_config=break_config,  
+                start=timezone.now()
+            )
             return Response(EmployeeBreakLogSerializer(break_log).data, status=201)
 
         elif action == "end":
+            # Find any active break regardless of config ID
             active_break = BreakLog.objects.filter(
                 employee=employee, 
-                break_config=break_config, 
                 end__isnull=True
-            ).first()
+            ).last() # Use last() to get the most recent active one if multiple exist (though shouldn't)
+            
             if not active_break:
-                return Response({"detail": "No active break found."}, status=400)
+                return Response({"detail": "No active break found for you."}, status=400)
 
             active_break.end = timezone.now()
             if active_break.start:

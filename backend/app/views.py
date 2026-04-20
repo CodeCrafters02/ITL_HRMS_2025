@@ -1,4 +1,5 @@
 from rest_framework import viewsets, generics, status
+import pytz
 import string
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -274,8 +275,17 @@ class CompanyUpdateAPIView(APIView):
 class AdminDashboardAPIView(APIView):
     permission_classes = [IsAuthenticated,IsAdminUser]
     def get(self, request):
-        today = timezone.now().date()
-        company = request.user.company  
+        tz = pytz.timezone('Asia/Kolkata')
+        now = timezone.localtime(timezone.now(), tz)
+        today = now.date()
+        company = request.user.company
+
+        # Personal birthday message for the admin
+        birthday_message = None
+        emp_profile = request.user.employee_profile
+        if emp_profile and emp_profile.date_of_birth:
+            if emp_profile.date_of_birth.day == today.day and emp_profile.date_of_birth.month == today.month:
+                birthday_message = f"Happy Birthday, {request.user.first_name or request.user.username}! 🎉"
 
         # Department count
         total_departments = Department.objects.filter(company=company).count()
@@ -370,6 +380,7 @@ class AdminDashboardAPIView(APIView):
             "pending_leave_requests": pending_leaves,
             "payroll_status": payroll_status,
             "next_salary_release_date": next_salary_release_date,
+            "birthday_message": birthday_message,
         })
 
     def _calculate_attendance_snapshot(self, company, today, employees):
