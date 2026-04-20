@@ -147,3 +147,79 @@ class EmployeeReference(models.Model):
 
     def __str__(self):
         return f"{self.name} ({self.employee.username})"
+
+
+class Announcement(models.Model):
+    """
+    Lightweight, company-scoped announcements shown on employee dashboard.
+    """
+
+    company = models.ForeignKey(
+        "app.Company",
+        on_delete=models.CASCADE,
+        related_name="announcements",
+    )
+    title = models.CharField(max_length=120)
+    body = models.TextField(blank=True)
+    image = models.ImageField(
+        upload_to="announcements/",
+        blank=True,
+        null=True,
+    )
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="announcements_created",
+    )
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return f"{self.company_id}: {self.title}"
+
+
+class Project(models.Model):
+    company = models.ForeignKey(
+        "app.Company",
+        on_delete=models.CASCADE,
+        related_name="projects",
+    )
+    name = models.CharField(max_length=120)
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["name"]
+        unique_together = [("company", "name")]
+
+    def __str__(self):
+        return f"{self.company_id}: {self.name}"
+
+
+class TimeEntry(models.Model):
+    employee = models.ForeignKey(
+        "app.Employee",
+        on_delete=models.CASCADE,
+        related_name="time_entries",
+    )
+    date = models.DateField()
+    project = models.ForeignKey(
+        Project,
+        on_delete=models.PROTECT,
+        related_name="time_entries",
+    )
+    job_name = models.CharField(max_length=120, blank=True)
+    description = models.TextField(blank=True)
+    minutes = models.PositiveIntegerField()
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-date", "-created_at"]
+
+    def __str__(self):
+        return f"{self.employee_id} {self.date} {self.minutes}m"

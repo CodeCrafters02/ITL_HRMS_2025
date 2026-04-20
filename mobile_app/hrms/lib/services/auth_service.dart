@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:math';
 
 import 'package:flutter/services.dart';
 import 'package:google_sign_in/google_sign_in.dart';
@@ -11,6 +12,7 @@ import 'fcm_service.dart';
 
 class AuthService {
   static GoogleSignIn? _googleSignIn;
+  static const Duration _refreshLeeway = Duration(minutes: 3);
 
   static GoogleSignIn _ensureGoogleSignIn() {
     if (kGoogleServerClientId.isEmpty) {
@@ -71,6 +73,9 @@ class AuthService {
           username: (storedName != null && storedName.isNotEmpty)
               ? storedName
               : email,
+          userEmail: email,
+          firstName: (data['first_name'] as String?)?.trim(),
+          lastName: (data['last_name'] as String?)?.trim(),
         );
 
         return ApiResponse(
@@ -215,7 +220,10 @@ class AuthService {
         return false;
       }
 
-      // Try to refresh token first to validate both tokens
+      if (!_isJwtExpiringSoon(token, leeway: _refreshLeeway)) {
+        return true;
+      }
+
       final refreshResponse = await refreshToken();
       return refreshResponse.success;
     } catch (e) {
@@ -234,21 +242,47 @@ class AuthService {
         return false;
       }
 
-      // Try to validate by attempting to refresh token
-      // This ensures both access and refresh tokens are valid
+      // Avoid refreshing on every app start; refresh only when close to expiry.
+      if (!_isJwtExpiringSoon(accessToken, leeway: _refreshLeeway)) {
+        return true;
+      }
+
       final refreshResponse = await refreshToken();
-      
       if (refreshResponse.success) {
         return true;
       }
 
-      // If refresh fails, tokens are invalid - clear them
       await logout();
       return false;
     } catch (e) {
       // On any error, clear tokens and return false
       await logout();
       return false;
+    }
+  }
+
+  static bool _isJwtExpiringSoon(String jwt, {required Duration leeway}) {
+    try {
+      final parts = jwt.split('.');
+      if (parts.length < 2) return true;
+
+      final payload = parts[1];
+      final normalized = base64Url.normalize(payload);
+      final decoded = utf8.decode(base64Url.decode(normalized));
+      final json = jsonDecode(decoded);
+      if (json is! Map<String, dynamic>) return true;
+
+      final exp = json['exp'];
+      if (exp is! num) return true;
+
+      final expMs = exp.toInt() * 1000;
+      final nowMs = DateTime.now().millisecondsSinceEpoch;
+      final remainingMs = expMs - nowMs;
+
+      return remainingMs <= max(0, leeway.inMilliseconds);
+    } catch (_) {
+      // If we can't parse, be safe and refresh.
+      return true;
     }
   }
 

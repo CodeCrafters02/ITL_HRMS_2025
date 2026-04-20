@@ -67,6 +67,88 @@ class ReportingManagerAPIView(APIView):
         return Response(serializer.data)
 
 
+class EmployeeAnnouncementsAPIView(generics.ListAPIView):
+    serializer_class = AnnouncementSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        employee = getattr(self.request.user, "employee_profile", None)
+        if not employee or not employee.company_id:
+            return Announcement.objects.none()
+        qs = Announcement.objects.filter(company_id=employee.company_id, is_active=True)
+        limit = self.request.query_params.get("limit")
+        if limit:
+            try:
+                limit_i = int(limit)
+                if 0 < limit_i <= 50:
+                    return qs[:limit_i]
+            except Exception:
+                pass
+        return qs
+
+
+class TimeLogMetaAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        employee = getattr(request.user, "employee_profile", None)
+        if not employee or not employee.company_id:
+            return Response({"detail": "No company linked."}, status=404)
+        projects = Project.objects.filter(company_id=employee.company_id, is_active=True).order_by("name")
+        return Response(
+            {
+                "projects": ProjectSerializer(projects, many=True).data,
+            }
+        )
+
+
+class TimeLogListCreateAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        employee = getattr(request.user, "employee_profile", None)
+        if not employee:
+            return Response({"detail": "Employee not found."}, status=404)
+        date_str = request.query_params.get("date")
+        if date_str:
+            try:
+                target_date = datetime.strptime(date_str, "%Y-%m-%d").date()
+            except Exception:
+                return Response({"detail": "Invalid date format. Use YYYY-MM-DD."}, status=400)
+        else:
+            target_date = timezone.localdate()
+
+        qs = TimeEntry.objects.filter(employee_id=employee.id, date=target_date).select_related("project")
+        return Response({"date": str(target_date), "entries": TimeEntrySerializer(qs, many=True).data})
+
+    def post(self, request):
+        employee = getattr(request.user, "employee_profile", None)
+        if not employee or not employee.company_id:
+            return Response({"detail": "Employee not found."}, status=404)
+
+        ser = TimeEntryCreateSerializer(data=request.data)
+        ser.is_valid(raise_exception=True)
+        data = ser.validated_data
+
+        entry_date = data.get("date") or timezone.localdate()
+        project_id = data["project_id"]
+        try:
+            project = Project.objects.get(id=project_id, company_id=employee.company_id, is_active=True)
+        except Project.DoesNotExist:
+            return Response({"detail": "Invalid project."}, status=400)
+
+        entry = TimeEntry.objects.create(
+            employee_id=employee.id,
+            date=entry_date,
+            project=project,
+            job_name=data.get("job_name", ""),
+            description=data.get("description", ""),
+            minutes=data["minutes"],
+        )
+
+        return Response(TimeEntrySerializer(entry).data, status=201)
+
+
 class CheckInAPIView(APIView):
     permission_classes = [IsAuthenticated]
 

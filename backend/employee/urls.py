@@ -14,6 +14,9 @@ urlpatterns = [
     path('checkin/', CheckInAPIView.as_view(), name='api_checkin'),
     path('checkout/', CheckOutAPIView.as_view(), name='api_checkout'),
     path('dashboard/', DashboardAPIView.as_view(), name='dashboard'),
+    path('announcements/', EmployeeAnnouncementsAPIView.as_view(), name='employee-announcements'),
+    path('time-log/meta/', TimeLogMetaAPIView.as_view(), name='time-log-meta'),
+    path('time-log/', TimeLogListCreateAPIView.as_view(), name='time-log'),
     path('employee-notifications/', NotificationListAPIView.as_view(), name='employee-notifications'),
 
     path('attendance-history/', AttendanceHistoryAPIView.as_view(), name='attendance_history'),

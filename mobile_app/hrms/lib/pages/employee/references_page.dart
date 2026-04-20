@@ -343,10 +343,12 @@ class _ReferencesPageState extends State<ReferencesPage> {
                     vertical: 4,
                   ),
                   decoration: BoxDecoration(
-                    color: _getStatusColor(reference.status).withOpacity(0.1),
+                    color: _getStatusColor(reference.status)
+                        .withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(6),
                     border: Border.all(
-                      color: _getStatusColor(reference.status).withOpacity(0.3),
+                      color: _getStatusColor(reference.status)
+                          .withValues(alpha: 0.3),
                       width: 1,
                     ),
                   ),
