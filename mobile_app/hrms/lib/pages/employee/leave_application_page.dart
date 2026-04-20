@@ -353,7 +353,7 @@ class _LeaveApplicationPageState extends State<LeaveApplicationPage> {
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.1),
+            color: Colors.black.withValues(alpha: 0.1),
             blurRadius: 4,
             offset: const Offset(0, 2),
           ),
@@ -381,8 +381,8 @@ class _LeaveApplicationPageState extends State<LeaveApplicationPage> {
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
             decoration: BoxDecoration(
               color: leaveType.isPaid
-                  ? const Color(0xFF10B981).withOpacity(0.2)
-                  : const Color(0xFFEF4444).withOpacity(0.2),
+                  ? const Color(0xFF10B981).withValues(alpha: 0.2)
+                  : const Color(0xFFEF4444).withValues(alpha: 0.2),
               borderRadius: BorderRadius.circular(6),
             ),
             child: Text(
@@ -542,7 +542,7 @@ class _LeaveApplicationPageState extends State<LeaveApplicationPage> {
                   color: _getStatusBgColor(leave.status),
                   borderRadius: BorderRadius.circular(6),
                   border: Border.all(
-                    color: _getStatusColor(leave.status).withOpacity(0.3),
+                    color: _getStatusColor(leave.status).withValues(alpha: 0.3),
                     width: 1,
                   ),
                 ),

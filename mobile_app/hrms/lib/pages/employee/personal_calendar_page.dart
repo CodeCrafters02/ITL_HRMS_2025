@@ -322,7 +322,7 @@ class _PersonalCalendarPageState extends State<PersonalCalendarPage> {
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 4,
             offset: const Offset(0, 2),
           ),
@@ -396,7 +396,7 @@ class _PersonalCalendarPageState extends State<PersonalCalendarPage> {
         margin: const EdgeInsets.all(2),
         decoration: BoxDecoration(
           color: isSelected
-              ? const Color(0xFF4F46E5).withOpacity(0.1)
+              ? const Color(0xFF4F46E5).withValues(alpha: 0.1)
               : day.isToday
                   ? const Color(0xFFF3F4F6)
                   : Colors.transparent,
@@ -405,7 +405,7 @@ class _PersonalCalendarPageState extends State<PersonalCalendarPage> {
             color: isSelected
                 ? const Color(0xFF4F46E5)
                 : day.isToday
-                    ? const Color(0xFF4F46E5).withOpacity(0.3)
+                    ? const Color(0xFF4F46E5).withValues(alpha: 0.3)
                     : Colors.transparent,
             width: isSelected ? 2 : 1,
           ),
@@ -477,7 +477,7 @@ class _PersonalCalendarPageState extends State<PersonalCalendarPage> {
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 4,
             offset: const Offset(0, 2),
           ),
@@ -538,13 +538,13 @@ class _PersonalCalendarPageState extends State<PersonalCalendarPage> {
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: isPersonal
-            ? const Color(0xFFDBEAFE).withOpacity(0.3)
-            : const Color(0xFFD1FAE5).withOpacity(0.3),
+            ? const Color(0xFFDBEAFE).withValues(alpha: 0.3)
+            : const Color(0xFFD1FAE5).withValues(alpha: 0.3),
         borderRadius: BorderRadius.circular(8),
         border: Border.all(
           color: isPersonal
-              ? const Color(0xFF2563EB).withOpacity(0.3)
-              : const Color(0xFF10B981).withOpacity(0.3),
+              ? const Color(0xFF2563EB).withValues(alpha: 0.3)
+              : const Color(0xFF10B981).withValues(alpha: 0.3),
           width: 1,
         ),
       ),

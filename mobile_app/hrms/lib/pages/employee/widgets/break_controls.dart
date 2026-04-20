@@ -341,7 +341,7 @@ class _BreakControlsState extends State<BreakControls> {
             top: offset.dy + size.height + 8,
             child: Material(
               elevation: 12,
-              shadowColor: Colors.black.withOpacity(0.2),
+              shadowColor: Colors.black.withValues(alpha: 0.2),
               borderRadius: BorderRadius.circular(8),
               child: Container(
                 width: 180,
@@ -351,7 +351,7 @@ class _BreakControlsState extends State<BreakControls> {
                   border: Border.all(color: AppStitchTheme.outline),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.1),
+                      color: Colors.black.withValues(alpha: 0.1),
                       blurRadius: 8,
                       offset: const Offset(0, 4),
                     ),
@@ -474,7 +474,7 @@ class _BreakControlsState extends State<BreakControls> {
             top: offset.dy + size.height + 8,
             child: Material(
               elevation: 12,
-              shadowColor: Colors.black.withOpacity(0.2),
+              shadowColor: Colors.black.withValues(alpha: 0.2),
               borderRadius: BorderRadius.circular(8),
               child: Container(
                 width: 150,
@@ -484,7 +484,7 @@ class _BreakControlsState extends State<BreakControls> {
                   border: Border.all(color: AppStitchTheme.outline),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.1),
+                      color: Colors.black.withValues(alpha: 0.1),
                       blurRadius: 8,
                       offset: const Offset(0, 4),
                     ),

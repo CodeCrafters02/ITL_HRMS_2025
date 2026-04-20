@@ -11,6 +11,8 @@ import 'attendance_history_page.dart';
 import 'widgets/employee_drawer.dart';
 import 'widgets/employee_bottom_nav.dart';
 import 'widgets/notification_button.dart';
+import '../../widgets/stitch_background.dart';
+import '../../widgets/glass_card.dart';
 
 class EmployeeLayout extends StatefulWidget {
   const EmployeeLayout({super.key});
@@ -211,7 +213,7 @@ class _EmployeeLayoutState extends State<EmployeeLayout> with WidgetsBindingObse
           border: Border.all(color: Colors.white, width: 2),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.1),
+              color: Colors.black.withValues(alpha: 0.1),
               blurRadius: 4,
               offset: const Offset(0, 2),
             ),
@@ -262,40 +264,54 @@ class _EmployeeLayoutState extends State<EmployeeLayout> with WidgetsBindingObse
   Widget build(BuildContext context) {
     return Scaffold(
       key: _scaffoldKey,
-      appBar: AppBar(
-        leading: IconButton(
-          icon: const Icon(Icons.menu),
-          onPressed: () => _scaffoldKey.currentState?.openDrawer(),
-        ),
-        title: Row(
-          children: [
-            Image.asset(
-              'assets/logo/app_logo.png',
-              height: 32,
-              width: 32,
-              errorBuilder: (context, error, stackTrace) => const SizedBox(),
-            ),
-            const SizedBox(width: 12),
-            Text(_getPageTitle()),
-          ],
-        ),
-        actions: [
-          const Padding(
-            padding: EdgeInsets.only(right: 8.0),
-            child: NotificationButton(),
-          ),
-          _buildProfileAvatar(),
-          const SizedBox(width: 8),
-        ],
-        backgroundColor: AppStitchTheme.primary,
-        foregroundColor: Colors.white,
-        elevation: 0,
-      ),
       drawer: EmployeeDrawer(
         isReportingManager: _isReportingManager,
         onItemTap: _onDrawerItemTap,
       ),
-      body: _getPage(_currentIndex),
+      body: StitchBackground(
+        child: SafeArea(
+          child: Column(
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 10),
+                child: GlassCard(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                  child: Row(
+                    children: [
+                      IconButton(
+                        icon: const Icon(Icons.menu_rounded),
+                        onPressed: () => _scaffoldKey.currentState?.openDrawer(),
+                      ),
+                      Image.asset(
+                        'assets/logo/app_logo.png',
+                        height: 28,
+                        width: 28,
+                        errorBuilder: (context, error, stackTrace) =>
+                            const SizedBox(width: 0, height: 0),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          _getPageTitle(),
+                          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                fontWeight: FontWeight.w800,
+                                color: AppStitchTheme.lightOnSurface,
+                              ),
+                        ),
+                      ),
+                      const NotificationButton(),
+                      _buildProfileAvatar(),
+                    ],
+                  ),
+                ),
+              ),
+              Expanded(
+                child: _getPage(_currentIndex),
+              ),
+            ],
+          ),
+        ),
+      ),
       bottomNavigationBar: EmployeeBottomNav(
         currentIndex: _currentIndex,
         onTap: _onBottomNavTap,

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../models/break_model.dart';
 import '../../../theme/app_stitch_theme.dart';
+import '../../../widgets/glass_card.dart';
 
 class RecentBreaksCard extends StatelessWidget {
   final List<BreakData>? recentBreaks;
@@ -14,43 +15,31 @@ class RecentBreaksCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final breaks = recentBreaks ?? [];
 
-    return Card(
-      elevation: 0,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(20),
-        side: const BorderSide(color: AppStitchTheme.outline),
-      ),
-      color: AppStitchTheme.surface,
+    return GlassCard(
+      borderRadius: 28,
+      padding: const EdgeInsets.all(18),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Padding(
-            padding: const EdgeInsets.all(24.0),
-            child: Row(
-              children: [
-                const Icon(
-                  Icons.coffee,
-                  color: Color(0xFFF59E0B),
-                  size: 20,
-                ),
-                const SizedBox(width: 8),
-                Text(
-                  'Recent Break Activity',
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.w600,
-                    color: AppStitchTheme.onSurface,
-                  ),
-                ),
-              ],
-            ),
+          Row(
+            children: [
+              const Icon(
+                Icons.coffee,
+                color: Color(0xFFF59E0B),
+                size: 20,
+              ),
+              const SizedBox(width: 8),
+              Text(
+                'Recent Break Activity',
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w800,
+                      color: AppStitchTheme.lightOnSurface,
+                    ),
+              ),
+            ],
           ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(24.0, 0, 24.0, 24.0),
-            child: breaks.isEmpty
-                ? _buildEmptyState()
-                : _buildBreaksGrid(breaks),
-          ),
+          const SizedBox(height: 14),
+          breaks.isEmpty ? _buildEmptyState() : _buildBreaksGrid(breaks),
         ],
       ),
     );
@@ -65,14 +54,14 @@ class RecentBreaksCard extends StatelessWidget {
             Icon(
               Icons.coffee_outlined,
               size: 48,
-              color: AppStitchTheme.onSurfaceMuted,
+              color: AppStitchTheme.lightOnSurfaceMuted,
             ),
             const SizedBox(height: 16),
             Text(
               'No recent break activity',
               style: TextStyle(
                 fontSize: 14,
-                color: AppStitchTheme.onSurfaceMuted,
+                color: AppStitchTheme.lightOnSurfaceMuted,
               ),
             ),
           ],
@@ -107,7 +96,7 @@ class RecentBreaksCard extends StatelessWidget {
                 vertical: 10,
               ),
               decoration: BoxDecoration(
-                color: AppStitchTheme.surfaceElevated,
+                color: Colors.white.withValues(alpha: 0.55),
                 borderRadius: BorderRadius.circular(16),
               ),
               child: Row(
@@ -130,7 +119,7 @@ class RecentBreaksCard extends StatelessWidget {
                             style: TextStyle(
                               fontSize: 13,
                               fontWeight: FontWeight.w500,
-                              color: AppStitchTheme.onSurface,
+                              color: AppStitchTheme.lightOnSurface,
                             ),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
@@ -142,7 +131,7 @@ class RecentBreaksCard extends StatelessWidget {
                             '${breakItem.startTime} - ${breakItem.endTime ?? 'Active'}',
                             style: TextStyle(
                               fontSize: 11,
-                              color: AppStitchTheme.onSurfaceMuted,
+                              color: AppStitchTheme.lightOnSurfaceMuted,
                             ),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,

@@ -539,9 +539,9 @@ class _AssignTaskPageState extends State<AssignTaskPage> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
+        color: color.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(6),
-        border: Border.all(color: color.withOpacity(0.3), width: 1),
+        border: Border.all(color: color.withValues(alpha: 0.3), width: 1),
       ),
       child: Text(
         '$label: ${value.toUpperCase()}',
@@ -641,7 +641,8 @@ class _AssignTaskPageState extends State<AssignTaskPage> {
                             vertical: 4,
                           ),
                           decoration: BoxDecoration(
-                            color: const Color(0xFF6B7280).withOpacity(0.1),
+                            color: const Color(0xFF6B7280)
+                                .withValues(alpha: 0.1),
                             borderRadius: BorderRadius.circular(6),
                           ),
                           child: Text(

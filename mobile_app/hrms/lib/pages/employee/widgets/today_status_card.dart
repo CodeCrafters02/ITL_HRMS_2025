@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../models/dashboard_model.dart';
 import '../../../theme/app_stitch_theme.dart';
+import '../../../widgets/glass_card.dart';
 
 class TodayStatusCard extends StatelessWidget {
   final DashboardData dashboardData;
@@ -9,40 +10,31 @@ class TodayStatusCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      elevation: 0,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(20),
-        side: const BorderSide(color: AppStitchTheme.outline),
-      ),
-      color: AppStitchTheme.surface,
+    return GlassCard(
+      borderRadius: 28,
+      padding: const EdgeInsets.all(18),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Padding(
-            padding: const EdgeInsets.all(24.0),
-            child: Row(
-              children: [
-                const Icon(
-                  Icons.calendar_today,
-                  color: Color(0xFF2563EB),
-                  size: 20,
-                ),
-                const SizedBox(width: 8),
-                Text(
-                  "Today's Status",
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.w600,
-                    color: AppStitchTheme.onSurface,
-                  ),
-                ),
-              ],
-            ),
+          Row(
+            children: [
+              const Icon(
+                Icons.calendar_today,
+                color: Color(0xFF2563EB),
+                size: 20,
+              ),
+              const SizedBox(width: 8),
+              Text(
+                "Today's Status",
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w800,
+                      color: AppStitchTheme.lightOnSurface,
+                    ),
+              ),
+            ],
           ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(24.0, 0, 24.0, 24.0),
-            child: LayoutBuilder(
+          const SizedBox(height: 14),
+          LayoutBuilder(
               builder: (context, constraints) {
                 final isWide = constraints.maxWidth > 600;
                 if (isWide) {
@@ -173,14 +165,18 @@ class TodayStatusCard extends StatelessWidget {
                               vertical: 8,
                             ),
                             decoration: BoxDecoration(
-                              color: const Color(0xFF450A0A),
+                              color: const Color(0xFFEF4444)
+                                  .withValues(alpha: 0.08),
                               borderRadius: BorderRadius.circular(12),
-                              border: Border.all(color: const Color(0xFFEF4444).withValues(alpha: 0.5)),
+                              border: Border.all(
+                                color: const Color(0xFFEF4444)
+                                    .withValues(alpha: 0.25),
+                              ),
                             ),
                             child: const Text(
                               'Late arrival detected',
                               style: TextStyle(
-                                color: Color(0xFFFCA5A5),
+                                color: Color(0xFFB91C1C),
                                 fontSize: 14,
                               ),
                             ),
@@ -191,7 +187,6 @@ class TodayStatusCard extends StatelessWidget {
                 }
               },
             ),
-          ),
         ],
       ),
     );
@@ -215,7 +210,7 @@ class TodayStatusCard extends StatelessWidget {
               style: TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.bold,
-                color: AppStitchTheme.onSurface,
+                color: AppStitchTheme.lightOnSurface,
               ),
             ),
           ],
@@ -231,7 +226,7 @@ class TodayStatusCard extends StatelessWidget {
                   item.label,
                   style: TextStyle(
                     fontSize: 14,
-                    color: AppStitchTheme.onSurfaceMuted,
+                    color: AppStitchTheme.lightOnSurfaceMuted,
                   ),
                 ),
                 Text(
@@ -239,7 +234,7 @@ class TodayStatusCard extends StatelessWidget {
                   style: TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w500,
-                    color: item.valueColor ?? AppStitchTheme.onSurface,
+                    color: item.valueColor ?? AppStitchTheme.lightOnSurface,
                   ),
                 ),
               ],

@@ -12,7 +12,7 @@
 /// **iOS:** Add an iOS OAuth client in Google Cloud and `CFBundleURLTypes` / GID config
 /// as in the `google_sign_in` iOS setup docs if sign-in fails on Simulator/device.
 const String _kDefaultWebClientId =
-    '998707069942-p768bcp5kgfivsjk1jbhrb4upq8kfqda.apps.googleusercontent.com';
+    '482392351722-9ps8jbabvg72cgfn8n9i2udl1i9obfrd.apps.googleusercontent.com';
 
 const String kGoogleServerClientId = String.fromEnvironment(
   'GOOGLE_SERVER_CLIENT_ID',

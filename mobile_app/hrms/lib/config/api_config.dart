@@ -1,7 +1,14 @@
 class ApiConfig {
-  // Base URL - Change this to your backend server URL
-  // static const String baseUrl = 'https://apihrms.innovyxtechlabs.com';
-  static const String baseUrl = 'http://192.168.1.4:8000';
+  /// Base URL for the backend API.
+  ///
+  /// Override at build time:
+  /// `--dart-define=API_BASE_URL=https://apihrms.innovyxtechlabs.com`
+  ///
+  /// Keep a sensible dev default for local/LAN testing.
+  static const String baseUrl = String.fromEnvironment(
+    'API_BASE_URL',
+    defaultValue: 'http://192.168.1.9:8000',
+  );
 
   /// Login footer "Contact IT Support" mailto. Override at build:
   /// `--dart-define=IT_SUPPORT_EMAIL=help@company.com`
@@ -61,6 +68,9 @@ class ApiConfig {
       '/employee/employee-hierarchy/';
   static const String deviceTokenEndpoint = '/notifications/devices/';
   static const String learningCornerEndpoint = '/employee/emp-learning-corner/';
+  static const String announcementsEndpoint = '/employee/announcements/';
+  static const String timeLogMetaEndpoint = '/employee/time-log/meta/';
+  static const String timeLogEndpoint = '/employee/time-log/';
 
   // Full URLs
   static String get loginUrl => '$baseUrl$loginEndpoint';
@@ -117,6 +127,9 @@ class ApiConfig {
       '$baseUrl$employeeHierarchyEndpoint';
   static String get deviceTokenUrl => '$baseUrl$deviceTokenEndpoint';
   static String get learningCornerUrl => '$baseUrl$learningCornerEndpoint';
+  static String get announcementsUrl => '$baseUrl$announcementsEndpoint';
+  static String get timeLogMetaUrl => '$baseUrl$timeLogMetaEndpoint';
+  static String get timeLogUrl => '$baseUrl$timeLogEndpoint';
 
   // API Headers
   static Map<String, String> get headers => {

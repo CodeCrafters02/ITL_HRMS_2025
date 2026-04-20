@@ -95,6 +95,14 @@ class _LoginPageState extends State<LoginPage> {
         });
 
         if (response.success) {
+          final role = response.data?.role.trim().toLowerCase();
+          if (role != null && role.isNotEmpty && role != 'employee') {
+            await AuthService.logout();
+            _showErrorDialog(
+              'This account type ($role) isn’t supported in the mobile app yet. Please use the web app.',
+            );
+            return;
+          }
           Navigator.pushNamedAndRemoveUntil(
             context,
             '/employee',

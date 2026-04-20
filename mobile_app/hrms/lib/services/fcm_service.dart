@@ -151,7 +151,7 @@ class FCMService {
         return;
       }
 
-      final response = await http.post(
+      await http.post(
         Uri.parse(ApiConfig.deviceTokenUrl),
         headers: ApiConfig.getAuthHeaders(accessToken),
         body: jsonEncode({'token': token}),
