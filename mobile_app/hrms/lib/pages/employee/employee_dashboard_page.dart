@@ -2,7 +2,6 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import '../../models/dashboard_model.dart';
 import '../../models/calendar_model.dart';
-import '../../models/company_policy_model.dart';
 import '../../models/task_model.dart';
 import '../../models/leave_model.dart';
 import '../../models/announcement_model.dart';
@@ -32,11 +31,11 @@ class _EmployeeDashboardPageState extends State<EmployeeDashboardPage> {
   List<Announcement> _announcements = const [];
   List<CalendarEvent> _events = const [];
   int _myTasksCount = 0;
-  int _policiesCount = 0;
+  int _holidaysCount = 0;
   int _leavesCount = 0;
   int _calendarCount = 0;
 
-  int _tabIndex = 0; // 0=Announcements, 1=Events
+  int _tabIndex = 0; // 0=Events, 1=Announcements
   final PageController _announcementPager = PageController();
 
   @override
@@ -110,37 +109,40 @@ class _EmployeeDashboardPageState extends State<EmployeeDashboardPage> {
       final results = await Future.wait([
         EmployeeService.getAnnouncements(limit: 3),
         EmployeeService.getMyTasks(),
-        EmployeeService.getCompanyPolicies(),
         EmployeeService.getAppliedLeaves(),
         EmployeeService.getCalendarData(year: now.year, month: now.month, day: now.day),
       ]);
 
       final a = results[0] as ApiResponse<List<Announcement>>;
       final t = results[1] as ApiResponse<List<Task>>;
-      final p = results[2] as ApiResponse<List<CompanyPolicy>>;
-      final l = results[3] as ApiResponse<List<AppliedLeave>>;
-      final c = results[4] as ApiResponse<CalendarData>;
+      final l = results[2] as ApiResponse<List<AppliedLeave>>;
+      final c = results[3] as ApiResponse<CalendarData>;
 
-      final calEvents = <CalendarEvent>[];
+      final upcomingEvents = <CalendarEvent>[];
+      final upcomingHolidays = <CalendarEvent>[];
       if (c.success && c.data != null) {
         for (final week in c.data!.weeks) {
           for (final day in week) {
-            if (day.isToday) {
-              calEvents.addAll(day.allEvents);
-            }
+            final dt = day.date;
+            if (dt == null) continue;
+            if (dt.isBefore(DateTime(now.year, now.month, now.day))) continue;
+
+            upcomingEvents.addAll(day.allEvents);
+            upcomingHolidays.addAll(day.adminEvents);
           }
         }
-        calEvents.sort((x, y) => x.date.compareTo(y.date));
+        upcomingEvents.sort((x, y) => x.date.compareTo(y.date));
+        upcomingHolidays.sort((x, y) => x.date.compareTo(y.date));
       }
 
       if (mounted) {
         setState(() {
           _announcements = a.data ?? const [];
           _myTasksCount = t.data?.length ?? 0;
-          _policiesCount = p.data?.length ?? 0;
           _leavesCount = l.data?.length ?? 0;
-          _calendarCount = calEvents.length;
-          _events = calEvents.take(3).toList();
+          _calendarCount = upcomingEvents.length;
+          _holidaysCount = upcomingHolidays.length;
+          _events = upcomingEvents.take(3).toList();
           _isLoadingOverview = false;
         });
       }
@@ -375,11 +377,11 @@ class _EmployeeDashboardPageState extends State<EmployeeDashboardPage> {
                   _KpiGrid(
                     isLoading: _isLoadingOverview,
                     leavesCount: _leavesCount,
-                    policiesCount: _policiesCount,
+                    holidaysCount: _holidaysCount,
                     myTasksCount: _myTasksCount,
                     calendarCount: _calendarCount,
                     onTapLeaves: () => Navigator.pushNamed(context, '/employee/leave-application'),
-                    onTapPolicies: () => Navigator.pushNamed(context, '/employee/company-policy'),
+                    onTapHolidays: () => Navigator.pushNamed(context, '/employee/personal-calendar'),
                     onTapTasks: () => Navigator.pushNamed(context, '/employee/my-tasks'),
                     onTapCalendar: () => Navigator.pushNamed(context, '/employee/personal-calendar'),
                   ),
@@ -393,13 +395,7 @@ class _EmployeeDashboardPageState extends State<EmployeeDashboardPage> {
                     child: AnimatedSwitcher(
                       duration: const Duration(milliseconds: 200),
                       child: _tabIndex == 0
-                          ? _AnnouncementsCarousel(
-                              key: const ValueKey('ann'),
-                              isLoading: _isLoadingOverview,
-                              items: _announcements,
-                              controller: _announcementPager,
-                            )
-                          : _EventsList(
+                          ? _EventsList(
                               key: const ValueKey('evt'),
                               isLoading: _isLoadingOverview,
                               events: _events,
@@ -407,7 +403,13 @@ class _EmployeeDashboardPageState extends State<EmployeeDashboardPage> {
                                 context,
                                 '/employee/personal-calendar',
                               ),
-                            ),
+                            )
+                          : _AnnouncementsCarousel(
+                              key: const ValueKey('ann'),
+                              isLoading: _isLoadingOverview,
+                              items: _announcements,
+                              controller: _announcementPager,
+                            )
                     ),
                   ),
                 ],
@@ -569,22 +571,22 @@ class _KpiGrid extends StatelessWidget {
   const _KpiGrid({
     required this.isLoading,
     required this.leavesCount,
-    required this.policiesCount,
+    required this.holidaysCount,
     required this.myTasksCount,
     required this.calendarCount,
     required this.onTapLeaves,
-    required this.onTapPolicies,
+    required this.onTapHolidays,
     required this.onTapTasks,
     required this.onTapCalendar,
   });
 
   final bool isLoading;
   final int leavesCount;
-  final int policiesCount;
+  final int holidaysCount;
   final int myTasksCount;
   final int calendarCount;
   final VoidCallback onTapLeaves;
-  final VoidCallback onTapPolicies;
+  final VoidCallback onTapHolidays;
   final VoidCallback onTapTasks;
   final VoidCallback onTapCalendar;
 
@@ -616,10 +618,10 @@ class _KpiGrid extends StatelessWidget {
           child: Column(
             children: [
               _KpiPill(
-                icon: Icons.policy_outlined,
-                title: 'Policies',
-                value: isLoading ? '—' : '$policiesCount',
-                onTap: onTapPolicies,
+                icon: Icons.celebration_outlined,
+                title: 'Holidays',
+                value: isLoading ? '—' : '$holidaysCount',
+                onTap: onTapHolidays,
               ),
               const SizedBox(height: 10),
               _KpiPill(
@@ -698,7 +700,7 @@ class _RoundedTabs extends StatelessWidget {
         children: [
           Expanded(
             child: _TabChip(
-              label: 'Announcements',
+              label: 'Events',
               active: index == 0,
               onTap: () => onChanged(0),
             ),
@@ -706,7 +708,7 @@ class _RoundedTabs extends StatelessWidget {
           const SizedBox(width: 6),
           Expanded(
             child: _TabChip(
-              label: 'Events',
+              label: 'Announcements',
               active: index == 1,
               onTap: () => onChanged(1),
             ),

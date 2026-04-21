@@ -5,7 +5,9 @@ import '../../models/reportee_model.dart';
 import '../../services/employee_service.dart';
 import '../../services/storage_service.dart';
 import '../../config/api_config.dart';
-import '../../widgets/employee_app_bar.dart';
+import '../../theme/app_stitch_theme.dart';
+import '../../widgets/glass_card.dart';
+import '../../widgets/stitch_background.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 
@@ -319,50 +321,105 @@ class _AssignTaskPageState extends State<AssignTaskPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF9FAFB),
-      appBar: EmployeeAppBar(
-        title: _selectedTask != null ? 'Task Details' : 'Assign Tasks',
-        actions: [
-          if (_selectedTask == null)
-            IconButton(
-              icon: const Icon(Icons.add),
-              onPressed: () => _createTask(),
-              tooltip: 'Create Task',
+      backgroundColor: Colors.transparent,
+      body: StitchBackground(
+        child: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+            child: Column(
+              children: [
+                GlassCard(
+                  padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
+                  child: Row(
+                    children: [
+                      IconButton(
+                        onPressed: () {
+                          if (_selectedTask != null) {
+                            setState(() => _selectedTask = null);
+                          } else {
+                            Navigator.pop(context);
+                          }
+                        },
+                        icon: const Icon(Icons.arrow_back_ios_new_rounded),
+                      ),
+                      const SizedBox(width: 6),
+                      Expanded(
+                        child: Text(
+                          _selectedTask != null ? 'Task details' : 'Assign tasks',
+                          style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                                fontWeight: FontWeight.w900,
+                                color: AppStitchTheme.lightOnSurface,
+                              ),
+                        ),
+                      ),
+                      if (_selectedTask == null)
+                        IconButton(
+                          onPressed: _createTask,
+                          tooltip: 'Create Task',
+                          icon: const Icon(Icons.add_rounded),
+                        )
+                      else
+                        IconButton(
+                          onPressed: _fetchTasks,
+                          tooltip: 'Refresh',
+                          icon: const Icon(Icons.refresh_rounded),
+                        ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Expanded(
+                  child: _isLoading
+                      ? const Center(child: CircularProgressIndicator())
+                      : _error != null
+                          ? _buildErrorState()
+                          : _selectedTask != null
+                              ? _buildTaskDetails()
+                              : _buildTasksList(),
+                ),
+              ],
             ),
-        ],
+          ),
+        ),
       ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : _error != null
-          ? _buildErrorState()
-          : _selectedTask != null
-          ? _buildTaskDetails()
-          : _buildTasksList(),
     );
   }
 
   Widget _buildErrorState() {
     return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(24),
+      child: GlassCard(
+        padding: const EdgeInsets.all(18),
         child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.error_outline, size: 64, color: Color(0xFFDC2626)),
-            const SizedBox(height: 16),
+            Container(
+              width: 56,
+              height: 56,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: const Color(0xFFEF4444).withValues(alpha: 0.10),
+                border: Border.all(
+                  color: const Color(0xFFEF4444).withValues(alpha: 0.20),
+                ),
+              ),
+              child: const Icon(Icons.error_outline_rounded, color: Color(0xFFEF4444)),
+            ),
+            const SizedBox(height: 10),
             Text(
               _error ?? 'Unknown error',
               textAlign: TextAlign.center,
-              style: const TextStyle(color: Color(0xFF6B7280)),
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    fontWeight: FontWeight.w600,
+                    color: AppStitchTheme.lightOnSurfaceMuted,
+                  ),
             ),
-            const SizedBox(height: 24),
-            ElevatedButton(
-              onPressed: _fetchTasks,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF4F46E5),
-                foregroundColor: Colors.white,
+            const SizedBox(height: 12),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: _fetchTasks,
+                child: const Text('Retry'),
               ),
-              child: const Text('Retry'),
             ),
           ],
         ),
@@ -406,9 +463,9 @@ class _AssignTaskPageState extends State<AssignTaskPage> {
 
     return RefreshIndicator(
       onRefresh: _fetchTasks,
-      color: const Color(0xFF4F46E5),
+      color: AppStitchTheme.primary,
       child: ListView.builder(
-        padding: const EdgeInsets.all(16),
+        padding: EdgeInsets.zero,
         itemCount: _tasks.length,
         itemBuilder: (context, index) {
           return _buildTaskCard(_tasks[index]);
@@ -418,59 +475,59 @@ class _AssignTaskPageState extends State<AssignTaskPage> {
   }
 
   Widget _buildTaskCard(Task task) {
-    return Card(
-      margin: const EdgeInsets.only(bottom: 12),
-      elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: InkWell(
-        onTap: () => _loadTaskDetails(task.id),
-        borderRadius: BorderRadius.circular(12),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      task.title,
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                        color: Color(0xFF111827),
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: GlassCard(
+        padding: const EdgeInsets.all(0),
+        child: InkWell(
+          onTap: () => _loadTaskDetails(task.id),
+          borderRadius: BorderRadius.circular(28),
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        task.title,
+                        style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                              fontWeight: FontWeight.w900,
+                              color: AppStitchTheme.lightOnSurface,
+                            ),
                       ),
                     ),
-                  ),
-                  Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      IconButton(
-                        icon: const Icon(Icons.edit_outlined, size: 20),
-                        color: const Color(0xFF4F46E5),
-                        onPressed: () => _editTask(task),
-                      ),
-                      IconButton(
-                        icon: const Icon(Icons.delete_outline, size: 20),
-                        color: Colors.red,
-                        onPressed: () => _deleteTask(task.id),
-                      ),
-                    ],
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        IconButton(
+                          icon: const Icon(Icons.edit_outlined, size: 20),
+                          color: AppStitchTheme.primary,
+                          onPressed: () => _editTask(task),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.delete_outline, size: 20),
+                          color: Colors.red,
+                          onPressed: () => _deleteTask(task.id),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+                if (task.description.isNotEmpty) ...[
+                  const SizedBox(height: 8),
+                  Text(
+                    task.description,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          fontWeight: FontWeight.w600,
+                          color: AppStitchTheme.lightOnSurfaceMuted,
+                          height: 1.35,
+                        ),
                   ),
                 ],
-              ),
-              if (task.description.isNotEmpty) ...[
-                const SizedBox(height: 8),
-                Text(
-                  task.description,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    fontSize: 14,
-                    color: Color(0xFF6B7280),
-                  ),
-                ),
-              ],
               const SizedBox(height: 12),
               Row(
                 children: [
@@ -517,18 +574,15 @@ class _AssignTaskPageState extends State<AssignTaskPage> {
                 ),
               ],
               const SizedBox(height: 12),
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: () => _assignTask(task),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF4F46E5),
-                    foregroundColor: Colors.white,
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: () => _assignTask(task),
+                    child: const Text('Assign Task'),
                   ),
-                  child: const Text('Assign Task'),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),

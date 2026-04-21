@@ -72,41 +72,42 @@ class EmployeeProfile {
   });
 
   factory EmployeeProfile.fromJson(Map<String, dynamic> json) {
+    String? s(dynamic v) => v?.toString();
     return EmployeeProfile(
       employeeId: json['employee_id']?.toString(),
-      firstName: json['first_name'],
-      middleName: json['middle_name'],
-      lastName: json['last_name'],
-      gender: json['gender'],
-      email: json['email'],
-      dateOfBirth: json['date_of_birth'],
-      mobile: json['mobile'],
-      departmentName: json['department_name'],
-      department: json['department'],
-      designationName: json['designation_name'],
-      designation: json['designation'],
-      photo: json['photo'],
-      temporaryAddress: json['temporary_address'],
-      permanentAddress: json['permanent_address'],
-      aadharNo: json['aadhar_no'],
-      aadharCard: json['aadhar_card'],
-      panNo: json['pan_no'],
-      panCard: json['pan_card'],
-      guardianName: json['guardian_name'],
-      guardianMobile: json['guardian_mobile'],
-      category: json['category'],
-      dateOfJoining: json['date_of_joining'],
-      ctc: json['ctc'],
-      grossSalary: json['gross_salary'],
-      epfStatus: json['epf_status'],
-      uan: json['uan'],
-      sourceOfEmployment: json['source_of_employment'],
-      paymentMethod: json['payment_method'],
-      accountNo: json['account_no'],
-      ifscCode: json['ifsc_code'],
-      bankName: json['bank_name'],
-      esicStatus: json['esic_status'],
-      esicNo: json['esic_no'],
+      firstName: s(json['first_name']),
+      middleName: s(json['middle_name']),
+      lastName: s(json['last_name']),
+      gender: s(json['gender']),
+      email: s(json['email']),
+      dateOfBirth: s(json['date_of_birth']),
+      mobile: s(json['mobile']),
+      departmentName: s(json['department_name']),
+      department: s(json['department']),
+      designationName: s(json['designation_name']),
+      designation: s(json['designation']),
+      photo: s(json['photo']),
+      temporaryAddress: s(json['temporary_address']),
+      permanentAddress: s(json['permanent_address']),
+      aadharNo: s(json['aadhar_no']),
+      aadharCard: s(json['aadhar_card']),
+      panNo: s(json['pan_no']),
+      panCard: s(json['pan_card']),
+      guardianName: s(json['guardian_name']),
+      guardianMobile: s(json['guardian_mobile']),
+      category: s(json['category']),
+      dateOfJoining: s(json['date_of_joining']),
+      ctc: s(json['ctc']),
+      grossSalary: s(json['gross_salary']),
+      epfStatus: s(json['epf_status']),
+      uan: s(json['uan']),
+      sourceOfEmployment: s(json['source_of_employment']),
+      paymentMethod: s(json['payment_method']),
+      accountNo: s(json['account_no']),
+      ifscCode: s(json['ifsc_code']),
+      bankName: s(json['bank_name']),
+      esicStatus: s(json['esic_status']),
+      esicNo: s(json['esic_no']),
     );
   }
 
@@ -148,11 +149,12 @@ class HierarchyEmployee {
   });
 
   factory HierarchyEmployee.fromJson(Map<String, dynamic> json) {
+    String s(dynamic v) => v == null ? '' : v.toString();
     return HierarchyEmployee(
       id: json['id'],
-      name: json['name'] ?? '',
-      level: json['level'] ?? '',
-      designation: json['designation'] ?? '',
+      name: s(json['name']),
+      level: s(json['level']),
+      designation: s(json['designation']),
       reportees: json['reportees'] != null
           ? (json['reportees'] as List)
               .map((item) => HierarchyEmployee.fromJson(item))
@@ -176,10 +178,11 @@ class HigherAuthority {
   });
 
   factory HigherAuthority.fromJson(Map<String, dynamic> json) {
+    String s(dynamic v) => v == null ? '' : v.toString();
     return HigherAuthority(
-      employeeName: json['employee_name'],
-      level: json['level'] ?? '',
-      designation: json['designation'] ?? '',
+      employeeName: json['employee_name']?.toString(),
+      level: s(json['level']),
+      designation: s(json['designation']),
       employeeCount: json['employee_count'],
     );
   }

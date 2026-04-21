@@ -748,7 +748,7 @@ class _MyTasksPageState extends State<MyTasksPage>
                           style: const TextStyle(fontSize: 12),
                         ),
                         style: TextButton.styleFrom(
-                          foregroundColor: const Color(0xFF2563EB),
+                          foregroundColor: AppStitchTheme.primary,
                           padding: const EdgeInsets.symmetric(
                             horizontal: 6,
                             vertical: 4,
@@ -769,7 +769,7 @@ class _MyTasksPageState extends State<MyTasksPage>
                     _buildInfoChip(
                       Icons.calendar_today,
                       task.deadline,
-                      Colors.blue,
+                      AppStitchTheme.primary,
                     ),
                     _buildInfoChip(
                       _getPriorityIcon(task.priority),
@@ -790,7 +790,7 @@ class _MyTasksPageState extends State<MyTasksPage>
                         const Icon(
                           Icons.people_outline,
                           size: 14,
-                          color: Color(0xFF6B7280),
+                          color: AppStitchTheme.lightOnSurfaceMuted,
                         ),
                         const SizedBox(width: 4),
                         Expanded(
@@ -804,10 +804,11 @@ class _MyTasksPageState extends State<MyTasksPage>
                                   vertical: 3,
                                 ),
                                 decoration: BoxDecoration(
-                                  color: const Color(0xFFEFF6FF),
+                                  color: Colors.white.withValues(alpha: 0.55),
                                   borderRadius: BorderRadius.circular(4),
                                   border: Border.all(
-                                    color: const Color(0xFFDBEAFE),
+                                    color: AppStitchTheme.lightOutline
+                                        .withValues(alpha: 0.55),
                                     width: 1,
                                   ),
                                 ),
@@ -816,7 +817,7 @@ class _MyTasksPageState extends State<MyTasksPage>
                                   style: const TextStyle(
                                     fontSize: 10,
                                     fontWeight: FontWeight.w500,
-                                    color: Color(0xFF1E40AF),
+                                    color: AppStitchTheme.lightOnSurface,
                                   ),
                                 ),
                               );
@@ -830,7 +831,7 @@ class _MyTasksPageState extends State<MyTasksPage>
                         const Icon(
                           Icons.assignment_ind,
                           size: 14,
-                          color: Color(0xFF6B7280),
+                          color: AppStitchTheme.lightOnSurfaceMuted,
                         ),
                         const SizedBox(width: 4),
                         Expanded(
@@ -841,10 +842,11 @@ class _MyTasksPageState extends State<MyTasksPage>
                               return Container(
                                 padding: const EdgeInsets.all(4),
                                 decoration: BoxDecoration(
-                                  color: const Color(0xFFF9FAFB),
+                                  color: Colors.white.withValues(alpha: 0.45),
                                   borderRadius: BorderRadius.circular(4),
                                   border: Border.all(
-                                    color: const Color(0xFFE5E7EB),
+                                    color: AppStitchTheme.lightOutline
+                                        .withValues(alpha: 0.55),
                                     width: 1,
                                   ),
                                 ),
@@ -872,7 +874,8 @@ class _MyTasksPageState extends State<MyTasksPage>
                                           style: const TextStyle(
                                             fontSize: 9,
                                             fontWeight: FontWeight.w600,
-                                            color: Color(0xFF6B7280),
+                                            color:
+                                                AppStitchTheme.lightOnSurfaceMuted,
                                           ),
                                         ),
                                       ),
@@ -883,7 +886,7 @@ class _MyTasksPageState extends State<MyTasksPage>
                                         style: const TextStyle(
                                           fontSize: 10,
                                           fontWeight: FontWeight.w500,
-                                          color: Color(0xFF111827),
+                                          color: AppStitchTheme.lightOnSurface,
                                         ),
                                         maxLines: 1,
                                         overflow: TextOverflow.ellipsis,
@@ -914,16 +917,15 @@ class _MyTasksPageState extends State<MyTasksPage>
                           const Icon(
                             Icons.list_alt,
                             size: 14,
-                            color: Color(0xFF6B7280),
+                            color: AppStitchTheme.lightOnSurfaceMuted,
                           ),
                           const SizedBox(width: 6),
                           Text(
                             'Subtasks (${task.subtaskDetails.length})',
-                            style: const TextStyle(
-                              fontSize: 13,
-                              fontWeight: FontWeight.w600,
-                              color: Color(0xFF111827),
-                            ),
+                            style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                                  fontWeight: FontWeight.w900,
+                                  color: AppStitchTheme.lightOnSurface,
+                                ),
                           ),
                         ],
                       ),
@@ -947,15 +949,11 @@ class _MyTasksPageState extends State<MyTasksPage>
         : null;
     final isDone = firstAssignment?.status == 'done';
 
-    return Container(
-      margin: const EdgeInsets.only(bottom: 10),
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: const Color(0xFFF9FAFB),
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: const Color(0xFFE5E7EB), width: 1),
-      ),
-      child: Column(
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: GlassCard(
+        padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
+        child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
@@ -967,8 +965,8 @@ class _MyTasksPageState extends State<MyTasksPage>
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
                     color: isDone
-                        ? const Color(0xFF6B7280)
-                        : const Color(0xFF111827),
+                        ? AppStitchTheme.lightOnSurfaceMuted
+                        : AppStitchTheme.lightOnSurface,
                     decoration: isDone ? TextDecoration.lineThrough : null,
                   ),
                 ),
@@ -1045,7 +1043,7 @@ class _MyTasksPageState extends State<MyTasksPage>
             subtask.description,
             style: const TextStyle(
               fontSize: 12,
-              color: Color(0xFF374151),
+              color: AppStitchTheme.lightOnSurfaceVariant,
               height: 1.4,
             ),
             maxLines: 2,
@@ -1059,7 +1057,7 @@ class _MyTasksPageState extends State<MyTasksPage>
               _buildInfoChip(
                 Icons.calendar_today,
                 subtask.deadline,
-                Colors.blue,
+                AppStitchTheme.primary,
                 size: 11,
               ),
               _buildInfoChip(
@@ -1079,10 +1077,10 @@ class _MyTasksPageState extends State<MyTasksPage>
                 return Container(
                   padding: const EdgeInsets.all(6),
                   decoration: BoxDecoration(
-                    color: Colors.white,
+                    color: Colors.white.withValues(alpha: 0.55),
                     borderRadius: BorderRadius.circular(6),
                     border: Border.all(
-                      color: const Color(0xFFE5E7EB),
+                      color: AppStitchTheme.lightOutline.withValues(alpha: 0.55),
                       width: 1,
                     ),
                   ),
@@ -1097,7 +1095,7 @@ class _MyTasksPageState extends State<MyTasksPage>
                       else
                         CircleAvatar(
                           radius: 10,
-                          backgroundColor: const Color(0xFFE5E7EB),
+                          backgroundColor: AppStitchTheme.lightOutline,
                           child: Text(
                             assign.employeeName.isNotEmpty
                                 ? assign.employeeName[0].toUpperCase()
@@ -1105,7 +1103,7 @@ class _MyTasksPageState extends State<MyTasksPage>
                             style: const TextStyle(
                               fontSize: 9,
                               fontWeight: FontWeight.w600,
-                              color: Color(0xFF6B7280),
+                              color: AppStitchTheme.lightOnSurfaceMuted,
                             ),
                           ),
                         ),
@@ -1115,7 +1113,7 @@ class _MyTasksPageState extends State<MyTasksPage>
                         style: const TextStyle(
                           fontSize: 11,
                           fontWeight: FontWeight.w500,
-                          color: Color(0xFF111827),
+                          color: AppStitchTheme.lightOnSurface,
                         ),
                       ),
                     ],
@@ -1125,6 +1123,7 @@ class _MyTasksPageState extends State<MyTasksPage>
             ),
           ],
         ],
+      ),
       ),
     );
   }
@@ -1138,9 +1137,13 @@ class _MyTasksPageState extends State<MyTasksPage>
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.1),
+        // Premium minimal: neutral glass chip, color only on icon/text.
+        color: Colors.white.withValues(alpha: 0.55),
         borderRadius: BorderRadius.circular(6),
-        border: Border.all(color: color.withValues(alpha: 0.3), width: 1),
+        border: Border.all(
+          color: AppStitchTheme.lightOutline.withValues(alpha: 0.65),
+          width: 1,
+        ),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -1151,9 +1154,94 @@ class _MyTasksPageState extends State<MyTasksPage>
             label,
             style: TextStyle(
               fontSize: size,
-              fontWeight: FontWeight.w500,
-              color: color,
+              fontWeight: FontWeight.w700,
+              color: AppStitchTheme.lightOnSurface,
             ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _FrostHeader extends StatelessWidget {
+  const _FrostHeader({
+    required this.title,
+    required this.subtitle,
+    required this.trailing,
+  });
+
+  final String title;
+  final String subtitle;
+  final Widget trailing;
+
+  @override
+  Widget build(BuildContext context) {
+    return GlassCard(
+      padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                        fontWeight: FontWeight.w900,
+                        color: AppStitchTheme.lightOnSurface,
+                      ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  subtitle,
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: AppStitchTheme.lightOnSurfaceMuted,
+                        fontWeight: FontWeight.w600,
+                      ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 10),
+          trailing,
+        ],
+      ),
+    );
+  }
+}
+
+class _CountPill extends StatelessWidget {
+  const _CountPill({required this.count});
+
+  final int count;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(AppStitchTheme.radiusPill),
+        color: Colors.white.withValues(alpha: 0.55),
+        border: Border.all(
+          color: AppStitchTheme.lightOutline.withValues(alpha: 0.60),
+        ),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(
+            Icons.layers_rounded,
+            size: 16,
+            color: AppStitchTheme.primary,
+          ),
+          const SizedBox(width: 6),
+          Text(
+            '$count',
+            style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                  fontWeight: FontWeight.w900,
+                  color: AppStitchTheme.lightOnSurface,
+                ),
           ),
         ],
       ),

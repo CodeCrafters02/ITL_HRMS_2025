@@ -249,7 +249,8 @@ class RelievedEmployee(models.Model):
 
     def __str__(self):
         return f"Relieved: {self.employee}"
-      
+
+#---------------------------ASSETS---------------------------------
 class FixedAsset(models.Model):
     """Serialized IT / furniture (core assets).
 
@@ -799,21 +800,35 @@ class GeneratedLetter(models.Model):
         who = self.employee or self.candidate or self.relieved_employee
         return f"Letter for {who} ({self.template.title})"
 
-# Office Structure Models
+class OfficeLocation(models.Model):
+    company = models.ForeignKey(Company, on_delete=models.CASCADE, related_name='office_locations')
+    name = models.CharField(max_length=100)
+    address = models.TextField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"{self.name} ({self.company.name})"
+
+
 class OfficeFloor(models.Model):
     company = models.ForeignKey(Company, on_delete=models.CASCADE, related_name='office_floors')
+    location = models.ForeignKey(OfficeLocation, on_delete=models.CASCADE, related_name='floors', null=True, blank=True)
     name = models.CharField(max_length=100)
     floor_number = models.IntegerField()
     description = models.TextField(null=True, blank=True)
+    # layout_data stores the Konva stage JSON (walls, zones, doors, etc.)
+    layout_data = models.JSONField(default=dict, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
         ordering = ['floor_number']
-        unique_together = ['company', 'floor_number']
+        unique_together = ['location', 'floor_number']
 
     def __str__(self):
-        return f"{self.name} - Floor {self.floor_number}"
+        branch = self.location.name if self.location else "No Location"
+        return f"{self.name} - Floor {self.floor_number} ({branch})"
 
 
 class OfficeSection(models.Model):
@@ -863,17 +878,34 @@ class EmailOTP(models.Model):
         return timezone.now() > self.created_at + timedelta(minutes=5)  
 
 class SeatBooking(models.Model):
+    BOOKING_TYPES = [
+        ('daily', 'Daily'),
+        ('weekly', 'Weekly'),
+        ('permanent', 'Permanent'),
+    ]
+    STATUS_CHOICES = [
+        ('pending', 'Pending Approval'),
+        ('approved', 'Approved'),
+        ('rejected', 'Rejected'),
+    ]
     seat = models.ForeignKey(OfficeSeat, on_delete=models.CASCADE, related_name='bookings')
     employee = models.ForeignKey(Employee, on_delete=models.CASCADE, related_name='seat_bookings')
-    booking_date = models.DateField()
+    booking_type = models.CharField(max_length=20, choices=BOOKING_TYPES, default='daily')
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
+    start_date = models.DateField()
+    end_date = models.DateField(null=True, blank=True) # Null for permanent
+    start_time = models.TimeField(null=True, blank=True)
+    end_time = models.TimeField(null=True, blank=True)
+    is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
-        unique_together = ['seat', 'booking_date']
-        ordering = ['-booking_date']
+        # For daily bookings, only one person per seat per day. 
+        # For weekly/permanent, we'll need to check overlap in the serializer/view.
+        ordering = ['-start_date']
 
     def __str__(self):
-        return f"{self.employee} booked {self.seat} on {self.booking_date}"
+        return f"{self.employee} booked {self.seat} ({self.booking_type})"
 
 
 # --------------------------- CHAT ---------------------------------
