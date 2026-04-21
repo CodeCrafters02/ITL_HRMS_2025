@@ -1481,6 +1481,10 @@ class SeatBookingSerializer(serializers.ModelSerializer):
         end_date = data.get('end_date') or start_date
         start_time = data.get('start_time')
         end_time = data.get('end_time')
+
+        # Check 0: Basic Date Sanity
+        if end_date and start_date and end_date < start_date:
+            raise serializers.ValidationError({"detail": "End date cannot be before start date."})
         
         request = self.context.get('request')
         user = request.user if request else None

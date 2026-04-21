@@ -278,6 +278,7 @@ const Sidebar = () => {
                                                 <li><NavLink to="/admin/configuration/company-policies">{t('Company Policies')}</NavLink></li>
                                                 <li><NavLink to="/admin/configuration/office-structure">{t('Office Structure')}</NavLink></li>
                                                 <li><NavLink to="/admin/seat-approvals">{t('Seat Approvals')}</NavLink></li>
+                                                <li><NavLink to="/admin/seat-bookings-overview">{t('Seat Bookings Overview')}</NavLink></li>
                                             </ul>
                                         </AnimateHeight>
                                     </li>

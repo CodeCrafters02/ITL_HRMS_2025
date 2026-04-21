@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { Stage, Layer, Rect, Text, Group, Line, Arc } from 'react-konva';
 import { useDispatch, useSelector } from 'react-redux';
 import { setPageTitle } from '../../store/themeConfigSlice';
@@ -6,6 +6,8 @@ import { IRootState } from '../../store';
 import Swal from 'sweetalert2';
 import flatpickr from 'flatpickr';
 import 'flatpickr/dist/flatpickr.css';
+import IconChecks from '../../components/Icon/IconChecks';
+import IconClock from '../../components/Icon/IconClock';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000';
 
@@ -14,7 +16,7 @@ const SeatBooking = () => {
     const [locations, setLocations] = useState<any[]>([]);
     const [selectedLocation, setSelectedLocation] = useState<any>(null);
     const [loadingLocations, setLoadingLocations] = useState(true);
-    
+
     const [floors, setFloors] = useState<any[]>([]);
     const [selectedFloor, setSelectedFloor] = useState<any>(null);
     const [loadingFloors, setLoadingFloors] = useState(false);
@@ -24,12 +26,17 @@ const SeatBooking = () => {
     const [targetStartTime, setTargetStartTime] = useState('09:00');
     const [targetEndTime, setTargetEndTime] = useState('18:00');
     const [selectedSeat, setSelectedSeat] = useState<any>(null);
-    
+
     // Booking Form State
     const [bookingType, setBookingType] = useState('daily');
+    const [startDate, setStartDate] = useState('');
     const [endDate, setEndDate] = useState('');
     const [startTime, setStartTime] = useState('09:00');
     const [endTime, setEndTime] = useState('18:00');
+
+    useEffect(() => {
+        setStartDate(selectedDate);
+    }, [selectedDate]);
 
     useEffect(() => {
         dispatch(setPageTitle('Book a Seat'));
@@ -120,9 +127,37 @@ const SeatBooking = () => {
         setElements(floor.layout_data?.elements || []);
     };
 
-    const handleSeatClick = (seat: any) => {
-        const booking = bookings.find(b => b.seat_details.seat_number === seat.name);
-        setSelectedSeat({ ...seat, booking });
+    const stageSize = useMemo(() => {
+        if (!selectedFloor || !elements || elements.length === 0) return { width: 1500, height: 1200 };
+        const maxX = Math.max(...elements.map(el => (el.x || 0) + (el.width || 0)));
+        const maxY = Math.max(...elements.map(el => (el.y || 0) + (el.height || 0)));
+        return {
+            width: Math.max(1500, maxX + 500),
+            height: Math.max(1200, maxY + 500)
+        };
+    }, [elements, selectedFloor]);
+
+    const handleSeatClick = async (seat: any) => {
+        // Find if it's booked for the CURRENTLY SELECTED date
+        const currentBooking = bookings.find(b => b.seat_details.seat_number === seat.name);
+        
+        let upcoming = [];
+        try {
+            const token = localStorage.getItem('access_token');
+            // Fetch ALL active bookings for this seat to see the future schedule
+            const res = await fetch(`${API_BASE_URL}/app/seat-bookings/?seat_number=${seat.name}&floor=${selectedFloor.id}`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (res.ok) {
+                const data = await res.json();
+                // Filter out the one already shown as "current" if it exists
+                upcoming = (data || []).filter((b: any) => b.id !== currentBooking?.id);
+            }
+        } catch (error) {
+            console.error('Error fetching seat schedule:', error);
+        }
+
+        setSelectedSeat({ ...seat, booking: currentBooking, upcomingBookings: upcoming });
     };
 
     const handleBook = async () => {
@@ -132,7 +167,7 @@ const SeatBooking = () => {
             // We need the numeric Seat ID. In our simple JSON layout, we use 'name' as seat_id.
             // In a real app, we'd sync these to model IDs. 
             // For now, let's assume we can find the seat by its number/label.
-            
+
             // First, find the seat in the backend to get its ID
             const seatRes = await fetch(`${API_BASE_URL}/app/office-seats/?floor=${selectedFloor.id}`, {
                 headers: { 'Authorization': `Bearer ${token}` }
@@ -146,6 +181,15 @@ const SeatBooking = () => {
                 return;
             }
 
+            // Date validation
+            const actualStartDate = bookingType === 'daily' ? selectedDate : startDate;
+            const actualEndDate = bookingType === 'daily' ? selectedDate : (bookingType === 'weekly' ? endDate : null);
+
+            if (actualEndDate && actualStartDate && actualEndDate < actualStartDate) {
+                Swal.fire('Error', 'End date cannot be before start date', 'warning');
+                return;
+            }
+
             const res = await fetch(`${API_BASE_URL}/app/seat-bookings/`, {
                 method: 'POST',
                 headers: {
@@ -154,7 +198,7 @@ const SeatBooking = () => {
                 },
                 body: JSON.stringify({
                     seat: backendSeat.id,
-                    start_date: selectedDate,
+                    start_date: bookingType === 'daily' ? selectedDate : startDate,
                     end_date: bookingType === 'daily' ? selectedDate : (bookingType === 'weekly' ? endDate : null),
                     start_time: startTime,
                     end_time: endTime,
@@ -191,8 +235,9 @@ const SeatBooking = () => {
         }
     };
 
-    const handleCancel = async () => {
-        if (!selectedSeat || !selectedSeat.booking) return;
+    const handleCancel = async (bookingId?: number) => {
+        const idToCancel = bookingId || selectedSeat?.booking?.id;
+        if (!idToCancel) return;
 
         const result = await Swal.fire({
             title: 'Are you sure?',
@@ -207,7 +252,7 @@ const SeatBooking = () => {
         if (result.isConfirmed) {
             try {
                 const token = localStorage.getItem('access_token');
-                const res = await fetch(`${API_BASE_URL}/app/seat-bookings/${selectedSeat.booking.id}/cancel/`, {
+                const res = await fetch(`${API_BASE_URL}/app/seat-bookings/${idToCancel}/cancel/`, {
                     method: 'POST',
                     headers: { 'Authorization': `Bearer ${token}` }
                 });
@@ -248,11 +293,24 @@ const SeatBooking = () => {
     };
 
     return (
-        <div className="flex flex-col h-[calc(100vh-150px)]">
-            <div className="flex flex-wrap items-center justify-between gap-4 mb-4 bg-white dark:bg-[#0e1726] p-4 rounded-xl shadow-sm">
+        <div className="flex flex-col h-[calc(100vh-90px)] space-y-4">
+            {/* Header Banner - Employee Style */}
+            <div className="bg-gradient-to-r from-blue-700 via-blue-800 to-indigo-900 rounded-xl p-4 text-white shadow-lg overflow-hidden relative">
+                <div className="relative z-10 flex items-center justify-between">
+                    <div>
+                        <h2 className="text-3xl font-extrabold mb-0.5 tracking-tight">Reserve Your Workspace</h2>
+                        <p className="text-white/80 text-sm font-medium">Select a seat on the interactive map below to reserve it for the day or week.</p>
+                    </div>
+                </div>
+                <div className="absolute right-[-20px] top-[-20px] opacity-10">
+                    <IconChecks className="w-48 h-48" />
+                </div>
+            </div>
+
+            <div className="flex flex-wrap items-center justify-between gap-4 bg-white dark:bg-[#0e1726] p-4 rounded-xl shadow-sm border border-gray-100 dark:border-gray-800">
                 <div className="flex items-center gap-3 pr-4 border-r border-gray-200 dark:border-gray-700">
                     <span className="text-[10px] font-black uppercase tracking-tighter text-gray-400 whitespace-nowrap">Select Office</span>
-                    <select 
+                    <select
                         className="form-select bg-gray-50 dark:bg-[#1b2e4b] border-gray-200 dark:border-gray-700 rounded-lg pr-10 font-bold text-sm min-w-[180px] cursor-pointer hover:border-primary transition-colors focus:ring-primary shadow-sm"
                         value={selectedLocation?.id || ''}
                         onChange={(e) => {
@@ -269,7 +327,7 @@ const SeatBooking = () => {
 
                 <div className="flex items-center gap-3 pr-4 border-r border-gray-200 dark:border-gray-700">
                     <span className="text-[10px] font-black uppercase tracking-tighter text-gray-400 whitespace-nowrap">Select Floor</span>
-                    <select 
+                    <select
                         className="form-select bg-gray-50 dark:bg-[#1b2e4b] border-gray-200 dark:border-gray-700 rounded-lg pr-10 font-bold text-sm min-w-[180px] cursor-pointer hover:border-primary transition-colors focus:ring-primary shadow-sm"
                         value={selectedFloor?.id || ''}
                         disabled={!selectedLocation}
@@ -289,9 +347,9 @@ const SeatBooking = () => {
                 <div className="flex items-center gap-6">
                     <div className="flex items-center gap-3">
                         <label className="font-bold text-[10px] uppercase text-gray-400">Target Date</label>
-                        <input 
-                            type="date" 
-                            value={selectedDate} 
+                        <input
+                            type="date"
+                            value={selectedDate}
                             onChange={(e) => setSelectedDate(e.target.value)}
                             className="form-input w-40 h-9 font-bold"
                         />
@@ -299,16 +357,16 @@ const SeatBooking = () => {
                     <div className="flex items-center gap-3 border-l border-gray-200 dark:border-gray-700 pl-6">
                         <label className="font-bold text-[10px] uppercase text-gray-400">Target Time</label>
                         <div className="flex items-center gap-2">
-                            <input 
-                                type="time" 
-                                value={targetStartTime} 
+                            <input
+                                type="time"
+                                value={targetStartTime}
                                 onChange={(e) => setTargetStartTime(e.target.value)}
                                 className="form-input w-24 h-9 font-bold"
                             />
                             <span className="text-gray-400">to</span>
-                            <input 
-                                type="time" 
-                                value={targetEndTime} 
+                            <input
+                                type="time"
+                                value={targetEndTime}
                                 onChange={(e) => setTargetEndTime(e.target.value)}
                                 className="form-input w-24 h-9 font-bold"
                             />
@@ -321,10 +379,16 @@ const SeatBooking = () => {
                 {/* Main View */}
                 <div className="flex-1 bg-gray-100 dark:bg-black/20 rounded-2xl overflow-auto border border-gray-200 dark:border-gray-800 relative shadow-inner">
                     <Stage
-                        width={1000}
-                        height={800}
+                        width={stageSize.width}
+                        height={stageSize.height}
                         className="bg-white dark:bg-[#1a2233]"
-                        style={{ backgroundImage: 'radial-gradient(#ccc 1px, transparent 1px)', backgroundSize: '20px 20px' }}
+                        style={{ 
+                            backgroundImage: 'radial-gradient(#ccc 1px, transparent 1px)', 
+                            backgroundSize: '15px 15px',
+                            minWidth: stageSize.width,
+                            minHeight: stageSize.height,
+                            display: 'block'
+                        }}
                     >
                         <Layer>
                             {elements.map((el) => {
@@ -387,7 +451,7 @@ const SeatBooking = () => {
                                             {/* Door Jambs */}
                                             <Rect width={3} height={6} x={0} y={-3} fill="#6B7280" />
                                             <Rect width={3} height={6} x={el.width - 3} y={-3} fill="#6B7280" />
-                                            
+
                                             {/* The Door Leaf - Open 90 degrees */}
                                             <Rect
                                                 width={3}
@@ -398,7 +462,7 @@ const SeatBooking = () => {
                                                 stroke="#6B7280"
                                                 strokeWidth={1}
                                             />
-                                            
+
                                             {/* The Swing Arc - 90 degrees */}
                                             <Arc
                                                 x={0}
@@ -450,7 +514,7 @@ const SeatBooking = () => {
                         <div className="animate-fade-in-right">
                             <h5 className="font-bold text-lg mb-2">Seat {selectedSeat.name}</h5>
                             <hr className="my-4 border-white-light dark:border-[#1b2e4b]" />
-                            
+
                             {selectedSeat.booking ? (
                                 <div className="space-y-4">
                                     <span className="badge badge-outline-danger">Booked</span>
@@ -483,7 +547,7 @@ const SeatBooking = () => {
                                         </div>
                                     )}
                                     {selectedSeat.booking.is_mine && (
-                                        <button onClick={handleCancel} className="btn btn-danger w-full mt-4 h-11 font-bold">
+                                        <button onClick={() => handleCancel()} className="btn btn-danger w-full mt-4 h-11 font-bold">
                                             Cancel Booking
                                         </button>
                                     )}
@@ -494,7 +558,7 @@ const SeatBooking = () => {
                                     <div className="grid grid-cols-2 gap-4">
                                         <div className="col-span-2">
                                             <label className="text-xs font-bold uppercase mb-2 block">Booking Type</label>
-                                            <select 
+                                            <select
                                                 className="form-select font-bold"
                                                 value={bookingType}
                                                 onChange={(e) => setBookingType(e.target.value)}
@@ -507,8 +571,8 @@ const SeatBooking = () => {
 
                                         <div>
                                             <label className="text-xs font-bold uppercase mb-2 block">Start Time</label>
-                                            <input 
-                                                type="time" 
+                                            <input
+                                                type="time"
                                                 className="form-input font-bold"
                                                 value={startTime}
                                                 onChange={(e) => setStartTime(e.target.value)}
@@ -516,8 +580,8 @@ const SeatBooking = () => {
                                         </div>
                                         <div>
                                             <label className="text-xs font-bold uppercase mb-2 block">End Time</label>
-                                            <input 
-                                                type="time" 
+                                            <input
+                                                type="time"
                                                 className="form-input font-bold"
                                                 value={endTime}
                                                 onChange={(e) => setEndTime(e.target.value)}
@@ -525,14 +589,25 @@ const SeatBooking = () => {
                                         </div>
 
                                         {bookingType === 'weekly' && (
-                                            <div className="col-span-2">
-                                                <label className="text-xs font-bold uppercase mb-2 block">End Date</label>
-                                                <input 
-                                                    type="date" 
-                                                    className="form-input font-bold"
-                                                    value={endDate}
-                                                    onChange={(e) => setEndDate(e.target.value)}
-                                                />
+                                            <div className="grid grid-cols-2 gap-4 col-span-2">
+                                                <div>
+                                                    <label className="text-xs font-bold uppercase mb-2 block">Start Date</label>
+                                                    <input
+                                                        type="date"
+                                                        className="form-input font-bold text-xs"
+                                                        value={startDate}
+                                                        onChange={(e) => setStartDate(e.target.value)}
+                                                    />
+                                                </div>
+                                                <div>
+                                                    <label className="text-xs font-bold uppercase mb-2 block">End Date</label>
+                                                    <input
+                                                        type="date"
+                                                        className="form-input font-bold text-xs"
+                                                        value={endDate}
+                                                        onChange={(e) => setEndDate(e.target.value)}
+                                                    />
+                                                </div>
                                             </div>
                                         )}
                                     </div>
@@ -548,6 +623,50 @@ const SeatBooking = () => {
                                     </button>
                                 </div>
                             )}
+
+                            {/* Upcoming Schedule Section for Employees */}
+                            {selectedSeat.upcomingBookings && selectedSeat.upcomingBookings.length > 0 && (
+                                <div className="mt-8 animate-fade-in-down">
+                                    <h6 className="text-[10px] uppercase font-black text-gray-400 mb-4 border-b pb-1 border-gray-100 dark:border-gray-800 tracking-widest">Upcoming Bookings</h6>
+                                    <div className="space-y-3">
+                                        {selectedSeat.upcomingBookings.slice(0, 3).map((b: any) => (
+                                            <div key={b.id} className="p-3 bg-gray-50 dark:bg-gray-800/40 rounded-xl border border-gray-100 dark:border-gray-800 relative group overflow-hidden">
+                                                <div className="flex justify-between items-start mb-2 relative z-10">
+                                                    <div>
+                                                        <p className="font-bold text-xs">{b.employee_details.name}</p>
+                                                        <p className="text-[10px] text-gray-400 font-bold uppercase tracking-tight">{b.booking_type}</p>
+                                                    </div>
+                                                    <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-full ${
+                                                        b.status === 'pending' ? 'bg-yellow-100 text-yellow-600' : 'bg-blue-100 text-blue-600'
+                                                    }`}>
+                                                        {b.status}
+                                                    </span>
+                                                </div>
+                                                <div className="text-[10px] space-y-0.5 relative z-10">
+                                                    <p className="font-bold text-gray-600 dark:text-gray-400">{b.start_date} {b.end_date && ` to ${b.end_date}`}</p>
+                                                    <p className="text-gray-400 italic">{b.start_time?.substring(0, 5)} - {b.end_time?.substring(0, 5)}</p>
+                                                </div>
+                                                {b.is_mine && (
+                                                    <div className="mt-3 relative z-10 flex justify-end">
+                                                        <button 
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                handleCancel(b.id);
+                                                            }}
+                                                            className="text-[10px] font-bold text-danger hover:underline flex items-center gap-1 bg-danger/5 px-2 py-1 rounded-md transition-colors hover:bg-danger/10"
+                                                        >
+                                                            Cancel This Slot
+                                                        </button>
+                                                    </div>
+                                                )}
+                                                <div className="absolute right-[-10px] bottom-[-10px] opacity-5 group-hover:opacity-10 transition-opacity">
+                                                    <IconClock className="w-12 h-12" />
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
                             <button onClick={() => setSelectedSeat(null)} className="btn btn-outline-secondary w-full mt-2">
                                 Close
                             </button>
@@ -557,7 +676,7 @@ const SeatBooking = () => {
                             <div className="w-16 h-16 bg-gray-100 dark:bg-gray-800 rounded-full flex items-center justify-center mb-4 text-gray-400">
                                 <span className="text-2xl font-bold">?</span>
                             </div>
-                            <p className="text-sm font-bold">Select a seat on the map <br/> to view details or book</p>
+                            <p className="text-sm font-bold">Select a seat on the map <br /> to view details or book</p>
                             <div className="flex flex-col gap-2 mt-6 w-full text-left">
                                 <div className="flex items-center gap-2 text-xs">
                                     <div className="w-3 h-3 rounded bg-[#10B981]"></div>

@@ -206,6 +206,7 @@ class LoginAPIView(APIView):
             return Response({
                 "access": access_token,
                 "refresh": refresh_token,
+                "id": user.id,
                 "username": user.username,
                 "first_name": user.first_name,
                 "last_name": user.last_name,
@@ -3282,15 +3283,37 @@ class SeatBookingViewSet(viewsets.ModelViewSet):
     permission_classes = [permissions.IsAuthenticated]
     
     def get_queryset(self):
-        queryset = SeatBooking.objects.filter(is_active=True)
+        # For history view, we want to see even cancelled/rejected (inactive) bookings
+        is_history = self.request.query_params.get('history', 'false').lower() == 'true'
+        
+        if is_history:
+            queryset = SeatBooking.objects.all()
+        else:
+            queryset = SeatBooking.objects.filter(is_active=True)
+        
+        # Enforce company security: Admins and Employees should only see bookings from their own company
+        if self.request.user.role in ['admin', 'employee']:
+            if self.request.user.company:
+                queryset = queryset.filter(employee__company=self.request.user.company)
+            else:
+                # If for some reason an admin/employee has no company, they see nothing
+                queryset = queryset.none()
+        elif self.request.user.role == 'master':
+            # Masters might want to filter by company if provided
+            target_company = self.request.query_params.get('company_id')
+            if target_company:
+                queryset = queryset.filter(employee__company_id=target_company)
+
         date_str = self.request.query_params.get('date', None)
         floor_id = self.request.query_params.get('floor', None)
+        seat_number = self.request.query_params.get('seat_number', None)
         status = self.request.query_params.get('status', None)
         start_time_str = self.request.query_params.get('start_time', None)
         end_time_str = self.request.query_params.get('end_time', None)
         
         # When viewing the map, we usually only care about already approved bookings
-        if date_str or floor_id:
+        # Unless we are in history mode, in which case we show everything requested
+        if (date_str or floor_id) and not is_history:
             queryset = queryset.filter(status='approved')
         
         if status:
@@ -3311,9 +3334,6 @@ class SeatBookingViewSet(viewsets.ModelViewSet):
                 target_start = datetime.strptime(start_time_str, '%H:%M').time()
                 target_end = datetime.strptime(end_time_str, '%H:%M').time()
                 
-                # A booking overlaps with target if:
-                # (Booking Start < Target End) AND (Booking End > Target Start)
-                # If booking has no times, it's considered whole day (00:00 to 23:59)
                 queryset = queryset.filter(
                     Q(start_time__lt=target_end) | Q(start_time__isnull=True),
                     Q(end_time__gt=target_start) | Q(end_time__isnull=True)
@@ -3324,11 +3344,14 @@ class SeatBookingViewSet(viewsets.ModelViewSet):
         if floor_id:
             queryset = queryset.filter(seat__section__floor_id=floor_id)
             
-        if not date_str and not floor_id and not status and hasattr(self.request.user, 'employee'):
+        if seat_number:
+            queryset = queryset.filter(seat__seat_number=seat_number)
+            
+        if not date_str and not floor_id and not status and not is_history and hasattr(self.request.user, 'employee'):
             # Show all bookings for the current employee (including pending)
             queryset = queryset.filter(employee=self.request.user.employee)
         
-        return queryset
+        return queryset.select_related('employee', 'seat__section__floor').order_by('-created_at')
 
     def perform_create(self, serializer):
         if not hasattr(self.request.user, 'employee'):
@@ -3511,6 +3534,7 @@ class GoogleLoginAPIView(APIView):
             return Response({
                 "access": str(refresh.access_token),
                 "refresh": str(refresh),
+                "id": user.id,
                 "username": user.username,
                 "first_name": user.first_name,
                 "last_name": user.last_name,

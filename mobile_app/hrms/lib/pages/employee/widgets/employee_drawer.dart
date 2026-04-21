@@ -3,6 +3,7 @@ import '../../../constants/nav_constants.dart';
 import '../../../models/nav_item_model.dart';
 import '../../../services/employee_service.dart';
 import '../../../services/notification_service.dart';
+import '../../../providers/chat_scope.dart';
 import '../../../theme/app_stitch_theme.dart';
 import '../../../widgets/stitch_background.dart';
 import '../../../widgets/glass_card.dart';
@@ -130,6 +131,9 @@ class _EmployeeDrawerState extends State<EmployeeDrawer> {
       switch (item.name) {
         case 'Notifications':
           badge = NotificationService.notificationsBadge;
+          break;
+        case 'Chat':
+          badge = ChatScope.of(context).unreadTotal;
           break;
         case 'My Tasks':
           badge = NotificationService.myTasksBadge;
