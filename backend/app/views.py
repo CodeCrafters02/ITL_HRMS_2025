@@ -3146,8 +3146,8 @@ class EmployeeReporteesView(APIView):
 
 
 # Office Structure ViewSets
-class OfficeFloorViewSet(viewsets.ModelViewSet):
-    serializer_class = OfficeFloorSerializer
+class OfficeLocationViewSet(viewsets.ModelViewSet):
+    serializer_class = OfficeLocationSerializer
     
     def get_permissions(self):
         if self.action in ['list', 'retrieve']:
@@ -3157,10 +3157,84 @@ class OfficeFloorViewSet(viewsets.ModelViewSet):
         return [permission() for permission in permission_classes]
     
     def get_queryset(self):
-        return OfficeFloor.objects.filter(company=self.request.user.company).prefetch_related('sections__seats__employee')
-    
+        return OfficeLocation.objects.filter(company=self.request.user.company)
+
     def get_serializer_context(self):
         return {'request': self.request}
+
+
+class OfficeFloorViewSet(viewsets.ModelViewSet):
+    serializer_class = OfficeFloorSerializer
+    queryset = OfficeFloor.objects.none()  # Base queryset to satisfy DRF requirements
+    
+    def get_permissions(self):
+        if self.action in ['list', 'retrieve']:
+            permission_classes = [IsAuthenticated]
+        else:
+            permission_classes = [IsAuthenticated, IsAdminUser]
+        return [permission() for permission in permission_classes]
+    
+    def get_queryset(self):
+        location_id = self.request.query_params.get('location')
+        queryset = OfficeFloor.objects.filter(company=self.request.user.company).prefetch_related('sections__seats__employee')
+        if location_id:
+            queryset = queryset.filter(location_id=location_id)
+        return queryset
+
+    def get_serializer_context(self):
+        return {'request': self.request}
+
+    def perform_create(self, serializer):
+        instance = serializer.save(company=self.request.user.company)
+        self.sync_seats(instance)
+
+    def perform_update(self, serializer):
+        instance = serializer.save()
+        if 'layout_data' in serializer.validated_data:
+            self.sync_seats(instance)
+
+    def sync_seats(self, floor):
+        """
+        Synchronizes visual seat elements from layout_data with OfficeSeat database records.
+        """
+        layout_data = floor.layout_data
+        if not layout_data or 'elements' not in layout_data:
+            return
+
+        # 1. Get or create a default section for the floor
+        # Use first available section or create a default one
+        section = OfficeSection.objects.filter(floor=floor).first()
+        if not section:
+            section = OfficeSection.objects.create(
+                floor=floor,
+                name="Main Section",
+                position_x=0, 
+                position_y=0
+            )
+
+        # 2. Extract seat elements from layout
+        layout_seats = [e for e in layout_data['elements'] if e.get('type') == 'seat']
+        seat_numbers = [str(s.get('name')) for s in layout_seats if s.get('name')]
+
+        # 3. Create or update seats found in layout
+        for ls in layout_seats:
+            seat_num = str(ls.get('name'))
+            if not seat_num:
+                continue
+            
+            OfficeSeat.objects.update_or_create(
+                section=section,
+                seat_number=seat_num,
+                defaults={
+                    'position_x': ls.get('x', 0),
+                    'position_y': ls.get('y', 0),
+                    'rotation': ls.get('rotation', 0),
+                    'is_available': True
+                }
+            )
+
+        # 4. Remove seats that no longer exist in the layout
+        OfficeSeat.objects.filter(section__floor=floor).exclude(seat_number__in=seat_numbers).delete()
 
 
 class OfficeSectionViewSet(viewsets.ModelViewSet):
@@ -3193,9 +3267,12 @@ class OfficeSeatViewSet(viewsets.ModelViewSet):
     
     def get_queryset(self):
         section_id = self.request.query_params.get('section')
+        floor_id = self.request.query_params.get('floor')
         queryset = OfficeSeat.objects.filter(section__floor__company=self.request.user.company).select_related('employee', 'section')
         if section_id:
             queryset = queryset.filter(section_id=section_id)
+        if floor_id:
+            queryset = queryset.filter(section__floor_id=floor_id)
         return queryset
 
 
@@ -3205,52 +3282,120 @@ class SeatBookingViewSet(viewsets.ModelViewSet):
     permission_classes = [permissions.IsAuthenticated]
     
     def get_queryset(self):
-        queryset = SeatBooking.objects.all()
-        booking_date = self.request.query_params.get('booking_date', None)
+        # For history view, we want to see even cancelled/rejected (inactive) bookings
+        is_history = self.request.query_params.get('history', 'false').lower() == 'true'
         
-        if booking_date:
-            # When fetching bookings for a specific date, show ALL bookings (not filtered by employee)
-            # This is needed so users can see which seats are booked by others
-            queryset = queryset.filter(booking_date=booking_date)
-        elif hasattr(self.request.user, 'employee'):
-            # When no date is specified, show only the current user's bookings (for "My Bookings" section)
+        if is_history:
+            queryset = SeatBooking.objects.all()
+        else:
+            queryset = SeatBooking.objects.filter(is_active=True)
+        
+        # Enforce company security: Admins and Employees should only see bookings from their own company
+        if self.request.user.role in ['admin', 'employee']:
+            if self.request.user.company:
+                queryset = queryset.filter(employee__company=self.request.user.company)
+            else:
+                # If for some reason an admin/employee has no company, they see nothing
+                queryset = queryset.none()
+        elif self.request.user.role == 'master':
+            # Masters might want to filter by company if provided
+            target_company = self.request.query_params.get('company_id')
+            if target_company:
+                queryset = queryset.filter(employee__company_id=target_company)
+
+        date_str = self.request.query_params.get('date', None)
+        floor_id = self.request.query_params.get('floor', None)
+        status = self.request.query_params.get('status', None)
+        start_time_str = self.request.query_params.get('start_time', None)
+        end_time_str = self.request.query_params.get('end_time', None)
+        
+        # When viewing the map, we usually only care about already approved bookings
+        # Unless we are in history mode, in which case we show everything requested
+        if (date_str or floor_id) and not is_history:
+            queryset = queryset.filter(status='approved')
+        
+        if status:
+            queryset = queryset.filter(status=status)
+            
+        if date_str:
+            try:
+                target_date = datetime.strptime(date_str, '%Y-%m-%d').date()
+                queryset = queryset.filter(
+                    Q(start_date__lte=target_date),
+                    Q(end_date__gte=target_date) | Q(end_date__isnull=True)
+                )
+            except ValueError:
+                pass
+
+        if start_time_str and end_time_str:
+            try:
+                target_start = datetime.strptime(start_time_str, '%H:%M').time()
+                target_end = datetime.strptime(end_time_str, '%H:%M').time()
+                
+                queryset = queryset.filter(
+                    Q(start_time__lt=target_end) | Q(start_time__isnull=True),
+                    Q(end_time__gt=target_start) | Q(end_time__isnull=True)
+                )
+            except ValueError:
+                pass
+        
+        if floor_id:
+            queryset = queryset.filter(seat__section__floor_id=floor_id)
+            
+        if not date_str and not floor_id and not status and not is_history and hasattr(self.request.user, 'employee'):
+            # Show all bookings for the current employee (including pending)
             queryset = queryset.filter(employee=self.request.user.employee)
         
-        return queryset
-    
+        return queryset.select_related('employee', 'seat__section__floor').order_by('-created_at')
+
     def perform_create(self, serializer):
-        # Automatically set the employee from the authenticated user
-        if hasattr(self.request.user, 'employee'):
-            employee = self.request.user.employee
-            booking_date = serializer.validated_data.get('booking_date')
-            seat = serializer.validated_data.get('seat')
+        if not hasattr(self.request.user, 'employee'):
+            raise serializers.ValidationError({"detail": "Only employees can book seats."})
             
-            # Check 1: Prevent same seat being booked twice on the same day
-            seat_already_booked = SeatBooking.objects.filter(
-                seat=seat,
-                booking_date=booking_date
-            ).first()
-            
-            if seat_already_booked:
-                raise serializers.ValidationError({
-                    "detail": f"This seat is already booked by {seat_already_booked.employee.full_name} for {booking_date}."
-                })
-            
-            # Check 2: Prevent user from booking multiple seats on the same day
-            existing_booking = SeatBooking.objects.filter(
-                employee=employee,
-                booking_date=booking_date
-            ).first()
-            
-            if existing_booking:
-                raise serializers.ValidationError({
-                    "detail": f"You have already booked seat {existing_booking.seat.seat_number} for {booking_date}. You can only book one seat per day."
-                })
-            
-            serializer.save(employee=employee)
-        else:
-            # If user doesn't have an employee record, raise error
-            raise serializers.ValidationError("User must have an employee record to book a seat")
+        employee = self.request.user.employee
+        booking_type = serializer.validated_data.get('booking_type', 'daily')
+        start_date = serializer.validated_data.get('start_date')
+        end_date = serializer.validated_data.get('end_date')
+
+        # Logic for end_date based on type
+        if booking_type == 'permanent':
+            end_date = None
+        elif booking_type == 'weekly' and not end_date:
+            end_date = start_date + timedelta(days=6)
+        elif booking_type == 'daily':
+            end_date = start_date
+
+        # Auto-approve daily bookings
+        status = 'approved' if booking_type == 'daily' else 'pending'
+
+        serializer.save(employee=employee, end_date=end_date, status=status)
+
+    @action(detail=True, methods=['post'], permission_classes=[IsAdminUser | IsMaster])
+    def approve(self, request, pk=None):
+        booking = self.get_object()
+        booking.status = 'approved'
+        booking.save()
+        return Response({'status': 'booking approved'})
+
+    @action(detail=True, methods=['post'], permission_classes=[IsAdminUser | IsMaster])
+    def reject(self, request, pk=None):
+        booking = self.get_object()
+        booking.status = 'rejected'
+        booking.is_active = False # Rejection cancels the booking
+        booking.save()
+        return Response({'status': 'booking rejected'})
+
+    @action(detail=True, methods=['post'], permission_classes=[permissions.IsAuthenticated])
+    def cancel(self, request, pk=None):
+        booking = self.get_object()
+        if not hasattr(request.user, 'employee'):
+            return Response({'error': 'Only employees can cancel bookings.'}, status=status.HTTP_403_FORBIDDEN)
+        if booking.employee != request.user.employee:
+            return Response({'error': 'You can only cancel your own bookings.'}, status=status.HTTP_403_FORBIDDEN)
+        booking.status = 'cancelled'
+        booking.is_active = False
+        booking.save()
+        return Response({'status': 'booking cancelled'})
 
 
 from google.oauth2 import id_token

@@ -203,10 +203,10 @@ const Sidebar = () => {
                                         </NavLink>
                                     </li>
                                     <li className="menu nav-item">
-                                        <NavLink to="/employee/desk-booking" className="group">
+                                        <NavLink to="/employee/seat-booking" className="group">
                                             <div className="flex items-center">
                                                 <IconMenuComponents className="group-hover:!text-primary shrink-0" />
-                                                <span className="ltr:pl-3 rtl:pr-3 text-black dark:text-[#506690] dark:group-hover:text-white-dark">{t('Desk Booking')}</span>
+                                                <span className="ltr:pl-3 rtl:pr-3 text-black dark:text-[#506690] dark:group-hover:text-white-dark">{t('Seat Booking')}</span>
                                             </div>
                                         </NavLink>
                                     </li>
@@ -277,6 +277,8 @@ const Sidebar = () => {
                                                 <li><NavLink to="/admin/configuration/leave-count">{t('Leave Count')}</NavLink></li>
                                                 <li><NavLink to="/admin/configuration/company-policies">{t('Company Policies')}</NavLink></li>
                                                 <li><NavLink to="/admin/configuration/office-structure">{t('Office Structure')}</NavLink></li>
+                                                <li><NavLink to="/admin/seat-approvals">{t('Seat Approvals')}</NavLink></li>
+                                                <li><NavLink to="/admin/seat-bookings-overview">{t('Seat Bookings Overview')}</NavLink></li>
                                             </ul>
                                         </AnimateHeight>
                                     </li>

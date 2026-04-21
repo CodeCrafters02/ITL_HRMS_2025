@@ -1,4 +1,5 @@
 from rest_framework import serializers
+from django.db.models import Q
 from datetime import datetime, timedelta
 from django.core.mail import send_mail
 from django.conf import settings
@@ -1464,6 +1465,102 @@ class RefreshTokenSerializer(serializers.Serializer):
             raise serializers.ValidationError("Invalid refresh token.")
 
 
+class SeatBookingSerializer(serializers.ModelSerializer):
+    employee_details = serializers.SerializerMethodField()
+    seat_details = serializers.SerializerMethodField()
+    is_mine = serializers.SerializerMethodField()
+
+    class Meta:
+        model = SeatBooking
+        fields = ['id', 'seat', 'employee', 'booking_type', 'status', 'start_date', 'end_date', 'start_time', 'end_time', 'is_active', 'created_at', 'employee_details', 'seat_details', 'is_mine']
+        read_only_fields = ['created_at', 'employee']  # employee set automatically by viewset
+
+    def validate(self, data):
+        seat = data.get('seat')
+        start_date = data.get('start_date')
+        end_date = data.get('end_date') or start_date
+        start_time = data.get('start_time')
+        end_time = data.get('end_time')
+        
+        request = self.context.get('request')
+        user = request.user if request else None
+        
+        # Current booking instance (if updating)
+        instance_id = self.instance.id if self.instance else None
+
+        # Check 1: Seat Overlap - Is the seat already booked by ANYONE?
+        seat_queryset = SeatBooking.objects.filter(
+            seat=seat,
+            is_active=True,
+            status__in=['pending', 'approved']
+        )
+        
+        if instance_id:
+            seat_queryset = seat_queryset.exclude(id=instance_id)
+        
+        # Date overlap check for seat
+        seat_date_overlap = seat_queryset.filter(
+            Q(start_date__lte=end_date),
+            Q(end_date__gte=start_date) | Q(end_date__isnull=True)
+        )
+        
+        for booking in seat_date_overlap:
+            if not start_time or not end_time or not booking.start_time or not booking.end_time:
+                raise serializers.ValidationError({"detail": f"Seat {seat.seat_number} is already booked for these dates."})
+            if start_time < booking.end_time and end_time > booking.start_time:
+                bStart = booking.start_time.strftime('%H:%M') if booking.start_time else '00:00'
+                bEnd = booking.end_time.strftime('%H:%M') if booking.end_time else '23:59'
+                raise serializers.ValidationError({"detail": f"Seat {seat.seat_number} is already booked during this time: {bStart} to {bEnd}"})
+
+        # Check 2: Employee Overlap - Does the CURRENT EMPLOYEE already have a booking?
+        if user and hasattr(user, 'employee'):
+            employee = user.employee
+            emp_queryset = SeatBooking.objects.filter(
+                employee=employee,
+                is_active=True,
+                status__in=['pending', 'approved']
+            )
+            
+            if instance_id:
+                emp_queryset = emp_queryset.exclude(id=instance_id)
+                
+            emp_date_overlap = emp_queryset.filter(
+                Q(start_date__lte=end_date),
+                Q(end_date__gte=start_date) | Q(end_date__isnull=True)
+            )
+            
+            for booking in emp_date_overlap:
+                if not start_time or not end_time or not booking.start_time or not booking.end_time:
+                    raise serializers.ValidationError({"detail": f"You already have a seat booking for these dates."})
+                if start_time < booking.end_time and end_time > booking.start_time:
+                    bStart = booking.start_time.strftime('%H:%M') if booking.start_time else '00:00'
+                    bEnd = booking.end_time.strftime('%H:%M') if booking.end_time else '23:59'
+                    raise serializers.ValidationError({"detail": f"You already have a booking for seat {booking.seat.seat_number} during this time: {bStart} to {bEnd}"})
+
+        return data
+
+    def get_employee_details(self, obj):
+        return {
+            'id': obj.employee.id,
+            'name': obj.employee.full_name,
+            'employee_id': obj.employee.employee_id
+        }
+
+    def get_seat_details(self, obj):
+        return {
+            "seat_number": obj.seat.seat_number,
+            "section": obj.seat.section.name,
+            "floor": obj.seat.section.floor.name,
+            "floor_id": obj.seat.section.floor.id
+        }
+
+    def get_is_mine(self, obj):
+        request = self.context.get('request')
+        if request and hasattr(request, 'user') and hasattr(request.user, 'employee'):
+            return obj.employee_id == request.user.employee.id
+        return False
+
+
 # Office Structure Serializers
 class OfficeSeatSerializer(serializers.ModelSerializer):
     employee_details = serializers.SerializerMethodField()
@@ -1486,35 +1583,7 @@ class OfficeSeatSerializer(serializers.ModelSerializer):
         return None
 
     def get_bookings_details(self, obj):
-        try:
-            return SeatBookingSerializer(obj.bookings.filter(booking_date__gte=timezone.now().date()), many=True).data
-        except NameError:
-             # Handle circular dependency if SeatBookingSerializer isn't defined yet
-             return []
-
-class SeatBookingSerializer(serializers.ModelSerializer):
-    employee_details = serializers.SerializerMethodField()
-    seat_details = serializers.SerializerMethodField()
-
-    class Meta:
-        model = SeatBooking
-        fields = ['id', 'seat', 'employee', 'booking_date', 'created_at', 'employee_details', 'seat_details']
-        read_only_fields = ['created_at', 'employee']  # employee set automatically by viewset
-
-    def get_employee_details(self, obj):
-        return {
-            'id': obj.employee.id,
-            'name': obj.employee.full_name,
-            'employee_id': obj.employee.employee_id
-        }
-
-    def get_seat_details(self, obj):
-        return {
-            "seat_number": obj.seat.seat_number,
-            "section": obj.seat.section.name,
-            "floor": obj.seat.section.floor.name,
-            "floor_id": obj.seat.section.floor.id
-        }
+        return SeatBookingSerializer(obj.bookings.filter(start_date__gte=timezone.now().date(), is_active=True), many=True).data
 
 
 class OfficeSectionSerializer(serializers.ModelSerializer):
@@ -1527,17 +1596,44 @@ class OfficeSectionSerializer(serializers.ModelSerializer):
         read_only_fields = ['created_at', 'updated_at']
 
 
-class OfficeFloorSerializer(serializers.ModelSerializer):
-    sections = OfficeSectionSerializer(many=True, read_only=True)
-    
+class OfficeLocationSerializer(serializers.ModelSerializer):
     class Meta:
-        model = OfficeFloor
-        fields = ['id', 'name', 'floor_number', 'description', 'sections', 'created_at', 'updated_at']
-        read_only_fields = ['created_at', 'updated_at', 'company']
-    
+        model = OfficeLocation
+        fields = ['id', 'name', 'address', 'company']
+        read_only_fields = ['company']
+
     def create(self, validated_data):
         request = self.context.get('request')
         if request and request.user.company:
             validated_data['company'] = request.user.company
+        return super().create(validated_data)
+
+
+class OfficeFloorSerializer(serializers.ModelSerializer):
+    sections = OfficeSectionSerializer(many=True, read_only=True)
+    location_name = serializers.CharField(source='location.name', read_only=True)
+    
+    class Meta:
+        model = OfficeFloor
+        fields = ['id', 'name', 'floor_number', 'description', 'layout_data', 'sections', 'created_at', 'updated_at', 'company', 'location', 'location_name']
+        read_only_fields = ['created_at', 'updated_at', 'company']
+    
+    def create(self, validated_data):
+        request = self.context.get('request')
+        if not request or not hasattr(request.user, 'company') or not request.user.company:
+            raise serializers.ValidationError({"detail": "User account is not associated with a company. Cannot create floors."})
+        
+        company = request.user.company
+        location = validated_data.get('location')
+        floor_number = validated_data.get('floor_number')
+
+        if location and location.company != company:
+             raise serializers.ValidationError({"detail": "Invalid location selected for your company."})
+
+        # Proactive uniqueness check to prevent 500 IntegrityError
+        if OfficeFloor.objects.filter(location=location, floor_number=floor_number).exists():
+            raise serializers.ValidationError({"detail": f"Floor number {floor_number} already exists for this office location."})
+
+        validated_data['company'] = company
         return super().create(validated_data)
 
