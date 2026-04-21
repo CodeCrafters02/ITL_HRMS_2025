@@ -132,6 +132,8 @@ const AdminLeaveCount = lazy(() => import('../pages/Admin/LeaveCount'));
 const AdminCompanyPolicies = lazy(() => import('../pages/Admin/CompanyPolicies'));
 const AdminCalendar = lazy(() => import('../pages/Admin/Calendar'));
 const AdminAssetsInventory = lazy(() => import('../pages/Admin/AssetsInventory'));
+const AdminOfficeStructure = lazy(() => import('../pages/Admin/OfficeStructure'));
+const AdminSeatApprovals = lazy(() => import('../pages/Admin/SeatApprovals'));
 
 // Employee Pages
 const EmployeeDashboard = lazy(() => import('../pages/Employee/Dashboard'));
@@ -144,6 +146,7 @@ const EmployeeLearningCorner = lazy(() => import('../pages/Employee/LearningCorn
 const EmployeeNotifications = lazy(() => import('../pages/Employee/Notifications/Notifications'));
 const EmployeeCompanyPolicy = lazy(() => import('../pages/Employee/CompanyPolicy/CompanyPolicy'));
 const EmployeeAssetRequests = lazy(() => import('../pages/Employee/AssetRequests'));
+const EmployeeSeatBooking = lazy(() => import('../pages/Employee/SeatBooking'));
 
 const routes = [
     // dashboard
@@ -696,7 +699,7 @@ const routes = [
     },
     {
         path: '/admin/configuration/office-structure',
-        element: <AdminComingSoon />,
+        element: <AdminOfficeStructure />,
     },
     {
         path: '/admin/calendar',
@@ -717,6 +720,10 @@ const routes = [
     {
         path: '/admin/chat',
         element: <AdminChat />,
+    },
+    {
+        path: '/admin/seat-approvals',
+        element: <AdminSeatApprovals />,
     },
     {
         path: '/employee/dashboard',
@@ -757,6 +764,10 @@ const routes = [
     {
         path: '/employee/asset-requests',
         element: <EmployeeAssetRequests />,
+    },
+    {
+        path: '/employee/seat-booking',
+        element: <EmployeeSeatBooking />,
     },
 ];
 
