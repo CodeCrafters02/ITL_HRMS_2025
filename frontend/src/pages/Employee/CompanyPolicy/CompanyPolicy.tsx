@@ -48,9 +48,9 @@ const CompanyPolicyPage = () => {
                         <h1 className="text-2xl md:text-3xl font-extrabold">Company Policies</h1>
                         <p className="mt-1 text-white/80">Review and download official company policy documents.</p>
                     </div>
-                    <button type="button" className="btn btn-outline-light w-full md:w-auto" onClick={loadPolicies}>
+                    {/* <button type="button" className="btn btn-outline-light w-full md:w-auto" onClick={loadPolicies}>
                         Refresh
-                    </button>
+                    </button> */}
                 </div>
             </div>
 

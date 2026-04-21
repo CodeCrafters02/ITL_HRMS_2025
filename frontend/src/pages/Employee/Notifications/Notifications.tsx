@@ -104,9 +104,9 @@ const Notifications = () => {
                         <h1 className="text-2xl md:text-3xl font-extrabold">Notifications</h1>
                         <p className="mt-1 text-white/80">Stay updated with company announcements, events, and personal alerts.</p>
                     </div>
-                    <button type="button" className="btn btn-outline-light w-full md:w-auto" onClick={loadNotifications}>
+                    {/* <button type="button" className="btn btn-outline-light w-full md:w-auto" onClick={loadNotifications}>
                         Refresh
-                    </button>
+                    </button> */}
                 </div>
             </div>
 
