@@ -41,6 +41,7 @@ const ApplyLeave = () => {
     const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
     const [search, setSearch] = useState('');
     const [isApplyModalOpen, setIsApplyModalOpen] = useState(false);
+    const [showAllBalances, setShowAllBalances] = useState(false);
 
     const [leaveType, setLeaveType] = useState<number | ''>('');
     const [fromDate, setFromDate] = useState('');
@@ -74,6 +75,11 @@ const ApplyLeave = () => {
     const totalRemaining = useMemo(() => leaveBalances.reduce((sum, leave) => sum + leave.remaining_count, 0), [leaveBalances]);
     const pendingCount = useMemo(() => leaveRequests.filter((request) => request.status === 'Pending').length, [leaveRequests]);
     const approvedCount = useMemo(() => leaveRequests.filter((request) => request.status === 'Approved').length, [leaveRequests]);
+    const leaveBalancePreviewCount = 6;
+    const visibleLeaveBalances = useMemo(() => {
+        if (showAllBalances) return leaveBalances;
+        return leaveBalances.slice(0, leaveBalancePreviewCount);
+    }, [leaveBalances, showAllBalances]);
 
     const filteredRequests = useMemo(() => {
         const loweredSearch = search.trim().toLowerCase();
@@ -159,9 +165,9 @@ const ApplyLeave = () => {
                         <button type="button" className="btn btn-primary w-full sm:w-auto" onClick={() => setIsApplyModalOpen(true)}>
                             Apply Leave
                         </button>
-                        <button type="button" onClick={loadData} className="btn btn-outline-light w-full sm:w-auto" disabled={loading}>
+                        {/* <button type="button" onClick={loadData} className="btn btn-outline-light w-full sm:w-auto" disabled={loading}>
                             Refresh
-                        </button>
+                        </button> */}
                     </div>
                 </div>
             </div>
@@ -192,37 +198,51 @@ const ApplyLeave = () => {
             </div>
 
             <div className="panel">
-                    <h3 className="text-lg font-bold mb-4">Leave Balances</h3>
-                    {loading ? (
-                        <p className="text-white-dark">Loading balances...</p>
-                    ) : leaveBalances.length === 0 ? (
-                        <p className="text-white-dark">No leave policies assigned yet.</p>
-                    ) : (
-                        <div className="space-y-3">
-                            {leaveBalances.map((leave) => {
-                                const percentUsed = leave.count ? Math.min(100, Math.round((leave.used_count / leave.count) * 100)) : 0;
-                                return (
-                                    <div key={leave.id} className="rounded-md border border-white-light dark:border-[#1b2e4b] p-4">
-                                        <div className="flex flex-wrap items-center justify-between gap-2">
-                                            <div className="flex items-center gap-2">
-                                                <IconCalendar className="w-5 h-5 text-primary" />
-                                                <p className="font-semibold">{leave.leave_name}</p>
-                                                <span className={`badge ${leave.is_paid ? 'bg-success-light text-success' : 'bg-dark-light text-white-dark'}`}>
-                                                    {leave.is_paid ? 'Paid' : 'Unpaid'}
-                                                </span>
-                                            </div>
-                                            <p className="text-sm text-white-dark">
-                                                {leave.remaining_count} / {leave.count} remaining
-                                            </p>
-                                        </div>
-                                        <div className="mt-3 h-2 bg-[#ebedf2] dark:bg-[#1b2e4b] rounded-full overflow-hidden">
-                                            <div className="h-full bg-primary rounded-full" style={{ width: `${percentUsed}%` }} />
-                                        </div>
-                                    </div>
-                                );
-                            })}
-                        </div>
+                <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+                    <h3 className="text-lg font-bold">Leave Balances</h3>
+                    {leaveBalances.length > leaveBalancePreviewCount && (
+                        <button type="button" className="btn btn-sm btn-outline-primary" onClick={() => setShowAllBalances((prev) => !prev)}>
+                            {showAllBalances ? 'Show Less' : `Show All (${leaveBalances.length})`}
+                        </button>
                     )}
+                </div>
+                {loading ? (
+                    <p className="text-white-dark">Loading balances...</p>
+                ) : leaveBalances.length === 0 ? (
+                    <p className="text-white-dark">No leave policies assigned yet.</p>
+                ) : (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
+                        {visibleLeaveBalances.map((leave) => {
+                            const percentUsed = leave.count ? Math.min(100, Math.round((leave.used_count / leave.count) * 100)) : 0;
+                            return (
+                                <div key={leave.id} className="rounded-md border border-white-light dark:border-[#1b2e4b] p-4 bg-white dark:bg-[#111c2d]">
+                                    <div className="mb-3 flex items-start justify-between gap-2">
+                                        <div className="min-w-0">
+                                            <div className="flex items-center gap-2">
+                                                <IconCalendar className="h-4 w-4 text-primary shrink-0" />
+                                                <p className="font-semibold truncate">{leave.leave_name}</p>
+                                            </div>
+                                            <span className={`mt-2 inline-block badge ${leave.is_paid ? 'bg-success-light text-success' : 'bg-dark-light text-white-dark'}`}>
+                                                {leave.is_paid ? 'Paid' : 'Unpaid'}
+                                            </span>
+                                        </div>
+                                        <p className="text-sm font-semibold text-primary whitespace-nowrap">{leave.remaining_count} left</p>
+                                    </div>
+
+                                    <div className="h-2 bg-[#ebedf2] dark:bg-[#1b2e4b] rounded-full overflow-hidden">
+                                        <div className="h-full bg-primary rounded-full" style={{ width: `${percentUsed}%` }} />
+                                    </div>
+
+                                    <div className="mt-3 flex items-center justify-between text-xs text-white-dark">
+                                        <span>Total: {leave.count}</span>
+                                        <span>Used: {leave.used_count}</span>
+                                        <span>{percentUsed}% used</span>
+                                    </div>
+                                </div>
+                            );
+                        })}
+                    </div>
+                )}
             </div>
 
             <div className="panel">
