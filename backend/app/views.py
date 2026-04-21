@@ -3305,6 +3305,7 @@ class SeatBookingViewSet(viewsets.ModelViewSet):
 
         date_str = self.request.query_params.get('date', None)
         floor_id = self.request.query_params.get('floor', None)
+        seat_number = self.request.query_params.get('seat_number', None)
         status = self.request.query_params.get('status', None)
         start_time_str = self.request.query_params.get('start_time', None)
         end_time_str = self.request.query_params.get('end_time', None)
@@ -3341,6 +3342,9 @@ class SeatBookingViewSet(viewsets.ModelViewSet):
         
         if floor_id:
             queryset = queryset.filter(seat__section__floor_id=floor_id)
+            
+        if seat_number:
+            queryset = queryset.filter(seat__seat_number=seat_number)
             
         if not date_str and not floor_id and not status and not is_history and hasattr(self.request.user, 'employee'):
             # Show all bookings for the current employee (including pending)

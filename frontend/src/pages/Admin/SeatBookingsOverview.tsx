@@ -153,9 +153,27 @@ const AdminSeatBookingsOverview = () => {
         }
     };
 
-    const handleSeatClick = (seat: any) => {
-        const booking = bookings.find(b => b.seat_details.seat_number === seat.name);
-        setSelectedSeat({ ...seat, booking });
+    const handleSeatClick = async (seat: any) => {
+        // Find if it's booked for the CURRENTLY SELECTED date
+        const currentBooking = bookings.find(b => b.seat_details.seat_number === seat.name);
+        
+        let upcoming = [];
+        try {
+            const token = localStorage.getItem('access_token');
+            // Fetch ALL active bookings for this seat to see the future schedule
+            const res = await fetch(`${API_BASE_URL}/app/seat-bookings/?seat_number=${seat.name}&floor=${selectedFloor.id}`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (res.ok) {
+                const data = await res.json();
+                // Filter out the one already shown as "current" if it exists
+                upcoming = (data || []).filter((b: any) => b.id !== currentBooking?.id);
+            }
+        } catch (error) {
+            console.error('Error fetching seat schedule:', error);
+        }
+
+        setSelectedSeat({ ...seat, booking: currentBooking, upcomingBookings: upcoming });
     };
 
     const fetchHistory = async () => {
@@ -491,6 +509,37 @@ const AdminSeatBookingsOverview = () => {
                                     <span className="badge badge-outline-success">Available</span>
                                     <div className="mt-4 opacity-70">
                                         <p className="font-bold text-sm">This seat is completely unoccupied for the selected date.</p>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Upcoming Schedule Section */}
+                            {selectedSeat.upcomingBookings && selectedSeat.upcomingBookings.length > 0 && (
+                                <div className="mt-8 animate-fade-in-down">
+                                    <h6 className="text-[10px] uppercase font-black text-gray-400 mb-4 border-b pb-1 border-gray-100 dark:border-gray-800 tracking-widest">Upcoming Schedule</h6>
+                                    <div className="space-y-3">
+                                        {selectedSeat.upcomingBookings.slice(0, 5).map((b: any) => (
+                                            <div key={b.id} className="p-3 bg-gray-50 dark:bg-gray-800/40 rounded-xl border border-gray-100 dark:border-gray-800 relative group overflow-hidden">
+                                                <div className="flex justify-between items-start mb-2 relative z-10">
+                                                    <div>
+                                                        <p className="font-bold text-xs">{b.employee_details.name}</p>
+                                                        <p className="text-[10px] text-gray-400 font-bold uppercase tracking-tight">{b.booking_type}</p>
+                                                    </div>
+                                                    <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-full ${
+                                                        b.status === 'pending' ? 'bg-yellow-100 text-yellow-600' : 'bg-blue-100 text-blue-600'
+                                                    }`}>
+                                                        {b.status}
+                                                    </span>
+                                                </div>
+                                                <div className="text-[10px] space-y-0.5 relative z-10">
+                                                    <p className="font-bold text-gray-600 dark:text-gray-400">{b.start_date} {b.end_date && ` to ${b.end_date}`}</p>
+                                                    <p className="text-gray-400 italic">{b.start_time?.substring(0, 5)} - {b.end_time?.substring(0, 5)}</p>
+                                                </div>
+                                                <div className="absolute right-[-10px] bottom-[-10px] opacity-5 group-hover:opacity-10 transition-opacity">
+                                                    <IconClock className="w-12 h-12" />
+                                                </div>
+                                            </div>
+                                        ))}
                                     </div>
                                 </div>
                             )}
