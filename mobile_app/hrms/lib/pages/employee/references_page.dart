@@ -6,7 +6,9 @@ import 'dart:io';
 import '../../models/employee_reference_model.dart';
 import '../../services/employee_service.dart';
 import '../../config/api_config.dart';
-import '../../widgets/employee_app_bar.dart';
+import '../../theme/app_stitch_theme.dart';
+import '../../widgets/glass_card.dart';
+import '../../widgets/stitch_background.dart';
 
 class ReferencesPage extends StatefulWidget {
   const ReferencesPage({super.key});
@@ -200,27 +202,57 @@ class _ReferencesPageState extends State<ReferencesPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF9FAFB),
-      appBar: EmployeeAppBar(
-        title: 'References',
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.add),
-            onPressed: _addReference,
-            tooltip: 'Add Reference',
+      backgroundColor: Colors.transparent,
+      body: StitchBackground(
+        child: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+            child: Column(
+              children: [
+                GlassCard(
+                  padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
+                  child: Row(
+                    children: [
+                      IconButton(
+                        onPressed: () => Navigator.pop(context),
+                        icon: const Icon(Icons.arrow_back_ios_new_rounded),
+                      ),
+                      const SizedBox(width: 6),
+                      Expanded(
+                        child: Text(
+                          'References',
+                          style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                                fontWeight: FontWeight.w900,
+                                color: AppStitchTheme.lightOnSurface,
+                              ),
+                        ),
+                      ),
+                      IconButton(
+                        onPressed: _addReference,
+                        tooltip: 'Add Reference',
+                        icon: const Icon(Icons.add_rounded),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Expanded(
+                  child: _isLoading
+                      ? const Center(child: CircularProgressIndicator())
+                      : _error != null
+                          ? _buildErrorState()
+                          : _references.isEmpty
+                              ? _buildEmptyState()
+                              : _buildReferencesList(),
+                ),
+              ],
+            ),
           ),
-        ],
+        ),
       ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : _error != null
-          ? _buildErrorState()
-          : _references.isEmpty
-          ? _buildEmptyState()
-          : _buildReferencesList(),
       floatingActionButton: FloatingActionButton(
         onPressed: _addReference,
-        backgroundColor: const Color(0xFF4F46E5),
+        backgroundColor: AppStitchTheme.primary,
         child: const Icon(Icons.add, color: Colors.white),
       ),
     );
@@ -291,9 +323,9 @@ class _ReferencesPageState extends State<ReferencesPage> {
   Widget _buildReferencesList() {
     return RefreshIndicator(
       onRefresh: _fetchReferences,
-      color: const Color(0xFF4F46E5),
+      color: AppStitchTheme.primary,
       child: ListView.builder(
-        padding: const EdgeInsets.all(16),
+        padding: EdgeInsets.zero,
         itemCount: _references.length,
         itemBuilder: (context, index) {
           return _buildReferenceCard(_references[index]);
@@ -303,11 +335,9 @@ class _ReferencesPageState extends State<ReferencesPage> {
   }
 
   Widget _buildReferenceCard(EmployeeReference reference) {
-    return Card(
-      margin: const EdgeInsets.only(bottom: 12),
-      elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: Padding(
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: GlassCard(
         padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -320,19 +350,18 @@ class _ReferencesPageState extends State<ReferencesPage> {
                     children: [
                       Text(
                         reference.name,
-                        style: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                          color: Color(0xFF111827),
-                        ),
+                        style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                              fontWeight: FontWeight.w900,
+                              color: AppStitchTheme.lightOnSurface,
+                            ),
                       ),
                       const SizedBox(height: 4),
                       Text(
                         reference.designation,
-                        style: const TextStyle(
-                          fontSize: 14,
-                          color: Color(0xFF6B7280),
-                        ),
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                              fontWeight: FontWeight.w600,
+                              color: AppStitchTheme.lightOnSurfaceMuted,
+                            ),
                       ),
                     ],
                   ),
@@ -374,18 +403,18 @@ class _ReferencesPageState extends State<ReferencesPage> {
                 child: Row(
                   children: [
                     const Icon(
-                      Icons.description,
+                      Icons.description_rounded,
                       size: 16,
-                      color: Color(0xFF4F46E5),
+                      color: AppStitchTheme.primary,
                     ),
                     const SizedBox(width: 8),
-                    const Text(
+                    Text(
                       'View Resume',
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: Color(0xFF4F46E5),
-                        decoration: TextDecoration.underline,
-                      ),
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                            fontWeight: FontWeight.w700,
+                            color: AppStitchTheme.primary,
+                            decoration: TextDecoration.underline,
+                          ),
                     ),
                   ],
                 ),
@@ -397,27 +426,29 @@ class _ReferencesPageState extends State<ReferencesPage> {
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFF3F4F6),
+                  color: Colors.white.withValues(alpha: 0.55),
                   borderRadius: BorderRadius.circular(8),
+                  border: Border.all(
+                    color: AppStitchTheme.lightOutline.withValues(alpha: 0.65),
+                  ),
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
+                    Text(
                       'Admin Comment:',
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                        color: Color(0xFF6B7280),
-                      ),
+                      style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                            fontWeight: FontWeight.w900,
+                            color: AppStitchTheme.lightOnSurfaceMuted,
+                          ),
                     ),
                     const SizedBox(height: 4),
                     Text(
                       reference.adminComment!,
-                      style: const TextStyle(
-                        fontSize: 14,
-                        color: Color(0xFF111827),
-                      ),
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                            fontWeight: FontWeight.w600,
+                            color: AppStitchTheme.lightOnSurface,
+                          ),
                     ),
                   ],
                 ),
@@ -428,15 +459,15 @@ class _ReferencesPageState extends State<ReferencesPage> {
               children: [
                 Text(
                   'Submitted: ${DateFormat('MMM dd, yyyy').format(DateTime.parse(reference.submittedAt))}',
-                  style: const TextStyle(
-                    fontSize: 12,
-                    color: Color(0xFF6B7280),
-                  ),
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        fontWeight: FontWeight.w600,
+                        color: AppStitchTheme.lightOnSurfaceMuted,
+                      ),
                 ),
                 const Spacer(),
                 IconButton(
                   icon: const Icon(Icons.edit_outlined, size: 20),
-                  color: const Color(0xFF4F46E5),
+                  color: AppStitchTheme.primary,
                   onPressed: () => _editReference(reference),
                 ),
                 IconButton(
@@ -456,12 +487,15 @@ class _ReferencesPageState extends State<ReferencesPage> {
   Widget _buildInfoRow(IconData icon, String text) {
     return Row(
       children: [
-        Icon(icon, size: 16, color: const Color(0xFF6B7280)),
+        Icon(icon, size: 16, color: AppStitchTheme.lightOnSurfaceMuted),
         const SizedBox(width: 8),
         Expanded(
           child: Text(
             text,
-            style: const TextStyle(fontSize: 14, color: Color(0xFF6B7280)),
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  fontWeight: FontWeight.w600,
+                  color: AppStitchTheme.lightOnSurface,
+                ),
           ),
         ),
       ],
