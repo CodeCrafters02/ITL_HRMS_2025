@@ -1,4 +1,5 @@
 import 'dart:async';
+
 import 'package:flutter/material.dart';
 import '../../models/dashboard_model.dart';
 import '../../models/calendar_model.dart';
@@ -601,6 +602,7 @@ class _KpiGrid extends StatelessWidget {
                 icon: Icons.beach_access_outlined,
                 title: 'Leaves',
                 value: isLoading ? '—' : '$leavesCount',
+                accent: AppStitchTheme.kpiLeaves,
                 onTap: onTapLeaves,
               ),
               const SizedBox(height: 10),
@@ -608,6 +610,7 @@ class _KpiGrid extends StatelessWidget {
                 icon: Icons.task_alt_rounded,
                 title: 'My tasks',
                 value: isLoading ? '—' : '$myTasksCount',
+                accent: AppStitchTheme.kpiTasks,
                 onTap: onTapTasks,
               ),
             ],
@@ -621,6 +624,7 @@ class _KpiGrid extends StatelessWidget {
                 icon: Icons.celebration_outlined,
                 title: 'Holidays',
                 value: isLoading ? '—' : '$holidaysCount',
+                accent: AppStitchTheme.kpiHolidays,
                 onTap: onTapHolidays,
               ),
               const SizedBox(height: 10),
@@ -628,6 +632,7 @@ class _KpiGrid extends StatelessWidget {
                 icon: Icons.event_available_outlined,
                 title: 'Calendar',
                 value: isLoading ? '—' : '$calendarCount',
+                accent: AppStitchTheme.kpiCalendar,
                 onTap: onTapCalendar,
               ),
             ],
@@ -643,13 +648,17 @@ class _KpiPill extends StatelessWidget {
     required this.icon,
     required this.title,
     required this.value,
+    required this.accent,
     required this.onTap,
   });
 
   final IconData icon;
   final String title;
   final String value;
+  final Color accent;
   final VoidCallback onTap;
+
+  static const double _iconChipSize = 38;
 
   @override
   Widget build(BuildContext context) {
@@ -661,7 +670,16 @@ class _KpiPill extends StatelessWidget {
         borderRadius: 22,
         child: Row(
           children: [
-            Icon(icon, color: AppStitchTheme.primary),
+            Container(
+              width: _iconChipSize,
+              height: _iconChipSize,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: accent.withValues(alpha: 0.12),
+              ),
+              alignment: Alignment.center,
+              child: Icon(icon, color: accent, size: 22),
+            ),
             const SizedBox(width: 10),
             Expanded(
               child: Text(
@@ -675,8 +693,9 @@ class _KpiPill extends StatelessWidget {
             Text(
               value,
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    color: AppStitchTheme.lightOnSurface,
+                    color: accent,
                     fontWeight: FontWeight.w900,
+                    fontFeatures: const [FontFeature.tabularFigures()],
                   ),
             ),
           ],

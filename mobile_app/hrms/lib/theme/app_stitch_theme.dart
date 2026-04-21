@@ -8,6 +8,12 @@ class AppStitchTheme {
   static const Color primaryDim = Color(0xFF3D24C4);
   static const Color accentBlue = Color(0xFF4285F4);
 
+  /// Dashboard KPI semantic accents — see `docs/DESIGN_SYSTEM.md`.
+  static const Color kpiLeaves = Color(0xFF0F766E);
+  static const Color kpiHolidays = Color(0xFFB45309);
+  static const Color kpiTasks = Color(0xFF4338CA);
+  static const Color kpiCalendar = Color(0xFF0369A1);
+
   // Light tokens (aligned with login page)
   static const Color lightScaffold = Color(0xFFE8ECF3);
   static const Color lightSurface = Color(0xFFF8FAFC);
