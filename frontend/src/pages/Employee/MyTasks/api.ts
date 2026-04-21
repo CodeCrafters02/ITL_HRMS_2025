@@ -58,11 +58,35 @@ const parseJson = async <T>(res: Response): Promise<T> => {
     return data as T;
 };
 
-export const fetchMyTasks = async (): Promise<EmployeeTask[]> => {
-    const res = await fetch(`${EMPLOYEE_API}/my-tasks/`, { headers: authHeaders() });
-    const data = await parseJson<EmployeeTask[] | { results?: EmployeeTask[] }>(res);
-    if (Array.isArray(data)) return data;
-    return data.results || [];
+export interface MyTasksResponse {
+    results: EmployeeTask[];
+    count: number;
+    next: string | null;
+    previous: string | null;
+    summary: {
+        total: number;
+        done: number;
+        in_progress: number;
+        overdue: number;
+    };
+}
+
+export const fetchMyTasks = async (params: {
+    search?: string;
+    status?: string;
+    priority?: string;
+    page?: number;
+    page_size?: number;
+}): Promise<MyTasksResponse> => {
+    const query = new URLSearchParams();
+    if (params.search) query.append('search', params.search);
+    if (params.status && params.status !== 'all') query.append('status', params.status);
+    if (params.priority && params.priority !== 'all') query.append('priority', params.priority);
+    if (params.page) query.append('page', params.page.toString());
+    if (params.page_size) query.append('page_size', params.page_size.toString());
+
+    const res = await fetch(`${EMPLOYEE_API}/my-tasks/?${query.toString()}`, { headers: authHeaders() });
+    return parseJson<MyTasksResponse>(res);
 };
 
 export const updateTaskAssignmentStatus = async (assignmentId: number, status: TaskStatus): Promise<void> => {
