@@ -5,12 +5,14 @@ import '../../services/notification_service.dart';
 import '../../services/auth_service.dart';
 import '../../services/fcm_service.dart';
 import '../../models/profile_model.dart';
+import '../../providers/chat_scope.dart';
 import 'employee_dashboard_page.dart';
 import 'my_tasks_page.dart';
 import 'attendance_history_page.dart';
 import 'widgets/employee_drawer.dart';
 import 'widgets/employee_bottom_nav.dart';
 import 'widgets/notification_button.dart';
+import 'widgets/chat_button.dart';
 import '../../widgets/stitch_background.dart';
 import '../../widgets/glass_card.dart';
 
@@ -33,6 +35,11 @@ class _EmployeeLayoutState extends State<EmployeeLayout> with WidgetsBindingObse
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     _checkAuthAndInitialize();
+    // Keep chat badge/conversations warm for global unread counts.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      ChatScope.of(context).initialize();
+    });
     // Check for pending notifications after a short delay to ensure context is ready
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _handlePendingNotifications();
@@ -44,6 +51,15 @@ class _EmployeeLayoutState extends State<EmployeeLayout> with WidgetsBindingObse
     if (state == AppLifecycleState.resumed) {
       // Check for pending notifications when app resumes
       _handlePendingNotifications();
+      if (mounted) {
+        ChatScope.of(context).setForeground(true);
+      }
+    } else if (state == AppLifecycleState.paused ||
+        state == AppLifecycleState.inactive ||
+        state == AppLifecycleState.detached) {
+      if (mounted) {
+        ChatScope.of(context).setForeground(false);
+      }
     }
   }
 
@@ -89,6 +105,18 @@ class _EmployeeLayoutState extends State<EmployeeLayout> with WidgetsBindingObse
     } else if (type == 'leave_status') {
       // Navigate to Leave Application page for employees
       Navigator.pushNamed(context, '/employee/leave-application');
+    } else if (type == 'chat') {
+      final convIdRaw = data['conversation_id'] ?? data['conversationId'];
+      final convId = int.tryParse(convIdRaw?.toString() ?? '') ?? 0;
+      if (convId > 0) {
+        Navigator.pushNamed(
+          context,
+          '/employee/chat/thread',
+          arguments: {'conversationId': convId},
+        );
+      } else {
+        Navigator.pushNamed(context, '/employee/chat');
+      }
     } else if (type == 'task') {
       // Navigate to My Tasks page
       setState(() {
@@ -300,6 +328,7 @@ class _EmployeeLayoutState extends State<EmployeeLayout> with WidgetsBindingObse
                         ),
                       ),
                       const NotificationButton(),
+                      const ChatButton(),
                       _buildProfileAvatar(),
                     ],
                   ),
