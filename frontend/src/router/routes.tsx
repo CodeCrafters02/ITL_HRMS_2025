@@ -134,6 +134,7 @@ const AdminCalendar = lazy(() => import('../pages/Admin/Calendar'));
 const AdminAssetsInventory = lazy(() => import('../pages/Admin/AssetsInventory'));
 const AdminOfficeStructure = lazy(() => import('../pages/Admin/OfficeStructure'));
 const AdminSeatApprovals = lazy(() => import('../pages/Admin/SeatApprovals'));
+const AdminSeatBookingsOverview = lazy(() => import('../pages/Admin/SeatBookingsOverview'));
 
 // Employee Pages
 const EmployeeDashboard = lazy(() => import('../pages/Employee/Dashboard'));
@@ -724,6 +725,10 @@ const routes = [
     {
         path: '/admin/seat-approvals',
         element: <AdminSeatApprovals />,
+    },
+    {
+        path: '/admin/seat-bookings-overview',
+        element: <AdminSeatBookingsOverview />,
     },
     {
         path: '/employee/dashboard',
