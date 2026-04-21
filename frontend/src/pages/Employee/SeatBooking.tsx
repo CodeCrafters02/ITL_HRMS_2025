@@ -547,7 +547,7 @@ const SeatBooking = () => {
                                         </div>
                                     )}
                                     {selectedSeat.booking.is_mine && (
-                                        <button onClick={handleCancel} className="btn btn-danger w-full mt-4 h-11 font-bold">
+                                        <button onClick={() => handleCancel()} className="btn btn-danger w-full mt-4 h-11 font-bold">
                                             Cancel Booking
                                         </button>
                                     )}
