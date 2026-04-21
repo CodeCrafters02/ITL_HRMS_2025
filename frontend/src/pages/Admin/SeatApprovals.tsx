@@ -6,6 +6,9 @@ import IconCircleCheck from '../../components/Icon/IconCircleCheck';
 import IconChecks from '../../components/Icon/IconChecks';
 import IconX from '../../components/Icon/IconX';
 import IconRefresh from '../../components/Icon/IconRefresh';
+import IconUsers from '../../components/Icon/IconUsers';
+import IconLayout from '../../components/Icon/IconLayout';
+import IconInfoCircle from '../../components/Icon/IconInfoCircle';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000';
 
@@ -98,7 +101,19 @@ const SeatApprovals = () => {
     };
 
     return (
-        <div className="panel flex flex-col h-[calc(100vh-150px)]">
+        <div className="flex flex-col h-[calc(100vh-90px)] space-y-4">
+            {/* Header Banner */}
+            <div className="bg-gradient-to-r from-rose-500 to-orange-500 rounded-xl p-4 text-white shadow-lg overflow-hidden relative">
+                <div className="relative z-10">
+                    <h2 className="text-3xl font-extrabold mb-0.5">Seat Booking Approvals</h2>
+                    <p className="text-white/80 text-sm font-medium">Review and manage pending seat requests. Approve or reject applications to ensure optimal office utilization.</p>
+                </div>
+                <div className="absolute right-[-20px] top-[-20px] opacity-10">
+                    <IconChecks className="w-48 h-48" />
+                </div>
+            </div>
+
+            <div className="panel flex flex-1 flex-col overflow-hidden">
             <div className="flex items-center justify-between mb-6">
                 <h5 className="font-bold text-xl dark:text-white-light">Pending Seat Requests</h5>
                 <button onClick={fetchPendingBookings} className="btn btn-outline-primary btn-sm flex items-center gap-2">
@@ -197,7 +212,8 @@ const SeatApprovals = () => {
                 )}
             </div>
         </div>
-    );
+    </div>
+);
 };
 
 export default SeatApprovals;
