@@ -206,6 +206,7 @@ class LoginAPIView(APIView):
             return Response({
                 "access": access_token,
                 "refresh": refresh_token,
+                "id": user.id,
                 "username": user.username,
                 "first_name": user.first_name,
                 "last_name": user.last_name,
@@ -3533,6 +3534,7 @@ class GoogleLoginAPIView(APIView):
             return Response({
                 "access": str(refresh.access_token),
                 "refresh": str(refresh),
+                "id": user.id,
                 "username": user.username,
                 "first_name": user.first_name,
                 "last_name": user.last_name,
