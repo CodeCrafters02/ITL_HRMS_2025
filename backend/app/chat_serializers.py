@@ -27,6 +27,7 @@ class ChatConversationMemberSerializer(serializers.ModelSerializer):
             "can_remove_members",
             "can_revoke_roles",
             "joined_at",
+            "last_seen_at",
         ]
 
 

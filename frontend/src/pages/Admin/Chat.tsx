@@ -18,6 +18,7 @@ type ChatMember = {
     can_add_members: boolean;
     can_remove_members: boolean;
     can_revoke_roles: boolean;
+    last_seen_at?: string | null;
 };
 type Conversation = {
     id: number;
@@ -51,6 +52,7 @@ const AdminChat = () => {
     const [pendingPreviewUrl, setPendingPreviewUrl] = useState<string | null>(null);
     const [people, setPeople] = useState<ChatUser[]>([]);
     const [unreadByConv, setUnreadByConv] = useState<Record<number, number>>({});
+    const [tab, setTab] = useState<'dm' | 'group'>('dm');
 
     const wsRef = useRef<WebSocket | null>(null);
     const activeIdRef = useRef<number | null>(null);
@@ -197,11 +199,14 @@ const AdminChat = () => {
     };
 
     const filteredConversations = useMemo(() => {
+        let list = conversations;
+        if (tab) {
+            list = list.filter((c) => c.type === tab);
+        }
         const q = search.trim().toLowerCase();
-        if (!q) return conversations;
-        return conversations.filter((c) => conversationSearchText(c).includes(q));
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [conversations, search]);
+        if (!q) return list;
+        return list.filter((c) => conversationSearchText(c).includes(q));
+    }, [conversations, search, tab]);
 
     const fetchPeople = async (q: string): Promise<ChatUser[]> => {
         try {
@@ -829,9 +834,25 @@ ${filtered
                             <IconUserPlus />
                         </button>
                     </div>
+                    <div className="px-4 pb-3 flex gap-2">
+                        <button
+                            type="button"
+                            className={`btn flex-1 ${tab === 'dm' ? 'btn-primary' : 'btn-outline-primary'}`}
+                            onClick={() => setTab('dm')}
+                        >
+                            Individual
+                        </button>
+                        <button
+                            type="button"
+                            className={`btn flex-1 ${tab === 'group' ? 'btn-primary' : 'btn-outline-primary'}`}
+                            onClick={() => setTab('group')}
+                        >
+                            Groups
+                        </button>
+                    </div>
                     <div className="px-4 pb-3">
-                        <button type="button" className="btn btn-outline-primary w-full" onClick={fetchConversations} disabled={loading}>
-                            {loading ? 'Loading...' : 'Refresh'}
+                        <button type="button" className="btn btn-outline-primary w-full btn-sm" onClick={fetchConversations} disabled={loading}>
+                            {loading ? 'Loading...' : 'Refresh List'}
                         </button>
                     </div>
                     <PerfectScrollbar className="flex-1">
@@ -922,6 +943,30 @@ ${filtered
                                                 </div>
                                             )}
                                         </div>
+                                        {isMine(m) && activeConv?.type === 'dm' && (
+                                            <div className="mt-0.5 flex justify-end">
+                                                {(() => {
+                                                    const other = activeConv.members.find((mb) => Number(mb.user?.id) !== myUserId);
+                                                    if (!other || !other.last_seen_at) return <span className="text-[10px] text-white-dark">Sent</span>;
+                                                    const seenTime = new Date(other.last_seen_at).getTime();
+                                                    const msgTime = new Date(m.created_at).getTime();
+                                                    if (seenTime >= msgTime) {
+                                                        return (
+                                                            <span className="flex items-center gap-0.5 text-success text-[10px] font-bold">
+                                                                <svg className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+                                                                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                                                                </svg>
+                                                                <svg className="w-3 h-3 -ml-2" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+                                                                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                                                                </svg>
+                                                                Seen
+                                                            </span>
+                                                        );
+                                                    }
+                                                    return <span className="text-[10px] text-white-dark">Sent</span>;
+                                                })()}
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
                             ))}

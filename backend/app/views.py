@@ -1252,6 +1252,13 @@ class ChatConversationViewSet(viewsets.ModelViewSet):
         target.save()
         return Response({"detail": "Permissions updated."}, status=200)
 
+    @action(detail=True, methods=["post"], url_path="seen")
+    def mark_as_seen(self, request, pk=None):
+        """Manually mark conversation as seen by the current user."""
+        conv = self.get_object()
+        ChatConversationMember.objects.filter(conversation=conv, user=request.user).update(last_seen_at=timezone.now())
+        return Response({"detail": "Conversation marked as seen."}, status=200)
+
 
 class ChatMessageViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated, IsCompanyChatUser]
