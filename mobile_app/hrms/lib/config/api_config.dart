@@ -78,6 +78,12 @@ class ApiConfig {
   static const String timeLogMetaEndpoint = '/employee/time-log/meta/';
   static const String timeLogEndpoint = '/employee/time-log/';
 
+  // Office / Seat Booking Endpoints
+  static const String officeLocationsEndpoint = '/app/office-locations/';
+  static const String officeFloorsEndpoint = '/app/office-floors/';
+  static const String officeSeatsEndpoint = '/app/office-seats/';
+  static const String seatBookingsEndpoint = '/app/seat-bookings/';
+
   // Full URLs
   static String get loginUrl => '$baseUrl$loginEndpoint';
   static String get googleLoginUrl => '$baseUrl$googleLoginEndpoint';
@@ -157,6 +163,49 @@ class ApiConfig {
   static String get announcementsUrl => '$baseUrl$announcementsEndpoint';
   static String get timeLogMetaUrl => '$baseUrl$timeLogMetaEndpoint';
   static String get timeLogUrl => '$baseUrl$timeLogEndpoint';
+
+  // Office / Seat Booking URLs
+  static String get officeLocationsUrl => '$baseUrl$officeLocationsEndpoint';
+  static String officeFloorsUrl({required int locationId}) =>
+      '$baseUrl$officeFloorsEndpoint?location=$locationId';
+  static String officeSeatsUrl({required int floorId}) =>
+      '$baseUrl$officeSeatsEndpoint?floor=$floorId';
+
+  /// Seat bookings query helper.
+  ///
+  /// Backend supports filters:
+  /// - `date=YYYY-MM-DD`
+  /// - `floor=<id>`
+  /// - `start_time=HH:MM` and `end_time=HH:MM`
+  /// - `seat_number=<label>`
+  /// - `status=<pending|approved|rejected|cancelled>`
+  /// - `history=true`
+  static String seatBookingsUrl({
+    String? date,
+    int? floorId,
+    String? startTime,
+    String? endTime,
+    String? seatNumber,
+    String? status,
+    bool? history,
+  }) {
+    final qp = <String, String>{};
+    if (date != null && date.isNotEmpty) qp['date'] = date;
+    if (floorId != null) qp['floor'] = floorId.toString();
+    if (startTime != null && startTime.isNotEmpty) qp['start_time'] = startTime;
+    if (endTime != null && endTime.isNotEmpty) qp['end_time'] = endTime;
+    if (seatNumber != null && seatNumber.isNotEmpty) qp['seat_number'] = seatNumber;
+    if (status != null && status.isNotEmpty) qp['status'] = status;
+    if (history != null) qp['history'] = history ? 'true' : 'false';
+
+    final base = Uri.parse('$baseUrl$seatBookingsEndpoint');
+    final uri = base.replace(queryParameters: qp.isEmpty ? null : qp);
+    return uri.toString();
+  }
+
+  static String get seatBookingCreateUrl => '$baseUrl$seatBookingsEndpoint';
+  static String seatBookingCancelUrl(int bookingId) =>
+      '$baseUrl$seatBookingsEndpoint$bookingId/cancel/';
 
   // API Headers
   static Map<String, String> get headers => {

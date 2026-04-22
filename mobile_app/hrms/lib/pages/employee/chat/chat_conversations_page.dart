@@ -17,8 +17,10 @@ class ChatConversationsPage extends StatefulWidget {
 class _ChatConversationsPageState extends State<ChatConversationsPage>
     with WidgetsBindingObserver {
   final _searchController = TextEditingController();
+  final _searchFocus = FocusNode();
   String _query = '';
   String _myUsername = '';
+  bool _searching = false;
 
   @override
   void initState() {
@@ -42,6 +44,7 @@ class _ChatConversationsPageState extends State<ChatConversationsPage>
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     _searchController.dispose();
+    _searchFocus.dispose();
     super.dispose();
   }
 
@@ -79,6 +82,7 @@ class _ChatConversationsPageState extends State<ChatConversationsPage>
     return Scaffold(
       backgroundColor: Colors.transparent,
       body: StitchBackground(
+        showParticles: false,
         child: SafeArea(
           child: Padding(
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
@@ -96,13 +100,57 @@ class _ChatConversationsPageState extends State<ChatConversationsPage>
                       ),
                       const SizedBox(width: 4),
                       Expanded(
-                        child: Text(
-                          'Chat',
-                          style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                                fontWeight: FontWeight.w900,
-                                color: AppStitchTheme.lightOnSurface,
-                              ),
+                        child: AnimatedSwitcher(
+                          duration: const Duration(milliseconds: 160),
+                          switchInCurve: Curves.easeOut,
+                          switchOutCurve: Curves.easeIn,
+                          child: _searching
+                              ? TextField(
+                                  key: const ValueKey('searchField'),
+                                  controller: _searchController,
+                                  focusNode: _searchFocus,
+                                  decoration: const InputDecoration(
+                                    hintText: 'Search…',
+                                    border: InputBorder.none,
+                                    isDense: true,
+                                  ),
+                                  textInputAction: TextInputAction.search,
+                                )
+                              : Text(
+                                  'Chat',
+                                  key: const ValueKey('title'),
+                                  style: Theme.of(context)
+                                      .textTheme
+                                      .titleMedium
+                                      ?.copyWith(
+                                        fontWeight: FontWeight.w900,
+                                        color: AppStitchTheme.lightOnSurface,
+                                      ),
+                                ),
                         ),
+                      ),
+                      if (_searching && _query.isNotEmpty)
+                        IconButton(
+                          icon: const Icon(Icons.close_rounded),
+                          onPressed: () => _searchController.clear(),
+                          tooltip: 'Clear',
+                        ),
+                      IconButton(
+                        icon: Icon(_searching
+                            ? Icons.search_off_rounded
+                            : Icons.search_rounded),
+                        tooltip: _searching ? 'Close search' : 'Search',
+                        onPressed: () {
+                          setState(() => _searching = !_searching);
+                          if (_searching) {
+                            WidgetsBinding.instance.addPostFrameCallback((_) {
+                              if (mounted) _searchFocus.requestFocus();
+                            });
+                          } else {
+                            _searchController.clear();
+                            _searchFocus.unfocus();
+                          }
+                        },
                       ),
                       IconButton(
                         icon: const Icon(Icons.group_add_outlined),
@@ -128,37 +176,11 @@ class _ChatConversationsPageState extends State<ChatConversationsPage>
                   ),
                 ),
                 const SizedBox(height: 12),
-                GlassCard(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                  child: Row(
-                    children: [
-                      const Icon(Icons.search_rounded,
-                          color: AppStitchTheme.lightOnSurfaceMuted),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: TextField(
-                          controller: _searchController,
-                          decoration: const InputDecoration(
-                            hintText: 'Search chats…',
-                            border: InputBorder.none,
-                          ),
-                        ),
-                      ),
-                      if (_query.isNotEmpty)
-                        IconButton(
-                          icon: const Icon(Icons.close_rounded),
-                          onPressed: () => _searchController.clear(),
-                          tooltip: 'Clear',
-                        ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 12),
                 Expanded(
                   child: RefreshIndicator(
                     onRefresh: () => chat.refreshConversations(showLoading: false),
                     child: GlassCard(
+                      enableBlur: false,
                       padding: const EdgeInsets.fromLTRB(12, 12, 12, 12),
                       child: Builder(
                         builder: (context) {
@@ -207,9 +229,8 @@ class _ChatConversationsPageState extends State<ChatConversationsPage>
 
                               return InkWell(
                                 borderRadius: BorderRadius.circular(16),
-                                onTap: () async {
-                                  await chat.openConversation(c.id);
-                                  if (!context.mounted) return;
+                                onTap: () {
+                                  // Navigate instantly. The thread page will load/join messages.
                                   Navigator.pushNamed(
                                     context,
                                     '/employee/chat/thread',

@@ -1641,3 +1641,41 @@ class OfficeFloorSerializer(serializers.ModelSerializer):
         validated_data['company'] = company
         return super().create(validated_data)
 
+
+# Conference Room Serializers
+class ConferenceRoomSerializer(serializers.ModelSerializer):
+    floor_name = serializers.CharField(source='floor.name', read_only=True)
+    class Meta:
+        model = ConferenceRoom
+        fields = ['id', 'company', 'floor', 'floor_name', 'name', 'capacity', 'layout_element_id', 'is_active', 'created_at', 'updated_at']
+        read_only_fields = ['company']
+
+class ConferenceRoomBookingSerializer(serializers.ModelSerializer):
+    employee_details = serializers.SerializerMethodField(read_only=True)
+    room_details = serializers.SerializerMethodField(read_only=True)
+    
+    class Meta:
+        model = ConferenceRoomBooking
+        fields = ['id', 'room', 'room_details', 'employee', 'employee_details', 'date', 'start_time', 'end_time', 'status', 'purpose', 'created_at']
+        read_only_fields = ['employee', 'status', 'created_at']
+
+    def get_employee_details(self, obj):
+        return {
+            "name": f"{obj.employee.first_name} {obj.employee.last_name}",
+            "employee_id": obj.employee.employee_id
+        }
+        
+    def get_room_details(self, obj):
+        return {
+            "name": obj.room.name,
+            "floor": obj.room.floor.name,
+            "floor_id": obj.room.floor.id,
+            "layout_element_id": obj.room.layout_element_id
+        }
+
+class ConferenceRoomConfigSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ConferenceRoomConfig
+        fields = ['id', 'company', 'approval_limit_minutes']
+        read_only_fields = ['company']
+

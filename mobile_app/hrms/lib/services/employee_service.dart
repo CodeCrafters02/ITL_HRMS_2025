@@ -496,8 +496,27 @@ class EmployeeService {
       );
 
       if (response.statusCode == 200) {
-        final List<dynamic> data = jsonDecode(response.body);
-        final tasks = data.map((item) => Task.fromJson(item)).toList();
+        final decoded = jsonDecode(response.body);
+        final dynamic rawList = decoded is List
+            ? decoded
+            : (decoded is Map
+                ? (decoded['results'] ??
+                    decoded['tasks'] ??
+                    decoded['data'] ??
+                    decoded['items'])
+                : null);
+
+        if (rawList is! List) {
+          return ApiResponse(
+            success: false,
+            message: 'Invalid tasks response format',
+          );
+        }
+
+        final tasks = rawList
+            .whereType<Map>()
+            .map((item) => Task.fromJson(item.cast<String, dynamic>()))
+            .toList();
         return ApiResponse(
           success: true,
           message: 'Tasks loaded successfully',

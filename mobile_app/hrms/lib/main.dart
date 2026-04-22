@@ -16,6 +16,7 @@ import 'pages/employee/reportees_page.dart';
 import 'pages/employee/assign_task_page.dart';
 import 'pages/employee/leave_request_page.dart';
 import 'pages/employee/profile_page.dart';
+import 'pages/employee/seat_booking_page.dart';
 import 'pages/auth/change_password_page.dart';
 import 'pages/employee/chat/chat_conversations_page.dart';
 import 'pages/employee/chat/chat_thread_page.dart';
@@ -129,6 +130,8 @@ class _MyAppState extends State<MyApp> {
               const AuthGuard(child: LeaveRequestPage()),
           '/employee/profile': (context) =>
               const AuthGuard(child: ProfilePage()),
+          '/employee/seat-booking': (context) =>
+              const AuthGuard(child: SeatBookingPage()),
           '/change-password': (context) =>
               const AuthGuard(child: ChangePasswordPage()),
         },
