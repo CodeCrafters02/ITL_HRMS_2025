@@ -438,6 +438,10 @@ const ConferenceRoomStructure = () => {
                                         y={el.y}
                                         rotation={el.rotation}
                                         draggable={isRoom}
+                                        dragBoundFunc={(pos) => ({
+                                            x: Math.max(0, pos.x),
+                                            y: Math.max(0, pos.y)
+                                        })}
                                         onDragEnd={(e) => isRoom && updateElement(el.id, { x: e.target.x(), y: e.target.y() })}
                                         onClick={() => isRoom && setSelectedId(el.id)}
                                         opacity={opacity}

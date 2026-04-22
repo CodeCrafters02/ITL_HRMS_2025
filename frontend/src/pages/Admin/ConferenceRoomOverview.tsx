@@ -163,10 +163,28 @@ const ConferenceRoomOverview = () => {
     }, [elements]);
 
     const getRoomColor = (el: any) => {
-        // Find if it's currently occupied (needs more logic for time-based overlap, 
-        // but for overview we show rooms that have AT LEAST ONE approved booking today)
-        const hasBooking = bookings.some(b => b.room_details.layout_element_id === el.id);
-        if (hasBooking) return '#FB923C'; // Orange for "Has Bookings"
+        const now = new Date();
+        const todayStr = now.toISOString().split('T')[0];
+
+        // Find if a meeting is CURRENTLY in progress
+        const isCurrentlyBooked = bookings.some(b => {
+            if (b.room_details.layout_element_id !== el.id) return false;
+            if (b.status === 'rejected' || b.status === 'cancelled') return false;
+            if (b.date !== todayStr) return false;
+            
+            const [startH, startM] = b.start_time.split(':').map(Number);
+            const [endH, endM] = b.end_time.split(':').map(Number);
+            
+            const startTimeDate = new Date();
+            startTimeDate.setHours(startH, startM, 0, 0);
+            
+            const endTimeDate = new Date();
+            endTimeDate.setHours(endH, endM, 0, 0);
+            
+            return now >= startTimeDate && now <= endTimeDate;
+        });
+
+        if (isCurrentlyBooked) return '#FB923C'; // Orange for "Occupied Now"
         return '#10B981'; // Green for "Available"
     };
 
@@ -310,7 +328,32 @@ const ConferenceRoomOverview = () => {
                                             />
                                             {isRoom && (
                                                 <Text
-                                                    text={bookings.filter(b => b.room_details.layout_element_id === el.id).length + ' Bookings Today'}
+                                                    text={(() => {
+                                                        const now = new Date();
+                                                        const todayStr = now.toISOString().split('T')[0];
+                                                        const dayBookings = bookings.filter(b => b.room_details.layout_element_id === el.id && b.status !== 'rejected' && b.status !== 'cancelled');
+                                                        
+                                                        const isNow = dayBookings.some(b => {
+                                                            if (b.date !== todayStr) return false;
+                                                            const [sH, sM] = b.start_time.split(':').map(Number);
+                                                            const [eH, eM] = b.end_time.split(':').map(Number);
+                                                            const s = new Date(); s.setHours(sH, sM, 0, 0);
+                                                            const e = new Date(); e.setHours(eH, eM, 0, 0);
+                                                            return now >= s && now <= e;
+                                                        });
+
+                                                        if (isNow) return 'OCCUPIED NOW';
+
+                                                        const upcoming = dayBookings.filter(b => {
+                                                            if (b.date > todayStr) return true;
+                                                            if (b.date < todayStr) return false;
+                                                            const [eH, eM] = b.end_time.split(':').map(Number);
+                                                            const e = new Date(); e.setHours(eH, eM, 0, 0);
+                                                            return e > now;
+                                                        }).length;
+
+                                                        return upcoming > 0 ? `${upcoming} Upcoming Today` : 'Available';
+                                                    })()}
                                                     fontSize={10}
                                                     fill={isDarkMode ? '#ccc' : '#666'}
                                                     y={el.height - 25}
@@ -339,17 +382,29 @@ const ConferenceRoomOverview = () => {
                                <h6 className="text-[10px] uppercase font-black text-gray-400 mt-6 mb-2 border-b pb-1">Today's Schedule</h6>
                                {selectedRoom.bookings.length > 0 ? (
                                    <div className="space-y-3">
-                                       {selectedRoom.bookings.map((b: any) => (
-                                           <div key={b.id} className="p-3 bg-gray-50 dark:bg-gray-800/40 rounded-xl border border-gray-100 dark:border-gray-800 relative group overflow-hidden">
-                                                <p className="font-bold text-xs">{b.employee_details.name}</p>
-                                                <p className="text-[10px] text-gray-500 font-bold italic mb-2">
-                                                    {b.start_time.substring(0, 5)} - {b.end_time.substring(0, 5)}
-                                                </p>
-                                                <div className="max-w-full truncate text-[10px] text-gray-400" title={b.purpose}>
-                                                    {b.purpose || 'No purpose mentioned'}
+                                        {selectedRoom.bookings.map((b: any) => {
+                                            const now = new Date();
+                                            const todayStr = now.toISOString().split('T')[0];
+                                            const [endH, endM] = b.end_time.split(':').map(Number);
+                                            const endTimeDate = new Date();
+                                            endTimeDate.setHours(endH, endM, 0, 0);
+                                            const isCompleted = b.date < todayStr || (b.date === todayStr && endTimeDate < now);
+
+                                            return (
+                                                <div key={b.id} className={`p-3 bg-gray-50 dark:bg-gray-800/40 rounded-xl border border-gray-100 dark:border-gray-800 relative group overflow-hidden ${isCompleted ? 'opacity-50 grayscale' : ''}`}>
+                                                     <div className="flex justify-between items-start mb-1">
+                                                         <p className="font-bold text-xs">{b.employee_details.name}</p>
+                                                         {isCompleted && <span className="text-[8px] font-black bg-gray-200 px-1 rounded text-gray-600">COMPLETED</span>}
+                                                     </div>
+                                                     <p className="text-[10px] text-gray-500 font-bold italic mb-2">
+                                                         {b.start_time.substring(0, 5)} - {b.end_time.substring(0, 5)}
+                                                     </p>
+                                                     <div className="max-w-full truncate text-[10px] text-gray-400" title={b.purpose}>
+                                                         {b.purpose || 'No purpose mentioned'}
+                                                     </div>
                                                 </div>
-                                           </div>
-                                       ))}
+                                            );
+                                        })}
                                    </div>
                                ) : (
                                    <div className="text-center py-10 opacity-40">
@@ -368,8 +423,8 @@ const ConferenceRoomOverview = () => {
 
                             <div className="mt-10 text-left w-full space-y-3 p-4 bg-gray-50 dark:bg-gray-800/50 rounded-xl">
                                 <p className="text-[10px] uppercase font-black border-b pb-1 dark:border-gray-700 tracking-wider opacity-60">Status Legend</p>
-                                <div className="flex items-center gap-2 text-xs font-bold"><span className="w-4 h-4 rounded bg-[#10B981]"></span> Available Today</div>
-                                <div className="flex items-center gap-2 text-sm font-bold font-['Outfit']"><span className="w-4 h-4 rounded bg-[#FB923C]"></span> Occ/Has Bookings</div>
+                                <div className="flex items-center gap-2 text-xs font-bold"><span className="w-4 h-4 rounded bg-[#10B981]"></span> Available Now</div>
+                                <div className="flex items-center gap-2 text-sm font-bold font-['Outfit']"><span className="w-4 h-4 rounded bg-[#FB923C]"></span> Occupied Now</div>
                             </div>
                         </div>
                     )}

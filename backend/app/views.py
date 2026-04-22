@@ -3744,7 +3744,7 @@ class ConferenceRoomBookingViewSet(viewsets.ModelViewSet):
         end_time = serializer.validated_data['end_time']
         date = serializer.validated_data['date']
 
-        # Conflict check
+        # Conflict check - Room
         if ConferenceRoomBooking.objects.filter(
             room=room,
             date=date,
@@ -3753,6 +3753,16 @@ class ConferenceRoomBookingViewSet(viewsets.ModelViewSet):
             end_time__gt=start_time
         ).exists():
             raise serializers.ValidationError({"detail": "Room is already booked for this time."})
+
+        # Conflict check - Employee (One person cannot book multiple rooms at same time)
+        if ConferenceRoomBooking.objects.filter(
+            employee=employee,
+            date=date,
+            status__in=['pending', 'approved'],
+            start_time__lt=end_time,
+            end_time__gt=start_time
+        ).exists():
+            raise serializers.ValidationError({"detail": "You already have another room booked during this overlapping time period."})
 
         # Duration check for approval
         config, created = ConferenceRoomConfig.objects.get_or_create(company=user.company)
