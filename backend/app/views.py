@@ -1,4 +1,5 @@
 from rest_framework import viewsets, generics, status
+from django.shortcuts import get_object_or_404
 import pytz
 import string
 from rest_framework.decorators import action
@@ -2792,6 +2793,124 @@ class RejectedLeaveLogView(generics.ListAPIView):
             qs = qs.filter(employee__id=employee_id)
 
         return qs.order_by("-from_date", "-id")
+
+class PendingLeaveLogView(generics.ListAPIView):
+    """
+    Admin pending leave requests with backend pagination + search.
+    """
+    serializer_class = LeaveLogSerializer
+    permission_classes = [IsAuthenticated, IsAdminUser]
+    pagination_class = CustomPagination
+    filter_backends = [filters.SearchFilter]
+    search_fields = [
+        "employee__first_name",
+        "employee__last_name",
+        "employee__employee_id",
+        "employee__email",
+        "reporting_manager__first_name",
+        "reporting_manager__last_name",
+        "reason",
+        "leave_type__leave_name",
+    ]
+
+    def get_queryset(self):
+        qs = EmpLeave.objects.filter(
+            status="Pending",
+            company=self.request.user.company,
+        ).select_related("employee", "reporting_manager", "leave_type")
+
+        from_date = self.request.query_params.get("from_date")
+        to_date = self.request.query_params.get("to_date")
+
+        if from_date:
+            qs = qs.filter(from_date__gte=from_date)
+        if to_date:
+            qs = qs.filter(from_date__lte=to_date)
+        return qs.order_by("-from_date", "-id")
+
+class LeaveHistoryView(generics.ListAPIView):
+    """
+    Admin combined leave history (Approved/Rejected) with backend pagination + search.
+    """
+    serializer_class = LeaveLogSerializer
+    permission_classes = [IsAuthenticated, IsAdminUser]
+    pagination_class = CustomPagination
+    filter_backends = [filters.SearchFilter]
+    search_fields = [
+        "employee__first_name",
+        "employee__last_name",
+        "employee__employee_id",
+        "employee__email",
+        "reporting_manager__first_name",
+        "reporting_manager__last_name",
+        "reason",
+        "leave_type__leave_name",
+    ]
+
+    def get_queryset(self):
+        # Default to Approved/Rejected, but allow filtering by status if provided
+        status_filter = self.request.query_params.get("status", "history")
+        
+        qs = EmpLeave.objects.filter(company=self.request.user.company).select_related("employee", "reporting_manager", "leave_type")
+        
+        if status_filter == "history":
+            qs = qs.filter(status__in=["Approved", "Rejected"])
+        elif status_filter != "all":
+            qs = qs.filter(status=status_filter)
+
+        from_date = self.request.query_params.get("from_date")
+        to_date = self.request.query_params.get("to_date")
+
+        if from_date:
+            qs = qs.filter(from_date__gte=from_date)
+        if to_date:
+            qs = qs.filter(from_date__lte=to_date)
+
+        return qs.order_by("-from_date", "-id")
+
+    def list(self, request, *args, **kwargs):
+        queryset = self.filter_queryset(self.get_queryset())
+
+        page = self.paginate_queryset(queryset)
+        if page is not None:
+            serializer = self.get_serializer(page, many=True)
+            response = self.get_paginated_response(serializer.data)
+            
+            # Add extra stats for the dashboard cards
+            stats_qs = EmpLeave.objects.filter(company=request.user.company)
+            response.data['approved_count'] = stats_qs.filter(status='Approved').count()
+            response.data['rejected_count'] = stats_qs.filter(status='Rejected').count()
+            
+            return response
+
+        serializer = self.get_serializer(queryset, many=True)
+        return Response(serializer.data)
+
+class AdminApproveEmpLeaveView(APIView):
+    permission_classes = [IsAuthenticated, IsAdminUser]
+
+    def post(self, request, leave_id):
+        company = request.user.company
+        leave = get_object_or_404(EmpLeave, id=leave_id, company=company)
+        if leave.status != 'Approved':
+            leave.status = 'Approved'
+            leave.save()
+            return Response({'detail': 'Leave approved successfully.'})
+        return Response({'detail': 'This leave is already approved.'}, status=400)
+
+class AdminRejectEmpLeaveView(APIView):
+    permission_classes = [IsAuthenticated, IsAdminUser]
+
+    def post(self, request, leave_id):
+        company = request.user.company
+        leave = get_object_or_404(EmpLeave, id=leave_id, company=company)
+        if leave.status != 'Rejected':
+            rejection_reason = request.data.get('reason', '')
+            leave.status = 'Rejected'
+            leave.rejection_reason = rejection_reason
+            leave.save()
+            return Response({'detail': 'Leave rejected successfully.'})
+        return Response({'detail': 'This leave is already rejected.'}, status=400)
    
 class UserLogListView(generics.ListAPIView):
     serializer_class = UserLogSerializer

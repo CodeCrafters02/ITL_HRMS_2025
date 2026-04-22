@@ -121,8 +121,8 @@ const AdminLetterTemplates = lazy(() => import('../pages/Admin/LetterTemplates')
 const AdminEmployeeReferences = lazy(() => import('../pages/Admin/EmployeeReferences'));
 const AdminLearningCorner = lazy(() => import('../pages/Admin/LearningCorner'));
 const AdminChat = lazy(() => import('../pages/Admin/Chat'));
-const AdminApprovedLeaves = lazy(() => import('../pages/Admin/ApprovedLeaves'));
-const AdminRejectedLeaves = lazy(() => import('../pages/Admin/RejectedLeaves'));
+const AdminLeaveApproval = lazy(() => import('../pages/Admin/LeaveApproval'));
+const AdminLeaveHistory = lazy(() => import('../pages/Admin/LeaveHistory'));
 const AdminAttendanceLogs = lazy(() => import('../pages/Admin/AttendanceLogs'));
 const AdminAttendanceDetails = lazy(() => import('../pages/Admin/AttendanceDetails'));
 const AdminBreakConfig = lazy(() => import('../pages/Admin/BreakConfig'));
@@ -649,12 +649,12 @@ const routes = [
         element: <AdminLetterTemplates />,
     },
     {
-        path: '/admin/approved-leaves',
-        element: <AdminApprovedLeaves />,
+        path: '/admin/leave-approval',
+        element: <AdminLeaveApproval />,
     },
     {
-        path: '/admin/rejected-leaves',
-        element: <AdminRejectedLeaves />,
+        path: '/admin/leave-history',
+        element: <AdminLeaveHistory />,
     },
     {
         path: '/admin/attendance-logs',

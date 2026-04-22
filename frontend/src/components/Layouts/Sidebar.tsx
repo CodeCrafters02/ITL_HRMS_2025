@@ -318,8 +318,8 @@ const Sidebar = () => {
                                         </button>
                                         <AnimateHeight duration={300} height={currentMenu === 'leave-mgt' ? 'auto' : 0}>
                                             <ul className="sub-menu text-gray-500">
-                                                <li><NavLink to="/admin/approved-leaves">{t('Approved Leaves')}</NavLink></li>
-                                                <li><NavLink to="/admin/rejected-leaves">{t('Rejected Leaves')}</NavLink></li>
+                                                <li><NavLink to="/admin/leave-approval">{t('Leave Approval')}</NavLink></li>
+                                                <li><NavLink to="/admin/leave-history">{t('Leave History')}</NavLink></li>
                                             </ul>
                                         </AnimateHeight>
                                     </li>
