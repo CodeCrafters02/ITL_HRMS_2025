@@ -37,6 +37,8 @@ export interface AttendanceHistoryResponse {
     selected_month_name: string;
     monthly_data: AttendanceDayRecord[];
     summary: AttendanceSummary;
+    count: number;
+    total_pages: number;
 }
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000';
@@ -58,10 +60,21 @@ const parseJson = async <T>(res: Response): Promise<T> => {
     return data as T;
 };
 
-export const fetchAttendanceHistory = async (month?: number, year?: number): Promise<AttendanceHistoryResponse> => {
+export const fetchAttendanceHistory = async (params: { 
+    month?: number; 
+    year?: number; 
+    search?: string; 
+    status?: string; 
+    page?: number; 
+    page_size?: number;
+}): Promise<AttendanceHistoryResponse> => {
     const url = new URL(`${EMPLOYEE_API}/attendance-history/`);
-    if (month) url.searchParams.set('month', String(month));
-    if (year) url.searchParams.set('year', String(year));
+    if (params.month) url.searchParams.set('month', String(params.month));
+    if (params.year) url.searchParams.set('year', String(params.year));
+    if (params.search) url.searchParams.set('search', params.search);
+    if (params.status && params.status !== 'all') url.searchParams.set('status', params.status);
+    if (params.page) url.searchParams.set('page', String(params.page));
+    if (params.page_size) url.searchParams.set('page_size', String(params.page_size));
 
     const res = await fetch(url.toString(), { headers: authHeaders() });
     return parseJson<AttendanceHistoryResponse>(res);

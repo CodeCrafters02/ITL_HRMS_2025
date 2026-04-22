@@ -12,6 +12,14 @@ from datetime import date
 from django.db.models import Q,Prefetch
 from rest_framework.views import APIView
 from calendar import month_name
+from django_filters.rest_framework import DjangoFilterBackend
+from rest_framework import filters
+from rest_framework.pagination import PageNumberPagination
+
+class EmployeePagination(PageNumberPagination):
+    page_size = 10
+    page_size_query_param = 'page_size'
+    max_page_size = 100
 from .utils import calculate_worked_time, calculate_effective_time
 import re
 from app.models import Attendance,Notification,LearningCorner, ShiftPolicy, Employee, BreakLog,Payroll,CalendarEvent,EmpLeave,CompanyPolicies,Level,Designation,DepartmentWiseWorkingDays
@@ -792,13 +800,50 @@ class AttendanceHistoryAPIView(APIView):
 
             day += timedelta(days=1)
 
+        # Filtering
+        search = request.GET.get('search', '').lower()
+        status_filter = request.GET.get('status', 'all')
+
+        filtered_data = []
+        status_label_map = {
+            'present': 'present',
+            'absent': 'absent',
+            'leave': 'leave',
+            'half_day': 'half day',
+            'weekend': 'weekend',
+            'checked_in': 'checked in',
+            'no_data': 'no data'
+        }
+
+        for row in monthly_data:
+            match_search = not search or search in row['date'].lower() or search in row['day_name'].lower() or search in status_label_map.get(row['status'], '').lower()
+            match_status = status_filter == 'all' or row['status'] == status_filter
+            if match_search and match_status:
+                filtered_data.append(row)
+
+        # Pagination
+        try:
+            page = int(request.GET.get('page', 1))
+            page_size = int(request.GET.get('page_size', 10))
+        except ValueError:
+            page = 1
+            page_size = 10
+
+        total_count = len(filtered_data)
+        total_pages = (total_count + page_size - 1) // page_size
+        start_index = (page - 1) * page_size
+        end_index = start_index + page_size
+        paginated_data = filtered_data[start_index:end_index]
+
         return Response({
             'months': [{'value': i, 'name': month_name[i]} for i in range(1, 13)],
             'years': list(range(today.year - 5, today.year + 6)),
             'selected_month': selected_month,
             'selected_year': selected_year,
             'selected_month_name': month_name[selected_month],
-            'monthly_data': monthly_data,
+            'monthly_data': paginated_data,
+            'count': total_count,
+            'total_pages': total_pages,
             'summary': stats
         })
 
@@ -1107,6 +1152,10 @@ class SubTaskAssignAPIView(APIView):
 class MyTasksAPIView(generics.ListAPIView):
     permission_classes = [IsAuthenticated]
     serializer_class = MyTaskSerializer
+    pagination_class = EmployeePagination
+    filter_backends = [filters.SearchFilter, DjangoFilterBackend]
+    search_fields = ['title', 'description', 'subtasks__title']
+    filterset_fields = ['status', 'priority']
 
     def get_queryset(self):
         user = self.request.user
@@ -1145,6 +1194,39 @@ class MyTasksAPIView(generics.ListAPIView):
 
         return queryset
 
+    def list(self, request, *args, **kwargs):
+        queryset = self.filter_queryset(self.get_queryset())
+        
+        # Calculate summary statistics for ALL tasks matching the criteria (before pagination)
+        # Note: Summary usually reflects the user's overall state, not just filtered view
+        # But to match the frontend expectations, I'll provide global vs filtered stats
+        
+        user = request.user
+        emp = user.employee_profile
+        
+        all_tasks = self.get_queryset()
+        now = timezone.now().date()
+        
+        summary = {
+            'total': all_tasks.count(),
+            'done': all_tasks.filter(status='done').count(),
+            'in_progress': all_tasks.filter(status__in=['inprogress', 'inreview']).count(),
+            'overdue': all_tasks.exclude(status='done').filter(deadline__lt=now).count(),
+        }
+
+        page = self.paginate_queryset(queryset)
+        if page is not None:
+            serializer = self.get_serializer(page, many=True)
+            response = self.get_paginated_response(serializer.data)
+            response.data['summary'] = summary
+            return response
+
+        serializer = self.get_serializer(queryset, many=True)
+        return Response({
+            'results': serializer.data,
+            'summary': summary
+        })
+
 
 class UpdateAssignmentStatusAPIView(generics.UpdateAPIView):
     permission_classes = [IsAuthenticated]
@@ -1182,6 +1264,10 @@ class UpdateAssignmentStatusAPIView(generics.UpdateAPIView):
 class EmpLeaveListCreateAPIView(generics.ListCreateAPIView):
     serializer_class = EmpLeaveSerializer
     permission_classes = [IsAuthenticated]
+    pagination_class = EmployeePagination
+    filter_backends = [filters.SearchFilter, DjangoFilterBackend]
+    search_fields = ['reason', 'leave_type__leave_name', 'status']
+    filterset_fields = ['status']
 
     def get_queryset(self):
         emp = self.request.user.employee_profile

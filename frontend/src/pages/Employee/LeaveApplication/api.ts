@@ -67,11 +67,38 @@ export const fetchLeaveBalances = async (): Promise<LeaveBalance[]> => {
     return parseJson<LeaveBalance[]>(res);
 };
 
-export const fetchMyLeaveRequests = async (): Promise<LeaveRequest[]> => {
-    const res = await fetch(`${EMPLOYEE_API}/employee-leave-create/`, { headers: authHeaders(false) });
-    const data = await parseJson<LeaveRequest[] | { results?: LeaveRequest[] }>(res);
-    if (Array.isArray(data)) return data;
-    return data.results || [];
+export interface PaginatedLeaveRequests {
+    results: LeaveRequest[];
+    count: number;
+    total_pages: number;
+}
+
+export const fetchMyLeaveRequests = async (params?: { page?: number; page_size?: number; search?: string; status?: string }): Promise<PaginatedLeaveRequests> => {
+    const url = new URL(`${EMPLOYEE_API}/employee-leave-create/`);
+    if (params) {
+        if (params.page) url.searchParams.set('page', String(params.page));
+        if (params.page_size) url.searchParams.set('page_size', String(params.page_size));
+        if (params.search) url.searchParams.set('search', params.search);
+        if (params.status && params.status !== 'all') url.searchParams.set('status', params.status);
+    }
+    const res = await fetch(url.toString(), { headers: authHeaders(false) });
+    const data = await parseJson<any>(res);
+    
+    // Handle both paginated and non-paginated (backward compatibility) responses
+    if (data.results && Array.isArray(data.results)) {
+        return {
+            results: data.results,
+            count: data.count || data.results.length,
+            total_pages: data.total_pages || 1
+        };
+    }
+    
+    const arr = Array.isArray(data) ? data : [];
+    return {
+        results: arr,
+        count: arr.length,
+        total_pages: 1
+    };
 };
 
 export const createLeaveRequest = async (payload: CreateLeavePayload): Promise<LeaveRequest> => {

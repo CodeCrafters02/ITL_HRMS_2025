@@ -81,9 +81,9 @@ const LearningCorner = () => {
                         <h1 className="text-2xl md:text-3xl font-extrabold">Learning Platform</h1>
                         <p className="mt-1 text-white/80">Explore curated resources, videos, and documents from your company knowledge base.</p>
                     </div>
-                    <button type="button" className="btn btn-outline-light w-full md:w-auto" onClick={loadResources}>
+                    {/* <button type="button" className="btn btn-outline-light w-full md:w-auto" onClick={loadResources}>
                         Refresh
-                    </button>
+                    </button> */}
                 </div>
             </div>
 

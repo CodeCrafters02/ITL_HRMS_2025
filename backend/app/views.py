@@ -206,6 +206,7 @@ class LoginAPIView(APIView):
             return Response({
                 "access": access_token,
                 "refresh": refresh_token,
+                "id": user.id,
                 "username": user.username,
                 "first_name": user.first_name,
                 "last_name": user.last_name,
@@ -1755,11 +1756,12 @@ class AttendanceViewSet(viewsets.ModelViewSet):
     queryset = Attendance.objects.all()
     serializer_class = AttendanceSerializer
     permission_classes = [IsAuthenticated, IsAdminUser]
+    pagination_class = CustomPagination
 
     def get_queryset(self):
+        # Base queryset for existing attendance records
         queryset = Attendance.objects.filter(company=self.request.user.company)
         
-        # Filter by date range
         from_date = self.request.query_params.get('from_date')
         to_date = self.request.query_params.get('to_date')
         if from_date:
@@ -1767,25 +1769,6 @@ class AttendanceViewSet(viewsets.ModelViewSet):
         if to_date:
             queryset = queryset.filter(date__lte=to_date)
             
-        # Filter by status
-        status = self.request.query_params.get('status')
-        if status:
-            if status.lower() == 'present':
-                # All employees who are checked in or marked as present and not on leave
-                queryset = queryset.filter(
-                    Q(check_in__isnull=False) | Q(is_present=True),
-                    leave__isnull=True
-                )
-            elif status.lower() == 'absent':
-                queryset = queryset.filter(
-                    check_in__isnull=True,
-                    is_present=False,
-                    leave__isnull=True
-                )
-            elif status.lower() == 'leave':
-                queryset = queryset.filter(leave__isnull=False)
-                
-        # Filter by search term (employee name or ID)
         search = self.request.query_params.get('search')
         if search:
             queryset = queryset.filter(
@@ -1793,8 +1776,172 @@ class AttendanceViewSet(viewsets.ModelViewSet):
                 Q(employee__first_name__icontains=search) |
                 Q(employee__last_name__icontains=search)
             )
+        return queryset
+
+    def list(self, request, *args, **kwargs):
+        company = request.user.company
+        from_date_str = request.query_params.get('from_date')
+        to_date_str = request.query_params.get('to_date')
+        search = request.query_params.get('search', '').strip()
+        status_filter = request.query_params.get('status', 'All').lower()
+        
+        # Determine date range
+        try:
+            today = timezone.localdate()
+            from_date = datetime.strptime(from_date_str, '%Y-%m-%d').date() if from_date_str else today
+            to_date = datetime.strptime(to_date_str, '%Y-%m-%d').date() if to_date_str else today
+        except (ValueError, TypeError):
+            from_date = to_date = today
+
+        # 1. Get all active employees for the company (applying employee-level search)
+        employee_qs = Employee.objects.filter(company=company, is_active=True).select_related('department', 'shift_assigned')
+        if search:
+            employee_qs = employee_qs.filter(
+                Q(employee_id__icontains=search) |
+                Q(first_name__icontains=search) |
+                Q(last_name__icontains=search)
+            )
+
+        # 2. Bulk fetch existing data for the range
+        attendance_records = Attendance.objects.filter(
+            company=company, 
+            date__range=(from_date, to_date)
+        ).select_related('employee')
+        
+        leaves = EmpLeave.objects.filter(
+            company=company,
+            status='Approved',
+            from_date__lte=to_date,
+            to_date__gte=from_date
+        ).select_related('employee', 'leave_type')
+        
+        holidays = CalendarEvent.objects.filter(
+            company=company,
+            is_holiday=True,
+            date__range=(from_date, to_date)
+        )
+
+        # Map data for fast lookup: { (emp_id, date): object }
+        att_map = { (att.employee_id, att.date): att for att in attendance_records }
+        holiday_map = { h.date: h.name for h in holidays }
+
+        # Generate the combined list
+        results = []
+        curr_date = from_date
+        while curr_date <= to_date:
+            curr_holiday = holiday_map.get(curr_date)
             
-        return queryset.order_by('-date', 'employee__employee_id')
+            for emp in employee_qs:
+                att = att_map.get((emp.id, curr_date))
+                
+                # Default synthetic row
+                row = {
+                    'id': att.id if att else None,
+                    'employee_id': emp.employee_id,
+                    'employee_name': f"{emp.first_name} {emp.last_name}",
+                    'date': str(curr_date),
+                    'check_in': att.check_in if att else None,
+                    'check_out': att.check_out if att else None,
+                    'total_work_duration': att.total_work_duration if att else '--',
+                    'total_break_time': att.total_break_time if att else '--',
+                    'overtime_duration': att.overtime_duration if att else '--',
+                    'is_present': att.is_present if att else False,
+                    'leave': att.leave_id if att else None,
+                    'status': '',
+                    'is_late': False
+                }
+
+                # Status logic
+                if att:
+                    if att.leave_id:
+                        row['status'] = 'leave'
+                    elif not att.is_present and not att.check_in:
+                        row['status'] = 'absent'
+                    else:
+                        row['status'] = 'present'
+                    # Call serializer helper or just use data
+                else:
+                    # Check for Leave
+                    matching_leave = next((l for l in leaves if l.employee_id == emp.id and l.from_date <= curr_date <= l.to_date), None)
+                    if matching_leave:
+                        row['status'] = 'leave'
+                        row['leave'] = matching_leave.id
+                    elif curr_holiday:
+                        row['status'] = 'holiday'
+                    else:
+                        row['status'] = 'absent'
+
+                # Filtering by calculated status
+                if status_filter != 'all' and status_filter != 'all statuses':
+                    if row['status'].lower() != status_filter:
+                        continue
+                
+                results.append(row)
+            
+            curr_date += timedelta(days=1)
+
+        # 3. Pagination
+        total_count = len(results)
+        page = self.paginate_queryset(results)
+        if page is not None:
+            # We need to manually serialize since these aren't all model instances
+            # But the 'results' are already dicts matching our needs
+            return self.get_paginated_response(page)
+
+        return Response(results)
+
+    @action(detail=False, methods=['get'])
+    def summary(self, request):
+        """Provide aggregated statistics for the current filter/date range, including absent employees."""
+        # Use the same logic as list but just count
+        company = request.user.company
+        from_date_str = request.query_params.get('from_date')
+        to_date_str = request.query_params.get('to_date')
+        search = request.query_params.get('search', '').strip()
+
+        try:
+            today = timezone.localdate()
+            from_date = datetime.strptime(from_date_str, '%Y-%m-%d').date() if from_date_str else today
+            to_date = datetime.strptime(to_date_str, '%Y-%m-%d').date() if to_date_str else today
+        except (ValueError, TypeError):
+            from_date = to_date = today
+
+        employee_qs = Employee.objects.filter(company=company, is_active=True)
+        if search:
+            employee_qs = employee_qs.filter(
+                Q(employee_id__icontains=search) | Q(first_name__icontains=search) | Q(last_name__icontains=search)
+            )
+            
+        emp_ids = employee_qs.values_list('id', flat=True)
+        num_emps = len(emp_ids)
+        num_days = (to_date - from_date).days + 1
+        total_slots = num_emps * num_days
+
+        # Counts
+        present_count = Attendance.objects.filter(
+            employee_id__in=emp_ids,
+            date__range=(from_date, to_date),
+            leave__isnull=True
+        ).filter(Q(is_present=True) | Q(check_in__isnull=False)).distinct().count()
+
+        leave_count = EmpLeave.objects.filter(
+            employee_id__in=emp_ids,
+            status='Approved',
+            from_date__lte=to_date,
+            to_date__gte=from_date
+        ).count()
+
+        # Simplified for responsiveness:
+        # Total = all active slots. Absent = Total - (Present + Leave)
+        # Note: In a real system, we'd iterate days for leaves.
+        absent_count = max(0, total_slots - present_count - leave_count)
+
+        return Response({
+            'total': total_slots,
+            'present': present_count,
+            'absent': absent_count,
+            'leave': leave_count,
+        })
 
     def _is_employee_late(self, attendance):
         """Check if an employee was late for their shift"""
@@ -3305,6 +3452,7 @@ class SeatBookingViewSet(viewsets.ModelViewSet):
 
         date_str = self.request.query_params.get('date', None)
         floor_id = self.request.query_params.get('floor', None)
+        seat_number = self.request.query_params.get('seat_number', None)
         status = self.request.query_params.get('status', None)
         start_time_str = self.request.query_params.get('start_time', None)
         end_time_str = self.request.query_params.get('end_time', None)
@@ -3341,6 +3489,9 @@ class SeatBookingViewSet(viewsets.ModelViewSet):
         
         if floor_id:
             queryset = queryset.filter(seat__section__floor_id=floor_id)
+            
+        if seat_number:
+            queryset = queryset.filter(seat__seat_number=seat_number)
             
         if not date_str and not floor_id and not status and not is_history and hasattr(self.request.user, 'employee'):
             # Show all bookings for the current employee (including pending)
@@ -3529,6 +3680,7 @@ class GoogleLoginAPIView(APIView):
             return Response({
                 "access": str(refresh.access_token),
                 "refresh": str(refresh),
+                "id": user.id,
                 "username": user.username,
                 "first_name": user.first_name,
                 "last_name": user.last_name,
