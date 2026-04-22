@@ -704,6 +704,44 @@ hover:text-primary hover:before:!bg-primary ltr:before:mr-2 rtl:before:ml-2 dark
     @apply transform opacity-100 scale-100;
 }
 
+@keyframes particle-float {
+    0% {
+        transform: translate3d(0, 0, 0) scale(1);
+    }
+    50% {
+        transform: translate3d(0, -10px, 0) scale(1.06);
+    }
+    100% {
+        transform: translate3d(0, 0, 0) scale(1);
+    }
+}
+
+@keyframes particle-drift {
+    0% {
+        transform: translate3d(0, 0, 0);
+    }
+    25% {
+        transform: translate3d(6px, -4px, 0);
+    }
+    50% {
+        transform: translate3d(0, -9px, 0);
+    }
+    75% {
+        transform: translate3d(-5px, -3px, 0);
+    }
+    100% {
+        transform: translate3d(0, 0, 0);
+    }
+}
+
+.animate-particle-float {
+    animation: particle-float 5.5s ease-in-out infinite;
+}
+
+.animate-particle-drift {
+    animation: particle-drift 8s ease-in-out infinite;
+}
+
 /* Hightlight JS */
 pre.hljs {
     @apply p-6 rounded-md overflow-x-auto !bg-[#191e3a];

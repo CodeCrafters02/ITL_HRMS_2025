@@ -1400,13 +1400,25 @@ class CancelEmpLeaveAPIView(APIView):
 class EmpLearningCornerAPIView(generics.ListAPIView):
     serializer_class = EmpLearningCornerSerializer
     permission_classes = [IsAuthenticated]
+    pagination_class = EmployeePagination
+    filter_backends = [filters.SearchFilter]
+    search_fields = ["title", "description"]
 
     def get_queryset(self):
         user = self.request.user
         employee_profile = getattr(user, "employee_profile", None)
-        if employee_profile:
-            return LearningCorner.objects.filter(company=employee_profile.company)
-        return LearningCorner.objects.none()
+        if not employee_profile:
+            return LearningCorner.objects.none()
+
+        qs = LearningCorner.objects.filter(company=employee_profile.company)
+        asset_type = (self.request.query_params.get("type") or "all").strip().lower()
+        if asset_type == "image":
+            qs = qs.filter(image__isnull=False).exclude(image="")
+        elif asset_type == "video":
+            qs = qs.filter(video__isnull=False).exclude(video="")
+        elif asset_type == "document":
+            qs = qs.filter(document__isnull=False).exclude(document="")
+        return qs.order_by("-id")
 
 class EmployeeProfileAPIView(generics.RetrieveUpdateAPIView):
     queryset = Employee.objects.all()
@@ -1497,10 +1509,13 @@ class BreakLogAPIView(APIView):
 class EmployeeCompanyPoliciesAPIView(generics.ListAPIView):
     serializer_class = PolicyConfigurationSerializer
     permission_classes = [IsAuthenticated]
+    pagination_class = EmployeePagination
+    filter_backends = [filters.SearchFilter]
+    search_fields = ["name"]
 
     def get_queryset(self):
         user = self.request.user
-        return CompanyPolicies.objects.filter(company=user.company,is_active=True)
+        return CompanyPolicies.objects.filter(company=user.company,is_active=True).order_by("-id")
 
     def get_serializer_context(self):
         context = super().get_serializer_context()

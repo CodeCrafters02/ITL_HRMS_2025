@@ -1,3 +1,5 @@
+import { authFetch } from '../../../utils/authFetch';
+
 export type AttendanceStatus = 'present' | 'absent' | 'leave' | 'half_day' | 'weekend' | 'checked_in' | 'no_data';
 
 export interface AttendanceDayRecord {
@@ -44,13 +46,6 @@ export interface AttendanceHistoryResponse {
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000';
 const EMPLOYEE_API = `${API_BASE_URL}/employee`;
 
-const authHeaders = (): HeadersInit => {
-    const token = localStorage.getItem('access_token');
-    const headers: Record<string, string> = {};
-    if (token) headers.Authorization = `Bearer ${token}`;
-    return headers;
-};
-
 const parseJson = async <T>(res: Response): Promise<T> => {
     const data = await res.json().catch(() => ({}));
     if (!res.ok) {
@@ -76,6 +71,6 @@ export const fetchAttendanceHistory = async (params: {
     if (params.page) url.searchParams.set('page', String(params.page));
     if (params.page_size) url.searchParams.set('page_size', String(params.page_size));
 
-    const res = await fetch(url.toString(), { headers: authHeaders() });
+    const res = await authFetch(url.toString());
     return parseJson<AttendanceHistoryResponse>(res);
 };

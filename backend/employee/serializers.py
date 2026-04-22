@@ -448,4 +448,14 @@ class EmployeeReferenceSerializer(serializers.ModelSerializer):
             'admin_comment',
             'updated_at'
         ]
-        read_only_fields = ['submitted_at', 'updated_at']
+        # Employee is assigned in the view from request.user.
+        read_only_fields = [
+            'employee',
+            'submitted_at',
+            'updated_at',
+            'employee_name',
+            'employee_id',
+            'employee_email',
+            'employee_designation',
+            'employee_department',
+        ]

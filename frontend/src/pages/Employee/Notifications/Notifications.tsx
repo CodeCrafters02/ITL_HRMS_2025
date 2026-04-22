@@ -46,27 +46,42 @@ const Notifications = () => {
     const [error, setError] = useState<string | null>(null);
     const [search, setSearch] = useState('');
     const [filter, setFilter] = useState<NotificationFilter>('all');
+    const [page, setPage] = useState(1);
+    const [pageSize, setPageSize] = useState(10);
+    const [totalCount, setTotalCount] = useState(0);
+    const [totalPages, setTotalPages] = useState(1);
 
     const loadNotifications = useCallback(async () => {
         setLoading(true);
         setError(null);
         try {
-            const data = await fetchEmployeeNotifications();
-            setItems(data);
+            const data = await fetchEmployeeNotifications({
+                page,
+                page_size: pageSize,
+                search: search.trim(),
+                type: filter === 'unread' ? 'all' : filter,
+                unread: filter === 'unread',
+            });
+            setItems(data.results);
+            setTotalCount(data.count);
+            setTotalPages(data.total_pages);
         } catch (err) {
             const message = err instanceof Error ? err.message : 'Failed to load notifications';
             setError(message);
         } finally {
             setLoading(false);
         }
-    }, []);
+    }, [page, pageSize, search, filter]);
 
     useEffect(() => {
         dispatch(setPageTitle('Notifications'));
     }, [dispatch]);
 
     useEffect(() => {
-        loadNotifications();
+        const timer = setTimeout(() => {
+            loadNotifications();
+        }, 300);
+        return () => clearTimeout(timer);
     }, [loadNotifications]);
 
     const unreadCount = useMemo(() => items.filter((n) => n.read === false).length, [items]);
@@ -78,27 +93,23 @@ const Notifications = () => {
         }).length;
     }, [items]);
 
-    const filteredItems = useMemo(() => {
-        const lowered = search.trim().toLowerCase();
-        return items.filter((item) => {
-            const filterMatch =
-                filter === 'all' ||
-                (filter === 'unread' && item.read === false) ||
-                item.type === filter;
-
-            const searchMatch =
-                !lowered ||
-                item.title.toLowerCase().includes(lowered) ||
-                item.description.toLowerCase().includes(lowered) ||
-                item.type.toLowerCase().includes(lowered);
-
-            return filterMatch && searchMatch;
-        });
-    }, [items, filter, search]);
+    const getPageNumbers = () => {
+        const pages: (number | '...')[] = [];
+        if (totalPages <= 7) {
+            for (let i = 1; i <= totalPages; i++) pages.push(i);
+        } else {
+            pages.push(1);
+            if (page > 3) pages.push('...');
+            for (let i = Math.max(2, page - 1); i <= Math.min(totalPages - 1, page + 1); i++) pages.push(i);
+            if (page < totalPages - 2) pages.push('...');
+            pages.push(totalPages);
+        }
+        return pages;
+    };
 
     return (
         <div className="space-y-6 animate__animated animate__fadeIn">
-            <div className="panel bg-gradient-to-r from-[#0e1726] to-[#1b2e4b] text-white border-0">
+            <div className="panel bg-gradient-to-r from-[#220fb6] via-[#4f6be5] to-[#0f52af] text-white border-0">
                 <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
                     <div>
                         <h1 className="text-2xl md:text-3xl font-extrabold">Notifications</h1>
@@ -119,7 +130,7 @@ const Notifications = () => {
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div className="panel">
                     <p className="text-white-dark text-xs uppercase tracking-wide">Total Notifications</p>
-                    <p className="text-2xl font-bold mt-2">{items.length}</p>
+                    <p className="text-2xl font-bold mt-2">{totalCount}</p>
                 </div>
                 <div className="panel">
                     <p className="text-white-dark text-xs uppercase tracking-wide">Unread</p>
@@ -139,14 +150,24 @@ const Notifications = () => {
                             className="form-input pl-10"
                             value={search}
                             placeholder="Search notifications..."
-                            onChange={(e) => setSearch(e.target.value)}
+                            onChange={(e) => {
+                                setSearch(e.target.value);
+                                setPage(1);
+                            }}
                         />
                         <span className="absolute left-3 top-1/2 -translate-y-1/2 text-white-dark">
                             <IconSearch className="h-4 w-4" />
                         </span>
                     </div>
 
-                    <select className="form-select" value={filter} onChange={(e) => setFilter(e.target.value as NotificationFilter)}>
+                    <select
+                        className="form-select"
+                        value={filter}
+                        onChange={(e) => {
+                            setFilter(e.target.value as NotificationFilter);
+                            setPage(1);
+                        }}
+                    >
                         <option value="all">All Types</option>
                         <option value="unread">Unread</option>
                         <option value="notification">General</option>
@@ -158,14 +179,72 @@ const Notifications = () => {
                 </div>
             </div>
 
+            {totalCount > 0 && (
+                <div className="panel">
+                    <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
+                        <div className="text-xs text-white-dark">
+                            Showing <span className="text-primary font-semibold">{(page - 1) * pageSize + 1}</span> to{' '}
+                            <span className="text-primary font-semibold">{Math.min(page * pageSize, totalCount)}</span> of{' '}
+                            <span className="text-primary font-semibold">{totalCount}</span> entries
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <label className="text-xs text-white-dark">Per page</label>
+                            <select
+                                className="form-select w-20 text-xs"
+                                value={pageSize}
+                                onChange={(e) => {
+                                    setPageSize(Number(e.target.value));
+                                    setPage(1);
+                                }}
+                            >
+                                <option value={10}>10</option>
+                                <option value={20}>20</option>
+                                <option value={50}>50</option>
+                            </select>
+                        </div>
+
+                        <ul className="inline-flex items-center gap-1">
+                            <li>
+                                <button type="button" className="btn btn-sm btn-outline-primary px-2.5" onClick={() => setPage(page > 1 ? page - 1 : 1)} disabled={page === 1}>
+                                    Prev
+                                </button>
+                            </li>
+                            {getPageNumbers().map((p, idx) =>
+                                p === '...' ? <li key={`dots-${idx}`} className="px-2 text-white-dark">...</li> : (
+                                    <li key={p}>
+                                        <button
+                                            type="button"
+                                            className={`btn btn-sm ${page === p ? 'btn-primary' : 'btn-outline-primary'} min-w-[34px]`}
+                                            onClick={() => setPage(p as number)}
+                                        >
+                                            {p}
+                                        </button>
+                                    </li>
+                                ),
+                            )}
+                            <li>
+                                <button
+                                    type="button"
+                                    className="btn btn-sm btn-outline-primary px-2.5"
+                                    onClick={() => setPage(page < totalPages ? page + 1 : totalPages)}
+                                    disabled={page === totalPages || totalPages === 0}
+                                >
+                                    Next
+                                </button>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            )}
+
             <div className="panel">
                 {loading ? (
                     <div className="py-12 text-center text-white-dark">Loading notifications...</div>
-                ) : filteredItems.length === 0 ? (
+                ) : items.length === 0 ? (
                     <div className="py-12 text-center text-white-dark">No notifications found.</div>
                 ) : (
                     <div className="space-y-3">
-                        {filteredItems.map((item) => (
+                        {items.map((item) => (
                             <div key={item.id} className="border border-white-light dark:border-[#1b2e4b] rounded-md p-4">
                                 <div className="flex items-start gap-3">
                                     <div className="w-10 h-10 rounded-full bg-primary-light text-primary flex items-center justify-center mt-1 shrink-0">
@@ -186,6 +265,7 @@ const Notifications = () => {
                     </div>
                 )}
             </div>
+
         </div>
     );
 };
