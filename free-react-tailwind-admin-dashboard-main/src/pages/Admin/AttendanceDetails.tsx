@@ -1,478 +1,455 @@
-// Helper to format total hours as HH:MM:SS
-function formatToHHMMSS(time: string): string {
-  if (!time) return '00:00:00';
-  // If already in HH:MM:SS
-  if (/^\d{2}:\d{2}:\d{2}$/.test(time)) return time;
-  // If in HH:MM
-  if (/^\d{2}:\d{2}$/.test(time)) return time + ':00';
-  // If in HH:MM:SS.ssssss or similar, trim to HH:MM:SS
-  if (/^\d{1,2}:\d{2}:\d{2}(\.\d+)?$/.test(time)) return time.split('.')[0].padStart(8, '0');
-  // If decimal (e.g. 7.5 or '7.5')
-  const num = Number(time);
-  if (!isNaN(num) && isFinite(num)) {
-    const hours = Math.floor(num);
-    const minutes = Math.floor((num - hours) * 60);
-    const seconds = Math.round((((num - hours) * 60) - minutes) * 60);
-    return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
-  }
-  // If time is something like '0.05:50:54.013777', try to extract HH:MM:SS
-  const match = time.match(/(\d{1,2}):(\d{2}):(\d{2})/);
-  if (match) {
-    return `${match[1].padStart(2, '0')}:${match[2]}:${match[3]}`;
-  }
-  return '00:00:00';
-}
-import React, { useEffect, useState } from 'react';
-import { Search, Calendar, Filter, Users, FileText, FileSpreadsheet } from 'lucide-react';
-import { axiosInstance } from '../Dashboard/api';
-import dayjs from 'dayjs';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHeader,
-  TableRow,
-} from "../../components/ui/table";
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useDispatch } from 'react-redux';
+import Swal from 'sweetalert2';
+import { setPageTitle } from '../../store/themeConfigSlice';
+import IconSearch from '../../components/Icon/IconSearch';
+import IconCalendar from '../../components/Icon/IconCalendar';
+import IconFile from '../../components/Icon/IconFile';
 
-type RawAttendance = {
-  id?: number;
-  employee_id?: string;
-  employee_name?: string;
-  date?: string;
-  check_in?: string | null;
-  check_out?: string | null;
-  total_break_time?: string;
-  total_work_duration?: string;
-  overtime_duration?: string;
-  is_late?: boolean;
-  check_in_late?: boolean;
-  is_present?: boolean;
-  status?: string;
-  leave?: number | null;
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000';
+
+type AttendanceRow = {
+    id?: number;
+    employee_id: string;
+    employee_name: string;
+    date: string;
+    check_in: string | null;
+    check_out: string | null;
+    break_time: string;
+    total_hours: string;
+    overtime: string;
+    is_late: boolean;
+    status: string;
 };
 
-interface Attendance {
-  id?: number;
-  employee_id: string;
-  employee_name: string;
-  date: string;
-  check_in: string | null;
-  check_out: string | null;
-  break_time: string;
-  total_hours: string;
-  overtime: string;
-  is_late: boolean;
-  status: string;
-}
+type SummaryStats = {
+    total: number;
+    present: number;
+    absent: number;
+    leave: number;
+};
 
-const Attendance: React.FC = () => {
-  const [attendanceData, setAttendanceData] = useState<Attendance[]>([]);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [selectedStatus, setSelectedStatus] = useState('');
-  const [startDate, setStartDate] = useState<string>(dayjs().format('YYYY-MM-DD'));
-  const [endDate, setEndDate] = useState<string>(dayjs().format('YYYY-MM-DD'));
-  const [loading, setLoading] = useState(false);
+const todayIso = () => new Date().toISOString().slice(0, 10);
+const firstOfMonthIso = () => {
+    const d = new Date();
+    return new Date(d.getFullYear(), d.getMonth(), 1).toISOString().slice(0, 10);
+};
 
+const strTime = (v: any) => {
+    if (v === null || v === undefined) return '';
+    if (typeof v === 'string') return v;
+    return String(v);
+};
 
-  useEffect(() => {
-    const fetchAttendance = async () => {
-      setLoading(true);
-      try {
-        const res = await axiosInstance.get('app/attendance/', {
-          params: {
-            from_date: startDate,
-            to_date: endDate,
-            status: selectedStatus,
-            search: searchTerm
-          }
-        });
-        const mapped = res.data.map((item: RawAttendance) => {
-          const isLate = item.is_late || item.check_in_late || false;
-          let status = item.status;
-          if (!status) {
-            if (item.leave) {
-              status = 'Leave';
-            } else if (item.check_in || item.is_present) {
-              status = 'Present';
-            } else {
-              status = 'Absent';
-            }
-          }
-          return {
-            id: item.id,
-            employee_id: item.employee_id || '',
-            employee_name: item.employee_name || '',
-            check_in: item.check_in || '',
-            check_out: item.check_out || '',
-            break_time: item.total_break_time || '',
-            total_hours: item.total_work_duration || '',
-            overtime: item.overtime_duration || '',
-            is_late: isLate,
-            status,
-            date: item.date || '',
-          };
-        });
-        const filtered = mapped.filter((item: Attendance) => item.date >= startDate && item.date <= endDate);
-        setAttendanceData(filtered);
-      } catch (err) {
-        console.error('Failed to fetch attendance:', err);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchAttendance();
-  }, [startDate, endDate, selectedStatus, searchTerm]);
+const toCsv = (rows: AttendanceRow[]) => {
+    const headers = ['Employee ID', 'Employee Name', 'Date', 'Check-In', 'Check-Out', 'Break Time', 'Total Hours', 'Overtime', 'Status', 'Late'];
+    const escape = (s: string) => `"${String(s ?? '').replace(/"/g, '""')}"`;
+    const lines = [
+        headers.map(escape).join(','),
+        ...rows.map((r) =>
+            [
+                r.employee_id,
+                r.employee_name,
+                r.date,
+                r.check_in || '',
+                r.check_out || '',
+                r.break_time,
+                r.total_hours,
+                r.overtime,
+                r.status,
+                r.is_late ? 'Yes' : 'No',
+            ].map(escape).join(',')
+        ),
+    ];
+    return lines.join('\n');
+};
 
-  const handleDateChange = (days: number) => {
-    const currentDate = startDate; // Use startDate as the current selected date
-    const newDate = dayjs(currentDate).add(days, 'day').format('YYYY-MM-DD');
-    setStartDate(newDate);
-    setEndDate(newDate);
-  };
-
-  const handleReset = () => {
-    setSearchTerm('');
-    setSelectedStatus('');
-    const today = dayjs().format('YYYY-MM-DD');
-    setStartDate(today);
-    setEndDate(today);
-  };
-
-  const getStatusBadge = (status: string, isLate: boolean) => {
-    const baseClasses = 'px-3 py-1 rounded-full text-sm font-medium';
-    switch (status.toLowerCase()) {
-      case 'present':
-        return `${baseClasses} ${isLate ? 'bg-orange-100 text-orange-800' : 'bg-green-100 text-green-800'}`;
-      case 'absent':
-        return `${baseClasses} bg-red-100 text-red-800`;
-      case 'leave':
-        return `${baseClasses} bg-blue-100 text-blue-800`;
-      default:
-        return `${baseClasses} bg-gray-100 text-gray-800`;
-    }
-  };
-
-  const downloadPDF = () => {
-    // Create a printable version
-    const printWindow = window.open('', '_blank');
-    const htmlContent = `
-      <!DOCTYPE html>
-      <html>
-        <head>
-          <title>Attendance Report</title>
-          <style>
-            body { font-family: Arial, sans-serif; margin: 20px; }
-            .header { text-align: center; margin-bottom: 30px; border-bottom: 2px solid #333; padding-bottom: 10px; }
-            .date-range { text-align: center; margin-bottom: 20px; font-size: 14px; color: #666; }
-            table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-            th, td { border: 1px solid #ddd; padding: 8px; text-align: center; }
-            th { background-color: #f5f5f5; font-weight: bold; }
-            .status-present { color: #059669; font-weight: bold; }
-            .status-late { color: #d97706; font-weight: bold; }
-            .status-absent { color: #dc2626; font-weight: bold; }
-            .late-time { color: #dc2626; font-weight: bold; }
-            @media print { body { margin: 0; } }
-          </style>
-        </head>
-        <body>
-          <div class="header">
-            <h1>Attendance Report</h1>
-            <div class="date-range">Report Period: ${startDate} to ${endDate}</div>
-          </div>
-          <table>
-            <thead>
-              <tr>
-                <th>Employee ID</th>
-                <th>Employee Name</th>
-                <th>Date</th>
-                <th>Check-In</th>
-                <th>Check-Out</th>
-                <th>Break Time</th>
-                <th>Total Hours</th>
-                <th>Overtime</th>
-                <th>Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${attendanceData.map(item => `
-                <tr>
-                  <td>${item.employee_id}</td>
-                  <td>${item.employee_name}</td>
-                  <td>${item.date}</td>
-                  <td class="${item.is_late ? 'late-time' : ''}">${item.check_in ? dayjs(item.check_in).format('HH:mm') : '--'}</td>
-                  <td>${item.check_out ? dayjs(item.check_out).format('HH:mm') : '--'}</td>
-                  <td>${item.break_time}</td>
-                  <td>${item.total_hours}</td>
-                  <td>${item.overtime}</td>
-                  <td class="status-${item.status.toLowerCase()}">${item.status}</td>
-                </tr>
-              `).join('')}
-            </tbody>
-          </table>
-          <script>
-            window.onload = function() {
-              window.print();
-              window.onafterprint = function() {
-                window.close();
-              };
-            };
-          </script>
-        </body>
-      </html>
-    `;
-    if (printWindow) {
-        printWindow.document.write(htmlContent);
-        printWindow.document.close();
-      }
-  };
-
-  const downloadExcel = () => {
-    const headers = ['Employee ID', 'Employee Name', 'Date', 'Check-In', 'Check-Out', 'Break Time', 'Total Hours', 'Overtime', 'Status'];
-    const csvContent = [
-      headers.join(','),
-      ...attendanceData.map(item => [
-        item.employee_id,
-        `"${item.employee_name}"`,
-        item.date,
-        item.check_in ? dayjs(item.check_in).format('HH:mm') : '--',
-        item.check_out ? dayjs(item.check_out).format('HH:mm') : '--',
-        item.break_time,
-        item.total_hours,
-        item.overtime,
-        item.status
-      ].join(','))
-    ].join('\n');
-
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
+const downloadText = (filename: string, text: string) => {
+    const blob = new Blob([text], { type: 'text/csv;charset=utf-8' });
     const url = URL.createObjectURL(blob);
-    link.setAttribute('href', url);
-    link.setAttribute('download', `attendance_report_${startDate}_to_${endDate}.csv`);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = filename;
     document.body.appendChild(link);
     link.click();
-    document.body.removeChild(link);
-  };
-
-
-  return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="max-w-7xl mx-auto p-6">
-        {/* Header */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6 dark:bg-gray-900">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-3">
-              <div className="bg-blue-100 p-2 rounded-lg">
-                <Users className="h-6 w-6 text-blue-600" />
-              </div>
-              <div>
-                <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-500">Attendance Management</h1>
-                <p className="text-gray-600">Track and manage employee attendance records</p>
-              </div>
-            </div>
-            <div className="flex space-x-2">
-              <button
-                onClick={downloadPDF}
-                className="flex items-center space-x-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors duration-200"
-              >
-                <FileText className="h-4 w-4" />
-                <span>Export PDF</span>
-              </button>
-              <button
-                onClick={downloadExcel}
-                className="flex items-center space-x-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors duration-200"
-              >
-                <FileSpreadsheet className="h-4 w-4" />
-                <span>Export Excel</span>
-              </button>
-            </div>
-          </div>
-        </div>
-
-       
-        {/* Filters */}
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6 mb-6">
-        <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
-          {/* Search Input */}
-          <div className="relative">
-            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-              <Search className="h-5 w-5 text-gray-400 dark:text-gray-300" />
-            </div>
-            <input
-              type="text"
-              placeholder="Search by Name or ID"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="block w-full pl-10 pr-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-            />
-          </div>
-
-          {/* Start Date */}
-          <div className="relative">
-            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-              <Calendar className="h-5 w-5 text-gray-400 dark:text-gray-300" />
-            </div>
-            <input
-              type="date"
-              value={startDate}
-              onChange={(e) => setStartDate(e.target.value)}
-              className="block w-full pl-10 pr-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-            />
-          </div>
-
-          {/* End Date */}
-          <div className="relative">
-            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-              <Calendar className="h-5 w-5 text-gray-400 dark:text-gray-300" />
-            </div>
-            <input
-              type="date"
-              value={endDate}
-              onChange={(e) => setEndDate(e.target.value)}
-              className="block w-full pl-10 pr-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-            />
-          </div>
-
-          {/* Status Filter */}
-          <div className="relative">
-            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-              <Filter className="h-5 w-5 text-gray-400 dark:text-gray-300" />
-            </div>
-            <select
-              value={selectedStatus}
-              onChange={(e) => setSelectedStatus(e.target.value)}
-              className="block w-full pl-10 pr-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-            >
-              <option value="">All Status</option>
-              <option value="Present">Present</option>
-              <option value="Absent">Absent</option>
-              <option value="Leave">Leave</option>
-            </select>
-          </div>
-
-          {/* Reset Button */}
-          <button
-            onClick={handleReset}
-            className="bg-gray-600 hover:bg-gray-700 dark:bg-gray-700 dark:hover:bg-gray-600 text-white px-4 py-2 rounded-lg transition-colors duration-200"
-          >
-            Reset Filters
-          </button>
-        </div>
-      </div>
-
-
-        {/* Date Navigation */}
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4 mb-6">
-        <div className="flex items-center justify-between">
-          {/* Previous Day */}
-          <button
-            onClick={() => handleDateChange(-1)}
-            className="flex items-center space-x-2 bg-blue-600 hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-600 text-white px-4 py-2 rounded-lg transition-colors duration-200"
-          >
-            <span>← Previous Day</span>
-          </button>
-
-          {/* Date Selection */}
-          <div className="flex items-center space-x-4">
-            <div className="flex items-center space-x-2">
-              <Calendar className="h-5 w-5 text-gray-400 dark:text-gray-300" />
-              <input
-                type="date"
-                value={startDate}
-                onChange={(e) => {
-                  const selectedDate = e.target.value;
-                  setStartDate(selectedDate);
-                  setEndDate(selectedDate);
-                }}
-                className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              />
-            </div>
-            <div className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-              {startDate === endDate ? startDate : `${startDate} to ${endDate}`}
-            </div>
-          </div>
-
-          {/* Next Day */}
-          <button
-            onClick={() => handleDateChange(1)}
-            className="flex items-center space-x-2 bg-blue-600 hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-600 text-white px-4 py-2 rounded-lg transition-colors duration-200"
-          >
-            <span>Next Day →</span>
-          </button>
-        </div>
-      </div>
-
-        {/* Attendance Table */}
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
-        <div className="overflow-x-auto">
-          {loading ? (
-            <div className="flex items-center justify-center py-12">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 dark:border-blue-400"></div>
-              <span className="ml-2 text-gray-600 dark:text-gray-300">Loading attendance data...</span>
-            </div>
-          ) : (
-            <Table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-              <TableHeader className="bg-gray-50 dark:bg-gray-700">
-                <TableRow>
-                  {['Employee ID', 'Employee Name', 'Check-In', 'Check-Out', 'Break Time', 'Total Hours', 'Overtime', 'Status'].map((header) => (
-                    <TableCell
-                      key={header}
-                      className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider"
-                    >
-                      {header}
-                    </TableCell>
-                  ))}
-                </TableRow>
-              </TableHeader>
-
-              <TableBody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-                {attendanceData.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={8} className="px-6 py-12 text-center text-gray-500 dark:text-gray-300">
-                      <Users className="mx-auto h-12 w-12 text-gray-400 dark:text-gray-500 mb-4" />
-                      <p className="text-lg font-medium">No attendance records found</p>
-                      <p className="text-sm">Try adjusting your search criteria or date range</p>
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  attendanceData.map((item) => (
-                    <TableRow key={item.id} className="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors duration-200">
-                      <TableCell className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-gray-100">
-                        {item.employee_id}
-                      </TableCell>
-                      <TableCell className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">
-                        {item.employee_name}
-                      </TableCell>
-                      <TableCell className={`px-6 py-4 whitespace-nowrap text-sm ${item.is_late ? 'text-red-600 font-semibold' : 'text-gray-900 dark:text-gray-100'}`}>
-                        {item.check_in ? dayjs(item.check_in).format('HH:mm') : '--'}
-                      </TableCell>
-                      <TableCell className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">
-                        {item.check_out ? dayjs(item.check_out).format('HH:mm') : '--'}
-                      </TableCell>
-                      <TableCell className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">
-                        {item.break_time}
-                      </TableCell>
-                      <TableCell className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">
-                        {formatToHHMMSS(item.total_hours)}
-                      </TableCell>
-                      <TableCell className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">
-                        {item.overtime}
-                      </TableCell>
-                      <TableCell className="px-6 py-4 whitespace-nowrap">
-                        <span className={getStatusBadge(item.status, item.is_late)}>
-                          {item.status}
-                        </span>
-                      </TableCell>
-                    </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
-          )}
-        </div>
-      </div>
-      </div>
-    </div>
-  );
+    link.remove();
+    URL.revokeObjectURL(url);
 };
 
-export default Attendance;
+const AdminAttendanceDetails = () => {
+    const dispatch = useDispatch();
+    
+    // Data State
+    const [items, setItems] = useState<AttendanceRow[]>([]);
+    const [summary, setSummary] = useState<SummaryStats | null>(null);
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState<string | null>(null);
+
+    // Filter & Pagination State
+    const [search, setSearch] = useState('');
+    const [statusFilter, setStatusFilter] = useState('All');
+    const [fromDate, setFromDate] = useState(todayIso());
+    const [toDate, setToDate] = useState(todayIso());
+    const [page, setPage] = useState(1);
+    const [pageSize, setPageSize] = useState(10);
+    const [totalCount, setTotalCount] = useState(0);
+
+    useEffect(() => {
+        dispatch(setPageTitle('Attendance Insights'));
+    }, [dispatch]);
+
+    const authHeaders = useMemo(() => {
+        const token = localStorage.getItem('access_token');
+        const h: Record<string, string> = { 'Content-Type': 'application/json' };
+        if (token) h.Authorization = `Bearer ${token}`;
+        return h;
+    }, []);
+
+    const fetchAttendance = useCallback(async () => {
+        setLoading(true);
+        setError(null);
+        try {
+            const url = new URL(`${API_BASE_URL}/app/attendance/`);
+            url.searchParams.set('page', String(page));
+            url.searchParams.set('page_size', String(pageSize));
+            if (fromDate) url.searchParams.set('from_date', fromDate);
+            if (toDate) url.searchParams.set('to_date', toDate);
+            if (search.trim()) url.searchParams.set('search', search.trim());
+            if (statusFilter !== 'All') url.searchParams.set('status', statusFilter);
+
+            const resp = await fetch(url.toString(), { headers: authHeaders });
+            const data = await resp.json();
+            if (!resp.ok) throw new Error(data?.detail || 'Fetch failed');
+
+            const mapped: AttendanceRow[] = (data.results || []).map((x: any) => ({
+                id: x.id,
+                employee_id: x.employee_id || '',
+                employee_name: x.employee_name || '',
+                date: x.date || '',
+                check_in: x.check_in ? new Date(x.check_in).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : null,
+                check_out: x.check_out ? new Date(x.check_out).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : null,
+                break_time: strTime(x.total_break_time || '--'),
+                total_hours: strTime(x.total_work_duration || '--'),
+                overtime: strTime(x.overtime_duration || '--'),
+                is_late: Boolean(x.is_late),
+                status: x.status || 'Unknown',
+            }));
+
+            setItems(mapped);
+            setTotalCount(data.count || 0);
+
+            // Fetch Summary for the same filter
+            const summaryUrl = new URL(`${API_BASE_URL}/app/attendance/summary/`);
+            if (fromDate) summaryUrl.searchParams.set('from_date', fromDate);
+            if (toDate) summaryUrl.searchParams.set('to_date', toDate);
+            if (search.trim()) summaryUrl.searchParams.set('search', search.trim());
+            if (statusFilter !== 'All') summaryUrl.searchParams.set('status', statusFilter);
+
+            const sResp = await fetch(summaryUrl.toString(), { headers: authHeaders });
+            const sData = await sResp.json();
+            if (sResp.ok) setSummary(sData);
+
+        } catch (e: any) {
+            setError(e.message);
+            setItems([]);
+        } finally {
+            setLoading(false);
+        }
+    }, [page, pageSize, fromDate, toDate, search, statusFilter, authHeaders]);
+
+    useEffect(() => {
+        const timer = setTimeout(() => fetchAttendance(), 300);
+        return () => clearTimeout(timer);
+    }, [fetchAttendance]);
+
+    const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
+
+    const exportCsv = () => {
+        downloadText(`attendance_export_${todayIso()}.csv`, toCsv(items));
+    };
+
+    const statusBadgeCls = (s: string, late: boolean) => {
+        const base = 'px-2 py-1 rounded-lg text-[10px] font-black uppercase tracking-tight';
+        const k = s.toLowerCase();
+        if (k === 'present') return `${base} ${late ? 'bg-orange-100 text-orange-600' : 'bg-green-100 text-green-600'}`;
+        if (k === 'leave') return `${base} bg-blue-100 text-blue-600`;
+        if (k === 'absent') return `${base} bg-red-100 text-red-600`;
+        return `${base} bg-slate-100 text-slate-500`;
+    };
+
+    // Pagination helper
+    const getPageNumbers = () => {
+        const pages: (number | string)[] = [];
+        if (totalPages <= 7) {
+            for (let i = 1; i <= totalPages; i++) pages.push(i);
+        } else {
+            pages.push(1);
+            if (page > 3) pages.push('...');
+            for (let i = Math.max(2, page - 1); i <= Math.min(totalPages - 1, page + 1); i++) pages.push(i);
+            if (page < totalPages - 2) pages.push('...');
+            pages.push(totalPages);
+        }
+        return pages;
+    };
+
+    return (
+        <div className="space-y-6 animate__animated animate__fadeIn">
+            {/* ─── Premium Header Banner ─── */}
+            <div className="relative bg-gradient-to-r from-cyan-500 to-blue-600 rounded-2xl p-6 md:p-8 text-white overflow-hidden shadow-lg border-0">
+                <div className="absolute top-0 right-0 -mt-12 -mr-12 w-48 h-48 bg-white/10 rounded-full blur-2xl"></div>
+                <div className="absolute bottom-0 left-1/4 -mb-8 w-32 h-32 bg-white/10 rounded-full blur-2xl"></div>
+                
+                <div className="relative z-10 flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+                    <div className="flex items-center gap-5">
+                        <div className="p-3.5 bg-white/20 backdrop-blur-md rounded-2xl shadow-inner border border-white/20">
+                            <IconCalendar className="w-8 h-8" />
+                        </div>
+                        <div>
+                            <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight">Attendance Analytics</h1>
+                            <p className="text-white/80 mt-1 font-medium max-w-lg">
+                                Comprehensive logs and engagement tracking for your entire workforce.
+                            </p>
+                        </div>
+                    </div>
+                    <div className="flex items-center gap-3">
+                         <button 
+                            type="button" 
+                            className="btn bg-white/20 hover:bg-white/30 backdrop-blur-md border-0 text-white rounded-xl py-2.5 px-5 font-bold shadow-lg transition-all flex items-center gap-2"
+                            onClick={exportCsv}
+                            disabled={items.length === 0}
+                        >
+                            <IconFile className="w-4 h-4" />
+                            <span>Export CSV</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            {/* ─── Statistic Dashboard ─── */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                {[
+                    { label: 'Total Records', value: summary?.total ?? 0, color: 'primary', icon: 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2' },
+                    { label: 'Present', value: summary?.present ?? 0, color: 'success', icon: 'M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z' },
+                    { label: 'Absent', value: summary?.absent ?? 0, color: 'danger', icon: 'M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z' },
+                    { label: 'On Leave', value: summary?.leave ?? 0, color: 'info', icon: 'M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z' },
+                ].map((stat, i) => (
+                    <div key={i} className="panel p-5 bg-white dark:bg-[#111c2d] border-0 shadow-md transform transition-all hover:scale-[1.02]">
+                        <div className="flex items-center justify-between">
+                            <div className={`p-2.5 bg-${stat.color}/10 rounded-xl`}>
+                                <svg className={`w-5 h-5 text-${stat.color}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d={stat.icon} />
+                                </svg>
+                            </div>
+                            <span className="text-[10px] font-black uppercase tracking-widest text-white-dark uppercase tracking-tight">Real-time</span>
+                        </div>
+                        <div className="mt-4">
+                            <h4 className="text-2xl font-black text-gray-800 dark:text-white-light font-mono">{loading ? '...' : stat.value}</h4>
+                            <p className="text-xs font-bold text-white-dark mt-1 uppercase tracking-tight">{stat.label}</p>
+                        </div>
+                    </div>
+                ))}
+            </div>
+
+            {/* ─── Multi-Filter Control Center ─── */}
+            <div className="panel p-5 border-0 shadow-lg bg-white dark:bg-[#111c2d] rounded-2xl overflow-visible">
+                <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-5">
+                    <div className="flex flex-wrap items-center gap-4 flex-1">
+                        <div className="flex items-center gap-2 group">
+                             <div className="flex flex-col">
+                                <label className="text-[9px] font-black text-white-dark uppercase tracking-[0.1em] mb-1">From Date</label>
+                                <input
+                                    type="date"
+                                    className="form-input text-xs font-bold h-10 w-[140px] rounded-xl border-gray-100 dark:border-gray-800 hover:border-primary transition-colors pr-2"
+                                    value={fromDate}
+                                    onChange={(e) => { setFromDate(e.target.value); setPage(1); }}
+                                />
+                             </div>
+                             <div className="flex flex-col">
+                                <label className="text-[9px] font-black text-white-dark uppercase tracking-[0.1em] mb-1">To Date</label>
+                                <input
+                                    type="date"
+                                    className="form-input text-xs font-bold h-10 w-[140px] rounded-xl border-gray-100 dark:border-gray-800 hover:border-primary transition-colors pr-2"
+                                    value={toDate}
+                                    onChange={(e) => { setToDate(e.target.value); setPage(1); }}
+                                />
+                             </div>
+                        </div>
+
+                        <div className="flex flex-col">
+                            <label className="text-[9px] font-black text-white-dark uppercase tracking-[0.1em] mb-1">Status Filter</label>
+                            <select
+                                className="form-select text-xs font-bold h-10 w-[150px] rounded-xl border-gray-100 dark:border-gray-800"
+                                value={statusFilter}
+                                onChange={(e) => { setStatusFilter(e.target.value); setPage(1); }}
+                            >
+                                <option value="All">All Statuses</option>
+                                <option value="Present">Present Only</option>
+                                <option value="Absent">Absent Only</option>
+                                <option value="Leave">On Leave</option>
+                            </select>
+                        </div>
+
+                        <div className="flex flex-col flex-1 min-w-[200px]">
+                            <label className="text-[9px] font-black text-white-dark uppercase tracking-[0.1em] mb-1">Search Employee</label>
+                            <div className="relative">
+                                <input
+                                    type="text"
+                                    className="form-input pl-10 text-xs font-bold h-10 rounded-xl border-gray-100 dark:border-gray-800"
+                                    placeholder="Search by ID or Name..."
+                                    value={search}
+                                    onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+                                />
+                                <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-white-dark">
+                                    <IconSearch className="w-4 h-4" />
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {/* ─── Attendance Records Table ─── */}
+            <div className="panel p-0 border-0 overflow-hidden shadow-xl rounded-2xl bg-white dark:bg-[#111c2d]">
+                <div className="table-responsive">
+                    <table className="table-hover text-sm">
+                        <thead className="bg-gray-50 dark:bg-gray-900/50">
+                            <tr>
+                                <th className="!py-4 font-bold uppercase tracking-wider text-[11px] text-gray-400">Employee Details</th>
+                                <th className="!py-4 font-bold uppercase tracking-wider text-[11px] text-gray-400">Date Log</th>
+                                <th className="!py-4 font-bold uppercase tracking-wider text-[11px] text-gray-400">Status & Timing</th>
+                                <th className="!py-4 font-bold uppercase tracking-wider text-[11px] text-gray-400 text-center">Break / Total</th>
+                                <th className="!py-4 font-bold uppercase tracking-wider text-[11px] text-gray-400 text-right pr-6">Overtime</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {loading ? (
+                                <tr>
+                                    <td colSpan={5} className="text-center py-20">
+                                        <div className="flex flex-col items-center gap-3">
+                                            <span className="inline-block h-10 w-10 animate-spin rounded-full border-4 border-primary border-l-transparent" />
+                                            <p className="text-xs font-black text-white-dark uppercase tracking-widest">Refreshing Data...</p>
+                                        </div>
+                                    </td>
+                                </tr>
+                            ) : error ? (
+                                <tr>
+                                    <td colSpan={5} className="text-center py-20 text-danger font-bold">{error}</td>
+                                </tr>
+                            ) : items.length === 0 ? (
+                                <tr>
+                                    <td colSpan={5} className="text-center py-24">
+                                        <div className="flex flex-col items-center gap-3">
+                                            <div className="p-5 bg-gray-50 dark:bg-gray-800 rounded-full">
+                                                  <IconCalendar className="w-12 h-12 text-gray-300" />
+                                            </div>
+                                            <h3 className="text-lg font-bold text-gray-600 dark:text-gray-400">No Logs Found</h3>
+                                            <p className="text-xs text-white-dark mt-1 uppercase tracking-tight">Try adjusting your filters or date range.</p>
+                                        </div>
+                                    </td>
+                                </tr>
+                            ) : (
+                                items.map((r) => (
+                                    <tr key={r.id || `${r.employee_id}-${r.date}`} className="group hover:bg-primary/5 transition-all duration-300">
+                                        <td className="!py-4">
+                                            <div className="flex items-center gap-3">
+                                                <div className="h-9 w-9 rounded-xl bg-primary/10 text-primary flex items-center justify-center font-black text-xs uppercase shadow-inner">
+                                                    {r.employee_name.charAt(0)}
+                                                </div>
+                                                <div className="flex flex-col">
+                                                    <span className="font-extrabold text-gray-800 dark:text-white-light group-hover:text-primary transition-colors">{r.employee_name}</span>
+                                                    <span className="text-[10px] font-black text-white-dark uppercase tracking-wider">{r.employee_id}</span>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td className="!py-4">
+                                            <div className="flex flex-col">
+                                                <span className="font-bold text-gray-700 dark:text-gray-300">{new Date(r.date).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })}</span>
+                                                <span className="text-[10px] font-bold text-white-dark">{r.date}</span>
+                                            </div>
+                                        </td>
+                                        <td className="!py-4">
+                                            <div className="flex items-center gap-4">
+                                                <span className={statusBadgeCls(r.status, r.is_late)}>{r.status}</span>
+                                                <div className="flex items-center gap-2 text-xs font-mono font-bold text-gray-500">
+                                                    <span className={`${r.is_late ? 'text-danger' : 'text-success'}`}>{r.check_in || '--:--'}</span>
+                                                    <span className="text-gray-300">→</span>
+                                                    <span>{r.check_out || '--:--'}</span>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td className="!py-4 text-center">
+                                            <div className="flex flex-col">
+                                                <span className="text-xs font-bold text-gray-700 dark:text-gray-300 tracking-tighter">Total: {r.total_hours}h</span>
+                                                <span className="text-[9px] font-black text-white-dark uppercase">Break: {r.break_time}h</span>
+                                            </div>
+                                        </td>
+                                        <td className="!py-4 text-right pr-6">
+                                            <span className={`text-xs font-black p-1.5 rounded-lg ${Number(r.overtime) > 0 ? 'bg-indigo-50 text-indigo-600' : 'text-gray-400 bg-gray-50 dark:bg-gray-800'}`}>
+                                                {Number(r.overtime) > 0 ? `+${r.overtime}h` : '0.00h'}
+                                            </span>
+                                        </td>
+                                    </tr>
+                                ))
+                            )}
+                        </tbody>
+                    </table>
+                </div>
+
+                {/* ─── Pagination Footer ─── */}
+                {!loading && items.length > 0 && (
+                    <div className="flex flex-col md:flex-row justify-between items-center p-6 gap-4 border-t border-gray-100 dark:border-gray-800">
+                        <div className="flex items-center gap-6">
+                            <p className="text-[10px] font-black text-white-dark uppercase tracking-widest whitespace-nowrap">
+                                Displaying <span className="text-primary">{(page - 1) * pageSize + 1} - {Math.min(page * pageSize, totalCount)}</span> of <span className="text-primary">{totalCount}</span>
+                            </p>
+                            <select
+                                className="form-select w-[100px] text-[10px] font-black uppercase h-8 py-0 rounded-lg border-gray-100 dark:border-gray-800"
+                                value={pageSize}
+                                onChange={(e) => { setPageSize(Number(e.target.value)); setPage(1); }}
+                            >
+                                {[10, 20, 50, 100].map(n => <option key={n} value={n}>{n} / Page</option>)}
+                            </select>
+                        </div>
+
+                        <div className="flex items-center gap-1.5 font-bold">
+                            <button
+                                type="button"
+                                className="flex h-9 w-9 items-center justify-center rounded-xl bg-gray-50 text-dark hover:bg-primary hover:text-white transition-all disabled:opacity-30 border border-gray-100 dark:border-gray-800 dark:bg-gray-900"
+                                onClick={() => setPage(p => Math.max(1, p - 1))}
+                                disabled={page === 1}
+                            >
+                                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M15 19l-7-7 7-7" /></svg>
+                            </button>
+                            
+                            {getPageNumbers().map((p, idx) => (
+                                typeof p === 'number' ? (
+                                    <button
+                                        key={idx}
+                                        type="button"
+                                        className={`h-9 w-9 rounded-xl transition-all border text-xs ${p === page ? 'bg-primary text-white border-primary shadow-lg' : 'bg-gray-50 text-dark hover:bg-primary hover:text-white border-gray-100 dark:border-gray-800 dark:bg-gray-900'}`}
+                                        onClick={() => setPage(p)}
+                                    >
+                                        {p}
+                                    </button>
+                                ) : (
+                                    <span key={idx} className="px-1 text-gray-400 font-black tracking-widest">...</span>
+                                )
+                            ))}
+
+                            <button
+                                type="button"
+                                className="flex h-9 w-9 items-center justify-center rounded-xl bg-gray-50 text-dark hover:bg-primary hover:text-white transition-all disabled:opacity-30 border border-gray-100 dark:border-gray-800 dark:bg-gray-900"
+                                onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+                                disabled={page === totalPages}
+                            >
+                                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M9 5l7 7-7 7" /></svg>
+                            </button>
+                        </div>
+                    </div>
+                )}
+            </div>
+        </div>
+    );
+};
+
+export default AdminAttendanceDetails;

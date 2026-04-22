@@ -909,6 +909,51 @@ class SeatBooking(models.Model):
         return f"{self.employee} booked {self.seat} ({self.booking_type})"
 
 
+# --------------------------- CONFERENCE ROOM MANAGEMENT ---------------------------------
+
+class ConferenceRoom(models.Model):
+    company = models.ForeignKey(Company, on_delete=models.CASCADE, related_name='conference_rooms')
+    floor = models.ForeignKey('OfficeFloor', on_delete=models.CASCADE, related_name='conference_rooms')
+    name = models.CharField(max_length=100)
+    capacity = models.IntegerField(default=0)
+    layout_element_id = models.CharField(max_length=100, blank=True, null=True) # ID from Konva layout
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"{self.name} ({self.floor.name})"
+
+class ConferenceRoomBooking(models.Model):
+    STATUS_CHOICES = [
+        ('pending', 'Pending Approval'),
+        ('approved', 'Approved'),
+        ('rejected', 'Rejected'),
+        ('cancelled', 'Cancelled'),
+    ]
+    room = models.ForeignKey(ConferenceRoom, on_delete=models.CASCADE, related_name='bookings')
+    employee = models.ForeignKey(Employee, on_delete=models.CASCADE, related_name='room_bookings')
+    date = models.DateField()
+    start_time = models.TimeField()
+    end_time = models.TimeField()
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
+    purpose = models.TextField(blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-date', '-start_time']
+
+    def __str__(self):
+        return f"{self.employee} - {self.room} on {self.date}"
+
+class ConferenceRoomConfig(models.Model):
+    company = models.OneToOneField(Company, on_delete=models.CASCADE, related_name='room_config')
+    approval_limit_minutes = models.IntegerField(default=120)
+
+    def __str__(self):
+        return f"Config for {self.company.name}"
+
+
 # --------------------------- CHAT ---------------------------------
 class ChatConversation(models.Model):
     TYPE_CHOICES = [
