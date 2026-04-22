@@ -162,14 +162,14 @@ const Sidebar = () => {
                                             </div>
                                         </NavLink>
                                     </li>
-                                    <li className="menu nav-item">
+                                    {/* <li className="menu nav-item">
                                         <NavLink to="/employee/notifications" className="group">
                                             <div className="flex items-center">
                                                 <IconMenuPages className="group-hover:!text-primary shrink-0" />
                                                 <span className="ltr:pl-3 rtl:pr-3 text-black dark:text-[#506690] dark:group-hover:text-white-dark">{t('Notifications')}</span>
                                             </div>
                                         </NavLink>
-                                    </li>
+                                    </li> */}
                                     <li className="menu nav-item">
                                         <NavLink to="/employee/learning-corner" className="group">
                                             <div className="flex items-center">
@@ -219,22 +219,14 @@ const Sidebar = () => {
                                             </div>
                                         </NavLink>
                                     </li>
-                                    <li className="menu nav-item">
+                                    {/* <li className="menu nav-item">
                                         <NavLink to="/employee/chat" className="group">
                                             <div className="flex items-center">
                                                 <IconMenuChat className="group-hover:!text-primary shrink-0" />
                                                 <span className="ltr:pl-3 rtl:pr-3 text-black dark:text-[#506690] dark:group-hover:text-white-dark">{t('Chat')}</span>
                                             </div>
                                         </NavLink>
-                                    </li>
-                                    <li className="menu nav-item">
-                                        <NavLink to="/employee/calendar" className="group">
-                                            <div className="flex items-center">
-                                                <IconMenuCalendar className="group-hover:!text-primary shrink-0" />
-                                                <span className="ltr:pl-3 rtl:pr-3 text-black dark:text-[#506690] dark:group-hover:text-white-dark">{t('Calendar')}</span>
-                                            </div>
-                                        </NavLink>
-                                    </li>
+                                    </li> */}
                                     <li className="menu nav-item">
                                         <NavLink to="/employee/asset-requests" className="group">
                                             <div className="flex items-center">

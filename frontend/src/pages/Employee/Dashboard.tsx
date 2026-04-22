@@ -13,6 +13,7 @@ import IconMenuChat from '../../components/Icon/Menu/IconMenuChat';
 import IconListCheck from '../../components/Icon/IconListCheck';
 import IconTrendingUp from '../../components/Icon/IconTrendingUp';
 import IconSun from '../../components/Icon/IconSun';
+import CountUp from 'react-countup';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000';
 
@@ -53,6 +54,15 @@ interface CalendarEventType {
     description: string;
     is_holiday: boolean;
 }
+
+const parseDurationToMinutes = (duration: string | null | undefined) => {
+    if (!duration) return 0;
+    const hoursMatch = duration.match(/(\d+)\s*h/i);
+    const minsMatch = duration.match(/(\d+)\s*m/i);
+    const hours = hoursMatch ? Number(hoursMatch[1]) : 0;
+    const mins = minsMatch ? Number(minsMatch[1]) : 0;
+    return hours * 60 + mins;
+};
 
 const EmployeeDashboard = () => {
     const dispatch = useDispatch();
@@ -108,8 +118,8 @@ const EmployeeDashboard = () => {
         'Content-Type': 'application/json',
     }), []);
 
-    const fetchAllData = async () => {
-        setLoading(true);
+    const fetchAllData = async (background = false) => {
+        if (!background) setLoading(true);
         try {
             // Fetch Dashboard Data
             const dashRes = await fetch(`${API_BASE_URL}/employee/dashboard/`, { headers: authHeaders });
@@ -140,7 +150,7 @@ const EmployeeDashboard = () => {
         } catch (error) {
             console.error('Error fetching dashboard data:', error);
         } finally {
-            setLoading(false);
+            if (!background) setLoading(false);
         }
     };
 
@@ -266,7 +276,7 @@ const EmployeeDashboard = () => {
             const result = await res.json();
             if (res.ok) {
                 Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Successfully Checked In!', showConfirmButton: false, timer: 3000 });
-                fetchAllData();
+                fetchAllData(true);
             } else {
                 Swal.fire('Error', result.detail || 'Could not check in', 'error');
             }
@@ -284,7 +294,7 @@ const EmployeeDashboard = () => {
             const result = await res.json();
             if (res.ok) {
                 Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Successfully Checked Out!', showConfirmButton: false, timer: 3000 });
-                fetchAllData();
+                fetchAllData(true);
             } else {
                 Swal.fire('Error', result.detail || 'Could not check out', 'error');
             }
@@ -303,7 +313,7 @@ const EmployeeDashboard = () => {
             const result = await res.json();
             if (res.ok) {
                 Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Break Started', showConfirmButton: false, timer: 3000 });
-                fetchAllData();
+                fetchAllData(true);
             } else {
                 Swal.fire('Error', result.detail || 'Could not start break', 'error');
             }
@@ -322,7 +332,7 @@ const EmployeeDashboard = () => {
             const result = await res.json();
             if (res.ok) {
                 Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Break Ended', showConfirmButton: false, timer: 3000 });
-                fetchAllData();
+                fetchAllData(true);
             } else {
                 Swal.fire('Error', result.detail || 'Could not end break', 'error');
             }
@@ -354,92 +364,100 @@ const EmployeeDashboard = () => {
     }
 
     const { checkin_time, checkout_time, active_break } = data;
+    const weeklyTargetHours = 40;
+    const weeklyProgress = Math.min(100, Math.round((Number(data.weekly_hours || 0) / weeklyTargetHours) * 100));
+    const overtimeTotalMinutes = data.overtime ? data.overtime.hours * 60 + data.overtime.minutes : 0;
+    const productiveMinutes = Math.max(0, parseDurationToMinutes(liveTime));
+    const breakMinutes = Math.max(0, data.total_break_minutes || 0);
+    const focusScore = productiveMinutes + breakMinutes > 0 ? Math.round((productiveMinutes / (productiveMinutes + breakMinutes)) * 100) : 100;
+    const isCheckedIn = Boolean(checkin_time && !checkout_time);
+    const attendanceStatusLabel = isCheckedIn ? (active_break ? 'On Break' : 'Checked In') : checkout_time ? 'Checked Out' : 'Not Checked In';
+    const attendanceStatusColor = isCheckedIn ? (active_break ? '#e2a03f' : '#00ab55') : checkout_time ? '#805dca' : '#e7515a';
 
     return (
         <div className="space-y-6 animate__animated animate__fadeIn">
-            {/* ─── Greeting Banner ─── */}
-            <div className="relative bg-gradient-to-r from-[#4361ee] via-[#6366f1] to-[#7c3aed] rounded-2xl p-6 md:p-8 text-white overflow-hidden shadow-lg">
-                <div className="absolute top-0 right-0 -mt-12 -mr-12 w-48 h-48 bg-white/10 rounded-full blur-2xl"></div>
-                <div className="absolute bottom-0 left-1/3 -mb-8 w-32 h-32 bg-white/10 rounded-full blur-2xl"></div>
+            <div className="panel relative overflow-hidden border-0 bg-gradient-to-r from-[#220fb6] via-[#4f6be5] to-[#0f52af] text-white p-4 md:p-5">
+                <div className="absolute inset-0 bg-[radial-gradient(circle_at_18%_22%,rgba(255,255,255,0.18),transparent_34%),radial-gradient(circle_at_84%_20%,rgba(128,224,255,0.22),transparent_36%)] pointer-events-none"></div>
+                <div className="absolute -top-12 -right-12 w-56 h-56 rounded-full bg-cyan-200/25 blur-3xl"></div>
+                <div className="absolute -bottom-14 -left-12 w-52 h-52 rounded-full bg-indigo-200/25 blur-3xl"></div>
 
-                <div className="relative z-10 flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
-                    <div>
-                        <p className="text-sm text-white/80 mb-1 font-medium tracking-wide">Hello, {formattedName}</p>
-                        <h1 className="text-3xl md:text-4xl font-extrabold flex items-center gap-3 drop-shadow-sm">
-                            {greeting} <span className="text-4xl">{GreetingEmoji}</span>
-                        </h1>
-                        <p className="text-sm text-white/80 mt-2 font-medium">{todayFormatted}</p>
-                        {data.birthday_message && (
-                            <p className="mt-3 inline-flex items-center gap-2 px-3 py-1 bg-gradient-to-r from-pink-500 to-rose-500 rounded-full text-sm font-bold shadow-sm animate-bounce">
-                                🎂 {data.birthday_message}
-                            </p>
-                        )}
-                    </div>
-                </div>
-            </div>
+                <div className="absolute z-[1] -left-10 bottom-9 h-20 w-20 rounded-full border border-white/20 bg-white/10 backdrop-blur-md shadow-[inset_0_0_24px_rgba(255,255,255,0.18)] animate-particle-drift"></div>
+                <div className="absolute z-[1] -right-8 top-1/3 h-20 w-20 rounded-full border border-cyan-100/25 bg-cyan-100/10 backdrop-blur-md shadow-[inset_0_0_20px_rgba(190,235,255,0.18)] animate-particle-drift [animation-delay:1.2s]"></div>
 
-            {/* ─── Web Clock / Actions Strip ─── */}
-            <div className="panel !p-0 overflow-hidden shadow-sm border-0 border-l-4 border-l-primary">
-                <div className="flex flex-col md:flex-row items-center justify-between gap-6 p-5">
-                    <div className="flex items-center gap-4">
-                        <div className="p-3 bg-gradient-to-br from-primary to-purple-600 rounded-2xl shadow-md text-white">
-                            <IconClock className="w-6 h-6" />
-                        </div>
+                <div className="absolute z-[1] left-7 top-8 h-4 w-4 rounded-full border border-white/65 bg-white/35 backdrop-blur-md shadow-[0_0_16px_rgba(255,255,255,0.45)] animate-particle-float"></div>
+                <div className="absolute z-[1] left-16 bottom-6 h-3.5 w-3.5 rounded-full border border-white/60 bg-white/30 backdrop-blur-md shadow-[0_0_14px_rgba(255,255,255,0.38)] animate-particle-drift [animation-delay:650ms]"></div>
+                <div className="absolute z-[1] right-36 top-6 h-5 w-5 rounded-full border border-cyan-100/70 bg-cyan-100/35 backdrop-blur-md shadow-[0_0_18px_rgba(180,236,255,0.5)] animate-particle-float [animation-delay:340ms]"></div>
+                <div className="absolute z-[1] right-8 bottom-8 h-4 w-4 rounded-full border border-blue-100/70 bg-blue-100/30 backdrop-blur-md shadow-[0_0_16px_rgba(190,220,255,0.45)] animate-particle-drift [animation-delay:1.6s]"></div>
+                <div className="absolute z-[1] left-[44%] top-[36%] h-4 w-4 rounded-full border border-white/60 bg-white/28 backdrop-blur-md shadow-[0_0_14px_rgba(255,255,255,0.36)] animate-particle-float [animation-delay:240ms]"></div>
+                <div className="absolute z-[1] left-[52%] bottom-9 h-3.5 w-3.5 rounded-full border border-cyan-100/60 bg-cyan-100/28 backdrop-blur-md shadow-[0_0_12px_rgba(175,230,255,0.34)] animate-particle-drift [animation-delay:920ms]"></div>
+                <div className="absolute z-[1] left-[60%] top-[48%] h-3 w-3 rounded-full border border-blue-100/60 bg-blue-100/28 backdrop-blur-md shadow-[0_0_12px_rgba(180,215,255,0.32)] animate-particle-float [animation-delay:1.25s]"></div>
+
+                <div className="relative z-10 space-y-4">
+                    <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-3">
                         <div>
-                            <p className="text-base font-bold text-gray-900 dark:text-white">Web Clock &amp; Breaks</p>
-                            <p className="text-sm text-gray-500 dark:text-gray-400">Manage your daily attendance</p>
-                        </div>
-                    </div>
-
-                    <div className="flex flex-wrap items-center gap-3 lg:gap-6 flex-1 justify-end">
-                        <div className="flex items-center gap-3">
-                            <div className="px-4 py-2 bg-gray-50 dark:bg-[#1a2941] rounded-xl border border-gray-100 dark:border-gray-800 text-center min-w-[110px]">
-                                <p className="text-[10px] text-gray-500 dark:text-gray-400 font-bold uppercase tracking-wider mb-1">Check In</p>
-                                <p className="text-sm font-bold text-gray-900 dark:text-white">{checkin_time ? checkin_time : '--:--'}</p>
-                            </div>
-                            <div className="px-4 py-2 bg-gray-50 dark:bg-[#1a2941] rounded-xl border border-gray-100 dark:border-gray-800 text-center min-w-[110px]">
-                                <p className="text-[10px] text-gray-500 dark:text-gray-400 font-bold uppercase tracking-wider mb-1">Check Out</p>
-                                <p className="text-sm font-bold text-gray-900 dark:text-white">{checkout_time ? checkout_time : '--:--'}</p>
-                            </div>
-                            <div className="px-4 py-2 bg-primary/5 dark:bg-primary/10 rounded-xl border border-primary/20 text-center min-w-[110px]">
-                                <p className="text-[10px] text-primary font-bold uppercase tracking-wider mb-1">Live Duration</p>
-                                <p className="text-sm font-black text-primary animate-pulse">{liveRawSeconds}</p>
-                            </div>
+                            <p className="text-sm font-medium tracking-wide text-white/85">Welcome back, {formattedName}</p>
+                            <h1 className="mt-1 text-2xl md:text-3xl font-black tracking-tight flex items-center gap-2">
+                                {greeting} <span>{GreetingEmoji}</span>
+                            </h1>
+                            <p className="mt-1 text-sm text-white/85">{todayFormatted}</p>
+                            {data.birthday_message && (
+                                <span className="mt-2 inline-flex items-center rounded-full bg-[#2413ba]/90 px-3 py-1 text-xs font-semibold shadow-md border border-white/25">
+                                    🎂 {data.birthday_message}
+                                </span>
+                            )}
                         </div>
 
-                        <div className="w-px h-10 bg-gray-200 dark:bg-gray-700 hidden lg:block"></div>
-
-                        <div className="flex items-center gap-2">
-                            {/* Punch In / Out Logic */}
+                        <div className="flex flex-wrap items-center gap-2">
+                            <span className="text-[11px] px-2.5 py-1 rounded-full bg-[#58b8df]/20 text-cyan-100 border border-cyan-200/40 font-semibold">Realtime</span>
                             {!checkin_time && (
-                                <button className="btn btn-primary shadow-md px-5 rounded-xl font-bold" onClick={handleCheckIn}>
+                                <button type="button" className="btn btn-primary shadow-md rounded-xl" onClick={handleCheckIn}>
                                     Check In
                                 </button>
                             )}
-
                             {checkin_time && !checkout_time && (
-                                <button className="btn btn-danger shadow-md px-5 rounded-xl font-bold" onClick={handleCheckOut}>
+                                <button type="button" className="btn btn-danger shadow-md rounded-xl" onClick={handleCheckOut}>
                                     Check Out
                                 </button>
                             )}
                         </div>
                     </div>
-                </div>
 
-                {/* ─── Dedicated Breaks Row ─── */}
-                {checkin_time && !checkout_time && (breakConfigs.length > 0 || active_break) && (
-                    <div className="border-t border-gray-100 dark:border-gray-800 bg-gray-50/30 dark:bg-black/5 p-4 flex flex-wrap items-center gap-3">
-                        <div className="flex items-center gap-2 mr-2">
-                            <span className="w-2 h-2 rounded-full bg-warning animate-pulse"></span>
-                            <span className="text-xs font-bold text-gray-500 uppercase tracking-widest">Available Breaks:</span>
+                    <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-2.5">
+                        <div className="rounded-xl border border-white/30 bg-white/10 px-3 py-2.5">
+                            <p className="text-[10px] uppercase tracking-wide text-blue-100">Status</p>
+                            <p className="text-base font-bold mt-1 text-white">{attendanceStatusLabel}</p>
                         </div>
-                        
-                        <div className="flex flex-wrap items-center gap-2">
+                        <div className="rounded-xl border border-white/30 bg-white/10 px-3 py-2.5">
+                            <p className="text-[10px] uppercase tracking-wide text-blue-100">Weekly Target</p>
+                            <p className="text-xl font-black mt-1 text-white">
+                                <CountUp end={weeklyProgress} duration={1.3} />%
+                            </p>
+                        </div>
+                        <div className="rounded-xl border border-white/30 bg-white/10 px-3 py-2.5">
+                            <p className="text-[10px] uppercase tracking-wide text-blue-100">Focus Index</p>
+                            <p className="text-xl font-black mt-1 text-white">
+                                <CountUp end={focusScore} duration={1.3} />%
+                            </p>
+                        </div>
+                        <div className="rounded-xl border border-white/20 bg-white/10 px-3 py-2.5">
+                            <p className="text-[10px] uppercase tracking-wide text-blue-100">Punch Time</p>
+                            <p className="text-sm font-bold text-white mt-1">{checkin_time || '--:--'} / {checkout_time || '--:--'}</p>
+                        </div>
+                        <div className="rounded-xl border border-white/20 bg-white/10 px-3 py-2.5">
+                            <p className="text-[10px] uppercase tracking-wide text-cyan-100">Live Clock</p>
+                            <p className="text-sm font-black text-cyan-100 mt-1 animate-pulse">{liveRawSeconds}</p>
+                        </div>
+                    </div>
+
+                    {checkin_time && !checkout_time && (breakConfigs.length > 0 || active_break) && (
+                        <div className="flex flex-wrap items-center gap-2 border-t border-dashed border-white/20 pt-3">
+                            <p className="text-xs font-semibold uppercase tracking-wider text-blue-100 mr-1">Breaks</p>
                             {!active_break ? (
                                 breakConfigs.map((bc) => (
                                     <button
                                         key={bc.id}
-                                        className="btn btn-outline-warning shadow-sm font-bold rounded-xl px-4 py-1.5 text-xs bg-white dark:bg-[#0e1726]"
+                                        type="button"
+                                        className="px-3 py-1.5 text-xs font-semibold rounded-lg border border-cyan-200/45 bg-cyan-200/10 text-cyan-100 hover:bg-cyan-200/20 transition-colors"
                                         style={{ textTransform: 'capitalize' }}
                                         onClick={() => handleStartBreak(bc.id)}
                                     >
@@ -447,90 +465,58 @@ const EmployeeDashboard = () => {
                                     </button>
                                 ))
                             ) : (
-                                <button className="btn btn-warning shadow-md rounded-xl font-bold animate-pulse px-6 py-2 text-xs" onClick={handleEndBreak}>
+                                <button type="button" className="btn btn-warning rounded-xl animate-pulse" onClick={handleEndBreak}>
                                     End Active Break ({active_break.type?.replace(/_/g, ' ') || 'Break'})
                                 </button>
                             )}
                         </div>
-                    </div>
-                )}
-            </div>
-
-            {/* ─── Key Metrics ─── */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-5">
-                {/* Hours Today */}
-                <div className="panel p-5 group hover:shadow-lg transition-all duration-300 hover:-translate-y-1 border-b-4 border-b-info">
-                    <div className="flex items-center justify-between mb-3">
-                        <div className="p-2.5 bg-info/10 dark:bg-info/20 rounded-xl">
-                            <IconClock className="w-5 h-5 text-info" />
-                        </div>
-                    </div>
-                    <p className="text-2xl font-bold text-gray-900 dark:text-white">
-                        {liveTime}
-                    </p>
-                    <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">Effective Hours Today</p>
-                </div>
-
-                {/* Weekly Hours */}
-                <div className="panel p-5 group hover:shadow-lg transition-all duration-300 hover:-translate-y-1 border-b-4 border-b-success">
-                    <div className="flex items-center justify-between mb-3">
-                        <div className="p-2.5 bg-success/10 dark:bg-success/20 rounded-xl">
-                            <IconTrendingUp className="w-5 h-5 text-success" />
-                        </div>
-                    </div>
-                    <p className="text-2xl font-bold text-gray-900 dark:text-white">
-                        {data.total_work_duration_week}
-                    </p>
-                    <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">Weekly Hours Accrued</p>
-                </div>
-
-                {/* Overtime */}
-                <div className="panel p-5 group hover:shadow-lg transition-all duration-300 hover:-translate-y-1 border-b-4 border-b-warning">
-                    <div className="flex items-center justify-between mb-3">
-                        <div className="p-2.5 bg-warning/10 dark:bg-warning/20 rounded-xl">
-                            <IconListCheck className="w-5 h-5 text-warning" />
-                        </div>
-                    </div>
-                    <p className="text-2xl font-bold text-gray-900 dark:text-white">
-                        {data.overtime ? `${data.overtime.hours}h ${data.overtime.minutes}m` : '0h 0m'}
-                    </p>
-                    <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">Accrued Overtime</p>
-                </div>
-
-                {/* Latest Payroll */}
-                <div className="panel p-5 group hover:shadow-lg transition-all duration-300 hover:-translate-y-1 border-b-4 border-b-secondary">
-                    <div className="flex items-center justify-between mb-3">
-                        <div className="p-2.5 bg-secondary/10 dark:bg-secondary/20 rounded-xl">
-                            <svg className="w-5 h-5 text-secondary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                            </svg>
-                        </div>
-                    </div>
-                    <p className="text-2xl font-bold text-gray-900 dark:text-white">
-                        {data.latest_payroll ? `$ ${data.latest_payroll.amount.toLocaleString()}` : 'Pending'}
-                    </p>
-                    <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">Latest Payroll</p>
+                    )}
                 </div>
             </div>
 
-            {/* ─── Trend Analytics & Timeline ─── */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                {/* Working Hours Trend */}
-                <div className="panel lg:col-span-2 shadow-lg border-0 bg-white dark:bg-[#0e1726]">
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-4">
+                <div className="panel p-4 hover:-translate-y-1 transition-all duration-300 border border-[#ebedf2] dark:border-[#1b2e4b]">
+                    <p className="text-[11px] uppercase tracking-wider text-white-dark font-semibold">Effective Time</p>
+                    <p className="text-2xl font-black mt-2">{liveTime}</p>
+                    <p className="text-xs text-white-dark mt-1">Net hours after breaks</p>
+                </div>
+                <div className="panel p-4 hover:-translate-y-1 transition-all duration-300 border border-[#ebedf2] dark:border-[#1b2e4b]">
+                    <p className="text-[11px] uppercase tracking-wider text-white-dark font-semibold">Weekly Hours</p>
+                    <p className="text-2xl font-black mt-2 text-success">{data.total_work_duration_week}</p>
+                    <p className="text-xs text-white-dark mt-1">Current week accumulation</p>
+                </div>
+                <div className="panel p-4 hover:-translate-y-1 transition-all duration-300 border border-[#ebedf2] dark:border-[#1b2e4b]">
+                    <p className="text-[11px] uppercase tracking-wider text-white-dark font-semibold">Overtime</p>
+                    <p className="text-2xl font-black mt-2 text-warning">{data.overtime ? `${data.overtime.hours}h ${data.overtime.minutes}m` : '0h 0m'}</p>
+                    <p className="text-xs text-white-dark mt-1">Extra contribution</p>
+                </div>
+                <div className="panel p-4 hover:-translate-y-1 transition-all duration-300 border border-[#ebedf2] dark:border-[#1b2e4b]">
+                    <p className="text-[11px] uppercase tracking-wider text-white-dark font-semibold">Latest Payroll</p>
+                    <p className="text-2xl font-black mt-2 text-secondary">{data.latest_payroll ? `$ ${data.latest_payroll.amount.toLocaleString()}` : 'Pending'}</p>
+                    <p className="text-xs text-white-dark mt-1">Most recent payout</p>
+                </div>
+                <div className="panel p-4 hover:-translate-y-1 transition-all duration-300 border border-[#ebedf2] dark:border-[#1b2e4b]">
+                    <p className="text-[11px] uppercase tracking-wider text-white-dark font-semibold">Focus Score</p>
+                    <p className="text-2xl font-black mt-2 text-primary">
+                        <CountUp end={focusScore} duration={1.2} />%
+                    </p>
+                    <p className="text-xs text-white-dark mt-1">Work-to-break ratio</p>
+                </div>
+            </div>
+
+            <div className="grid grid-cols-1 xl:grid-cols-5 gap-6">
+                <div className="xl:col-span-3 panel p-5">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-5">
                         <div className="flex items-center gap-3">
                             <div className="flex items-center gap-1 bg-gray-100 dark:bg-gray-800 p-1 rounded-xl">
-                                <button
-                                    className="p-1.5 hover:bg-white dark:hover:bg-gray-700 rounded-lg transition-all text-gray-500 disabled:opacity-30 disabled:cursor-not-allowed"
-                                    onClick={() => setNavOffset((prev) => prev + 1)}
-                                    title="Previous Period"
-                                >
+                                <button type="button" className="p-1.5 hover:bg-white dark:hover:bg-gray-700 rounded-lg text-gray-500 transition-all" onClick={() => setNavOffset((prev) => prev + 1)} title="Previous Period">
                                     <svg className="w-5 h-5 rtl:rotate-180" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                                         <path d="M15 18l-6-6 6-6" />
                                     </svg>
                                 </button>
                                 <button
-                                    className="p-1.5 hover:bg-white dark:hover:bg-gray-700 rounded-lg transition-all text-gray-500 disabled:opacity-30 disabled:cursor-not-allowed"
+                                    type="button"
+                                    className="p-1.5 hover:bg-white dark:hover:bg-gray-700 rounded-lg text-gray-500 transition-all disabled:opacity-30 disabled:cursor-not-allowed"
                                     onClick={() => setNavOffset((prev) => Math.max(0, prev - 1))}
                                     disabled={navOffset === 0}
                                     title="Next Period"
@@ -541,8 +527,8 @@ const EmployeeDashboard = () => {
                                 </button>
                             </div>
                             <div>
-                                <h5 className="font-bold text-lg dark:text-white leading-none">Working Hours Trend</h5>
-                                <p className="text-xs text-primary font-bold mt-1.5 bg-primary/10 px-2 py-0.5 rounded-md inline-block">
+                                <h5 className="font-bold text-lg dark:text-white">Productivity Trend</h5>
+                                <p className="text-xs mt-1 inline-flex px-2 py-0.5 rounded bg-primary-light text-primary font-semibold">
                                     {chartData?.period_label || 'Loading...'}
                                 </p>
                             </div>
@@ -551,10 +537,9 @@ const EmployeeDashboard = () => {
                             {['week', 'month', 'year'].map((r) => (
                                 <button
                                     key={r}
+                                    type="button"
                                     className={`px-4 py-1.5 text-xs font-bold rounded-lg transition-all ${
-                                        chartRange === r
-                                            ? 'bg-primary text-white shadow-md'
-                                            : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
+                                        chartRange === r ? 'bg-primary text-white shadow' : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
                                     }`}
                                     onClick={() => {
                                         setChartRange(r);
@@ -569,37 +554,30 @@ const EmployeeDashboard = () => {
 
                     <div className="relative min-h-[350px]">
                         {chartLoading && (
-                            <div className="absolute inset-0 z-10 bg-white/50 dark:bg-[#0e1726]/50 flex items-center justify-center backdrop-blur-[1px] rounded-xl">
+                            <div className="absolute inset-0 z-10 bg-white/60 dark:bg-[#0f1726]/60 flex items-center justify-center rounded-xl backdrop-blur-[1px]">
                                 <span className="animate-spin border-2 border-primary border-t-transparent rounded-full w-8 h-8"></span>
                             </div>
                         )}
-
                         <ReactApexChart
                             series={[{ name: 'Work Hours', data: chartData?.series || [] }]}
                             options={{
-                                chart: {
-                                    height: 350,
-                                    type: 'area',
-                                    fontFamily: 'Nunito, sans-serif',
-                                    toolbar: { show: false },
-                                    zoom: { enabled: false },
-                                },
+                                chart: { height: 350, type: 'area', fontFamily: 'Nunito, sans-serif', toolbar: { show: false }, zoom: { enabled: false } },
                                 colors: ['#4361ee'],
                                 dataLabels: { enabled: false },
-                                stroke: { curve: 'smooth', width: 3 },
+                                stroke: { curve: 'smooth', width: 3.4 },
                                 fill: {
                                     type: 'gradient',
                                     gradient: {
                                         shadeIntensity: 1,
                                         inverseColors: false,
                                         opacityFrom: 0.45,
-                                        opacityTo: 0.05,
-                                        stops: [20, 100],
+                                        opacityTo: 0.04,
+                                        stops: [10, 100],
                                     },
                                 },
                                 grid: {
-                                    borderColor: isDark ? '#191e3a' : '#e0e6ed',
-                                    strokeDashArray: 5,
+                                    borderColor: isDark ? '#1f2a44' : '#dce7ef',
+                                    strokeDashArray: 4,
                                     xaxis: { lines: { show: false } },
                                     yaxis: { lines: { show: true } },
                                 },
@@ -608,21 +586,13 @@ const EmployeeDashboard = () => {
                                     axisBorder: { show: false },
                                     axisTicks: { show: false },
                                     labels: {
-                                        style: {
-                                            colors: isDark ? '#bfc9d4' : '#888ea8',
-                                            fontSize: '11px',
-                                            fontWeight: 700,
-                                        },
+                                        style: { colors: isDark ? '#94a3b8' : '#64748b', fontSize: '11px', fontWeight: 700 },
                                     },
                                 },
                                 yaxis: {
                                     labels: {
                                         formatter: (val: any) => `${val}h`,
-                                        style: {
-                                            colors: isDark ? '#bfc9d4' : '#888ea8',
-                                            fontSize: '11px',
-                                            fontWeight: 700,
-                                        },
+                                        style: { colors: isDark ? '#94a3b8' : '#64748b', fontSize: '11px', fontWeight: 700 },
                                     },
                                 },
                                 annotations: {
@@ -636,8 +606,8 @@ const EmployeeDashboard = () => {
                                                       label: {
                                                           borderColor: 'transparent',
                                                           style: {
-                                                              color: '#e7515a',
-                                                              background: isDark ? '#e7515a22' : '#e7515a11',
+                                                              color: '#f59e0b',
+                                                              background: isDark ? '#f59e0b22' : '#f59e0b1f',
                                                               fontSize: '9px',
                                                               fontWeight: 800,
                                                               padding: { left: 4, right: 4, top: 2, bottom: 2 },
@@ -654,7 +624,6 @@ const EmployeeDashboard = () => {
                                 },
                                 tooltip: {
                                     theme: isDark ? 'dark' : 'light',
-                                    x: { show: true },
                                     y: {
                                         formatter: (val: any) => `${val} hours`,
                                     },
@@ -666,143 +635,183 @@ const EmployeeDashboard = () => {
                     </div>
                 </div>
 
-                {/* Today's Timeline */}
-                <div className="space-y-6">
-                    <div className="panel shadow-lg border-0 bg-white dark:bg-[#0e1726]">
-                        <div className="flex items-center justify-between mb-5">
-                            <h5 className="font-bold text-lg dark:text-white">Today's Timeline</h5>
-                            <div className="p-2 bg-warning/10 rounded-lg">
-                                <IconClock className="w-5 h-5 text-warning" />
-                            </div>
+                <div className="xl:col-span-2 space-y-6">
+                    <div className="panel p-5">
+                        <div className="flex items-center justify-between mb-3">
+                            <h5 className="font-bold text-lg dark:text-white">Attendance Health</h5>
+                            <span className="text-xs px-2 py-1 rounded-full bg-primary-light text-primary font-semibold">{attendanceStatusLabel}</span>
                         </div>
-                        <div className="space-y-4">
-                            {data?.recent_breaks && data.recent_breaks.length > 0 ? (
-                                data.recent_breaks.map((b, i) => (
-                                    <div key={i} className="flex gap-4 relative">
-                                        {i !== data.recent_breaks!.length - 1 && (
-                                            <div className="absolute left-[11px] top-6 bottom-0 w-0.5 bg-gray-100 dark:bg-gray-800"></div>
-                                        )}
-                                        <div
-                                            className={`w-6 h-6 rounded-full border-4 ${
-                                                b.end ? 'border-primary bg-primary' : 'border-warning bg-warning animate-pulse'
-                                            } z-10`}
-                                        ></div>
-                                        <div className="flex-1 pb-4">
-                                            <p className="text-sm font-bold text-gray-900 dark:text-white capitalize">{b.type?.replace(/_/g, ' ')}</p>
-                                            <p className="text-xs text-gray-500">
-                                                {b.start_time} - {b.end_time || 'Active'}
-                                            </p>
-                                            <p className="text-[10px] text-primary font-bold mt-1 bg-primary/5 inline-block px-2 py-0.5 rounded uppercase tracking-tighter">
-                                                {b.duration || 'Running...'}
-                                            </p>
-                                        </div>
-                                    </div>
-                                ))
-                            ) : (
-                                <div className="text-center py-10 bg-gray-50/50 dark:bg-black/10 rounded-2xl border border-dashed border-gray-200 dark:border-gray-800">
-                                    <IconClock className="w-10 h-10 text-gray-300 dark:text-gray-700 mx-auto mb-3" />
-                                    <p className="text-sm text-gray-500">No activity logged yet today.</p>
-                                </div>
-                            )}
-                        </div>
+                        <ReactApexChart
+                            type="radialBar"
+                            height={220}
+                            series={[isCheckedIn ? 100 : checkout_time ? 68 : 30]}
+                            options={{
+                                chart: { sparkline: { enabled: true } },
+                                colors: [attendanceStatusColor],
+                                plotOptions: {
+                                    radialBar: {
+                                        hollow: { size: '64%' },
+                                        track: { background: isDark ? '#1d263d' : '#e8f0f4' },
+                                        dataLabels: {
+                                            name: { show: true, color: isDark ? '#cbd5e1' : '#475569', fontSize: '13px' },
+                                            value: { show: true, fontWeight: 700, fontSize: '22px', color: isDark ? '#f8fafc' : '#0f172a' },
+                                        },
+                                    },
+                                },
+                                labels: [isCheckedIn ? 'Active' : checkout_time ? 'Closed' : 'Idle'],
+                            }}
+                        />
                     </div>
 
-                    {/* Upcoming Events */}
-                    <div className="panel shadow-lg border-0 bg-white dark:bg-[#0e1726]">
-                        <div className="flex items-center justify-between mb-5">
-                            <h5 className="font-bold text-lg dark:text-white">Upcoming Holidays & Events</h5>
-                            <div className="p-2 bg-primary/10 rounded-lg">
-                                <IconCalendar className="w-5 h-5 text-primary" />
-                            </div>
+                    <div className="panel p-5">
+                        <div className="flex items-center justify-between mb-3">
+                            <h5 className="font-bold text-lg dark:text-white">Time Distribution</h5>
+                            <span className="text-xs px-2 py-1 rounded-full bg-primary-light text-primary font-semibold">Today</span>
                         </div>
-                        <div className="space-y-4">
-                            {events.length > 0 ? (
-                                events.map((event) => (
-                                    <div key={event.id} className="flex items-start gap-3 p-3 bg-gray-50 dark:bg-black/20 rounded-xl hover:bg-primary/5 transition-colors">
-                                        <div
-                                            className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${
-                                                event.is_holiday ? 'bg-gradient-to-br from-warning to-orange-500' : 'bg-gradient-to-br from-primary to-purple-500'
-                                            }`}
-                                        >
-                                            {event.is_holiday ? <IconSun className="w-5 h-5 text-white" /> : <IconCalendar className="w-5 h-5 text-white" />}
-                                        </div>
-                                        <div className="flex-1 min-w-0">
-                                            <p className="text-sm font-bold text-gray-800 dark:text-white truncate">{event.name}</p>
-                                            <p className="text-[10px] text-gray-500 dark:text-gray-400 font-medium">
-                                                {new Date(event.date).toLocaleDateString('en-US', {
-                                                    weekday: 'short',
-                                                    month: 'short',
-                                                    day: 'numeric',
-                                                })}
-                                                <span className="ml-2 py-0.5 px-1.5 bg-gray-100 dark:bg-gray-800 rounded text-[9px] uppercase tracking-wider">
-                                                    {getDaysUntil(event.date)}
-                                                </span>
-                                            </p>
-                                        </div>
-                                    </div>
-                                ))
-                            ) : (
-                                <div className="text-center py-8 bg-gray-50/50 dark:bg-black/10 rounded-2xl border border-dashed border-gray-200 dark:border-gray-800">
-                                    <IconCalendar className="w-8 h-8 text-gray-300 dark:text-gray-700 mx-auto mb-2" />
-                                    <p className="text-xs text-gray-500">No upcoming events</p>
-                                </div>
-                            )}
+                        <ReactApexChart
+                            type="donut"
+                            height={220}
+                            series={[productiveMinutes, breakMinutes || 1]}
+                            options={{
+                                labels: ['Productive', 'Break'],
+                                colors: ['#1953c2', '#58b8df'],
+                                legend: { position: 'bottom', labels: { colors: isDark ? '#cbd5e1' : '#334155' } },
+                                dataLabels: { enabled: false },
+                                stroke: { colors: [isDark ? '#0f1726' : '#ffffff'] },
+                                plotOptions: {
+                                    pie: {
+                                        donut: {
+                                            size: '70%',
+                                            labels: {
+                                                show: true,
+                                                total: {
+                                                    show: true,
+                                                    label: 'Focus',
+                                                    formatter: () => `${focusScore}%`,
+                                                    color: isDark ? '#f8fafc' : '#0f172a',
+                                                },
+                                            },
+                                        },
+                                    },
+                                },
+                            }}
+                        />
+                        <div className="grid grid-cols-2 gap-3 mt-2">
+                            <div className="rounded-lg bg-slate-50 dark:bg-black/20 border border-slate-200 dark:border-slate-800 p-2.5">
+                                <p className="text-[11px] text-slate-500">Overtime mins</p>
+                                <p className="text-lg font-bold text-amber-600 dark:text-amber-300">
+                                    <CountUp end={overtimeTotalMinutes} duration={1.2} />
+                                </p>
+                            </div>
+                            <div className="rounded-lg bg-slate-50 dark:bg-black/20 border border-slate-200 dark:border-slate-800 p-2.5">
+                                <p className="text-[11px] text-slate-500">Break mins</p>
+                                <p className="text-lg font-bold text-cyan-600 dark:text-cyan-300">
+                                    <CountUp end={breakMinutes} duration={1.2} />
+                                </p>
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
 
-            {/* Quick Shortcuts */}
-            <div className="panel p-6 shadow-lg border-0 bg-white dark:bg-[#0e1726]">
-                <div className="flex items-center justify-between mb-5">
-                    <h5 className="font-bold text-lg dark:text-white">Quick Navigations</h5>
+            <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+                <div className="panel xl:col-span-1 p-5 shadow-lg border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-[#0f1726]">
+                    <div className="flex items-center justify-between mb-5">
+                        <h5 className="font-bold text-lg dark:text-white">Today's Timeline</h5>
+                        <div className="p-2 rounded-lg bg-amber-100 dark:bg-amber-500/15">
+                            <IconClock className="w-5 h-5 text-amber-600 dark:text-amber-300" />
+                        </div>
+                    </div>
+                    <div className="space-y-4">
+                        {data?.recent_breaks && data.recent_breaks.length > 0 ? (
+                            data.recent_breaks.map((b, i) => (
+                                <div key={i} className="flex gap-3.5 relative">
+                                    {i !== data.recent_breaks!.length - 1 && <div className="absolute left-[10px] top-6 bottom-0 w-0.5 bg-slate-200 dark:bg-slate-800"></div>}
+                                    <div className={`w-5 h-5 rounded-full border-4 ${b.end ? 'border-emerald-500 bg-emerald-500' : 'border-amber-500 bg-amber-500 animate-pulse'} z-10`}></div>
+                                    <div className="flex-1 pb-4">
+                                        <p className="text-sm font-bold text-slate-900 dark:text-white capitalize">{b.type?.replace(/_/g, ' ')}</p>
+                                        <p className="text-xs text-slate-500 mt-0.5">{b.start_time} - {b.end_time || 'Active'}</p>
+                                        <span className="inline-flex mt-1.5 text-[10px] font-semibold uppercase tracking-wide bg-emerald-50 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300 rounded px-2 py-0.5">
+                                            {b.duration || 'Running...'}
+                                        </span>
+                                    </div>
+                                </div>
+                            ))
+                        ) : (
+                            <div className="text-center py-10 border border-dashed border-slate-200 dark:border-slate-800 rounded-xl">
+                                <IconClock className="w-10 h-10 text-slate-300 dark:text-slate-700 mx-auto mb-2" />
+                                <p className="text-sm text-slate-500">No activity logged yet today.</p>
+                            </div>
+                        )}
+                    </div>
                 </div>
-                
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                    <Link
-                        to="/employee/chat"
-                        className="group p-5 bg-gradient-to-br from-[#f8fafc] to-[#f1f5f9] dark:from-[#1b2e4b] dark:to-[#1a2941] rounded-2xl border border-gray-100 dark:border-gray-800 hover:shadow-lg transition-all duration-300 hover:scale-[1.02]"
-                    >
-                        <div className="flex items-center gap-4">
-                            <div className="w-12 h-12 bg-white dark:bg-[#0e1726] rounded-xl shadow-sm flex items-center justify-center text-primary group-hover:bg-primary group-hover:text-white transition-colors duration-300 border border-gray-100 dark:border-gray-800">
-                                <IconMenuChat className="w-6 h-6" />
-                            </div>
-                            <div>
-                                <h4 className="font-bold text-gray-800 dark:text-gray-100 text-base">Chat System</h4>
-                                <p className="text-xs text-gray-500 mt-1">Message your team</p>
-                            </div>
-                        </div>
-                    </Link>
 
-                    <Link
-                        to="/employee/calendar"
-                        className="group p-5 bg-gradient-to-br from-[#f8fafc] to-[#f1f5f9] dark:from-[#1b2e4b] dark:to-[#1a2941] rounded-2xl border border-gray-100 dark:border-gray-800 hover:shadow-lg transition-all duration-300 hover:scale-[1.02]"
-                    >
-                        <div className="flex items-center gap-4">
-                            <div className="w-12 h-12 bg-white dark:bg-[#0e1726] rounded-xl shadow-sm flex items-center justify-center text-violet-500 group-hover:bg-violet-500 group-hover:text-white transition-colors duration-300 border border-gray-100 dark:border-gray-800">
-                                <IconCalendar className="w-6 h-6" />
+                <div className="panel xl:col-span-1 p-5 shadow-lg border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-[#0f1726]">
+                    <div className="flex items-center justify-between mb-5">
+                        <h5 className="font-bold text-lg dark:text-white">Upcoming Events</h5>
+                        <div className="p-2 rounded-lg bg-cyan-100 dark:bg-cyan-500/15">
+                            <IconCalendar className="w-5 h-5 text-cyan-700 dark:text-cyan-300" />
+                        </div>
+                    </div>
+                    <div className="space-y-3.5">
+                        {events.length > 0 ? (
+                            events.map((event) => (
+                                <div key={event.id} className="flex items-start gap-3 p-3 rounded-xl border border-slate-100 dark:border-slate-800 bg-slate-50/70 dark:bg-black/15 hover:-translate-y-0.5 transition-transform">
+                                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${event.is_holiday ? 'bg-gradient-to-br from-amber-400 to-orange-500' : 'bg-gradient-to-br from-emerald-500 to-cyan-500'}`}>
+                                        {event.is_holiday ? <IconSun className="w-5 h-5 text-white" /> : <IconCalendar className="w-5 h-5 text-white" />}
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                        <p className="text-sm font-bold text-slate-800 dark:text-white truncate">{event.name}</p>
+                                        <p className="text-[11px] text-slate-500 mt-0.5">
+                                            {new Date(event.date).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
+                                            <span className="ml-2 px-1.5 py-0.5 rounded bg-slate-200/70 text-slate-700 dark:bg-slate-700 dark:text-slate-200 text-[10px] uppercase">{getDaysUntil(event.date)}</span>
+                                        </p>
+                                    </div>
+                                </div>
+                            ))
+                        ) : (
+                            <div className="text-center py-8 border border-dashed border-slate-200 dark:border-slate-800 rounded-xl">
+                                <IconCalendar className="w-8 h-8 text-slate-300 dark:text-slate-700 mx-auto mb-2" />
+                                <p className="text-xs text-slate-500">No upcoming events</p>
+                            </div>
+                        )}
+                    </div>
+                </div>
+
+                <div className="panel xl:col-span-1 p-5 shadow-lg border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-[#0f1726]">
+                    <div className="flex items-center justify-between mb-4">
+                        <h5 className="font-bold text-lg dark:text-white">Quick Navigation</h5>
+                        <span className="text-[11px] font-semibold px-2 py-1 rounded-full bg-violet-100 text-violet-700 dark:bg-violet-500/15 dark:text-violet-300">Shortcuts</span>
+                    </div>
+                    <div className="space-y-3">
+                        <Link to="/employee/chat" className="group flex items-center gap-3 p-3.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-gradient-to-r from-white to-slate-50 dark:from-[#172036] dark:to-[#101827] hover:shadow-md transition-all">
+                            <div className="w-10 h-10 rounded-lg bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300 flex items-center justify-center group-hover:scale-105 transition-transform">
+                                <IconMenuChat className="w-5 h-5" />
                             </div>
                             <div>
-                                <h4 className="font-bold text-gray-800 dark:text-gray-100 text-base">Calendar</h4>
-                                <p className="text-xs text-gray-500 mt-1">View holidays & events</p>
+                                <p className="text-sm font-semibold text-slate-900 dark:text-white">Chat System</p>
+                                <p className="text-xs text-slate-500">Message your team</p>
                             </div>
-                        </div>
-                    </Link>
-                    
-                    <Link
-                        to="/employee/asset-requests"
-                        className="group p-5 bg-gradient-to-br from-[#f8fafc] to-[#f1f5f9] dark:from-[#1b2e4b] dark:to-[#1a2941] rounded-2xl border border-gray-100 dark:border-gray-800 hover:shadow-lg transition-all duration-300 hover:scale-[1.02] lg:col-span-1"
-                    >
-                        <div className="flex items-center gap-4">
-                            <div className="w-12 h-12 bg-white dark:bg-[#0e1726] rounded-xl shadow-sm flex items-center justify-center text-success group-hover:bg-success group-hover:text-white transition-colors duration-300 border border-gray-100 dark:border-gray-800">
-                                <IconListCheck className="w-6 h-6" />
+                        </Link>
+                        <Link to="/employee/calendar" className="group flex items-center gap-3 p-3.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-gradient-to-r from-white to-slate-50 dark:from-[#172036] dark:to-[#101827] hover:shadow-md transition-all">
+                            <div className="w-10 h-10 rounded-lg bg-cyan-100 text-cyan-700 dark:bg-cyan-500/15 dark:text-cyan-300 flex items-center justify-center group-hover:scale-105 transition-transform">
+                                <IconCalendar className="w-5 h-5" />
                             </div>
                             <div>
-                                <h4 className="font-bold text-gray-800 dark:text-gray-100 text-base">Asset Requests</h4>
-                                <p className="text-xs text-gray-500 mt-1">Request supplies or report damages.</p>
+                                <p className="text-sm font-semibold text-slate-900 dark:text-white">Calendar</p>
+                                <p className="text-xs text-slate-500">View holidays and events</p>
                             </div>
-                        </div>
-                    </Link>
+                        </Link>
+                        <Link to="/employee/asset-requests" className="group flex items-center gap-3 p-3.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-gradient-to-r from-white to-slate-50 dark:from-[#172036] dark:to-[#101827] hover:shadow-md transition-all">
+                            <div className="w-10 h-10 rounded-lg bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300 flex items-center justify-center group-hover:scale-105 transition-transform">
+                                <IconListCheck className="w-5 h-5" />
+                            </div>
+                            <div>
+                                <p className="text-sm font-semibold text-slate-900 dark:text-white">Asset Requests</p>
+                                <p className="text-xs text-slate-500">Request or track assets</p>
+                            </div>
+                        </Link>
+                    </div>
                 </div>
             </div>
         </div>

@@ -134,6 +134,9 @@ class ChatProvider extends ChangeNotifier {
 
   Future<void> openConversation(int conversationId) async {
     _activeConversationId = conversationId;
+    // Prevent "flash of previous thread" while new messages load.
+    _messages = const [];
+    _loadingMessages = true;
     notifyListeners();
 
     await _ensureConnected();
@@ -225,6 +228,17 @@ class ChatProvider extends ChangeNotifier {
     _messages = List.of(_messages)..add(optimistic);
     notifyListeners();
 
+    // Make sending feel instant: run network + sync in background.
+    unawaited(_sendTextAndSync(
+      conversationId: conversationId,
+      content: content,
+    ));
+  }
+
+  Future<void> _sendTextAndSync({
+    required int conversationId,
+    required String content,
+  }) async {
     try {
       await _ensureConnected();
       if (_service.isConnected) {

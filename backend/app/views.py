@@ -608,6 +608,13 @@ class EmployeeViewSet(viewsets.ModelViewSet):
     ]
     parser_classes = [MultiPartParser, FormParser, JSONParser]
 
+    @action(detail=False, methods=['get'])
+    def me(self, request):
+        if not hasattr(request.user, 'employee'):
+            return Response({"error": "No employee profile found"}, status=status.HTTP_404_NOT_FOUND)
+        serializer = self.get_serializer(request.user.employee)
+        return Response(serializer.data)
+
     def _ensure_employee_profiles_for_company(self, company):
         """
         Ensure every employee `UserRegister` in this company has an `Employee` profile.
@@ -1244,6 +1251,13 @@ class ChatConversationViewSet(viewsets.ModelViewSet):
             target.can_revoke_roles = False
         target.save()
         return Response({"detail": "Permissions updated."}, status=200)
+
+    @action(detail=True, methods=["post"], url_path="seen")
+    def mark_as_seen(self, request, pk=None):
+        """Manually mark conversation as seen by the current user."""
+        conv = self.get_object()
+        ChatConversationMember.objects.filter(conversation=conv, user=request.user).update(last_seen_at=timezone.now())
+        return Response({"detail": "Conversation marked as seen."}, status=200)
 
 
 class ChatMessageViewSet(viewsets.ModelViewSet):
@@ -3396,6 +3410,8 @@ class EmployeeStatusViewSet(viewsets.ModelViewSet):
     
 
 class EmployeeReporteesView(APIView):
+    permission_classes = [IsAuthenticated]
+
     def post(self, request):
         emp_id = request.data.get("employee_id")
         if not emp_id:
@@ -3406,9 +3422,24 @@ class EmployeeReporteesView(APIView):
         except Employee.DoesNotExist:
             return Response({"error": "Employee not found"})
         
+        search = (request.query_params.get("search") or request.data.get("search") or "").strip()
         reportees = Employee.objects.filter(reporting_manager=manager)
-        serializer = ReportingEmployeesSerializer(reportees, many=True, context={'request': request})
-        return Response(serializer.data)
+        if search:
+            reportees = reportees.filter(
+                Q(first_name__icontains=search)
+                | Q(middle_name__icontains=search)
+                | Q(last_name__icontains=search)
+                | Q(employee_id__icontains=search)
+                | Q(department__department_name__icontains=search)
+                | Q(designation__designation_name__icontains=search)
+                | Q(status__icontains=search)
+            )
+        reportees = reportees.order_by("first_name", "last_name", "id")
+
+        paginator = CustomPagination()
+        paginated_qs = paginator.paginate_queryset(reportees, request, view=self)
+        serializer = ReportingEmployeesSerializer(paginated_qs, many=True, context={"request": request})
+        return paginator.get_paginated_response(serializer.data)
 
 
 # Office Structure ViewSets
@@ -3780,7 +3811,11 @@ class ConferenceRoomBookingViewSet(viewsets.ModelViewSet):
 
 class ConferenceRoomConfigViewSet(viewsets.ModelViewSet):
     serializer_class = ConferenceRoomConfigSerializer
-    permission_classes = [IsAuthenticated, IsAdminUser | IsMaster]
+    
+    def get_permissions(self):
+        if self.action in ['list', 'retrieve']:
+            return [permissions.IsAuthenticated()]
+        return [permissions.IsAuthenticated(), (IsAdminUser | IsMaster)()]
 
     def get_queryset(self):
         return ConferenceRoomConfig.objects.filter(company=self.request.user.company)

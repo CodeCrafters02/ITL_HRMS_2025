@@ -27,6 +27,7 @@ const ConfRoomBooking = () => {
     const [purpose, setPurpose] = useState('');
     const [selectedRoom, setSelectedRoom] = useState<any>(null);
     const [config, setConfig] = useState<any>(null);
+    const [currentEmployee, setCurrentEmployee] = useState<any>(null);
     
     const stageRef = useRef<any>(null);
 
@@ -34,6 +35,7 @@ const ConfRoomBooking = () => {
         dispatch(setPageTitle('Book a Room'));
         fetchLocations();
         fetchConfig();
+        fetchCurrentEmployee();
     }, []);
 
     useEffect(() => {
@@ -117,6 +119,21 @@ const ConfRoomBooking = () => {
         }
     };
 
+    const fetchCurrentEmployee = async () => {
+        try {
+            const token = localStorage.getItem('access_token');
+            const res = await fetch(`${API_BASE_URL}/app/employees/me/`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (res.ok) {
+                const data = await res.json();
+                setCurrentEmployee(data);
+            }
+        } catch (error) {
+            console.error('Error fetching current employee:', error);
+        }
+    };
+
     const stageSize = useMemo(() => {
         if (!elements || elements.length === 0) return { width: 1500, height: 1200 };
         const maxX = Math.max(...elements.map(el => (el.x || 0) + (el.width || 0)));
@@ -193,6 +210,43 @@ const ConfRoomBooking = () => {
             }
         } catch (error) {
             Swal.fire('Error', 'Failed to submit booking', 'error');
+        }
+    };
+
+    const handleCancelBooking = async (bookingId: number) => {
+        const result = await Swal.fire({
+            title: 'Cancel Booking?',
+            text: 'Are you sure you want to cancel this meeting room booking?',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonText: 'Yes, cancel it!',
+            cancelButtonText: 'No, keep it'
+        });
+
+        if (result.isConfirmed) {
+            try {
+                const token = localStorage.getItem('access_token');
+                const res = await fetch(`${API_BASE_URL}/app/conference-room-bookings/${bookingId}/cancel/`, {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+
+                if (res.ok) {
+                    Swal.fire('Cancelled!', 'Your booking has been cancelled.', 'success');
+                    fetchBookings(selectedFloor.id, selectedDate);
+                    // Update the selectedRoom bookings in real-time
+                    if (selectedRoom) {
+                         const updatedRoomBookings = selectedRoom.bookings.map((b: any) => 
+                             b.id === bookingId ? { ...b, status: 'cancelled' } : b
+                         );
+                         setSelectedRoom({ ...selectedRoom, bookings: updatedRoomBookings });
+                    }
+                } else {
+                    Swal.fire('Error', 'Failed to cancel booking', 'error');
+                }
+            } catch (error) {
+                console.error('Error cancelling booking:', error);
+            }
         }
     };
 
@@ -433,12 +487,39 @@ const ConfRoomBooking = () => {
                                     <h6 className="text-[10px] uppercase font-black text-gray-400 mb-2 border-b pb-1">Room Schedule ({selectedDate})</h6>
                                     {selectedRoom.bookings.length > 0 ? (
                                         <div className="space-y-2">
-                                            {selectedRoom.bookings.map((b: any) => (
-                                                <div key={b.id} className="p-2 bg-gray-50 dark:bg-gray-800/40 rounded border dark:border-gray-800 text-[10px]">
-                                                    <span className="font-bold">{b.start_time.substring(0, 5)} - {b.end_time.substring(0, 5)}</span>
-                                                    <span className="opacity-50 ml-2">({b.status})</span>
-                                                </div>
-                                            ))}
+                                            {selectedRoom.bookings.map((b: any) => {
+                                                const isMyBooking = currentEmployee && b.employee === currentEmployee.id;
+                                                const canCancel = isMyBooking && (b.status === 'pending' || b.status === 'approved');
+                                                
+                                                return (
+                                                    <div key={b.id} className="p-2 bg-gray-50 dark:bg-gray-800/40 rounded border dark:border-gray-800 text-[10px] flex items-center justify-between group">
+                                                        <div>
+                                                            <div className="flex items-center gap-2 mb-1">
+                                                                <span className="font-black text-gray-700 dark:text-gray-300">{b.start_time.substring(0, 5)} - {b.end_time.substring(0, 5)}</span>
+                                                                <span className={`px-1.5 py-0.5 rounded-full font-bold uppercase tracking-tighter text-[8px] ${
+                                                                    b.status === 'approved' ? 'bg-green-100 text-green-700' : 
+                                                                    b.status === 'pending' ? 'bg-amber-100 text-amber-700' :
+                                                                    'bg-gray-100 text-gray-600'
+                                                                }`}>
+                                                                    {b.status}
+                                                                </span>
+                                                            </div>
+                                                            <div className="opacity-60 flex items-center gap-1 italic">
+                                                                <span className="truncate max-w-[120px]">{b.purpose || 'No purpose'}</span>
+                                                                {isMyBooking && <span className="text-primary font-black ml-1">(YOU)</span>}
+                                                            </div>
+                                                        </div>
+                                                        {canCancel && (
+                                                            <button 
+                                                                onClick={() => handleCancelBooking(b.id)}
+                                                                className="opacity-0 group-hover:opacity-100 transition-opacity bg-red-50 text-red-600 hover:bg-red-600 hover:text-white px-2 py-1 rounded font-bold uppercase text-[8px]"
+                                                            >
+                                                                Cancel
+                                                            </button>
+                                                        )}
+                                                    </div>
+                                                );
+                                            })}
                                         </div>
                                     ) : (
                                         <p className="text-[10px] opacity-50 italic">No other bookings today.</p>

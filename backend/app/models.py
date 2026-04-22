@@ -887,6 +887,7 @@ class SeatBooking(models.Model):
         ('pending', 'Pending Approval'),
         ('approved', 'Approved'),
         ('rejected', 'Rejected'),
+        ('cancelled', 'Cancelled'),
     ]
     seat = models.ForeignKey(OfficeSeat, on_delete=models.CASCADE, related_name='bookings')
     employee = models.ForeignKey(Employee, on_delete=models.CASCADE, related_name='seat_bookings')

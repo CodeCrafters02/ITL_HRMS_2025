@@ -1657,7 +1657,7 @@ class ConferenceRoomBookingSerializer(serializers.ModelSerializer):
     class Meta:
         model = ConferenceRoomBooking
         fields = ['id', 'room', 'room_details', 'employee', 'employee_details', 'date', 'start_time', 'end_time', 'status', 'purpose', 'created_at']
-        read_only_fields = ['status', 'created_at']
+        read_only_fields = ['employee', 'status', 'created_at']
 
     def get_employee_details(self, obj):
         return {
@@ -1669,7 +1669,8 @@ class ConferenceRoomBookingSerializer(serializers.ModelSerializer):
         return {
             "name": obj.room.name,
             "floor": obj.room.floor.name,
-            "floor_id": obj.room.floor.id
+            "floor_id": obj.room.floor.id,
+            "layout_element_id": obj.room.layout_element_id
         }
 
 class ConferenceRoomConfigSerializer(serializers.ModelSerializer):
