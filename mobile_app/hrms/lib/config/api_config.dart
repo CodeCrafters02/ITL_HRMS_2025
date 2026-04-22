@@ -7,7 +7,7 @@ class ApiConfig {
   /// Keep a sensible dev default for local/LAN testing.
   static const String baseUrl = String.fromEnvironment(
     'API_BASE_URL',
-    defaultValue: 'http://192.168.1.9:8000',
+    defaultValue: 'http://192.168.1.3:8000',
   );
 
   /// Login footer "Contact IT Support" mailto. Override at build:
@@ -33,6 +33,12 @@ class ApiConfig {
   static const String registerEndpoint = '/app/master-register/';
   static const String tokenRefreshEndpoint = '/api/token/refresh/';
   static const String changePasswordEndpoint = '/app/change-password/';
+
+  // Chat Endpoints (REST + WebSocket)
+  static const String chatConversationsEndpoint = '/app/chat-conversations/';
+  static const String chatConversationsDmEndpoint = '/app/chat-conversations/dm/';
+  static const String chatMessagesEndpoint = '/app/chat-messages/';
+  static const String chatUsersEndpoint = '/app/chat/users/';
 
   // Employee Endpoints
   static const String employeeDashboardEndpoint = '/employee/dashboard/';
@@ -78,6 +84,27 @@ class ApiConfig {
   static String get registerUrl => '$baseUrl$registerEndpoint';
   static String get tokenRefreshUrl => '$baseUrl$tokenRefreshEndpoint';
   static String get changePasswordUrl => '$baseUrl$changePasswordEndpoint';
+
+  // Chat URLs
+  static String get chatConversationsUrl => '$baseUrl$chatConversationsEndpoint';
+  static String get chatConversationsDmUrl => '$baseUrl$chatConversationsDmEndpoint';
+  static String get chatMessagesUrl => '$baseUrl$chatMessagesEndpoint';
+  static String get chatUsersUrl => '$baseUrl$chatUsersEndpoint';
+
+  /// WebSocket URL for chat. Backend expects query param: `?token=<access_token>`.
+  /// Backend route: `/ws/chat/` (see Django Channels routing).
+  static Uri chatWsUri({required String token}) {
+    final base = Uri.parse(baseUrl);
+    final wsScheme = base.scheme == 'https' ? 'wss' : 'ws';
+    // Ensure we always hit `/ws/chat/` at the backend root (not under /app).
+    return Uri(
+      scheme: wsScheme,
+      host: base.host,
+      port: base.hasPort ? base.port : null,
+      path: '/ws/chat/',
+      queryParameters: {'token': token},
+    );
+  }
   static String get employeeDashboardUrl =>
       '$baseUrl$employeeDashboardEndpoint';
   static String get employeeCheckInUrl => '$baseUrl$employeeCheckInEndpoint';
