@@ -44,10 +44,8 @@ router.register(r'conference-room-config', ConferenceRoomConfigViewSet, basename
 router.register(r'chat-conversations', ChatConversationViewSet, basename='chat-conversations')
 router.register(r'chat-messages', ChatMessageViewSet, basename='chat-messages')
 
-
-
 urlpatterns = [
-    path('', include(router.urls)),
+    # --- Manual API Views (Checked First) ---
     path('chat/users/', ChatCompanyUsersAPIView.as_view(), name='chat-company-users'),
     path('company-update/', CompanyUpdateAPIView.as_view(), name='company_get'),
     path('company-update/<int:pk>/', CompanyUpdateAPIView.as_view(), name='company_update'),
@@ -77,4 +75,6 @@ urlpatterns = [
     path('resetpassword/', ResetPasswordView.as_view(), name='resetpassword'),
     path('getreportees/', EmployeeReporteesView.as_view(), name='getreportees'),
 
+    # --- Router URLs (Catch-all - Checked Last) ---
+    path('', include(router.urls)),
 ]
