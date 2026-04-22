@@ -1,8 +1,8 @@
-import { defineConfig } from "vite";
-import react from "@vitejs/plugin-react";
-import svgr from "vite-plugin-svgr";
+import { defineConfig } from 'vite';
+import react from '@vitejs/plugin-react';
+import path from 'path';
 
-// https://vite.dev/config/
+// https://vitejs.dev/config/
 export default defineConfig({
   plugins: [
     react(),
@@ -42,10 +42,13 @@ export default defineConfig({
       '/media': {
         target: 'https://apihrms.innovyxtechlabs.com',
         changeOrigin: true,
-      },
+      }
+    plugins: [
+        react(),
+    ],
+    resolve: {
+        alias: {
+            '@': path.resolve(__dirname, './src'),
+        },
     },
-
-    // Allow access from specific domains or IPs (optional)
-    allowedHosts: ['hrms.innovyxtechlabs.com'],
-  },
 });
