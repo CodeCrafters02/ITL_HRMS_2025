@@ -41,11 +41,12 @@ class _ChatThreadPageState extends State<ChatThreadPage>
   final _textController = TextEditingController();
   final _scrollController = ScrollController();
   final _composerFocus = FocusNode();
+  final ValueNotifier<bool> _showScrollToBottom = ValueNotifier<bool>(false);
+  DateTime _lastScrollEval = DateTime.fromMillisecondsSinceEpoch(0);
 
   File? _pendingFile;
   bool _sending = false;
   ChatUser? _me;
-  bool _showScrollToBottom = false;
   ChatMessage? _replyTo;
   final ImagePicker _imagePicker = ImagePicker();
 
@@ -53,6 +54,7 @@ class _ChatThreadPageState extends State<ChatThreadPage>
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    _scrollController.addListener(_handleScroll);
     _textController.addListener(() {
       if (!mounted) return;
       setState(() {});
@@ -69,9 +71,27 @@ class _ChatThreadPageState extends State<ChatThreadPage>
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     _textController.dispose();
+    _scrollController.removeListener(_handleScroll);
     _scrollController.dispose();
     _composerFocus.dispose();
+    _showScrollToBottom.dispose();
     super.dispose();
+  }
+
+  void _handleScroll() {
+    if (!_scrollController.hasClients) return;
+    // Throttle updates so we don't rebuild during every scroll tick.
+    final now = DateTime.now();
+    if (now.difference(_lastScrollEval).inMilliseconds < 60) return;
+    _lastScrollEval = now;
+
+    final nearBottom =
+        _scrollController.position.maxScrollExtent - _scrollController.position.pixels <
+            240;
+    final shouldShow = !nearBottom;
+    if (_showScrollToBottom.value != shouldShow) {
+      _showScrollToBottom.value = shouldShow;
+    }
   }
 
   @override
@@ -209,13 +229,15 @@ class _ChatThreadPageState extends State<ChatThreadPage>
         ((hasSendableText && _pendingFile == null) ||
             (hasSendableText && _pendingFile != null));
 
-    final msgs = chat.messages;
+    final isThisThreadActive = chat.activeConversationId == widget.conversationId;
+    final msgs = isThisThreadActive ? chat.messages : const <ChatMessage>[];
     final threadItems = _buildThreadItems(msgs);
     final pendingAttachment = chat.pendingAttachment;
 
     return Scaffold(
       backgroundColor: Colors.transparent,
       body: StitchBackground(
+        showParticles: false,
         child: SafeArea(
           child: Padding(
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
@@ -297,8 +319,10 @@ class _ChatThreadPageState extends State<ChatThreadPage>
                 const SizedBox(height: 12),
                 Expanded(
                   child: GlassCard(
+                    enableBlur: false,
                     padding: const EdgeInsets.fromLTRB(12, 12, 12, 12),
-                    child: chat.loadingMessages && msgs.isEmpty
+                    child: (!isThisThreadActive) ||
+                            (chat.loadingMessages && msgs.isEmpty)
                         ? const Center(child: CircularProgressIndicator())
                         : Stack(
                             children: [
@@ -308,24 +332,12 @@ class _ChatThreadPageState extends State<ChatThreadPage>
                                     _composerFocus.requestFocus();
                                   },
                                 ),
-                              NotificationListener<ScrollNotification>(
-                                onNotification: (n) {
-                                  if (!_scrollController.hasClients) {
-                                    return false;
-                                  }
-                                  final nearBottom = _scrollController
-                                              .position.maxScrollExtent -
-                                          _scrollController.position.pixels <
-                                      240;
-                                  if (nearBottom == !_showScrollToBottom) {
-                                    setState(() =>
-                                        _showScrollToBottom = !nearBottom);
-                                  }
-                                  return false;
-                                },
+                              RepaintBoundary(
                                 child: ListView.builder(
                                   controller: _scrollController,
                                   padding: EdgeInsets.zero,
+                                  cacheExtent: 900,
+                                  addAutomaticKeepAlives: false,
                                   itemCount: threadItems.length +
                                       ((pendingAttachment != null &&
                                               pendingAttachment.conversationId ==
@@ -338,7 +350,7 @@ class _ChatThreadPageState extends State<ChatThreadPage>
                                             widget.conversationId;
                                     if (hasPending && i == threadItems.length) {
                                       return _PendingAttachmentBubble(
-                                        pending: pendingAttachment!,
+                                        pending: pendingAttachment,
                                       );
                                     }
                                     final it = threadItems[i];
@@ -346,8 +358,8 @@ class _ChatThreadPageState extends State<ChatThreadPage>
                                       return _DateSeparator(label: it.label!);
                                     }
                                     final m = it.message!;
-                                    final isPending =
-                                        it.isMine == true && chat.isPendingMessage(m.id);
+                                    final isPending = it.isMine == true &&
+                                        chat.isPendingMessage(m.id);
                                     return _MessageBubble(
                                       message: m,
                                       isMine: it.isMine!,
@@ -360,16 +372,15 @@ class _ChatThreadPageState extends State<ChatThreadPage>
                                         _composerFocus.requestFocus();
                                       },
                                       onOpenAttachment: (msg) async {
-                                        final url = _resolveAttachmentUrl(
-                                            msg.attachmentUrl);
+                                        final url =
+                                            _resolveAttachmentUrl(msg.attachmentUrl);
                                         if (url == null) return;
                                         if (msg.isImageAttachment) {
                                           await showDialog(
                                             context: context,
                                             builder: (_) => _ImageViewerDialog(
                                               url: url,
-                                              title: msg.attachmentName ??
-                                                  'Image',
+                                              title: msg.attachmentName ?? 'Image',
                                             ),
                                           );
                                           return;
@@ -383,53 +394,58 @@ class _ChatThreadPageState extends State<ChatThreadPage>
                                   },
                                 ),
                               ),
-                              if (_showScrollToBottom)
-                                Positioned(
-                                  right: 6,
-                                  bottom: 6,
-                                  child: InkWell(
-                                    onTap: _scrollToBottom,
-                                    borderRadius: BorderRadius.circular(999),
-                                    child: Container(
-                                      padding: const EdgeInsets.symmetric(
-                                          horizontal: 12, vertical: 10),
-                                      decoration: BoxDecoration(
-                                        color:
-                                            Colors.white.withValues(alpha: 0.70),
-                                        borderRadius:
-                                            BorderRadius.circular(999),
-                                        border: Border.all(
-                                          color: AppStitchTheme.lightOutline
-                                              .withValues(alpha: 0.60),
-                                        ),
-                                        boxShadow: [
-                                          BoxShadow(
-                                            color: Colors.black
-                                                .withValues(alpha: 0.08),
-                                            blurRadius: 18,
-                                            offset: const Offset(0, 10),
+                              Positioned(
+                                right: 6,
+                                bottom: 6,
+                                child: ValueListenableBuilder<bool>(
+                                  valueListenable: _showScrollToBottom,
+                                  builder: (context, show, _) {
+                                    if (!show) return const SizedBox.shrink();
+                                    return InkWell(
+                                      onTap: _scrollToBottom,
+                                      borderRadius: BorderRadius.circular(999),
+                                      child: Container(
+                                        padding: const EdgeInsets.symmetric(
+                                            horizontal: 12, vertical: 10),
+                                        decoration: BoxDecoration(
+                                          color: Colors.white
+                                              .withValues(alpha: 0.70),
+                                          borderRadius:
+                                              BorderRadius.circular(999),
+                                          border: Border.all(
+                                            color: AppStitchTheme.lightOutline
+                                                .withValues(alpha: 0.60),
                                           ),
-                                        ],
-                                      ),
-                                      child: Row(
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: const [
-                                          Icon(Icons.arrow_downward_rounded,
-                                              size: 18,
-                                              color: AppStitchTheme.primary),
-                                          SizedBox(width: 6),
-                                          Text(
-                                            'Latest',
-                                            style: TextStyle(
-                                              fontWeight: FontWeight.w900,
-                                              color: AppStitchTheme.primary,
+                                          boxShadow: [
+                                            BoxShadow(
+                                              color: Colors.black
+                                                  .withValues(alpha: 0.08),
+                                              blurRadius: 18,
+                                              offset: const Offset(0, 10),
                                             ),
-                                          ),
-                                        ],
+                                          ],
+                                        ),
+                                        child: Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: const [
+                                            Icon(Icons.arrow_downward_rounded,
+                                                size: 18,
+                                                color: AppStitchTheme.primary),
+                                            SizedBox(width: 6),
+                                            Text(
+                                              'Latest',
+                                              style: TextStyle(
+                                                fontWeight: FontWeight.w900,
+                                                color: AppStitchTheme.primary,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
                                       ),
-                                    ),
-                                  ),
+                                    );
+                                  },
                                 ),
+                              ),
                             ],
                           ),
                   ),
@@ -548,30 +564,35 @@ class _ChatThreadPageState extends State<ChatThreadPage>
     if (_pendingFile != null && text.isEmpty) return;
     if (_pendingFile == null && text.isEmpty) return;
 
+    final replyPrefix = _replyTo != null ? _buildReplyPrefix(_replyTo!) : '';
+    if (_pendingFile == null) {
+      // Text should feel instant: don't block UI on network.
+      final me = _me ?? await chat.getMe();
+      _me = me;
+      chat.sendText(
+        conversationId: widget.conversationId,
+        text: '$replyPrefix$text',
+        me: me,
+      );
+      _textController.clear();
+      if (mounted) setState(() => _replyTo = null);
+      _scrollToBottom();
+      return;
+    }
+
+    // Attachments: keep the existing "sending" lock.
     setState(() => _sending = true);
     try {
-      final replyPrefix = _replyTo != null ? _buildReplyPrefix(_replyTo!) : '';
-      if (_pendingFile != null) {
-        await chat.sendAttachment(
-          conversationId: widget.conversationId,
-          text: '$replyPrefix$text',
-          file: _pendingFile!,
-        );
-        _textController.clear();
-        setState(() {
-          _pendingFile = null;
-          _replyTo = null;
-        });
-      } else {
-        final me = _me ?? await chat.getMe();
-        await chat.sendText(
-          conversationId: widget.conversationId,
-          text: '$replyPrefix$text',
-          me: me,
-        );
-        _textController.clear();
-        setState(() => _replyTo = null);
-      }
+      await chat.sendAttachment(
+        conversationId: widget.conversationId,
+        text: '$replyPrefix$text',
+        file: _pendingFile!,
+      );
+      _textController.clear();
+      setState(() {
+        _pendingFile = null;
+        _replyTo = null;
+      });
       _scrollToBottom();
     } finally {
       if (mounted) setState(() => _sending = false);
@@ -599,6 +620,13 @@ class _MessageBubble extends StatelessWidget {
     required this.onOpenAttachment,
   });
 
+  int _thumbCacheWidth(BuildContext context) {
+    final dpr = MediaQuery.of(context).devicePixelRatio;
+    final w = MediaQuery.of(context).size.width * 0.74; // bubble max width
+    // Keep thumbnails small for smooth scroll; viewer opens full image anyway.
+    return (w * dpr).clamp(320.0, 900.0).round();
+  }
+
   @override
   Widget build(BuildContext context) {
     final bg = isMine
@@ -607,7 +635,7 @@ class _MessageBubble extends StatelessWidget {
     final fg = isMine ? Colors.white : AppStitchTheme.lightOnSurface;
     final align = isMine ? CrossAxisAlignment.end : CrossAxisAlignment.start;
 
-    return Padding(
+    final bubble = Padding(
       padding: EdgeInsets.only(bottom: 8, top: groupedWithPrev ? 2 : 10),
       child: Column(
         crossAxisAlignment: align,
@@ -667,8 +695,8 @@ class _MessageBubble extends StatelessWidget {
                       boxShadow: [
                         BoxShadow(
                           color: Colors.black.withValues(alpha: 0.05),
-                          blurRadius: 10,
-                          offset: const Offset(0, 6),
+                          blurRadius: 6,
+                          offset: const Offset(0, 4),
                         ),
                       ],
                     ),
@@ -692,6 +720,11 @@ class _MessageBubble extends StatelessWidget {
                                             message.attachmentUrl) ??
                                         '',
                                     fit: BoxFit.cover,
+                                    filterQuality: FilterQuality.low,
+                                    cacheWidth: _thumbCacheWidth(context),
+                                    cacheHeight:
+                                        (_thumbCacheWidth(context) * 3 / 4)
+                                            .round(),
                                     errorBuilder: (_, __, ___) => Container(
                                       color: Colors.black.withValues(alpha: 0.10),
                                       alignment: Alignment.center,
@@ -769,6 +802,9 @@ class _MessageBubble extends StatelessWidget {
         ],
       ),
     );
+
+    // Isolate bubble repaints to keep scroll smooth.
+    return RepaintBoundary(child: bubble);
   }
 
   String _formatTime(DateTime dt) {
