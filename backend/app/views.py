@@ -608,6 +608,13 @@ class EmployeeViewSet(viewsets.ModelViewSet):
     ]
     parser_classes = [MultiPartParser, FormParser, JSONParser]
 
+    @action(detail=False, methods=['get'])
+    def me(self, request):
+        if not hasattr(request.user, 'employee'):
+            return Response({"error": "No employee profile found"}, status=status.HTTP_404_NOT_FOUND)
+        serializer = self.get_serializer(request.user.employee)
+        return Response(serializer.data)
+
     def _ensure_employee_profiles_for_company(self, company):
         """
         Ensure every employee `UserRegister` in this company has an `Employee` profile.
@@ -3780,7 +3787,11 @@ class ConferenceRoomBookingViewSet(viewsets.ModelViewSet):
 
 class ConferenceRoomConfigViewSet(viewsets.ModelViewSet):
     serializer_class = ConferenceRoomConfigSerializer
-    permission_classes = [IsAuthenticated, IsAdminUser | IsMaster]
+    
+    def get_permissions(self):
+        if self.action in ['list', 'retrieve']:
+            return [permissions.IsAuthenticated()]
+        return [permissions.IsAuthenticated(), (IsAdminUser | IsMaster)()]
 
     def get_queryset(self):
         return ConferenceRoomConfig.objects.filter(company=self.request.user.company)
