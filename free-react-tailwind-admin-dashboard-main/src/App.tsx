@@ -1,46 +1,36 @@
-import { BrowserRouter as Router } from "react-router-dom";
-import { ScrollToTop } from "./components/common/ScrollToTop";
-import { FirebaseNotificationListener } from "./components/FirebaseNotificationListener";
-import { appRoutes } from "./appRoutes";
-import { NotificationProvider } from "./context/NotificationContext";
-import { ToastContainer } from "react-toastify";
-import "react-toastify/dist/ReactToastify.css";
+import { PropsWithChildren, useEffect } from 'react';
+import { useDispatch, useSelector } from 'react-redux';
+import { IRootState } from './store';
+import { toggleRTL, toggleTheme, toggleLocale, toggleMenu, toggleLayout, toggleAnimation, toggleNavbar, toggleSemidark } from './store/themeConfigSlice';
+import store from './store';
+import { GoogleOAuthProvider } from '@react-oauth/google';
 
-import { useState, useEffect } from "react";
+function App({ children }: PropsWithChildren) {
+    const themeConfig = useSelector((state: IRootState) => state.themeConfig);
+    const dispatch = useDispatch();
 
-export default function App() {
-  const [accessToken, setAccessToken] = useState<string | null>(null);
+    useEffect(() => {
+        dispatch(toggleTheme(localStorage.getItem('theme') || themeConfig.theme));
+        dispatch(toggleMenu(localStorage.getItem('menu') || themeConfig.menu));
+        dispatch(toggleLayout(localStorage.getItem('layout') || themeConfig.layout));
+        dispatch(toggleRTL(localStorage.getItem('rtlClass') || themeConfig.rtlClass));
+        dispatch(toggleAnimation(localStorage.getItem('animation') || themeConfig.animation));
+        dispatch(toggleNavbar(localStorage.getItem('navbar') || themeConfig.navbar));
+        dispatch(toggleLocale(localStorage.getItem('i18nextLng') || themeConfig.locale));
+        dispatch(toggleSemidark(localStorage.getItem('semidark') || themeConfig.semidark));
+    }, [dispatch, themeConfig.theme, themeConfig.menu, themeConfig.layout, themeConfig.rtlClass, themeConfig.animation, themeConfig.navbar, themeConfig.locale, themeConfig.semidark]);
 
-  useEffect(() => {
-    // Always get the latest token after login
-    setAccessToken(localStorage.getItem("access_token"));
-    // Optionally, listen for storage events if login can happen in another tab
-    const onStorage = () => setAccessToken(localStorage.getItem("access_token"));
-    window.addEventListener("storage", onStorage);
-    return () => window.removeEventListener("storage", onStorage);
-  }, []);
-
-  // Only render notification listener if token is present
-  return (
-    <NotificationProvider>
-      <Router>
-        <ScrollToTop />
-        {accessToken && <FirebaseNotificationListener userToken={accessToken} />}
-        {appRoutes()}
-        <ToastContainer
-          position="bottom-right"
-          autoClose={5000}
-          hideProgressBar={false}
-          newestOnTop={false}
-          closeOnClick
-          rtl={false}
-          pauseOnFocusLoss
-          draggable
-          pauseOnHover
-          theme="colored"
-          style={{ zIndex: 100001 }}
-        />
-      </Router>
-    </NotificationProvider>
-  );
+    return (
+        <GoogleOAuthProvider clientId={import.meta.env.VITE_GOOGLE_CLIENT_ID || ''}>
+            <div
+                className={`${(store.getState().themeConfig.sidebar && 'toggle-sidebar') || ''} ${themeConfig.menu} ${themeConfig.layout} ${
+                    themeConfig.rtlClass
+                } main-section antialiased relative font-nunito text-sm font-normal`}
+            >
+                {children}
+            </div>
+        </GoogleOAuthProvider>
+    );
 }
+
+export default App;

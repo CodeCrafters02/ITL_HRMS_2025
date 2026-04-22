@@ -1,237 +1,389 @@
-import React, { useState, useEffect } from "react";
-import { axiosInstance } from "../../pages/Dashboard/api";
-import ComponentCard from "../../components/common/ComponentCard";
-import Button from "../../components/ui/button/Button";
-import Switch from "../../components/form/switch/Switch";
-import InputField from "../../components/form/input/InputField";
-import { Plus, X, Clock, Coffee, Moon } from "lucide-react";
+import { useEffect, useMemo, useState } from 'react';
+import { useDispatch } from 'react-redux';
+import Swal from 'sweetalert2';
+import { setPageTitle } from '../../store/themeConfigSlice';
+import IconPlus from '../../components/Icon/IconPlus';
+import IconTrashLines from '../../components/Icon/IconTrashLines';
 
-interface BreakConfig {
-  id: number;
-  break_choice: string;
-  break_choice_display: string;
-  duration_minutes: number | null;
-  enabled: boolean;
-}
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000';
+const API_URL = `${API_BASE_URL}/app/break-config/`;
 
-const BreakConfigDisplay: React.FC = () => {
-  const [breaks, setBreaks] = useState<BreakConfig[]>([]);
-  const [loading, setLoading] = useState<boolean>(true);
-  const [error, setError] = useState<string | null>(null);
-
-  const fetchBreaks = () => {
-    setLoading(true);
-    axiosInstance
-      .get("app/break-config/")
-      .then((res) => {
-        setBreaks(res.data);
-        setLoading(false);
-      })
-      .catch((err) => {
-        setError(err?.response?.data?.detail || "Failed to fetch break configs");
-        setLoading(false);
-      });
-  };
-
-  const refetchBreaks = () => {
-    axiosInstance
-      .get("app/break-config/")
-      .then((res) => setBreaks(res.data))
-      .catch((err) => setError(err?.response?.data?.detail || "Failed to fetch break configs"));
-  };
-
-  useEffect(() => { fetchBreaks(); }, []);
-
-  if (loading)
-    return (
-      <div className="flex items-center justify-center min-h-64">
-        <div className="text-gray-500 dark:text-gray-400">Loading break configurations...</div>
-      </div>
-    );
-
-  if (error)
-    return (
-      <div className="flex items-center justify-center min-h-64">
-        <div className="text-red-500 bg-red-50 dark:bg-red-900/30 p-4 rounded-lg border border-red-200 dark:border-red-700">
-          {error}
-        </div>
-      </div>
-    );
-
-  const shortBreaks = breaks.filter((b) => b.break_choice === "short_break");
-  const mealBreak = breaks.find((b) => b.break_choice === "meal_break");
-  const dontDisturb = breaks.find((b) => b.break_choice === "dont_disturb");
-
-  const handleShortBreakChange = (id: number, changes: Partial<BreakConfig>) => {
-    const breakToUpdate = breaks.find((b) => b.id === id);
-    if (!breakToUpdate) return;
-    axiosInstance.patch(`app/break-config/${id}/`, { ...breakToUpdate, ...changes }).then(refetchBreaks);
-  };
-  const handleRemoveShortBreak = (id: number) => { axiosInstance.delete(`app/break-config/${id}/`).then(refetchBreaks); };
-  const handleAddShortBreak = () => { axiosInstance.post(`app/break-config/`, { break_choice: "short_break", duration_minutes: 5, enabled: true }).then(refetchBreaks); };
-
-  const handleMealBreakChange = (id: number, changes: Partial<BreakConfig>) => {
-    const breakToUpdate = breaks.find((b) => b.id === id);
-    if (!breakToUpdate) return;
-    axiosInstance.patch(`app/break-config/${id}/`, { ...breakToUpdate, ...changes }).then(refetchBreaks);
-  };
-  const handleAddMealBreak = () => { axiosInstance.post(`app/break-config/`, { break_choice: "meal_break", duration_minutes: 30, enabled: true }).then(refetchBreaks); };
-  const handleRemoveMealBreak = (id: number) => { axiosInstance.delete(`app/break-config/${id}/`).then(refetchBreaks); };
-
-  const handleDontDisturbChange = (id: number, changes: Partial<BreakConfig>) => {
-    const breakToUpdate = breaks.find((b) => b.id === id);
-    if (!breakToUpdate) return;
-    axiosInstance.patch(`app/break-config/${id}/`, { ...breakToUpdate, ...changes }).then(refetchBreaks);
-  };
-
-  return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-8 transition-all duration-300">
-      <div className="container mx-auto px-4 max-w-4xl">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100 mb-2">Break Configurations</h1>
-          <p className="text-gray-600 dark:text-gray-300">Manage break settings for your organization</p>
-        </div>
-        <div className="grid gap-6">
-          {/* Short Breaks */}
-          <ComponentCard title="Short Breaks">
-            <div className="space-y-4">
-              <p className="text-sm text-gray-600 dark:text-gray-300 mb-4">
-                Configure multiple short breaks with different durations. Users can take these breaks throughout their work day.
-              </p>
-              {shortBreaks.length === 0 ? (
-                <div className="text-center py-8 text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-800 rounded-lg border-2 border-dashed border-gray-300 dark:border-gray-700">
-                  <Clock className="w-12 h-12 mx-auto mb-3 text-gray-400 dark:text-gray-500" />
-                  <p className="font-medium">No short breaks configured</p>
-                  <p className="text-sm">Add your first short break to get started</p>
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  {shortBreaks.map((b) => (
-                    <div key={b.id} className="flex items-center gap-4 bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg border border-blue-100 dark:border-blue-700">
-                      <div className="flex items-center gap-2 flex-1">
-                        <Clock className="w-4 h-4 text-blue-500" />
-                        <span className="text-sm font-medium text-gray-700 dark:text-gray-200">Duration:</span>
-                        <InputField
-                          type="number"
-                          min={1}
-                          value={b.duration_minutes ?? 5}
-                          onChange={(e) => handleShortBreakChange(b.id, { duration_minutes: Number(e.target.value) })}
-                          className="w-20 text-center bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 border border-gray-300 dark:border-gray-700"
-                          placeholder="5"
-                        />
-                        <span className="text-sm text-gray-600 dark:text-gray-300">minutes</span>
-                      </div>
-                      <Switch
-                        defaultChecked={b.enabled}
-                        onChange={(val) => handleShortBreakChange(b.id, { enabled: val })}
-                        label={b.enabled ? "Enabled" : "Disabled"}
-                      />
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleRemoveShortBreak(b.id)}
-                        className="flex items-center gap-1 text-red-600 border-red-300 hover:bg-red-50 dark:hover:bg-red-900/30"
-                      >
-                        <X className="w-4 h-4" />
-                        Remove
-                      </Button>
-                    </div>
-                  ))}
-                </div>
-              )}
-              <div className="pt-4 border-t border-gray-200 dark:border-gray-700">
-                <Button variant="primary" size="md" onClick={handleAddShortBreak} className="flex items-center gap-2">
-                  <Plus className="w-4 h-4" />
-                  Add Short Break
-                </Button>
-              </div>
-            </div>
-          </ComponentCard>
-
-          {/* Meal Break */}
-          <ComponentCard title="Meal Break">
-            <div className="space-y-4">
-              <p className="text-sm text-gray-600 dark:text-gray-300 mb-4">
-                Configure a single meal break with adjustable duration. Typically used for lunch breaks.
-              </p>
-              {mealBreak ? (
-                <div className="bg-orange-50 dark:bg-orange-900/20 p-4 rounded-lg border border-orange-100 dark:border-orange-700">
-                  <div className="flex items-center gap-4">
-                    <div className="flex items-center gap-2 flex-1">
-                      <Coffee className="w-4 h-4 text-orange-500" />
-                      <span className="text-sm font-medium text-gray-700 dark:text-gray-200">Duration:</span>
-                      <InputField
-                        type="number"
-                        min={1}
-                        value={mealBreak.duration_minutes ?? 30}
-                        onChange={(e) => handleMealBreakChange(mealBreak.id, { duration_minutes: Number(e.target.value) })}
-                        className="w-20 text-center bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 border border-gray-300 dark:border-gray-700"
-                        placeholder="30"
-                      />
-                      <span className="text-sm text-gray-600 dark:text-gray-300">minutes</span>
-                    </div>
-                    <Switch
-                      defaultChecked={mealBreak.enabled}
-                      onChange={(val) => handleMealBreakChange(mealBreak.id, { enabled: val })}
-                      label={mealBreak.enabled ? "Enabled" : "Disabled"}
-                    />
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleRemoveMealBreak(mealBreak.id)}
-                      className="flex items-center gap-1 text-red-600 border-red-300 hover:bg-red-50 dark:hover:bg-red-900/30"
-                    >
-                      <X className="w-4 h-4" />
-                      Remove
-                    </Button>
-                  </div>
-                </div>
-              ) : (
-                <div className="text-center py-6 text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-800 rounded-lg border-2 border-dashed border-gray-300 dark:border-gray-700">
-                  <Coffee className="w-10 h-10 mx-auto mb-2 text-gray-400 dark:text-gray-500" />
-                  <p className="font-medium mb-3">No meal break configured</p>
-                  <Button variant="primary" size="md" onClick={handleAddMealBreak}>
-                    Add Meal Break
-                  </Button>
-                </div>
-              )}
-            </div>
-          </ComponentCard>
-
-          {/* Don't Disturb */}
-          {/* <ComponentCard title="Don't Disturb">
-            <div className="space-y-4">
-              <p className="text-sm text-gray-600 dark:text-gray-300 mb-4">
-                Enable "Don't Disturb" mode to prevent interruptions. This setting has no fixed duration.
-              </p>
-              {dontDisturb ? (
-                <div className="bg-purple-50 dark:bg-purple-900/20 p-4 rounded-lg border border-purple-100 dark:border-purple-700">
-                  <div className="flex items-center gap-4">
-                    <div className="flex items-center gap-2 flex-1">
-                      <Moon className="w-4 h-4 text-purple-500" />
-                      <span className="text-sm font-medium text-gray-700 dark:text-gray-200">Don't Disturb Mode</span>
-                      <span className="text-xs text-gray-500 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded">No fixed duration</span>
-                    </div>
-                    <Switch
-                      defaultChecked={dontDisturb.enabled}
-                      onChange={(val) => handleDontDisturbChange(dontDisturb.id, { enabled: val })}
-                      label={dontDisturb.enabled ? "Enabled" : "Disabled"}
-                    />
-                  </div>
-                </div>
-              ) : (
-                <div className="text-center py-6 text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-800 rounded-lg border-2 border-dashed border-gray-300 dark:border-gray-700">
-                  <Moon className="w-10 h-10 mx-auto mb-2 text-gray-400 dark:text-gray-500" />
-                  <p className="font-medium">"Don't Disturb" break is not configured</p>
-                  <p className="text-sm">This feature may be managed by system settings</p>
-                </div>
-              )}
-            </div>
-          </ComponentCard> */}
-        </div>
-      </div>
-    </div>
-  );
+type BreakConfig = {
+    id: number;
+    break_choice: 'short_break' | 'meal_break' | 'dont_disturb' | string;
+    break_choice_display?: string;
+    duration_minutes: number | null;
+    enabled: boolean;
 };
 
-export default BreakConfigDisplay;
+const IconCoffee = ({ className = 'w-5 h-5' }: { className?: string }) => (
+    <svg viewBox="0 0 24 24" fill="none" className={className} xmlns="http://www.w3.org/2000/svg">
+        <path
+            d="M3 8h13v6a6 6 0 0 1-6 6H9a6 6 0 0 1-6-6V8Z"
+            stroke="currentColor"
+            strokeWidth="1.5"
+            strokeLinejoin="round"
+        />
+        <path d="M16 10h2a3 3 0 0 1 0 6h-2" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" />
+        <path d="M7 3v3M11 3v3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+    </svg>
+);
+
+const IconMoon = ({ className = 'w-5 h-5' }: { className?: string }) => (
+    <svg viewBox="0 0 24 24" fill="none" className={className} xmlns="http://www.w3.org/2000/svg">
+        <path
+            d="M21 14.5A8.5 8.5 0 0 1 9.5 3a7.5 7.5 0 1 0 11.5 11.5Z"
+            stroke="currentColor"
+            strokeWidth="1.5"
+            strokeLinejoin="round"
+        />
+    </svg>
+);
+
+const IconClock = ({ className = 'w-5 h-5' }: { className?: string }) => (
+    <svg viewBox="0 0 24 24" fill="none" className={className} xmlns="http://www.w3.org/2000/svg">
+        <path d="M12 22a10 10 0 1 0-10-10 10 10 0 0 0 10 10Z" stroke="currentColor" strokeWidth="1.5" />
+        <path d="M12 6v6l4 2" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+);
+
+const InlineDurationInput = ({ value, min, max, onSave }: { value: number; min: number; max: number; onSave: (val: number) => void }) => {
+    const [localVal, setLocalVal] = useState(String(value));
+    useEffect(() => setLocalVal(String(value)), [value]);
+    return (
+        <input
+            className="form-input w-24"
+            type="number"
+            min={min}
+            max={max}
+            value={localVal}
+            onChange={(e) => setLocalVal(e.target.value)}
+            onBlur={() => onSave(Math.max(min, Math.min(max, Number(localVal) || 0)))}
+            onKeyDown={(e) => e.key === 'Enter' && e.currentTarget.blur()}
+        />
+    );
+};
+
+const AdminBreakConfig = () => {
+    const dispatch = useDispatch();
+    const [items, setItems] = useState<BreakConfig[]>([]);
+    const [loading, setLoading] = useState(false);
+    const [savingId, setSavingId] = useState<number | null>(null);
+
+    useEffect(() => {
+        dispatch(setPageTitle('Break Config'));
+    }, [dispatch]);
+
+    const headers = (): Record<string, string> => {
+        const token = localStorage.getItem('access_token');
+        const h: Record<string, string> = { 'Content-Type': 'application/json' };
+        if (token) h.Authorization = `Bearer ${token}`;
+        return h;
+    };
+
+    const fetchAll = async (): Promise<BreakConfig[]> => {
+        setLoading(true);
+        try {
+            const resp = await fetch(API_URL, { headers: headers() });
+            const data = await resp.json();
+            if (!resp.ok) throw new Error(data?.detail || 'Failed to load break config');
+            const arr: BreakConfig[] = Array.isArray(data) ? data : data?.results || [];
+            setItems(arr);
+            return arr;
+        } catch (e: any) {
+            Swal.fire('Error', e?.message || 'Failed to load break config', 'error');
+            return [];
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        // Load break config and auto-ensure Don't Disturb exists
+        (async () => {
+            const loaded = await fetchAll();
+            // Auto-create Do Not Disturb if it doesn't exist
+            const hasDnd = loaded.some((b) => b.break_choice === 'dont_disturb');
+            if (!hasDnd) {
+                try {
+                    const resp = await fetch(API_URL, {
+                        method: 'POST',
+                        headers: headers(),
+                        body: JSON.stringify({ break_choice: 'dont_disturb', duration_minutes: null, enabled: true }),
+                    });
+                    if (resp.ok) await fetchAll();
+                } catch { /* ignore */ }
+            }
+        })();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
+
+    const shortBreaks = useMemo(() => items.filter((b) => b.break_choice === 'short_break'), [items]);
+    const mealBreaks = useMemo(() => items.filter((b) => b.break_choice === 'meal_break'), [items]);
+    const dontDisturb = useMemo(() => items.find((b) => b.break_choice === 'dont_disturb') || null, [items]);
+
+    const patch = async (id: number, payload: Partial<BreakConfig>) => {
+        const current = items.find((x) => x.id === id);
+        if (!current) return;
+        try {
+            setSavingId(id);
+            const resp = await fetch(`${API_URL}${id}/`, {
+                method: 'PATCH',
+                headers: headers(),
+                body: JSON.stringify({ ...current, ...payload }),
+            });
+            const data = await resp.json();
+            if (!resp.ok) throw new Error(data?.detail || 'Failed to update');
+            await fetchAll();
+        } catch (e: any) {
+            Swal.fire('Error', e?.message || 'Failed to update', 'error');
+        } finally {
+            setSavingId((prev) => (prev === id ? null : prev));
+        }
+    };
+
+    const setEnabledExclusive = async (targetId: number, enable: boolean, listOverride?: BreakConfig[]) => {
+        const list = listOverride || items;
+        const target = list.find((x) => x.id === targetId);
+        if (!target) return;
+
+        // If enabling, disable others in same break_choice first (so only one enabled per section)
+        if (enable) {
+            const siblings = list.filter((x) => x.break_choice === target.break_choice && x.id !== targetId && x.enabled);
+            for (const s of siblings) {
+                // eslint-disable-next-line no-await-in-loop
+                await patch(s.id, { enabled: false });
+            }
+        }
+        await patch(targetId, { enabled: enable });
+    };
+
+    const remove = async (id: number) => {
+        const ok = await Swal.fire({ title: 'Delete break?', showCancelButton: true, confirmButtonText: 'Delete' });
+        if (!ok.isConfirmed) return;
+        try {
+            const resp = await fetch(`${API_URL}${id}/`, { method: 'DELETE', headers: headers() });
+            if (!resp.ok) {
+                const data = await resp.json().catch(() => ({}));
+                throw new Error(data?.detail || 'Failed to delete');
+            }
+            await fetchAll();
+        } catch (e: any) {
+            Swal.fire('Error', e?.message || 'Failed to delete', 'error');
+        }
+    };
+
+    const addShortBreak = async () => {
+        try {
+            const resp = await fetch(API_URL, {
+                method: 'POST',
+                headers: headers(),
+                body: JSON.stringify({ break_choice: 'short_break', duration_minutes: 5, enabled: true }),
+            });
+            const data = await resp.json();
+            if (!resp.ok) throw new Error(data?.detail || 'Failed to add');
+            await fetchAll();
+        } catch (e: any) {
+            Swal.fire('Error', e?.message || 'Failed to add', 'error');
+        }
+    };
+
+    const addMealBreak = async () => {
+        try {
+            const resp = await fetch(API_URL, {
+                method: 'POST',
+                headers: headers(),
+                body: JSON.stringify({ break_choice: 'meal_break', duration_minutes: 30, enabled: false }),
+            });
+            const data = await resp.json();
+            if (!resp.ok) throw new Error(data?.detail || 'Failed to add');
+            const fresh = await fetchAll();
+            // Make the newly created meal break the active one (disables others)
+            if (data?.id) {
+                await setEnabledExclusive(Number(data.id), true, fresh);
+            }
+        } catch (e: any) {
+            Swal.fire('Error', e?.message || 'Failed to add', 'error');
+        }
+    };
+
+    if (loading) {
+        return (
+            <div className="panel">
+                <div className="text-white-dark">Loading break configuration...</div>
+            </div>
+        );
+    }
+
+    return (
+        <div className="space-y-6">
+            {/* Gradient Banner Header */}
+            <div className="bg-gradient-to-r from-[#1e1b4b] to-[#7c3aed] p-6 rounded-xl shadow-lg relative overflow-hidden">
+                <div className="relative z-10">
+                    <h1 className="text-3xl font-extrabold text-white tracking-tight">Break Configuration</h1>
+                    <p className="text-white/80 mt-1 text-sm font-medium">Set which breaks appear for employees, and control default durations.</p>
+                </div>
+                <div className="absolute top-0 right-0 -mt-10 -mr-10 w-48 h-48 bg-white opacity-10 rounded-full blur-2xl"></div>
+            </div>
+
+            <div className="panel">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                    <div className="flex items-center gap-2">
+                        <button type="button" className="btn btn-outline-primary" onClick={fetchAll}>
+                            Refresh
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div className="panel">
+                <div className="flex items-center justify-between gap-3 mb-2">
+                    <div>
+                        <div className="text-lg font-bold flex items-center gap-2">
+                            <IconClock className="w-5 h-5 text-primary" /> Short Breaks
+                        </div>
+                        <div className="text-sm text-white-dark">You can add multiple short breaks with different durations.</div>
+                    </div>
+                    <button type="button" className="btn btn-primary gap-2" onClick={addShortBreak}>
+                        <IconPlus /> Add Short Break
+                    </button>
+                </div>
+                {!shortBreaks.length ? (
+                    <div className="p-6 rounded-lg border border-dashed border-[#e0e6ed] dark:border-[#1b2e4b] text-white-dark">
+                        No short breaks configured yet.
+                    </div>
+                ) : (
+                    <div className="space-y-3">
+                        {shortBreaks.map((b) => (
+                            <div
+                                key={b.id}
+                                className="flex flex-wrap items-center gap-3 p-4 rounded-lg border border-[#e0e6ed] dark:border-[#1b2e4b] bg-white dark:bg-[#0e1726]"
+                            >
+                                <div className="min-w-[140px]">
+                                    <div className="text-xs text-white-dark">Duration</div>
+                                    <div className="flex items-center gap-2">
+                                        <InlineDurationInput
+                                            value={b.duration_minutes ?? 5}
+                                            min={1}
+                                            max={180}
+                                            onSave={(val) => patch(b.id, { duration_minutes: val })}
+                                        />
+                                        <span className="text-sm text-white-dark">min</span>
+                                    </div>
+                                </div>
+
+                                <div className="min-w-[140px]">
+                                    <div className="text-xs text-white-dark">Status</div>
+                                    <label className="inline-flex items-center gap-2 cursor-pointer select-none">
+                                        <input type="checkbox" checked={!!b.enabled} onChange={(e) => setEnabledExclusive(b.id, e.target.checked)} />
+                                        <span className={`text-sm font-semibold ${b.enabled ? 'text-success' : 'text-danger'}`}>{b.enabled ? 'Enabled' : 'Disabled'}</span>
+                                    </label>
+                                </div>
+
+                                <div className="flex-1" />
+                                <div className="flex items-center gap-2">
+                                    {savingId === b.id && <span className="text-xs text-white-dark">Saving…</span>}
+                                    <button type="button" className="btn btn-outline-danger gap-2" onClick={() => remove(b.id)}>
+                                        <IconTrashLines /> Remove
+                                    </button>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                )}
+            </div>
+
+            <div className="panel">
+                <div className="flex items-center justify-between gap-3 mb-2">
+                    <div>
+                        <div className="text-lg font-bold flex items-center gap-2">
+                            <IconCoffee className="w-5 h-5 text-warning" /> Meal Breaks
+                        </div>
+                        <div className="text-sm text-white-dark">Add multiple meal breaks — only <strong>one</strong> can be enabled at a time.</div>
+                    </div>
+                    <button type="button" className="btn btn-primary gap-2" onClick={addMealBreak}>
+                        <IconPlus /> Add Meal Break
+                    </button>
+                </div>
+                {!mealBreaks.length ? (
+                    <div className="p-6 rounded-lg border border-dashed border-[#e0e6ed] dark:border-[#1b2e4b] text-white-dark">
+                        No meal breaks configured yet.
+                    </div>
+                ) : (
+                    <div className="space-y-3">
+                        {mealBreaks.map((b) => (
+                            <div
+                                key={b.id}
+                                className="flex flex-wrap items-center gap-3 p-4 rounded-lg border border-[#e0e6ed] dark:border-[#1b2e4b] bg-white dark:bg-[#0e1726]"
+                            >
+                                <div className="min-w-[140px]">
+                                    <div className="text-xs text-white-dark">Duration</div>
+                                    <div className="flex items-center gap-2">
+                                        <InlineDurationInput
+                                            value={b.duration_minutes ?? 30}
+                                            min={1}
+                                            max={240}
+                                            onSave={(val) => patch(b.id, { duration_minutes: val })}
+                                        />
+                                        <span className="text-sm text-white-dark">min</span>
+                                    </div>
+                                </div>
+                                <div className="min-w-[140px]">
+                                    <div className="text-xs text-white-dark">Status</div>
+                                    <label className="inline-flex items-center gap-2 cursor-pointer select-none">
+                                        <input type="checkbox" checked={!!b.enabled} onChange={(e) => setEnabledExclusive(b.id, e.target.checked)} />
+                                        <span className={`text-sm font-semibold ${b.enabled ? 'text-success' : 'text-danger'}`}>{b.enabled ? 'Enabled' : 'Disabled'}</span>
+                                    </label>
+                                </div>
+                                <div className="flex-1" />
+                                <div className="flex items-center gap-2">
+                                    {savingId === b.id && <span className="text-xs text-white-dark">Saving…</span>}
+                                    <button type="button" className="btn btn-outline-danger gap-2" onClick={() => remove(b.id)}>
+                                        <IconTrashLines /> Remove
+                                    </button>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                )}
+            </div>
+
+            <div className="panel">
+                <div className="mb-2">
+                    <div className="text-lg font-bold flex items-center gap-2">
+                        <IconMoon className="w-5 h-5 text-info" /> Do Not Disturb
+                    </div>
+                    <div className="text-sm text-white-dark">When enabled, employees can mark themselves as unavailable.</div>
+                </div>
+                {dontDisturb ? (
+                    <div className="flex flex-wrap items-center gap-3 p-4 rounded-lg border border-[#e0e6ed] dark:border-[#1b2e4b] bg-white dark:bg-[#0e1726]">
+                        <div className="min-w-[140px]">
+                            <div className="text-xs text-white-dark">Status</div>
+                            <label className="w-12 h-6 relative">
+                                <input
+                                    type="checkbox"
+                                    className="custom_switch absolute w-full h-full opacity-0 z-10 cursor-pointer peer"
+                                    checked={!!dontDisturb.enabled}
+                                    onChange={(e) => patch(dontDisturb.id, { enabled: e.target.checked })}
+                                />
+                                <span className="bg-[#ebedf2] dark:bg-dark block h-full rounded-full before:absolute before:left-1 before:bg-white dark:before:bg-white-dark before:bottom-1 before:w-4 before:h-4 before:rounded-full peer-checked:before:left-7 peer-checked:bg-primary before:transition-all before:duration-300"></span>
+                            </label>
+                        </div>
+                        <span className={`text-sm font-semibold ${dontDisturb.enabled ? 'text-success' : 'text-danger'}`}>
+                            {dontDisturb.enabled ? 'Enabled' : 'Disabled'}
+                        </span>
+                        <div className="flex-1" />
+                        {savingId === dontDisturb.id && <span className="text-xs text-white-dark">Saving…</span>}
+                    </div>
+                ) : (
+                    <div className="p-4 rounded-lg border border-dashed border-[#e0e6ed] dark:border-[#1b2e4b] text-white-dark flex items-center gap-2">
+                        <span className="animate-pulse">Setting up…</span>
+                    </div>
+                )}
+            </div>
+        </div>
+    );
+};
+
+export default AdminBreakConfig;
+
