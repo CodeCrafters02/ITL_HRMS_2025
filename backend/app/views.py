@@ -3668,6 +3668,130 @@ class SeatBookingViewSet(viewsets.ModelViewSet):
         return Response({'status': 'booking cancelled'})
 
 
+# --------------------------- CONFERENCE ROOM MANAGEMENT ---------------------------------
+
+class ConferenceRoomViewSet(viewsets.ModelViewSet):
+    serializer_class = ConferenceRoomSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        user = self.request.user
+        if user.role == 'master':
+            return ConferenceRoom.objects.all().order_by('name')
+        return ConferenceRoom.objects.filter(company=user.company).order_by('name')
+
+    def perform_create(self, serializer):
+        serializer.save(company=self.request.user.company)
+
+class ConferenceRoomBookingViewSet(viewsets.ModelViewSet):
+    serializer_class = ConferenceRoomBookingSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        user = self.request.user
+        queryset = ConferenceRoomBooking.objects.all()
+        
+        # Filtering
+        status = self.request.query_params.get('status')
+        date = self.request.query_params.get('date')
+        is_history = self.request.query_params.get('history') == 'true'
+        room_id = self.request.query_params.get('room')
+        floor_id = self.request.query_params.get('floor')
+        
+        if user.role != 'master':
+            queryset = queryset.filter(room__company=user.company)
+            
+        if status:
+            queryset = queryset.filter(status=status)
+        if date:
+            queryset = queryset.filter(date=date)
+        if room_id:
+            queryset = queryset.filter(room_id=room_id)
+        if floor_id:
+            queryset = queryset.filter(room__floor_id=floor_id)
+            
+        if is_history:
+             queryset = queryset.filter(date__lt=timezone.now().date())
+        
+        if not status and not date and not is_history and hasattr(user, 'employee'):
+            # Show active and future bookings for the current employee
+            queryset = queryset.filter(employee=user.employee, date__gte=timezone.now().date())
+
+        return queryset.select_related('employee', 'room__floor').order_by('-date', '-start_time')
+
+    def perform_create(self, serializer):
+        user = self.request.user
+        if not hasattr(user, 'employee'):
+            raise serializers.ValidationError({"detail": "Only employees can book conference rooms."})
+            
+        employee = user.employee
+        room = serializer.validated_data['room']
+        start_time = serializer.validated_data['start_time']
+        end_time = serializer.validated_data['end_time']
+        date = serializer.validated_data['date']
+
+        # Conflict check
+        if ConferenceRoomBooking.objects.filter(
+            room=room,
+            date=date,
+            status__in=['pending', 'approved'],
+            start_time__lt=end_time,
+            end_time__gt=start_time
+        ).exists():
+            raise serializers.ValidationError({"detail": "Room is already booked for this time."})
+
+        # Duration check for approval
+        config, created = ConferenceRoomConfig.objects.get_or_create(company=user.company)
+        limit = config.approval_limit_minutes
+        
+        # Calculate duration in minutes
+        duration = (datetime.combine(date, end_time) - datetime.combine(date, start_time)).total_seconds() / 60
+        
+        # If duration is negative or zero
+        if duration <= 0:
+            raise serializers.ValidationError({"detail": "End time must be after start time."})
+
+        status = 'approved' if duration <= limit else 'pending'
+        
+        serializer.save(employee=employee, status=status)
+
+    @action(detail=True, methods=['post'], permission_classes=[IsAdminUser | IsMaster])
+    def approve(self, request, pk=None):
+        booking = self.get_object()
+        booking.status = 'approved'
+        booking.save()
+        return Response({'status': 'booking approved'})
+
+    @action(detail=True, methods=['post'], permission_classes=[IsAdminUser | IsMaster])
+    def reject(self, request, pk=None):
+        booking = self.get_object()
+        booking.status = 'rejected'
+        booking.save()
+        return Response({'status': 'booking rejected'})
+
+    @action(detail=True, methods=['post'], permission_classes=[permissions.IsAuthenticated])
+    def cancel(self, request, pk=None):
+        booking = self.get_object()
+        if not hasattr(request.user, 'employee') or booking.employee != request.user.employee:
+            return Response({'error': 'Unauthorized'}, status=status.HTTP_403_FORBIDDEN)
+        booking.status = 'cancelled'
+        booking.save()
+        return Response({'status': 'booking cancelled'})
+
+class ConferenceRoomConfigViewSet(viewsets.ModelViewSet):
+    serializer_class = ConferenceRoomConfigSerializer
+    permission_classes = [IsAuthenticated, IsAdminUser | IsMaster]
+
+    def get_queryset(self):
+        return ConferenceRoomConfig.objects.filter(company=self.request.user.company)
+
+    def perform_create(self, serializer):
+        # Ensure only one config per company
+        if ConferenceRoomConfig.objects.filter(company=self.request.user.company).exists():
+             raise serializers.ValidationError({"detail": "Config already exists for this company."})
+        serializer.save(company=self.request.user.company)
+
+
 from google.oauth2 import id_token
 from google.auth.transport import requests as google_requests
 from django.conf import settings

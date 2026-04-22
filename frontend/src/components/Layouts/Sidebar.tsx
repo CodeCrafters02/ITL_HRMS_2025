@@ -212,6 +212,14 @@ const Sidebar = () => {
                                         </NavLink>
                                     </li>
                                     <li className="menu nav-item">
+                                        <NavLink to="/employee/conference-room-booking" className="group">
+                                            <div className="flex items-center">
+                                                <IconMenuComponents className="group-hover:!text-primary shrink-0" />
+                                                <span className="ltr:pl-3 rtl:pr-3 text-black dark:text-[#506690] dark:group-hover:text-white-dark">{t('Conf. Room Booking')}</span>
+                                            </div>
+                                        </NavLink>
+                                    </li>
+                                    <li className="menu nav-item">
                                         <NavLink to="/employee/chat" className="group">
                                             <div className="flex items-center">
                                                 <IconMenuChat className="group-hover:!text-primary shrink-0" />
@@ -302,6 +310,26 @@ const Sidebar = () => {
                                                 <li><NavLink to="/admin/recruitment">{t('Recruitment')}</NavLink></li>
                                                 <li><NavLink to="/admin/relieved-employees">{t('Relieved Employees')}</NavLink></li>
                                                 <li><NavLink to="/admin/letter-templates">{t('Letter Templates')}</NavLink></li>
+                                            </ul>
+                                        </AnimateHeight>
+                                    </li>
+
+                                    {/* Conference Room Management */}
+                                    <li className="menu nav-item">
+                                        <button type="button" className={`${currentMenu === 'conference-room-mgt' ? 'active' : ''} nav-link group w-full`} onClick={() => toggleMenu('conference-room-mgt')}>
+                                            <div className="flex items-center">
+                                                <IconMenuComponents className="group-hover:!text-primary shrink-0" />
+                                                <span className="ltr:pl-3 rtl:pr-3 text-black dark:text-[#506690] dark:group-hover:text-white-dark">{t('Conference Room Mgt')}</span>
+                                            </div>
+                                            <div className={currentMenu !== 'conference-room-mgt' ? 'rtl:rotate-90 -rotate-90' : ''}>
+                                                <IconCaretDown />
+                                            </div>
+                                        </button>
+                                        <AnimateHeight duration={300} height={currentMenu === 'conference-room-mgt' ? 'auto' : 0}>
+                                            <ul className="sub-menu text-gray-500">
+                                                <li><NavLink to="/admin/conference-room/structure">{t('Structure')}</NavLink></li>
+                                                <li><NavLink to="/admin/conference-room/approval">{t('Approval')}</NavLink></li>
+                                                <li><NavLink to="/admin/conference-room/overview">{t('Overview')}</NavLink></li>
                                             </ul>
                                         </AnimateHeight>
                                     </li>

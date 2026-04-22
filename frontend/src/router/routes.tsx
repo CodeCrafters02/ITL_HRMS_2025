@@ -135,6 +135,9 @@ const AdminAssetsInventory = lazy(() => import('../pages/Admin/AssetsInventory')
 const AdminOfficeStructure = lazy(() => import('../pages/Admin/OfficeStructure'));
 const AdminSeatApprovals = lazy(() => import('../pages/Admin/SeatApprovals'));
 const AdminSeatBookingsOverview = lazy(() => import('../pages/Admin/SeatBookingsOverview'));
+const AdminConfRoomStructure = lazy(() => import('../pages/Admin/ConferenceRoomStructure'));
+const AdminConfRoomApproval = lazy(() => import('../pages/Admin/ConferenceRoomApproval'));
+const AdminConfRoomOverview = lazy(() => import('../pages/Admin/ConferenceRoomOverview'));
 
 // Employee Pages
 const EmployeeDashboard = lazy(() => import('../pages/Employee/Dashboard'));
@@ -148,6 +151,7 @@ const EmployeeNotifications = lazy(() => import('../pages/Employee/Notifications
 const EmployeeCompanyPolicy = lazy(() => import('../pages/Employee/CompanyPolicy/CompanyPolicy'));
 const EmployeeAssetRequests = lazy(() => import('../pages/Employee/AssetRequests'));
 const EmployeeSeatBooking = lazy(() => import('../pages/Employee/SeatBooking'));
+const EmployeeConfRoomBooking = lazy(() => import('../pages/Employee/ConfRoomBooking'));
 const EmployeeReferences = lazy(() => import('../pages/Employee/References/References'));
 const EmployeeReportees = lazy(() => import('../pages/Employee/Reportees/Reportees'));
 
@@ -733,6 +737,18 @@ const routes = [
         element: <AdminSeatBookingsOverview />,
     },
     {
+        path: '/admin/conference-room/structure',
+        element: <AdminConfRoomStructure />,
+    },
+    {
+        path: '/admin/conference-room/approval',
+        element: <AdminConfRoomApproval />,
+    },
+    {
+        path: '/admin/conference-room/overview',
+        element: <AdminConfRoomOverview />,
+    },
+    {
         path: '/employee/dashboard',
         element: <EmployeeDashboard />,
     },
@@ -783,6 +799,10 @@ const routes = [
     {
         path: '/employee/seat-booking',
         element: <EmployeeSeatBooking />,
+    },
+    {
+        path: '/employee/conference-room-booking',
+        element: <EmployeeConfRoomBooking />,
     },
 ];
 
