@@ -3410,6 +3410,8 @@ class EmployeeStatusViewSet(viewsets.ModelViewSet):
     
 
 class EmployeeReporteesView(APIView):
+    permission_classes = [IsAuthenticated]
+
     def post(self, request):
         emp_id = request.data.get("employee_id")
         if not emp_id:
@@ -3420,9 +3422,24 @@ class EmployeeReporteesView(APIView):
         except Employee.DoesNotExist:
             return Response({"error": "Employee not found"})
         
+        search = (request.query_params.get("search") or request.data.get("search") or "").strip()
         reportees = Employee.objects.filter(reporting_manager=manager)
-        serializer = ReportingEmployeesSerializer(reportees, many=True, context={'request': request})
-        return Response(serializer.data)
+        if search:
+            reportees = reportees.filter(
+                Q(first_name__icontains=search)
+                | Q(middle_name__icontains=search)
+                | Q(last_name__icontains=search)
+                | Q(employee_id__icontains=search)
+                | Q(department__department_name__icontains=search)
+                | Q(designation__designation_name__icontains=search)
+                | Q(status__icontains=search)
+            )
+        reportees = reportees.order_by("first_name", "last_name", "id")
+
+        paginator = CustomPagination()
+        paginated_qs = paginator.paginate_queryset(reportees, request, view=self)
+        serializer = ReportingEmployeesSerializer(paginated_qs, many=True, context={"request": request})
+        return paginator.get_paginated_response(serializer.data)
 
 
 # Office Structure ViewSets

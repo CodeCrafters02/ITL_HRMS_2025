@@ -7,6 +7,9 @@ import '../../services/seat_booking_service.dart';
 import '../../theme/app_stitch_theme.dart';
 import '../../widgets/glass_card.dart';
 import '../../widgets/stitch_background.dart';
+import 'widgets/legend_popover.dart';
+import 'widgets/seat_search_sheet.dart';
+import 'widgets/time_range_sheet.dart';
 
 class SeatBookingPage extends StatefulWidget {
   const SeatBookingPage({super.key});
@@ -14,6 +17,8 @@ class SeatBookingPage extends StatefulWidget {
   @override
   State<SeatBookingPage> createState() => _SeatBookingPageState();
 }
+
+enum _SeatBookingTab { map, list }
 
 class _SeatBookingPageState extends State<SeatBookingPage> {
   bool _loadingLocations = true;
@@ -27,10 +32,9 @@ class _SeatBookingPageState extends State<SeatBookingPage> {
   List<OfficeFloor> _floors = <OfficeFloor>[];
   OfficeFloor? _selectedFloor;
 
-  List<OfficeSeat> _officeSeats = <OfficeSeat>[];
   Map<String, int> _seatNumberToId = <String, int>{};
 
-  List<SeatBooking> _bookings = <SeatBooking>[];
+  late final Map<String, SeatBooking> _bookingBySeatNumber = <String, SeatBooking>{};
 
   DateTime _selectedDate = DateTime.now();
   TimeOfDay _targetStart = const TimeOfDay(hour: 9, minute: 0);
@@ -38,8 +42,18 @@ class _SeatBookingPageState extends State<SeatBookingPage> {
 
   LayoutElement? _selectedSeatEl;
   SeatBooking? _selectedSeatBooking;
-  List<SeatBooking> _selectedSeatUpcoming = <SeatBooking>[];
+  List<SeatBooking> _selectedSeatUpcoming = [];
   bool _loadingSeatSchedule = false;
+
+  StateSetter? _sheetSetState;
+
+  void _updateState(VoidCallback fn) {
+    setState(fn);
+    _sheetSetState?.call(fn);
+  }
+
+  _SeatBookingTab _tab = _SeatBookingTab.map;
+  final TransformationController _mapTransform = TransformationController();
 
   // Booking form
   String _bookingType = 'daily';
@@ -55,11 +69,25 @@ class _SeatBookingPageState extends State<SeatBookingPage> {
     _fetchLocations();
   }
 
+  @override
+  void dispose() {
+    _mapTransform.dispose();
+    super.dispose();
+  }
+
   String _fmtDate(DateTime d) =>
       '${d.year.toString().padLeft(4, '0')}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
 
   String _fmtTime(TimeOfDay t) =>
       '${t.hour.toString().padLeft(2, '0')}:${t.minute.toString().padLeft(2, '0')}';
+
+  String _officePillLabel() {
+    final office = _selectedLocation?.name ?? 'Office';
+    final floor = _selectedFloor == null
+        ? 'Floor'
+        : 'F${_selectedFloor!.floorNumber}: ${_selectedFloor!.name}';
+    return '$office • $floor';
+  }
 
   Future<void> _fetchLocations() async {
     setState(() => _loadingLocations = true);
@@ -87,12 +115,11 @@ class _SeatBookingPageState extends State<SeatBookingPage> {
       _loadingFloors = true;
       _floors = <OfficeFloor>[];
       _selectedFloor = null;
-      _bookings = <SeatBooking>[];
-      _officeSeats = <OfficeSeat>[];
       _seatNumberToId = <String, int>{};
       _selectedSeatEl = null;
       _selectedSeatBooking = null;
       _selectedSeatUpcoming = <SeatBooking>[];
+      _bookingBySeatNumber.clear();
     });
     try {
       final floors = await SeatBookingService.fetchFloors(locationId: locationId);
@@ -122,7 +149,6 @@ class _SeatBookingPageState extends State<SeatBookingPage> {
       final seats = await SeatBookingService.fetchSeats(floorId: floorId);
       if (!mounted) return;
       setState(() {
-        _officeSeats = seats;
         _seatNumberToId = {
           for (final s in seats) s.seatNumber.toLowerCase(): s.id,
         };
@@ -148,7 +174,15 @@ class _SeatBookingPageState extends State<SeatBookingPage> {
         endTime: _fmtTime(_targetEnd),
       );
       if (!mounted) return;
-      setState(() => _bookings = list);
+      setState(() {
+        _bookingBySeatNumber
+          ..clear()
+          ..addEntries(
+            list.map(
+              (b) => MapEntry(b.seatDetails.seatNumber.toLowerCase(), b),
+            ),
+          );
+      });
       // Refresh selection if same seat is selected.
       if (_selectedSeatEl != null) {
         _applySelectedSeatBooking(_selectedSeatEl!);
@@ -165,19 +199,29 @@ class _SeatBookingPageState extends State<SeatBookingPage> {
   SeatBooking? _bookingForSeat(LayoutElement el) {
     final seatNum = el.name.trim();
     if (seatNum.isEmpty) return null;
-    for (final b in _bookings) {
-      if (b.seatDetails.seatNumber.toLowerCase() == seatNum.toLowerCase()) {
-        return b;
-      }
-    }
-    return null;
+    return _bookingBySeatNumber[seatNum.toLowerCase()];
   }
 
   Color _seatColor(LayoutElement el) {
     final booking = _bookingForSeat(el);
-    if (booking == null) return const Color(0xFF10B981);
-    if (booking.bookingType == 'permanent') return const Color(0xFFF472B6);
-    return const Color(0xFFFB923C);
+    if (booking == null) return const Color(0xFF10B981); // Available (Emerald 500)
+    if (booking.bookingType == 'permanent') return const Color(0xFFD946EF); // Permanent (Fuchsia 500)
+    return const Color(0xFFF59E0B); // Booked (Amber 500)
+  }
+
+  String _initialsFromName(String name) {
+    final parts = name
+        .trim()
+        .split(RegExp(r'\s+'))
+        .where((p) => p.isNotEmpty)
+        .toList();
+    if (parts.isEmpty) return '?';
+    final first = parts.first.characters.isNotEmpty ? parts.first.characters.first : '';
+    final last = parts.length > 1 && parts.last.characters.isNotEmpty
+        ? parts.last.characters.first
+        : '';
+    final s = (first + last).toUpperCase();
+    return s.isEmpty ? '?' : s;
   }
 
   void _applySelectedSeatBooking(LayoutElement el) {
@@ -303,224 +347,345 @@ class _SeatBookingPageState extends State<SeatBookingPage> {
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (ctx) {
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            _sheetSetState = setModalState;
+            return DraggableScrollableSheet(
+          initialChildSize: 0.62,
+          minChildSize: 0.40,
+          maxChildSize: 0.92,
+          builder: (context, scrollController) {
         return Padding(
-          padding: EdgeInsets.only(
-            left: 12,
-            right: 12,
-            bottom: MediaQuery.of(ctx).viewInsets.bottom + 12,
+          padding: EdgeInsets.fromLTRB(
+            12,
+            0,
+            12,
+            MediaQuery.of(ctx).viewInsets.bottom + 12,
           ),
           child: GlassCard(
+            borderRadius: 22,
             padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
-            child: _buildSeatSheetContent(),
+            child: _buildSeatSheetContent(scrollController),
           ),
         );
+          },
+        );
+          },
+        );
       },
-    );
+    ).whenComplete(() => _sheetSetState = null);
   }
 
-  Widget _buildSeatSheetContent() {
+  Widget _buildSeatSheetContent(ScrollController scrollController) {
     final el = _selectedSeatEl!;
     final booking = _selectedSeatBooking;
 
     return SingleChildScrollView(
+      controller: scrollController,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
+      children: [
+        Center(
+          child: Container(
+            width: 40,
+            height: 5,
+            margin: const EdgeInsets.only(bottom: 12),
+            decoration: BoxDecoration(
+              color: AppStitchTheme.lightOutline.withValues(alpha: 0.8),
+              borderRadius: BorderRadius.circular(99),
+            ),
+          ),
+        ),
+        Row(
+          children: [
+            Expanded(
+              child: Text(
+                'Seat ${el.name}',
+                style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                      fontWeight: FontWeight.w900,
+                      color: AppStitchTheme.lightOnSurface,
+                    ),
+              ),
+            ),
+            IconButton(
+              onPressed: () => Navigator.pop(context),
+              icon: const Icon(Icons.close_rounded),
+            ),
+          ],
+        ),
+        const SizedBox(height: 6),
+        if (_loadingSeatSchedule) const LinearProgressIndicator(minHeight: 2),
+        const SizedBox(height: 10),
+        if (booking != null) ...[
+          _badge(
+            booking.status == 'pending'
+                ? 'Pending approval'
+                : booking.status.isEmpty
+                    ? 'Booked'
+                    : (booking.status[0].toUpperCase() + booking.status.substring(1)),
+            color: booking.status == 'pending'
+                ? const Color(0xFFF59E0B)
+                : (booking.status.toLowerCase() == 'approved'
+                    ? AppStitchTheme.accentBlue
+                    : const Color(0xFFEF4444)),
+          ),
+          const SizedBox(height: 12),
           Row(
             children: [
-              Expanded(
-                child: Text(
-                  'Seat ${el.name}',
-                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                        fontWeight: FontWeight.w800,
-                        color: AppStitchTheme.lightOnSurface,
-                      ),
+              Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(14),
+                  color: AppStitchTheme.primary.withValues(alpha: 0.12),
+                  border: Border.all(color: AppStitchTheme.primary.withValues(alpha: 0.25)),
+                ),
+                child: Center(
+                  child: Text(
+                    _initialsFromName(booking.employeeDetails.name),
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w900,
+                      color: AppStitchTheme.primary,
+                    ),
+                  ),
                 ),
               ),
-              IconButton(
-                onPressed: () => Navigator.pop(context),
-                icon: const Icon(Icons.close_rounded),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      booking.employeeDetails.name,
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.w900,
+                          ),
+                    ),
+                    if (booking.employeeDetails.employeeId.isNotEmpty) ...[
+                      const SizedBox(height: 2),
+                      Text(
+                        'ID: ${booking.employeeDetails.employeeId}',
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              color: AppStitchTheme.lightOnSurfaceMuted,
+                              fontWeight: FontWeight.w700,
+                            ),
+                      ),
+                    ],
+                  ],
+                ),
               ),
             ],
           ),
-          const SizedBox(height: 6),
-          if (_loadingSeatSchedule)
-            const LinearProgressIndicator(minHeight: 2),
+          const SizedBox(height: 12),
+          _kvGrid(
+            leftKey: 'Type',
+            leftValue: booking.bookingType,
+            rightKey: 'Time',
+            rightValue:
+                '${(booking.startTime ?? '00:00').substring(0, 5)} - ${(booking.endTime ?? '23:59').substring(0, 5)}',
+          ),
           const SizedBox(height: 10),
-          if (booking != null) ...[
-            _badge(
-              booking.status == 'pending'
-                  ? 'Pending approval'
-                  : booking.status.isEmpty
-                      ? 'Booked'
-                      : booking.status,
-              color: booking.status == 'pending'
-                  ? const Color(0xFFF59E0B)
-                  : const Color(0xFFEF4444),
-            ),
-            const SizedBox(height: 12),
-            Text(
-              'Occupant',
-              style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                    color: AppStitchTheme.lightOnSurfaceMuted,
-                    fontWeight: FontWeight.w800,
-                    letterSpacing: 0.6,
-                  ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              booking.employeeDetails.name,
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w800,
-                  ),
-            ),
-            const SizedBox(height: 10),
-            _kvRow('Type', booking.bookingType),
-            _kvRow(
-              'Time',
-              '${(booking.startTime ?? '00:00').substring(0, 5)} - ${(booking.endTime ?? '23:59').substring(0, 5)}',
-            ),
-            _kvRow(
-              'Dates',
-              booking.endDate != null && booking.endDate!.isNotEmpty
-                  ? '${booking.startDate} to ${booking.endDate}'
-                  : booking.startDate,
-            ),
-            const SizedBox(height: 12),
-            if (booking.isMine)
-              SizedBox(
+          _kvGrid(
+            leftKey: 'Start',
+            leftValue: booking.startDate,
+            rightKey: 'End',
+            rightValue: (booking.endDate != null && booking.endDate!.isNotEmpty)
+                ? booking.endDate!
+                : '—',
+          ),
+          const SizedBox(height: 12),
+          if (booking.isMine)
+            Padding(
+              padding: const EdgeInsets.only(top: 8),
+              child: SizedBox(
                 width: double.infinity,
                 child: FilledButton.icon(
                   style: FilledButton.styleFrom(
-                    backgroundColor: const Color(0xFFEF4444),
+                    backgroundColor: const Color(0xFFEF4444).withValues(alpha: 0.9),
                     foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                    elevation: 0,
                   ),
                   onPressed: () => _cancelBooking(booking.id),
-                  icon: const Icon(Icons.cancel_rounded),
+                  icon: const Icon(Icons.cancel_rounded, size: 20),
                   label: const Text(
                     'Cancel booking',
-                    style: TextStyle(fontWeight: FontWeight.w800),
+                    style: TextStyle(fontWeight: FontWeight.w900, letterSpacing: 0.5),
                   ),
                 ),
               ),
-          ] else ...[
-            _badge('Available', color: const Color(0xFF10B981)),
-            const SizedBox(height: 12),
-            Text(
-              'Book this seat',
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w800,
-                  ),
             ),
-            const SizedBox(height: 10),
-            _bookingTypePicker(),
-            const SizedBox(height: 10),
-            Row(
-              children: [
-                Expanded(
-                  child: _timePickerTile(
-                    label: 'Start time',
-                    value: _bookStart,
-                    onChanged: (t) => setState(() => _bookStart = t),
-                  ),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: _timePickerTile(
-                    label: 'End time',
-                    value: _bookEnd,
-                    onChanged: (t) => setState(() => _bookEnd = t),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 10),
-            if (_bookingType == 'weekly') _weeklyDatePickers(),
-            if (_bookingType == 'weekly' || _bookingType == 'permanent')
-              Padding(
-                padding: const EdgeInsets.only(top: 8),
-                child: Text(
-                  'Weekly and Permanent bookings require Administrator approval.',
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: AppStitchTheme.lightOnSurfaceMuted,
-                        fontWeight: FontWeight.w600,
-                      ),
-                ),
-              ),
-            const SizedBox(height: 14),
-            SizedBox(
-              width: double.infinity,
-              child: FilledButton.icon(
-                style: FilledButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 12),
-                ),
-                onPressed: _confirmBooking,
-                icon: const Icon(Icons.check_circle_rounded),
-                label: const Text(
-                  'Confirm booking',
-                  style: TextStyle(fontWeight: FontWeight.w800),
-                ),
-              ),
-            ),
-          ],
+        ] else ...[
+          _badge('Available', color: const Color(0xFF10B981)),
           const SizedBox(height: 18),
-          if (_selectedSeatUpcoming.isNotEmpty) ...[
-            Text(
-              'Upcoming bookings',
-              style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                    fontWeight: FontWeight.w900,
-                    letterSpacing: 0.5,
-                  ),
+          Text(
+            'Book this seat',
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.w900,
+                ),
+          ),
+          const SizedBox(height: 12),
+          _bookingTypeSegmented(),
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              Expanded(
+                child: _timePickerTile(
+                  label: 'Start time',
+                  value: _bookStart,
+                  onChanged: (t) => _updateState(() => _bookStart = t),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: _timePickerTile(
+                  label: 'End time',
+                  value: _bookEnd,
+                  onChanged: (t) => _updateState(() => _bookEnd = t),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          if (_bookingType == 'weekly') _weeklyDatePickers(),
+          if (_bookingType == 'weekly' || _bookingType == 'permanent')
+            Padding(
+              padding: const EdgeInsets.only(top: 8),
+              child: Text(
+                'Weekly and Permanent bookings require Administrator approval.',
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: AppStitchTheme.lightOnSurfaceMuted,
+                      fontWeight: FontWeight.w700,
+                    ),
+              ),
             ),
-            const SizedBox(height: 10),
-            ..._selectedSeatUpcoming.take(5).map(_upcomingCard),
-          ],
-        ],
-      ),
-    );
-  }
-
-  Widget _kvRow(String k, String v) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
-      child: Row(
-        children: [
+          const SizedBox(height: 14),
           SizedBox(
-            width: 70,
-            child: Text(
-              k,
-              style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                    color: AppStitchTheme.lightOnSurfaceMuted,
-                    fontWeight: FontWeight.w800,
-                  ),
+            width: double.infinity,
+            child: FilledButton.icon(
+              style: FilledButton.styleFrom(
+                backgroundColor: AppStitchTheme.primary,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                elevation: 4,
+                shadowColor: AppStitchTheme.primary.withValues(alpha: 0.4),
+              ),
+              onPressed: _confirmBooking,
+              icon: const Icon(Icons.check_circle_rounded, size: 20),
+              label: const Text(
+                'Confirm booking',
+                style: TextStyle(fontWeight: FontWeight.w900, letterSpacing: 0.5),
+              ),
             ),
           ),
-          Expanded(
-            child: Text(
-              v,
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    fontWeight: FontWeight.w700,
-                  ),
-            ),
+        ],
+        const SizedBox(height: 18),
+        if (_selectedSeatUpcoming.isNotEmpty) ...[
+          Text(
+            'Upcoming bookings',
+            style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: 0.5,
+                ),
+          ),
+          const SizedBox(height: 10),
+          ..._selectedSeatUpcoming.take(5).map(_upcomingCard),
+        ],
+      ],
+    ),
+  );
+}
+
+  Widget _kvGrid({
+    required String leftKey,
+    required String leftValue,
+    required String rightKey,
+    required String rightValue,
+  }) {
+    return Row(
+      children: [
+        Expanded(child: _kvTile(leftKey, leftValue)),
+        const SizedBox(width: 10),
+        Expanded(child: _kvTile(rightKey, rightValue)),
+      ],
+    );
+  }
+
+  Widget _kvTile(String k, String v) {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(18),
+        color: Colors.white.withValues(alpha: 0.45),
+        border: Border.all(color: AppStitchTheme.lightOutline.withValues(alpha: 0.35)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            k,
+            style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                  color: AppStitchTheme.lightOnSurface.withValues(alpha: 0.55),
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: 0.5,
+                  fontSize: 10,
+                ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            v,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  fontWeight: FontWeight.w900,
+                  color: AppStitchTheme.lightOnSurface,
+                ),
           ),
         ],
       ),
     );
   }
 
-  Widget _upcomingCard(SeatBooking b) {
+  Widget _bookingTypeSegmented() {
+    return _TabToggle<String>(
+      values: const ['daily', 'weekly', 'permanent'],
+      labels: const ['Daily', 'Weekly', 'Permanent'],
+      selected: _bookingType,
+      onChanged: (v) {
+        _updateState(() {
+          _bookingType = v;
+          if (v == 'weekly') {
+            _weeklyStartDate ??= _selectedDate;
+          } else {
+            _weeklyEndDate = null;
+          }
+        });
+      },
+    );
+  }
+
+   Widget _upcomingCard(SeatBooking b) {
+    final isApproved = b.status.toLowerCase() == 'approved';
     final statusColor = b.status == 'pending'
         ? const Color(0xFFF59E0B)
-        : const Color(0xFF3B82F6);
+        : (isApproved ? AppStitchTheme.accentBlue : const Color(0xFFEF4444));
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
       child: Container(
-        padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
+        padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
         decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: 0.10),
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: Colors.white.withValues(alpha: 0.18)),
+          color: Colors.white.withValues(alpha: 0.15),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: Colors.white.withValues(alpha: 0.25)),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.03),
+              blurRadius: 8,
+              offset: const Offset(0, 4),
+            ),
+          ],
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -531,26 +696,44 @@ class _SeatBookingPageState extends State<SeatBookingPage> {
                   child: Text(
                     b.employeeDetails.name,
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          fontWeight: FontWeight.w800,
+                          fontWeight: FontWeight.w900,
+                          color: AppStitchTheme.lightOnSurface,
                         ),
                   ),
                 ),
-                _badge(b.status, color: statusColor),
+                _badge(
+                  b.status.isEmpty ? 'Booked' : (b.status[0].toUpperCase() + b.status.substring(1)),
+                  color: statusColor,
+                ),
               ],
             ),
-            const SizedBox(height: 6),
-            Text(
-              '${b.startDate}${(b.endDate != null && b.endDate!.isNotEmpty) ? ' to ${b.endDate}' : ''}',
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: AppStitchTheme.lightOnSurfaceMuted,
-                    fontWeight: FontWeight.w700,
-                  ),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                const Icon(Icons.event_rounded, size: 14, color: AppStitchTheme.lightOnSurfaceMuted),
+                const SizedBox(width: 6),
+                Text(
+                  '${b.startDate}${(b.endDate != null && b.endDate!.isNotEmpty) ? ' to ${b.endDate}' : ''}',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: AppStitchTheme.lightOnSurfaceMuted,
+                        fontWeight: FontWeight.w800,
+                      ),
+                ),
+              ],
             ),
-            Text(
-              '${(b.startTime ?? '00:00').substring(0, 5)} - ${(b.endTime ?? '23:59').substring(0, 5)} • ${b.bookingType}',
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: AppStitchTheme.lightOnSurfaceMuted,
-                  ),
+            const SizedBox(height: 4),
+            Row(
+              children: [
+                const Icon(Icons.schedule_rounded, size: 14, color: AppStitchTheme.lightOnSurfaceMuted),
+                const SizedBox(width: 6),
+                Text(
+                  '${(b.startTime ?? '00:00').substring(0, 5)} - ${(b.endTime ?? '23:59').substring(0, 5)} • ${b.bookingType}',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: AppStitchTheme.lightOnSurfaceMuted,
+                        fontWeight: FontWeight.w700,
+                      ),
+                ),
+              ],
             ),
           ],
         ),
@@ -563,44 +746,19 @@ class _SeatBookingPageState extends State<SeatBookingPage> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.18),
+        color: color.withValues(alpha: 0.22),
         borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: color.withValues(alpha: 0.35)),
+        border: Border.all(color: color.withValues(alpha: 0.45)),
       ),
       child: Text(
         t,
         style: TextStyle(
-          color: color,
+          color: color.withValues(alpha: 0.95),
           fontSize: 11,
-          fontWeight: FontWeight.w800,
+          fontWeight: FontWeight.w900,
+          letterSpacing: 0.3,
         ),
       ),
-    );
-  }
-
-  Widget _bookingTypePicker() {
-    return DropdownButtonFormField<String>(
-      value: _bookingType,
-      items: const [
-        DropdownMenuItem(value: 'daily', child: Text('Daily (One Day)')),
-        DropdownMenuItem(value: 'weekly', child: Text('Weekly (7 Days)')),
-        DropdownMenuItem(value: 'permanent', child: Text('Permanent')),
-      ],
-      decoration: const InputDecoration(
-        labelText: 'Booking type',
-        border: OutlineInputBorder(),
-      ),
-      onChanged: (v) {
-        if (v == null) return;
-        setState(() {
-          _bookingType = v;
-          if (v == 'weekly') {
-            _weeklyStartDate ??= _selectedDate;
-          } else {
-            _weeklyEndDate = null;
-          }
-        });
-      },
     );
   }
 
@@ -613,7 +771,7 @@ class _SeatBookingPageState extends State<SeatBookingPage> {
           child: _datePickerTile(
             label: 'Start date',
             value: s,
-            onChanged: (d) => setState(() => _weeklyStartDate = d),
+            onChanged: (d) => _updateState(() => _weeklyStartDate = d),
           ),
         ),
         const SizedBox(width: 10),
@@ -621,7 +779,7 @@ class _SeatBookingPageState extends State<SeatBookingPage> {
           child: _datePickerTile(
             label: 'End date',
             value: e,
-            onChanged: (d) => setState(() => _weeklyEndDate = d),
+            onChanged: (d) => _updateState(() => _weeklyEndDate = d),
           ),
         ),
       ],
@@ -645,12 +803,35 @@ class _SeatBookingPageState extends State<SeatBookingPage> {
         );
         if (picked != null) onChanged(picked);
       },
-      child: InputDecorator(
-        decoration: InputDecoration(
-          labelText: label,
-          border: const OutlineInputBorder(),
-        ),
-        child: Text(value == null ? '-' : _fmtDate(value)),
+      borderRadius: BorderRadius.circular(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.only(left: 4, bottom: 6),
+            child: Text(
+              label,
+              style: TextStyle(
+                color: AppStitchTheme.lightOnSurface.withValues(alpha: 0.7),
+                fontWeight: FontWeight.w800,
+                fontSize: 12,
+              ),
+            ),
+          ),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(16),
+              color: Colors.white.withValues(alpha: 0.45),
+              border: Border.all(color: AppStitchTheme.lightOutline.withValues(alpha: 0.35)),
+            ),
+            child: Text(
+              value == null ? '-' : _fmtDate(value),
+              style: const TextStyle(fontWeight: FontWeight.w900, color: AppStitchTheme.lightOnSurface),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -668,12 +849,35 @@ class _SeatBookingPageState extends State<SeatBookingPage> {
         );
         if (picked != null) onChanged(picked);
       },
-      child: InputDecorator(
-        decoration: InputDecoration(
-          labelText: label,
-          border: const OutlineInputBorder(),
-        ),
-        child: Text(_fmtTime(value)),
+      borderRadius: BorderRadius.circular(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.only(left: 4, bottom: 6),
+            child: Text(
+              label,
+              style: TextStyle(
+                color: AppStitchTheme.lightOnSurface.withValues(alpha: 0.7),
+                fontWeight: FontWeight.w800,
+                fontSize: 12,
+              ),
+            ),
+          ),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(16),
+              color: Colors.white.withValues(alpha: 0.45),
+              border: Border.all(color: AppStitchTheme.lightOutline.withValues(alpha: 0.35)),
+            ),
+            child: Text(
+              _fmtTime(value),
+              style: const TextStyle(fontWeight: FontWeight.w900, color: AppStitchTheme.lightOnSurface),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -714,86 +918,77 @@ class _SeatBookingPageState extends State<SeatBookingPage> {
             children: [
               Padding(
                 padding: const EdgeInsets.fromLTRB(16, 12, 16, 10),
-                child: Row(
-                  children: [
-                    IconButton(
-                      onPressed: () => Navigator.pop(context),
-                      icon: const Icon(Icons.arrow_back_rounded),
-                    ),
-                    const SizedBox(width: 6),
-                    Expanded(
-                      child: Text(
-                        'Seat Booking',
-                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                              fontWeight: FontWeight.w900,
-                            ),
+                child: GlassCard(
+                  padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
+                  child: Row(
+                    children: [
+                      IconButton(
+                        onPressed: () => Navigator.pop(context),
+                        icon: const Icon(Icons.arrow_back_rounded),
                       ),
-                    ),
-                    IconButton(
-                      onPressed: _fetchBookings,
-                      icon: const Icon(Icons.refresh_rounded),
-                      tooltip: 'Refresh',
-                    ),
-                  ],
+                      const SizedBox(width: 4),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Seat Booking',
+                              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                    fontWeight: FontWeight.w900,
+                                  ),
+                            ),
+                            const SizedBox(height: 2),
+                            _chip(
+                              icon: Icons.location_on_rounded,
+                              label: _officePillLabel(),
+                              onTap: _openLocationFloorSheet,
+                            ),
+                          ],
+                        ),
+                      ),
+                      IconButton(
+                        onPressed: _fetchBookings,
+                        icon: const Icon(Icons.refresh_rounded),
+                        tooltip: 'Refresh',
+                      ),
+                    ],
+                  ),
                 ),
               ),
               Padding(
-                padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
                 child: GlassCard(
-                  padding: const EdgeInsets.all(14),
-                  child: Column(
+                  padding: const EdgeInsets.fromLTRB(10, 10, 10, 10),
+                  child: Row(
                     children: [
-                      Row(
-                        children: [
-                          Expanded(child: _locationDropdown()),
-                          const SizedBox(width: 10),
-                          Expanded(child: _floorDropdown()),
-                        ],
+                      Expanded(
+                        child: _TabToggle<_SeatBookingTab>(
+                          values: const [_SeatBookingTab.map, _SeatBookingTab.list],
+                          labels: const ['Map', 'List'],
+                          selected: _tab,
+                          onChanged: (v) => setState(() => _tab = v),
+                        ),
                       ),
-                      const SizedBox(height: 10),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: _datePickerTile(
-                              label: 'Target date',
-                              value: _selectedDate,
-                              onChanged: (d) async {
-                                setState(() {
-                                  _selectedDate = d;
-                                  _weeklyStartDate = d;
-                                });
-                                await _fetchBookings();
-                              },
-                            ),
-                          ),
-                          const SizedBox(width: 10),
-                          Expanded(
-                            child: _timePickerTile(
-                              label: 'Start',
-                              value: _targetStart,
-                              onChanged: (t) async {
-                                setState(() => _targetStart = t);
-                                await _fetchBookings();
-                              },
-                            ),
-                          ),
-                          const SizedBox(width: 10),
-                          Expanded(
-                            child: _timePickerTile(
-                              label: 'End',
-                              value: _targetEnd,
-                              onChanged: (t) async {
-                                setState(() => _targetEnd = t);
-                                await _fetchBookings();
-                              },
-                            ),
-                          ),
-                        ],
-                      ),
-                      if (_loadingBookings || _loadingSeats || _loadingFloors)
-                        const Padding(
-                          padding: EdgeInsets.only(top: 10),
-                          child: LinearProgressIndicator(minHeight: 2),
+                      const SizedBox(width: 10),
+                      if (_tab == _SeatBookingTab.list)
+                        _chip(
+                          icon: Icons.event_rounded,
+                          label: _fmtDate(_selectedDate),
+                          onTap: () async {
+                            final now = DateTime.now();
+                            final picked = await showDatePicker(
+                              context: context,
+                              initialDate: _selectedDate,
+                              firstDate: DateTime(now.year - 1),
+                              lastDate: DateTime(now.year + 3),
+                            );
+                            if (picked == null) return;
+                            setState(() {
+                              _selectedDate = picked;
+                              _weeklyStartDate = picked;
+                            });
+                            await _fetchBookings();
+                          },
                         ),
                     ],
                   ),
@@ -802,49 +997,341 @@ class _SeatBookingPageState extends State<SeatBookingPage> {
               Expanded(
                 child: Padding(
                   padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                  child: _tab == _SeatBookingTab.map
+                      ? GlassCard(
+                          padding: const EdgeInsets.all(0),
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(24),
+                            child: _buildMapTab(
+                              floor: floor,
+                              elements: elements,
+                              canvasW: canvasW,
+                              canvasH: canvasH,
+                            ),
+                          ),
+                        )
+                      : _buildListTab(elements: elements),
+                ),
+              ),
+              if (_tab == _SeatBookingTab.map)
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
                   child: GlassCard(
-                    padding: const EdgeInsets.all(0),
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(24),
-                      child: floor == null
-                          ? _emptyState('No floor selected.')
-                          : elements.isEmpty
-                              ? _emptyState('No layout mapped for this floor.')
-                              : InteractiveViewer(
-                                  minScale: 0.35,
-                                  maxScale: 3.5,
-                                  boundaryMargin: const EdgeInsets.all(80),
-                                  child: SizedBox(
-                                    width: canvasW,
-                                    height: canvasH,
-                                    child: Stack(
-                                      children: [
-                                        ...elements
-                                            .where((e) => e.type == 'zone' || e.type == 'room')
-                                            .map(_zoneWidget),
-                                        ...elements.where((e) => e.type == 'label').map(_labelWidget),
-                                        ...elements.where((e) => e.type == 'seat').map(_seatWidget),
-                                      ],
-                                    ),
-                                  ),
-                                ),
+                    padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                      children: [
+                        _legendDot(const Color(0xFF10B981), 'Available'),
+                        _legendDot(const Color(0xFFF59E0B), 'Booked'),
+                        _legendDot(const Color(0xFFD946EF), 'Permanent'),
+                      ],
                     ),
                   ),
                 ),
-              ),
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-                child: GlassCard(
-                  padding: const EdgeInsets.fromLTRB(14, 10, 14, 10),
-                  child: Row(
-                    children: [
-                      _legendDot(const Color(0xFF10B981), 'Available'),
-                      const SizedBox(width: 12),
-                      _legendDot(const Color(0xFFFB923C), 'Booked'),
-                      const SizedBox(width: 12),
-                      _legendDot(const Color(0xFFF472B6), 'Permanent'),
-                    ],
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _openTimeRangeSheet() async {
+    final picked = await showModalBottomSheet<TimeRangeResult>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => TimeRangeSheet(
+        initialStart: _targetStart,
+        initialEnd: _targetEnd,
+      ),
+    );
+    if (picked == null) return;
+    setState(() {
+      _targetStart = picked.start;
+      _targetEnd = picked.end;
+    });
+    await _fetchBookings();
+  }
+
+  Future<void> _openLocationFloorSheet() async {
+    if (_loadingLocations || _loadingFloors) return;
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) {
+        return Padding(
+          padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+          child: GlassCard(
+            borderRadius: 22,
+            padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Center(
+                  child: Container(
+                    width: 40,
+                    height: 5,
+                    margin: const EdgeInsets.only(bottom: 12),
+                    decoration: BoxDecoration(
+                      color: AppStitchTheme.lightOutline.withValues(alpha: 0.8),
+                      borderRadius: BorderRadius.circular(99),
+                    ),
                   ),
+                ),
+                const SizedBox(height: 10),
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        'Choose office & floor',
+                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                              fontWeight: FontWeight.w900,
+                            ),
+                      ),
+                    ),
+                    IconButton(
+                      onPressed: () => Navigator.pop(ctx),
+                      icon: const Icon(Icons.close_rounded),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                _locationDropdown(),
+                const SizedBox(height: 10),
+                _floorDropdown(),
+                const SizedBox(height: 10),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildMapTab({
+    required OfficeFloor? floor,
+    required List<LayoutElement> elements,
+    required double canvasW,
+    required double canvasH,
+  }) {
+    if (floor == null) return _emptyState('No floor selected.');
+    if (elements.isEmpty) return _emptyState('No layout mapped for this floor.');
+
+    return Stack(
+      children: [
+        InteractiveViewer(
+          transformationController: _mapTransform,
+          minScale: 0.15,
+          maxScale: 5.0,
+          clipBehavior: Clip.none,
+          boundaryMargin: const EdgeInsets.all(double.infinity),
+          child: SizedBox(
+            width: canvasW,
+            height: canvasH,
+            child: Stack(
+              clipBehavior: Clip.none,
+              children: [
+                const Positioned.fill(child: _MapDotGrid()),
+                ...elements
+                    .where((e) => e.type == 'zone' || e.type == 'room')
+                    .map(_zoneWidget),
+                ...elements.where((e) => e.type == 'label').map(_labelWidget),
+                ...elements.where((e) => e.type == 'seat').map(_seatWidget),
+              ],
+            ),
+          ),
+        ),
+        Positioned(
+          left: 12,
+          top: 12,
+          right: 80,
+          child: _floatingFilterBar(),
+        ),
+        Positioned(
+          right: 12,
+          top: 12,
+          child: _floatingToolbar(),
+        ),
+        if (_loadingBookings || _loadingSeats || _loadingFloors)
+          const Positioned(
+            left: 0,
+            right: 0,
+            top: 0,
+            child: LinearProgressIndicator(minHeight: 2),
+          ),
+      ],
+    );
+  }
+
+  Widget _floatingFilterBar() {
+    return GlassCard(
+      blurSigma: 18,
+      padding: const EdgeInsets.fromLTRB(10, 8, 10, 8),
+      child: Row(
+        children: [
+          Expanded(
+            child: _chip(
+              icon: Icons.event_rounded,
+              label: _fmtDate(_selectedDate),
+              onTap: () async {
+                final now = DateTime.now();
+                final picked = await showDatePicker(
+                  context: context,
+                  initialDate: _selectedDate,
+                  firstDate: DateTime(now.year - 1),
+                  lastDate: DateTime(now.year + 3),
+                );
+                if (picked == null) return;
+                setState(() {
+                  _selectedDate = picked;
+                  _weeklyStartDate = picked;
+                });
+                await _fetchBookings();
+              },
+            ),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: _chip(
+              icon: Icons.schedule_rounded,
+              label: '${_fmtTime(_targetStart)}–${_fmtTime(_targetEnd)}',
+              onTap: _openTimeRangeSheet,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _floatingToolbar() {
+    return GlassCard(
+      blurSigma: 18,
+      padding: const EdgeInsets.all(6),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          _toolIcon(Icons.search_rounded, 'Search', _openSeatSearch),
+          const SizedBox(height: 6),
+          _toolIcon(Icons.info_outline_rounded, 'Legend', () => showLegendPopover(context)),
+          const SizedBox(height: 6),
+          _toolIcon(Icons.center_focus_strong_rounded, 'Fit', _fitToFloor),
+        ],
+      ),
+    );
+  }
+
+  Widget _toolIcon(IconData icon, String tooltip, VoidCallback onTap) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(14),
+        onTap: onTap,
+        child: Tooltip(
+          message: tooltip,
+          child: Container(
+            width: 44,
+            height: 44,
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(14),
+              color: Colors.white.withValues(alpha: 0.62),
+              border: Border.all(color: Colors.white.withValues(alpha: 0.85)),
+            ),
+            child: Icon(icon, color: AppStitchTheme.lightOnSurface),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildListTab({required List<LayoutElement> elements}) {
+    final seats = elements.where((e) => e.type == 'seat').toList();
+    return SeatSearchList(
+      seats: seats,
+      bookingForSeatNumber: (seatNumber) => _bookingBySeatNumber[seatNumber.toLowerCase()],
+      initialsFromName: _initialsFromName,
+      onViewOnMap: (seat) {
+        setState(() {
+          _tab = _SeatBookingTab.map;
+        });
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          _jumpToSeat(seat);
+          _onSeatTap(seat);
+        });
+      },
+    );
+  }
+
+  Future<void> _openSeatSearch() async {
+    final floor = _selectedFloor;
+    if (floor == null) return;
+    final el = await showModalBottomSheet<LayoutElement>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) {
+        final seats = floor.elements.where((e) => e.type == 'seat').toList();
+        return SeatSearchSheet(
+          seats: seats,
+          bookingForSeatNumber: (seatNumber) => _bookingBySeatNumber[seatNumber.toLowerCase()],
+          initialsFromName: _initialsFromName,
+        );
+      },
+    );
+    if (el == null) return;
+    _jumpToSeat(el);
+    await _onSeatTap(el);
+  }
+
+  void _fitToFloor() {
+    _mapTransform.value = Matrix4.identity();
+  }
+
+  void _jumpToSeat(LayoutElement seat) {
+    // Better dynamic jump scaling for different screens
+    final scale = 1.35;
+    // Calculate a safer offset assuming typical mobile screen bounds
+    final tx = -(seat.x * scale) + 160;
+    final ty = -(seat.y * scale) + 280;
+    
+    _mapTransform.value = Matrix4.identity()
+      ..translate(tx, ty)
+      ..scale(scale);
+  }
+
+  Widget _chip({
+    required IconData icon,
+    required String label,
+    required VoidCallback onTap,
+  }) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(AppStitchTheme.radiusPill),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(AppStitchTheme.radiusPill),
+            color: Colors.white.withValues(alpha: 0.55),
+            border: Border.all(
+              color: AppStitchTheme.lightOutline.withValues(alpha: 0.65),
+            ),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(icon, size: 16, color: AppStitchTheme.primary),
+              const SizedBox(width: 6),
+              Flexible(
+                child: Text(
+                  label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                        fontWeight: FontWeight.w800,
+                      ),
                 ),
               ),
             ],
@@ -970,7 +1457,7 @@ class _SeatBookingPageState extends State<SeatBookingPage> {
           width: el.width,
           height: el.height,
           decoration: BoxDecoration(
-            color: c.withValues(alpha: 0.10),
+            color: c.withValues(alpha: el.type == 'room' ? 0.14 : 0.10),
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
               color: c.withValues(alpha: el.type == 'room' ? 0.6 : 0.4),
@@ -980,13 +1467,14 @@ class _SeatBookingPageState extends State<SeatBookingPage> {
           child: Align(
             alignment: Alignment.topLeft,
             child: Padding(
-              padding: const EdgeInsets.all(6),
+              padding: const EdgeInsets.all(8),
               child: Text(
                 el.name,
                 style: TextStyle(
                   color: c,
-                  fontSize: 11,
+                  fontSize: el.type == 'room' ? 13 : 11,
                   fontWeight: FontWeight.w900,
+                  letterSpacing: 0.5,
                 ),
               ),
             ),
@@ -1009,9 +1497,10 @@ class _SeatBookingPageState extends State<SeatBookingPage> {
             el.name,
             textAlign: TextAlign.center,
             style: TextStyle(
-              color: c,
-              fontSize: 16,
+              color: c.withValues(alpha: 0.85),
+              fontSize: 18,
               fontWeight: FontWeight.w900,
+              letterSpacing: 1.2,
             ),
           ),
         ),
@@ -1022,6 +1511,10 @@ class _SeatBookingPageState extends State<SeatBookingPage> {
   Widget _seatWidget(LayoutElement el) {
     final color = _seatColor(el);
     final isSelected = _selectedSeatEl?.id == el.id;
+    final booking = _bookingForSeat(el);
+    final initials = booking == null ? null : _initialsFromName(booking.employeeDetails.name);
+    final hitW = math.max(34.0, el.width);
+    final hitH = math.max(34.0, el.height);
     return Positioned(
       left: el.x,
       top: el.y,
@@ -1032,32 +1525,80 @@ class _SeatBookingPageState extends State<SeatBookingPage> {
           child: InkWell(
             borderRadius: BorderRadius.circular(10),
             onTap: () => _onSeatTap(el),
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 150),
-              width: el.width,
-              height: el.height,
-              decoration: BoxDecoration(
-                color: color,
-                borderRadius: BorderRadius.circular(10),
-                border: Border.all(
-                  color: isSelected ? const Color(0xFF3B82F6) : Colors.white,
-                  width: isSelected ? 3 : 1,
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.15),
-                    blurRadius: 6,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
-              ),
+            onLongPress: () {
+              final b = _bookingForSeat(el);
+              final msg = b == null
+                  ? 'Seat ${el.name} • Available'
+                  : 'Seat ${el.name} • ${b.employeeDetails.name}';
+              _toastOk(msg);
+            },
+            child: SizedBox(
+              width: hitW,
+              height: hitH,
               child: Center(
-                child: Text(
-                  el.name,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 11,
-                    fontWeight: FontWeight.w900,
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 150),
+                  width: el.width,
+                  height: el.height,
+                  decoration: BoxDecoration(
+                    color: color,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: isSelected ? AppStitchTheme.primary : Colors.white.withValues(alpha: 0.9),
+                      width: isSelected ? 2.5 : 1,
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: color.withValues(alpha: 0.25),
+                        blurRadius: 8,
+                        offset: const Offset(0, 3),
+                      ),
+                      if (isSelected)
+                        BoxShadow(
+                          color: AppStitchTheme.primary.withValues(alpha: 0.45),
+                          blurRadius: 18,
+                          spreadRadius: 1,
+                          offset: const Offset(0, 4),
+                        ),
+                    ],
+                  ),
+                  child: Stack(
+                    children: [
+                      Center(
+                        child: Text(
+                          el.name,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 11,
+                            fontWeight: FontWeight.w900,
+                          ),
+                        ),
+                      ),
+                      if (initials != null)
+                        Positioned(
+                          right: 4,
+                          bottom: 4,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+                            decoration: BoxDecoration(
+                              color: Colors.black.withValues(alpha: 0.28),
+                              borderRadius: BorderRadius.circular(999),
+                              border: Border.all(
+                                color: Colors.white.withValues(alpha: 0.35),
+                              ),
+                            ),
+                            child: Text(
+                              initials,
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 9,
+                                fontWeight: FontWeight.w900,
+                                letterSpacing: 0.4,
+                              ),
+                            ),
+                          ),
+                        ),
+                    ],
                   ),
                 ),
               ),
@@ -1075,9 +1616,93 @@ class _SeatBookingPageState extends State<SeatBookingPage> {
     final value = int.parse(s, radix: 16);
     return Color(0xFF000000 | value);
   }
+
+  // Subtle dotted grid behind the map to add depth cues.
+  // (Paint-only; does not affect backend behavior or hit-testing.)
 }
 
-extension _FirstOrNullX<T> on Iterable<T> {
-  T? get firstOrNull => isEmpty ? null : first;
+class _MapDotGrid extends StatelessWidget {
+  const _MapDotGrid();
+
+  @override
+  Widget build(BuildContext context) {
+    return IgnorePointer(
+      child: CustomPaint(
+        painter: _DotGridPainter(),
+      ),
+    );
+  }
+}
+
+class _DotGridPainter extends CustomPainter {
+  static const double step = 18;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = Colors.black.withValues(alpha: 0.06)
+      ..style = PaintingStyle.fill;
+    for (double y = 0; y <= size.height; y += step) {
+      for (double x = 0; x <= size.width; x += step) {
+        canvas.drawCircle(Offset(x, y), 1.0, paint);
+      }
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}
+
+class _TabToggle<T> extends StatelessWidget {
+  final List<T> values;
+  final List<String> labels;
+  final T selected;
+  final ValueChanged<T> onChanged;
+
+  const _TabToggle({
+    required this.values,
+    required this.labels,
+    required this.selected,
+    required this.onChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GlassCard(
+      borderRadius: 22,
+      padding: const EdgeInsets.all(6),
+      child: Row(
+        children: List.generate(values.length, (i) {
+          final value = values[i];
+          final label = labels[i];
+          final isActive = value == selected;
+          return Expanded(
+            child: InkWell(
+              onTap: () => onChanged(value),
+              borderRadius: BorderRadius.circular(18),
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 220),
+                curve: Curves.easeOutCubic,
+                padding: const EdgeInsets.symmetric(vertical: 10),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(18),
+                  color: isActive ? AppStitchTheme.primary.withValues(alpha: 0.12) : Colors.transparent,
+                ),
+                child: Center(
+                  child: Text(
+                    label,
+                    style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                          fontWeight: FontWeight.w900,
+                          color: isActive ? AppStitchTheme.primary : AppStitchTheme.lightOnSurfaceMuted,
+                        ),
+                  ),
+                ),
+              ),
+            ),
+          );
+        }),
+      ),
+    );
+  }
 }
 

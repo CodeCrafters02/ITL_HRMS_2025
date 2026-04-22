@@ -1,3 +1,5 @@
+import { authFetch } from '../../../utils/authFetch';
+
 export interface LeaveBalance {
     id: number;
     leave_name: string;
@@ -36,10 +38,8 @@ const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000
 const EMPLOYEE_API = `${API_BASE_URL}/employee`;
 
 const authHeaders = (json = true): HeadersInit => {
-    const token = localStorage.getItem('access_token');
     const headers: Record<string, string> = {};
     if (json) headers['Content-Type'] = 'application/json';
-    if (token) headers.Authorization = `Bearer ${token}`;
     return headers;
 };
 
@@ -63,7 +63,7 @@ const parseJson = async <T>(res: Response): Promise<T> => {
 };
 
 export const fetchLeaveBalances = async (): Promise<LeaveBalance[]> => {
-    const res = await fetch(`${EMPLOYEE_API}/leaves-list/`, { headers: authHeaders(false) });
+    const res = await authFetch(`${EMPLOYEE_API}/leaves-list/`, { headers: authHeaders(false) });
     return parseJson<LeaveBalance[]>(res);
 };
 
@@ -81,7 +81,7 @@ export const fetchMyLeaveRequests = async (params?: { page?: number; page_size?:
         if (params.search) url.searchParams.set('search', params.search);
         if (params.status && params.status !== 'all') url.searchParams.set('status', params.status);
     }
-    const res = await fetch(url.toString(), { headers: authHeaders(false) });
+    const res = await authFetch(url.toString(), { headers: authHeaders(false) });
     const data = await parseJson<any>(res);
     
     // Handle both paginated and non-paginated (backward compatibility) responses
@@ -102,7 +102,7 @@ export const fetchMyLeaveRequests = async (params?: { page?: number; page_size?:
 };
 
 export const createLeaveRequest = async (payload: CreateLeavePayload): Promise<LeaveRequest> => {
-    const res = await fetch(`${EMPLOYEE_API}/employee-leave-create/`, {
+    const res = await authFetch(`${EMPLOYEE_API}/employee-leave-create/`, {
         method: 'POST',
         headers: authHeaders(true),
         body: JSON.stringify(payload),
@@ -111,7 +111,7 @@ export const createLeaveRequest = async (payload: CreateLeavePayload): Promise<L
 };
 
 export const cancelLeaveRequest = async (leaveId: number): Promise<void> => {
-    const res = await fetch(`${EMPLOYEE_API}/emp-leaves/${leaveId}/cancel/`, {
+    const res = await authFetch(`${EMPLOYEE_API}/emp-leaves/${leaveId}/cancel/`, {
         method: 'POST',
         headers: authHeaders(false),
     });

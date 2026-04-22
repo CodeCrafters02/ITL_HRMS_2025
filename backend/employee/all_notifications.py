@@ -9,6 +9,7 @@ import json
 import time
 from django.http import StreamingHttpResponse
 from django.views import View
+from rest_framework.pagination import PageNumberPagination
 
 
 
@@ -45,6 +46,12 @@ class NotificationSSEView(View):
                     time.sleep(2)  # Only sleep if nothing was sent
 
         return StreamingHttpResponse(event_stream(request.user), content_type='text/event-stream')
+
+
+class NotificationPagination(PageNumberPagination):
+    page_size = 10
+    page_size_query_param = "page_size"
+    max_page_size = 100
 
 
 class AllNotificationsAPIView(APIView):
@@ -157,4 +164,24 @@ class AllNotificationsAPIView(APIView):
                 unique_notifications.append(notif)
         
         unique_notifications.sort(key=sort_key, reverse=True)
-        return Response(unique_notifications)
+
+        lowered_search = (request.query_params.get("search") or "").strip().lower()
+        notification_type = (request.query_params.get("type") or "all").strip().lower()
+        unread_only = (request.query_params.get("unread") or "").strip().lower() in {"1", "true", "yes"}
+
+        filtered_notifications = []
+        for notif in unique_notifications:
+            notif_type = str(notif.get("type") or "").lower()
+            notif_title = str(notif.get("title") or "").lower()
+            notif_desc = str(notif.get("description") or "").lower()
+
+            type_matches = notification_type in {"", "all"} or notif_type == notification_type
+            unread_matches = not unread_only or notif.get("read") is False
+            search_matches = not lowered_search or lowered_search in notif_title or lowered_search in notif_desc or lowered_search in notif_type
+
+            if type_matches and unread_matches and search_matches:
+                filtered_notifications.append(notif)
+
+        paginator = NotificationPagination()
+        paginated = paginator.paginate_queryset(filtered_notifications, request, view=self)
+        return paginator.get_paginated_response(paginated)

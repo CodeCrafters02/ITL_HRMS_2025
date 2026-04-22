@@ -6,6 +6,7 @@ import IconLayoutGrid from '../../../components/Icon/IconLayoutGrid';
 import IconListCheck from '../../../components/Icon/IconListCheck';
 import IconEye from '../../../components/Icon/IconEye';
 import { LearningResource, fetchLearningResources } from './api';
+import { authFetch } from '../../../utils/authFetch';
 
 type ResourceFilter = 'all' | 'image' | 'video' | 'document';
 type ViewMode = 'card' | 'table';
@@ -13,6 +14,13 @@ type ViewMode = 'card' | 'table';
 const buildAssetUrl = (value?: string | null) => {
     if (!value) return null;
     return value.startsWith('http') ? value : value;
+};
+
+const buildDownloadFilename = (title: string, imageUrl: string) => {
+    const extFromUrl = imageUrl.split('?')[0].split('.').pop();
+    const ext = extFromUrl && extFromUrl.length <= 5 ? extFromUrl : 'jpg';
+    const safeTitle = title.trim().replace(/[^a-zA-Z0-9-_ ]/g, '').replace(/\s+/g, '_') || 'learning_image';
+    return `${safeTitle}.${ext}`;
 };
 
 const LearningCorner = () => {
@@ -24,50 +32,78 @@ const LearningCorner = () => {
     const [filter, setFilter] = useState<ResourceFilter>('all');
     const [viewMode, setViewMode] = useState<ViewMode>('card');
     const [selectedItem, setSelectedItem] = useState<LearningResource | null>(null);
+    const [previewImage, setPreviewImage] = useState<{ url: string; title: string } | null>(null);
+    const [page, setPage] = useState(1);
+    const [pageSize, setPageSize] = useState(10);
+    const [totalCount, setTotalCount] = useState(0);
+    const [totalPages, setTotalPages] = useState(1);
+
+    const handleImageDownload = useCallback(async () => {
+        if (!previewImage?.url) return;
+        try {
+            const response = await authFetch(previewImage.url);
+            if (!response.ok) {
+                throw new Error('Image download failed');
+            }
+            const blob = await response.blob();
+            const objectUrl = window.URL.createObjectURL(blob);
+            const anchor = document.createElement('a');
+            anchor.href = objectUrl;
+            anchor.download = buildDownloadFilename(previewImage.title, previewImage.url);
+            document.body.appendChild(anchor);
+            anchor.click();
+            document.body.removeChild(anchor);
+            window.URL.revokeObjectURL(objectUrl);
+        } catch {
+            setError('Failed to download image. Please try again.');
+        }
+    }, [previewImage]);
 
     const loadResources = useCallback(async () => {
         setLoading(true);
         setError(null);
         try {
-            const data = await fetchLearningResources();
-            setResources(data);
+            const data = await fetchLearningResources({
+                page,
+                page_size: pageSize,
+                search: search.trim(),
+                type: filter,
+            });
+            setResources(data.results);
+            setTotalCount(data.count);
+            setTotalPages(data.total_pages);
         } catch (err) {
             const message = err instanceof Error ? err.message : 'Failed to load learning resources';
             setError(message);
         } finally {
             setLoading(false);
         }
-    }, []);
+    }, [page, pageSize, search, filter]);
 
     useEffect(() => {
         dispatch(setPageTitle('Learning Corner'));
     }, [dispatch]);
 
     useEffect(() => {
-        loadResources();
+        const timer = setTimeout(() => {
+            loadResources();
+        }, 300);
+        return () => clearTimeout(timer);
     }, [loadResources]);
 
-    const filteredResources = useMemo(() => {
-        const lowered = search.trim().toLowerCase();
-        return resources.filter((resource) => {
-            const imageUrl = buildAssetUrl(resource.image);
-            const videoUrl = buildAssetUrl(resource.video);
-            const documentUrl = buildAssetUrl(resource.document);
-
-            const typeMatch =
-                filter === 'all' ||
-                (filter === 'image' && !!imageUrl) ||
-                (filter === 'video' && !!videoUrl) ||
-                (filter === 'document' && !!documentUrl);
-
-            const searchMatch =
-                !lowered ||
-                resource.title.toLowerCase().includes(lowered) ||
-                (resource.description || '').toLowerCase().includes(lowered);
-
-            return typeMatch && searchMatch;
-        });
-    }, [resources, filter, search]);
+    const getPageNumbers = () => {
+        const pages: (number | '...')[] = [];
+        if (totalPages <= 7) {
+            for (let i = 1; i <= totalPages; i++) pages.push(i);
+        } else {
+            pages.push(1);
+            if (page > 3) pages.push('...');
+            for (let i = Math.max(2, page - 1); i <= Math.min(totalPages - 1, page + 1); i++) pages.push(i);
+            if (page < totalPages - 2) pages.push('...');
+            pages.push(totalPages);
+        }
+        return pages;
+    };
 
     const imageCount = useMemo(() => resources.filter((r) => !!buildAssetUrl(r.image)).length, [resources]);
     const videoCount = useMemo(() => resources.filter((r) => !!buildAssetUrl(r.video)).length, [resources]);
@@ -75,7 +111,7 @@ const LearningCorner = () => {
 
     return (
         <div className="space-y-6 animate__animated animate__fadeIn">
-            <div className="panel bg-gradient-to-r from-[#0e1726] to-[#1b2e4b] text-white border-0">
+            <div className="panel bg-gradient-to-r from-[#220fb6] via-[#4f6be5] to-[#0f52af] text-white border-0">
                 <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
                     <div>
                         <h1 className="text-2xl md:text-3xl font-extrabold">Learning Platform</h1>
@@ -96,7 +132,7 @@ const LearningCorner = () => {
             <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
                 <div className="panel">
                     <p className="text-white-dark text-xs uppercase tracking-wide">Total Resources</p>
-                    <p className="text-2xl font-bold mt-2">{resources.length}</p>
+                    <p className="text-2xl font-bold mt-2">{totalCount}</p>
                 </div>
                 <div className="panel">
                     <p className="text-white-dark text-xs uppercase tracking-wide">Images</p>
@@ -121,7 +157,10 @@ const LearningCorner = () => {
                                 className="form-input pl-10"
                                 placeholder="Search by title or description..."
                                 value={search}
-                                onChange={(e) => setSearch(e.target.value)}
+                                onChange={(e) => {
+                                    setSearch(e.target.value);
+                                    setPage(1);
+                                }}
                             />
                             <span className="absolute left-3 top-1/2 -translate-y-1/2 text-white-dark">
                                 <IconSearch className="h-4 w-4" />
@@ -129,7 +168,14 @@ const LearningCorner = () => {
                         </div>
                     </div>
 
-                    <select className="form-select" value={filter} onChange={(e) => setFilter(e.target.value as ResourceFilter)}>
+                    <select
+                        className="form-select"
+                        value={filter}
+                        onChange={(e) => {
+                            setFilter(e.target.value as ResourceFilter);
+                            setPage(1);
+                        }}
+                    >
                         <option value="all">All Types</option>
                         <option value="image">Images</option>
                         <option value="video">Videos</option>
@@ -157,13 +203,71 @@ const LearningCorner = () => {
                 </div>
             </div>
 
+            {totalCount > 0 && (
+                <div className="panel">
+                    <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
+                        <div className="text-xs text-white-dark">
+                            Showing <span className="text-primary font-semibold">{(page - 1) * pageSize + 1}</span> to{' '}
+                            <span className="text-primary font-semibold">{Math.min(page * pageSize, totalCount)}</span> of{' '}
+                            <span className="text-primary font-semibold">{totalCount}</span> entries
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <label className="text-xs text-white-dark">Per page</label>
+                            <select
+                                className="form-select w-20 text-xs"
+                                value={pageSize}
+                                onChange={(e) => {
+                                    setPageSize(Number(e.target.value));
+                                    setPage(1);
+                                }}
+                            >
+                                <option value={10}>10</option>
+                                <option value={20}>20</option>
+                                <option value={50}>50</option>
+                            </select>
+                        </div>
+
+                        <ul className="inline-flex items-center gap-1">
+                            <li>
+                                <button type="button" className="btn btn-sm btn-outline-primary px-2.5" onClick={() => setPage(page > 1 ? page - 1 : 1)} disabled={page === 1}>
+                                    Prev
+                                </button>
+                            </li>
+                            {getPageNumbers().map((p, idx) =>
+                                p === '...' ? <li key={`dots-${idx}`} className="px-2 text-white-dark">...</li> : (
+                                    <li key={p}>
+                                        <button
+                                            type="button"
+                                            className={`btn btn-sm ${page === p ? 'btn-primary' : 'btn-outline-primary'} min-w-[34px]`}
+                                            onClick={() => setPage(p as number)}
+                                        >
+                                            {p}
+                                        </button>
+                                    </li>
+                                ),
+                            )}
+                            <li>
+                                <button
+                                    type="button"
+                                    className="btn btn-sm btn-outline-primary px-2.5"
+                                    onClick={() => setPage(page < totalPages ? page + 1 : totalPages)}
+                                    disabled={page === totalPages || totalPages === 0}
+                                >
+                                    Next
+                                </button>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            )}
+
             {loading ? (
                 <div className="panel text-center py-12 text-white-dark">Loading learning resources...</div>
-            ) : filteredResources.length === 0 ? (
+            ) : resources.length === 0 ? (
                 <div className="panel text-center py-12 text-white-dark">No resources found for your current filters.</div>
             ) : viewMode === 'card' ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
-                    {filteredResources.map((resource) => {
+                    {resources.map((resource) => {
                         const imageUrl = buildAssetUrl(resource.image);
                         const videoUrl = buildAssetUrl(resource.video);
                         const documentUrl = buildAssetUrl(resource.document);
@@ -183,9 +287,13 @@ const LearningCorner = () => {
                                 </div>
                                 <div className="mt-4 space-y-1 text-sm">
                                     {imageUrl && (
-                                        <a href={imageUrl} target="_blank" rel="noreferrer" className="text-info hover:underline block">
+                                        <button
+                                            type="button"
+                                            className="text-info hover:underline block"
+                                            onClick={() => setPreviewImage({ url: imageUrl, title: resource.title })}
+                                        >
                                             Open image
-                                        </a>
+                                        </button>
                                     )}
                                     {videoUrl && (
                                         <a href={videoUrl} target="_blank" rel="noreferrer" className="text-success hover:underline block">
@@ -215,7 +323,7 @@ const LearningCorner = () => {
                                 </tr>
                             </thead>
                             <tbody>
-                                {filteredResources.map((resource) => {
+                                {resources.map((resource) => {
                                     const imageUrl = buildAssetUrl(resource.image);
                                     const videoUrl = buildAssetUrl(resource.video);
                                     const documentUrl = buildAssetUrl(resource.document);
@@ -286,6 +394,27 @@ const LearningCorner = () => {
                                     <p className="text-white-dark text-sm">No document attached.</p>
                                 )}
                             </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {previewImage && (
+                <div className="fixed inset-0 z-[1001] bg-black/70 p-4 flex items-center justify-center" onClick={() => setPreviewImage(null)}>
+                    <div className="panel w-full max-w-4xl max-h-[92vh] overflow-auto dark:bg-[#0e1726]" onClick={(e) => e.stopPropagation()}>
+                        <div className="flex flex-wrap items-center justify-between gap-3">
+                            <h3 className="text-lg font-bold">{previewImage.title}</h3>
+                            <div className="flex items-center gap-2">
+                                <button type="button" className="btn btn-sm btn-primary" onClick={handleImageDownload}>
+                                    Download image
+                                </button>
+                                <button type="button" className="btn btn-sm btn-outline-danger" onClick={() => setPreviewImage(null)}>
+                                    Close
+                                </button>
+                            </div>
+                        </div>
+                        <div className="mt-4">
+                            <img src={previewImage.url} alt={previewImage.title} className="w-full max-h-[72vh] object-contain rounded-lg border border-white-light dark:border-[#1b2e4b]" />
                         </div>
                     </div>
                 </div>
