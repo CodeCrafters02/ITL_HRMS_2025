@@ -9,6 +9,39 @@ import '../models/chat_user_model.dart';
 import '../services/chat_service.dart';
 import '../services/storage_service.dart';
 
+class PendingAttachmentMessage {
+  final int localId;
+  final int conversationId;
+  final ChatUser me;
+  final String caption;
+  final File file;
+  final DateTime createdAt;
+
+  const PendingAttachmentMessage({
+    required this.localId,
+    required this.conversationId,
+    required this.me,
+    required this.caption,
+    required this.file,
+    required this.createdAt,
+  });
+
+  bool get isImage {
+    final p = file.path.toLowerCase();
+    return p.endsWith('.png') ||
+        p.endsWith('.jpg') ||
+        p.endsWith('.jpeg') ||
+        p.endsWith('.webp') ||
+        p.endsWith('.gif') ||
+        p.endsWith('.heic');
+  }
+
+  String get fileName {
+    final parts = file.path.split(Platform.pathSeparator);
+    return parts.isNotEmpty ? parts.last : 'attachment';
+  }
+}
+
 class ChatProvider extends ChangeNotifier {
   final ChatService _service;
 
@@ -40,6 +73,15 @@ class ChatProvider extends ChangeNotifier {
 
   bool _reconnecting = false;
   bool get reconnecting => _reconnecting;
+
+  bool _wsEverConnected = false;
+  bool get wsEverConnected => _wsEverConnected;
+
+  final Set<int> _pendingMessageIds = <int>{};
+  bool isPendingMessage(int messageId) => _pendingMessageIds.contains(messageId);
+
+  PendingAttachmentMessage? _pendingAttachment;
+  PendingAttachmentMessage? get pendingAttachment => _pendingAttachment;
 
   Timer? _unreadPollTimer;
   Timer? _threadSyncTimer;
@@ -114,6 +156,11 @@ class ChatProvider extends ChangeNotifier {
       _error = null;
       final msgs = await _service.fetchMessages(conversationId: conversationId);
       _messages = msgs;
+      // Server sync clears optimistic pending states.
+      _pendingMessageIds.clear();
+      if (_pendingAttachment?.conversationId == conversationId) {
+        _pendingAttachment = null;
+      }
     } catch (e) {
       _error = e.toString();
     } finally {
@@ -163,8 +210,9 @@ class ChatProvider extends ChangeNotifier {
     if (content.isEmpty) return;
 
     // Optimistic append
+    final optimisticId = DateTime.now().millisecondsSinceEpoch;
     final optimistic = ChatMessage(
-      id: DateTime.now().millisecondsSinceEpoch,
+      id: optimisticId,
       conversationId: conversationId,
       sender: me,
       content: content,
@@ -173,6 +221,7 @@ class ChatProvider extends ChangeNotifier {
       attachmentMime: null,
       createdAt: DateTime.now(),
     );
+    _pendingMessageIds.add(optimisticId);
     _messages = List.of(_messages)..add(optimistic);
     notifyListeners();
 
@@ -198,9 +247,31 @@ class ChatProvider extends ChangeNotifier {
     required String text,
     required File file,
   }) async {
-    await _service.sendAttachment(conversationId: conversationId, content: text, file: file);
-    await refreshMessages(conversationId: conversationId, showLoading: false);
-    await refreshConversations(showLoading: false);
+    final me = await getMe();
+    final localId = DateTime.now().millisecondsSinceEpoch;
+    _pendingAttachment = PendingAttachmentMessage(
+      localId: localId,
+      conversationId: conversationId,
+      me: me,
+      caption: text.trim(),
+      file: file,
+      createdAt: DateTime.now(),
+    );
+    notifyListeners();
+
+    try {
+      await _service.sendAttachment(
+        conversationId: conversationId,
+        content: text,
+        file: file,
+      );
+    } finally {
+      // Sync and clear pending (even on error, refresh will update error state elsewhere).
+      _pendingAttachment = null;
+      notifyListeners();
+      await refreshMessages(conversationId: conversationId, showLoading: false);
+      await refreshConversations(showLoading: false);
+    }
   }
 
   Future<ChatUser> getMe() async {
@@ -225,6 +296,7 @@ class ChatProvider extends ChangeNotifier {
     try {
       await _service.connect();
       _wsConnected = true;
+      _wsEverConnected = true;
       _reconnecting = false;
       _bindWs();
       notifyListeners();

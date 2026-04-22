@@ -67,6 +67,9 @@ class _CreateGroupSheetState extends State<CreateGroupSheet> {
 
   @override
   Widget build(BuildContext context) {
+    final media = MediaQuery.of(context);
+    final maxHeight = media.size.height * 0.86;
+
     return SafeArea(
       child: Material(
         color: Colors.transparent,
@@ -77,13 +80,15 @@ class _CreateGroupSheetState extends State<CreateGroupSheet> {
               left: 16,
               right: 16,
               top: 16,
-              bottom: MediaQuery.of(context).viewInsets.bottom + 16,
+              bottom: media.viewInsets.bottom + 16,
             ),
-            child: GlassCard(
-              padding: const EdgeInsets.fromLTRB(14, 14, 14, 14),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
+            child: ConstrainedBox(
+              constraints: BoxConstraints(maxHeight: maxHeight),
+              child: GlassCard(
+                padding: const EdgeInsets.fromLTRB(14, 14, 14, 14),
+                child: Column(
+                  mainAxisSize: MainAxisSize.max,
+                  children: [
                   Row(
                     children: [
                       Expanded(
@@ -152,8 +157,7 @@ class _CreateGroupSheetState extends State<CreateGroupSheet> {
                     ),
                   ),
                   const SizedBox(height: 10),
-                  SizedBox(
-                    height: 320,
+                  Expanded(
                     child: _loading
                         ? const Center(child: CircularProgressIndicator())
                         : (_error != null)
@@ -168,6 +172,8 @@ class _CreateGroupSheetState extends State<CreateGroupSheet> {
                                 ),
                               )
                             : ListView.separated(
+                                keyboardDismissBehavior:
+                                    ScrollViewKeyboardDismissBehavior.onDrag,
                                 itemCount: _results.length,
                                 separatorBuilder: (_, __) =>
                                     const SizedBox(height: 6),
@@ -216,26 +222,30 @@ class _CreateGroupSheetState extends State<CreateGroupSheet> {
                                                 Text(
                                                   u.displayName,
                                                   maxLines: 1,
-                                                  overflow: TextOverflow.ellipsis,
+                                                  overflow:
+                                                      TextOverflow.ellipsis,
                                                   style: Theme.of(context)
                                                       .textTheme
                                                       .titleSmall
                                                       ?.copyWith(
-                                                        fontWeight: FontWeight.w900,
+                                                        fontWeight:
+                                                            FontWeight.w900,
                                                       ),
                                                 ),
                                                 const SizedBox(height: 2),
                                                 Text(
                                                   u.email,
                                                   maxLines: 1,
-                                                  overflow: TextOverflow.ellipsis,
+                                                  overflow:
+                                                      TextOverflow.ellipsis,
                                                   style: Theme.of(context)
                                                       .textTheme
                                                       .bodySmall
                                                       ?.copyWith(
                                                         color: AppStitchTheme
                                                             .lightOnSurfaceMuted,
-                                                        fontWeight: FontWeight.w600,
+                                                        fontWeight:
+                                                            FontWeight.w600,
                                                       ),
                                                 ),
                                               ],
@@ -299,7 +309,8 @@ class _CreateGroupSheetState extends State<CreateGroupSheet> {
                       ),
                     ),
                   ],
-                ],
+                  ],
+                ),
               ),
             ),
           ),

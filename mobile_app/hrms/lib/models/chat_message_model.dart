@@ -22,8 +22,17 @@ class ChatMessage {
   });
 
   bool get hasAttachment => attachmentUrl != null && attachmentUrl!.isNotEmpty;
-  bool get isImageAttachment =>
-      (attachmentMime ?? '').toLowerCase().startsWith('image/');
+  bool get isImageAttachment {
+    final mime = (attachmentMime ?? '').toLowerCase();
+    if (mime.startsWith('image/')) return true;
+    final name = (attachmentName ?? attachmentUrl ?? '').toLowerCase();
+    return name.endsWith('.png') ||
+        name.endsWith('.jpg') ||
+        name.endsWith('.jpeg') ||
+        name.endsWith('.webp') ||
+        name.endsWith('.gif') ||
+        name.endsWith('.heic');
+  }
 
   factory ChatMessage.fromJson(Map<String, dynamic> json) {
     final createdRaw = (json['created_at'] ?? '').toString();

@@ -18,6 +18,7 @@ class _ChatConversationsPageState extends State<ChatConversationsPage>
     with WidgetsBindingObserver {
   final _searchController = TextEditingController();
   String _query = '';
+  String _myUsername = '';
 
   @override
   void initState() {
@@ -26,6 +27,11 @@ class _ChatConversationsPageState extends State<ChatConversationsPage>
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final chat = ChatScope.of(context);
       chat.initialize();
+    });
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      final me = await ChatScope.of(context).getMe();
+      if (!mounted) return;
+      setState(() => _myUsername = me.username);
     });
     _searchController.addListener(() {
       setState(() => _query = _searchController.text.trim().toLowerCase());
@@ -318,21 +324,19 @@ class _ChatConversationsPageState extends State<ChatConversationsPage>
   }
 
   String _dmTitle(c) {
-    // Best-effort: show the member that isn't "me" (by username).
-    // This app doesn't store numeric user_id, so we rely on username/email match.
-    // If it fails, fallback to the first member.
-    final me = (ChatScope.of(context).conversations.isNotEmpty)
-        ? null
-        : null;
-    // We'll use stored username via provider helper.
     return _dmTitleFromMembers(c);
   }
 
   String _dmTitleFromMembers(dynamic c) {
     final members = (c.members as List);
     if (members.isEmpty) return 'Direct message';
-    // Try to find "other" by comparing against stored username.
-    // If username missing, just pick the first.
+    if (_myUsername.trim().isNotEmpty) {
+      for (final m in members) {
+        final u = m.user;
+        if ((u.username).trim().isEmpty) continue;
+        if (u.username != _myUsername) return u.displayName;
+      }
+    }
     return members.first.user.displayName;
   }
 
@@ -398,30 +402,56 @@ class _AvatarCircle extends StatelessWidget {
         : const LinearGradient(
             colors: [Color(0xFF3B82F6), Color(0xFF60A5FA)],
           );
-    return Container(
-      width: 44,
-      height: 44,
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        gradient: bg,
-        border: Border.all(color: Colors.white, width: 2),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.08),
-            blurRadius: 10,
-            offset: const Offset(0, 6),
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        Container(
+          width: 46,
+          height: 46,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            gradient: bg,
+            border: Border.all(color: Colors.white, width: 2),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.06),
+                blurRadius: 10,
+                offset: const Offset(0, 6),
+              ),
+            ],
           ),
-        ],
-      ),
-      child: Center(
-        child: Text(
-          _initials(),
-          style: const TextStyle(
-            color: Colors.white,
-            fontWeight: FontWeight.w900,
+          child: Center(
+            child: Text(
+              _initials(),
+              style: const TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
           ),
         ),
-      ),
+        if (isGroup)
+          Positioned(
+            right: -2,
+            bottom: -2,
+            child: Container(
+              width: 18,
+              height: 18,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                shape: BoxShape.circle,
+                border: Border.all(
+                  color: AppStitchTheme.lightOutline.withValues(alpha: 0.65),
+                ),
+              ),
+              child: const Icon(
+                Icons.groups_rounded,
+                size: 12,
+                color: AppStitchTheme.primary,
+              ),
+            ),
+          ),
+      ],
     );
   }
 }
