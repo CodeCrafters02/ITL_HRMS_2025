@@ -57,6 +57,11 @@ class DrawerNavItems {
         path: '/employee/notifications',
       ),
       NavItem(
+        name: 'Chat',
+        icon: Icons.chat_bubble_outline_rounded,
+        path: '/employee/chat',
+      ),
+      NavItem(
         name: 'Learning Corner',
         icon: Icons.school,
         path: '/employee/learning-corner',

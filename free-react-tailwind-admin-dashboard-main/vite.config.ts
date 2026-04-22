@@ -35,8 +35,13 @@ export default defineConfig({
     proxy: {
       '/api': {
         target: 'https://apihrms.innovyxtechlabs.com',
+        // target: 'http://localhost:8000',
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/api/, ''),
+      },
+      '/media': {
+        target: 'https://apihrms.innovyxtechlabs.com',
+        changeOrigin: true,
       },
     },
 

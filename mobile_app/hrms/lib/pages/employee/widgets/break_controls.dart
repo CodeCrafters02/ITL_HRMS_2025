@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import '../../../theme/app_stitch_theme.dart';
+import '../../../models/break_model.dart';
 import '../../../models/dashboard_model.dart';
 import '../../../models/break_config_model.dart';
 import '../../../services/employee_service.dart';
@@ -152,28 +154,29 @@ class _BreakControlsState extends State<BreakControls> {
     return _buildBreakOptions();
   }
 
-  Widget _buildActiveBreakView(activeBreak) {
+  Widget _buildActiveBreakView(ActiveBreakData activeBreak) {
     return Row(
       children: [
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
           decoration: BoxDecoration(
-            color: const Color(0xFFFED7AA),
-            borderRadius: BorderRadius.circular(8),
+            color: const Color(0xFF422006),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: const Color(0xFFF59E0B).withValues(alpha: 0.5)),
           ),
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
               const Icon(
                 Icons.pause,
-                color: Color(0xFF92400E),
+                color: Color(0xFFFBBF24),
                 size: 16,
               ),
               const SizedBox(width: 8),
               Text(
                 '${activeBreak.type} Break',
                 style: const TextStyle(
-                  color: Color(0xFF92400E),
+                  color: Color(0xFFFBBF24),
                   fontSize: 14,
                   fontWeight: FontWeight.w500,
                 ),
@@ -197,7 +200,7 @@ class _BreakControlsState extends State<BreakControls> {
               vertical: 8,
             ),
             shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(8),
+              borderRadius: BorderRadius.circular(16),
             ),
             elevation: 0,
           ),
@@ -231,7 +234,7 @@ class _BreakControlsState extends State<BreakControls> {
           padding: EdgeInsets.all(16.0),
           child: CircularProgressIndicator(
             strokeWidth: 2,
-            valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF4F46E5)),
+            valueColor: AlwaysStoppedAnimation<Color>(AppStitchTheme.primary),
           ),
         ),
       );
@@ -251,7 +254,7 @@ class _BreakControlsState extends State<BreakControls> {
           'No break options available',
           style: TextStyle(
             fontSize: 14,
-            color: Color(0xFF6B7280),
+            color: AppStitchTheme.onSurfaceMuted,
           ),
         ),
       );
@@ -338,17 +341,17 @@ class _BreakControlsState extends State<BreakControls> {
             top: offset.dy + size.height + 8,
             child: Material(
               elevation: 12,
-              shadowColor: Colors.black.withOpacity(0.2),
+              shadowColor: Colors.black.withValues(alpha: 0.2),
               borderRadius: BorderRadius.circular(8),
               child: Container(
                 width: 180,
                 decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: const Color(0xFFE5E7EB)),
+                  color: AppStitchTheme.surfaceElevated,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: AppStitchTheme.outline),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.1),
+                      color: Colors.black.withValues(alpha: 0.1),
                       blurRadius: 8,
                       offset: const Offset(0, 4),
                     ),
@@ -394,7 +397,7 @@ class _BreakControlsState extends State<BreakControls> {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
         decoration: BoxDecoration(
-          color: isSelected ? const Color(0xFFF3F4F6) : Colors.transparent,
+          color: isSelected ? AppStitchTheme.surfaceHighlight : Colors.transparent,
         ),
         child: Row(
           children: [
@@ -412,7 +415,7 @@ class _BreakControlsState extends State<BreakControls> {
               style: TextStyle(
                 fontSize: 14,
                 fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
-                color: const Color(0xFF111827),
+                color: AppStitchTheme.onSurface,
               ),
             ),
           ],
@@ -438,7 +441,7 @@ class _BreakControlsState extends State<BreakControls> {
         Icons.coffee,
         color: _teaDropdownOpen
             ? const Color(0xFFF59E0B)
-            : const Color(0xFF6B7280),
+            : AppStitchTheme.onSurfaceMuted,
         size: 20,
       ),
       tooltip: 'Tea Break',
@@ -471,17 +474,17 @@ class _BreakControlsState extends State<BreakControls> {
             top: offset.dy + size.height + 8,
             child: Material(
               elevation: 12,
-              shadowColor: Colors.black.withOpacity(0.2),
+              shadowColor: Colors.black.withValues(alpha: 0.2),
               borderRadius: BorderRadius.circular(8),
               child: Container(
                 width: 150,
                 decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: const Color(0xFFE5E7EB)),
+                  color: AppStitchTheme.surfaceElevated,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: AppStitchTheme.outline),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.1),
+                      color: Colors.black.withValues(alpha: 0.1),
                       blurRadius: 8,
                       offset: const Offset(0, 4),
                     ),
@@ -512,7 +515,7 @@ class _BreakControlsState extends State<BreakControls> {
                               '${breakConfig.durationMinutes ?? 0} min',
                               style: const TextStyle(
                                 fontSize: 14,
-                                color: Color(0xFF111827),
+                                color: AppStitchTheme.onSurface,
                               ),
                             ),
                           ],
@@ -551,7 +554,7 @@ class _BreakControlsState extends State<BreakControls> {
             },
       icon: const Icon(
         Icons.restaurant,
-        color: Color(0xFF6B7280),
+        color: AppStitchTheme.onSurfaceMuted,
         size: 20,
       ),
       tooltip: 'Meal Break',

@@ -4,10 +4,12 @@ import '../../models/learning_corner_model.dart';
 import '../../services/employee_service.dart';
 import '../../services/storage_service.dart';
 import '../../config/api_config.dart';
-import '../../widgets/employee_app_bar.dart';
 import 'dart:io';
 import 'package:dio/dio.dart';
 import 'package:path_provider/path_provider.dart';
+import '../../theme/app_stitch_theme.dart';
+import '../../widgets/glass_card.dart';
+import '../../widgets/stitch_background.dart';
 
 class LearningCornerPage extends StatefulWidget {
   const LearningCornerPage({super.key});
@@ -181,12 +183,15 @@ class _LearningCornerPageState extends State<LearningCornerPage> {
 
   Widget _buildTable() {
     if (_items.isEmpty) {
-      return const Center(
-        child: Padding(
-          padding: EdgeInsets.all(32.0),
+      return GlassCard(
+        padding: const EdgeInsets.all(18),
+        child: Center(
           child: Text(
             'No learning resources found.',
-            style: TextStyle(fontSize: 16, color: Color(0xFF6B7280)),
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  fontWeight: FontWeight.w600,
+                  color: AppStitchTheme.lightOnSurfaceMuted,
+                ),
           ),
         ),
       );
@@ -195,7 +200,7 @@ class _LearningCornerPageState extends State<LearningCornerPage> {
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
       child: DataTable(
-        headingRowColor: MaterialStateProperty.all(const Color(0xFFF3F4F6)),
+        headingRowColor: WidgetStateProperty.all(Colors.white.withValues(alpha: 0.35)),
         columns: const [
           DataColumn(
             label: Text('S.No', style: TextStyle(fontWeight: FontWeight.bold)),
@@ -301,74 +306,153 @@ class _LearningCornerPageState extends State<LearningCornerPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF9FAFB),
-      appBar: EmployeeAppBar(title: 'Learning Corner'),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : _error != null
-          ? Center(
-              child: Padding(
-                padding: const EdgeInsets.all(24.0),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const Icon(
-                      Icons.error_outline,
-                      size: 64,
-                      color: Color(0xFFDC2626),
-                    ),
-                    const SizedBox(height: 16),
-                    Text(
-                      _error!,
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(
-                        fontSize: 16,
-                        color: Color(0xFF6B7280),
+      backgroundColor: Colors.transparent,
+      body: StitchBackground(
+        child: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+            child: Column(
+              children: [
+                GlassCard(
+                  padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
+                  child: Row(
+                    children: [
+                      IconButton(
+                        onPressed: () => Navigator.pop(context),
+                        icon: const Icon(Icons.arrow_back_ios_new_rounded),
                       ),
-                    ),
-                    const SizedBox(height: 24),
-                    ElevatedButton(
-                      onPressed: _fetchLearningCornerItems,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF4F46E5),
-                        foregroundColor: Colors.white,
+                      const SizedBox(width: 6),
+                      Expanded(
+                        child: Text(
+                          'Learning Corner',
+                          style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                                fontWeight: FontWeight.w900,
+                                color: AppStitchTheme.lightOnSurface,
+                              ),
+                        ),
                       ),
-                      child: const Text('Retry'),
-                    ),
-                  ],
+                      IconButton(
+                        onPressed: _fetchLearningCornerItems,
+                        tooltip: 'Refresh',
+                        icon: const Icon(Icons.refresh_rounded),
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-            )
-          : RefreshIndicator(
-              onRefresh: _fetchLearningCornerItems,
-              child: SingleChildScrollView(
-                physics: const AlwaysScrollableScrollPhysics(),
-                padding: const EdgeInsets.all(16.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'Learning Corner',
-                      style: TextStyle(
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
-                        color: Color(0xFF111827),
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      'Company learning resources for employees. Total items: ${_items.length}',
-                      style: const TextStyle(
-                        fontSize: 14,
-                        color: Color(0xFF6B7280),
-                      ),
-                    ),
-                    const SizedBox(height: 24),
-                    _buildTable(),
-                  ],
+                const SizedBox(height: 12),
+                Expanded(
+                  child: _isLoading
+                      ? const Center(child: CircularProgressIndicator())
+                      : _error != null
+                          ? Center(
+                              child: GlassCard(
+                                padding: const EdgeInsets.all(18),
+                                child: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Container(
+                                      width: 56,
+                                      height: 56,
+                                      decoration: BoxDecoration(
+                                        shape: BoxShape.circle,
+                                        color: const Color(0xFFEF4444).withValues(alpha: 0.10),
+                                        border: Border.all(
+                                          color: const Color(0xFFEF4444).withValues(alpha: 0.20),
+                                        ),
+                                      ),
+                                      child: const Icon(
+                                        Icons.error_outline_rounded,
+                                        color: Color(0xFFEF4444),
+                                      ),
+                                    ),
+                                    const SizedBox(height: 10),
+                                    Text(
+                                      _error!,
+                                      textAlign: TextAlign.center,
+                                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                            fontWeight: FontWeight.w600,
+                                            color: AppStitchTheme.lightOnSurfaceMuted,
+                                          ),
+                                    ),
+                                    const SizedBox(height: 12),
+                                    SizedBox(
+                                      width: double.infinity,
+                                      child: ElevatedButton(
+                                        onPressed: _fetchLearningCornerItems,
+                                        child: const Text('Retry'),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            )
+                          : RefreshIndicator(
+                              onRefresh: _fetchLearningCornerItems,
+                              color: AppStitchTheme.primary,
+                              child: ListView(
+                                physics: const AlwaysScrollableScrollPhysics(),
+                                padding: EdgeInsets.zero,
+                                children: [
+                                  GlassCard(
+                                    padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
+                                    child: Row(
+                                      children: [
+                                        Container(
+                                          width: 44,
+                                          height: 44,
+                                          decoration: BoxDecoration(
+                                            shape: BoxShape.circle,
+                                            color: Colors.white.withValues(alpha: 0.60),
+                                            border: Border.all(
+                                              color: AppStitchTheme.lightOutline.withValues(alpha: 0.70),
+                                            ),
+                                          ),
+                                          child: const Icon(
+                                            Icons.school_rounded,
+                                            color: AppStitchTheme.primary,
+                                          ),
+                                        ),
+                                        const SizedBox(width: 12),
+                                        Expanded(
+                                          child: Column(
+                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            children: [
+                                              Text(
+                                                'Resources',
+                                                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                                      fontWeight: FontWeight.w900,
+                                                      color: AppStitchTheme.lightOnSurface,
+                                                    ),
+                                              ),
+                                              const SizedBox(height: 2),
+                                              Text(
+                                                'Total items: ${_items.length}',
+                                                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                                      fontWeight: FontWeight.w600,
+                                                      color: AppStitchTheme.lightOnSurfaceMuted,
+                                                    ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  const SizedBox(height: 12),
+                                  GlassCard(
+                                    padding: const EdgeInsets.all(12),
+                                    child: _buildTable(),
+                                  ),
+                                  const SizedBox(height: 24),
+                                ],
+                              ),
+                            ),
                 ),
-              ),
+              ],
             ),
+          ),
+        ),
+      ),
     );
   }
 }

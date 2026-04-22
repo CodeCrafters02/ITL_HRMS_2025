@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../../models/notification_model.dart';
 import '../../services/employee_service.dart';
-import '../../widgets/employee_app_bar.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../../theme/app_stitch_theme.dart';
+import '../../widgets/glass_card.dart';
+import '../../widgets/stitch_background.dart';
 
 class NotificationsPage extends StatefulWidget {
   const NotificationsPage({super.key});
@@ -134,17 +136,16 @@ class _NotificationsPageState extends State<NotificationsPage> {
         width: 48,
         height: 48,
         decoration: BoxDecoration(
-          gradient: const LinearGradient(
-            colors: [Color(0xFFFEF3C7), Color(0xFFFED7AA)],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
+          color: const Color(0xFFF59E0B).withValues(alpha: 0.12),
           shape: BoxShape.circle,
-          border: Border.all(color: const Color(0xFFFCD34D), width: 2),
+          border: Border.all(
+            color: const Color(0xFFF59E0B).withValues(alpha: 0.25),
+            width: 1,
+          ),
         ),
         child: const Icon(
           Icons.access_time,
-          color: Color(0xFFD97706),
+          color: Color(0xFFF59E0B),
           size: 24,
         ),
       );
@@ -153,12 +154,15 @@ class _NotificationsPageState extends State<NotificationsPage> {
         width: 40,
         height: 40,
         decoration: BoxDecoration(
-          color: const Color(0xFFDBEAFE),
+          color: Colors.white.withValues(alpha: 0.60),
           shape: BoxShape.circle,
+          border: Border.all(
+            color: AppStitchTheme.lightOutline.withValues(alpha: 0.70),
+          ),
         ),
         child: const Icon(
           Icons.info_outline,
-          color: Color(0xFF2563EB),
+          color: AppStitchTheme.primary,
           size: 20,
         ),
       );
@@ -168,80 +172,96 @@ class _NotificationsPageState extends State<NotificationsPage> {
   Widget _buildNotificationCard(NotificationModel notification) {
     final isReminder = notification.isReminder;
 
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: isReminder ? const Color(0xFFFFFBEB) : Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: isReminder ? const Color(0xFFFCD34D) : const Color(0xFFE5E7EB),
-          width: isReminder ? 2 : 1,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 4,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _buildNotificationIcon(notification),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Expanded(
-                      child: Text(
-                        notification.title,
-                        style: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                          color: Color(0xFF111827),
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: GlassCard(
+        padding: const EdgeInsets.all(16),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _buildNotificationIcon(notification),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(
+                        child: Text(
+                          notification.title,
+                          style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                                fontWeight: FontWeight.w900,
+                                color: AppStitchTheme.lightOnSurface,
+                              ),
                         ),
                       ),
-                    ),
-                    const SizedBox(width: 8),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 4,
-                      ),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFF3F4F6),
-                        borderRadius: BorderRadius.circular(6),
-                      ),
-                      child: Text(
-                        _formatDate(notification.date),
-                        style: const TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w500,
-                          color: Color(0xFF374151),
+                      const SizedBox(width: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 4,
+                        ),
+                        decoration: BoxDecoration(
+                          color: isReminder
+                              ? const Color(0xFFF59E0B).withValues(alpha: 0.12)
+                              : Colors.white.withValues(alpha: 0.55),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(
+                            color: isReminder
+                                ? const Color(0xFFF59E0B).withValues(alpha: 0.22)
+                                : AppStitchTheme.lightOutline.withValues(alpha: 0.65),
+                          ),
+                        ),
+                        child: Text(
+                          _formatDate(notification.date),
+                          style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                                fontWeight: FontWeight.w800,
+                                color: isReminder
+                                    ? const Color(0xFFF59E0B)
+                                    : AppStitchTheme.lightOnSurfaceMuted,
+                              ),
                         ),
                       ),
+                    ],
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    notification.description,
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: AppStitchTheme.lightOnSurfaceMuted,
+                          height: 1.35,
+                        ),
+                  ),
+                  if (isReminder) ...[
+                    const SizedBox(height: 10),
+                    Row(
+                      children: [
+                        Container(
+                          width: 8,
+                          height: 8,
+                          decoration: const BoxDecoration(
+                            color: Color(0xFFF59E0B),
+                            shape: BoxShape.circle,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          'Reminder',
+                          style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                                fontWeight: FontWeight.w900,
+                                color: AppStitchTheme.lightOnSurface,
+                              ),
+                        ),
+                      ],
                     ),
                   ],
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  notification.description,
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: const Color(0xFF6B7280),
-                    height: 1.4,
-                  ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -249,24 +269,54 @@ class _NotificationsPageState extends State<NotificationsPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF9FAFB),
-      appBar: EmployeeAppBar(
-        title: 'Notifications',
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: _fetchNotifications,
-            tooltip: 'Refresh',
+      backgroundColor: Colors.transparent,
+      body: StitchBackground(
+        child: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+            child: Column(
+              children: [
+                GlassCard(
+                  padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
+                  child: Row(
+                    children: [
+                      IconButton(
+                        onPressed: () => Navigator.pop(context),
+                        icon: const Icon(Icons.arrow_back_ios_new_rounded),
+                      ),
+                      const SizedBox(width: 6),
+                      Expanded(
+                        child: Text(
+                          'Notifications',
+                          style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                                fontWeight: FontWeight.w900,
+                                color: AppStitchTheme.lightOnSurface,
+                              ),
+                        ),
+                      ),
+                      IconButton(
+                        onPressed: _fetchNotifications,
+                        tooltip: 'Refresh',
+                        icon: const Icon(Icons.refresh_rounded),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Expanded(
+                  child: _loading
+                      ? _buildLoadingState()
+                      : _error != null
+                          ? _buildErrorState()
+                          : _notifications.isEmpty
+                              ? _buildEmptyState()
+                              : _buildNotificationsList(),
+                ),
+              ],
+            ),
           ),
-        ],
+        ),
       ),
-      body: _loading
-          ? _buildLoadingState()
-          : _error != null
-          ? _buildErrorState()
-          : _notifications.isEmpty
-          ? _buildEmptyState()
-          : _buildNotificationsList(),
     );
   }
 

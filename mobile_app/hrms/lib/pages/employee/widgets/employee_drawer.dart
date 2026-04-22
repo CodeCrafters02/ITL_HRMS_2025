@@ -3,6 +3,10 @@ import '../../../constants/nav_constants.dart';
 import '../../../models/nav_item_model.dart';
 import '../../../services/employee_service.dart';
 import '../../../services/notification_service.dart';
+import '../../../providers/chat_scope.dart';
+import '../../../theme/app_stitch_theme.dart';
+import '../../../widgets/stitch_background.dart';
+import '../../../widgets/glass_card.dart';
 import 'drawer_user_section.dart';
 
 class EmployeeDrawer extends StatefulWidget {
@@ -81,8 +85,10 @@ class _EmployeeDrawerState extends State<EmployeeDrawer> {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         decoration: BoxDecoration(
-          color: isActive ? const Color(0xFFF3F4F6) : Colors.transparent,
-          borderRadius: BorderRadius.circular(8),
+          color: isActive
+              ? AppStitchTheme.primary.withValues(alpha: 0.10)
+              : Colors.transparent,
+          borderRadius: BorderRadius.circular(16),
         ),
         child: Row(
           children: [
@@ -90,8 +96,8 @@ class _EmployeeDrawerState extends State<EmployeeDrawer> {
               item.icon,
               size: 20,
               color: isActive
-                  ? const Color(0xFF4F46E5)
-                  : const Color(0xFF6B7280),
+                  ? AppStitchTheme.primary
+                  : AppStitchTheme.lightOnSurfaceMuted,
             ),
             const SizedBox(width: 12),
             Expanded(
@@ -101,8 +107,8 @@ class _EmployeeDrawerState extends State<EmployeeDrawer> {
                   fontSize: 14,
                   fontWeight: isActive ? FontWeight.w600 : FontWeight.normal,
                   color: isActive
-                      ? const Color(0xFF4F46E5)
-                      : const Color(0xFF111827),
+                      ? AppStitchTheme.primary
+                      : AppStitchTheme.lightOnSurface,
                 ),
               ),
             ),
@@ -125,6 +131,9 @@ class _EmployeeDrawerState extends State<EmployeeDrawer> {
       switch (item.name) {
         case 'Notifications':
           badge = NotificationService.notificationsBadge;
+          break;
+        case 'Chat':
+          badge = ChatScope.of(context).unreadTotal;
           break;
         case 'My Tasks':
           badge = NotificationService.myTasksBadge;
@@ -156,78 +165,86 @@ class _EmployeeDrawerState extends State<EmployeeDrawer> {
     final currentRoute = ModalRoute.of(context)?.settings.name ?? '';
 
     return Drawer(
-      child: Column(
-        children: [
-          // Header with company logo/name
-          Container(
-            padding: const EdgeInsets.all(24),
-            decoration: BoxDecoration(
-              border: Border(
-                bottom: BorderSide(color: Colors.grey.shade200, width: 1),
-              ),
-            ),
-            child: _isLoadingCompanyInfo
-                ? const Center(child: CircularProgressIndicator())
-                : _companyName != null
-                ? Row(
+      width: 340,
+      elevation: 0,
+      backgroundColor: Colors.transparent,
+      child: StitchBackground(
+        showParticles: false,
+        child: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+            child: Column(
+              children: [
+                GlassCard(
+                  padding: const EdgeInsets.fromLTRB(18, 16, 18, 16),
+                  child: Row(
                     children: [
                       Expanded(
-                        child: Text(
-                          _companyName!,
-                          style: const TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                            color: Color(0xFF111827),
-                          ),
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                        ),
+                        child: _isLoadingCompanyInfo
+                            ? const SizedBox(
+                                height: 20,
+                                child: LinearProgressIndicator(),
+                              )
+                            : Text(
+                                _companyName ?? 'People Suite',
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .titleMedium
+                                    ?.copyWith(fontWeight: FontWeight.w800),
+                              ),
                       ),
                     ],
-                  )
-                : const SizedBox.shrink(),
-          ),
-
-          // Menu header
-          Padding(
-            padding: const EdgeInsets.fromLTRB(24, 24, 24, 16),
-            child: Row(
-              children: const [
-                Text(
-                  'MENU',
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                    color: Color(0xFF9CA3AF),
-                    letterSpacing: 1,
                   ),
                 ),
+                const SizedBox(height: 12),
+                Expanded(
+                  child: GlassCard(
+                    padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(10, 8, 10, 10),
+                          child: Text(
+                            'MENU',
+                            style: Theme.of(context)
+                                .textTheme
+                                .labelSmall
+                                ?.copyWith(
+                                  letterSpacing: 1,
+                                  fontWeight: FontWeight.w800,
+                                  color: AppStitchTheme.lightOnSurfaceMuted,
+                                ),
+                          ),
+                        ),
+                        Expanded(
+                          child: ListView.builder(
+                            padding: EdgeInsets.zero,
+                            itemCount: itemsWithBadges.length,
+                            itemBuilder: (context, index) {
+                              final item = itemsWithBadges[index];
+                              final isActive = item.path != null &&
+                                  (currentRoute == item.path ||
+                                      currentRoute.startsWith(item.path!));
+                              return Padding(
+                                padding: const EdgeInsets.only(bottom: 4),
+                                child: _buildDrawerItem(item, isActive),
+                              );
+                            },
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                const DrawerUserSection(),
               ],
             ),
           ),
-
-          // Menu items
-          Expanded(
-            child: ListView.builder(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              itemCount: itemsWithBadges.length,
-              itemBuilder: (context, index) {
-                final item = itemsWithBadges[index];
-                final isActive =
-                    item.path != null &&
-                    (currentRoute == item.path ||
-                        currentRoute.startsWith(item.path!));
-                return Padding(
-                  padding: const EdgeInsets.only(bottom: 4),
-                  child: _buildDrawerItem(item, isActive),
-                );
-              },
-            ),
-          ),
-
-          // User section at bottom
-          const DrawerUserSection(),
-        ],
+        ),
       ),
     );
   }

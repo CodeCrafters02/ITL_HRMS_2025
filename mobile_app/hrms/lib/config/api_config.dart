@@ -1,7 +1,27 @@
 class ApiConfig {
-  // Base URL - Change this to your backend server URL
-  static const String baseUrl = 'https://apihrms.innovyxtechlabs.com';
-  // static const String baseUrl = 'http://192.168.0.3:8000';
+  /// Base URL for the backend API.
+  ///
+  /// Override at build time:
+  /// `--dart-define=API_BASE_URL=https://apihrms.innovyxtechlabs.com`
+  ///
+  /// Keep a sensible dev default for local/LAN testing.
+  static const String baseUrl = String.fromEnvironment(
+    'API_BASE_URL',
+    defaultValue: 'http://192.168.1.3:8000',
+  );
+
+  /// Login footer "Contact IT Support" mailto. Override at build:
+  /// `--dart-define=IT_SUPPORT_EMAIL=help@company.com`
+  static const String itSupportEmail = String.fromEnvironment(
+    'IT_SUPPORT_EMAIL',
+    defaultValue: 'it-support@company.local',
+  );
+
+  static Uri get itSupportMailtoUri => Uri(
+        scheme: 'mailto',
+        path: itSupportEmail,
+        queryParameters: const {'subject': 'HRMS access help'},
+      );
 
   // Alternative for local development:
   // static const String baseUrl = 'http://localhost:8000';
@@ -9,9 +29,16 @@ class ApiConfig {
 
   // API Endpoints
   static const String loginEndpoint = '/app/login/';
+  static const String googleLoginEndpoint = '/app/google-login/';
   static const String registerEndpoint = '/app/master-register/';
   static const String tokenRefreshEndpoint = '/api/token/refresh/';
   static const String changePasswordEndpoint = '/app/change-password/';
+
+  // Chat Endpoints (REST + WebSocket)
+  static const String chatConversationsEndpoint = '/app/chat-conversations/';
+  static const String chatConversationsDmEndpoint = '/app/chat-conversations/dm/';
+  static const String chatMessagesEndpoint = '/app/chat-messages/';
+  static const String chatUsersEndpoint = '/app/chat/users/';
 
   // Employee Endpoints
   static const String employeeDashboardEndpoint = '/employee/dashboard/';
@@ -47,12 +74,37 @@ class ApiConfig {
       '/employee/employee-hierarchy/';
   static const String deviceTokenEndpoint = '/notifications/devices/';
   static const String learningCornerEndpoint = '/employee/emp-learning-corner/';
+  static const String announcementsEndpoint = '/employee/announcements/';
+  static const String timeLogMetaEndpoint = '/employee/time-log/meta/';
+  static const String timeLogEndpoint = '/employee/time-log/';
 
   // Full URLs
   static String get loginUrl => '$baseUrl$loginEndpoint';
+  static String get googleLoginUrl => '$baseUrl$googleLoginEndpoint';
   static String get registerUrl => '$baseUrl$registerEndpoint';
   static String get tokenRefreshUrl => '$baseUrl$tokenRefreshEndpoint';
   static String get changePasswordUrl => '$baseUrl$changePasswordEndpoint';
+
+  // Chat URLs
+  static String get chatConversationsUrl => '$baseUrl$chatConversationsEndpoint';
+  static String get chatConversationsDmUrl => '$baseUrl$chatConversationsDmEndpoint';
+  static String get chatMessagesUrl => '$baseUrl$chatMessagesEndpoint';
+  static String get chatUsersUrl => '$baseUrl$chatUsersEndpoint';
+
+  /// WebSocket URL for chat. Backend expects query param: `?token=<access_token>`.
+  /// Backend route: `/ws/chat/` (see Django Channels routing).
+  static Uri chatWsUri({required String token}) {
+    final base = Uri.parse(baseUrl);
+    final wsScheme = base.scheme == 'https' ? 'wss' : 'ws';
+    // Ensure we always hit `/ws/chat/` at the backend root (not under /app).
+    return Uri(
+      scheme: wsScheme,
+      host: base.host,
+      port: base.hasPort ? base.port : null,
+      path: '/ws/chat/',
+      queryParameters: {'token': token},
+    );
+  }
   static String get employeeDashboardUrl =>
       '$baseUrl$employeeDashboardEndpoint';
   static String get employeeCheckInUrl => '$baseUrl$employeeCheckInEndpoint';
@@ -96,12 +148,15 @@ class ApiConfig {
   static String get employeeReferenceUrl =>
       '$baseUrl$employeeReferenceEndpoint';
   static String employeeReferenceDetailUrl(int referenceId) =>
-      '$baseUrl${employeeReferenceEndpoint}$referenceId/';
+      '$baseUrl$employeeReferenceEndpoint$referenceId/';
   static String get employeeProfileUrl => '$baseUrl$employeeProfileEndpoint';
   static String get employeeHierarchyUrl =>
       '$baseUrl$employeeHierarchyEndpoint';
   static String get deviceTokenUrl => '$baseUrl$deviceTokenEndpoint';
   static String get learningCornerUrl => '$baseUrl$learningCornerEndpoint';
+  static String get announcementsUrl => '$baseUrl$announcementsEndpoint';
+  static String get timeLogMetaUrl => '$baseUrl$timeLogMetaEndpoint';
+  static String get timeLogUrl => '$baseUrl$timeLogEndpoint';
 
   // API Headers
   static Map<String, String> get headers => {

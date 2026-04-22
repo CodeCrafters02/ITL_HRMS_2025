@@ -12,9 +12,17 @@ from datetime import date
 from django.db.models import Q,Prefetch
 from rest_framework.views import APIView
 from calendar import month_name
+from django_filters.rest_framework import DjangoFilterBackend
+from rest_framework import filters
+from rest_framework.pagination import PageNumberPagination
+
+class EmployeePagination(PageNumberPagination):
+    page_size = 10
+    page_size_query_param = 'page_size'
+    max_page_size = 100
 from .utils import calculate_worked_time, calculate_effective_time
 import re
-from app.models import Attendance,Notification,LearningCorner, ShiftPolicy, Employee, BreakLog,Payroll,CalendarEvent,EmpLeave,CompanyPolicies,Level,Designation
+from app.models import Attendance,Notification,LearningCorner, ShiftPolicy, Employee, BreakLog,Payroll,CalendarEvent,EmpLeave,CompanyPolicies,Level,Designation,DepartmentWiseWorkingDays
 from .models import *
 from .serializers import *
 
@@ -67,6 +75,88 @@ class ReportingManagerAPIView(APIView):
         return Response(serializer.data)
 
 
+class EmployeeAnnouncementsAPIView(generics.ListAPIView):
+    serializer_class = AnnouncementSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        employee = getattr(self.request.user, "employee_profile", None)
+        if not employee or not employee.company_id:
+            return Announcement.objects.none()
+        qs = Announcement.objects.filter(company_id=employee.company_id, is_active=True)
+        limit = self.request.query_params.get("limit")
+        if limit:
+            try:
+                limit_i = int(limit)
+                if 0 < limit_i <= 50:
+                    return qs[:limit_i]
+            except Exception:
+                pass
+        return qs
+
+
+class TimeLogMetaAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        employee = getattr(request.user, "employee_profile", None)
+        if not employee or not employee.company_id:
+            return Response({"detail": "No company linked."}, status=404)
+        projects = Project.objects.filter(company_id=employee.company_id, is_active=True).order_by("name")
+        return Response(
+            {
+                "projects": ProjectSerializer(projects, many=True).data,
+            }
+        )
+
+
+class TimeLogListCreateAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        employee = getattr(request.user, "employee_profile", None)
+        if not employee:
+            return Response({"detail": "Employee not found."}, status=404)
+        date_str = request.query_params.get("date")
+        if date_str:
+            try:
+                target_date = datetime.strptime(date_str, "%Y-%m-%d").date()
+            except Exception:
+                return Response({"detail": "Invalid date format. Use YYYY-MM-DD."}, status=400)
+        else:
+            target_date = timezone.localdate()
+
+        qs = TimeEntry.objects.filter(employee_id=employee.id, date=target_date).select_related("project")
+        return Response({"date": str(target_date), "entries": TimeEntrySerializer(qs, many=True).data})
+
+    def post(self, request):
+        employee = getattr(request.user, "employee_profile", None)
+        if not employee or not employee.company_id:
+            return Response({"detail": "Employee not found."}, status=404)
+
+        ser = TimeEntryCreateSerializer(data=request.data)
+        ser.is_valid(raise_exception=True)
+        data = ser.validated_data
+
+        entry_date = data.get("date") or timezone.localdate()
+        project_id = data["project_id"]
+        try:
+            project = Project.objects.get(id=project_id, company_id=employee.company_id, is_active=True)
+        except Project.DoesNotExist:
+            return Response({"detail": "Invalid project."}, status=400)
+
+        entry = TimeEntry.objects.create(
+            employee_id=employee.id,
+            date=entry_date,
+            project=project,
+            job_name=data.get("job_name", ""),
+            description=data.get("description", ""),
+            minutes=data["minutes"],
+        )
+
+        return Response(TimeEntrySerializer(entry).data, status=201)
+
+
 class CheckInAPIView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -90,7 +180,14 @@ class CheckInAPIView(APIView):
                 "detail": f"Already checked in at {existing.check_in.astimezone(tz).strftime('%H:%M:%S')}"
             }, status=400)
 
-        shifts = ShiftPolicy.objects.all()
+        shifts_qs = ShiftPolicy.objects.all()
+        if not shifts_qs.exists():
+            return Response(
+                {"detail": "No shift policy configured. Please contact HR/admin."},
+                status=status.HTTP_409_CONFLICT,
+            )
+
+        shifts = list(shifts_qs)
         selected_shift = None
         early_checkin_buffer = timedelta(hours=2)
         min_work_time = timedelta(hours=2)
@@ -331,9 +428,9 @@ class DashboardAPIView(APIView):
         try:
             # Get employee
             employee = Employee.objects.get(email=user.email)
-            today = timezone.localdate()
             tz = pytz.timezone('Asia/Kolkata')
             now = timezone.localtime(timezone.now(), tz)
+            today = now.date()
 
             # Today's attendance
             attendance = Attendance.objects.filter(employee=employee, date=today).first()
@@ -703,13 +800,50 @@ class AttendanceHistoryAPIView(APIView):
 
             day += timedelta(days=1)
 
+        # Filtering
+        search = request.GET.get('search', '').lower()
+        status_filter = request.GET.get('status', 'all')
+
+        filtered_data = []
+        status_label_map = {
+            'present': 'present',
+            'absent': 'absent',
+            'leave': 'leave',
+            'half_day': 'half day',
+            'weekend': 'weekend',
+            'checked_in': 'checked in',
+            'no_data': 'no data'
+        }
+
+        for row in monthly_data:
+            match_search = not search or search in row['date'].lower() or search in row['day_name'].lower() or search in status_label_map.get(row['status'], '').lower()
+            match_status = status_filter == 'all' or row['status'] == status_filter
+            if match_search and match_status:
+                filtered_data.append(row)
+
+        # Pagination
+        try:
+            page = int(request.GET.get('page', 1))
+            page_size = int(request.GET.get('page_size', 10))
+        except ValueError:
+            page = 1
+            page_size = 10
+
+        total_count = len(filtered_data)
+        total_pages = (total_count + page_size - 1) // page_size
+        start_index = (page - 1) * page_size
+        end_index = start_index + page_size
+        paginated_data = filtered_data[start_index:end_index]
+
         return Response({
             'months': [{'value': i, 'name': month_name[i]} for i in range(1, 13)],
             'years': list(range(today.year - 5, today.year + 6)),
             'selected_month': selected_month,
             'selected_year': selected_year,
             'selected_month_name': month_name[selected_month],
-            'monthly_data': monthly_data,
+            'monthly_data': paginated_data,
+            'count': total_count,
+            'total_pages': total_pages,
             'summary': stats
         })
 
@@ -1018,6 +1152,10 @@ class SubTaskAssignAPIView(APIView):
 class MyTasksAPIView(generics.ListAPIView):
     permission_classes = [IsAuthenticated]
     serializer_class = MyTaskSerializer
+    pagination_class = EmployeePagination
+    filter_backends = [filters.SearchFilter, DjangoFilterBackend]
+    search_fields = ['title', 'description', 'subtasks__title']
+    filterset_fields = ['status', 'priority']
 
     def get_queryset(self):
         user = self.request.user
@@ -1056,6 +1194,39 @@ class MyTasksAPIView(generics.ListAPIView):
 
         return queryset
 
+    def list(self, request, *args, **kwargs):
+        queryset = self.filter_queryset(self.get_queryset())
+        
+        # Calculate summary statistics for ALL tasks matching the criteria (before pagination)
+        # Note: Summary usually reflects the user's overall state, not just filtered view
+        # But to match the frontend expectations, I'll provide global vs filtered stats
+        
+        user = request.user
+        emp = user.employee_profile
+        
+        all_tasks = self.get_queryset()
+        now = timezone.now().date()
+        
+        summary = {
+            'total': all_tasks.count(),
+            'done': all_tasks.filter(status='done').count(),
+            'in_progress': all_tasks.filter(status__in=['inprogress', 'inreview']).count(),
+            'overdue': all_tasks.exclude(status='done').filter(deadline__lt=now).count(),
+        }
+
+        page = self.paginate_queryset(queryset)
+        if page is not None:
+            serializer = self.get_serializer(page, many=True)
+            response = self.get_paginated_response(serializer.data)
+            response.data['summary'] = summary
+            return response
+
+        serializer = self.get_serializer(queryset, many=True)
+        return Response({
+            'results': serializer.data,
+            'summary': summary
+        })
+
 
 class UpdateAssignmentStatusAPIView(generics.UpdateAPIView):
     permission_classes = [IsAuthenticated]
@@ -1093,6 +1264,10 @@ class UpdateAssignmentStatusAPIView(generics.UpdateAPIView):
 class EmpLeaveListCreateAPIView(generics.ListCreateAPIView):
     serializer_class = EmpLeaveSerializer
     permission_classes = [IsAuthenticated]
+    pagination_class = EmployeePagination
+    filter_backends = [filters.SearchFilter, DjangoFilterBackend]
+    search_fields = ['reason', 'leave_type__leave_name', 'status']
+    filterset_fields = ['status']
 
     def get_queryset(self):
         emp = self.request.user.employee_profile
@@ -1268,19 +1443,21 @@ class BreakLogAPIView(APIView):
         return Response(serializer.data)
 
     def post(self, request):
-        
         employee = request.user.employee_profile
-        break_config_id = request.data.get("break_config_id")
         action = request.data.get("action")  # "start" or "end"
 
-        break_config = get_object_or_404(
-            BreakConfig, 
-            id=break_config_id, 
-            company=employee.company, 
-            enabled=True
-        )
-
         if action == "start":
+            break_config_id = request.data.get("break_config_id")
+            if not break_config_id:
+                return Response({"detail": "break_config_id is required to start a break."}, status=400)
+                
+            break_config = get_object_or_404(
+                BreakConfig, 
+                id=break_config_id, 
+                company=employee.company, 
+                enabled=True
+            )
+
             # Prevent starting a new break if one is active
             active_break = BreakLog.objects.filter(
                 employee=employee, 
@@ -1290,20 +1467,21 @@ class BreakLogAPIView(APIView):
                 return Response({"detail": "You already have an active break."}, status=400)
 
             break_log = BreakLog.objects.create(
-                    employee=employee,
-                    break_config=break_config,  
-                    start=timezone.now()
-                )
+                employee=employee,
+                break_config=break_config,  
+                start=timezone.now()
+            )
             return Response(EmployeeBreakLogSerializer(break_log).data, status=201)
 
         elif action == "end":
+            # Find any active break regardless of config ID
             active_break = BreakLog.objects.filter(
                 employee=employee, 
-                break_config=break_config, 
                 end__isnull=True
-            ).first()
+            ).last() # Use last() to get the most recent active one if multiple exist (though shouldn't)
+            
             if not active_break:
-                return Response({"detail": "No active break found."}, status=400)
+                return Response({"detail": "No active break found for you."}, status=400)
 
             active_break.end = timezone.now()
             if active_break.start:
@@ -1429,11 +1607,33 @@ class EmployeeHierarchyAPIView(APIView):
 from rest_framework import viewsets, permissions, serializers, decorators, response, status
 from .models import EmployeeReference, Employee
 from .serializers import EmployeeReferenceSerializer
+from rest_framework import filters
+from rest_framework.pagination import PageNumberPagination
+
+
+class EmployeeReferencePagination(PageNumberPagination):
+    page_size = 10
+    page_size_query_param = "page_size"
+    max_page_size = 100
 
 
 class EmployeeReferenceViewSet(viewsets.ModelViewSet):
     serializer_class = EmployeeReferenceSerializer
     queryset = EmployeeReference.objects.all().order_by('-submitted_at')
+    pagination_class = EmployeeReferencePagination
+    filter_backends = [filters.SearchFilter]
+    search_fields = [
+        'employee__employee_id',
+        'employee__first_name',
+        'employee__middle_name',
+        'employee__last_name',
+        'name',
+        'designation',
+        'email',
+        'contact_number',
+        'status',
+        'admin_comment',
+    ]
 
     def get_permissions(self):
         return [permissions.IsAuthenticated()]
@@ -1443,13 +1643,21 @@ class EmployeeReferenceViewSet(viewsets.ModelViewSet):
 
         # Admin: only see references from employees in the same company
         if user.role == "admin" and user.company:
-            return EmployeeReference.objects.filter(
+            queryset = EmployeeReference.objects.filter(
                 employee__company=user.company
-            ).order_by('-submitted_at')
+            ).select_related('employee', 'employee__department', 'employee__designation').order_by('-submitted_at')
+            status_filter = self.request.query_params.get("status")
+            if status_filter and status_filter != "All":
+                queryset = queryset.filter(status=status_filter)
+            return queryset
 
         # Superuser sees all
         if user.is_superuser:
-            return EmployeeReference.objects.all().order_by('-submitted_at')
+            queryset = EmployeeReference.objects.all().select_related('employee', 'employee__department', 'employee__designation').order_by('-submitted_at')
+            status_filter = self.request.query_params.get("status")
+            if status_filter and status_filter != "All":
+                queryset = queryset.filter(status=status_filter)
+            return queryset
 
         # Regular employee: only own references
         try:
@@ -1457,7 +1665,11 @@ class EmployeeReferenceViewSet(viewsets.ModelViewSet):
         except Employee.DoesNotExist:
             return EmployeeReference.objects.none()
 
-        return EmployeeReference.objects.filter(employee=employee).order_by('-submitted_at')
+        queryset = EmployeeReference.objects.filter(employee=employee).select_related('employee', 'employee__department', 'employee__designation').order_by('-submitted_at')
+        status_filter = self.request.query_params.get("status")
+        if status_filter and status_filter != "All":
+            queryset = queryset.filter(status=status_filter)
+        return queryset
 
     def perform_create(self, serializer):
         """Attach logged-in employee automatically"""
@@ -1470,7 +1682,7 @@ class EmployeeReferenceViewSet(viewsets.ModelViewSet):
     @decorators.action(
         detail=True,
         methods=["patch"],
-        permission_classes=[permissions.IsAdminUser],
+        permission_classes=[permissions.IsAuthenticated],
         url_path="review",
     )
     def review(self, request, pk=None):
@@ -1479,6 +1691,11 @@ class EmployeeReferenceViewSet(viewsets.ModelViewSet):
 
         # Ensure admin and employee are in same company
         admin_user = request.user
+        if not (admin_user.role == "admin" or admin_user.is_superuser):
+            return response.Response(
+                {"error": "Only admins can review employee references."},
+                status=status.HTTP_403_FORBIDDEN
+            )
         if reference.employee.company != admin_user.company:
             return response.Response(
                 {"error": "You are not allowed to review references from another company."},
@@ -1502,3 +1719,157 @@ class EmployeeReferenceViewSet(viewsets.ModelViewSet):
             {"message": "Reference reviewed successfully."},
             status=status.HTTP_200_OK
         )
+
+class AttendanceChartDataAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        range_type = request.GET.get('range', 'week')
+        try:
+            offset = int(request.GET.get('offset', 0))
+        except ValueError:
+            offset = 0
+
+        employee = getattr(request.user, 'employee_profile', None)
+        if not employee:
+            return Response({"detail": "Employee profile not found."}, status=404)
+
+        tz = pytz.timezone('Asia/Kolkata')
+        now = timezone.localtime(timezone.now(), tz)
+        today = now.date()
+
+        series_data = [] # Hours worked
+        labels = []
+        holidays_flags = []
+
+        # Get company holidays
+        holidays = set(CalendarEvent.objects.filter(
+            company=employee.company, 
+            is_holiday=True
+        ).values_list('date', flat=True))
+        
+        # Get weekend config
+        working_days_config = DepartmentWiseWorkingDays.objects.filter(
+            department=employee.department, 
+            company=employee.company
+        ).first()
+        weekend_days = working_days_config.weekend_days if working_days_config else ['Saturday', 'Sunday']
+
+        period_label = ""
+
+        if range_type == 'week':
+            # Offset shifts the 7-day window
+            base_end = today - timedelta(days=7 * offset)
+            base_start = base_end - timedelta(days=6)
+            period_label = f"{base_start.strftime('%b %d')} - {base_end.strftime('%b %d, %Y')}"
+
+            for i in range(6, -1, -1):
+                d = base_end - timedelta(days=i)
+                att = Attendance.objects.filter(employee=employee, date=d).first()
+                hours = 0
+                if att:
+                    if att.total_work_duration:
+                        hours = round(att.total_work_duration.total_seconds() / 3600, 2)
+                    elif d == today and att.check_in and not att.check_out:
+                         # Live calculation for today
+                        now_dt = timezone.now()
+                        total_breaks_secs = sum(
+                            [(b.end - b.start).total_seconds() for b in att.break_logs.filter(start__isnull=False, end__isnull=False)],
+                            0
+                        )
+                        # Active break?
+                        active_b = att.break_logs.filter(end__isnull=True, start__isnull=False).first()
+                        if active_b:
+                            total_breaks_secs += (now_dt - active_b.start).total_seconds()
+                        
+                        live_secs = (now_dt - att.check_in).total_seconds() - total_breaks_secs
+                        hours = round(max(0, live_secs) / 3600, 2)
+
+                day_name = d.strftime('%a')
+                day_full_name = d.strftime('%A')
+                
+                series_data.append(hours)
+                labels.append(day_name)
+                holidays_flags.append(d in holidays or day_full_name in weekend_days)
+
+        elif range_type == 'month':
+            # Offset shifts by 30-day buckets
+            base_end = today - timedelta(days=30 * offset)
+            base_start = base_end - timedelta(days=29)
+            period_label = f"{base_start.strftime('%b %d')} - {base_end.strftime('%b %d, %Y')}"
+
+            for i in range(29, -1, -1):
+                d = base_end - timedelta(days=i)
+                att = Attendance.objects.filter(employee=employee, date=d).first()
+                hours = 0
+                if att:
+                    if att.total_work_duration:
+                        hours = round(att.total_work_duration.total_seconds() / 3600, 2)
+                    elif d == today and att.check_in and not att.check_out:
+                        # Live calculation
+                        now_dt = timezone.now()
+                        total_breaks_secs = sum(
+                            [(b.end - b.start).total_seconds() for b in att.break_logs.filter(start__isnull=False, end__isnull=False)],
+                            0
+                        )
+                        active_b = att.break_logs.filter(end__isnull=True, start__isnull=False).first()
+                        if active_b:
+                            total_breaks_secs += (now_dt - active_b.start).total_seconds()
+                        
+                        live_secs = (now_dt - att.check_in).total_seconds() - total_breaks_secs
+                        hours = round(max(0, live_secs) / 3600, 2)
+
+                series_data.append(hours)
+                labels.append(str(d.day))
+                holidays_flags.append(d in holidays or d.strftime('%A') in weekend_days)
+
+        elif range_type == 'year':
+            # Offset shifts by 12-month buckets
+            current_month_start = today.replace(day=1)
+            # Find the starting month for the 12-month window based on offset
+            # (month - offset*12)
+            base_end_month = (current_month_start.month - (offset * 12) - 1) % 12 + 1
+            base_end_year = current_month_start.year + (current_month_start.month - (offset * 12) - 1) // 12
+            base_end_date = current_month_start.replace(year=base_end_year, month=base_end_month)
+
+            # Period label for year
+            start_month_idx = (base_end_month - 11 - 1) % 12 + 1
+            start_year = base_end_year + (base_end_month - 11 - 1) // 12
+            start_date = current_month_start.replace(year=start_year, month=start_month_idx)
+            period_label = f"{start_date.strftime('%b %Y')} - {base_end_date.strftime('%b %Y')}"
+
+            for i in range(11, -1, -1):
+                # Calculate the year and month accurately
+                m = (base_end_month - i - 1) % 12 + 1
+                y = base_end_year + (base_end_month - i - 1) // 12
+                
+                monthly_atts = Attendance.objects.filter(
+                    employee=employee, 
+                    date__year=y, 
+                    date__month=m
+                )
+                
+                total_seconds = 0
+                for a in monthly_atts:
+                    if a.total_work_duration:
+                        total_seconds += a.total_work_duration.total_seconds()
+                    elif a.date == today and a.check_in and not a.check_out:
+                        now_dt = timezone.now()
+                        brk_secs = sum([(b.end - b.start).total_seconds() for b in a.break_logs.filter(start__isnull=False, end__isnull=False)], 0)
+                        active_b = a.break_logs.filter(end__isnull=True, start__isnull=False).first()
+                        if active_b:
+                            brk_secs += (now_dt - active_b.start).total_seconds()
+                        total_seconds += max(0, (now_dt - a.check_in).total_seconds() - brk_secs)
+                
+                series_data.append(round(total_seconds / 3600, 2))
+                labels.append(month_name[m][:3])
+                holidays_flags.append(False)
+
+        return Response({
+            "series": series_data,
+            "labels": labels,
+            "holidays": holidays_flags,
+            "range": range_type,
+            "period_label": period_label,
+            "offset": offset
+        })

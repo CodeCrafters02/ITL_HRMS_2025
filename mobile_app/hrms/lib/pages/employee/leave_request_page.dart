@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../../models/leave_request_model.dart';
 import '../../services/employee_service.dart';
-import '../../widgets/employee_app_bar.dart';
+import '../../theme/app_stitch_theme.dart';
+import '../../widgets/glass_card.dart';
+import '../../widgets/stitch_background.dart';
 
 class LeaveRequestPage extends StatefulWidget {
   const LeaveRequestPage({super.key});
@@ -86,42 +88,92 @@ class _LeaveRequestPageState extends State<LeaveRequestPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF9FAFB),
-      appBar: EmployeeAppBar(
-        title: 'Leave Requests',
+      backgroundColor: Colors.transparent,
+      body: StitchBackground(
+        child: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+            child: Column(
+              children: [
+                GlassCard(
+                  padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
+                  child: Row(
+                    children: [
+                      IconButton(
+                        onPressed: () => Navigator.pop(context),
+                        icon: const Icon(Icons.arrow_back_ios_new_rounded),
+                      ),
+                      const SizedBox(width: 6),
+                      Expanded(
+                        child: Text(
+                          'Leave requests',
+                          style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                                fontWeight: FontWeight.w900,
+                                color: AppStitchTheme.lightOnSurface,
+                              ),
+                        ),
+                      ),
+                      IconButton(
+                        onPressed: _fetchLeaveRequests,
+                        tooltip: 'Refresh',
+                        icon: const Icon(Icons.refresh_rounded),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Expanded(
+                  child: _isLoading
+                      ? const Center(child: CircularProgressIndicator())
+                      : _error != null
+                          ? _buildErrorState()
+                          : _leaveRequests.isEmpty
+                              ? _buildEmptyState()
+                              : _buildLeaveRequestsList(),
+                ),
+              ],
+            ),
+          ),
+        ),
       ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : _error != null
-              ? _buildErrorState()
-              : _leaveRequests.isEmpty
-                  ? _buildEmptyState()
-                  : _buildLeaveRequestsList(),
     );
   }
 
   Widget _buildErrorState() {
     return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(24),
+      child: GlassCard(
+        padding: const EdgeInsets.all(18),
         child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.error_outline, size: 64, color: Color(0xFFDC2626)),
-            const SizedBox(height: 16),
+            Container(
+              width: 56,
+              height: 56,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: const Color(0xFFEF4444).withValues(alpha: 0.10),
+                border: Border.all(
+                  color: const Color(0xFFEF4444).withValues(alpha: 0.20),
+                ),
+              ),
+              child: const Icon(Icons.error_outline_rounded, color: Color(0xFFEF4444)),
+            ),
+            const SizedBox(height: 10),
             Text(
               _error ?? 'Unknown error',
               textAlign: TextAlign.center,
-              style: const TextStyle(color: Color(0xFF6B7280)),
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    fontWeight: FontWeight.w600,
+                    color: AppStitchTheme.lightOnSurfaceMuted,
+                  ),
             ),
-            const SizedBox(height: 24),
-            ElevatedButton(
-              onPressed: _fetchLeaveRequests,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF4F46E5),
-                foregroundColor: Colors.white,
+            const SizedBox(height: 12),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: _fetchLeaveRequests,
+                child: const Text('Retry'),
               ),
-              child: const Text('Retry'),
             ),
           ],
         ),
@@ -131,27 +183,39 @@ class _LeaveRequestPageState extends State<LeaveRequestPage> {
 
   Widget _buildEmptyState() {
     return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(24),
+      child: GlassCard(
+        padding: const EdgeInsets.all(18),
         child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.event_busy_outlined,
-                size: 64, color: Color(0xFF6B7280)),
-            const SizedBox(height: 16),
-            const Text(
-              'No leave requests',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.w500,
-                color: Color(0xFF111827),
+            Container(
+              width: 56,
+              height: 56,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: Colors.white.withValues(alpha: 0.60),
+                border: Border.all(
+                  color: AppStitchTheme.lightOutline.withValues(alpha: 0.70),
+                ),
               ),
+              child: const Icon(Icons.event_busy_outlined, color: AppStitchTheme.primary),
             ),
-            const SizedBox(height: 8),
-            const Text(
-              'Leave requests from your reportees will appear here',
+            const SizedBox(height: 10),
+            Text(
+              'No leave requests',
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w900,
+                    color: AppStitchTheme.lightOnSurface,
+                  ),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              'Leave requests from your reportees will appear here.',
               textAlign: TextAlign.center,
-              style: TextStyle(color: Color(0xFF6B7280)),
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    fontWeight: FontWeight.w600,
+                    color: AppStitchTheme.lightOnSurfaceMuted,
+                  ),
             ),
           ],
         ),
@@ -162,9 +226,9 @@ class _LeaveRequestPageState extends State<LeaveRequestPage> {
   Widget _buildLeaveRequestsList() {
     return RefreshIndicator(
       onRefresh: _fetchLeaveRequests,
-      color: const Color(0xFF4F46E5),
+      color: AppStitchTheme.primary,
       child: ListView.builder(
-        padding: const EdgeInsets.all(16),
+        padding: EdgeInsets.zero,
         itemCount: _leaveRequests.length,
         itemBuilder: (context, index) {
           return _buildLeaveRequestCard(_leaveRequests[index]);
@@ -177,11 +241,9 @@ class _LeaveRequestPageState extends State<LeaveRequestPage> {
     final isPending = leave.status.toLowerCase() == 'pending';
     final statusColor = _getStatusColor(leave.status);
 
-    return Card(
-      margin: const EdgeInsets.only(bottom: 12),
-      elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: Padding(
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: GlassCard(
         padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -194,20 +256,19 @@ class _LeaveRequestPageState extends State<LeaveRequestPage> {
                     children: [
                       Text(
                         leave.employeeName,
-                        style: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                          color: Color(0xFF111827),
-                        ),
+                        style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                              fontWeight: FontWeight.w900,
+                              color: AppStitchTheme.lightOnSurface,
+                            ),
                       ),
                       if (leave.leaveTypeName != null) ...[
                         const SizedBox(height: 4),
                         Text(
                           leave.leaveTypeName!,
-                          style: const TextStyle(
-                            fontSize: 14,
-                            color: Color(0xFF6B7280),
-                          ),
+                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                fontWeight: FontWeight.w600,
+                                color: AppStitchTheme.lightOnSurfaceMuted,
+                              ),
                         ),
                       ],
                     ],
@@ -216,9 +277,9 @@ class _LeaveRequestPageState extends State<LeaveRequestPage> {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                   decoration: BoxDecoration(
-                    color: statusColor.withOpacity(0.1),
+                    color: statusColor.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(6),
-                    border: Border.all(color: statusColor.withOpacity(0.3)),
+                    border: Border.all(color: statusColor.withValues(alpha: 0.3)),
                   ),
                   child: Text(
                     leave.status,

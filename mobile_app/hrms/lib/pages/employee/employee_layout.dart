@@ -1,15 +1,20 @@
 import 'package:flutter/material.dart';
+import '../../theme/app_stitch_theme.dart';
 import '../../services/employee_service.dart';
 import '../../services/notification_service.dart';
 import '../../services/auth_service.dart';
 import '../../services/fcm_service.dart';
 import '../../models/profile_model.dart';
+import '../../providers/chat_scope.dart';
 import 'employee_dashboard_page.dart';
 import 'my_tasks_page.dart';
 import 'attendance_history_page.dart';
 import 'widgets/employee_drawer.dart';
 import 'widgets/employee_bottom_nav.dart';
 import 'widgets/notification_button.dart';
+import 'widgets/chat_button.dart';
+import '../../widgets/stitch_background.dart';
+import '../../widgets/glass_card.dart';
 
 class EmployeeLayout extends StatefulWidget {
   const EmployeeLayout({super.key});
@@ -30,6 +35,11 @@ class _EmployeeLayoutState extends State<EmployeeLayout> with WidgetsBindingObse
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     _checkAuthAndInitialize();
+    // Keep chat badge/conversations warm for global unread counts.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      ChatScope.of(context).initialize();
+    });
     // Check for pending notifications after a short delay to ensure context is ready
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _handlePendingNotifications();
@@ -41,6 +51,15 @@ class _EmployeeLayoutState extends State<EmployeeLayout> with WidgetsBindingObse
     if (state == AppLifecycleState.resumed) {
       // Check for pending notifications when app resumes
       _handlePendingNotifications();
+      if (mounted) {
+        ChatScope.of(context).setForeground(true);
+      }
+    } else if (state == AppLifecycleState.paused ||
+        state == AppLifecycleState.inactive ||
+        state == AppLifecycleState.detached) {
+      if (mounted) {
+        ChatScope.of(context).setForeground(false);
+      }
     }
   }
 
@@ -86,6 +105,18 @@ class _EmployeeLayoutState extends State<EmployeeLayout> with WidgetsBindingObse
     } else if (type == 'leave_status') {
       // Navigate to Leave Application page for employees
       Navigator.pushNamed(context, '/employee/leave-application');
+    } else if (type == 'chat') {
+      final convIdRaw = data['conversation_id'] ?? data['conversationId'];
+      final convId = int.tryParse(convIdRaw?.toString() ?? '') ?? 0;
+      if (convId > 0) {
+        Navigator.pushNamed(
+          context,
+          '/employee/chat/thread',
+          arguments: {'conversationId': convId},
+        );
+      } else {
+        Navigator.pushNamed(context, '/employee/chat');
+      }
     } else if (type == 'task') {
       // Navigate to My Tasks page
       setState(() {
@@ -205,12 +236,12 @@ class _EmployeeLayoutState extends State<EmployeeLayout> with WidgetsBindingObse
           gradient: const LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
-            colors: [Color(0xFF6366F1), Color(0xFFA5B4FC)],
+            colors: [AppStitchTheme.primary, Color(0xFF8B5CF6)],
           ),
           border: Border.all(color: Colors.white, width: 2),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.1),
+              color: Colors.black.withValues(alpha: 0.1),
               blurRadius: 4,
               offset: const Offset(0, 2),
             ),
@@ -261,40 +292,55 @@ class _EmployeeLayoutState extends State<EmployeeLayout> with WidgetsBindingObse
   Widget build(BuildContext context) {
     return Scaffold(
       key: _scaffoldKey,
-      appBar: AppBar(
-        leading: IconButton(
-          icon: const Icon(Icons.menu),
-          onPressed: () => _scaffoldKey.currentState?.openDrawer(),
-        ),
-        title: Row(
-          children: [
-            Image.asset(
-              'assets/logo/app_logo.png',
-              height: 32,
-              width: 32,
-              errorBuilder: (context, error, stackTrace) => const SizedBox(),
-            ),
-            const SizedBox(width: 12),
-            Text(_getPageTitle()),
-          ],
-        ),
-        actions: [
-          const Padding(
-            padding: EdgeInsets.only(right: 8.0),
-            child: NotificationButton(),
-          ),
-          _buildProfileAvatar(),
-          const SizedBox(width: 8),
-        ],
-        backgroundColor: const Color(0xFF4F46E5),
-        foregroundColor: Colors.white,
-        elevation: 0,
-      ),
       drawer: EmployeeDrawer(
         isReportingManager: _isReportingManager,
         onItemTap: _onDrawerItemTap,
       ),
-      body: _getPage(_currentIndex),
+      body: StitchBackground(
+        child: SafeArea(
+          child: Column(
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 10),
+                child: GlassCard(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                  child: Row(
+                    children: [
+                      IconButton(
+                        icon: const Icon(Icons.menu_rounded),
+                        onPressed: () => _scaffoldKey.currentState?.openDrawer(),
+                      ),
+                      Image.asset(
+                        'assets/logo/app_logo.png',
+                        height: 28,
+                        width: 28,
+                        errorBuilder: (context, error, stackTrace) =>
+                            const SizedBox(width: 0, height: 0),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          _getPageTitle(),
+                          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                fontWeight: FontWeight.w800,
+                                color: AppStitchTheme.lightOnSurface,
+                              ),
+                        ),
+                      ),
+                      const NotificationButton(),
+                      const ChatButton(),
+                      _buildProfileAvatar(),
+                    ],
+                  ),
+                ),
+              ),
+              Expanded(
+                child: _getPage(_currentIndex),
+              ),
+            ],
+          ),
+        ),
+      ),
       bottomNavigationBar: EmployeeBottomNav(
         currentIndex: _currentIndex,
         onTap: _onBottomNavTap,

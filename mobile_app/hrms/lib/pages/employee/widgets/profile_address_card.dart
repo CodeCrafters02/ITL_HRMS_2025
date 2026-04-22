@@ -30,14 +30,14 @@ class ProfileAddressCard extends StatelessWidget {
           isLink && value.isNotEmpty && value != '-'
               ? GestureDetector(
                   onTap: () async {
+                    final nav = Navigator.of(context);
                     try {
                       final uri = Uri.parse(value);
                       if (await canLaunchUrl(uri)) {
                         await launchUrl(uri, mode: LaunchMode.externalApplication);
                       } else {
                         // If it's a relative URL, navigate to PDF viewer
-                        Navigator.push(
-                          context,
+                        nav.push(
                           MaterialPageRoute(
                             builder: (context) => PdfViewerPage(
                               pdfUrl: value,
@@ -48,8 +48,7 @@ class ProfileAddressCard extends StatelessWidget {
                       }
                     } catch (e) {
                       // Navigate to PDF viewer
-                      Navigator.push(
-                        context,
+                      nav.push(
                         MaterialPageRoute(
                           builder: (context) => PdfViewerPage(
                             pdfUrl: value,

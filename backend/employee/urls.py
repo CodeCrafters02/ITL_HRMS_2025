@@ -14,6 +14,9 @@ urlpatterns = [
     path('checkin/', CheckInAPIView.as_view(), name='api_checkin'),
     path('checkout/', CheckOutAPIView.as_view(), name='api_checkout'),
     path('dashboard/', DashboardAPIView.as_view(), name='dashboard'),
+    path('announcements/', EmployeeAnnouncementsAPIView.as_view(), name='employee-announcements'),
+    path('time-log/meta/', TimeLogMetaAPIView.as_view(), name='time-log-meta'),
+    path('time-log/', TimeLogListCreateAPIView.as_view(), name='time-log'),
     path('employee-notifications/', NotificationListAPIView.as_view(), name='employee-notifications'),
 
     path('attendance-history/', AttendanceHistoryAPIView.as_view(), name='attendance_history'),
@@ -38,6 +41,8 @@ urlpatterns = [
     path('employee-breaks/', BreakLogAPIView.as_view(), name='employee-breaks'),
     path('employee-companypolicies/', EmployeeCompanyPoliciesAPIView.as_view(), name='employee-company-policies'),
     path('employee-hierarchy/', EmployeeHierarchyAPIView.as_view(), name='employee-hierarchy'),
+    path('attendance-chart/', AttendanceChartDataAPIView.as_view(), name='attendance-chart'),
+
 
     path('all-notifications/', AllNotificationsAPIView.as_view(), name='all-notifications'),
     path('sse/', NotificationSSEView.as_view(), name='notification_sse'),    

@@ -1,4 +1,6 @@
 from rest_framework import viewsets, generics, status
+from django.shortcuts import get_object_or_404
+import pytz
 import string
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -23,11 +25,23 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 import re
 from rest_framework.permissions import IsAuthenticated
-from .permissions import IsMaster,IsAdminUser
+from .permissions import IsMaster, IsAdminUser, IsCompanyChatUser, CanReadCompanyCalendar
 from .serializers import *
 from .models import *
 
+from rest_framework import filters
+from rest_framework.pagination import PageNumberPagination
+from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
+from .chat_serializers import (
+    ChatConversationSerializer,
+    ChatMessageSerializer,
+)
 
+
+class CustomPagination(PageNumberPagination):
+    page_size = 10
+    page_size_query_param = 'page_size'
+    max_page_size = 100
 class CustomPasswordChangeAPIView(generics.UpdateAPIView):
     serializer_class = CustomPasswordChangeSerializer
     permission_classes = [IsAuthenticated]
@@ -59,9 +73,12 @@ class UserManagementViewSet(viewsets.ModelViewSet):
     serializer_class = UserSerializer
     # permission_classes = [permissions.IsAuthenticated, IsMaster]
     permission_classes = [permissions.AllowAny]
+    pagination_class = CustomPagination
+    filter_backends = [filters.SearchFilter]
+    search_fields = ['username', 'email', 'role']
 
     def get_queryset(self):
-        queryset = UserRegister.objects.all()
+        queryset = UserRegister.objects.all().order_by('id')
         created_by = self.request.query_params.get('created_by')
         if created_by:
             queryset = queryset.filter(created_by=created_by)
@@ -74,33 +91,15 @@ class UserManagementViewSet(viewsets.ModelViewSet):
         else:
             serializer.save()
 class AdminRegisterViewSet(viewsets.ModelViewSet):
-    queryset = UserRegister.objects.filter(role='admin')
     serializer_class = AdminRegisterSerializer
     permission_classes = [IsAuthenticated, IsMaster]
+    pagination_class = CustomPagination
+    filter_backends = [filters.SearchFilter]
+    search_fields = ['username', 'email']
 
-    def update(self, request, pk=None):
-        try:
-            admin = UserRegister.objects.get(pk=pk, role='admin')
-        except UserRegister.DoesNotExist:
-            return Response({'detail': 'Admin not found.'}, status=status.HTTP_404_NOT_FOUND)
-
-        serializer = AdminRegisterSerializer(admin, data=request.data, partial=True)
-        serializer.is_valid(raise_exception=True)
-        serializer.save()
-        return Response(serializer.data, status=status.HTTP_200_OK)
-
-    def create(self, request):
-        serializer = AdminRegisterSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        serializer.save()
-        return Response(serializer.data, status=status.HTTP_201_CREATED)
-
-    def list(self, request):
-        # Default to showing all admins
-        # Support 'unassigned=true' to show only admins without a company
-        # Support 'include_id' to ensure a specific admin is in the list
-        unassigned = request.query_params.get('unassigned') == 'true'
-        include_id = request.query_params.get('include_id')
+    def get_queryset(self):
+        unassigned = self.request.query_params.get('unassigned') == 'true'
+        include_id = self.request.query_params.get('include_id')
         
         queryset_filter = Q(role='admin')
         
@@ -110,9 +109,25 @@ class AdminRegisterViewSet(viewsets.ModelViewSet):
             else:
                 queryset_filter &= Q(company__isnull=True)
             
-        admins = UserRegister.objects.filter(queryset_filter)
-        serializer = AdminRegisterSerializer(admins, many=True)
-        return Response(serializer.data)
+        return UserRegister.objects.filter(queryset_filter).order_by('id')
+
+    def update(self, request, pk=None, *args, **kwargs):
+        partial = kwargs.pop('partial', False)
+        try:
+            admin = UserRegister.objects.get(pk=pk, role='admin')
+        except UserRegister.DoesNotExist:
+            return Response({'detail': 'Admin not found.'}, status=status.HTTP_404_NOT_FOUND)
+
+        serializer = AdminRegisterSerializer(admin, data=request.data, partial=partial)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+    def create(self, request):
+        serializer = AdminRegisterSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
 class PasswordChangeView(generics.UpdateAPIView):
     serializer_class = PasswordChangeSerializer
     permission_classes = [IsAuthenticated]
@@ -167,7 +182,9 @@ class MasterDashboardView(APIView):
         return Response({
             "companies": companies_data,
             "total_companies": companies.count(),
-            "total_admins": UserRegister.objects.filter(role='admin').count()
+            "total_admins": UserRegister.objects.filter(role='admin').count(),
+            "total_masters": UserRegister.objects.filter(role='master').count(),
+            "total_employees": UserRegister.objects.filter(role='employee').count()
         })
 
 class LoginAPIView(APIView):
@@ -190,15 +207,30 @@ class LoginAPIView(APIView):
             return Response({
                 "access": access_token,
                 "refresh": refresh_token,
+                "id": user.id,
+                "username": user.username,
+                "first_name": user.first_name,
+                "last_name": user.last_name,
                 "role": user.role  # ✅ This lets frontend redirect properly!
             }, status=status.HTTP_200_OK)
 
         return Response({"detail": "Invalid credentials"}, status=status.HTTP_401_UNAUTHORIZED)
      
+from rest_framework import filters
+from rest_framework.pagination import PageNumberPagination
+
+class CustomPagination(PageNumberPagination):
+    page_size = 10
+    page_size_query_param = 'page_size'
+    max_page_size = 100
+
 class CompanyWithAdminViewSet(viewsets.ModelViewSet):
-    queryset = Company.objects.all()
+    queryset = Company.objects.all().order_by('id')
     serializer_class = CompanyWithAdminSerializer
     permission_classes = [IsAuthenticated, IsMaster]
+    pagination_class = CustomPagination
+    filter_backends = [filters.SearchFilter]
+    search_fields = ['name', 'email', 'location', 'phone_number']
 
     def get_serializer_context(self):
         return {'request': self.request}
@@ -245,8 +277,17 @@ class CompanyUpdateAPIView(APIView):
 class AdminDashboardAPIView(APIView):
     permission_classes = [IsAuthenticated,IsAdminUser]
     def get(self, request):
-        today = timezone.now().date()
-        company = request.user.company  
+        tz = pytz.timezone('Asia/Kolkata')
+        now = timezone.localtime(timezone.now(), tz)
+        today = now.date()
+        company = request.user.company
+
+        # Personal birthday message for the admin
+        birthday_message = None
+        emp_profile = request.user.employee_profile
+        if emp_profile and emp_profile.date_of_birth:
+            if emp_profile.date_of_birth.day == today.day and emp_profile.date_of_birth.month == today.month:
+                birthday_message = f"Happy Birthday, {request.user.first_name or request.user.username}! 🎉"
 
         # Department count
         total_departments = Department.objects.filter(company=company).count()
@@ -274,16 +315,28 @@ class AdminDashboardAPIView(APIView):
             relieved_info__relieving_date__year=today.year,
             relieved_info__relieving_date__month=today.month
         ).count()
-        # Upcoming Birthdays/Anniversaries (next 30 days)
+        # Upcoming Birthdays (next 30 days)
+        # NOTE: month/day range filtering breaks across month/year boundaries.
+        # Compute each employee's next birthday date and filter in Python (company sizes are typically manageable).
         next_30 = today + timezone.timedelta(days=30)
-        upcoming_birthdays = Employee.objects.filter(
-            company=company,
-            date_of_birth__month__gte=today.month,
-            date_of_birth__day__gte=today.day,
-            date_of_birth__month__lte=next_30.month,
-            date_of_birth__day__lte=next_30.day,
-            is_active=True
-        ).order_by('date_of_birth')
+        upcoming_birthdays = []
+        for e in Employee.objects.filter(company=company, is_active=True).only('id', 'first_name', 'last_name', 'date_of_birth'):
+            dob = e.date_of_birth
+            if not dob:
+                continue
+            try:
+                next_bday = dob.replace(year=today.year)
+            except ValueError:
+                # Handle Feb 29 in non-leap years: treat as Feb 28
+                next_bday = timezone.datetime(today.year, 2, 28).date()
+            if next_bday < today:
+                try:
+                    next_bday = next_bday.replace(year=today.year + 1)
+                except ValueError:
+                    next_bday = timezone.datetime(today.year + 1, 2, 28).date()
+            if today <= next_bday <= next_30:
+                upcoming_birthdays.append((next_bday, e))
+        upcoming_birthdays.sort(key=lambda x: x[0])
         
 
         # Attendance Snapshot - Calculate based on shift timing
@@ -318,13 +371,18 @@ class AdminDashboardAPIView(APIView):
                 "exits_this_month": exits_this_month,
             },
             "upcoming_birthdays": [
-                {"name": e.full_name, "date_of_birth": e.date_of_birth} for e in upcoming_birthdays
+                {
+                    "name": f"{(e.first_name or '').strip()} {(e.last_name or '').strip()}".strip() or str(e.employee_id or e.id),
+                    "date_of_birth": e.date_of_birth,
+                }
+                for _, e in upcoming_birthdays
             ],
            
             "attendance_snapshot": attendance_snapshot,
             "pending_leave_requests": pending_leaves,
             "payroll_status": payroll_status,
             "next_salary_release_date": next_salary_release_date,
+            "birthday_message": birthday_message,
         })
 
     def _calculate_attendance_snapshot(self, company, today, employees):
@@ -474,47 +532,169 @@ class AdminDashboardAPIView(APIView):
 
 class DepartmentViewSet(viewsets.ModelViewSet):
     serializer_class = DepartmentSerializer
-    permission_classes = [IsAuthenticated,IsAdminUser]
+    permission_classes = [IsAuthenticated, IsAdminUser | IsMaster]
+    pagination_class = CustomPagination
+    filter_backends = [filters.SearchFilter]
+    search_fields = ['department_name']
     
     def get_queryset(self):
-        return Department.objects.filter(company=self.request.user.company)
+        user = self.request.user
+        if user.role == 'master':
+            return Department.objects.all().order_by('id')
+        return Department.objects.filter(company=user.company).order_by('id')
 
     def perform_create(self, serializer):
-        serializer.save(company=self.request.user.company)
+        company = self.request.user.company
+        if not company:
+            raise serializers.ValidationError({"company": "No company found for the current user."})
+        serializer.save(company=company)
 
 
 class LevelViewSet(viewsets.ModelViewSet):
     serializer_class = LevelSerializer
-    permission_classes = [IsAuthenticated,IsAdminUser]
+    permission_classes = [IsAuthenticated, IsAdminUser | IsMaster]
+    pagination_class = CustomPagination
+    filter_backends = [filters.SearchFilter]
+    search_fields = ['level_name', 'description']
    
     def get_queryset(self):
-        return Level.objects.filter(company=self.request.user.company)
+        user = self.request.user
+        if user.role == 'master':
+            return Level.objects.all().order_by('id')
+        return Level.objects.filter(company=user.company).order_by('id')
 
     def perform_create(self, serializer):
-        serializer.save(company=self.request.user.company)
+        company = self.request.user.company
+        if not company:
+            raise serializers.ValidationError({"company": "No company found for the current user."})
+        serializer.save(company=company)
 
 
 class DesignationViewSet(viewsets.ModelViewSet):
     serializer_class = DesignationSerializer
-    permission_classes = [IsAuthenticated,IsAdminUser]
+    permission_classes = [IsAuthenticated, IsAdminUser | IsMaster]
+    pagination_class = CustomPagination
+    filter_backends = [filters.SearchFilter]
+    search_fields = ['designation_name', 'department__department_name', 'level__level_name']
    
     def get_queryset(self):
-        return Designation.objects.filter(company=self.request.user.company)
+        user = self.request.user
+        if user.role == 'master':
+            return Designation.objects.select_related('department', 'level').order_by('id')
+        return Designation.objects.filter(company=user.company).select_related('department', 'level').order_by('id')
 
     def perform_create(self, serializer):
-        serializer.save(company=self.request.user.company)        
+        company = self.request.user.company
+        if not company:
+            raise serializers.ValidationError({"company": "No company found for the current user."})
+        serializer.save(company=company)        
 
 class EmployeeViewSet(viewsets.ModelViewSet):
     queryset = Employee.objects.all()
     serializer_class = EmployeeSerializer
-    permission_classes = [IsAuthenticated, IsAdminUser]
+    permission_classes = [IsAuthenticated]
+    pagination_class = CustomPagination
+    filter_backends = [filters.SearchFilter]
+    search_fields = [
+        'employee_id',
+        'first_name',
+        'middle_name',
+        'last_name',
+        'email',
+        'mobile',
+        'department__department_name',
+        'designation__designation_name',
+        'level__level_name',
+    ]
+    parser_classes = [MultiPartParser, FormParser, JSONParser]
+
+    def _ensure_employee_profiles_for_company(self, company):
+        """
+        Ensure every employee `UserRegister` in this company has an `Employee` profile.
+        This fixes mismatches where SSO-created users exist without an Employee record,
+        causing Admin "Employee Register" to appear incomplete.
+        """
+        if not company:
+            return
+
+        # Users with role=employee but no Employee profile (OneToOne reverse is `employee` by default)
+        missing_profile_users = (
+            UserRegister.objects.filter(role="employee", company=company, employee__isnull=True)
+            .only("id", "first_name", "last_name", "email", "company_id")
+        )
+
+        for u in missing_profile_users:
+            if not u.email:
+                continue
+
+            # Prefer linking an existing Employee row (created earlier via HR) by email+company
+            existing = (
+                Employee.objects.filter(company=company, email__iexact=u.email)
+                .select_related("company")
+                .first()
+            )
+            if existing:
+                if not existing.user_id:
+                    existing.user_id = u.id
+                    # Backfill basic fields if empty
+                    if not existing.first_name:
+                        existing.first_name = u.first_name or existing.first_name
+                    if not existing.last_name:
+                        existing.last_name = u.last_name or existing.last_name
+                    if not existing.email:
+                        existing.email = u.email
+                    existing.save(update_fields=["user", "first_name", "last_name", "email"])
+                continue
+
+            # Otherwise create a lightweight Employee profile
+            Employee.objects.create(
+                user_id=u.id,
+                company=company,
+                first_name=u.first_name or None,
+                last_name=u.last_name or None,
+                email=u.email,
+            )
+
+    def get_permissions(self):
+        # Employees can view (list/retrieve) employees from their company,
+        # but cannot create/update/delete.
+        if self.action in ['list', 'retrieve', 'get_reporting_manager_choices']:
+            permission_classes = [IsAuthenticated]
+        else:
+            permission_classes = [IsAuthenticated, IsAdminUser | IsMaster]
+        return [permission() for permission in permission_classes]
 
     def get_queryset(self):
         user = self.request.user
-        return Employee.objects.filter(company=user.company).select_related(
+        qs = Employee.objects.all()
+        if user.role != 'master':
+            company = getattr(user, 'company', None)
+            if not company:
+                # Fallback (SSO/legacy): infer company from linked employee profile
+                emp = Employee.objects.filter(user=user).select_related('company').first()
+                company = emp.company if emp else None
+            if company:
+                # Keep the Employee register complete for this company
+                self._ensure_employee_profiles_for_company(company)
+                qs = qs.filter(company=company)
+            else:
+                qs = qs.none()
+            
+        return qs.select_related(
             'department', 'designation', 'level', 'reporting_manager', 
             'reporting_level', 'shift_assigned'
         ).order_by('employee_id')
+
+    def perform_destroy(self, instance):
+        """
+        When deleting an Employee, also delete the linked UserRegister account.
+        The OneToOneField CASCADE only works UserRegister→Employee (not reverse),
+        so we must manually clean up the UserRegister to avoid orphaned login accounts.
+        """
+        linked_user = instance.user
+        instance.delete()
+        if linked_user:
+            linked_user.delete()
 
     @action(detail=False, methods=['get'], url_path='get-reporting-manager-choices')
     def get_reporting_manager_choices(self, request):
@@ -558,19 +738,97 @@ class EmployeeViewSet(viewsets.ModelViewSet):
         return Response(response_data, status=status.HTTP_200_OK)
 
     
-class AssetInventoryViewSet(viewsets.ModelViewSet):
-    serializer_class = AssetInventorySerializer
+class SupplyItemViewSet(viewsets.ModelViewSet):
+    serializer_class = SupplyItemSerializer
     permission_classes = [IsAuthenticated, IsAdminUser]
+    pagination_class = CustomPagination
+    filter_backends = [filters.SearchFilter]
+    search_fields = ['item_code', 'item_name', 'vendor_details', 'sub_category']
 
     def get_queryset(self):
-        """ Limit to assets belonging to  company """
-        company = self.request.user.company
-        return AssetInventory.objects.filter(company=company)
-    
+        return SupplyItem.objects.filter(company=self.request.user.company).order_by('item_code')
+
+
+class FixedAssetViewSet(viewsets.ModelViewSet):
+    serializer_class = FixedAssetSerializer
+    permission_classes = [IsAuthenticated, IsAdminUser]
+    pagination_class = CustomPagination
+    parser_classes = [JSONParser, MultiPartParser, FormParser]
+    filter_backends = [filters.SearchFilter]
+    search_fields = ['asset_tag', 'serial_number', 'model_brand', 'category', 'status']
+
+    def get_queryset(self):
+        return FixedAsset.objects.filter(company=self.request.user.company).select_related(
+            'assigned_to', 'variable_supply_item'
+        )
+
+    def perform_destroy(self, instance):
+        instance.delete()
+
+
+class AssetRequestViewSet(viewsets.ModelViewSet):
+    serializer_class = AssetRequestSerializer
+    pagination_class = CustomPagination
+    parser_classes = [JSONParser, MultiPartParser, FormParser]
+    filter_backends = [filters.SearchFilter]
+    search_fields = ['remarks', 'approval_status', 'requested_by__first_name', 'requested_by__last_name']
+
+    def get_permissions(self):
+        # Employees can create requests and view their own.
+        if self.action in ("create", "list", "retrieve"):
+            return [IsAuthenticated()]
+        # Only admins can approve/edit/delete requests
+        return [IsAuthenticated(), IsAdminUser()]
+
+    def get_queryset(self):
+        qs = AssetRequest.objects.filter(company=self.request.user.company).select_related(
+            'requested_by', 'related_fixed_asset', 'related_supply_item'
+        )
+        if getattr(self.request.user, 'role', None) == 'employee':
+            emp = getattr(self.request.user, 'employee_profile', None)
+            if emp:
+                qs = qs.filter(requested_by=emp)
+            else:
+                qs = qs.none()
+        return qs
+    def perform_create(self, serializer):
+        u = self.request.user
+        if getattr(u, 'role', None) == 'employee':
+            emp = getattr(u, 'employee_profile', None)
+            serializer.save(company=u.company, requested_by=emp)
+        else:
+            serializer.save(company=u.company)
+
+class AssetSupportingDocumentViewSet(viewsets.ModelViewSet):
+    serializer_class = AssetSupportingDocumentSerializer
+    permission_classes = [IsAuthenticated, IsAdminUser]
+    pagination_class = CustomPagination
+    parser_classes = [JSONParser, MultiPartParser, FormParser]
+
+    def get_queryset(self):
+        qs = AssetSupportingDocument.objects.filter(company=self.request.user.company)
+        fa = self.request.query_params.get('fixed_asset')
+        si = self.request.query_params.get('supply_item')
+        ar = self.request.query_params.get('asset_request')
+        if fa:
+            qs = qs.filter(fixed_asset_id=fa)
+        if si:
+            qs = qs.filter(supply_item_id=si)
+        if ar:
+            qs = qs.filter(asset_request_id=ar)
+        return qs.order_by('-uploaded_at')
+
+    def perform_create(self, serializer):
+        serializer.save(company=self.request.user.company, uploaded_by=self.request.user)
+
     
 class RecruitmentViewSet(viewsets.ModelViewSet):
     queryset = Recruitment.objects.all()
     serializer_class = RecruitmentSerializer
+    permission_classes = [IsAuthenticated, IsAdminUser | IsMaster]
+    pagination_class = CustomPagination
+    filter_backends = [filters.SearchFilter]
+    search_fields = ['reference_id', 'name', 'email', 'job_title', 'status', 'guardian_name']
 
     def perform_update(self, serializer):
         instance = serializer.save()
@@ -610,10 +868,13 @@ class LearningCornerViewSet(viewsets.ModelViewSet):
     queryset = LearningCorner.objects.all()
     serializer_class = LearningCornerSerializer
     permission_classes = [IsAuthenticated,IsAdminUser]
+    pagination_class = CustomPagination
+    filter_backends = [filters.SearchFilter]
+    search_fields = ['title', 'description']
 
     def get_queryset(self):
         user = self.request.user
-        return LearningCorner.objects.filter(company=user.company)
+        return LearningCorner.objects.filter(company=user.company).order_by('id')
 
     def perform_create(self, serializer):
         serializer.save(company=self.request.user.company)
@@ -634,6 +895,9 @@ class NotificationViewSet(viewsets.ModelViewSet):
 class ShiftPolicyViewSet(viewsets.ModelViewSet):
     serializer_class = ShiftPolicySerializer
     permission_classes = [IsAuthenticated,IsAdminUser]
+    pagination_class = CustomPagination
+    filter_backends = [filters.SearchFilter]
+    search_fields = ['shift_type']
 
     def get_queryset(self):
         return ShiftPolicy.objects.filter(company=self.request.user.company)
@@ -655,53 +919,81 @@ class DepartmentWiseWorkingDaysViewSet(viewsets.ModelViewSet):
             qs = qs.filter(company=company)
         return qs
 
-    def create(self, request, *args, **kwargs):
-        department_id = request.data.get('department')
-        shift_ids = request.data.get('shifts', [])
-        company_id = request.data.get('company')
-
-        if not department_id:
-            return Response({'detail': 'Department is required.'}, status=400)
-
+    def _check_duplicate(self, department_id, shift_ids, company_id, current_id=None):
         existing_qs = DepartmentWiseWorkingDays.objects.filter(department_id=department_id)
-
         if company_id:
             existing_qs = existing_qs.filter(company_id=company_id)
         else:
             existing_qs = existing_qs.filter(company__isnull=True)
+            
+        if current_id:
+            existing_qs = existing_qs.exclude(id=current_id)
 
         if not shift_ids:
-            # Adding for all shifts
             if existing_qs.filter(shifts__isnull=False).exists():
-                return Response({'detail': 'Shift-specific records already exist. Cannot add "All Shifts" record.'}, status=400)
+                return 'Shift-specific records already exist. Cannot add "All Shifts" record.'
         else:
-            # Adding for specific shifts
-            if existing_qs.filter(shifts=None).exists():
-                return Response({'detail': 'An "All Shifts" record exists. Cannot add shift-specific records.'}, status=400)
+            if existing_qs.filter(shifts__isnull=True).exists():
+                return 'An "All Shifts" record exists. Cannot add shift-specific records.'
 
-            for obj in existing_qs:
-                existing_shifts = set(obj.shifts.values_list('id', flat=True))
-                if set(shift_ids) == existing_shifts:
-                    return Response({'detail': 'Duplicate shift combination exists for this department.'}, status=400)
+            # If any requested shift is already assigned in another record for this department
+            conflicting = existing_qs.filter(shifts__id__in=shift_ids).distinct()
+            if conflicting.exists():
+                return 'One or more of the selected shifts are already configured for this department.'
+        return None
 
-        # Always save with the current user's company, and only pass expected fields
+    def create(self, request, *args, **kwargs):
+        department_id = request.data.get('department')
+        shift_ids = request.data.get('shifts', [])
+        company_id = self.request.user.company.id
+
+        if not department_id:
+            return Response({'detail': 'Department is required.'}, status=400)
+
+        err = self._check_duplicate(department_id, shift_ids, company_id)
+        if err:
+            return Response({'detail': err}, status=400)
+
         serializer = self.get_serializer(data={
             'department': department_id,
             'shifts': shift_ids,
             'working_days_count': request.data.get('working_days_count'),
             'week_start_day': request.data.get('week_start_day'),
             'week_end_day': request.data.get('week_end_day'),
-            'company': self.request.user.company.id
+            'working_days': request.data.get('working_days', []),
+            'weekend_days': request.data.get('weekend_days', []),
+            'company': company_id
         })
         serializer.is_valid(raise_exception=True)
         self.perform_create(serializer)
         headers = self.get_success_headers(serializer.data)
         return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
 
+    def update(self, request, *args, **kwargs):
+        partial = kwargs.pop('partial', False)
+        instance = self.get_object()
+        
+        department_id = request.data.get('department', instance.department_id)
+        shift_ids = request.data.get('shifts')
+        if shift_ids is None:
+            shift_ids = list(instance.shifts.values_list('id', flat=True))
+            
+        company_id = getattr(self.request.user.company, 'id', None)
+        
+        err = self._check_duplicate(department_id, shift_ids, company_id, current_id=instance.id)
+        if err:
+            return Response({'detail': err}, status=400)
+            
+        return super().update(request, *args, **kwargs)
+
 
 class CalendarEventViewSet(viewsets.ModelViewSet):
     serializer_class = CalendarEventSerializer
-    permission_classes = [IsAuthenticated, IsAdminUser]
+
+    def get_permissions(self):
+        if self.action in ("list", "retrieve"):
+            return [IsAuthenticated(), CanReadCompanyCalendar()]
+        return [IsAuthenticated(), IsAdminUser()]
 
     def get_queryset(self):
         return CalendarEvent.objects.filter(company=self.request.user.company)
@@ -709,6 +1001,390 @@ class CalendarEventViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         serializer.save(company=self.request.user.company)
 
+    @action(detail=False, methods=['post'], url_path='bulk-import')
+    def bulk_import(self, request):
+        """
+        Bulk import company holidays/events.
+
+        Expected JSON body:
+        {
+          "rows": [
+            { "date": "2026-03-03", "name": "Holiday name", "description": "", "is_holiday": true }
+          ]
+        }
+        """
+        company = request.user.company
+        rows = request.data.get('rows')
+        if not isinstance(rows, list):
+            return Response({'detail': 'rows must be a list'}, status=status.HTTP_400_BAD_REQUEST)
+
+        created = 0
+        updated = 0
+        skipped = 0
+        out = []
+
+        for r in rows:
+            if not isinstance(r, dict):
+                skipped += 1
+                continue
+            name = (r.get('name') or '').strip()
+            date_val = r.get('date')
+            if not name or not date_val:
+                skipped += 1
+                continue
+            desc = (r.get('description') or '').strip()
+            is_holiday = bool(r.get('is_holiday', True))
+
+            obj, was_created = CalendarEvent.objects.get_or_create(
+                company=company,
+                date=date_val,
+                name=name,
+                defaults={'description': desc, 'is_holiday': is_holiday},
+            )
+            if was_created:
+                created += 1
+            else:
+                changed = False
+                if desc and obj.description != desc:
+                    obj.description = desc
+                    changed = True
+                if obj.is_holiday != is_holiday:
+                    obj.is_holiday = is_holiday
+                    changed = True
+                if changed:
+                    obj.save(update_fields=['description', 'is_holiday', 'updated_at'])
+                    updated += 1
+                else:
+                    skipped += 1
+            out.append({'id': obj.id, 'name': obj.name, 'date': str(obj.date), 'is_holiday': obj.is_holiday})
+
+        return Response(
+            {'created': created, 'updated': updated, 'skipped': skipped, 'results': out},
+            status=status.HTTP_200_OK,
+        )
+
+
+class ChatConversationViewSet(viewsets.ModelViewSet):
+    permission_classes = [IsAuthenticated, IsCompanyChatUser]
+    pagination_class = CustomPagination
+    filter_backends = [filters.SearchFilter]
+    search_fields = ["name", "members__user__username", "members__user__email"]
+    serializer_class = ChatConversationSerializer
+
+    def get_queryset(self):
+        user = self.request.user
+        return (
+            ChatConversation.objects.filter(company=user.company, members__user=user)
+            .distinct()
+            .order_by("-updated_at")
+        )
+
+    def perform_create(self, serializer):
+        # Only group conversations created via REST; DMs can be created via action below
+        user = self.request.user
+        company = user.company
+        conv_type = self.request.data.get("type") or "group"
+        if conv_type != "group":
+            raise serializers.ValidationError({"type": "Only group conversations can be created here."})
+        name = (self.request.data.get("name") or "").strip()
+        if not name:
+            raise serializers.ValidationError({"name": "Group name is required."})
+
+        conversation = serializer.save(company=company, created_by=user, type="group", name=name)
+        # creator becomes admin with full permissions
+        ChatConversationMember.objects.create(
+            conversation=conversation,
+            user=user,
+            role="admin",
+            can_add_members=True,
+            can_remove_members=True,
+            can_revoke_roles=True,
+        )
+
+        # optional initial members
+        member_ids = self.request.data.get("member_ids") or []
+        if isinstance(member_ids, str):
+            member_ids = [x for x in member_ids.split(",") if x.strip()]
+        for uid in member_ids:
+            try:
+                uid_int = int(uid)
+            except Exception:
+                continue
+            if uid_int == user.id:
+                continue
+            target = UserRegister.objects.filter(id=uid_int, company=company).first()
+            if not target:
+                continue
+            ChatConversationMember.objects.get_or_create(conversation=conversation, user=target, defaults={"role": "member"})
+
+    @action(detail=False, methods=["post"], url_path="dm")
+    def create_dm(self, request):
+        """Create (or get) a DM conversation between current user and another user in same company."""
+        user = request.user
+        company = user.company
+        other_id = request.data.get("user_id")
+        if not other_id:
+            return Response({"detail": "user_id is required."}, status=400)
+        company_id = company.id
+        other = UserRegister.objects.filter(
+            Q(id=other_id),
+            Q(company_id=company_id) | Q(employee__company_id=company_id),
+            Q(role__in=["admin", "employee"]),
+        ).first()
+        if not other:
+            return Response({"detail": "User not found in your company."}, status=404)
+        if other.id == user.id:
+            return Response({"detail": "Cannot DM yourself."}, status=400)
+
+        # find existing dm with exactly these two members
+        existing = (
+            ChatConversation.objects.filter(company=company, type="dm", members__user=user)
+            .filter(members__user=other)
+            .distinct()
+            .first()
+        )
+        if existing:
+            ser = self.get_serializer(existing)
+            return Response(ser.data, status=200)
+
+        conv = ChatConversation.objects.create(company=company, type="dm", created_by=user, name=None)
+        ChatConversationMember.objects.create(conversation=conv, user=user, role="member")
+        ChatConversationMember.objects.create(conversation=conv, user=other, role="member")
+        ser = self.get_serializer(conv)
+        return Response(ser.data, status=201)
+
+    @action(detail=True, methods=["post"], url_path="members/add")
+    def add_member(self, request, pk=None):
+        user = request.user
+        conv = self.get_object()
+        if conv.type != "group":
+            return Response({"detail": "Members can only be managed for groups."}, status=400)
+        actor = ChatConversationMember.objects.filter(conversation=conv, user=user).first()
+        if not actor or not actor.can_add_members:
+            return Response({"detail": "Not allowed."}, status=403)
+
+        # Support adding a single user_id OR multiple member_ids
+        ids = request.data.get("member_ids") or request.data.get("user_ids") or request.data.get("user_id")
+        if isinstance(ids, str):
+            ids = [x for x in ids.split(",") if x.strip()]
+        if isinstance(ids, (int, float)):
+            ids = [int(ids)]
+        if not isinstance(ids, list):
+            ids = [ids] if ids else []
+
+        added = 0
+        for member_id in ids:
+            try:
+                mid = int(member_id)
+            except Exception:
+                continue
+            if mid == user.id:
+                continue
+            target = UserRegister.objects.filter(id=mid, company=user.company).first()
+            if not target:
+                continue
+            ChatConversationMember.objects.get_or_create(conversation=conv, user=target, defaults={"role": "member"})
+            added += 1
+        conv.save(update_fields=["updated_at"])
+        return Response({"detail": f"Members added: {added}."}, status=200)
+
+    @action(detail=True, methods=["post"], url_path="members/remove")
+    def remove_member(self, request, pk=None):
+        user = request.user
+        conv = self.get_object()
+        if conv.type != "group":
+            return Response({"detail": "Members can only be managed for groups."}, status=400)
+        actor = ChatConversationMember.objects.filter(conversation=conv, user=user).first()
+        if not actor or not actor.can_remove_members:
+            return Response({"detail": "Not allowed."}, status=403)
+
+        member_id = request.data.get("user_id")
+        target_member = ChatConversationMember.objects.filter(conversation=conv, user_id=member_id).first()
+        if not target_member:
+            return Response({"detail": "Member not found."}, status=404)
+        target_member.delete()
+        conv.save(update_fields=["updated_at"])
+        return Response({"detail": "Member removed."}, status=200)
+
+    @action(detail=True, methods=["patch"], url_path="members/permissions")
+    def update_member_permissions(self, request, pk=None):
+        user = request.user
+        conv = self.get_object()
+        actor = ChatConversationMember.objects.filter(conversation=conv, user=user).first()
+        if not actor or not actor.can_revoke_roles:
+            return Response({"detail": "Not allowed."}, status=403)
+
+        member_id = request.data.get("user_id")
+        target = ChatConversationMember.objects.filter(conversation=conv, user_id=member_id).first()
+        if not target:
+            return Response({"detail": "Member not found."}, status=404)
+
+        # Normalize roles and permissions:
+        # - admin: full access
+        # - member: message only (no member management)
+        # - viewer: read-only (no sending messages enforced elsewhere)
+        new_role = request.data.get("role", target.role)
+        if new_role not in ("admin", "member", "viewer"):
+            new_role = target.role
+
+        if new_role == "admin":
+            target.role = "admin"
+            target.can_add_members = True
+            target.can_remove_members = True
+            target.can_revoke_roles = True
+        elif new_role == "viewer":
+            target.role = "viewer"
+            target.can_add_members = False
+            target.can_remove_members = False
+            target.can_revoke_roles = False
+        else:
+            target.role = "member"
+            target.can_add_members = False
+            target.can_remove_members = False
+            target.can_revoke_roles = False
+        target.save()
+        return Response({"detail": "Permissions updated."}, status=200)
+
+
+class ChatMessageViewSet(viewsets.ModelViewSet):
+    permission_classes = [IsAuthenticated, IsCompanyChatUser]
+    pagination_class = CustomPagination
+    serializer_class = ChatMessageSerializer
+    parser_classes = [MultiPartParser, FormParser, JSONParser]
+
+    def get_queryset(self):
+        user = self.request.user
+        qs = ChatMessage.objects.filter(company=user.company, conversation__members__user=user).distinct()
+        conversation_id = self.request.query_params.get("conversation")
+        if conversation_id:
+            qs = qs.filter(conversation_id=conversation_id)
+        return qs.order_by("-created_at")
+
+    def list(self, request, *args, **kwargs):
+        resp = super().list(request, *args, **kwargs)
+        # Mark conversation as seen when messages are fetched.
+        conversation_id = request.query_params.get("conversation")
+        if conversation_id:
+            ChatConversationMember.objects.filter(conversation_id=conversation_id, user_id=request.user.id).update(last_seen_at=timezone.now())
+        return resp
+
+    def perform_create(self, serializer):
+        user = self.request.user
+        # For multipart/form-data uploads, some clients omit/rename keys; prefer validated_data when present.
+        conv_obj = serializer.validated_data.get("conversation") if hasattr(serializer, "validated_data") else None
+        conv_id = (
+            getattr(conv_obj, "id", None)
+            or self.request.data.get("conversation")
+            or self.request.data.get("conversation_id")
+        )
+        if not conv_id:
+            raise serializers.ValidationError({"conversation": "conversation (or conversation_id) is required."})
+
+        conv = ChatConversation.objects.filter(id=conv_id, company=user.company, members__user=user).first()
+        if not conv:
+            raise serializers.ValidationError({"conversation": "Conversation not found or not allowed."})
+        if conv.type == "group":
+            member = ChatConversationMember.objects.filter(conversation_id=conv.id, user_id=user.id).only("role").first()
+            if member and member.role == "viewer":
+                raise serializers.ValidationError({"detail": "View-only members cannot send messages."})
+        msg = serializer.save(company=user.company, sender=user, conversation=conv)
+        # Sender has "seen" their own message
+        ChatConversationMember.objects.filter(conversation_id=conv.id, user_id=user.id).update(last_seen_at=timezone.now())
+        # bump conversation updated_at
+        ChatConversation.objects.filter(id=conv.id).update(updated_at=timezone.now())
+        return msg
+
+
+class ChatCompanyUsersAPIView(APIView):
+    """
+    List users in the current admin's company (admins + employees) for starting DMs.
+    """
+
+    permission_classes = [IsAuthenticated, IsCompanyChatUser]
+
+    def _ensure_employee_profiles_for_company(self, company):
+        """
+        Ensure `UserRegister(role='employee')` users are represented in chat user picker
+        even if they were created via SSO and don't yet have an Employee profile.
+        """
+        if not company:
+            return
+
+        missing_profile_users = (
+            UserRegister.objects.filter(role="employee", company=company, employee__isnull=True)
+            .only("id", "first_name", "last_name", "email", "company_id")
+        )
+        for u in missing_profile_users:
+            if not u.email:
+                continue
+            existing = Employee.objects.filter(company=company, email__iexact=u.email).first()
+            if existing:
+                if not existing.user_id:
+                    existing.user_id = u.id
+                    if not existing.first_name:
+                        existing.first_name = u.first_name or existing.first_name
+                    if not existing.last_name:
+                        existing.last_name = u.last_name or existing.last_name
+                    if not existing.email:
+                        existing.email = u.email
+                    existing.save(update_fields=["user", "first_name", "last_name", "email"])
+                continue
+            Employee.objects.create(
+                user_id=u.id,
+                company=company,
+                first_name=u.first_name or None,
+                last_name=u.last_name or None,
+                email=u.email,
+            )
+
+    def get(self, request):
+        user = request.user
+        company = getattr(user, "company", None)
+        if not company:
+            # fallback for employee accounts missing UserRegister.company
+            emp = Employee.objects.filter(user=user).select_related("company").first()
+            company = emp.company if emp else None
+        if not company:
+            return Response({"results": []}, status=200)
+
+        # Keep chat picker complete for this company
+        self._ensure_employee_profiles_for_company(company)
+
+        q = (request.query_params.get("q") or "").strip()
+        # Include:
+        # - users where UserRegister.company == company
+        # - employee-linked users where Employee.company == company
+        company_id = company.id
+        qs = (
+            UserRegister.objects.filter(Q(company_id=company_id) | Q(employee__company_id=company_id))
+            .exclude(id=user.id)
+            .filter(role__in=["admin", "employee"])
+            .select_related("employee")
+            .distinct()
+        )
+        if q:
+            qs = qs.filter(
+                Q(username__icontains=q)
+                | Q(email__icontains=q)
+                | Q(first_name__icontains=q)
+                | Q(last_name__icontains=q)
+            )
+        qs = qs.order_by("username")[:50]
+
+        results = [
+            {
+                "id": u.id,
+                "username": u.username,
+                # Prefer Employee profile data when available (SSO/legacy users sometimes
+                # have incorrect/missing fields on UserRegister).
+                "email": (getattr(getattr(u, "employee", None), "email", None) or u.email or u.username),
+                "first_name": (getattr(getattr(u, "employee", None), "first_name", None) or u.first_name),
+                "last_name": (getattr(getattr(u, "employee", None), "last_name", None) or u.last_name),
+                "role": u.role,
+            }
+            for u in qs
+        ]
+        return Response({"results": results}, status=200)
 
 class RelievedEmployeeViewSet(viewsets.ModelViewSet):
 
@@ -738,6 +1414,17 @@ class RelievedEmployeeViewSet(viewsets.ModelViewSet):
     queryset = RelievedEmployee.objects.all()
     serializer_class = RelievedEmployeeSerializer
     permission_classes = [IsAuthenticated, IsAdminUser]
+    pagination_class = CustomPagination
+    filter_backends = [filters.SearchFilter]
+    search_fields = [
+        'employee__employee_id',
+        'employee__first_name',
+        'employee__middle_name',
+        'employee__last_name',
+        'employee__full_name',
+        'employee__department__department_name',
+        'employee__designation__designation_name',
+    ]
 
     def get_queryset(self):
         return RelievedEmployee.objects.filter(employee__company=self.request.user.company)
@@ -749,13 +1436,12 @@ class RelievedEmployeeViewSet(viewsets.ModelViewSet):
         employee = relieved_instance.employee
         if employee:
            
-            assigned_assets = EmployeeAssetDetails.objects.filter(employee=employee)
-            if assigned_assets.exists():
-                for asset_detail in assigned_assets:
-                    asset = asset_detail.asset
-                    if asset:
-                        asset.quantity += asset_detail.quantity
-                        asset.save()
+            assigned_supply = EmployeeSupplyAssignment.objects.filter(employee=employee)
+            for row in assigned_supply:
+                si = row.supply_item
+                si.available_quantity += 1
+                si.save(update_fields=['available_quantity', 'updated_at'])
+            assigned_supply.delete()
             # Mark employee as inactive
             employee.is_active = False
             employee.save()
@@ -1071,11 +1757,12 @@ class AttendanceViewSet(viewsets.ModelViewSet):
     queryset = Attendance.objects.all()
     serializer_class = AttendanceSerializer
     permission_classes = [IsAuthenticated, IsAdminUser]
+    pagination_class = CustomPagination
 
     def get_queryset(self):
+        # Base queryset for existing attendance records
         queryset = Attendance.objects.filter(company=self.request.user.company)
         
-        # Filter by date range
         from_date = self.request.query_params.get('from_date')
         to_date = self.request.query_params.get('to_date')
         if from_date:
@@ -1083,25 +1770,6 @@ class AttendanceViewSet(viewsets.ModelViewSet):
         if to_date:
             queryset = queryset.filter(date__lte=to_date)
             
-        # Filter by status
-        status = self.request.query_params.get('status')
-        if status:
-            if status.lower() == 'present':
-                # All employees who are checked in or marked as present and not on leave
-                queryset = queryset.filter(
-                    Q(check_in__isnull=False) | Q(is_present=True),
-                    leave__isnull=True
-                )
-            elif status.lower() == 'absent':
-                queryset = queryset.filter(
-                    check_in__isnull=True,
-                    is_present=False,
-                    leave__isnull=True
-                )
-            elif status.lower() == 'leave':
-                queryset = queryset.filter(leave__isnull=False)
-                
-        # Filter by search term (employee name or ID)
         search = self.request.query_params.get('search')
         if search:
             queryset = queryset.filter(
@@ -1109,8 +1777,172 @@ class AttendanceViewSet(viewsets.ModelViewSet):
                 Q(employee__first_name__icontains=search) |
                 Q(employee__last_name__icontains=search)
             )
+        return queryset
+
+    def list(self, request, *args, **kwargs):
+        company = request.user.company
+        from_date_str = request.query_params.get('from_date')
+        to_date_str = request.query_params.get('to_date')
+        search = request.query_params.get('search', '').strip()
+        status_filter = request.query_params.get('status', 'All').lower()
+        
+        # Determine date range
+        try:
+            today = timezone.localdate()
+            from_date = datetime.strptime(from_date_str, '%Y-%m-%d').date() if from_date_str else today
+            to_date = datetime.strptime(to_date_str, '%Y-%m-%d').date() if to_date_str else today
+        except (ValueError, TypeError):
+            from_date = to_date = today
+
+        # 1. Get all active employees for the company (applying employee-level search)
+        employee_qs = Employee.objects.filter(company=company, is_active=True).select_related('department', 'shift_assigned')
+        if search:
+            employee_qs = employee_qs.filter(
+                Q(employee_id__icontains=search) |
+                Q(first_name__icontains=search) |
+                Q(last_name__icontains=search)
+            )
+
+        # 2. Bulk fetch existing data for the range
+        attendance_records = Attendance.objects.filter(
+            company=company, 
+            date__range=(from_date, to_date)
+        ).select_related('employee')
+        
+        leaves = EmpLeave.objects.filter(
+            company=company,
+            status='Approved',
+            from_date__lte=to_date,
+            to_date__gte=from_date
+        ).select_related('employee', 'leave_type')
+        
+        holidays = CalendarEvent.objects.filter(
+            company=company,
+            is_holiday=True,
+            date__range=(from_date, to_date)
+        )
+
+        # Map data for fast lookup: { (emp_id, date): object }
+        att_map = { (att.employee_id, att.date): att for att in attendance_records }
+        holiday_map = { h.date: h.name for h in holidays }
+
+        # Generate the combined list
+        results = []
+        curr_date = from_date
+        while curr_date <= to_date:
+            curr_holiday = holiday_map.get(curr_date)
             
-        return queryset.order_by('-date', 'employee__employee_id')
+            for emp in employee_qs:
+                att = att_map.get((emp.id, curr_date))
+                
+                # Default synthetic row
+                row = {
+                    'id': att.id if att else None,
+                    'employee_id': emp.employee_id,
+                    'employee_name': f"{emp.first_name} {emp.last_name}",
+                    'date': str(curr_date),
+                    'check_in': att.check_in if att else None,
+                    'check_out': att.check_out if att else None,
+                    'total_work_duration': att.total_work_duration if att else '--',
+                    'total_break_time': att.total_break_time if att else '--',
+                    'overtime_duration': att.overtime_duration if att else '--',
+                    'is_present': att.is_present if att else False,
+                    'leave': att.leave_id if att else None,
+                    'status': '',
+                    'is_late': False
+                }
+
+                # Status logic
+                if att:
+                    if att.leave_id:
+                        row['status'] = 'leave'
+                    elif not att.is_present and not att.check_in:
+                        row['status'] = 'absent'
+                    else:
+                        row['status'] = 'present'
+                    # Call serializer helper or just use data
+                else:
+                    # Check for Leave
+                    matching_leave = next((l for l in leaves if l.employee_id == emp.id and l.from_date <= curr_date <= l.to_date), None)
+                    if matching_leave:
+                        row['status'] = 'leave'
+                        row['leave'] = matching_leave.id
+                    elif curr_holiday:
+                        row['status'] = 'holiday'
+                    else:
+                        row['status'] = 'absent'
+
+                # Filtering by calculated status
+                if status_filter != 'all' and status_filter != 'all statuses':
+                    if row['status'].lower() != status_filter:
+                        continue
+                
+                results.append(row)
+            
+            curr_date += timedelta(days=1)
+
+        # 3. Pagination
+        total_count = len(results)
+        page = self.paginate_queryset(results)
+        if page is not None:
+            # We need to manually serialize since these aren't all model instances
+            # But the 'results' are already dicts matching our needs
+            return self.get_paginated_response(page)
+
+        return Response(results)
+
+    @action(detail=False, methods=['get'])
+    def summary(self, request):
+        """Provide aggregated statistics for the current filter/date range, including absent employees."""
+        # Use the same logic as list but just count
+        company = request.user.company
+        from_date_str = request.query_params.get('from_date')
+        to_date_str = request.query_params.get('to_date')
+        search = request.query_params.get('search', '').strip()
+
+        try:
+            today = timezone.localdate()
+            from_date = datetime.strptime(from_date_str, '%Y-%m-%d').date() if from_date_str else today
+            to_date = datetime.strptime(to_date_str, '%Y-%m-%d').date() if to_date_str else today
+        except (ValueError, TypeError):
+            from_date = to_date = today
+
+        employee_qs = Employee.objects.filter(company=company, is_active=True)
+        if search:
+            employee_qs = employee_qs.filter(
+                Q(employee_id__icontains=search) | Q(first_name__icontains=search) | Q(last_name__icontains=search)
+            )
+            
+        emp_ids = employee_qs.values_list('id', flat=True)
+        num_emps = len(emp_ids)
+        num_days = (to_date - from_date).days + 1
+        total_slots = num_emps * num_days
+
+        # Counts
+        present_count = Attendance.objects.filter(
+            employee_id__in=emp_ids,
+            date__range=(from_date, to_date),
+            leave__isnull=True
+        ).filter(Q(is_present=True) | Q(check_in__isnull=False)).distinct().count()
+
+        leave_count = EmpLeave.objects.filter(
+            employee_id__in=emp_ids,
+            status='Approved',
+            from_date__lte=to_date,
+            to_date__gte=from_date
+        ).count()
+
+        # Simplified for responsiveness:
+        # Total = all active slots. Absent = Total - (Present + Leave)
+        # Note: In a real system, we'd iterate days for leaves.
+        absent_count = max(0, total_slots - present_count - leave_count)
+
+        return Response({
+            'total': total_slots,
+            'present': present_count,
+            'absent': absent_count,
+            'leave': leave_count,
+        })
 
     def _is_employee_late(self, attendance):
         """Check if an employee was late for their shift"""
@@ -1365,9 +2197,18 @@ class AttendanceLogView(APIView):
         try:
             year, month_num = map(int, month.split('-'))
             start_date = datetime(year, month_num, 1).date()
-            end_date = datetime(year, month_num, monthrange(year, month_num)[1]).date()
+            month_end_date = datetime(year, month_num, monthrange(year, month_num)[1]).date()
+            today = timezone.localdate()
+            # For attendance calculation, only consider up to today if viewing current/future month
+            effective_end_date = min(month_end_date, today)
+            end_date = month_end_date  # Still use full month for holidays/reference
         except (ValueError, IndexError):
             return Response({"error": "Invalid month format. Use YYYY-MM"}, status=400)
+
+        # ── Backend search & filter on Employee queryset ──
+        search_query = request.query_params.get('search', '').strip()
+        department_filter = request.query_params.get('department', '').strip()
+        status_filter = request.query_params.get('status', '').strip()  # Present/Absent/Leave/Half Day
 
         # Get holidays for the month
         holidays = CalendarEvent.objects.filter(
@@ -1382,7 +2223,22 @@ class AttendanceLogView(APIView):
             company=request.user.company,
             is_active=True
         ).select_related('department').prefetch_related('attendances')
-        
+
+        # Apply search filter on employees
+        if search_query:
+            employees = employees.filter(
+                Q(first_name__icontains=search_query) |
+                Q(last_name__icontains=search_query) |
+                Q(employee_id__icontains=search_query) |
+                Q(email__icontains=search_query)
+            )
+
+        # Apply department filter
+        if department_filter:
+            employees = employees.filter(department__department_name__iexact=department_filter)
+
+        employees = employees.order_by('first_name', 'last_name')
+
         result = []
         
         for emp in employees:
@@ -1397,10 +2253,16 @@ class AttendanceLogView(APIView):
                 department=emp.department,
                 company=request.user.company
             ).first()
+
+            valid_weekday_names = self._valid_weekday_names(dept_working_days)
             
-            # Determine working days for this employee
-            working_days = self._get_working_days_for_month(
+            # Determine working days for this employee (full month for reference)
+            all_working_days = self._get_working_days_for_month(
                 start_date, end_date, dept_working_days, holidays_dict
+            )
+            # Working days only up to today (for absent marking & percentage calculation)
+            elapsed_working_days = self._get_working_days_for_month(
+                start_date, effective_end_date, dept_working_days, holidays_dict
             )
             
             daily_data = []
@@ -1408,32 +2270,37 @@ class AttendanceLogView(APIView):
             total_worked_hours = 0.0
             leave_summary = {}
 
-            # Process each attendance record
+            # Process each attendance record (only days that are working days for this department)
             for att in attendance_qs:
+                ad = att.date
+                if ad in holidays_dict:
+                    continue
+                if ad.strftime('%A').lower() not in valid_weekday_names:
+                    continue
                 daily_record = self._process_attendance_record(att, emp.company)
                 daily_data.append(daily_record)
                 
                 # Count status types
-                status = daily_record["status"]
+                att_status = daily_record["status"]
                 worked_hours = daily_record["worked_hours"]
                 
-                if status == "Present":
+                if att_status == "Present":
                     present_days += 1
                     total_worked_hours += worked_hours
                     if daily_record["is_late"]:
                         late_days += 1
-                elif status == "Half Day":
+                elif att_status == "Half Day":
                     half_days += 1
                     present_days += 0.5
                     total_worked_hours += worked_hours
                     if daily_record["is_late"]:
                         late_days += 1
-                elif status == "Leave":
+                elif att_status == "Leave":
                     leave_days += 1
                     leave_type = daily_record["leave_type"]
                     if leave_type:
                         leave_summary[leave_type] = leave_summary.get(leave_type, 0) + 1
-                elif status == "Absent":
+                elif att_status == "Absent":
                     absent_days += 1
                 # Note: Holidays are not counted in any category as they're non-working days
 
@@ -1460,11 +2327,11 @@ class AttendanceLogView(APIView):
                         "shift_type": None
                     })
 
-            # Fill missing days as Absent (only for working days)
+            # Fill missing days as Absent (only for elapsed working days, not future)
             all_dates = {att.date for att in attendance_qs}
             all_dates.update(holidays_dict.keys())
             
-            for single_date in working_days:
+            for single_date in elapsed_working_days:
                 if single_date not in all_dates:
                     daily_data.append({
                         "date": str(single_date),
@@ -1487,12 +2354,78 @@ class AttendanceLogView(APIView):
                     })
                     absent_days += 1
 
+            # Add future working days as "Upcoming" (no absent marking)
+            for single_date in all_working_days:
+                if single_date > effective_end_date and single_date not in all_dates:
+                    daily_data.append({
+                        "date": str(single_date),
+                        "status": "Upcoming",
+                        "check_in": None,
+                        "check_out": None,
+                        "worked_hours": 0.0,
+                        "scheduled_hours": 0.0,
+                        "break_time": 0.0,
+                        "overtime_hours": 0.0,
+                        "is_late": False,
+                        "late_by_minutes": 0,
+                        "early_departure": False,
+                        "early_departure_minutes": 0,
+                        "leave_type": None,
+                        "leave_type_initials": None,
+                        "half_day": False,
+                        "remarks": "",
+                        "shift_type": None
+                    })
+
+            # Department off-days (weekdays not in working_days / weekend_days) show as Holiday (★)
+            by_date = {d["date"]: i for i, d in enumerate(daily_data)}
+            wd_list = (dept_working_days.weekend_days or []) if dept_working_days else []
+            off_cursor = start_date
+            while off_cursor <= end_date:
+                if off_cursor in holidays_dict:
+                    off_cursor += timedelta(days=1)
+                    continue
+                day_key = off_cursor.strftime('%A').lower()
+                if day_key in valid_weekday_names:
+                    off_cursor += timedelta(days=1)
+                    continue
+                iso = str(off_cursor)
+                remark = self._off_day_remark(off_cursor, wd_list)
+                rec = {
+                    "date": iso,
+                    "status": "Holiday",
+                    "check_in": None,
+                    "check_out": None,
+                    "worked_hours": 0.0,
+                    "scheduled_hours": 0.0,
+                    "break_time": 0.0,
+                    "overtime_hours": 0.0,
+                    "is_late": False,
+                    "late_by_minutes": 0,
+                    "early_departure": False,
+                    "early_departure_minutes": 0,
+                    "leave_type": None,
+                    "leave_type_initials": None,
+                    "half_day": False,
+                    "remarks": remark,
+                    "shift_type": None
+                }
+                if iso in by_date:
+                    daily_data[by_date[iso]] = rec
+                else:
+                    daily_data.append(rec)
+                    by_date[iso] = len(daily_data) - 1
+                off_cursor += timedelta(days=1)
+
+            daily_data.sort(key=lambda x: x["date"])
+
             # Calculate totals and percentages
-            total_working_days = len(working_days)
+            total_working_days = len(all_working_days)
+            elapsed_working_day_count = len(elapsed_working_days)
             total_days_present = present_days  # This includes half days as 0.5
             
-            # Attendance percentage based on working days only
-            attendance_percentage = (total_days_present / total_working_days * 100) if total_working_days > 0 else 0
+            # Attendance percentage based on elapsed working days only (not future)
+            attendance_percentage = (total_days_present / elapsed_working_day_count * 100) if elapsed_working_day_count > 0 else 0
             
             # Average working hours per present day
             avg_hours_per_day = total_worked_hours / present_days if present_days > 0 else 0
@@ -1529,11 +2462,17 @@ class AttendanceLogView(APIView):
                 for shift in company_shifts
             ]
 
+            # Determine today's status for this employee (for status filter)
+            today_iso = str(today)
+            today_record = next((d for d in daily_data if d["date"] == today_iso), None)
+            today_status = today_record["status"] if today_record else "Absent"
+
             result.append({
                 "employee_id": emp.employee_id,
                 "employee_name": emp.full_name,
                 "department": emp.department.department_name if emp.department else None,
                 "month": month,
+                "today_status": today_status,
                 
                 # Monthly Working Days Statistics
                 "total_working_days": total_working_days,
@@ -1574,38 +2513,84 @@ class AttendanceLogView(APIView):
                 "daily_attendance": sorted(daily_data, key=lambda x: x["date"])
             })
 
-        return Response(result)
+        # ── Apply today's status filter after building result ──
+        if status_filter and status_filter.lower() != 'all':
+            result = [r for r in result if r.get("today_status", "").lower() == status_filter.lower()]
+
+        # ── Pagination ──
+        total_count = len(result)
+        try:
+            page = int(request.query_params.get('page', 1))
+        except (ValueError, TypeError):
+            page = 1
+        try:
+            page_size = int(request.query_params.get('page_size', 10))
+        except (ValueError, TypeError):
+            page_size = 10
+        page_size = min(page_size, 100)  # Max 100
+
+        total_pages = max(1, -(-total_count // page_size))  # ceil division
+        page = max(1, min(page, total_pages))
+        start_idx = (page - 1) * page_size
+        end_idx = start_idx + page_size
+        paginated_result = result[start_idx:end_idx]
+
+        # Collect unique departments for filter dropdown
+        all_departments = list(
+            Employee.objects.filter(
+                company=request.user.company,
+                is_active=True,
+                department__isnull=False
+            ).values_list('department__department_name', flat=True).distinct().order_by('department__department_name')
+        )
+
+        return Response({
+            "count": total_count,
+            "page": page,
+            "page_size": page_size,
+            "total_pages": total_pages,
+            "departments": all_departments,
+            "results": paginated_result
+        })
+
+    def _valid_weekday_names(self, dept_working_days):
+        """Lowercase weekday names that count as working days for the department."""
+        weekdays = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday']
+        if dept_working_days:
+            wd = dept_working_days.working_days
+            if isinstance(wd, list) and len(wd) > 0:
+                return [str(x).lower() for x in wd]
+            ws = (dept_working_days.week_start_day or '').strip().lower()
+            we = (dept_working_days.week_end_day or '').strip().lower()
+            if ws in weekdays and we in weekdays:
+                si, ei = weekdays.index(ws), weekdays.index(we)
+                if si <= ei:
+                    return weekdays[si : ei + 1]
+                return weekdays[si:] + weekdays[: ei + 1]
+        # No department row: match prior behavior (Mon–Sat as working; Sunday off)
+        return ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday']
+
+    def _off_day_remark(self, d, weekend_days_list):
+        """Tooltip text for a non-working weekday (dept schedule)."""
+        long_name = d.strftime('%A')
+        if isinstance(weekend_days_list, list):
+            for entry in weekend_days_list:
+                if str(entry).lower() == long_name.lower():
+                    return f'Off day ({entry})'
+        return 'Off day (non-working)'
 
     def _get_working_days_for_month(self, start_date, end_date, dept_working_days, holidays):
-        """Get all working days for the month excluding weekends and holidays"""
+        """Dates in range that are working days for the department (excludes company holidays)."""
         working_days = []
         current_date = start_date
-        
-        # Define weekday mapping
-        weekdays = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday']
-        
-        if dept_working_days:
-            # Get valid working days based on department configuration
-            start_idx = weekdays.index(dept_working_days.week_start_day.lower())
-            end_idx = weekdays.index(dept_working_days.week_end_day.lower())
-            
-            if start_idx <= end_idx:
-                valid_weekdays = weekdays[start_idx:end_idx + 1]
-            else:
-                valid_weekdays = weekdays[start_idx:] + weekdays[:end_idx + 1]
-        else:
-            # Default to Monday-Friday saturday
-            valid_weekdays = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday','saturday']
-        
+        valid_weekdays = self._valid_weekday_names(dept_working_days)
+
         while current_date <= end_date:
             day_name = current_date.strftime('%A').lower()
-            
-            # Include if it's a valid working day and not a holiday
             if day_name in valid_weekdays and current_date not in holidays:
                 working_days.append(current_date)
-            
             current_date += timedelta(days=1)
-        
+
         return working_days
 
     def _process_attendance_record(self, attendance, company):
@@ -1738,34 +2723,63 @@ class CompanyPoliciesViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         serializer.save(company=self.request.user.company)
  
-class ApprovedLeaveLogView(APIView):
-    def get(self, request):
-        
+class ApprovedLeaveLogView(generics.ListAPIView):
+    """
+    Admin approved leave logs with backend pagination + search.
+    """
+    serializer_class = LeaveLogSerializer
+    permission_classes = [IsAuthenticated, IsAdminUser]
+    pagination_class = CustomPagination
+    filter_backends = [filters.SearchFilter]
+    search_fields = [
+        "employee__first_name",
+        "employee__last_name",
+        "employee__email",
+        "reporting_manager__first_name",
+        "reporting_manager__last_name",
+        "reason",
+        "leave_type__leave_name",
+    ]
+
+    def get_queryset(self):
         qs = EmpLeave.objects.filter(
-            status='Approved',
-            company=request.user.company
-        ).select_related('employee__user', 'reporting_manager')
+            status="Approved",
+            company=self.request.user.company,
+        ).select_related("employee", "reporting_manager", "leave_type")
 
-        if employee_id := request.GET.get("employee_id"):
+        employee_id = self.request.query_params.get("employee_id")
+        from_date = self.request.query_params.get("from_date")
+        to_date = self.request.query_params.get("to_date")
+
+        if employee_id:
             qs = qs.filter(employee__id=employee_id)
-        if from_date := request.GET.get("from_date"):
+        if from_date:
             qs = qs.filter(from_date__gte=from_date)
-        if to_date := request.GET.get("to_date"):
+        if to_date:
             qs = qs.filter(from_date__lte=to_date)
-
-        serializer = LeaveLogSerializer(qs, many=True)
-        return Response(serializer.data)
+        return qs.order_by("-from_date", "-id")
 
 
 class RejectedLeaveLogView(generics.ListAPIView):
     serializer_class = LeaveLogSerializer
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsAdminUser]
+    pagination_class = CustomPagination
+    filter_backends = [filters.SearchFilter]
+    search_fields = [
+        "employee__first_name",
+        "employee__last_name",
+        "employee__email",
+        "reporting_manager__first_name",
+        "reporting_manager__last_name",
+        "reason",
+        "leave_type__leave_name",
+    ]
 
     def get_queryset(self):
         qs = EmpLeave.objects.filter(
             status='Rejected',
             company=self.request.user.company
-        ).select_related('employee', 'reporting_manager')
+        ).select_related('employee', 'reporting_manager', 'leave_type')
 
         from_date = self.request.query_params.get('from_date')
         to_date = self.request.query_params.get('to_date')
@@ -1778,7 +2792,125 @@ class RejectedLeaveLogView(generics.ListAPIView):
         if employee_id:
             qs = qs.filter(employee__id=employee_id)
 
-        return qs
+        return qs.order_by("-from_date", "-id")
+
+class PendingLeaveLogView(generics.ListAPIView):
+    """
+    Admin pending leave requests with backend pagination + search.
+    """
+    serializer_class = LeaveLogSerializer
+    permission_classes = [IsAuthenticated, IsAdminUser]
+    pagination_class = CustomPagination
+    filter_backends = [filters.SearchFilter]
+    search_fields = [
+        "employee__first_name",
+        "employee__last_name",
+        "employee__employee_id",
+        "employee__email",
+        "reporting_manager__first_name",
+        "reporting_manager__last_name",
+        "reason",
+        "leave_type__leave_name",
+    ]
+
+    def get_queryset(self):
+        qs = EmpLeave.objects.filter(
+            status="Pending",
+            company=self.request.user.company,
+        ).select_related("employee", "reporting_manager", "leave_type")
+
+        from_date = self.request.query_params.get("from_date")
+        to_date = self.request.query_params.get("to_date")
+
+        if from_date:
+            qs = qs.filter(from_date__gte=from_date)
+        if to_date:
+            qs = qs.filter(from_date__lte=to_date)
+        return qs.order_by("-from_date", "-id")
+
+class LeaveHistoryView(generics.ListAPIView):
+    """
+    Admin combined leave history (Approved/Rejected) with backend pagination + search.
+    """
+    serializer_class = LeaveLogSerializer
+    permission_classes = [IsAuthenticated, IsAdminUser]
+    pagination_class = CustomPagination
+    filter_backends = [filters.SearchFilter]
+    search_fields = [
+        "employee__first_name",
+        "employee__last_name",
+        "employee__employee_id",
+        "employee__email",
+        "reporting_manager__first_name",
+        "reporting_manager__last_name",
+        "reason",
+        "leave_type__leave_name",
+    ]
+
+    def get_queryset(self):
+        # Default to Approved/Rejected, but allow filtering by status if provided
+        status_filter = self.request.query_params.get("status", "history")
+        
+        qs = EmpLeave.objects.filter(company=self.request.user.company).select_related("employee", "reporting_manager", "leave_type")
+        
+        if status_filter == "history":
+            qs = qs.filter(status__in=["Approved", "Rejected"])
+        elif status_filter != "all":
+            qs = qs.filter(status=status_filter)
+
+        from_date = self.request.query_params.get("from_date")
+        to_date = self.request.query_params.get("to_date")
+
+        if from_date:
+            qs = qs.filter(from_date__gte=from_date)
+        if to_date:
+            qs = qs.filter(from_date__lte=to_date)
+
+        return qs.order_by("-from_date", "-id")
+
+    def list(self, request, *args, **kwargs):
+        queryset = self.filter_queryset(self.get_queryset())
+
+        page = self.paginate_queryset(queryset)
+        if page is not None:
+            serializer = self.get_serializer(page, many=True)
+            response = self.get_paginated_response(serializer.data)
+            
+            # Add extra stats for the dashboard cards
+            stats_qs = EmpLeave.objects.filter(company=request.user.company)
+            response.data['approved_count'] = stats_qs.filter(status='Approved').count()
+            response.data['rejected_count'] = stats_qs.filter(status='Rejected').count()
+            
+            return response
+
+        serializer = self.get_serializer(queryset, many=True)
+        return Response(serializer.data)
+
+class AdminApproveEmpLeaveView(APIView):
+    permission_classes = [IsAuthenticated, IsAdminUser]
+
+    def post(self, request, leave_id):
+        company = request.user.company
+        leave = get_object_or_404(EmpLeave, id=leave_id, company=company)
+        if leave.status != 'Approved':
+            leave.status = 'Approved'
+            leave.save()
+            return Response({'detail': 'Leave approved successfully.'})
+        return Response({'detail': 'This leave is already approved.'}, status=400)
+
+class AdminRejectEmpLeaveView(APIView):
+    permission_classes = [IsAuthenticated, IsAdminUser]
+
+    def post(self, request, leave_id):
+        company = request.user.company
+        leave = get_object_or_404(EmpLeave, id=leave_id, company=company)
+        if leave.status != 'Rejected':
+            rejection_reason = request.data.get('reason', '')
+            leave.status = 'Rejected'
+            leave.rejection_reason = rejection_reason
+            leave.save()
+            return Response({'detail': 'Leave rejected successfully.'})
+        return Response({'detail': 'This leave is already rejected.'}, status=400)
    
 class UserLogListView(generics.ListAPIView):
     serializer_class = UserLogSerializer
@@ -1815,6 +2947,9 @@ class BreakConfigViewSet(viewsets.ModelViewSet):
 class LetterTemplateViewSet(viewsets.ModelViewSet):
     serializer_class = LetterTemplateSerializer
     permission_classes = [IsAuthenticated, IsAdminUser]
+    pagination_class = CustomPagination
+    filter_backends = [filters.SearchFilter]
+    search_fields = ['title', 'content', 'email_content']
 
     def get_queryset(self):
         return LetterTemplate.objects.filter(
@@ -2277,8 +3412,8 @@ class EmployeeReporteesView(APIView):
 
 
 # Office Structure ViewSets
-class OfficeFloorViewSet(viewsets.ModelViewSet):
-    serializer_class = OfficeFloorSerializer
+class OfficeLocationViewSet(viewsets.ModelViewSet):
+    serializer_class = OfficeLocationSerializer
     
     def get_permissions(self):
         if self.action in ['list', 'retrieve']:
@@ -2288,10 +3423,84 @@ class OfficeFloorViewSet(viewsets.ModelViewSet):
         return [permission() for permission in permission_classes]
     
     def get_queryset(self):
-        return OfficeFloor.objects.filter(company=self.request.user.company).prefetch_related('sections__seats__employee')
-    
+        return OfficeLocation.objects.filter(company=self.request.user.company)
+
     def get_serializer_context(self):
         return {'request': self.request}
+
+
+class OfficeFloorViewSet(viewsets.ModelViewSet):
+    serializer_class = OfficeFloorSerializer
+    queryset = OfficeFloor.objects.none()  # Base queryset to satisfy DRF requirements
+    
+    def get_permissions(self):
+        if self.action in ['list', 'retrieve']:
+            permission_classes = [IsAuthenticated]
+        else:
+            permission_classes = [IsAuthenticated, IsAdminUser]
+        return [permission() for permission in permission_classes]
+    
+    def get_queryset(self):
+        location_id = self.request.query_params.get('location')
+        queryset = OfficeFloor.objects.filter(company=self.request.user.company).prefetch_related('sections__seats__employee')
+        if location_id:
+            queryset = queryset.filter(location_id=location_id)
+        return queryset
+
+    def get_serializer_context(self):
+        return {'request': self.request}
+
+    def perform_create(self, serializer):
+        instance = serializer.save(company=self.request.user.company)
+        self.sync_seats(instance)
+
+    def perform_update(self, serializer):
+        instance = serializer.save()
+        if 'layout_data' in serializer.validated_data:
+            self.sync_seats(instance)
+
+    def sync_seats(self, floor):
+        """
+        Synchronizes visual seat elements from layout_data with OfficeSeat database records.
+        """
+        layout_data = floor.layout_data
+        if not layout_data or 'elements' not in layout_data:
+            return
+
+        # 1. Get or create a default section for the floor
+        # Use first available section or create a default one
+        section = OfficeSection.objects.filter(floor=floor).first()
+        if not section:
+            section = OfficeSection.objects.create(
+                floor=floor,
+                name="Main Section",
+                position_x=0, 
+                position_y=0
+            )
+
+        # 2. Extract seat elements from layout
+        layout_seats = [e for e in layout_data['elements'] if e.get('type') == 'seat']
+        seat_numbers = [str(s.get('name')) for s in layout_seats if s.get('name')]
+
+        # 3. Create or update seats found in layout
+        for ls in layout_seats:
+            seat_num = str(ls.get('name'))
+            if not seat_num:
+                continue
+            
+            OfficeSeat.objects.update_or_create(
+                section=section,
+                seat_number=seat_num,
+                defaults={
+                    'position_x': ls.get('x', 0),
+                    'position_y': ls.get('y', 0),
+                    'rotation': ls.get('rotation', 0),
+                    'is_available': True
+                }
+            )
+
+        # 4. Remove seats that no longer exist in the layout
+        OfficeSeat.objects.filter(section__floor=floor).exclude(seat_number__in=seat_numbers).delete()
 
 
 class OfficeSectionViewSet(viewsets.ModelViewSet):
@@ -2324,9 +3533,12 @@ class OfficeSeatViewSet(viewsets.ModelViewSet):
     
     def get_queryset(self):
         section_id = self.request.query_params.get('section')
+        floor_id = self.request.query_params.get('floor')
         queryset = OfficeSeat.objects.filter(section__floor__company=self.request.user.company).select_related('employee', 'section')
         if section_id:
             queryset = queryset.filter(section_id=section_id)
+        if floor_id:
+            queryset = queryset.filter(section__floor_id=floor_id)
         return queryset
 
 
@@ -2336,50 +3548,267 @@ class SeatBookingViewSet(viewsets.ModelViewSet):
     permission_classes = [permissions.IsAuthenticated]
     
     def get_queryset(self):
-        queryset = SeatBooking.objects.all()
-        booking_date = self.request.query_params.get('booking_date', None)
+        # For history view, we want to see even cancelled/rejected (inactive) bookings
+        is_history = self.request.query_params.get('history', 'false').lower() == 'true'
         
-        if booking_date:
-            # When fetching bookings for a specific date, show ALL bookings (not filtered by employee)
-            # This is needed so users can see which seats are booked by others
-            queryset = queryset.filter(booking_date=booking_date)
-        elif hasattr(self.request.user, 'employee'):
-            # When no date is specified, show only the current user's bookings (for "My Bookings" section)
+        if is_history:
+            queryset = SeatBooking.objects.all()
+        else:
+            queryset = SeatBooking.objects.filter(is_active=True)
+        
+        # Enforce company security: Admins and Employees should only see bookings from their own company
+        if self.request.user.role in ['admin', 'employee']:
+            if self.request.user.company:
+                queryset = queryset.filter(employee__company=self.request.user.company)
+            else:
+                # If for some reason an admin/employee has no company, they see nothing
+                queryset = queryset.none()
+        elif self.request.user.role == 'master':
+            # Masters might want to filter by company if provided
+            target_company = self.request.query_params.get('company_id')
+            if target_company:
+                queryset = queryset.filter(employee__company_id=target_company)
+
+        date_str = self.request.query_params.get('date', None)
+        floor_id = self.request.query_params.get('floor', None)
+        seat_number = self.request.query_params.get('seat_number', None)
+        status = self.request.query_params.get('status', None)
+        start_time_str = self.request.query_params.get('start_time', None)
+        end_time_str = self.request.query_params.get('end_time', None)
+        
+        # When viewing the map, we usually only care about already approved bookings
+        # Unless we are in history mode, in which case we show everything requested
+        if (date_str or floor_id) and not is_history:
+            queryset = queryset.filter(status='approved')
+        
+        if status:
+            queryset = queryset.filter(status=status)
+            
+        if date_str:
+            try:
+                target_date = datetime.strptime(date_str, '%Y-%m-%d').date()
+                queryset = queryset.filter(
+                    Q(start_date__lte=target_date),
+                    Q(end_date__gte=target_date) | Q(end_date__isnull=True)
+                )
+            except ValueError:
+                pass
+
+        if start_time_str and end_time_str:
+            try:
+                target_start = datetime.strptime(start_time_str, '%H:%M').time()
+                target_end = datetime.strptime(end_time_str, '%H:%M').time()
+                
+                queryset = queryset.filter(
+                    Q(start_time__lt=target_end) | Q(start_time__isnull=True),
+                    Q(end_time__gt=target_start) | Q(end_time__isnull=True)
+                )
+            except ValueError:
+                pass
+        
+        if floor_id:
+            queryset = queryset.filter(seat__section__floor_id=floor_id)
+            
+        if seat_number:
+            queryset = queryset.filter(seat__seat_number=seat_number)
+            
+        if not date_str and not floor_id and not status and not is_history and hasattr(self.request.user, 'employee'):
+            # Show all bookings for the current employee (including pending)
             queryset = queryset.filter(employee=self.request.user.employee)
         
-        return queryset
-    
+        return queryset.select_related('employee', 'seat__section__floor').order_by('-created_at')
+
     def perform_create(self, serializer):
-        # Automatically set the employee from the authenticated user
-        if hasattr(self.request.user, 'employee'):
-            employee = self.request.user.employee
-            booking_date = serializer.validated_data.get('booking_date')
-            seat = serializer.validated_data.get('seat')
+        if not hasattr(self.request.user, 'employee'):
+            raise serializers.ValidationError({"detail": "Only employees can book seats."})
             
-            # Check 1: Prevent same seat being booked twice on the same day
-            seat_already_booked = SeatBooking.objects.filter(
-                seat=seat,
-                booking_date=booking_date
-            ).first()
+        employee = self.request.user.employee
+        booking_type = serializer.validated_data.get('booking_type', 'daily')
+        start_date = serializer.validated_data.get('start_date')
+        end_date = serializer.validated_data.get('end_date')
+
+        # Logic for end_date based on type
+        if booking_type == 'permanent':
+            end_date = None
+        elif booking_type == 'weekly' and not end_date:
+            end_date = start_date + timedelta(days=6)
+        elif booking_type == 'daily':
+            end_date = start_date
+
+        # Auto-approve daily bookings
+        status = 'approved' if booking_type == 'daily' else 'pending'
+
+        serializer.save(employee=employee, end_date=end_date, status=status)
+
+    @action(detail=True, methods=['post'], permission_classes=[IsAdminUser | IsMaster])
+    def approve(self, request, pk=None):
+        booking = self.get_object()
+        booking.status = 'approved'
+        booking.save()
+        return Response({'status': 'booking approved'})
+
+    @action(detail=True, methods=['post'], permission_classes=[IsAdminUser | IsMaster])
+    def reject(self, request, pk=None):
+        booking = self.get_object()
+        booking.status = 'rejected'
+        booking.is_active = False # Rejection cancels the booking
+        booking.save()
+        return Response({'status': 'booking rejected'})
+
+    @action(detail=True, methods=['post'], permission_classes=[permissions.IsAuthenticated])
+    def cancel(self, request, pk=None):
+        booking = self.get_object()
+        if not hasattr(request.user, 'employee'):
+            return Response({'error': 'Only employees can cancel bookings.'}, status=status.HTTP_403_FORBIDDEN)
+        if booking.employee != request.user.employee:
+            return Response({'error': 'You can only cancel your own bookings.'}, status=status.HTTP_403_FORBIDDEN)
+        booking.status = 'cancelled'
+        booking.is_active = False
+        booking.save()
+        return Response({'status': 'booking cancelled'})
+
+
+from google.oauth2 import id_token
+from google.auth.transport import requests as google_requests
+from django.conf import settings
+from rest_framework.permissions import AllowAny
+
+def _normalize_domain_list(raw: str | None) -> list[str]:
+    if not raw:
+        return []
+    parts = []
+    for x in str(raw).split(","):
+        d = (x or "").strip().lower()
+        if d.startswith("@"):
+            d = d[1:]
+        if d:
+            parts.append(d)
+    return parts
+
+
+def _company_for_email_domain(email: str):
+    domain = (email.split("@")[-1] if "@" in email else "").strip().lower()
+    if not domain:
+        return None
+    # gmail_domains is comma-separated; easiest safe match is to scan companies.
+    for c in Company.objects.exclude(gmail_domains__isnull=True).exclude(gmail_domains__exact="").only("id", "gmail_domains"):
+        if domain in _normalize_domain_list(c.gmail_domains):
+            return c
+    return None
+
+
+def _ensure_employee_for_company_user(*, user: UserRegister, email: str, first_name: str = "", last_name: str = ""):
+    """
+    If user logs in via SSO for the first time and their email domain matches a company's allowed domains,
+    auto-create/link an Employee profile under that company.
+    """
+    if user.role != "employee":
+        return
+    if getattr(user, "company_id", None):
+        return
+
+    company = _company_for_email_domain(email)
+    if not company:
+        return
+
+    # Link user to company
+    user.company_id = company.id
+    user.save(update_fields=["company"])
+
+    # Link or create Employee
+    emp = Employee.objects.filter(email__iexact=email).select_related("company").first()
+    if emp:
+        if not emp.company_id:
+            emp.company_id = company.id
+        if not emp.user_id:
+            emp.user_id = user.id
+        if not emp.first_name and first_name:
+            emp.first_name = first_name
+        if not emp.last_name and last_name:
+            emp.last_name = last_name
+        emp.save()
+        return
+
+    Employee.objects.create(
+        user_id=user.id,
+        company_id=company.id,
+        email=email,
+        first_name=first_name or None,
+        last_name=last_name or None,
+    )
+
+
+class GoogleLoginAPIView(APIView):
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        token = request.data.get("credential")
+        if not token:
+            return Response({"detail": "Credential missing"}, status=status.HTTP_400_BAD_REQUEST)
+        
+        try:
+            # Verify Google Token
+            idinfo = id_token.verify_oauth2_token(
+                token, 
+                google_requests.Request(), 
+                settings.GOOGLE_CLIENT_ID
+            )
             
-            if seat_already_booked:
-                raise serializers.ValidationError({
-                    "detail": f"This seat is already booked by {seat_already_booked.employee.full_name} for {booking_date}."
-                })
+            email = (idinfo.get("email") or "").strip().lower()
+            first_name = idinfo.get("given_name", "")
+            last_name = idinfo.get("family_name", "")
             
-            # Check 2: Prevent user from booking multiple seats on the same day
-            existing_booking = SeatBooking.objects.filter(
-                employee=employee,
-                booking_date=booking_date
-            ).first()
-            
-            if existing_booking:
-                raise serializers.ValidationError({
-                    "detail": f"You have already booked seat {existing_booking.seat.seat_number} for {booking_date}. You can only book one seat per day."
-                })
-            
-            serializer.save(employee=employee)
-        else:
-            # If user doesn't have an employee record, raise error
-            raise serializers.ValidationError("User must have an employee record to book a seat")
+            # Determine role for new user:
+            # If NO users exist on the platform yet, the first SSO user becomes 'master'.
+            # All subsequent users default to 'employee'.
+            if UserRegister.objects.count() == 0:
+                default_role = "master"
+            else:
+                default_role = "employee"
+
+            # Find or Create User
+            user, created = UserRegister.objects.get_or_create(
+                email=email,
+                defaults={
+                    "username": email,
+                    "first_name": first_name,
+                    "last_name": last_name,
+                    "role": default_role,
+                    "is_active": True
+                }
+            )
+            if created:
+                user.set_unusable_password()
+                user.save()
+
+            # If this is an employee login and company is missing, try to link by Employee.email
+            if user.role == "employee" and not getattr(user, "company_id", None):
+                emp = Employee.objects.filter(email__iexact=email).select_related("company").first()
+                if emp and emp.company_id:
+                    user.company_id = emp.company_id
+                    user.save(update_fields=["company"])
+                    if not emp.user_id:
+                        emp.user_id = user.id
+                        emp.save(update_fields=["user"])
+                else:
+                    # If no Employee exists yet, try auto-registering by allowed company domains
+                    _ensure_employee_for_company_user(user=user, email=email, first_name=first_name, last_name=last_name)
+
+            # Return tokens
+            refresh = RefreshToken.for_user(user)
+            return Response({
+                "access": str(refresh.access_token),
+                "refresh": str(refresh),
+                "id": user.id,
+                "username": user.username,
+                "first_name": user.first_name,
+                "last_name": user.last_name,
+                "role": user.role
+            }, status=status.HTTP_200_OK)
+
+        except ValueError as e:
+            print("Google verify error:", str(e))
+            return Response({"detail": f"Invalid Google token: {str(e)}"}, status=status.HTTP_401_UNAUTHORIZED)
+        except Exception as e:
+            return Response({"detail": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 

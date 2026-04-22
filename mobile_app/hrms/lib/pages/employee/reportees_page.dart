@@ -3,7 +3,9 @@ import '../../models/reportee_model.dart';
 import '../../services/employee_service.dart';
 import '../../services/storage_service.dart';
 import '../../config/api_config.dart';
-import '../../widgets/employee_app_bar.dart';
+import '../../theme/app_stitch_theme.dart';
+import '../../widgets/glass_card.dart';
+import '../../widgets/stitch_background.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 
@@ -78,40 +80,92 @@ class _ReporteesPageState extends State<ReporteesPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF9FAFB),
-      appBar: EmployeeAppBar(title: 'My Reportees'),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : _error != null
-          ? _buildErrorState()
-          : _reportees.isEmpty
-          ? _buildEmptyState()
-          : _buildReporteesList(),
+      backgroundColor: Colors.transparent,
+      body: StitchBackground(
+        child: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+            child: Column(
+              children: [
+                GlassCard(
+                  padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
+                  child: Row(
+                    children: [
+                      IconButton(
+                        onPressed: () => Navigator.pop(context),
+                        icon: const Icon(Icons.arrow_back_ios_new_rounded),
+                      ),
+                      const SizedBox(width: 6),
+                      Expanded(
+                        child: Text(
+                          'Reportees',
+                          style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                                fontWeight: FontWeight.w900,
+                                color: AppStitchTheme.lightOnSurface,
+                              ),
+                        ),
+                      ),
+                      IconButton(
+                        onPressed: _fetchReportees,
+                        tooltip: 'Refresh',
+                        icon: const Icon(Icons.refresh_rounded),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Expanded(
+                  child: _isLoading
+                      ? const Center(child: CircularProgressIndicator())
+                      : _error != null
+                          ? _buildErrorState()
+                          : _reportees.isEmpty
+                              ? _buildEmptyState()
+                              : _buildReporteesList(),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
     );
   }
 
   Widget _buildErrorState() {
     return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(24),
+      child: GlassCard(
+        padding: const EdgeInsets.all(18),
         child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.error_outline, size: 64, color: Color(0xFFDC2626)),
-            const SizedBox(height: 16),
+            Container(
+              width: 56,
+              height: 56,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: const Color(0xFFEF4444).withValues(alpha: 0.10),
+                border: Border.all(
+                  color: const Color(0xFFEF4444).withValues(alpha: 0.20),
+                ),
+              ),
+              child: const Icon(Icons.error_outline_rounded, color: Color(0xFFEF4444)),
+            ),
+            const SizedBox(height: 10),
             Text(
               _error ?? 'Unknown error',
               textAlign: TextAlign.center,
-              style: const TextStyle(color: Color(0xFF6B7280)),
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    fontWeight: FontWeight.w600,
+                    color: AppStitchTheme.lightOnSurfaceMuted,
+                  ),
             ),
-            const SizedBox(height: 24),
-            ElevatedButton(
-              onPressed: _fetchReportees,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF4F46E5),
-                foregroundColor: Colors.white,
+            const SizedBox(height: 12),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: _fetchReportees,
+                child: const Text('Retry'),
               ),
-              child: const Text('Retry'),
             ),
           ],
         ),
@@ -121,30 +175,39 @@ class _ReporteesPageState extends State<ReporteesPage> {
 
   Widget _buildEmptyState() {
     return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(24),
+      child: GlassCard(
+        padding: const EdgeInsets.all(18),
         child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(
-              Icons.people_outline,
-              size: 64,
-              color: Color(0xFF6B7280),
-            ),
-            const SizedBox(height: 16),
-            const Text(
-              'No reportees found',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.w500,
-                color: Color(0xFF111827),
+            Container(
+              width: 56,
+              height: 56,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: Colors.white.withValues(alpha: 0.60),
+                border: Border.all(
+                  color: AppStitchTheme.lightOutline.withValues(alpha: 0.70),
+                ),
               ),
+              child: const Icon(Icons.people_outline_rounded, color: AppStitchTheme.primary),
             ),
-            const SizedBox(height: 8),
-            const Text(
-              'You don\'t have any employees reporting to you',
+            const SizedBox(height: 10),
+            Text(
+              'No reportees found',
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w900,
+                    color: AppStitchTheme.lightOnSurface,
+                  ),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              'You don\'t have any employees reporting to you.',
               textAlign: TextAlign.center,
-              style: TextStyle(color: Color(0xFF6B7280)),
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    fontWeight: FontWeight.w600,
+                    color: AppStitchTheme.lightOnSurfaceMuted,
+                  ),
             ),
           ],
         ),
@@ -155,30 +218,24 @@ class _ReporteesPageState extends State<ReporteesPage> {
   Widget _buildReporteesList() {
     return RefreshIndicator(
       onRefresh: _fetchReportees,
-      color: const Color(0xFF4F46E5),
+      color: AppStitchTheme.primary,
       child: ListView(
-        padding: const EdgeInsets.all(16),
+        padding: EdgeInsets.zero,
         children: [
-          Container(
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(12),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.05),
-                  blurRadius: 4,
-                  offset: const Offset(0, 2),
-                ),
-              ],
-            ),
+          GlassCard(
+            padding: const EdgeInsets.all(0),
             child: Column(
               children: [
                 // Header row
                 Container(
                   padding: const EdgeInsets.all(16),
-                  decoration: const BoxDecoration(
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.25),
                     border: Border(
-                      bottom: BorderSide(color: Color(0xFFE5E7EB), width: 1),
+                      bottom: BorderSide(
+                        color: AppStitchTheme.lightOutline.withValues(alpha: 0.55),
+                        width: 1,
+                      ),
                     ),
                   ),
                   child: const Row(

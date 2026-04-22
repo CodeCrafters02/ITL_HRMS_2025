@@ -9,7 +9,10 @@ router.register(r'company-with-admin', CompanyWithAdminViewSet, basename='compan
 router.register(r'departments', DepartmentViewSet,basename='departments')
 router.register(r'levels', LevelViewSet,basename='levels')
 router.register(r'designations', DesignationViewSet,basename='designations')
-router.register(r'assets', AssetInventoryViewSet, basename='asset')
+router.register(r'supply-items', SupplyItemViewSet, basename='supply-item')
+router.register(r'fixed-assets', FixedAssetViewSet, basename='fixed-asset')
+router.register(r'asset-requests', AssetRequestViewSet, basename='asset-request')
+router.register(r'asset-documents', AssetSupportingDocumentViewSet, basename='asset-document')
 router.register(r'employee', EmployeeViewSet, basename='employee')
 router.register(r'recruitment', RecruitmentViewSet, basename='recruitment')
 router.register(r'leaves', LeaveViewSet, basename='leave')
@@ -30,19 +33,24 @@ router.register(r'break-config', BreakConfigViewSet, basename='break-config')
 router.register(r"letter-templates", LetterTemplateViewSet, basename="lettertemplate")
 router.register(r'generated-letters', GeneratedLetterViewSet, basename='generatedletter')
 router.register(r'employeestatus', EmployeeStatusViewSet, basename='employeestatus')
+router.register(r'office-locations', OfficeLocationViewSet, basename='office-locations')
 router.register(r'office-floors', OfficeFloorViewSet, basename='office-floors')
 router.register(r'office-sections', OfficeSectionViewSet, basename='office-sections')
 router.register(r'office-seats', OfficeSeatViewSet, basename='office-seats')
 router.register(r'seat-bookings', SeatBookingViewSet, basename='seat-bookings')
+router.register(r'chat-conversations', ChatConversationViewSet, basename='chat-conversations')
+router.register(r'chat-messages', ChatMessageViewSet, basename='chat-messages')
 
 
 
 urlpatterns = [
     path('', include(router.urls)),
+    path('chat/users/', ChatCompanyUsersAPIView.as_view(), name='chat-company-users'),
     path('company-update/', CompanyUpdateAPIView.as_view(), name='company_get'),
     path('company-update/<int:pk>/', CompanyUpdateAPIView.as_view(), name='company_update'),
     path('change-password/', CustomPasswordChangeAPIView.as_view(), name='custom-password-change'),
     path('login/', LoginAPIView.as_view(), name='login'),
+    path('google-login/', GoogleLoginAPIView.as_view(), name='google-login'),
     path('change-password/', PasswordChangeView.as_view(), name='change-password'),
     path('users/', UserLogListView.as_view(), name='user_log_api'),
     path('master-dashboard/', MasterDashboardView.as_view(), name='master_dashboard'),
@@ -51,6 +59,10 @@ urlpatterns = [
     path('users/<int:pk>/', UserLogDeleteView.as_view(), name='delete_user_api'),
     path('approved-leaves/', ApprovedLeaveLogView.as_view(), name='approved_leave_log'),
     path('rejected-leaves/', RejectedLeaveLogView.as_view(), name='rejected_leave_log'),
+    path('pending-leaves/', PendingLeaveLogView.as_view(), name='pending_leave_log'),
+    path('pending-leaves/<int:leave_id>/approve/', AdminApproveEmpLeaveView.as_view(), name='admin_leave_approve'),
+    path('pending-leaves/<int:leave_id>/reject/', AdminRejectEmpLeaveView.as_view(), name='admin_leave_reject'),
+    path('leave-history/', LeaveHistoryView.as_view(), name='leave_history'),
     path('attendance-logs/', AttendanceLogView.as_view(), name='attendance_log'),
     path('generate-payroll/', GeneratePayrollView.as_view(), name='generate-payroll'),
     path('generate-letter-content/', GenerateLetterContentAPIView.as_view(), name='generate-letter-content'),

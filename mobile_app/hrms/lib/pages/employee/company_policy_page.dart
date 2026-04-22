@@ -6,7 +6,9 @@ import '../../models/company_policy_model.dart';
 import '../../services/employee_service.dart';
 import '../../services/storage_service.dart';
 import '../../config/api_config.dart';
-import '../../widgets/employee_app_bar.dart';
+import '../../theme/app_stitch_theme.dart';
+import '../../widgets/glass_card.dart';
+import '../../widgets/stitch_background.dart';
 import 'widgets/pdf_viewer_page.dart';
 
 class CompanyPolicyPage extends StatefulWidget {
@@ -58,41 +60,96 @@ class _CompanyPolicyPageState extends State<CompanyPolicyPage> {
 
     showModalBottomSheet(
       context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
-      builder: (context) => Container(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: 40,
-              height: 4,
-              margin: const EdgeInsets.only(bottom: 20),
-              decoration: BoxDecoration(
-                color: Colors.grey[300],
-                borderRadius: BorderRadius.circular(2),
+      builder: (context) => Padding(
+        padding: EdgeInsets.only(
+          left: 16,
+          right: 16,
+          bottom: 16 + MediaQuery.of(context).viewInsets.bottom,
+          top: 16,
+        ),
+        child: GlassCard(
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 44,
+                height: 5,
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.55),
+                  borderRadius: BorderRadius.circular(999),
+                  border: Border.all(
+                    color: AppStitchTheme.lightOutline.withValues(alpha: 0.65),
+                  ),
+                ),
               ),
-            ),
-            ListTile(
-              leading: const Icon(Icons.visibility, color: Color(0xFF4F46E5)),
-              title: const Text('View PDF'),
-              onTap: () {
-                Navigator.pop(context);
-                _viewPdf(policy);
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.download, color: Color(0xFF4F46E5)),
-              title: const Text('Download PDF'),
-              onTap: () {
-                Navigator.pop(context);
-                _downloadPdf(policy);
-              },
-            ),
-            const SizedBox(height: 10),
-          ],
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  Container(
+                    width: 44,
+                    height: 44,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: Colors.white.withValues(alpha: 0.60),
+                      border: Border.all(
+                        color: AppStitchTheme.lightOutline.withValues(alpha: 0.70),
+                      ),
+                    ),
+                    child: const Icon(Icons.policy_rounded, color: AppStitchTheme.primary),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      policy.name,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.w900,
+                            color: AppStitchTheme.lightOnSurface,
+                          ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: const Icon(Icons.visibility_rounded, color: AppStitchTheme.primary),
+                title: Text(
+                  'View PDF',
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        fontWeight: FontWeight.w700,
+                        color: AppStitchTheme.lightOnSurface,
+                      ),
+                ),
+                onTap: () {
+                  Navigator.pop(context);
+                  _viewPdf(policy);
+                },
+              ),
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: const Icon(Icons.download_rounded, color: AppStitchTheme.primary),
+                title: Text(
+                  'Download PDF',
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        fontWeight: FontWeight.w700,
+                        color: AppStitchTheme.lightOnSurface,
+                      ),
+                ),
+                onTap: () {
+                  Navigator.pop(context);
+                  _downloadPdf(policy);
+                },
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -213,40 +270,92 @@ class _CompanyPolicyPageState extends State<CompanyPolicyPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF9FAFB),
-      appBar: EmployeeAppBar(title: 'Company Policies'),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : _error != null
-          ? _buildErrorState()
-          : _policies.isEmpty
-          ? _buildEmptyState()
-          : _buildPoliciesGrid(),
+      backgroundColor: Colors.transparent,
+      body: StitchBackground(
+        child: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+            child: Column(
+              children: [
+                GlassCard(
+                  padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
+                  child: Row(
+                    children: [
+                      IconButton(
+                        onPressed: () => Navigator.pop(context),
+                        icon: const Icon(Icons.arrow_back_ios_new_rounded),
+                      ),
+                      const SizedBox(width: 6),
+                      Expanded(
+                        child: Text(
+                          'Company policies',
+                          style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                                fontWeight: FontWeight.w900,
+                                color: AppStitchTheme.lightOnSurface,
+                              ),
+                        ),
+                      ),
+                      IconButton(
+                        onPressed: _fetchPolicies,
+                        tooltip: 'Refresh',
+                        icon: const Icon(Icons.refresh_rounded),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Expanded(
+                  child: _isLoading
+                      ? const Center(child: CircularProgressIndicator())
+                      : _error != null
+                          ? _buildErrorState()
+                          : _policies.isEmpty
+                              ? _buildEmptyState()
+                              : _buildPoliciesGrid(),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
     );
   }
 
   Widget _buildErrorState() {
     return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(24),
+      child: GlassCard(
+        padding: const EdgeInsets.all(18),
         child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.error_outline, size: 64, color: Color(0xFFDC2626)),
-            const SizedBox(height: 16),
+            Container(
+              width: 56,
+              height: 56,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: const Color(0xFFEF4444).withValues(alpha: 0.10),
+                border: Border.all(
+                  color: const Color(0xFFEF4444).withValues(alpha: 0.20),
+                ),
+              ),
+              child: const Icon(Icons.error_outline_rounded, color: Color(0xFFEF4444)),
+            ),
+            const SizedBox(height: 10),
             Text(
               _error ?? 'Unknown error',
               textAlign: TextAlign.center,
-              style: const TextStyle(color: Color(0xFF6B7280)),
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    fontWeight: FontWeight.w600,
+                    color: AppStitchTheme.lightOnSurfaceMuted,
+                  ),
             ),
-            const SizedBox(height: 24),
-            ElevatedButton(
-              onPressed: _fetchPolicies,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF4F46E5),
-                foregroundColor: Colors.white,
+            const SizedBox(height: 12),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: _fetchPolicies,
+                child: const Text('Retry'),
               ),
-              child: const Text('Retry'),
             ),
           ],
         ),
@@ -256,30 +365,39 @@ class _CompanyPolicyPageState extends State<CompanyPolicyPage> {
 
   Widget _buildEmptyState() {
     return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(24),
+      child: GlassCard(
+        padding: const EdgeInsets.all(18),
         child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(
-              Icons.description_outlined,
-              size: 64,
-              color: Color(0xFF6B7280),
-            ),
-            const SizedBox(height: 16),
-            const Text(
-              'No policies available',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.w500,
-                color: Color(0xFF111827),
+            Container(
+              width: 56,
+              height: 56,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: Colors.white.withValues(alpha: 0.60),
+                border: Border.all(
+                  color: AppStitchTheme.lightOutline.withValues(alpha: 0.70),
+                ),
               ),
+              child: const Icon(Icons.description_outlined, color: AppStitchTheme.primary),
             ),
-            const SizedBox(height: 8),
-            const Text(
-              'Company policies will appear here when available',
+            const SizedBox(height: 10),
+            Text(
+              'No policies available',
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w900,
+                    color: AppStitchTheme.lightOnSurface,
+                  ),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              'Company policies will appear here when available.',
               textAlign: TextAlign.center,
-              style: TextStyle(color: Color(0xFF6B7280)),
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    fontWeight: FontWeight.w600,
+                    color: AppStitchTheme.lightOnSurfaceMuted,
+                  ),
             ),
           ],
         ),
@@ -290,12 +408,12 @@ class _CompanyPolicyPageState extends State<CompanyPolicyPage> {
   Widget _buildPoliciesGrid() {
     return RefreshIndicator(
       onRefresh: _fetchPolicies,
-      color: const Color(0xFF4F46E5),
+      color: AppStitchTheme.primary,
       child: LayoutBuilder(
         builder: (context, constraints) {
           final crossAxisCount = constraints.maxWidth > 600 ? 2 : 1;
           return GridView.builder(
-            padding: const EdgeInsets.all(16),
+            padding: EdgeInsets.zero,
             gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
               crossAxisCount: crossAxisCount,
               crossAxisSpacing: 16,
@@ -318,18 +436,13 @@ class _CompanyPolicyPageState extends State<CompanyPolicyPage> {
     final isPdf =
         hasDocument && policy.documentUrl!.toLowerCase().endsWith('.pdf');
 
-    return Card(
-      elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+    return GlassCard(
+      padding: const EdgeInsets.all(0),
       child: InkWell(
         onTap: hasDocument ? () => _showDocumentOptions(policy) : null,
-        borderRadius: BorderRadius.circular(12),
-        child: Container(
+        borderRadius: BorderRadius.circular(28),
+        child: Padding(
           padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(12),
-            color: Colors.white,
-          ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -337,15 +450,19 @@ class _CompanyPolicyPageState extends State<CompanyPolicyPage> {
               Row(
                 children: [
                   Container(
-                    padding: const EdgeInsets.all(8),
+                    width: 44,
+                    height: 44,
                     decoration: BoxDecoration(
-                      color: const Color(0xFF4F46E5).withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(8),
+                      color: Colors.white.withValues(alpha: 0.60),
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(
+                        color: AppStitchTheme.lightOutline.withValues(alpha: 0.70),
+                      ),
                     ),
                     child: Icon(
-                      isPdf ? Icons.picture_as_pdf : Icons.description,
-                      color: const Color(0xFF4F46E5),
-                      size: 24,
+                      isPdf ? Icons.picture_as_pdf_rounded : Icons.description_rounded,
+                      color: AppStitchTheme.primary,
+                      size: 22,
                     ),
                   ),
                 ],
@@ -354,11 +471,10 @@ class _CompanyPolicyPageState extends State<CompanyPolicyPage> {
               Expanded(
                 child: Text(
                   policy.name,
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                    color: Color(0xFF111827),
-                  ),
+                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                        fontWeight: FontWeight.w900,
+                        color: AppStitchTheme.lightOnSurface,
+                      ),
                   maxLines: 3,
                   overflow: TextOverflow.ellipsis,
                 ),
@@ -368,25 +484,27 @@ class _CompanyPolicyPageState extends State<CompanyPolicyPage> {
                 Row(
                   children: [
                     const Icon(
-                      Icons.more_vert,
-                      size: 16,
-                      color: Color(0xFF4F46E5),
+                      Icons.more_horiz_rounded,
+                      size: 18,
+                      color: AppStitchTheme.primary,
                     ),
                     const SizedBox(width: 6),
-                    const Text(
+                    Text(
                       'View / Download',
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: Color(0xFF4F46E5),
-                        fontWeight: FontWeight.w500,
-                      ),
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                            fontWeight: FontWeight.w700,
+                            color: AppStitchTheme.primary,
+                          ),
                     ),
                   ],
                 )
               else
-                const Text(
+                Text(
                   'No document',
-                  style: TextStyle(fontSize: 12, color: Color(0xFF9CA3AF)),
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        fontWeight: FontWeight.w600,
+                        color: AppStitchTheme.lightOnSurfaceMuted,
+                      ),
                 ),
             ],
           ),

@@ -1,8 +1,10 @@
 from rest_framework import serializers
+from django.db.models import Q
 from datetime import datetime, timedelta
 from django.core.mail import send_mail
 from django.conf import settings
 from django.utils.crypto import get_random_string
+import threading
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ObjectDoesNotExist
 from django.contrib.auth import get_user_model
@@ -50,6 +52,15 @@ class UserRegisterSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError("Role must be master, admin, or employee.")
         return value
 
+    def validate_email(self, value):
+        email = value.strip().lower()
+        queryset = UserRegister.objects.filter(email__iexact=email)
+        if self.instance:
+            queryset = queryset.exclude(pk=self.instance.pk)
+        if queryset.exists():
+            raise serializers.ValidationError("A user with this email already exists.")
+        return email
+
     def create(self, validated_data):
         user = UserRegister.objects.create_user(
             username=validated_data['username'],
@@ -67,19 +78,35 @@ class UserSerializer(serializers.ModelSerializer):
         allow_null=True
     )
     company_name = serializers.SerializerMethodField(read_only=True)
+    designation = serializers.SerializerMethodField(read_only=True)
 
     class Meta:
         model = UserRegister
-        fields = ['id', 'username', 'email', 'password', 'role', 'is_active', 'first_name', 'last_name', 'company', 'company_name']
+        fields = ['id', 'username', 'email', 'password', 'role', 'is_active', 'first_name', 'last_name', 'company', 'company_name', 'designation']
         read_only_fields = ['created_by'] 
 
     def get_company_name(self, obj):
         return obj.company.name if obj.company else None
 
+    def get_designation(self, obj):
+        try:
+            return obj.employee_profile.designation.name if obj.employee_profile and obj.employee_profile.designation else obj.role.capitalize()
+        except:
+            return obj.role.capitalize()
+
     def validate_role(self, value):
         if value not in ['master', 'admin', 'employee']:
             raise serializers.ValidationError("Role must be master, admin, or employee.")
         return value
+
+    def validate_email(self, value):
+        email = value.strip().lower()
+        queryset = UserRegister.objects.filter(email__iexact=email)
+        if self.instance:
+            queryset = queryset.exclude(pk=self.instance.pk)
+        if queryset.exists():
+            raise serializers.ValidationError("A user with this email already exists.")
+        return email
 
     def validate(self, data):
         role = data.get('role')
@@ -123,7 +150,16 @@ class AdminRegisterSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = UserRegister
-        fields = ['id', 'username', 'email', 'password']
+        fields = ['id', 'username', 'email', 'password', 'first_name', 'last_name']
+
+    def validate_email(self, value):
+        email = value.strip().lower()
+        queryset = UserRegister.objects.filter(email__iexact=email)
+        if self.instance:
+            queryset = queryset.exclude(pk=self.instance.pk)
+        if queryset.exists():
+            raise serializers.ValidationError("A user with this email already exists.")
+        return email
 
     def create(self, validated_data):
         validated_data['role'] = 'admin'
@@ -133,6 +169,9 @@ class AdminRegisterSerializer(serializers.ModelSerializer):
             password=validated_data['password'],
             role='admin'
         )
+        user.first_name = validated_data.get('first_name', '')
+        user.last_name = validated_data.get('last_name', '')
+        user.save()
         return user
 
 class MasterDashboardSerializer(serializers.ModelSerializer):
@@ -142,16 +181,26 @@ class MasterDashboardSerializer(serializers.ModelSerializer):
 
 class CompanyWithAdminSerializer(serializers.ModelSerializer):
     admin = serializers.IntegerField(write_only=True, required=False)
+    admin_username_input = serializers.CharField(write_only=True, required=False)
+    admin_email_input = serializers.EmailField(write_only=True, required=False)
+    admin_first_name = serializers.CharField(write_only=True, required=False, allow_blank=True)
+    admin_last_name = serializers.CharField(write_only=True, required=False, allow_blank=True)
+    admin_password = serializers.CharField(write_only=True, required=False)
     admin_id = serializers.SerializerMethodField(read_only=True)
     admin_username = serializers.SerializerMethodField(read_only=True)
     admin_email = serializers.SerializerMethodField(read_only=True)
+    admin_first_name_value = serializers.SerializerMethodField(read_only=True)
+    admin_last_name_value = serializers.SerializerMethodField(read_only=True)
     logo_url = serializers.SerializerMethodField()
 
     class Meta:
         model = Company
         fields = [
-            'id', 'name', 'address', 'location', 'email', 'phone_number',
-            'logo', 'logo_url', 'admin', 'admin_id', 'admin_username', 'admin_email'
+            'id', 'name', 'address', 'location', 'email', 'phone_number', 'gmail_domains',
+            'logo', 'logo_url',
+            'admin',
+            'admin_username_input', 'admin_email_input', 'admin_first_name', 'admin_last_name', 'admin_password',
+            'admin_id', 'admin_username', 'admin_email', 'admin_first_name_value', 'admin_last_name_value'
         ]
         extra_kwargs = {
             'admin': {'write_only': True}
@@ -168,6 +217,14 @@ class CompanyWithAdminSerializer(serializers.ModelSerializer):
     def get_admin_email(self, obj):
         admin_user = UserRegister.objects.filter(company=obj, role='admin').first()
         return admin_user.email if admin_user else None
+
+    def get_admin_first_name_value(self, obj):
+        admin_user = UserRegister.objects.filter(company=obj, role='admin').first()
+        return admin_user.first_name if admin_user else ''
+
+    def get_admin_last_name_value(self, obj):
+        admin_user = UserRegister.objects.filter(company=obj, role='admin').first()
+        return admin_user.last_name if admin_user else ''
     
     def get_logo_url(self, obj):
         request = self.context.get('request')
@@ -179,6 +236,11 @@ class CompanyWithAdminSerializer(serializers.ModelSerializer):
     
     def update(self, instance, validated_data):
         admin_id = validated_data.pop('admin', None)
+        admin_username_input = (validated_data.pop('admin_username_input', None) or '').strip()
+        admin_email_input = (validated_data.pop('admin_email_input', None) or '').strip().lower()
+        admin_first_name = validated_data.pop('admin_first_name', None)
+        admin_last_name = validated_data.pop('admin_last_name', None)
+        admin_password = validated_data.pop('admin_password', None)
 
         # Update basic fields
         for attr, value in validated_data.items():
@@ -198,12 +260,43 @@ class CompanyWithAdminSerializer(serializers.ModelSerializer):
                 admin_user.save()
             except UserRegister.DoesNotExist:
                 raise serializers.ValidationError({"admin": "Admin user not found."})
+
+        # Update existing admin details (if any fields provided)
+        if admin_username_input or admin_email_input or admin_first_name is not None or admin_last_name is not None or admin_password:
+            admin_user = UserRegister.objects.filter(company=instance, role='admin').first()
+            if not admin_user:
+                raise serializers.ValidationError({"detail": "No admin is assigned to this company."})
+
+            if admin_username_input and UserRegister.objects.filter(username__iexact=admin_username_input).exclude(pk=admin_user.pk).exists():
+                raise serializers.ValidationError({"admin_username_input": "A user with this username already exists."})
+            if admin_email_input and UserRegister.objects.filter(email__iexact=admin_email_input).exclude(pk=admin_user.pk).exists():
+                raise serializers.ValidationError({"admin_email_input": "A user with this email already exists."})
+
+            if admin_username_input:
+                admin_user.username = admin_username_input
+            if admin_email_input:
+                admin_user.email = admin_email_input
+            if admin_first_name is not None:
+                admin_user.first_name = admin_first_name
+            if admin_last_name is not None:
+                admin_user.last_name = admin_last_name
+            if admin_password:
+                admin_user.set_password(admin_password)
+
+            admin_user.role = 'admin'
+            admin_user.company = instance
+            admin_user.save()
         
         return instance
 
 
     def create(self, validated_data):
         admin_id = validated_data.pop('admin', None)
+        admin_username_input = (validated_data.pop('admin_username_input', None) or '').strip()
+        admin_email_input = (validated_data.pop('admin_email_input', None) or '').strip().lower()
+        admin_first_name = validated_data.pop('admin_first_name', '') or ''
+        admin_last_name = validated_data.pop('admin_last_name', '') or ''
+        admin_password = validated_data.pop('admin_password', None)
         company = Company.objects.create(**validated_data)
 
         if admin_id is not None:
@@ -224,15 +317,37 @@ class CompanyWithAdminSerializer(serializers.ModelSerializer):
                     f"Regards,\n"
                     f"{company.name} Team"
                 )
-                send_mail(
-                    subject,
-                    message,
-                    None,  # uses DEFAULT_FROM_EMAIL
-                    [admin_user.email],
-                    fail_silently=False,
+                # Send welcome email in the background to avoid blocking the response
+                email_thread = threading.Thread(
+                    target=send_mail,
+                    args=(subject, message, None, [admin_user.email]),
+                    kwargs={'fail_silently': False}
                 )
+                email_thread.start()
             except UserRegister.DoesNotExist:
                 raise serializers.ValidationError({"admin": "Admin user not found."})
+        else:
+            # Create a new admin user along with company
+            if not admin_username_input or not admin_email_input or not admin_password:
+                raise serializers.ValidationError(
+                    {"detail": "Admin details are required (admin_username_input, admin_email_input, admin_password) when admin is not provided."}
+                )
+
+            if UserRegister.objects.filter(username__iexact=admin_username_input).exists():
+                raise serializers.ValidationError({"admin_username_input": "A user with this username already exists."})
+            if UserRegister.objects.filter(email__iexact=admin_email_input).exists():
+                raise serializers.ValidationError({"admin_email_input": "A user with this email already exists."})
+
+            admin_user = UserRegister.objects.create_user(
+                username=admin_username_input,
+                email=admin_email_input,
+                password=admin_password,
+                role='admin',
+                company=company,
+                first_name=admin_first_name,
+                last_name=admin_last_name,
+                is_active=True,
+            )
 
         return company
     
@@ -264,6 +379,7 @@ class CompanySerializer(serializers.ModelSerializer):
             'location',
             'email',
             'phone_number',
+            'gmail_domains',
             'logo',
             'logo_url',
             'created_at',
@@ -282,7 +398,7 @@ class CompanySerializer(serializers.ModelSerializer):
 class DepartmentSerializer(serializers.ModelSerializer):
     class Meta:
         model = Department
-        fields = ['id', 'department_name']
+        fields = ['id', 'department_name', 'creation_date']
         
 class LevelSerializer(serializers.ModelSerializer):
     class Meta:
@@ -291,9 +407,18 @@ class LevelSerializer(serializers.ModelSerializer):
         read_only_fields = ['company']
 
 class DesignationSerializer(serializers.ModelSerializer):
+    department_name = serializers.SerializerMethodField(read_only=True)
+    level_name = serializers.SerializerMethodField(read_only=True)
+
     class Meta:
         model = Designation
-        fields = ['id', 'designation_name', 'department', 'level']
+        fields = ['id', 'designation_name', 'department', 'department_name', 'level', 'level_name']
+
+    def get_department_name(self, obj):
+        return obj.department.department_name if obj.department else None
+
+    def get_level_name(self, obj):
+        return obj.level.level_name if obj.level else None
 
     def validate(self, attrs):
         designation_name = attrs.get('designation_name', '').strip()
@@ -325,9 +450,11 @@ class ShiftPolicySerializer(serializers.ModelSerializer):
 
        
 class EmployeeSerializer(serializers.ModelSerializer):
-    department = serializers.PrimaryKeyRelatedField(queryset=Department.objects.all())
-    designation = serializers.PrimaryKeyRelatedField(queryset=Designation.objects.all())
-    level = serializers.PrimaryKeyRelatedField(queryset=Level.objects.all(), required=False)
+    company = serializers.PrimaryKeyRelatedField(queryset=Company.objects.all(), required=False, allow_null=True)
+    department = serializers.PrimaryKeyRelatedField(queryset=Department.objects.all(), required=False, allow_null=True)
+    designation = serializers.PrimaryKeyRelatedField(queryset=Designation.objects.all(), required=False, allow_null=True)
+    level = serializers.PrimaryKeyRelatedField(queryset=Level.objects.all(), required=False, allow_null=True)
+    password = serializers.CharField(write_only=True, required=False, allow_blank=True)
 
     reporting_level = serializers.PrimaryKeyRelatedField(
         queryset=Level.objects.all(), write_only=True, required=False, allow_null=True
@@ -338,7 +465,7 @@ class EmployeeSerializer(serializers.ModelSerializer):
     reporting_manager_name = serializers.SerializerMethodField()
     reporting_level_name = serializers.SerializerMethodField()
     asset_details = serializers.PrimaryKeyRelatedField(
-        queryset=AssetInventory.objects.all(), many=True, required=False, allow_null=True
+        queryset=SupplyItem.objects.all(), many=True, required=False, allow_null=True
     )
 
     department_name = serializers.SerializerMethodField()
@@ -346,6 +473,7 @@ class EmployeeSerializer(serializers.ModelSerializer):
     asset_names = serializers.SerializerMethodField()
     source_choices = serializers.SerializerMethodField()
     shift_assigned = ShiftPolicySerializer(read_only=True)
+    company_name = serializers.SerializerMethodField()
 
     class Meta:
         model = Employee
@@ -353,17 +481,20 @@ class EmployeeSerializer(serializers.ModelSerializer):
             'id', 'employee_id', 'first_name', 'middle_name', 'last_name', 'gender',
             'email', 'date_of_birth', 'mobile', 'temporary_address', 'permanent_address', 'photo',
             'aadhar_no', 'aadhar_card', 'pan_no', 'pan_card', 'guardian_name', 'guardian_mobile',
-            'category', 'department', 'department_name', 'designation', 'designation_name',
+            'category', 'company', 'company_name', 'department', 'department_name', 'designation', 'designation_name',
             'level', 'reporting_manager', 'reporting_level', 'reporting_level_name', 'reporting_manager_name',
             'payment_method', 'account_no', 'ifsc_code', 'bank_name', 'source_of_employment',
             'who_referred', 'date_of_joining', 'previous_employer', 'date_of_releaving',
             'previous_designation_name', 'previous_salary', 'ctc', 'gross_salary',
             'epf_status', 'uan', 'asset_details', 'asset_names', 'esic_status', 'esic_no',
-            'source_choices', 'shift_assigned'
+            'source_choices', 'shift_assigned', 'password'
         ]
 
     def get_department_name(self, obj):
         return obj.department.department_name if obj.department else None
+
+    def get_company_name(self, obj):
+        return obj.company.name if obj.company else None
 
     def get_designation_name(self, obj):
         return obj.designation.designation_name if obj.designation else None
@@ -371,7 +502,7 @@ class EmployeeSerializer(serializers.ModelSerializer):
     def get_asset_names(self, obj):
         if not obj.id:
             return []
-        return [asset.name for asset in obj.asset_details.all()]
+        return [item.item_name for item in obj.supply_items.all()]
 
     def get_source_choices(self, obj):
         return [{'value': key, 'label': label} for key, label in Employee.SOURCE_CHOICES]
@@ -396,13 +527,26 @@ class EmployeeSerializer(serializers.ModelSerializer):
         if not request:
             raise serializers.ValidationError("Request context is required.")
 
-        company = request.user.company
+        company_id = self.initial_data.get('company')
+        if request.user.role == 'master' and company_id:
+            company = Company.objects.filter(id=company_id).first()
+            if not company:
+                raise serializers.ValidationError({"company": "Invalid company provided."})
+        else:
+            company = request.user.company
         
+        if email:
+            email = email.strip().lower()
+            data['email'] = email
+            existing_users = UserRegister.objects.filter(email__iexact=email)
+            if self.instance and getattr(self.instance, 'user_id', None):
+                existing_users = existing_users.exclude(pk=self.instance.user_id)
+            if existing_users.exists():
+                raise serializers.ValidationError({"email": "A user with this email already exists."})
+
         if self.instance is None:  # Means create, not update
             if not email:
                 raise serializers.ValidationError({"email": "Email is required for employee creation."})
-            if Employee.objects.filter(email=email, company=company).exists():
-                raise serializers.ValidationError({"email": "This email is already registered for this company."})
 
 
         if source != 'internalreference' and ref:
@@ -420,17 +564,28 @@ class EmployeeSerializer(serializers.ModelSerializer):
             if reporting_level and reporting_manager.level_id != reporting_level.id:
                 raise serializers.ValidationError("Reporting manager is not assigned to the selected reporting level.")
 
+        # Non-master users can only create/update employees in their own company.
+        if request.user.role != 'master':
+            data['company'] = company
+
         return data
 
     def create(self, validated_data):
         reporting_level = validated_data.pop('reporting_level', None)
         assets = validated_data.pop('asset_details', [])
+        raw_password = validated_data.pop('password', '').strip()
         request = self.context['request']
         admin_user = request.user
+        
+        company_id = self.initial_data.get('company')
+        if admin_user.role == 'master' and company_id:
+            assigned_company = Company.objects.get(id=company_id)
+        else:
+            assigned_company = admin_user.company
 
         employee_id = self.generate_employee_id()
         username = self.generate_username(validated_data)
-        password = get_random_string(8)
+        password = raw_password or get_random_string(8)
 
         # Ensure email exists in validated_data
         email = validated_data.get('email')
@@ -452,7 +607,7 @@ class EmployeeSerializer(serializers.ModelSerializer):
                 email=email,
                 password=password,
                 role='employee',
-                company=admin_user.company
+                company=assigned_company
             )
         except Exception as e:
             # Handle any database constraint violations
@@ -467,14 +622,14 @@ class EmployeeSerializer(serializers.ModelSerializer):
                         email=email,
                         password=password,
                         role='employee',
-                        company=admin_user.company
+                        company=assigned_company
                     )
                 else:
                     raise serializers.ValidationError({"error": f"Database constraint violation: {str(e)}"})
             else:
                 raise
 
-        validated_data['company'] = admin_user.company
+        validated_data['company'] = assigned_company
         validated_data['user'] = user
         validated_data['employee_id'] = employee_id
 
@@ -503,20 +658,37 @@ class EmployeeSerializer(serializers.ModelSerializer):
             else:
                 raise
 
-        # Convert asset IDs to AssetInventory instances if needed
-        asset_instances = []
-        for asset in assets:
-            if isinstance(asset, int):
-                asset_obj = AssetInventory.objects.get(pk=asset)
-            else:
-                asset_obj = asset
-            if asset_obj.quantity <= 0:
-                raise serializers.ValidationError(f"Asset '{asset_obj.name}' is out of stock.")
-            asset_obj.quantity -= 1
-            asset_obj.save()
-            EmployeeAssetDetails.objects.create(employee=employee, assetinventory=asset_obj)
+        for item in assets:
+            pk = item if isinstance(item, int) else getattr(item, 'pk', item)
+            supply = SupplyItem.objects.get(pk=pk)
+            if supply.company_id != assigned_company.id:
+                raise serializers.ValidationError('Supply item does not belong to your company.')
+            if supply.available_quantity <= 0:
+                raise serializers.ValidationError(f"Supply item '{supply.item_name}' is out of stock.")
+            supply.available_quantity -= 1
+            supply.save(update_fields=['available_quantity', 'updated_at'])
+            EmployeeSupplyAssignment.objects.create(employee=employee, supply_item=supply)
 
         self.send_welcome_email(user, password)
+
+        return employee
+
+    def update(self, instance, validated_data):
+        request = self.context.get('request')
+        if not request:
+            raise serializers.ValidationError("Request context is required.")
+
+        # Admins cannot move employees across companies.
+        if request.user.role != 'master':
+            validated_data['company'] = request.user.company
+
+        employee = super().update(instance, validated_data)
+
+        # Linked auth user must always remain an employee and match employee company.
+        if employee.user:
+            employee.user.role = 'employee'
+            employee.user.company = employee.company
+            employee.user.save(update_fields=['role', 'company'])
 
         return employee
 
@@ -646,37 +818,130 @@ class EmployeeSerializer(serializers.ModelSerializer):
         send_mail(subject, message, settings.DEFAULT_FROM_EMAIL, [user.email])
     
     
-class AssetInventorySerializer(serializers.ModelSerializer):
+class SupplyItemSerializer(serializers.ModelSerializer):
     class Meta:
-        model = AssetInventory
-        fields = [
-            'id',
-            'name',
-            'description',
-            'quantity',
-            'icon_image',
-            
-        ]
+        model = SupplyItem
+        fields = '__all__'
+        read_only_fields = ('company', 'created_at', 'updated_at')
+
+    def validate(self, attrs):
+        inst = self.instance
+        total = attrs.get('total_stock', inst.total_stock if inst else None)
+        avail = attrs.get('available_quantity', inst.available_quantity if inst else None)
+        if total is None:
+            total = 0
+        if avail is None:
+            avail = 0
+        if avail > total:
+            raise serializers.ValidationError({'available_quantity': 'Cannot exceed total stock.'})
+        return attrs
 
     def create(self, validated_data):
         request = self.context['request']
-        admin_user = request.user
-        company = admin_user.company
-
-        validated_data['company'] = company
-        return AssetInventory.objects.create(**validated_data)
-
-    def update(self, instance, validated_data):
-        return super().update(instance, validated_data)
+        validated_data['company'] = request.user.company
+        return super().create(validated_data)
 
 
-class EmployeeAssetDetailsSerializer(serializers.ModelSerializer):
-    employee_name = serializers.CharField(source='employee.__str__', read_only=True)
-    asset_name = serializers.CharField(source='assetinventory.name', read_only=True)
+class FixedAssetSerializer(serializers.ModelSerializer):
+    assigned_to_name = serializers.SerializerMethodField(read_only=True)
+    variable_catalog_code = serializers.SerializerMethodField(read_only=True)
+    variable_catalog_name = serializers.SerializerMethodField(read_only=True)
 
     class Meta:
-        model = EmployeeAssetDetails
-        fields = ['id', 'employee', 'employee_name', 'assetinventory', 'asset_name']
+        model = FixedAsset
+        fields = '__all__'
+        read_only_fields = ('company', 'created_at', 'updated_at')
+
+    def get_assigned_to_name(self, obj):
+        if not obj.assigned_to_id:
+            return None
+        e = obj.assigned_to
+        return f"{(e.first_name or '').strip()} {(e.last_name or '').strip()}".strip() or str(e.employee_id)
+
+    def get_variable_catalog_code(self, obj):
+        return obj.variable_supply_item.item_code if obj.variable_supply_item_id else None
+
+    def get_variable_catalog_name(self, obj):
+        return obj.variable_supply_item.item_name if obj.variable_supply_item_id else None
+
+    def create(self, validated_data):
+        request = self.context['request']
+        validated_data['company'] = request.user.company
+        return super().create(validated_data)
+
+    def validate(self, attrs):
+        request = self.context['request']
+        company = getattr(request.user, 'company', None)
+        inst = self.instance
+        if 'variable_supply_item' in attrs:
+            vs = attrs.get('variable_supply_item')
+        else:
+            vs = inst.variable_supply_item if inst else None
+        if vs is not None and company and vs.company_id != company.id:
+            raise serializers.ValidationError({'variable_supply_item': 'Supply item must belong to your company.'})
+        assigned = attrs.get('assigned_to', inst.assigned_to if inst else None)
+        status = attrs.get('status', inst.status if inst else None)
+        if status == 'in_use' and not assigned:
+            raise serializers.ValidationError({'assigned_to': 'Required when status is In-Use.'})
+        return attrs
+
+
+class AssetRequestSerializer(serializers.ModelSerializer):
+    requested_by_name = serializers.SerializerMethodField(read_only=True)
+    image_url = serializers.SerializerMethodField(read_only=True)
+
+    class Meta:
+        model = AssetRequest
+        fields = '__all__'
+        read_only_fields = ('company', 'created_at', 'updated_at')
+
+    def get_requested_by_name(self, obj):
+        e = obj.requested_by
+        return f"{(e.first_name or '').strip()} {(e.last_name or '').strip()}".strip() or str(e.employee_id)
+
+    def get_image_url(self, obj):
+        request = self.context.get('request')
+        if obj.image and request:
+            return request.build_absolute_uri(obj.image.url)
+        return None
+
+    def create(self, validated_data):
+        request = self.context['request']
+        validated_data['company'] = request.user.company
+        return super().create(validated_data)
+
+
+class AssetSupportingDocumentSerializer(serializers.ModelSerializer):
+    file_url = serializers.SerializerMethodField(read_only=True)
+    uploaded_by_username = serializers.CharField(source='uploaded_by.username', read_only=True)
+
+    class Meta:
+        model = AssetSupportingDocument
+        fields = '__all__'
+        read_only_fields = ('company', 'uploaded_at', 'uploaded_by')
+
+    def get_file_url(self, obj):
+        request = self.context.get('request')
+        if obj.file and request:
+            return request.build_absolute_uri(obj.file.url)
+        return None
+
+    def validate(self, attrs):
+        fa = attrs.get('fixed_asset_id') or attrs.get('fixed_asset')
+        si = attrs.get('supply_item_id') or attrs.get('supply_item')
+        ar = attrs.get('asset_request_id') or attrs.get('asset_request')
+        if self.instance:
+            fa = fa or self.instance.fixed_asset_id
+            si = si or self.instance.supply_item_id
+            ar = ar or self.instance.asset_request_id
+        ids = sum(1 for x in (fa, si, ar) if x)
+        if ids != 1:
+            raise serializers.ValidationError('Link exactly one of fixed_asset, supply_item, or asset_request.')
+        return attrs
+
+    def create(self, validated_data):
+        # company / uploaded_by set in view perform_create
+        return super().create(validated_data)
 
 
 class RecruitmentSerializer(serializers.ModelSerializer):
@@ -749,7 +1014,7 @@ class DepartmentWiseWorkingDaysSerializer(serializers.ModelSerializer):
         model = DepartmentWiseWorkingDays
         fields = [
             'id', 'department', 'shifts', 'working_days_count',
-            'week_start_day', 'week_end_day', 'company'
+            'week_start_day', 'week_end_day', 'working_days', 'weekend_days', 'company'
         ]
 
 
@@ -1200,6 +1465,106 @@ class RefreshTokenSerializer(serializers.Serializer):
             raise serializers.ValidationError("Invalid refresh token.")
 
 
+class SeatBookingSerializer(serializers.ModelSerializer):
+    employee_details = serializers.SerializerMethodField()
+    seat_details = serializers.SerializerMethodField()
+    is_mine = serializers.SerializerMethodField()
+
+    class Meta:
+        model = SeatBooking
+        fields = ['id', 'seat', 'employee', 'booking_type', 'status', 'start_date', 'end_date', 'start_time', 'end_time', 'is_active', 'created_at', 'employee_details', 'seat_details', 'is_mine']
+        read_only_fields = ['created_at', 'employee']  # employee set automatically by viewset
+
+    def validate(self, data):
+        seat = data.get('seat')
+        start_date = data.get('start_date')
+        end_date = data.get('end_date') or start_date
+        start_time = data.get('start_time')
+        end_time = data.get('end_time')
+
+        # Check 0: Basic Date Sanity
+        if end_date and start_date and end_date < start_date:
+            raise serializers.ValidationError({"detail": "End date cannot be before start date."})
+        
+        request = self.context.get('request')
+        user = request.user if request else None
+        
+        # Current booking instance (if updating)
+        instance_id = self.instance.id if self.instance else None
+
+        # Check 1: Seat Overlap - Is the seat already booked by ANYONE?
+        seat_queryset = SeatBooking.objects.filter(
+            seat=seat,
+            is_active=True,
+            status__in=['pending', 'approved']
+        )
+        
+        if instance_id:
+            seat_queryset = seat_queryset.exclude(id=instance_id)
+        
+        # Date overlap check for seat
+        seat_date_overlap = seat_queryset.filter(
+            Q(start_date__lte=end_date),
+            Q(end_date__gte=start_date) | Q(end_date__isnull=True)
+        )
+        
+        for booking in seat_date_overlap:
+            if not start_time or not end_time or not booking.start_time or not booking.end_time:
+                raise serializers.ValidationError({"detail": f"Seat {seat.seat_number} is already booked for these dates."})
+            if start_time < booking.end_time and end_time > booking.start_time:
+                bStart = booking.start_time.strftime('%H:%M') if booking.start_time else '00:00'
+                bEnd = booking.end_time.strftime('%H:%M') if booking.end_time else '23:59'
+                raise serializers.ValidationError({"detail": f"Seat {seat.seat_number} is already booked during this time: {bStart} to {bEnd}"})
+
+        # Check 2: Employee Overlap - Does the CURRENT EMPLOYEE already have a booking?
+        if user and hasattr(user, 'employee'):
+            employee = user.employee
+            emp_queryset = SeatBooking.objects.filter(
+                employee=employee,
+                is_active=True,
+                status__in=['pending', 'approved']
+            )
+            
+            if instance_id:
+                emp_queryset = emp_queryset.exclude(id=instance_id)
+                
+            emp_date_overlap = emp_queryset.filter(
+                Q(start_date__lte=end_date),
+                Q(end_date__gte=start_date) | Q(end_date__isnull=True)
+            )
+            
+            for booking in emp_date_overlap:
+                if not start_time or not end_time or not booking.start_time or not booking.end_time:
+                    raise serializers.ValidationError({"detail": f"You already have a seat booking for these dates."})
+                if start_time < booking.end_time and end_time > booking.start_time:
+                    bStart = booking.start_time.strftime('%H:%M') if booking.start_time else '00:00'
+                    bEnd = booking.end_time.strftime('%H:%M') if booking.end_time else '23:59'
+                    raise serializers.ValidationError({"detail": f"You already have a booking for seat {booking.seat.seat_number} during this time: {bStart} to {bEnd}"})
+
+        return data
+
+    def get_employee_details(self, obj):
+        return {
+            'id': obj.employee.id,
+            'name': obj.employee.full_name,
+            'employee_id': obj.employee.employee_id
+        }
+
+    def get_seat_details(self, obj):
+        return {
+            "seat_number": obj.seat.seat_number,
+            "section": obj.seat.section.name,
+            "floor": obj.seat.section.floor.name,
+            "floor_id": obj.seat.section.floor.id
+        }
+
+    def get_is_mine(self, obj):
+        request = self.context.get('request')
+        if request and hasattr(request, 'user') and hasattr(request.user, 'employee'):
+            return obj.employee_id == request.user.employee.id
+        return False
+
+
 # Office Structure Serializers
 class OfficeSeatSerializer(serializers.ModelSerializer):
     employee_details = serializers.SerializerMethodField()
@@ -1222,35 +1587,7 @@ class OfficeSeatSerializer(serializers.ModelSerializer):
         return None
 
     def get_bookings_details(self, obj):
-        try:
-            return SeatBookingSerializer(obj.bookings.filter(booking_date__gte=timezone.now().date()), many=True).data
-        except NameError:
-             # Handle circular dependency if SeatBookingSerializer isn't defined yet
-             return []
-
-class SeatBookingSerializer(serializers.ModelSerializer):
-    employee_details = serializers.SerializerMethodField()
-    seat_details = serializers.SerializerMethodField()
-
-    class Meta:
-        model = SeatBooking
-        fields = ['id', 'seat', 'employee', 'booking_date', 'created_at', 'employee_details', 'seat_details']
-        read_only_fields = ['created_at', 'employee']  # employee set automatically by viewset
-
-    def get_employee_details(self, obj):
-        return {
-            'id': obj.employee.id,
-            'name': obj.employee.full_name,
-            'employee_id': obj.employee.employee_id
-        }
-
-    def get_seat_details(self, obj):
-        return {
-            "seat_number": obj.seat.seat_number,
-            "section": obj.seat.section.name,
-            "floor": obj.seat.section.floor.name,
-            "floor_id": obj.seat.section.floor.id
-        }
+        return SeatBookingSerializer(obj.bookings.filter(start_date__gte=timezone.now().date(), is_active=True), many=True).data
 
 
 class OfficeSectionSerializer(serializers.ModelSerializer):
@@ -1263,17 +1600,44 @@ class OfficeSectionSerializer(serializers.ModelSerializer):
         read_only_fields = ['created_at', 'updated_at']
 
 
-class OfficeFloorSerializer(serializers.ModelSerializer):
-    sections = OfficeSectionSerializer(many=True, read_only=True)
-    
+class OfficeLocationSerializer(serializers.ModelSerializer):
     class Meta:
-        model = OfficeFloor
-        fields = ['id', 'name', 'floor_number', 'description', 'sections', 'created_at', 'updated_at']
-        read_only_fields = ['created_at', 'updated_at', 'company']
-    
+        model = OfficeLocation
+        fields = ['id', 'name', 'address', 'company']
+        read_only_fields = ['company']
+
     def create(self, validated_data):
         request = self.context.get('request')
         if request and request.user.company:
             validated_data['company'] = request.user.company
+        return super().create(validated_data)
+
+
+class OfficeFloorSerializer(serializers.ModelSerializer):
+    sections = OfficeSectionSerializer(many=True, read_only=True)
+    location_name = serializers.CharField(source='location.name', read_only=True)
+    
+    class Meta:
+        model = OfficeFloor
+        fields = ['id', 'name', 'floor_number', 'description', 'layout_data', 'sections', 'created_at', 'updated_at', 'company', 'location', 'location_name']
+        read_only_fields = ['created_at', 'updated_at', 'company']
+    
+    def create(self, validated_data):
+        request = self.context.get('request')
+        if not request or not hasattr(request.user, 'company') or not request.user.company:
+            raise serializers.ValidationError({"detail": "User account is not associated with a company. Cannot create floors."})
+        
+        company = request.user.company
+        location = validated_data.get('location')
+        floor_number = validated_data.get('floor_number')
+
+        if location and location.company != company:
+             raise serializers.ValidationError({"detail": "Invalid location selected for your company."})
+
+        # Proactive uniqueness check to prevent 500 IntegrityError
+        if OfficeFloor.objects.filter(location=location, floor_number=floor_number).exists():
+            raise serializers.ValidationError({"detail": f"Floor number {floor_number} already exists for this office location."})
+
+        validated_data['company'] = company
         return super().create(validated_data)
 

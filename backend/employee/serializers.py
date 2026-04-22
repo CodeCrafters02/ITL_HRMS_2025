@@ -35,6 +35,64 @@ class PersonalCalendarSerializer(serializers.ModelSerializer):
         read_only_fields = ['id']
 
 
+class AnnouncementSerializer(serializers.ModelSerializer):
+    image_url = serializers.SerializerMethodField()
+    company_name = serializers.CharField(source="company.name", read_only=True)
+
+    class Meta:
+        model = Announcement
+        fields = [
+            "id",
+            "title",
+            "body",
+            "image_url",
+            "company",
+            "company_name",
+            "created_at",
+        ]
+        read_only_fields = ["id", "company", "company_name", "created_at", "image_url"]
+
+    def get_image_url(self, obj):
+        request = self.context.get("request")
+        if obj.image:
+            if request:
+                return request.build_absolute_uri(obj.image.url)
+            return obj.image.url
+        return None
+
+
+class ProjectSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Project
+        fields = ["id", "name"]
+
+
+class TimeEntrySerializer(serializers.ModelSerializer):
+    project_name = serializers.CharField(source="project.name", read_only=True)
+
+    class Meta:
+        model = TimeEntry
+        fields = [
+            "id",
+            "date",
+            "project",
+            "project_name",
+            "job_name",
+            "description",
+            "minutes",
+            "created_at",
+        ]
+        read_only_fields = ["id", "project_name", "created_at"]
+
+
+class TimeEntryCreateSerializer(serializers.Serializer):
+    date = serializers.DateField(required=False)
+    project_id = serializers.IntegerField()
+    job_name = serializers.CharField(required=False, allow_blank=True, max_length=120)
+    description = serializers.CharField(required=False, allow_blank=True)
+    minutes = serializers.IntegerField(min_value=1, max_value=24 * 60)
+
+
 
 class SubTaskCreateSerializer(serializers.ModelSerializer):
     id = serializers.IntegerField(required=False)
@@ -367,8 +425,8 @@ class EmployeeReferenceSerializer(serializers.ModelSerializer):
     employee_name = serializers.CharField(source='employee.full_name', read_only=True)
     employee_id = serializers.CharField(source='employee.employee_id', read_only=True)
     employee_email = serializers.CharField(source='employee.email', read_only=True)
-    employee_designation = serializers.CharField(source='employee.designation.name', read_only=True)
-    employee_department = serializers.CharField(source='employee.department.name', read_only=True)
+    employee_designation = serializers.CharField(source='employee.designation.designation_name', read_only=True)
+    employee_department = serializers.CharField(source='employee.department.department_name', read_only=True)
 
     class Meta:
         model = EmployeeReference

@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../../../models/dashboard_model.dart';
+import '../../../theme/app_stitch_theme.dart';
+import '../../../widgets/glass_card.dart';
 import 'timer_widget.dart';
 
 class DashboardHeader extends StatelessWidget {
@@ -40,17 +42,11 @@ class DashboardHeader extends StatelessWidget {
     final hasActiveBreak = dashboardData.hasActiveBreak;
     final isBirthday = dashboardData.birthdayMessage != null;
 
-    return Card(
-      elevation: 0,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(8),
-        side: BorderSide(
-          color: isBirthday ? const Color(0xFFFCD34D) : const Color(0xFFE5E7EB),
-        ),
-      ),
-      color: isBirthday ? const Color(0xFFFEF3C7) : Colors.white,
+    return GlassCard(
+      borderRadius: 28,
+      padding: const EdgeInsets.all(18),
       child: Padding(
-        padding: const EdgeInsets.all(24.0),
+        padding: EdgeInsets.zero,
         child: LayoutBuilder(
           builder: (context, constraints) {
             final isWide = constraints.maxWidth > 768;
@@ -66,13 +62,13 @@ class DashboardHeader extends StatelessWidget {
                             Container(
                               width: 64,
                               height: 64,
-                              decoration: BoxDecoration(
-                                shape: BoxShape.circle,
-                                border: Border.all(
-                                  color: const Color(0xFFE5E7EB),
-                                  width: 2,
-                                ),
-                              ),
+                                    decoration: BoxDecoration(
+                                      shape: BoxShape.circle,
+                                      border: Border.all(
+                                        color: AppStitchTheme.lightOutline,
+                                        width: 2,
+                                      ),
+                                    ),
                               child: dashboardData.employeePhoto != null
                                   ? ClipOval(
                                       child: Image.network(
@@ -81,7 +77,7 @@ class DashboardHeader extends StatelessWidget {
                                         errorBuilder:
                                             (context, error, stackTrace) {
                                               return Container(
-                                                color: const Color(0xFF4F46E5),
+                                                color: AppStitchTheme.primary,
                                                 child: Center(
                                                   child: Text(
                                                     _getInitials(
@@ -101,7 +97,7 @@ class DashboardHeader extends StatelessWidget {
                                       ),
                                     )
                                   : Container(
-                                      color: const Color(0xFF4F46E5),
+                                      color: AppStitchTheme.primary,
                                       child: Center(
                                         child: Text(
                                           _getInitials(
@@ -148,9 +144,7 @@ class DashboardHeader extends StatelessWidget {
                                     style: TextStyle(
                                       fontSize: 24,
                                       fontWeight: FontWeight.bold,
-                                      color: isBirthday
-                                          ? const Color(0xFF92400E)
-                                          : const Color(0xFF111827),
+                                      color: AppStitchTheme.lightOnSurface,
                                     ),
                                   ),
                                   if (isBirthday) ...[
@@ -167,9 +161,7 @@ class DashboardHeader extends StatelessWidget {
                                 _getCurrentDate(),
                                 style: TextStyle(
                                   fontSize: 14,
-                                  color: isBirthday
-                                      ? const Color(0xFF92400E)
-                                      : const Color(0xFF6B7280),
+                                  color: AppStitchTheme.lightOnSurfaceMuted,
                                 ),
                               ),
                               if (isBirthday &&
@@ -181,10 +173,11 @@ class DashboardHeader extends StatelessWidget {
                                     vertical: 8,
                                   ),
                                   decoration: BoxDecoration(
-                                    color: Colors.white.withOpacity(0.8),
-                                    borderRadius: BorderRadius.circular(8),
+                                    color: Colors.white.withValues(alpha: 0.55),
+                                    borderRadius: BorderRadius.circular(16),
                                     border: Border.all(
-                                      color: const Color(0xFFFCD34D),
+                                      color: const Color(0xFFF59E0B)
+                                          .withValues(alpha: 0.45),
                                     ),
                                   ),
                                   child: Row(
@@ -200,7 +193,7 @@ class DashboardHeader extends StatelessWidget {
                                         style: const TextStyle(
                                           fontSize: 16,
                                           fontWeight: FontWeight.w600,
-                                          color: Color(0xFF92400E),
+                                          color: Color(0xFFB45309),
                                         ),
                                       ),
                                       const SizedBox(width: 8),
@@ -229,9 +222,7 @@ class DashboardHeader extends StatelessWidget {
                               fontSize: 18,
                               fontWeight: FontWeight.bold,
                               fontFamily: 'monospace',
-                              color: isBirthday
-                                  ? const Color(0xFF92400E)
-                                  : const Color(0xFF374151),
+                              color: AppStitchTheme.lightOnSurfaceVariant,
                             ),
                           ),
                           const SizedBox(height: 4),
@@ -243,9 +234,7 @@ class DashboardHeader extends StatelessWidget {
                                 : 'Ready to Start',
                             style: TextStyle(
                               fontSize: 14,
-                              color: isBirthday
-                                  ? const Color(0xFF92400E)
-                                  : const Color(0xFF6B7280),
+                              color: AppStitchTheme.lightOnSurfaceMuted,
                             ),
                           ),
                         ],
@@ -257,7 +246,7 @@ class DashboardHeader extends StatelessWidget {
                             onPressed: onRefresh,
                             icon: const Icon(
                               Icons.refresh,
-                              color: Color(0xFF6B7280),
+                              color: AppStitchTheme.lightOnSurfaceMuted,
                               size: 20,
                             ),
                             tooltip: 'Refresh',
@@ -274,7 +263,7 @@ class DashboardHeader extends StatelessWidget {
                                 vertical: 12,
                               ),
                               shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(8),
+                                borderRadius: BorderRadius.circular(16),
                               ),
                               elevation: 0,
                             ),
@@ -318,7 +307,7 @@ class DashboardHeader extends StatelessWidget {
                             decoration: BoxDecoration(
                               shape: BoxShape.circle,
                               border: Border.all(
-                                color: const Color(0xFFE5E7EB),
+                                color: AppStitchTheme.lightOutline,
                                 width: 2,
                               ),
                             ),
@@ -330,7 +319,7 @@ class DashboardHeader extends StatelessWidget {
                                       errorBuilder:
                                           (context, error, stackTrace) {
                                             return Container(
-                                              color: const Color(0xFF4F46E5),
+                                              color: AppStitchTheme.primary,
                                               child: Center(
                                                 child: Text(
                                                   _getInitials(
@@ -348,7 +337,7 @@ class DashboardHeader extends StatelessWidget {
                                     ),
                                   )
                                 : Container(
-                                    color: const Color(0xFF4F46E5),
+                                    color: AppStitchTheme.primary,
                                     child: Center(
                                       child: Text(
                                         _getInitials(
@@ -396,9 +385,7 @@ class DashboardHeader extends StatelessWidget {
                                     style: TextStyle(
                                       fontSize: 20,
                                       fontWeight: FontWeight.bold,
-                                      color: isBirthday
-                                          ? const Color(0xFF92400E)
-                                          : const Color(0xFF111827),
+                                      color: AppStitchTheme.lightOnSurface,
                                     ),
                                   ),
                                 ),
@@ -414,9 +401,7 @@ class DashboardHeader extends StatelessWidget {
                               _getCurrentDate(),
                               style: TextStyle(
                                 fontSize: 14,
-                                color: isBirthday
-                                    ? const Color(0xFF92400E)
-                                    : const Color(0xFF6B7280),
+                                color: AppStitchTheme.lightOnSurfaceMuted,
                               ),
                             ),
                             if (isBirthday &&
@@ -428,10 +413,11 @@ class DashboardHeader extends StatelessWidget {
                                   vertical: 8,
                                 ),
                                 decoration: BoxDecoration(
-                                  color: Colors.white.withOpacity(0.8),
-                                  borderRadius: BorderRadius.circular(8),
+                                  color: Colors.white.withValues(alpha: 0.55),
+                                  borderRadius: BorderRadius.circular(16),
                                   border: Border.all(
-                                    color: const Color(0xFFFCD34D),
+                                    color: const Color(0xFFF59E0B)
+                                        .withValues(alpha: 0.45),
                                   ),
                                 ),
                                 child: Row(
@@ -448,7 +434,7 @@ class DashboardHeader extends StatelessWidget {
                                         style: const TextStyle(
                                           fontSize: 14,
                                           fontWeight: FontWeight.w600,
-                                          color: Color(0xFF92400E),
+                                          color: Color(0xFFB45309),
                                         ),
                                       ),
                                     ),
@@ -480,9 +466,7 @@ class DashboardHeader extends StatelessWidget {
                               fontSize: 18,
                               fontWeight: FontWeight.bold,
                               fontFamily: 'monospace',
-                              color: isBirthday
-                                  ? const Color(0xFF92400E)
-                                  : const Color(0xFF374151),
+                              color: AppStitchTheme.lightOnSurfaceVariant,
                             ),
                           ),
                           const SizedBox(height: 4),
@@ -494,9 +478,7 @@ class DashboardHeader extends StatelessWidget {
                                 : 'Ready to Start',
                             style: TextStyle(
                               fontSize: 14,
-                              color: isBirthday
-                                  ? const Color(0xFF92400E)
-                                  : const Color(0xFF6B7280),
+                              color: AppStitchTheme.lightOnSurfaceMuted,
                             ),
                           ),
                         ],
@@ -507,7 +489,7 @@ class DashboardHeader extends StatelessWidget {
                             onPressed: onRefresh,
                             icon: const Icon(
                               Icons.refresh,
-                              color: Color(0xFF6B7280),
+                              color: AppStitchTheme.lightOnSurfaceMuted,
                               size: 20,
                             ),
                             tooltip: 'Refresh',
@@ -524,7 +506,7 @@ class DashboardHeader extends StatelessWidget {
                                 vertical: 12,
                               ),
                               shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(8),
+                                borderRadius: BorderRadius.circular(16),
                               ),
                               elevation: 0,
                             ),

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../models/dashboard_model.dart';
+import '../../../theme/app_stitch_theme.dart';
+import '../../../widgets/glass_card.dart';
 
 class PerformanceCard extends StatelessWidget {
   final DashboardData dashboardData;
@@ -21,41 +23,32 @@ class PerformanceCard extends StatelessWidget {
     final totalWeekHours = weekHours + (weekMinutes / 60);
     final weekPercent = (totalWeekHours / 48 * 100).clamp(0, 100);
 
-    return Card(
-      elevation: 0,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(8),
-        side: const BorderSide(color: Color(0xFFE5E7EB)),
-      ),
-      color: Colors.white,
+    return GlassCard(
+      borderRadius: 28,
+      padding: const EdgeInsets.all(18),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Padding(
-            padding: const EdgeInsets.all(24.0),
-            child: Row(
-              children: [
-                const Icon(
-                  Icons.trending_up,
-                  color: Color(0xFF10B981),
-                  size: 20,
-                ),
-                const SizedBox(width: 8),
-                const Text(
-                  'Performance',
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.w600,
-                    color: Color(0xFF111827),
-                  ),
-                ),
-              ],
-            ),
+          Row(
+            children: [
+              const Icon(
+                Icons.trending_up,
+                color: Color(0xFF10B981),
+                size: 20,
+              ),
+              const SizedBox(width: 8),
+              Text(
+                'Performance',
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w800,
+                      color: AppStitchTheme.lightOnSurface,
+                    ),
+              ),
+            ],
           ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(24.0, 0, 24.0, 24.0),
-            child: Column(
-              children: [
+          const SizedBox(height: 14),
+          Column(
+            children: [
                 // Weekly Hours Progress
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -63,19 +56,19 @@ class PerformanceCard extends StatelessWidget {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        const Text(
+                        Text(
                           'Weekly Hours',
                           style: TextStyle(
                             fontSize: 14,
-                            color: Color(0xFF6B7280),
+                            color: AppStitchTheme.lightOnSurfaceMuted,
                           ),
                         ),
                         Text(
                           '$weekDuration / 48 hrs',
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 14,
                             fontWeight: FontWeight.w500,
-                            color: Color(0xFF111827),
+                            color: AppStitchTheme.lightOnSurface,
                           ),
                         ),
                       ],
@@ -86,9 +79,10 @@ class PerformanceCard extends StatelessWidget {
                       child: LinearProgressIndicator(
                         value: weekPercent / 100,
                         minHeight: 8,
-                        backgroundColor: const Color(0xFFE5E7EB),
+                        backgroundColor:
+                            AppStitchTheme.lightOutline.withValues(alpha: 0.55),
                         valueColor: const AlwaysStoppedAnimation<Color>(
-                          Color(0xFF2563EB),
+                          AppStitchTheme.primary,
                         ),
                       ),
                     ),
@@ -99,8 +93,8 @@ class PerformanceCard extends StatelessWidget {
                 Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    color: const Color(0xFFF9FAFB),
-                    borderRadius: BorderRadius.circular(8),
+                    color: Colors.white.withValues(alpha: 0.55),
+                    borderRadius: BorderRadius.circular(16),
                   ),
                   child: Column(
                     children: [
@@ -113,11 +107,11 @@ class PerformanceCard extends StatelessWidget {
                         ),
                       ),
                       const SizedBox(height: 4),
-                      const Text(
+                      Text(
                         'of Weekly Target',
                         style: TextStyle(
                           fontSize: 12,
-                          color: Color(0xFF6B7280),
+                          color: AppStitchTheme.lightOnSurfaceMuted,
                         ),
                       ),
                     ],
@@ -125,7 +119,6 @@ class PerformanceCard extends StatelessWidget {
                 ),
               ],
             ),
-          ),
         ],
       ),
     );

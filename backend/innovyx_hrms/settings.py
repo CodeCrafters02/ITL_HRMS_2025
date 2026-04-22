@@ -13,9 +13,19 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 from pathlib import Path
 from datetime import timedelta
 import os
+from dotenv import load_dotenv
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
+
+load_dotenv(BASE_DIR / '.env', override=True)
+GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID") or os.getenv("GMAIL_CLIENT_ID")
+if not GOOGLE_CLIENT_ID and DEBUG:
+    import warnings
+    warnings.warn(
+        "GOOGLE_CLIENT_ID is not set in .env — POST /app/google-login/ will fail token verification.",
+        stacklevel=1,
+    )
 
 
 # Quick-start development settings - unsuitable for production
@@ -28,12 +38,13 @@ SECRET_KEY = 'django-insecure-v++-2-a@y^9k1+kky5l^fg6#r1hc)hd(fwjox62c7@=ccvdkff
 DEBUG = False
 
 # ALLOWED_HOSTS = ['apihrms.innovyxtechlabs.com']
-ALLOWED_HOSTS = [
-    'apihrms.innovyxtechlabs.com', 
-    'hrms.innovyxtechlabs.com',
-    'localhost', 
-    '127.0.0.1'
+#ALLOWED_HOSTS = [
+   # 'apihrms.innovyxtechlabs.com', 
+   # 'hrms.innovyxtechlabs.com',
+   # 'localhost', 
+   # '127.0.0.1'
 ]
+ALLOWED_HOSTS = ['apihrms.innovyxtechlabs.com', 'localhost', '127.0.0.1', '10.209.43.199', '192.168.0.3', '192.168.1.4']
 
 # Application definition
 
@@ -48,6 +59,7 @@ INSTALLED_APPS = [
     'rest_framework_simplejwt',
     'drf_yasg',
     'corsheaders',
+    'channels',
     'app',
     'employee',
     'notifications',
@@ -116,29 +128,45 @@ ASGI_APPLICATION = 'innovyx_hrms.asgi.application'
 
 WSGI_APPLICATION = 'innovyx_hrms.wsgi.application'
 
+# Channels / WebSocket (Redis)
+REDIS_URL = os.getenv("REDIS_URL", "redis://127.0.0.1:6379/0")
+CHANNEL_LAYERS = {
+    "default": {
+        "BACKEND": "channels_redis.core.RedisChannelLayer",
+        "CONFIG": {"hosts": [REDIS_URL]},
+    }
+}
+
 
 FCM_CREDENTIALS_FILE = BASE_DIR / "firebase-service-account.json"
 
 FCM_PROJECT_ID = "hrms-54ea8"
 
-SITE_URL = "https://apihrms.innovyxtechlabs.com/"
-# SITE_URL = "http://localhost:8000/"
+# SITE_URL = "https://apihrms.innovyxtechlabs.com/"
+SITE_URL = "http://localhost:8000/"
 
 
 # CORS_ALLOW_ALL_ORIGINS = True
 # CORS_ALLOW_ALL_HEADERS = True
 # CORS_ALLOW_CREDENTIALS = True
 
+SECURE_CROSS_ORIGIN_OPENER_POLICY = 'same-origin-allow-popups'
+
 CORS_ALLOWED_ORIGINS = [
     "https://hrms.innovyxtechlabs.com",
     "http://localhost:3000",
     "http://localhost:3009",
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
 ]
 
 CSRF_TRUSTED_ORIGINS = [
     "https://hrms.innovyxtechlabs.com",
     "https://apihrms.innovyxtechlabs.com",
-]
+    "http://localhost:3000",
+    "http://localhost:3009",
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
 
 
 # CORS_ALLOWED_ORIGINS = [
@@ -200,8 +228,8 @@ EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 EMAIL_HOST = 'smtp.gmail.com'
 EMAIL_PORT = 587
 EMAIL_USE_TLS = True
-EMAIL_HOST_USER = 'servicescc.002@gmail.com'
-EMAIL_HOST_PASSWORD = 'pobtshsdfqdehswu'
+EMAIL_HOST_USER = 'alerts@innovyxtechlabs.com'
+EMAIL_HOST_PASSWORD = 'ebrhnknvfngrloum'
 DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
 
 

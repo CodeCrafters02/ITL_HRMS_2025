@@ -188,3 +188,4 @@ dist-ssr
 *.sln
 *.sw?
 node_modules/
+/backend/app/migrations
