@@ -7,6 +7,7 @@ import IconSave from '../../components/Icon/IconSave';
 import IconTrash from '../../components/Icon/IconTrash';
 import IconLayout from '../../components/Icon/IconLayout';
 import IconUsers from '../../components/Icon/IconUsers';
+import IconMenuComponents from '../../components/Icon/Menu/IconMenuComponents';
 import IconNotes from '../../components/Icon/IconNotes';
 import IconChecks from '../../components/Icon/IconChecks';
 import { IRootState } from '../../store';
@@ -126,19 +127,19 @@ const OfficeStructure = () => {
     }, [elements]);
 
     // --- Editor Actions ---
-    const addElement = (type: 'seat' | 'door' | 'zone' | 'room' | 'label') => {
+    const addElement = (type: 'seat' | 'door' | 'zone' | 'label') => {
         const newElement: LayoutElement = {
             id: `${type}-${Date.now()}`,
             type,
             x: 50,
             y: 50,
-            width: (type === 'zone' || type === 'room') ? 200 : (type === 'door' ? 60 : (type === 'label' ? 120 : 40)),
-            height: (type === 'zone' || type === 'room') ? 150 : (type === 'door' ? 60 : (type === 'label' ? 40 : 40)),
+            width: (type === 'zone') ? 200 : (type === 'door' ? 60 : (type === 'label' ? 120 : 40)),
+            height: (type === 'zone') ? 150 : (type === 'door' ? 60 : (type === 'label' ? 40 : 40)),
             rotation: 0,
             name: type === 'seat' ? `S-${elements.filter(e => e.type === 'seat').length + 1}` :
-                (type === 'zone' ? 'New Zone' : (type === 'room' ? 'Conf. Room' : (type === 'label' ? 'Label Text' : 'Door'))),
-            color: type === 'zone' ? '#3B82F6' : (type === 'room' ? '#6B7280' :
-                (type === 'seat' ? '#10B981' : (type === 'label' ? (isDarkMode ? '#e0e6ed' : '#3b3f5c') : '#9CA3AF'))),
+                (type === 'zone' ? 'New Zone' : (type === 'label' ? 'Label Text' : 'Door')),
+            color: type === 'zone' ? '#3B82F6' :
+                (type === 'seat' ? '#10B981' : (type === 'label' ? (isDarkMode ? '#e0e6ed' : '#3b3f5c') : '#9CA3AF')),
         };
         setElements([...elements, newElement]);
         setSelectedId(newElement.id);
@@ -416,10 +417,6 @@ const OfficeStructure = () => {
                                 <IconLayout className="w-6 h-6 text-blue-600" />
                                 <span className="text-xs font-bold text-blue-700">Zone</span>
                             </button>
-                            <button onClick={() => addElement('room')} className="flex flex-col items-center gap-2 p-3 bg-indigo-50 dark:bg-indigo-900/10 border border-indigo-100 dark:border-indigo-800 rounded-xl hover:scale-105 transition-transform">
-                                <IconLayout className="w-6 h-6 text-indigo-600" />
-                                <span className="text-xs font-bold text-indigo-700">Room</span>
-                            </button>
                             <button onClick={() => addElement('label')} className="flex flex-col items-center gap-2 p-3 bg-yellow-50 dark:bg-yellow-900/10 border border-yellow-100 dark:border-yellow-800 rounded-xl hover:scale-105 transition-transform">
                                 <IconNotes className="w-6 h-6 text-yellow-600" />
                                 <span className="text-xs font-bold text-yellow-700">Label</span>
@@ -494,9 +491,15 @@ const OfficeStructure = () => {
                                             x={el.x}
                                             y={el.y}
                                             rotation={el.rotation}
-                                            draggable
+                                            draggable={el.type !== 'room'}
                                             onDragEnd={(e) => updateElement(el.id, { x: e.target.x(), y: e.target.y() })}
-                                            onClick={() => setSelectedId(el.id)}
+                                            onClick={() => el.type !== 'room' && setSelectedId(el.id)}
+                                            onMouseEnter={(e) => {
+                                                if (el.type !== 'room') e.target.getStage()!.container().style.cursor = 'move';
+                                            }}
+                                            onMouseLeave={(e) => {
+                                                e.target.getStage()!.container().style.cursor = 'default';
+                                            }}
                                             onTransformEnd={(e) => {
                                                 const node = e.target;
                                                 const scaleX = node.scaleX();
