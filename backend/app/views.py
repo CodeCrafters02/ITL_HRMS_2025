@@ -3410,6 +3410,8 @@ class EmployeeStatusViewSet(viewsets.ModelViewSet):
     
 
 class EmployeeReporteesView(APIView):
+    permission_classes = [IsAuthenticated]
+
     def post(self, request):
         emp_id = request.data.get("employee_id")
         if not emp_id:
@@ -3420,9 +3422,24 @@ class EmployeeReporteesView(APIView):
         except Employee.DoesNotExist:
             return Response({"error": "Employee not found"})
         
+        search = (request.query_params.get("search") or request.data.get("search") or "").strip()
         reportees = Employee.objects.filter(reporting_manager=manager)
-        serializer = ReportingEmployeesSerializer(reportees, many=True, context={'request': request})
-        return Response(serializer.data)
+        if search:
+            reportees = reportees.filter(
+                Q(first_name__icontains=search)
+                | Q(middle_name__icontains=search)
+                | Q(last_name__icontains=search)
+                | Q(employee_id__icontains=search)
+                | Q(department__department_name__icontains=search)
+                | Q(designation__designation_name__icontains=search)
+                | Q(status__icontains=search)
+            )
+        reportees = reportees.order_by("first_name", "last_name", "id")
+
+        paginator = CustomPagination()
+        paginated_qs = paginator.paginate_queryset(reportees, request, view=self)
+        serializer = ReportingEmployeesSerializer(paginated_qs, many=True, context={"request": request})
+        return paginator.get_paginated_response(serializer.data)
 
 
 # Office Structure ViewSets
@@ -3672,10 +3689,15 @@ class SeatBookingViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=['post'], permission_classes=[permissions.IsAuthenticated])
     def cancel(self, request, pk=None):
         booking = self.get_object()
-        if not hasattr(request.user, 'employee'):
-            return Response({'error': 'Only employees can cancel bookings.'}, status=status.HTTP_403_FORBIDDEN)
-        if booking.employee != request.user.employee:
-            return Response({'error': 'You can only cancel your own bookings.'}, status=status.HTTP_403_FORBIDDEN)
+        user = request.user
+        
+        # Check if user is admin/master OR the owner of the booking
+        is_admin_or_master = user.role in ['admin', 'master']
+        is_owner = hasattr(user, 'employee') and booking.employee == user.employee
+        
+        if not (is_admin_or_master or is_owner):
+            return Response({'error': 'You do not have permission to cancel this booking.'}, status=status.HTTP_403_FORBIDDEN)
+            
         booking.status = 'cancelled'
         booking.is_active = False
         booking.save()
@@ -3744,7 +3766,7 @@ class ConferenceRoomBookingViewSet(viewsets.ModelViewSet):
         end_time = serializer.validated_data['end_time']
         date = serializer.validated_data['date']
 
-        # Conflict check
+        # Conflict check - Room
         if ConferenceRoomBooking.objects.filter(
             room=room,
             date=date,
@@ -3753,6 +3775,16 @@ class ConferenceRoomBookingViewSet(viewsets.ModelViewSet):
             end_time__gt=start_time
         ).exists():
             raise serializers.ValidationError({"detail": "Room is already booked for this time."})
+
+        # Conflict check - Employee (One person cannot book multiple rooms at same time)
+        if ConferenceRoomBooking.objects.filter(
+            employee=employee,
+            date=date,
+            status__in=['pending', 'approved'],
+            start_time__lt=end_time,
+            end_time__gt=start_time
+        ).exists():
+            raise serializers.ValidationError({"detail": "You already have another room booked during this overlapping time period."})
 
         # Duration check for approval
         config, created = ConferenceRoomConfig.objects.get_or_create(company=user.company)
@@ -3786,8 +3818,15 @@ class ConferenceRoomBookingViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=['post'], permission_classes=[permissions.IsAuthenticated])
     def cancel(self, request, pk=None):
         booking = self.get_object()
-        if not hasattr(request.user, 'employee') or booking.employee != request.user.employee:
-            return Response({'error': 'Unauthorized'}, status=status.HTTP_403_FORBIDDEN)
+        user = request.user
+        
+        # Check if user is admin/master OR the owner of the booking
+        is_admin_or_master = user.role in ['admin', 'master']
+        is_owner = hasattr(user, 'employee') and booking.employee == user.employee
+        
+        if not (is_admin_or_master or is_owner):
+            return Response({'error': 'You do not have permission to cancel this booking.'}, status=status.HTTP_403_FORBIDDEN)
+            
         booking.status = 'cancelled'
         booking.save()
         return Response({'status': 'booking cancelled'})

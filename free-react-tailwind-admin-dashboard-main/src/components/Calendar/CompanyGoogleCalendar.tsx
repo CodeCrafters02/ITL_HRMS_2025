@@ -7,6 +7,7 @@ import { hasGrantedAllScopesGoogle, useGoogleLogin } from '@react-oauth/google';
 import type { TokenResponse } from '@react-oauth/google';
 import * as XLSX from 'xlsx';
 import Swal from 'sweetalert2';
+import { authFetch } from '../../utils/authFetch';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000';
 /** Full Calendar access (events, Meet/conferenceData). Narrow `calendar.events` alone can still 403 on insert with some OAuth setups. */
@@ -610,13 +611,6 @@ const CompanyGoogleCalendar = ({ variant = 'page' }: CompanyGoogleCalendarProps)
         }
     };
 
-    const headers = useCallback((): Record<string, string> => {
-        const token = localStorage.getItem('access_token');
-        const h: Record<string, string> = {};
-        if (token) h.Authorization = `Bearer ${token}`;
-        return h;
-    }, []);
-
     const submitCompanyCalendarEntry = async (e: FormEvent) => {
         e.preventDefault();
         if (!isAdmin) return;
@@ -627,9 +621,9 @@ const CompanyGoogleCalendar = ({ variant = 'page' }: CompanyGoogleCalendarProps)
         }
         setCoSaving(true);
         try {
-            const res = await fetch(`${API_BASE_URL}/app/calendar-events/`, {
+            const res = await authFetch(`${API_BASE_URL}/app/calendar-events/`, {
                 method: 'POST',
-                headers: { ...headers(), 'Content-Type': 'application/json' },
+                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     name,
                     date: coDate,
@@ -748,9 +742,9 @@ const CompanyGoogleCalendar = ({ variant = 'page' }: CompanyGoogleCalendarProps)
             for (const r of rows) uniq.set(`${r.date}__${r.name.toLowerCase()}`, r);
             const payload = { rows: Array.from(uniq.values()) };
 
-            const res = await fetch(`${API_BASE_URL}/app/calendar-events/bulk-import/`, {
+            const res = await authFetch(`${API_BASE_URL}/app/calendar-events/bulk-import/`, {
                 method: 'POST',
-                headers: { ...headers(), 'Content-Type': 'application/json' },
+                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload),
             });
             const data = await res.json().catch(() => ({}));
@@ -784,7 +778,7 @@ const CompanyGoogleCalendar = ({ variant = 'page' }: CompanyGoogleCalendarProps)
         (async () => {
             setLoadingGuests(true);
             try {
-                const res = await fetch(`${API_BASE_URL}/app/chat/users/`, { headers: headers() });
+                const res = await authFetch(`${API_BASE_URL}/app/chat/users/`);
                 const data = await res.json().catch(() => ({}));
                 if (!res.ok) throw new Error(data?.detail || 'Failed to load company directory');
                 const list: CompanyGuest[] = Array.isArray(data?.results) ? data.results : [];
@@ -798,14 +792,14 @@ const CompanyGoogleCalendar = ({ variant = 'page' }: CompanyGoogleCalendarProps)
         return () => {
             cancelled = true;
         };
-    }, [addOpen, headers]);
+    }, [addOpen]);
 
     useEffect(() => {
         let cancelled = false;
         (async () => {
             setLoadingCompany(true);
             try {
-                const res = await fetch(`${API_BASE_URL}/app/calendar-events/`, { headers: headers() });
+                const res = await authFetch(`${API_BASE_URL}/app/calendar-events/`);
                 const data = await res.json().catch(() => null);
                 if (!res.ok) throw new Error(data?.detail || 'Failed to load company calendar');
                 const list = Array.isArray(data) ? data : data?.results || [];
@@ -825,7 +819,7 @@ const CompanyGoogleCalendar = ({ variant = 'page' }: CompanyGoogleCalendarProps)
         return () => {
             cancelled = true;
         };
-    }, [headers, embedded]);
+    }, [embedded]);
 
     const googleLogin = useGoogleLogin({
         /**
@@ -1022,9 +1016,8 @@ const CompanyGoogleCalendar = ({ variant = 'page' }: CompanyGoogleCalendarProps)
                     await deleteGoogleCalendarEvent(googleToken, googleEventId);
                     setRefreshTick((t) => t + 1);
                 } else if (companyEventId != null) {
-                    const res = await fetch(`${API_BASE_URL}/app/calendar-events/${companyEventId}/`, {
+                    const res = await authFetch(`${API_BASE_URL}/app/calendar-events/${companyEventId}/`, {
                         method: 'DELETE',
-                        headers: headers(),
                     });
                     const data = await res.json().catch(() => ({}));
                     if (!res.ok) throw new Error(data?.detail || res.statusText || 'Could not delete');
@@ -1041,7 +1034,7 @@ const CompanyGoogleCalendar = ({ variant = 'page' }: CompanyGoogleCalendarProps)
                 Swal.fire('Could not delete', err?.message || 'Unknown error', 'error');
             }
         },
-        [googleToken, isAdmin, headers]
+        [googleToken, isAdmin]
     );
 
     const panelInner = (

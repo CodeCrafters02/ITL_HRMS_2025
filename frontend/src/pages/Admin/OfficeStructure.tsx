@@ -492,6 +492,10 @@ const OfficeStructure = () => {
                                             y={el.y}
                                             rotation={el.rotation}
                                             draggable={el.type !== 'room'}
+                                            dragBoundFunc={(pos) => ({
+                                                x: Math.max(0, pos.x),
+                                                y: Math.max(0, pos.y)
+                                            })}
                                             onDragEnd={(e) => updateElement(el.id, { x: e.target.x(), y: e.target.y() })}
                                             onClick={() => el.type !== 'room' && setSelectedId(el.id)}
                                             onMouseEnter={(e) => {
@@ -544,6 +548,10 @@ const OfficeStructure = () => {
                                             y={el.y}
                                             rotation={el.rotation}
                                             draggable
+                                            dragBoundFunc={(pos) => ({
+                                                x: Math.max(0, pos.x),
+                                                y: Math.max(0, pos.y)
+                                            })}
                                             onDragEnd={(e) => updateElement(el.id, { x: e.target.x(), y: e.target.y() })}
                                             onClick={() => setSelectedId(el.id)}
                                             onTransformEnd={(e) => {
@@ -593,6 +601,10 @@ const OfficeStructure = () => {
                                             y={el.y}
                                             rotation={el.rotation}
                                             draggable
+                                            dragBoundFunc={(pos) => ({
+                                                x: Math.max(0, pos.x),
+                                                y: Math.max(0, pos.y)
+                                            })}
                                             onDragStayed={(e: any) => e.target.getStage().container().style.cursor = 'move'}
                                             onDragEnd={(e) => updateElement(el.id, { x: e.target.x(), y: e.target.y() })}
                                             onClick={() => setSelectedId(el.id)}
@@ -677,6 +689,10 @@ const OfficeStructure = () => {
                                             y={el.y}
                                             rotation={el.rotation}
                                             draggable
+                                            dragBoundFunc={(pos) => ({
+                                                x: Math.max(0, pos.x),
+                                                y: Math.max(0, pos.y)
+                                            })}
                                             onDragEnd={(e) => updateElement(el.id, { x: e.target.x(), y: e.target.y() })}
                                             onClick={() => setSelectedId(el.id)}
                                             onTransformEnd={(e) => {
