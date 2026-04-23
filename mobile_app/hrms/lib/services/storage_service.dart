@@ -8,6 +8,7 @@ class StorageService {
   static const String _userEmailKey = 'user_email';
   static const String _firstNameKey = 'first_name';
   static const String _lastNameKey = 'last_name';
+  static const String _biometricEnabledKey = 'biometric_enabled';
 
   // Save tokens after login
   static Future<void> saveTokens({
@@ -76,6 +77,20 @@ class StorageService {
     return prefs.getString(_lastNameKey);
   }
 
+  static Future<void> setBiometricEnabled(bool enabled) async {
+    final prefs = await SharedPreferences.getInstance();
+    if (enabled) {
+      await prefs.setBool(_biometricEnabledKey, true);
+    } else {
+      await prefs.remove(_biometricEnabledKey);
+    }
+  }
+
+  static Future<bool> isBiometricEnabled() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getBool(_biometricEnabledKey) ?? false;
+  }
+
   // Check if user is logged in
   static Future<bool> isLoggedIn() async {
     final token = await getAccessToken();
@@ -92,5 +107,6 @@ class StorageService {
     await prefs.remove(_userEmailKey);
     await prefs.remove(_firstNameKey);
     await prefs.remove(_lastNameKey);
+    await prefs.remove(_biometricEnabledKey);
   }
 }

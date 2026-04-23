@@ -70,7 +70,9 @@ class _CalendarEventDialogState extends State<CalendarEventDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return Dialog(
+      backgroundColor: theme.colorScheme.surface,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: Container(
         constraints: BoxConstraints(
@@ -86,18 +88,18 @@ class _CalendarEventDialogState extends State<CalendarEventDialog> {
               children: [
               Text(
                 widget.isEdit ? 'Edit Personal Event' : 'Add Personal Event',
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 20,
                   fontWeight: FontWeight.w600,
-                  color: Color(0xFF111827),
+                  color: theme.colorScheme.onSurface,
                 ),
               ),
               const SizedBox(height: 8),
-              const Text(
+              Text(
                 'Manage your personal schedule: add appointments, reminders, and important dates',
                 style: TextStyle(
                   fontSize: 14,
-                  color: Color(0xFF6B7280),
+                  color: theme.colorScheme.onSurface.withValues(alpha: 0.72),
                 ),
               ),
               const SizedBox(height: 24),
@@ -142,14 +144,17 @@ class _CalendarEventDialogState extends State<CalendarEventDialog> {
                           const SizedBox(height: 4),
                           Text(
                             DateFormat('MMM dd, yyyy').format(_selectedDate),
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 16,
-                              color: Color(0xFF111827),
+                              color: theme.colorScheme.onSurface,
                             ),
                           ),
                         ],
                       ),
-                      const Icon(Icons.calendar_today, color: Color(0xFF6B7280)),
+                      Icon(
+                        Icons.calendar_today,
+                        color: theme.colorScheme.onSurface.withValues(alpha: 0.72),
+                      ),
                     ],
                   ),
                 ),

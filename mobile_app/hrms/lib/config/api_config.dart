@@ -83,6 +83,11 @@ class ApiConfig {
   static const String officeFloorsEndpoint = '/app/office-floors/';
   static const String officeSeatsEndpoint = '/app/office-seats/';
   static const String seatBookingsEndpoint = '/app/seat-bookings/';
+  
+  // Conference Room Endpoints
+  static const String conferenceRoomConfigEndpoint = '/app/conference-room-config/';
+  static const String conferenceRoomsEndpoint = '/app/conference-rooms/';
+  static const String conferenceRoomBookingsEndpoint = '/app/conference-room-bookings/';
 
   // Full URLs
   static String get loginUrl => '$baseUrl$loginEndpoint';
@@ -206,6 +211,24 @@ class ApiConfig {
   static String get seatBookingCreateUrl => '$baseUrl$seatBookingsEndpoint';
   static String seatBookingCancelUrl(int bookingId) =>
       '$baseUrl$seatBookingsEndpoint$bookingId/cancel/';
+
+  // Conference Room URLs
+  static String get conferenceRoomConfigUrl => '$baseUrl$conferenceRoomConfigEndpoint';
+  static String conferenceRoomsUrl({required int floorId}) =>
+      '$baseUrl$conferenceRoomsEndpoint?floor=$floorId';
+  static String conferenceRoomBookingsUrl({
+    String? date,
+    int? floorId,
+  }) {
+    final qp = <String, String>{};
+    if (date != null && date.isNotEmpty) qp['date'] = date;
+    if (floorId != null) qp['floor'] = floorId.toString();
+    final base = Uri.parse('$baseUrl$conferenceRoomBookingsEndpoint');
+    return base.replace(queryParameters: qp.isEmpty ? null : qp).toString();
+  }
+  static String get conferenceRoomBookingCreateUrl => '$baseUrl$conferenceRoomBookingsEndpoint';
+  static String conferenceRoomBookingCancelUrl(int bookingId) =>
+      '$baseUrl$conferenceRoomBookingsEndpoint$bookingId/cancel/';
 
   // API Headers
   static Map<String, String> get headers => {

@@ -175,6 +175,7 @@ class AppStitchTheme {
     return base.copyWith(
       colorScheme: colorScheme,
       scaffoldBackgroundColor: lightScaffold,
+      canvasColor: lightSurfaceElevated,
       textTheme: textTheme,
       primaryColor: primary,
       appBarTheme: AppBarTheme(
@@ -201,9 +202,84 @@ class AppStitchTheme {
       ),
       snackBarTheme: SnackBarThemeData(
         behavior: SnackBarBehavior.floating,
-        backgroundColor: lightOnSurface.withValues(alpha: 0.92),
-        contentTextStyle:
-            GoogleFonts.plusJakartaSans(color: Colors.white),
+        backgroundColor: lightSurfaceElevated,
+        contentTextStyle: GoogleFonts.plusJakartaSans(color: lightOnSurface),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(14),
+          side: BorderSide(color: lightOutline.withValues(alpha: 0.6)),
+        ),
+      ),
+      dialogTheme: DialogThemeData(
+        backgroundColor: lightSurfaceElevated,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        titleTextStyle: GoogleFonts.plusJakartaSans(
+          fontSize: 20,
+          fontWeight: FontWeight.w700,
+          color: lightOnSurface,
+        ),
+        contentTextStyle: GoogleFonts.plusJakartaSans(
+          fontSize: 14,
+          color: lightOnSurfaceVariant,
+        ),
+      ),
+      bottomSheetTheme: BottomSheetThemeData(
+        backgroundColor: lightSurfaceElevated,
+        surfaceTintColor: Colors.transparent,
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+      ),
+      datePickerTheme: DatePickerThemeData(
+        backgroundColor: lightSurfaceElevated,
+        surfaceTintColor: Colors.transparent,
+        headerBackgroundColor: primary,
+        headerForegroundColor: Colors.white,
+        weekdayStyle: GoogleFonts.plusJakartaSans(color: lightOnSurfaceVariant),
+        dayStyle: GoogleFonts.plusJakartaSans(color: lightOnSurface),
+        yearStyle: GoogleFonts.plusJakartaSans(color: lightOnSurface),
+        todayBorder: BorderSide(color: primary.withValues(alpha: 0.65)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      ),
+      timePickerTheme: TimePickerThemeData(
+        backgroundColor: lightSurfaceElevated,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        hourMinuteTextColor: lightOnSurface,
+        hourMinuteColor: lightSurface,
+        dayPeriodTextColor: lightOnSurface,
+        dayPeriodColor: lightSurface,
+        dialBackgroundColor: lightSurface,
+        dialHandColor: primary,
+        dialTextColor: lightOnSurface,
+        entryModeIconColor: primary,
+        helpTextStyle: GoogleFonts.plusJakartaSans(
+          color: lightOnSurfaceVariant,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+      popupMenuTheme: PopupMenuThemeData(
+        color: lightSurfaceElevated,
+        surfaceTintColor: Colors.transparent,
+        textStyle: GoogleFonts.plusJakartaSans(color: lightOnSurface),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+      ),
+      menuTheme: MenuThemeData(
+        style: MenuStyle(
+          backgroundColor: WidgetStatePropertyAll(lightSurfaceElevated),
+          surfaceTintColor: const WidgetStatePropertyAll(Colors.transparent),
+          shape: WidgetStatePropertyAll(
+            RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+          ),
+        ),
+      ),
+      dropdownMenuTheme: DropdownMenuThemeData(
+        textStyle: GoogleFonts.plusJakartaSans(color: lightOnSurface),
+        menuStyle: MenuStyle(
+          backgroundColor: WidgetStatePropertyAll(lightSurfaceElevated),
+          surfaceTintColor: const WidgetStatePropertyAll(Colors.transparent),
+          shape: WidgetStatePropertyAll(
+            RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+          ),
+        ),
       ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,

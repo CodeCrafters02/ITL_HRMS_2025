@@ -57,7 +57,6 @@ class _BreakControlsState extends State<BreakControls> {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
                 content: Text(response.message ?? 'Break action failed'),
-                backgroundColor: const Color(0xFFEF4444),
               ),
             );
           }
@@ -71,7 +70,6 @@ class _BreakControlsState extends State<BreakControls> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Error: ${e.toString()}'),
-            backgroundColor: const Color(0xFFEF4444),
           ),
         );
       }

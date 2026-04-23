@@ -59,7 +59,6 @@ class _LeaveApplicationFormDialogState extends State<LeaveApplicationFormDialog>
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Please select from date first'),
-          backgroundColor: Colors.orange,
         ),
       );
       return;
@@ -160,7 +159,9 @@ class _LeaveApplicationFormDialogState extends State<LeaveApplicationFormDialog>
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return Dialog(
+      backgroundColor: theme.colorScheme.surface,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
       ),
@@ -181,7 +182,7 @@ class _LeaveApplicationFormDialogState extends State<LeaveApplicationFormDialog>
                       style: TextStyle(
                         fontSize: 20,
                         fontWeight: FontWeight.w600,
-                        color: Color(0xFF111827),
+                        color: Color(0xFF1A2233),
                       ),
                     ),
                     IconButton(
@@ -195,7 +196,7 @@ class _LeaveApplicationFormDialogState extends State<LeaveApplicationFormDialog>
                   'Fill in the details to apply for leave.',
                   style: TextStyle(
                     fontSize: 14,
-                    color: Color(0xFF6B7280),
+                    color: Color(0xFF5C6578),
                   ),
                 ),
                 const SizedBox(height: 24),
@@ -205,7 +206,7 @@ class _LeaveApplicationFormDialogState extends State<LeaveApplicationFormDialog>
                   style: TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w500,
-                    color: Color(0xFF111827),
+                    color: Color(0xFF1A2233),
                   ),
                 ),
                 const SizedBox(height: 8),
@@ -247,7 +248,7 @@ class _LeaveApplicationFormDialogState extends State<LeaveApplicationFormDialog>
                             style: TextStyle(
                               fontSize: 14,
                               fontWeight: FontWeight.w500,
-                              color: Color(0xFF111827),
+                              color: Color(0xFF1A2233),
                             ),
                           ),
                           const SizedBox(height: 8),
@@ -273,7 +274,7 @@ class _LeaveApplicationFormDialogState extends State<LeaveApplicationFormDialog>
                                       style: TextStyle(
                                         fontSize: 14,
                                         color: _fromDate != null
-                                            ? const Color(0xFF111827)
+                                          ? const Color(0xFF1A2233)
                                             : const Color(0xFF9CA3AF),
                                       ),
                                       overflow: TextOverflow.ellipsis,
@@ -302,7 +303,7 @@ class _LeaveApplicationFormDialogState extends State<LeaveApplicationFormDialog>
                             style: TextStyle(
                               fontSize: 14,
                               fontWeight: FontWeight.w500,
-                              color: Color(0xFF111827),
+                              color: Color(0xFF1A2233),
                             ),
                           ),
                           const SizedBox(height: 8),
@@ -328,7 +329,7 @@ class _LeaveApplicationFormDialogState extends State<LeaveApplicationFormDialog>
                                       style: TextStyle(
                                         fontSize: 14,
                                         color: _toDate != null
-                                            ? const Color(0xFF111827)
+                                          ? const Color(0xFF1A2233)
                                             : const Color(0xFF9CA3AF),
                                       ),
                                       overflow: TextOverflow.ellipsis,
@@ -356,7 +357,7 @@ class _LeaveApplicationFormDialogState extends State<LeaveApplicationFormDialog>
                   style: TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w500,
-                    color: Color(0xFF111827),
+                    color: Color(0xFF1A2233),
                   ),
                 ),
                 const SizedBox(height: 8),

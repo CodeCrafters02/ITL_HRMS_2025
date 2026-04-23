@@ -35,6 +35,18 @@ def remove_unregistered_token(token):
     UserDevice.objects.filter(token=token).delete()
 
 
+def _stringify_payload_data(data):
+    """FCM data payload values must be strings."""
+    if not data:
+        return {}
+    out = {}
+    for key, value in data.items():
+        if value is None:
+            continue
+        out[str(key)] = str(value)
+    return out
+
+
 def send_fcm_push(token, title, body, data=None):
     """
     Send a push notification to a single device using FCM HTTP v1 API and service account JSON.
@@ -68,21 +80,58 @@ def send_fcm_push(token, title, body, data=None):
             "Authorization": f"Bearer {access_token}",
             "Content-Type": "application/json; UTF-8",
         }
-        # Only send 'data' payload for full control in service worker
+        payload_data = _stringify_payload_data(data)
+
+        # Send both notification + data payload for reliable system-tray behavior.
         message = {
             "message": {
                 "token": token,
+                "notification": {
+                    "title": title,
+                    "body": body,
+                },
                 "data": {
                     "title": title,
                     "body": body,
-                    **(data or {})
+                    **payload_data,
+                },
+                "android": {
+                    "priority": "HIGH",
+                    "notification": {
+                        "channel_id": "hrms_notifications",
+                        "sound": "default",
+                    },
+                },
+                "apns": {
+                    "headers": {
+                        "apns-priority": "10",
+                    },
+                    "payload": {
+                        "aps": {
+                            "sound": "default",
+                        }
+                    },
                 },
             }
         }
-        response = requests.post(url, headers=headers, data=json.dumps(message))
+        response = requests.post(
+            url,
+            headers=headers,
+            data=json.dumps(message),
+            timeout=15,
+        )
         # If token is unregistered, remove it from DB
-        if response.status_code == 404 and 'UNREGISTERED' in response.text:
+        if 'UNREGISTERED' in response.text:
             remove_unregistered_token(token)
+
+        if response.status_code >= 400:
+            logger.error(
+                "FCM send failed (status=%s, token=%s...): %s",
+                response.status_code,
+                token[:12],
+                response.text,
+            )
+
         return response.status_code, response.text
     except Exception as e:
         # Log but do not break the workflow
@@ -127,7 +176,16 @@ def send_fcm_push(token, title, body, data=None):
 
 
 
-def send_fcm_to_users(user_ids, notif_type, message, sender, title="", related_object_id=None, extra_data=None):
+def send_fcm_to_users(
+    user_ids,
+    notif_type,
+    message,
+    sender,
+    title="",
+    related_object_id=None,
+    extra_data=None,
+    create_user_notifications=True,
+):
     """
     Create UserNotification, then send FCM push to all user devices.
     sender: required, must be a User instance (AUTH_USER_MODEL)
@@ -138,14 +196,15 @@ def send_fcm_to_users(user_ids, notif_type, message, sender, title="", related_o
     if not employee_ids:
         
         return
-    for eid in employee_ids:
-        UserNotification.objects.create(
-            recipient_id=eid,
-            sender=sender,
-            title=title or notif_type.capitalize(),
-            message=message,
-            related_object_id=related_object_id
-        )
+    if create_user_notifications:
+        for eid in employee_ids:
+            UserNotification.objects.create(
+                recipient_id=eid,
+                sender=sender,
+                title=title or notif_type.capitalize(),
+                message=message,
+                related_object_id=related_object_id
+            )
     from app.models import Employee
     # Prepare mappings from user_id to company logo and name (or empty string)
     employees = Employee.objects.filter(user_id__in=user_ids).select_related('company')
@@ -155,10 +214,10 @@ def send_fcm_to_users(user_ids, notif_type, message, sender, title="", related_o
     emp_name_map = {e.user_id: (e.company.name if e.company and e.company.name else "") for e in employees}
     tokens = list(UserDevice.objects.filter(user_id__in=user_ids).values_list("user_id", "token"))
     # FCM requires all data values to be strings
+    clean_extra_data = {}
     if extra_data:
-        base_extra_data = {k: str(v) for k, v in extra_data.items()}
-    else:
-        base_extra_data = {}
+        clean_extra_data = {k: v for k, v in extra_data.items() if k != 'request'}
+    base_extra_data = _stringify_payload_data(clean_extra_data)
     for user_id, tk in tokens:
         this_extra_data = dict(base_extra_data)
         this_extra_data['company_logo'] = emp_logo_map.get(user_id, "")

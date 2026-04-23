@@ -887,15 +887,12 @@ class _SeatBookingPageState extends State<SeatBookingPage> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(clean.isEmpty ? 'Something went wrong' : clean),
-        backgroundColor: const Color(0xFFEF4444),
       ),
     );
   }
 
   void _toastOk(String msg) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(msg), backgroundColor: const Color(0xFF10B981)),
-    );
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
   }
 
   @override

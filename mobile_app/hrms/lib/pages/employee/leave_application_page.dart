@@ -156,7 +156,6 @@ class _LeaveApplicationPageState extends State<LeaveApplicationPage> {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
                 content: Text(response.message ?? 'Leave cancelled successfully'),
-                backgroundColor: const Color(0xFF10B981),
                 behavior: SnackBarBehavior.floating,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(8),
@@ -169,7 +168,6 @@ class _LeaveApplicationPageState extends State<LeaveApplicationPage> {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
                 content: Text(response.message ?? 'Failed to cancel leave'),
-                backgroundColor: Colors.red,
               ),
             );
           }
@@ -179,7 +177,6 @@ class _LeaveApplicationPageState extends State<LeaveApplicationPage> {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text('Error: ${e.toString()}'),
-              backgroundColor: Colors.red,
             ),
           );
         }

@@ -184,14 +184,7 @@ class _MyTasksPageState extends State<MyTasksPage>
 
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: const Row(
-                children: [
-                  Icon(Icons.check_circle, color: Colors.white, size: 20),
-                  SizedBox(width: 8),
-                  Text('Status updated successfully'),
-                ],
-              ),
-              backgroundColor: Colors.green,
+              content: const Text('Status updated successfully'),
               behavior: SnackBarBehavior.floating,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(8),
@@ -203,7 +196,6 @@ class _MyTasksPageState extends State<MyTasksPage>
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text(response.message ?? 'Failed to update status'),
-              backgroundColor: Colors.red,
               behavior: SnackBarBehavior.floating,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(8),
@@ -217,7 +209,6 @@ class _MyTasksPageState extends State<MyTasksPage>
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Error: ${e.toString()}'),
-            backgroundColor: Colors.red,
             behavior: SnackBarBehavior.floating,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(8),

@@ -10,7 +10,6 @@ import '../../theme/app_stitch_theme.dart';
 import '../../services/employee_service.dart';
 import '../../widgets/glass_card.dart';
 import 'widgets/timer_widget.dart';
-import 'widgets/time_log_bottom_sheet.dart';
 
 class EmployeeDashboardPage extends StatefulWidget {
   const EmployeeDashboardPage({super.key});
@@ -420,9 +419,10 @@ class _EmployeeDashboardPageState extends State<EmployeeDashboardPage> {
               right: 16,
               bottom: 20,
               child: _FloatingQuickAction(
-                label: 'Log time',
+                label: 'Chat',
+                icon: Icons.forum_rounded,
                 onTap: () {
-                  showTimeLogBottomSheet(context);
+                  Navigator.pushNamed(context, '/employee/chat');
                 },
               ),
             ),
@@ -968,9 +968,14 @@ class _EventsList extends StatelessWidget {
 }
 
 class _FloatingQuickAction extends StatelessWidget {
-  const _FloatingQuickAction({required this.label, required this.onTap});
+  const _FloatingQuickAction({
+    required this.label,
+    required this.onTap,
+    required this.icon,
+  });
   final String label;
   final VoidCallback onTap;
+  final IconData icon;
 
   @override
   Widget build(BuildContext context) {
@@ -995,7 +1000,54 @@ class _FloatingQuickAction extends StatelessWidget {
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Icon(Icons.timer_outlined, color: Colors.white, size: 18),
+              Container(
+                width: 26,
+                height: 26,
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      Colors.white.withValues(alpha: 0.32),
+                      Colors.white.withValues(alpha: 0.14),
+                    ],
+                  ),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(
+                    color: Colors.white.withValues(alpha: 0.26),
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.12),
+                      blurRadius: 8,
+                      offset: const Offset(0, 3),
+                    ),
+                  ],
+                ),
+                child: Stack(
+                  clipBehavior: Clip.none,
+                  alignment: Alignment.center,
+                  children: [
+                    Icon(icon, color: Colors.white, size: 15),
+                    Positioned(
+                      top: 4,
+                      right: 4,
+                      child: Container(
+                        width: 5,
+                        height: 5,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF7CF3D4),
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                            color: Colors.white.withValues(alpha: 0.9),
+                            width: 0.8,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
               const SizedBox(width: 8),
               Text(
                 label,

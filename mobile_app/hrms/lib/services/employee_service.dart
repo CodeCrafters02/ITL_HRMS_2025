@@ -17,6 +17,7 @@ import '../models/profile_model.dart';
 import '../models/learning_corner_model.dart';
 import '../models/announcement_model.dart';
 import '../models/time_log_model.dart';
+import '../models/conference_room_model.dart';
 import '../services/storage_service.dart';
 import '../services/auth_service.dart';
 import 'dart:io';
@@ -2134,6 +2135,129 @@ class EmployeeService {
       }
 
       return ApiResponse(success: false, message: errorMsg);
+    }
+  }
+
+  // ---------------------------------------------------------------------------
+  // Conference Room Booking Endpoints
+  // ---------------------------------------------------------------------------
+
+  static Future<ApiResponse<List<ConferenceRoom>>> getConferenceRooms({required int floorId}) async {
+    try {
+      final response = await _makeAuthenticatedRequest(() async {
+        return await http.get(
+          Uri.parse(ApiConfig.conferenceRoomsUrl(floorId: floorId)),
+          headers: await _getAuthHeaders(),
+        );
+      });
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        final list = (data is List ? data : (data['results'] ?? [])) as List;
+        final items = list.map((e) => ConferenceRoom.fromJson(e)).toList();
+        return ApiResponse(success: true, data: items);
+      }
+      return ApiResponse(success: false, message: 'Failed to load conference rooms');
+    } catch (e) {
+      return ApiResponse(success: false, message: e.toString());
+    }
+  }
+
+  static Future<ApiResponse<List<ConferenceBooking>>> getConferenceRoomBookings({
+    required int floorId,
+    required String date,
+  }) async {
+    try {
+      final response = await _makeAuthenticatedRequest(() async {
+        return await http.get(
+          Uri.parse(ApiConfig.conferenceRoomBookingsUrl(date: date, floorId: floorId)),
+          headers: await _getAuthHeaders(),
+        );
+      });
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        final list = (data is List ? data : (data['results'] ?? [])) as List;
+        final items = list.map((e) => ConferenceBooking.fromJson(e)).toList();
+        return ApiResponse(success: true, data: items);
+      }
+      return ApiResponse(success: false, message: 'Failed to load bookings');
+    } catch (e) {
+      return ApiResponse(success: false, message: e.toString());
+    }
+  }
+
+  static Future<ApiResponse<ConferenceConfig?>> getConferenceRoomConfig() async {
+    try {
+      final response = await _makeAuthenticatedRequest(() async {
+        return await http.get(
+          Uri.parse(ApiConfig.conferenceRoomConfigUrl),
+          headers: await _getAuthHeaders(),
+        );
+      });
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        final list = (data is List ? data : (data['results'] ?? [])) as List;
+        if (list.isNotEmpty) {
+          return ApiResponse(success: true, data: ConferenceConfig.fromJson(list.first));
+        }
+        return ApiResponse(success: true, data: null);
+      }
+      return ApiResponse(success: false, message: 'Failed to load config');
+    } catch (e) {
+      return ApiResponse(success: false, message: e.toString());
+    }
+  }
+
+  static Future<ApiResponse<Map<String, dynamic>>> bookConferenceRoom({
+    required int roomId,
+    required String date,
+    required String startTime,
+    required String endTime,
+    required String purpose,
+  }) async {
+    try {
+      final response = await _makeAuthenticatedRequest(() async {
+        return await http.post(
+          Uri.parse(ApiConfig.conferenceRoomBookingCreateUrl),
+          headers: await _getAuthHeaders(),
+          body: jsonEncode({
+            'room': roomId,
+            'date': date,
+            'start_time': startTime,
+            'end_time': endTime,
+            'purpose': purpose,
+          }),
+        );
+      });
+      
+      final data = jsonDecode(response.body);
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        return ApiResponse(success: true, data: data);
+      }
+      
+      String err = 'Failed to book room';
+      if (data['detail'] != null) err = data['detail'];
+      if (data['non_field_errors'] != null) err = (data['non_field_errors'] as List).first.toString();
+      
+      return ApiResponse(success: false, message: err, data: data);
+    } catch (e) {
+      return ApiResponse(success: false, message: e.toString());
+    }
+  }
+
+  static Future<ApiResponse<void>> cancelConferenceRoomBooking(int bookingId) async {
+    try {
+      final response = await _makeAuthenticatedRequest(() async {
+        return await http.post(
+          Uri.parse(ApiConfig.conferenceRoomBookingCancelUrl(bookingId)),
+          headers: await _getAuthHeaders(),
+        );
+      });
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        return ApiResponse(success: true);
+      }
+      return ApiResponse(success: false, message: 'Failed to cancel booking');
+    } catch (e) {
+      return ApiResponse(success: false, message: e.toString());
     }
   }
 }

@@ -1,4 +1,4 @@
-from .service import send_fcm_to_users,send_push_notification_to_all
+from .service import send_fcm_to_users
 from app.models import UserRegister
 from django.db.models.signals import post_save, pre_save, post_migrate
 from django.dispatch import receiver
@@ -137,24 +137,23 @@ def admin_notification_broadcast(sender, instance, created, **kwargs):
     if created and instance.company_id:
         user_ids = _company_user_ids(instance.company)
         default_sender = UserRegister.objects.filter(role='admin').first()
-        send_fcm_to_users(
-            user_ids,
-            "general",
-            instance.description or (instance.title or "Notification"),
-            sender=default_sender,
-            title=instance.title or "Notification",
-            related_object_id=instance.id,
-            extra_data={"type": "admin_notification", "notification_id": instance.id}
-        )
-        # Create UserNotification for all employees in company
-        for emp in Employee.objects.filter(company=instance.company):
-            UserNotification.objects.create(
-                recipient=emp,
-                title=instance.title or "Admin Notification",
-                message=instance.description or instance.title or "",
+        try:
+            send_fcm_to_users(
+                user_ids,
+                "admin_notification",
+                instance.description or (instance.title or "Notification"),
+                sender=default_sender,
+                title=instance.title or "Notification",
                 related_object_id=instance.id,
-                sender=default_sender
+                extra_data={
+                    "type": "admin_notification",
+                    "notification_id": instance.id,
+                    "company_id": instance.company_id,
+                },
+                create_user_notifications=True,
             )
+        except Exception as e:
+            logger.error(f"Failed to send admin notification broadcast: {e}")
 
 @receiver(post_save, sender=CalendarEvent)
 def calendar_event_broadcast(sender, instance, created, **kwargs):

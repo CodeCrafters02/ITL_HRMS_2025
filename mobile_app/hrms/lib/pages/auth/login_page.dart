@@ -7,6 +7,7 @@ import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../config/api_config.dart';
+import '../../services/biometric_service.dart';
 import '../../services/auth_service.dart';
 import '../../theme/app_stitch_theme.dart';
 
@@ -66,6 +67,59 @@ class _LoginDesign {
 class _LoginPageState extends State<LoginPage> {
   bool _isLoading = false;
 
+  Future<void> _promptBiometricEnrollment() async {
+    final supported = await BiometricService.isBiometricAvailable();
+    if (!mounted || !supported) {
+      return;
+    }
+
+    final label = await BiometricService.biometricLabel();
+    if (!mounted) {
+      return;
+    }
+
+    final shouldEnable = await showDialog<bool>(
+      context: context,
+      builder: (context) {
+        final theme = Theme.of(context);
+        return AlertDialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+          side: BorderSide(
+            color: theme.colorScheme.outline.withValues(alpha: 0.6),
+          ),
+        ),
+        title: const Text('Enable quick access?'),
+        content: Text(
+          'You can use $label next time to unlock your HRMS session faster.',
+          style: theme.textTheme.bodyMedium?.copyWith(
+            color: theme.colorScheme.onSurface.withValues(alpha: 0.78),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Not now'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Enable'),
+          ),
+        ],
+      );
+      },
+    );
+
+    if (shouldEnable == true) {
+      await BiometricService.enableBiometricLogin();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('$label quick access enabled.')),
+        );
+      }
+    }
+  }
+
   Future<void> _openSupport() async {
     try {
       await launchUrl(
@@ -103,6 +157,7 @@ class _LoginPageState extends State<LoginPage> {
             );
             return;
           }
+          await _promptBiometricEnrollment();
           Navigator.pushNamedAndRemoveUntil(
             context,
             '/employee',
@@ -131,37 +186,31 @@ class _LoginPageState extends State<LoginPage> {
   }
 
   void _showBiometricSoon() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          'Biometric sign-in will be available in a future update.',
-          style: TextStyle(color: AppStitchTheme.onSurface),
-        ),
-        backgroundColor: AppStitchTheme.surfaceElevated,
-        behavior: SnackBarBehavior.floating,
-      ),
-    );
+    _promptBiometricEnrollment();
   }
 
   void _showErrorDialog(String message) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: AppStitchTheme.surfaceElevated,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(20),
-          side: const BorderSide(color: AppStitchTheme.outline),
+          side: BorderSide(
+            color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.6),
+          ),
         ),
         title: Text(
           'Sign in',
           style: Theme.of(
             context,
-          ).textTheme.titleLarge?.copyWith(color: AppStitchTheme.onSurface),
+          ).textTheme.titleLarge?.copyWith(
+            color: Theme.of(context).colorScheme.onSurface,
+          ),
         ),
         content: Text(
           message,
           style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-            color: AppStitchTheme.onSurfaceVariant,
+            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.78),
           ),
         ),
         actions: [
@@ -430,11 +479,10 @@ class _LoginPageState extends State<LoginPage> {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    'Biometric sign-in coming soon',
+                    'Enable biometric quick access after Google sign-in',
                     textAlign: TextAlign.center,
                     style: theme.textTheme.labelSmall?.copyWith(
                       color: _LoginDesign.textMuted.withValues(alpha: 0.88),
-                      fontStyle: FontStyle.italic,
                     ),
                   ),
                   const SizedBox(height: 12),

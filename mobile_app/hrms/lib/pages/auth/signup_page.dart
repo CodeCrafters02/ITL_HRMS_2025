@@ -106,21 +106,25 @@ class _SignupPageState extends State<SignupPage> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: AppStitchTheme.surfaceElevated,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(20),
-          side: const BorderSide(color: AppStitchTheme.outline),
+          side: BorderSide(
+            color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.6),
+          ),
         ),
         title: Text(
           'Error',
           style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                color: AppStitchTheme.onSurface,
+                color: Theme.of(context).colorScheme.onSurface,
               ),
         ),
         content: Text(
           message,
           style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: AppStitchTheme.onSurfaceVariant,
+                color: Theme.of(context)
+                    .colorScheme
+                    .onSurface
+                    .withValues(alpha: 0.78),
               ),
         ),
         actions: [
@@ -137,21 +141,25 @@ class _SignupPageState extends State<SignupPage> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: AppStitchTheme.surfaceElevated,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(20),
-          side: const BorderSide(color: AppStitchTheme.outline),
+          side: BorderSide(
+            color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.6),
+          ),
         ),
         title: Text(
           'Success',
           style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                color: AppStitchTheme.onSurface,
+                color: Theme.of(context).colorScheme.onSurface,
               ),
         ),
         content: Text(
           message,
           style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: AppStitchTheme.onSurfaceVariant,
+                color: Theme.of(context)
+                    .colorScheme
+                    .onSurface
+                    .withValues(alpha: 0.78),
               ),
         ),
         actions: [

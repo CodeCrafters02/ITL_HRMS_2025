@@ -42,14 +42,12 @@ class _ProfileMetaCardState extends State<ProfileMetaCard> {
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(
                 content: Text('Photo updated successfully'),
-                backgroundColor: Colors.green,
               ),
             );
           } else {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
                 content: Text(response.message ?? 'Failed to update photo'),
-                backgroundColor: Colors.red,
               ),
             );
           }
@@ -66,7 +64,6 @@ class _ProfileMetaCardState extends State<ProfileMetaCard> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Error: ${e.toString()}'),
-            backgroundColor: Colors.red,
           ),
         );
       }

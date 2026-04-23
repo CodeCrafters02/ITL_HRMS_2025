@@ -77,6 +77,11 @@ class DrawerNavItems {
         path: '/employee/seat-booking',
       ),
       NavItem(
+        name: 'Room Booking',
+        icon: Icons.meeting_room_rounded,
+        path: '/employee/room-booking',
+      ),
+      NavItem(
         name: 'Company policies',
         icon: Icons.policy,
         path: '/employee/company-policy',
