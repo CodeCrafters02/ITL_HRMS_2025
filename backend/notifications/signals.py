@@ -3,7 +3,7 @@ from app.models import UserRegister
 from django.db.models.signals import post_save, pre_save, post_migrate
 from django.dispatch import receiver
 from employee.models import TaskAssignment, Task
-from app.models import Employee, EmpLeave, CalendarEvent, LearningCorner, Notification
+from app.models import Employee, EmpLeave, CalendarEvent, LearningCorner, Notification, ChatMessage, AssetRequest, SeatBooking, ConferenceRoomBooking
 from notifications.models import UserNotification
 import logging
 
@@ -204,3 +204,157 @@ def learning_corner_broadcast(sender, instance, created, **kwargs):
             )
 
 
+
+@receiver(post_save, sender=ChatMessage)
+def chat_message_notify(sender, instance, created, **kwargs):
+    """
+    When a new chat message is created, notify all other members of the conversation.
+    """
+    if created:
+        # Get all members except the sender
+        members = instance.conversation.members.exclude(user=instance.sender).select_related('user')
+        recipient_user_ids = [m.user.id for m in members if m.user and m.user.id]
+        
+        if not recipient_user_ids:
+            return
+
+        sender_name = instance.sender.first_name or instance.sender.username
+        body = instance.content if len(instance.content) < 50 else f"{instance.content[:47]}..."
+        
+        extra_data = {
+            "type": "chat",
+            "conversation_id": instance.conversation.id,
+            "sender_id": instance.sender.id,
+            "sender_name": sender_name
+        }
+
+        try:
+            send_fcm_to_users(
+                recipient_user_ids,
+                "chat",
+                body,
+                sender=instance.sender,
+                title=f"New message from {sender_name}",
+                extra_data=extra_data,
+                create_user_notifications=False # Chat has its own persistence
+            )
+        except Exception as e:
+            logger.error(f"Failed to send FCM for chat message: {e}")
+
+@receiver(pre_save, sender=AssetRequest)
+def asset_request_status_change(sender, instance, **kwargs):
+    """
+    Notify employee when their asset request status is updated (Approved/Rejected).
+    """
+    if not instance.pk:
+        return
+    try:
+        prev = AssetRequest.objects.get(pk=instance.pk)
+    except AssetRequest.DoesNotExist:
+        return
+    
+    if prev.approval_status != instance.approval_status and instance.approval_status != 'pending':
+        if instance.requested_by and instance.requested_by.user and instance.requested_by.user.id:
+            default_sender = UserRegister.objects.filter(role='admin').first()
+            status = instance.approval_status.capitalize()
+            asset_name = instance.related_fixed_asset.name if instance.related_fixed_asset else (instance.related_supply_item.item_name if instance.related_supply_item else "Asset")
+            
+            body = f"Your request for {asset_name} has been {status}."
+            data = {"type": "asset_request", "request_id": instance.id, "status": instance.approval_status}
+            
+            try:
+                send_fcm_to_users(
+                    [instance.requested_by.user.id],
+                    "asset",
+                    body,
+                    sender=default_sender,
+                    title=f"Asset Request {status}",
+                    extra_data=data
+                )
+                
+                # Create UserNotification
+                UserNotification.objects.create(
+                    recipient=instance.requested_by,
+                    title=f"Asset Request {status}",
+                    message=body,
+                    related_object_id=instance.id,
+                    sender=default_sender
+                )
+            except Exception as e:
+                logger.error(f"Failed to send FCM for asset request status change: {e}")
+
+@receiver(pre_save, sender=SeatBooking)
+def seat_booking_status_change(sender, instance, **kwargs):
+    """
+    Notify employee when their seat booking status is updated.
+    """
+    if not instance.pk:
+        return
+    try:
+        prev = SeatBooking.objects.get(pk=instance.pk)
+    except SeatBooking.DoesNotExist:
+        return
+
+    if prev.status != instance.status and instance.status != 'pending':
+        if instance.employee and instance.employee.user and instance.employee.user.id:
+            default_sender = UserRegister.objects.filter(role='admin').first()
+            status = instance.status.capitalize()
+            body = f"Your seat booking for {instance.seat.seat_number} has been {status}."
+            data = {"type": "seat_booking", "booking_id": instance.id, "status": instance.status}
+            
+            try:
+                send_fcm_to_users(
+                    [instance.employee.user.id],
+                    "booking",
+                    body,
+                    sender=default_sender,
+                    title=f"Seat Booking {status}",
+                    extra_data=data
+                )
+                UserNotification.objects.create(
+                    recipient=instance.employee,
+                    title=f"Seat Booking {status}",
+                    message=body,
+                    related_object_id=instance.id,
+                    sender=default_sender
+                )
+            except Exception as e:
+                logger.error(f"Failed to send FCM for seat booking status change: {e}")
+
+@receiver(pre_save, sender=ConferenceRoomBooking)
+def room_booking_status_change(sender, instance, **kwargs):
+    """
+    Notify employee when their conference room booking status is updated.
+    """
+    if not instance.pk:
+        return
+    try:
+        prev = ConferenceRoomBooking.objects.get(pk=instance.pk)
+    except ConferenceRoomBooking.DoesNotExist:
+        return
+
+    if prev.status != instance.status and instance.status != 'pending':
+        if instance.employee and instance.employee.user and instance.employee.user.id:
+            default_sender = UserRegister.objects.filter(role='admin').first()
+            status = instance.status.capitalize()
+            body = f"Your booking for {instance.room.name} has been {status}."
+            data = {"type": "room_booking", "booking_id": instance.id, "status": instance.status}
+            
+            try:
+                send_fcm_to_users(
+                    [instance.employee.user.id],
+                    "booking",
+                    body,
+                    sender=default_sender,
+                    title=f"Room Booking {status}",
+                    extra_data=data
+                )
+                UserNotification.objects.create(
+                    recipient=instance.employee,
+                    title=f"Room Booking {status}",
+                    message=body,
+                    related_object_id=instance.id,
+                    sender=default_sender
+                )
+            except Exception as e:
+                logger.error(f"Failed to send FCM for room booking status change: {e}")
