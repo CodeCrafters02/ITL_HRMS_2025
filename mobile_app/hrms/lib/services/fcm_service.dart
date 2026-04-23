@@ -4,6 +4,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:http/http.dart' as http;
+import '../firebase_options.dart';
 import '../config/api_config.dart';
 import '../services/storage_service.dart';
 import '../services/notification_service.dart';
@@ -11,7 +12,9 @@ import '../services/notification_service.dart';
 // Background message handler (must be top-level function)
 @pragma('vm:entry-point')
 Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
-  await Firebase.initializeApp();
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
   // Update badge counts when notification arrives
   // Note: This is called from background, so we trigger a refresh
   // The actual badge update will happen when app comes to foreground
