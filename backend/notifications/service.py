@@ -193,10 +193,10 @@ def send_fcm_to_users(
     
     from app.models import Employee
     employee_ids = list(Employee.objects.filter(user_id__in=user_ids).values_list('id', flat=True))
-    if not employee_ids:
-        
-        return
-    if create_user_notifications:
+
+    # Keep DB notification persistence tied to Employee profiles,
+    # but never block push delivery when a user profile exists without Employee row.
+    if create_user_notifications and employee_ids:
         for eid in employee_ids:
             UserNotification.objects.create(
                 recipient_id=eid,
@@ -205,7 +205,6 @@ def send_fcm_to_users(
                 message=message,
                 related_object_id=related_object_id
             )
-    from app.models import Employee
     # Prepare mappings from user_id to company logo and name (or empty string)
     employees = Employee.objects.filter(user_id__in=user_ids).select_related('company')
     # Try to get request from extra_data if passed (for absolute URL)
@@ -213,6 +212,9 @@ def send_fcm_to_users(
     emp_logo_map = {e.user_id: (get_absolute_logo_url(e.company.logo, request) if e.company and e.company.logo else "") for e in employees}
     emp_name_map = {e.user_id: (e.company.name if e.company and e.company.name else "") for e in employees}
     tokens = list(UserDevice.objects.filter(user_id__in=user_ids).values_list("user_id", "token"))
+    if not tokens:
+        logger.warning("No registered device tokens for users: %s", user_ids)
+        return
     # FCM requires all data values to be strings
     clean_extra_data = {}
     if extra_data:

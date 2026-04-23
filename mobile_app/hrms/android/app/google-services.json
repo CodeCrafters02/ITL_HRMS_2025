@@ -37,6 +37,13 @@
             {
               "client_id": "482392351722-9ps8jbabvg72cgfn8n9i2udl1i9obfrd.apps.googleusercontent.com",
               "client_type": 3
+            },
+            {
+              "client_id": "482392351722-4t91e445h429erfeje0vgh8f396cmbfh.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.innovyx.peoplesuite"
+              }
             }
           ]
         }

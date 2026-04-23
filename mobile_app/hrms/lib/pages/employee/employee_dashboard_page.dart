@@ -6,6 +6,7 @@ import '../../models/calendar_model.dart';
 import '../../models/task_model.dart';
 import '../../models/leave_model.dart';
 import '../../models/announcement_model.dart';
+import '../../models/break_config_model.dart';
 import '../../theme/app_stitch_theme.dart';
 import '../../services/employee_service.dart';
 import '../../widgets/glass_card.dart';
@@ -34,6 +35,7 @@ class _EmployeeDashboardPageState extends State<EmployeeDashboardPage> {
   int _holidaysCount = 0;
   int _leavesCount = 0;
   int _calendarCount = 0;
+  List<BreakConfig> _breakConfigs = [];
 
   int _tabIndex = 0; // 0=Events, 1=Announcements
   final PageController _announcementPager = PageController();
@@ -70,6 +72,7 @@ class _EmployeeDashboardPageState extends State<EmployeeDashboardPage> {
           });
           _startTimers();
           _fetchOverviewData();
+          _fetchBreakConfigs();
         } else {
           // Check if session expired
           if (response.message?.contains('Session expired') == true ||
@@ -152,6 +155,19 @@ class _EmployeeDashboardPageState extends State<EmployeeDashboardPage> {
           _isLoadingOverview = false;
         });
       }
+    }
+  }
+
+  Future<void> _fetchBreakConfigs() async {
+    try {
+      final response = await EmployeeService.getBreakConfigs();
+      if (mounted && response.success) {
+        setState(() {
+          _breakConfigs = response.data ?? [];
+        });
+      }
+    } catch (e) {
+      debugPrint('Error fetching break configs: $e');
     }
   }
 
@@ -298,6 +314,71 @@ class _EmployeeDashboardPageState extends State<EmployeeDashboardPage> {
     }
   }
 
+  Future<void> _handleStartBreak(BreakConfig config) async {
+    setState(() {
+      _checkInOutLoading = true;
+    });
+
+    try {
+      final response = await EmployeeService.startBreak(config.id);
+
+      if (mounted) {
+        setState(() {
+          _checkInOutLoading = false;
+        });
+
+        if (response.success) {
+          _showNotification('Started ${config.displayName}', isError: false);
+          await _fetchDashboardData();
+        } else {
+          _showNotification(response.message ?? 'Failed to start break', isError: true);
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _checkInOutLoading = false;
+        });
+        _showNotification('Network error occurred', isError: true);
+      }
+    }
+  }
+
+  Future<void> _handleEndBreak() async {
+    if (_dashboardData?.activeBreak == null) return;
+    
+    setState(() {
+      _checkInOutLoading = true;
+    });
+
+    try {
+      // The backend expects 'action': 'end'. The service endBreak method is called.
+      // We pass 0 or active break ID, the backend usually just ends the current active session anyway.
+      final breakId = _dashboardData!.activeBreak!.breakConfigId ?? 0;
+      final response = await EmployeeService.endBreak(breakId);
+
+      if (mounted) {
+        setState(() {
+          _checkInOutLoading = false;
+        });
+
+        if (response.success) {
+          _showNotification('Break ended', isError: false);
+          await _fetchDashboardData();
+        } else {
+          _showNotification(response.message ?? 'Failed to end break', isError: true);
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _checkInOutLoading = false;
+        });
+        _showNotification('Network error occurred', isError: true);
+      }
+    }
+  }
+
   void _showNotification(String message, {required bool isError}) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -365,15 +446,26 @@ class _EmployeeDashboardPageState extends State<EmployeeDashboardPage> {
                 children: [
                   _GreetingHeader(name: d.employeeName ?? 'Employee'),
                   const SizedBox(height: 10),
-                  _ReadyForDayStrip(
-                    isCheckedIn: isCheckedIn,
-                    hasActiveBreak: hasActiveBreak,
-                    seconds: seconds,
-                    isLoading: _checkInOutLoading,
-                    onRefresh: _fetchDashboardData,
-                    onCheckInOut: _handleCheckInOut,
-                  ),
-                  const SizedBox(height: 12),
+                    _ReadyForDayStrip(
+                      isCheckedIn: isCheckedIn,
+                      hasActiveBreak: hasActiveBreak,
+                      seconds: seconds,
+                      isLoading: _checkInOutLoading,
+                      onRefresh: _fetchDashboardData,
+                      onCheckInOut: _handleCheckInOut,
+                    ),
+                    if (isCheckedIn) ...[
+                      const SizedBox(height: 10),
+                      _BreakButtons(
+                        hasActiveBreak: hasActiveBreak,
+                        activeBreakName: d.activeBreak?.breakChoice ?? 'Break',
+                        configs: _breakConfigs,
+                        isLoading: _checkInOutLoading,
+                        onStart: _handleStartBreak,
+                        onEnd: _handleEndBreak,
+                      ),
+                    ],
+                    const SizedBox(height: 12),
                   _KpiGrid(
                     isLoading: _isLoadingOverview,
                     leavesCount: _leavesCount,
@@ -1059,6 +1151,94 @@ class _FloatingQuickAction extends StatelessWidget {
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _BreakButtons extends StatelessWidget {
+  const _BreakButtons({
+    required this.hasActiveBreak,
+    required this.activeBreakName,
+    required this.configs,
+    required this.isLoading,
+    required this.onStart,
+    required this.onEnd,
+  });
+
+  final bool hasActiveBreak;
+  final String activeBreakName;
+  final List<BreakConfig> configs;
+  final bool isLoading;
+  final Function(BreakConfig) onStart;
+  final VoidCallback onEnd;
+
+  @override
+  Widget build(BuildContext context) {
+    if (hasActiveBreak) {
+      return GlassCard(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        child: Row(
+          children: [
+            const Icon(Icons.coffee_rounded, color: AppStitchTheme.primary, size: 20),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                'On active break ($activeBreakName)',
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      fontWeight: FontWeight.w800,
+                      color: AppStitchTheme.lightOnSurface,
+                    ),
+              ),
+            ),
+            ElevatedButton(
+              onPressed: isLoading ? null : onEnd,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppStitchTheme.primary,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                elevation: 0,
+              ),
+              child: const Text('End Break'),
+            ),
+          ],
+        ),
+      );
+    }
+
+    if (configs.isEmpty) return const SizedBox.shrink();
+
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: Row(
+        children: configs.map((config) {
+          return Padding(
+            padding: const EdgeInsets.only(right: 8),
+            child: InkWell(
+              onTap: isLoading ? null : () => onStart(config),
+              borderRadius: BorderRadius.circular(12),
+              child: GlassCard(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                borderRadius: 12,
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.play_arrow_rounded, color: AppStitchTheme.primary, size: 16),
+                    const SizedBox(width: 6),
+                    Text(
+                      config.displayName,
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            fontWeight: FontWeight.w800,
+                            color: AppStitchTheme.lightOnSurface,
+                          ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          );
+        }).toList(),
       ),
     );
   }
