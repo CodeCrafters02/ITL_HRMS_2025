@@ -206,8 +206,8 @@ const References = () => {
                                         <td>{row.email}</td>
                                         <td>{row.contact_number}</td>
                                         <td>
-                                            {buildResumeUrl(row.resume) ? (
-                                                <a className="text-primary hover:underline" href={buildResumeUrl(row.resume) || '#'} target="_blank" rel="noreferrer">
+                                            {buildResumeUrl(row.resume || '') ? (
+                                                <a className="text-primary hover:underline" href={buildResumeUrl(row.resume || '') || '#'} target="_blank" rel="noreferrer">
                                                     View Resume
                                                 </a>
                                             ) : (

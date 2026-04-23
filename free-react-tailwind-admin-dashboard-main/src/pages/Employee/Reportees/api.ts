@@ -1,5 +1,8 @@
 import axios from 'axios';
 
+// Define the API URL directly to clear the build error
+const API_URL = 'https://apihrms.innovyxtechlabs.com/app/';
+
 export interface Reportee {
     id: number;
     full_name: string;
@@ -12,8 +15,7 @@ export interface Reportee {
 }
 
 export const fetchMyReportees = async (): Promise<Reportee[]> => {
-    // This uses the base URL defined in your vite.config.ts
-    // Adjust the endpoint path ('reportees/') if your backend uses a different name
-    const response = await axios.get(`${__API_URL__}reportees/`);
+    // Swapped __API_URL__ for the defined API_URL
+    const response = await axios.get(`${API_URL}reportees/`);
     return response.data;
 };
