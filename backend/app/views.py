@@ -3689,10 +3689,15 @@ class SeatBookingViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=['post'], permission_classes=[permissions.IsAuthenticated])
     def cancel(self, request, pk=None):
         booking = self.get_object()
-        if not hasattr(request.user, 'employee'):
-            return Response({'error': 'Only employees can cancel bookings.'}, status=status.HTTP_403_FORBIDDEN)
-        if booking.employee != request.user.employee:
-            return Response({'error': 'You can only cancel your own bookings.'}, status=status.HTTP_403_FORBIDDEN)
+        user = request.user
+        
+        # Check if user is admin/master OR the owner of the booking
+        is_admin_or_master = user.role in ['admin', 'master']
+        is_owner = hasattr(user, 'employee') and booking.employee == user.employee
+        
+        if not (is_admin_or_master or is_owner):
+            return Response({'error': 'You do not have permission to cancel this booking.'}, status=status.HTTP_403_FORBIDDEN)
+            
         booking.status = 'cancelled'
         booking.is_active = False
         booking.save()
@@ -3761,7 +3766,7 @@ class ConferenceRoomBookingViewSet(viewsets.ModelViewSet):
         end_time = serializer.validated_data['end_time']
         date = serializer.validated_data['date']
 
-        # Conflict check
+        # Conflict check - Room
         if ConferenceRoomBooking.objects.filter(
             room=room,
             date=date,
@@ -3770,6 +3775,16 @@ class ConferenceRoomBookingViewSet(viewsets.ModelViewSet):
             end_time__gt=start_time
         ).exists():
             raise serializers.ValidationError({"detail": "Room is already booked for this time."})
+
+        # Conflict check - Employee (One person cannot book multiple rooms at same time)
+        if ConferenceRoomBooking.objects.filter(
+            employee=employee,
+            date=date,
+            status__in=['pending', 'approved'],
+            start_time__lt=end_time,
+            end_time__gt=start_time
+        ).exists():
+            raise serializers.ValidationError({"detail": "You already have another room booked during this overlapping time period."})
 
         # Duration check for approval
         config, created = ConferenceRoomConfig.objects.get_or_create(company=user.company)
@@ -3803,8 +3818,15 @@ class ConferenceRoomBookingViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=['post'], permission_classes=[permissions.IsAuthenticated])
     def cancel(self, request, pk=None):
         booking = self.get_object()
-        if not hasattr(request.user, 'employee') or booking.employee != request.user.employee:
-            return Response({'error': 'Unauthorized'}, status=status.HTTP_403_FORBIDDEN)
+        user = request.user
+        
+        # Check if user is admin/master OR the owner of the booking
+        is_admin_or_master = user.role in ['admin', 'master']
+        is_owner = hasattr(user, 'employee') and booking.employee == user.employee
+        
+        if not (is_admin_or_master or is_owner):
+            return Response({'error': 'You do not have permission to cancel this booking.'}, status=status.HTTP_403_FORBIDDEN)
+            
         booking.status = 'cancelled'
         booking.save()
         return Response({'status': 'booking cancelled'})
