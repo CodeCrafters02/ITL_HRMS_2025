@@ -1,3 +1,5 @@
+import { authFetch } from '../../../utils/authFetch';
+
 export type NotificationType = 'notification' | 'admin' | 'calendar' | 'learning_corner' | 'birthday' | string;
 
 export interface EmployeeNotification {
@@ -9,15 +11,14 @@ export interface EmployeeNotification {
     read?: boolean;
 }
 
+export interface PaginatedEmployeeNotifications {
+    results: EmployeeNotification[];
+    count: number;
+    total_pages: number;
+}
+
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000';
 const EMPLOYEE_API = `${API_BASE_URL}/employee`;
-
-const authHeaders = (): HeadersInit => {
-    const token = localStorage.getItem('access_token');
-    const headers: Record<string, string> = {};
-    if (token) headers.Authorization = `Bearer ${token}`;
-    return headers;
-};
 
 const parseJson = async <T>(res: Response): Promise<T> => {
     const data = await res.json().catch(() => ({}));
@@ -28,9 +29,35 @@ const parseJson = async <T>(res: Response): Promise<T> => {
     return data as T;
 };
 
-export const fetchEmployeeNotifications = async (): Promise<EmployeeNotification[]> => {
-    const res = await fetch(`${EMPLOYEE_API}/all-notifications/`, { headers: authHeaders() });
-    const data = await parseJson<EmployeeNotification[] | { results?: EmployeeNotification[] }>(res);
-    if (Array.isArray(data)) return data;
-    return data.results || [];
+export const fetchEmployeeNotifications = async (params?: {
+    page?: number;
+    page_size?: number;
+    search?: string;
+    type?: string;
+    unread?: boolean;
+}): Promise<PaginatedEmployeeNotifications> => {
+    const url = new URL(`${EMPLOYEE_API}/all-notifications/`);
+    if (params?.page) url.searchParams.set("page", String(params.page));
+    if (params?.page_size) url.searchParams.set("page_size", String(params.page_size));
+    if (params?.search) url.searchParams.set("search", params.search);
+    if (params?.type && params.type !== "all") url.searchParams.set("type", params.type);
+    if (params?.unread) url.searchParams.set("unread", "true");
+
+    const res = await authFetch(url.toString());
+    const data = await parseJson<EmployeeNotification[] | { results?: EmployeeNotification[]; count?: number }>(res);
+    if (Array.isArray(data)) {
+        return {
+            results: data,
+            count: data.length,
+            total_pages: 1,
+        };
+    }
+    const results = data.results || [];
+    const count = data.count ?? results.length;
+    const pageSize = Math.max(1, params?.page_size || 10);
+    return {
+        results,
+        count,
+        total_pages: Math.max(1, Math.ceil(count / pageSize)),
+    };
 };

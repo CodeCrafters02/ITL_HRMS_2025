@@ -1,18 +1,19 @@
+import { authFetch } from '../../../utils/authFetch';
+
 export interface CompanyPolicy {
     id: number;
     name: string;
     document: string | null;
 }
 
+export interface PaginatedCompanyPolicies {
+    results: CompanyPolicy[];
+    count: number;
+    total_pages: number;
+}
+
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000';
 const EMPLOYEE_API = `${API_BASE_URL}/employee`;
-
-const authHeaders = (): HeadersInit => {
-    const token = localStorage.getItem('access_token');
-    const headers: Record<string, string> = {};
-    if (token) headers.Authorization = `Bearer ${token}`;
-    return headers;
-};
 
 const parseJson = async <T>(res: Response): Promise<T> => {
     const data = await res.json().catch(() => ({}));
@@ -23,9 +24,31 @@ const parseJson = async <T>(res: Response): Promise<T> => {
     return data as T;
 };
 
-export const fetchCompanyPolicies = async (): Promise<CompanyPolicy[]> => {
-    const res = await fetch(`${EMPLOYEE_API}/employee-companypolicies/`, { headers: authHeaders() });
-    const data = await parseJson<CompanyPolicy[] | { results?: CompanyPolicy[] }>(res);
-    if (Array.isArray(data)) return data;
-    return data.results || [];
+export const fetchCompanyPolicies = async (params?: {
+    page?: number;
+    page_size?: number;
+    search?: string;
+}): Promise<PaginatedCompanyPolicies> => {
+    const url = new URL(`${EMPLOYEE_API}/employee-companypolicies/`);
+    if (params?.page) url.searchParams.set("page", String(params.page));
+    if (params?.page_size) url.searchParams.set("page_size", String(params.page_size));
+    if (params?.search) url.searchParams.set("search", params.search);
+
+    const res = await authFetch(url.toString());
+    const data = await parseJson<CompanyPolicy[] | { results?: CompanyPolicy[]; count?: number }>(res);
+    if (Array.isArray(data)) {
+        return {
+            results: data,
+            count: data.length,
+            total_pages: 1,
+        };
+    }
+    const results = data.results || [];
+    const count = data.count ?? results.length;
+    const pageSize = Math.max(1, params?.page_size || 10);
+    return {
+        results,
+        count,
+        total_pages: Math.max(1, Math.ceil(count / pageSize)),
+    };
 };

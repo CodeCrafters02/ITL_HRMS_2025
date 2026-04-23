@@ -27,6 +27,10 @@ const References = () => {
     const [search, setSearch] = useState('');
     const [statusFilter, setStatusFilter] = useState<StatusFilter>('All');
     const [isModalOpen, setIsModalOpen] = useState(false);
+    const [page, setPage] = useState(1);
+    const [pageSize, setPageSize] = useState(10);
+    const [totalCount, setTotalCount] = useState(0);
+    const [totalPages, setTotalPages] = useState(1);
 
     const [name, setName] = useState('');
     const [designation, setDesignation] = useState('');
@@ -38,41 +42,50 @@ const References = () => {
         setLoading(true);
         setError(null);
         try {
-            const data = await fetchMyReferences();
-            setRows(data);
+            const data = await fetchMyReferences({
+                page,
+                page_size: pageSize,
+                search: search.trim(),
+                status: statusFilter,
+            });
+            setRows(data.results);
+            setTotalCount(data.count);
+            setTotalPages(data.total_pages);
         } catch (err) {
             const message = err instanceof Error ? err.message : 'Failed to load references';
             setError(message);
         } finally {
             setLoading(false);
         }
-    }, []);
+    }, [page, pageSize, search, statusFilter]);
 
     useEffect(() => {
         dispatch(setPageTitle('References'));
     }, [dispatch]);
 
     useEffect(() => {
-        loadReferences();
+        const timer = setTimeout(() => {
+            loadReferences();
+        }, 300);
+        return () => clearTimeout(timer);
     }, [loadReferences]);
 
     const approvedCount = useMemo(() => rows.filter((ref) => ref.status === 'Approved').length, [rows]);
     const pendingCount = useMemo(() => rows.filter((ref) => ref.status === 'Pending').length, [rows]);
 
-    const filteredRows = useMemo(() => {
-        const lowered = search.trim().toLowerCase();
-        return rows.filter((row) => {
-            const statusMatch = statusFilter === 'All' || row.status === statusFilter;
-            const searchMatch =
-                !lowered ||
-                row.name.toLowerCase().includes(lowered) ||
-                row.designation.toLowerCase().includes(lowered) ||
-                row.email.toLowerCase().includes(lowered) ||
-                row.contact_number.toLowerCase().includes(lowered) ||
-                (row.admin_comment || '').toLowerCase().includes(lowered);
-            return statusMatch && searchMatch;
-        });
-    }, [rows, search, statusFilter]);
+    const getPageNumbers = () => {
+        const pages: (number | '...')[] = [];
+        if (totalPages <= 7) {
+            for (let i = 1; i <= totalPages; i++) pages.push(i);
+        } else {
+            pages.push(1);
+            if (page > 3) pages.push('...');
+            for (let i = Math.max(2, page - 1); i <= Math.min(totalPages - 1, page + 1); i++) pages.push(i);
+            if (page < totalPages - 2) pages.push('...');
+            pages.push(totalPages);
+        }
+        return pages;
+    };
 
     const resetForm = () => {
         setName('');
@@ -101,6 +114,7 @@ const References = () => {
             });
             resetForm();
             setIsModalOpen(false);
+            setPage(1);
             await loadReferences();
         } catch (err) {
             const message = err instanceof Error ? err.message : 'Failed to submit reference';
@@ -112,7 +126,7 @@ const References = () => {
 
     return (
         <div className="space-y-6 animate__animated animate__fadeIn">
-            <div className="panel bg-gradient-to-r from-[#0e1726] to-[#1b2e4b] text-white border-0">
+            <div className="panel bg-gradient-to-r from-[#220fb6] via-[#4f6be5] to-[#0f52af] text-white border-0">
                 <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
                     <div>
                         <h1 className="text-2xl md:text-3xl font-extrabold">References</h1>
@@ -133,7 +147,7 @@ const References = () => {
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div className="panel">
                     <p className="text-white-dark text-xs uppercase tracking-wide">Total References</p>
-                    <p className="text-2xl font-bold mt-2">{rows.length}</p>
+                    <p className="text-2xl font-bold mt-2">{totalCount}</p>
                 </div>
                 <div className="panel">
                     <p className="text-white-dark text-xs uppercase tracking-wide">Pending</p>
@@ -152,14 +166,24 @@ const References = () => {
                             type="text"
                             className="form-input pl-10"
                             value={search}
-                            onChange={(e) => setSearch(e.target.value)}
+                            onChange={(e) => {
+                                setSearch(e.target.value);
+                                setPage(1);
+                            }}
                             placeholder="Search by name, designation, email or contact..."
                         />
                         <span className="absolute left-3 top-1/2 -translate-y-1/2 text-white-dark">
                             <IconSearch className="w-4 h-4" />
                         </span>
                     </div>
-                    <select className="form-select" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value as StatusFilter)}>
+                    <select
+                        className="form-select"
+                        value={statusFilter}
+                        onChange={(e) => {
+                            setStatusFilter(e.target.value as StatusFilter);
+                            setPage(1);
+                        }}
+                    >
                         <option value="All">All Status</option>
                         <option value="Pending">Pending</option>
                         <option value="Approved">Approved</option>
@@ -167,6 +191,64 @@ const References = () => {
                     </select>
                 </div>
             </div>
+
+            {totalCount > 0 && (
+                <div className="panel">
+                    <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
+                        <div className="text-xs text-white-dark">
+                            Showing <span className="text-primary font-semibold">{(page - 1) * pageSize + 1}</span> to{' '}
+                            <span className="text-primary font-semibold">{Math.min(page * pageSize, totalCount)}</span> of{' '}
+                            <span className="text-primary font-semibold">{totalCount}</span> entries
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <label className="text-xs text-white-dark">Per page</label>
+                            <select
+                                className="form-select w-20 text-xs"
+                                value={pageSize}
+                                onChange={(e) => {
+                                    setPageSize(Number(e.target.value));
+                                    setPage(1);
+                                }}
+                            >
+                                <option value={10}>10</option>
+                                <option value={20}>20</option>
+                                <option value={50}>50</option>
+                            </select>
+                        </div>
+
+                        <ul className="inline-flex items-center gap-1">
+                            <li>
+                                <button type="button" className="btn btn-sm btn-outline-primary px-2.5" onClick={() => setPage(page > 1 ? page - 1 : 1)} disabled={page === 1}>
+                                    Prev
+                                </button>
+                            </li>
+                            {getPageNumbers().map((p, idx) =>
+                                p === '...' ? <li key={`dots-${idx}`} className="px-2 text-white-dark">...</li> : (
+                                    <li key={p}>
+                                        <button
+                                            type="button"
+                                            className={`btn btn-sm ${page === p ? 'btn-primary' : 'btn-outline-primary'} min-w-[34px]`}
+                                            onClick={() => setPage(p as number)}
+                                        >
+                                            {p}
+                                        </button>
+                                    </li>
+                                ),
+                            )}
+                            <li>
+                                <button
+                                    type="button"
+                                    className="btn btn-sm btn-outline-primary px-2.5"
+                                    onClick={() => setPage(page < totalPages ? page + 1 : totalPages)}
+                                    disabled={page === totalPages || totalPages === 0}
+                                >
+                                    Next
+                                </button>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            )}
 
             <div className="panel p-0 overflow-hidden">
                 <div className="table-responsive">
@@ -191,23 +273,23 @@ const References = () => {
                                         Loading references...
                                     </td>
                                 </tr>
-                            ) : filteredRows.length === 0 ? (
+                            ) : rows.length === 0 ? (
                                 <tr>
                                     <td colSpan={9} className="text-center py-8 text-white-dark">
                                         No references found.
                                     </td>
                                 </tr>
                             ) : (
-                                filteredRows.map((row, index) => (
+                                rows.map((row, index) => (
                                     <tr key={row.id}>
-                                        <td>{index + 1}</td>
+                                        <td>{(page - 1) * pageSize + index + 1}</td>
                                         <td className="font-semibold">{row.name}</td>
                                         <td>{row.designation}</td>
                                         <td>{row.email}</td>
                                         <td>{row.contact_number}</td>
                                         <td>
-                                            {buildResumeUrl(row.resume || '') ? (
-                                                <a className="text-primary hover:underline" href={buildResumeUrl(row.resume || '') || '#'} target="_blank" rel="noreferrer">
+                                            {buildResumeUrl(row.resume) ? (
+                                                <a className="text-primary hover:underline" href={buildResumeUrl(row.resume) || '#'} target="_blank" rel="noreferrer">
                                                     View Resume
                                                 </a>
                                             ) : (

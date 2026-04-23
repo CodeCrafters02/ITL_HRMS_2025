@@ -30,7 +30,6 @@
         "@types/react-text-mask": "^5.4.11",
         "@x1mrdonut1x/nouislider-react": "^3.4.3",
         "apexcharts": "^3.54.0",
-        "axios": "^1.15.2",
         "canvas-confetti": "^1.9.4",
         "easymde": "^2.18.0",
         "formik": "^2.2.9",
@@ -89,7 +88,6 @@
         "react-perfect-scrollbar": "^1.5.8",
         "tailwindcss": "^3.4.1",
         "typescript": "^5.5.4",
-        "vite": "^5.4.1",
-        "vite-plugin-svgr": "^5.2.0"
+        "vite": "^5.4.1"
     }
 }
