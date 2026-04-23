@@ -57,5 +57,18 @@
 	<string>Allow saving received images to your photo library.</string>
 	<key>NSFaceIDUsageDescription</key>
 	<string>Allow Face ID to unlock your HRMS account quickly.</string>
+	<key>GIDClientID</key>
+	<string>482392351722-4t91e445h429erfeje0vgh8f396cmbfh.apps.googleusercontent.com</string>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>com.googleusercontent.apps.482392351722-4t91e445h429erfeje0vgh8f396cmbfh</string>
+			</array>
+		</dict>
+	</array>
 </dict>
 </plist>

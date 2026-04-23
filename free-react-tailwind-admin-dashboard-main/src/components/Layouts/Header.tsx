@@ -33,6 +33,7 @@ import IconMenuDatatables from '../Icon/Menu/IconMenuDatatables';
 import IconMenuForms from '../Icon/Menu/IconMenuForms';
 import IconMenuPages from '../Icon/Menu/IconMenuPages';
 import IconMenuMore from '../Icon/Menu/IconMenuMore';
+import { notificationService } from '../../services/notificationService';
 
 const Header = () => {
     const location = useLocation();
@@ -320,7 +321,11 @@ const Header = () => {
                             </Dropdown>
                         </div>
                         <div className="shrink-0">
-                            <Link to={notificationRoute} className="relative block p-2 rounded-full bg-white-light/40 dark:bg-dark/40 hover:text-primary hover:bg-white-light/90 dark:hover:bg-dark/60">
+                            <Link 
+                                to={notificationRoute} 
+                                className="relative block p-2 rounded-full bg-white-light/40 dark:bg-dark/40 hover:text-primary hover:bg-white-light/90 dark:hover:bg-dark/60"
+                                onClick={() => notificationService.requestPermission()}
+                            >
                                 <IconBellBing />
                                 <span className="flex absolute w-3 h-3 ltr:right-0 rtl:left-0 top-0">
                                     <span className="animate-ping absolute ltr:-left-[3px] rtl:-right-[3px] -top-[3px] inline-flex h-full w-full rounded-full bg-success/50 opacity-75"></span>
