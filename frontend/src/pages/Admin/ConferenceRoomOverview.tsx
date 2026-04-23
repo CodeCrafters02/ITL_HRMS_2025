@@ -8,6 +8,7 @@ import IconInfoCircle from '../../components/Icon/IconInfoCircle';
 import IconRefresh from '../../components/Icon/IconRefresh';
 import IconClock from '../../components/Icon/IconClock';
 import IconSave from '../../components/Icon/IconSave';
+import IconTrash from '../../components/Icon/IconTrash';
 import Swal from 'sweetalert2';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000';
@@ -186,6 +187,57 @@ const ConferenceRoomOverview = () => {
 
         if (isCurrentlyBooked) return '#FB923C'; // Orange for "Occupied Now"
         return '#10B981'; // Green for "Available"
+    };
+
+    const handleCancelBooking = async (bookingId: number) => {
+        try {
+            const { isConfirmed } = await Swal.fire({
+                title: 'Cancel Meeting?',
+                text: "Are you sure you want to cancel this conference room booking? This action cannot be undone.",
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#ef4444',
+                cancelButtonColor: '#3b82f6',
+                confirmButtonText: 'Yes, Cancel it!',
+                padding: '2em',
+                customClass: {
+                    popup: 'sweet-alerts',
+                },
+            });
+
+            if (isConfirmed) {
+                const token = localStorage.getItem('access_token');
+                const res = await fetch(`${API_BASE_URL}/app/conference-room-bookings/${bookingId}/cancel/`, {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+
+                if (res.ok) {
+                    Swal.fire({
+                        title: 'Cancelled!',
+                        text: 'The meeting has been successfully cancelled.',
+                        icon: 'success',
+                        timer: 2000,
+                        showConfirmButton: false
+                    });
+                    
+                    // Refresh data
+                    if (selectedFloor) {
+                        fetchBookings(selectedFloor.id, selectedDate);
+                    }
+                    if (selectedRoom) {
+                        // Refresh the selected room bookings
+                        const updatedBookings = bookings.filter(b => b.id !== bookingId);
+                        setSelectedRoom({ ...selectedRoom, bookings: updatedBookings.filter(b => b.room_details.layout_element_id === selectedRoom.id) });
+                    }
+                } else {
+                    const error = await res.json();
+                    Swal.fire('Error', error.error || 'Failed to cancel booking', 'error');
+                }
+            }
+        } catch (error) {
+            Swal.fire('Error', 'An unexpected error occurred', 'error');
+        }
     };
 
     const handleRoomClick = (el: any) => {
@@ -402,6 +454,17 @@ const ConferenceRoomOverview = () => {
                                                      <div className="max-w-full truncate text-[10px] text-gray-400" title={b.purpose}>
                                                          {b.purpose || 'No purpose mentioned'}
                                                      </div>
+
+                                                     {/* Admin Cancel Button */}
+                                                     {!isCompleted && b.status !== 'cancelled' && (
+                                                         <button 
+                                                            onClick={() => handleCancelBooking(b.id)}
+                                                            className="absolute top-2 right-2 p-1.5 bg-danger/10 text-danger rounded-lg opacity-0 group-hover:opacity-100 transition-opacity z-20 hover:bg-danger hover:text-white"
+                                                            title="Cancel Booking"
+                                                         >
+                                                             <IconTrash className="w-3.5 h-3.5" />
+                                                         </button>
+                                                     )}
                                                 </div>
                                             );
                                         })}

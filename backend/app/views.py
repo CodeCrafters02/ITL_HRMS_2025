@@ -3689,10 +3689,15 @@ class SeatBookingViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=['post'], permission_classes=[permissions.IsAuthenticated])
     def cancel(self, request, pk=None):
         booking = self.get_object()
-        if not hasattr(request.user, 'employee'):
-            return Response({'error': 'Only employees can cancel bookings.'}, status=status.HTTP_403_FORBIDDEN)
-        if booking.employee != request.user.employee:
-            return Response({'error': 'You can only cancel your own bookings.'}, status=status.HTTP_403_FORBIDDEN)
+        user = request.user
+        
+        # Check if user is admin/master OR the owner of the booking
+        is_admin_or_master = user.role in ['admin', 'master']
+        is_owner = hasattr(user, 'employee') and booking.employee == user.employee
+        
+        if not (is_admin_or_master or is_owner):
+            return Response({'error': 'You do not have permission to cancel this booking.'}, status=status.HTTP_403_FORBIDDEN)
+            
         booking.status = 'cancelled'
         booking.is_active = False
         booking.save()
@@ -3813,8 +3818,15 @@ class ConferenceRoomBookingViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=['post'], permission_classes=[permissions.IsAuthenticated])
     def cancel(self, request, pk=None):
         booking = self.get_object()
-        if not hasattr(request.user, 'employee') or booking.employee != request.user.employee:
-            return Response({'error': 'Unauthorized'}, status=status.HTTP_403_FORBIDDEN)
+        user = request.user
+        
+        # Check if user is admin/master OR the owner of the booking
+        is_admin_or_master = user.role in ['admin', 'master']
+        is_owner = hasattr(user, 'employee') and booking.employee == user.employee
+        
+        if not (is_admin_or_master or is_owner):
+            return Response({'error': 'You do not have permission to cancel this booking.'}, status=status.HTTP_403_FORBIDDEN)
+            
         booking.status = 'cancelled'
         booking.save()
         return Response({'status': 'booking cancelled'})

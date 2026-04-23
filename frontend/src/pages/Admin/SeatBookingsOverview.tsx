@@ -9,6 +9,8 @@ import IconRefresh from '../../components/Icon/IconRefresh';
 import IconSearch from '../../components/Icon/IconSearch';
 import IconX from '../../components/Icon/IconX';
 import IconClock from '../../components/Icon/IconClock';
+import IconTrash from '../../components/Icon/IconTrash';
+import Swal from 'sweetalert2';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000';
 
@@ -191,6 +193,59 @@ const AdminSeatBookingsOverview = () => {
             console.error('Error fetching history:', error);
         } finally {
             setLoadingHistory(false);
+        }
+    };
+
+    const handleCancelBooking = async (bookingId: number) => {
+        try {
+            const { isConfirmed } = await Swal.fire({
+                title: 'Cancel Booking?',
+                text: "Are you sure you want to cancel this seat booking? This action cannot be undone.",
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#ef4444',
+                cancelButtonColor: '#3b82f6',
+                confirmButtonText: 'Yes, Cancel it!',
+                padding: '2em',
+                customClass: {
+                    popup: 'sweet-alerts',
+                },
+            });
+
+            if (isConfirmed) {
+                const token = localStorage.getItem('access_token');
+                const res = await fetch(`${API_BASE_URL}/app/seat-bookings/${bookingId}/cancel/`, {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+
+                if (res.ok) {
+                    Swal.fire({
+                        title: 'Cancelled!',
+                        text: 'The booking has been successfully cancelled.',
+                        icon: 'success',
+                        timer: 2000,
+                        showConfirmButton: false
+                    });
+                    
+                    // Refresh data
+                    if (selectedFloor) {
+                        fetchBookings(selectedFloor.id, selectedDate);
+                    }
+                    if (showHistoryModal) {
+                        fetchHistory();
+                    }
+                    if (selectedSeat) {
+                        // Refresh selected seat data if it's the one cancelled
+                        handleSeatClick(selectedSeat);
+                    }
+                } else {
+                    const error = await res.json();
+                    Swal.fire('Error', error.error || 'Failed to cancel booking', 'error');
+                }
+            }
+        } catch (error) {
+            Swal.fire('Error', 'An unexpected error occurred', 'error');
         }
     };
 
@@ -503,6 +558,14 @@ const AdminSeatBookingsOverview = () => {
                                             <p className="font-bold text-sm">{selectedSeat.booking.start_date} to {selectedSeat.booking.end_date}</p>
                                         </div>
                                     )}
+
+                                    <button 
+                                        onClick={() => handleCancelBooking(selectedSeat.booking.id)}
+                                        className="btn btn-outline-danger w-full gap-2 mt-2"
+                                    >
+                                        <IconTrash className="w-4 h-4" />
+                                        Cancel This Booking
+                                    </button>
                                 </div>
                             ) : (
                                 <div className="space-y-4">
@@ -535,6 +598,19 @@ const AdminSeatBookingsOverview = () => {
                                                     <p className="font-bold text-gray-600 dark:text-gray-400">{b.start_date} {b.end_date && ` to ${b.end_date}`}</p>
                                                     <p className="text-gray-400 italic">{b.start_time?.substring(0, 5)} - {b.end_time?.substring(0, 5)}</p>
                                                 </div>
+                                                
+                                                {/* Quick Cancel for Admin */}
+                                                <button 
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        handleCancelBooking(b.id);
+                                                    }}
+                                                    className="absolute top-2 right-2 p-1.5 bg-danger/10 text-danger rounded-lg opacity-0 group-hover:opacity-100 transition-opacity z-20 hover:bg-danger hover:text-white"
+                                                    title="Cancel Booking"
+                                                >
+                                                    <IconTrash className="w-3.5 h-3.5" />
+                                                </button>
+
                                                 <div className="absolute right-[-10px] bottom-[-10px] opacity-5 group-hover:opacity-10 transition-opacity">
                                                     <IconClock className="w-12 h-12" />
                                                 </div>
@@ -612,6 +688,7 @@ const AdminSeatBookingsOverview = () => {
                                             <th>Date & Time</th>
                                             <th>Type</th>
                                             <th>Status</th>
+                                            <th className="text-center">Action</th>
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -646,11 +723,22 @@ const AdminSeatBookingsOverview = () => {
                                                             {b.status === 'pending' ? 'Pending Approval' : b.status}
                                                         </span>
                                                     </td>
+                                                    <td className="text-center">
+                                                        {(b.status === 'approved' || b.status === 'pending') && (
+                                                            <button 
+                                                                onClick={() => handleCancelBooking(b.id)}
+                                                                className="p-2 bg-danger/10 text-danger rounded-lg hover:bg-danger hover:text-white transition-all shadow-sm"
+                                                                title="Cancel Booking"
+                                                            >
+                                                                <IconTrash className="w-4 h-4" />
+                                                            </button>
+                                                        )}
+                                                    </td>
                                                 </tr>
                                             ))
                                         ) : (
                                             <tr>
-                                                <td colSpan={5} className="text-center py-10 opacity-50 font-bold">No booking history found matching your filters.</td>
+                                                <td colSpan={6} className="text-center py-10 opacity-50 font-bold">No booking history found matching your filters.</td>
                                             </tr>
                                         )}
                                     </tbody>
