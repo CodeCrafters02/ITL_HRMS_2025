@@ -156,6 +156,12 @@ const EmployeeConfRoomBooking = lazy(() => import('../pages/Employee/ConfRoomBoo
 const EmployeeReferences = lazy(() => import('../pages/Employee/References/References'));
 const EmployeeReportees = lazy(() => import('../pages/Employee/Reportees/Reportees'));
 
+// Reimbursement Pages
+const ReimbursementCategories = lazy(() => import('../pages/Reimbursement/Categories'));
+const ReimbursementRequest = lazy(() => import('../pages/Reimbursement/Request'));
+const ReimbursementStatus = lazy(() => import('../pages/Reimbursement/Status'));
+const ReimbursementApprovals = lazy(() => import('../pages/Reimbursement/Approvals'));
+
 const routes = [
     // dashboard
     {
@@ -804,6 +810,23 @@ const routes = [
     {
         path: '/employee/conference-room-booking',
         element: <EmployeeConfRoomBooking />,
+    },
+    // Reimbursement Routes
+    {
+        path: '/admin/reimbursement/categories',
+        element: <ReimbursementCategories />,
+    },
+    {
+        path: '/employee/reimbursement/request',
+        element: <ReimbursementRequest />,
+    },
+    {
+        path: '/employee/reimbursement/status',
+        element: <ReimbursementStatus />,
+    },
+    {
+        path: '/employee/reimbursement/approvals',
+        element: <ReimbursementApprovals />,
     },
 ];
 

@@ -235,6 +235,26 @@ const Sidebar = () => {
                                             </div>
                                         </NavLink>
                                     </li>
+
+                                    {/* Reimbursement */}
+                                    <li className="menu nav-item">
+                                        <button type="button" className={`${currentMenu === 'reimbursement' ? 'active' : ''} nav-link group w-full`} onClick={() => toggleMenu('reimbursement')}>
+                                            <div className="flex items-center">
+                                                <IconMenuInvoice className="group-hover:!text-primary shrink-0" />
+                                                <span className="ltr:pl-3 rtl:pr-3 text-black dark:text-[#506690] dark:group-hover:text-white-dark">{t('Reimbursement')}</span>
+                                            </div>
+                                            <div className={currentMenu !== 'reimbursement' ? 'rtl:rotate-90 -rotate-90' : ''}>
+                                                <IconCaretDown />
+                                            </div>
+                                        </button>
+                                        <AnimateHeight duration={300} height={currentMenu === 'reimbursement' ? 'auto' : 0}>
+                                            <ul className="sub-menu text-gray-500">
+                                                <li><NavLink to="/employee/reimbursement/request">{t('Request Reimbursement')}</NavLink></li>
+                                                <li><NavLink to="/employee/reimbursement/status">{t('My Requests')}</NavLink></li>
+                                                <li><NavLink to="/employee/reimbursement/approvals">{t('Approvals')}</NavLink></li>
+                                            </ul>
+                                        </AnimateHeight>
+                                    </li>
                                 </>
                             )}
 
@@ -443,6 +463,25 @@ const Sidebar = () => {
                                                 <span className="ltr:pl-3 rtl:pr-3 text-black dark:text-[#506690] dark:group-hover:text-white-dark">{t('Employee References')}</span>
                                             </div>
                                         </NavLink>
+                                    </li>
+
+                                    {/* Reimbursement */}
+                                    <li className="menu nav-item">
+                                        <button type="button" className={`${currentMenu === 'reimbursement-admin' ? 'active' : ''} nav-link group w-full`} onClick={() => toggleMenu('reimbursement-admin')}>
+                                            <div className="flex items-center">
+                                                <IconMenuInvoice className="group-hover:!text-primary shrink-0" />
+                                                <span className="ltr:pl-3 rtl:pr-3 text-black dark:text-[#506690] dark:group-hover:text-white-dark">{t('Reimbursement')}</span>
+                                            </div>
+                                            <div className={currentMenu !== 'reimbursement-admin' ? 'rtl:rotate-90 -rotate-90' : ''}>
+                                                <IconCaretDown />
+                                            </div>
+                                        </button>
+                                        <AnimateHeight duration={300} height={currentMenu === 'reimbursement-admin' ? 'auto' : 0}>
+                                            <ul className="sub-menu text-gray-500">
+                                                <li><NavLink to="/admin/reimbursement/categories">{t('Categories')}</NavLink></li>
+                                                <li><NavLink to="/employee/reimbursement/approvals">{t('Approvals')}</NavLink></li>
+                                            </ul>
+                                        </AnimateHeight>
                                     </li>
                                 </>
                             )}

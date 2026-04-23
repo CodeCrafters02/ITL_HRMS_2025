@@ -43,6 +43,8 @@ router.register(r'conference-room-bookings', ConferenceRoomBookingViewSet, basen
 router.register(r'conference-room-config', ConferenceRoomConfigViewSet, basename='conference-room-config')
 router.register(r'chat-conversations', ChatConversationViewSet, basename='chat-conversations')
 router.register(r'chat-messages', ChatMessageViewSet, basename='chat-messages')
+router.register(r'reimbursement-categories', ReimbursementCategoryViewSet, basename='reimbursement-category')
+router.register(r'reimbursement-requests', ReimbursementRequestViewSet, basename='reimbursement-request')
 
 urlpatterns = [
     # --- Manual API Views (Checked First) ---

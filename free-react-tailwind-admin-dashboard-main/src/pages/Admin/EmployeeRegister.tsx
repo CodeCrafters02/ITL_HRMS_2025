@@ -41,6 +41,7 @@ type EmployeeRecord = {
     department?: number | null;
     designation?: number | null;
     level?: number | null;
+    reporting_manager?: number | null;
     reporting_level_name?: string | null;
     reporting_manager_name?: string | null;
     payment_method?: string | null;
@@ -110,6 +111,7 @@ const AdminEmployeeRegister = () => {
         department: '',
         designation: '',
         level: '',
+        reporting_manager: '',
         date_of_joining: '',
         aadhar_no: '',
         pan_no: '',
@@ -144,6 +146,7 @@ const AdminEmployeeRegister = () => {
     const [departments, setDepartments] = useState<DepartmentOption[]>([]);
     const [designations, setDesignations] = useState<DesignationOption[]>([]);
     const [levels, setLevels] = useState<LevelOption[]>([]);
+    const [allEmployees, setAllEmployees] = useState<{ id: number; full_name: string; level?: number }[]>([]);
     const [adminCompanyName, setAdminCompanyName] = useState('');
 
     useEffect(() => {
@@ -234,6 +237,18 @@ const AdminEmployeeRegister = () => {
                 const levelData = await levelRes.json();
                 setLevels(levelData.results || levelData);
             }
+
+            // Fetch all employees for manager dropdown
+            const empRes = await fetch(`${API_URL}?page_size=1000`, { headers });
+            if (empRes.ok) {
+                const empData = await empRes.json();
+                const list = (empData.results || empData).map((e: any) => ({
+                    id: e.id,
+                    full_name: [e.first_name, e.last_name].filter(Boolean).join(' '),
+                    level: e.level,
+                }));
+                setAllEmployees(list);
+            }
         } catch (e) {
             console.error('Error fetching dependencies', e);
         }
@@ -310,6 +325,7 @@ const AdminEmployeeRegister = () => {
             department: '',
             designation: '',
             level: '',
+            reporting_manager: '',
             date_of_joining: '',
             aadhar_no: '',
             pan_no: '',
@@ -357,6 +373,7 @@ const AdminEmployeeRegister = () => {
             department: emp.department ? String(emp.department) : '',
             designation: emp.designation ? String(emp.designation) : '',
             level: emp.level ? String(emp.level) : '',
+            reporting_manager: emp.reporting_manager ? String(emp.reporting_manager) : '',
             date_of_joining: emp.date_of_joining || '',
             aadhar_no: emp.aadhar_no || '',
             pan_no: emp.pan_no || '',
@@ -402,6 +419,13 @@ const AdminEmployeeRegister = () => {
             Object.entries(formData).forEach(([key, value]) => {
                 if (value !== '') payload.append(key, value);
             });
+
+            if (formData.reporting_manager) {
+                const mgr = allEmployees.find(e => String(e.id) === formData.reporting_manager);
+                if (mgr?.level) {
+                    payload.append('reporting_level', String(mgr.level));
+                }
+            }
             if (files.photo) payload.append('photo', files.photo);
             if (files.aadhar_card) payload.append('aadhar_card', files.aadhar_card);
             if (files.pan_card) payload.append('pan_card', files.pan_card);
@@ -447,6 +471,13 @@ const AdminEmployeeRegister = () => {
             Object.entries(formData).forEach(([key, value]) => {
                 if (value !== '') payload.append(key, value);
             });
+
+            if (formData.reporting_manager) {
+                const mgr = allEmployees.find(e => String(e.id) === formData.reporting_manager);
+                if (mgr?.level) {
+                    payload.append('reporting_level', String(mgr.level));
+                }
+            }
             if (files.photo) payload.append('photo', files.photo);
             if (files.aadhar_card) payload.append('aadhar_card', files.aadhar_card);
             if (files.pan_card) payload.append('pan_card', files.pan_card);
@@ -867,6 +898,20 @@ const AdminEmployeeRegister = () => {
                                                 </div>
                                             </div>
 
+                                            <div className="grid grid-cols-1 md:grid-cols-1 gap-4">
+                                                <div>
+                                                    <label className="font-semibold mb-1 block">Reporting Manager</label>
+                                                    <select className="form-select" value={formData.reporting_manager} onChange={(e) => setFormData({ ...formData, reporting_manager: e.target.value })}>
+                                                        <option value="">Select Manager (Optional)</option>
+                                                        {allEmployees.filter(emp => emp.id !== selectedEmployee?.id).map((emp) => (
+                                                            <option key={emp.id} value={emp.id}>
+                                                                {emp.full_name}
+                                                            </option>
+                                                        ))}
+                                                    </select>
+                                                </div>
+                                            </div>
+
                                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                                 <div><label className="font-semibold mb-1 block">Temporary Address</label><input className="form-input" value={formData.temporary_address} onChange={(e) => setFormData({ ...formData, temporary_address: e.target.value })} /></div>
                                                 <div><label className="font-semibold mb-1 block">Permanent Address</label><input className="form-input" value={formData.permanent_address} onChange={(e) => setFormData({ ...formData, permanent_address: e.target.value })} /></div>
@@ -1076,6 +1121,20 @@ const AdminEmployeeRegister = () => {
                                                     This designation is fetched from the current admin company.
                                                 </div>
                                             )}
+
+                                            <div className="grid grid-cols-1 md:grid-cols-1 gap-4">
+                                                <div>
+                                                    <label className="font-semibold mb-1 block">Reporting Manager</label>
+                                                    <select className="form-select" value={formData.reporting_manager} onChange={(e) => setFormData({ ...formData, reporting_manager: e.target.value })}>
+                                                        <option value="">Select Manager (Optional)</option>
+                                                        {allEmployees.map((emp) => (
+                                                            <option key={emp.id} value={emp.id}>
+                                                                {emp.full_name}
+                                                            </option>
+                                                        ))}
+                                                    </select>
+                                                </div>
+                                            </div>
 
                                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                                 <div><label className="font-semibold mb-1 block">Temporary Address</label><input className="form-input" value={formData.temporary_address} onChange={(e) => setFormData({ ...formData, temporary_address: e.target.value })} /></div>

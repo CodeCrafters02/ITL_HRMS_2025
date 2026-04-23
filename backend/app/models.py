@@ -1013,3 +1013,39 @@ class ChatMessage(models.Model):
 
     def __str__(self):
         return f"{self.conversation_id}:{self.sender_id}:{self.created_at}"
+
+# --------------------------- REIMBURSEMENT MANAGEMENT ---------------------------------
+
+class ReimbursementCategory(models.Model):
+    company = models.ForeignKey(Company, on_delete=models.CASCADE, related_name='reimbursement_categories')
+    name = models.CharField(max_length=100)
+    description = models.TextField(blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.name} ({self.company.name})"
+
+class ReimbursementRequest(models.Model):
+    STATUS_CHOICES = [
+        ('pending', 'Pending Approval'),
+        ('approved', 'Approved'),
+        ('rejected', 'Rejected'),
+    ]
+    company = models.ForeignKey(Company, on_delete=models.CASCADE, related_name='reimbursement_requests')
+    employee = models.ForeignKey(Employee, on_delete=models.CASCADE, related_name='reimbursements')
+    category = models.ForeignKey(ReimbursementCategory, on_delete=models.SET_NULL, null=True, blank=True)
+    custom_category = models.CharField(max_length=100, blank=True, null=True)
+    amount = models.DecimalField(max_digits=10, decimal_places=2)
+    description = models.TextField()
+    bill_attachment = models.FileField(upload_to='reimbursements/bills/', blank=True, null=True)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
+    reporting_manager = models.ForeignKey(Employee, on_delete=models.SET_NULL, null=True, blank=True, related_name='reimbursement_approvals')
+    rejection_reason = models.TextField(blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"{self.employee.full_name} - {self.category.name} - {self.amount}"

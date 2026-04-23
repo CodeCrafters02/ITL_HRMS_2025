@@ -626,7 +626,7 @@ class EmployeeViewSet(viewsets.ModelViewSet):
 
         # Users with role=employee but no Employee profile (OneToOne reverse is `employee` by default)
         missing_profile_users = (
-            UserRegister.objects.filter(role="employee", company=company, employee__isnull=True)
+            UserRegister.objects.filter(role__in=["employee", "admin"], company=company, employee__isnull=True)
             .only("id", "first_name", "last_name", "email", "company_id")
         )
 
@@ -827,6 +827,95 @@ class AssetSupportingDocumentViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         serializer.save(company=self.request.user.company, uploaded_by=self.request.user)
+
+class ReimbursementCategoryViewSet(viewsets.ModelViewSet):
+    queryset = ReimbursementCategory.objects.all()
+    serializer_class = ReimbursementCategorySerializer
+    permission_classes = [IsAuthenticated]
+    pagination_class = CustomPagination
+    filter_backends = [filters.SearchFilter]
+    search_fields = ['name', 'description']
+    
+    def get_queryset(self):
+        user = self.request.user
+        if user.role == 'master':
+            return ReimbursementCategory.objects.all().order_by('id')
+        return ReimbursementCategory.objects.filter(company=user.company).order_by('id')
+
+    def perform_create(self, serializer):
+        user = self.request.user
+        if user.role == 'master':
+            serializer.save()
+        else:
+            serializer.save(company=user.company)
+
+class ReimbursementRequestViewSet(viewsets.ModelViewSet):
+    serializer_class = ReimbursementRequestSerializer
+    permission_classes = [IsAuthenticated]
+    parser_classes = [MultiPartParser, FormParser, JSONParser]
+    pagination_class = CustomPagination
+    filter_backends = [filters.SearchFilter]
+    search_fields = ['employee__first_name', 'employee__last_name', 'category__name', 'custom_category', 'description', 'status']
+
+    def get_queryset(self):
+        user = self.request.user
+        company = user.company
+        emp = getattr(user, 'employee_profile', None)
+        
+        if user.role == 'admin' or user.role == 'master':
+            queryset = ReimbursementRequest.objects.filter(company=company)
+        elif emp:
+            queryset = ReimbursementRequest.objects.filter(
+                Q(employee=emp) | Q(reporting_manager=emp)
+            )
+        else:
+            queryset = ReimbursementRequest.objects.none()
+            
+        status_param = self.request.query_params.get('status')
+        if status_param:
+            queryset = queryset.filter(status=status_param)
+            
+        return queryset.order_by('-created_at')
+
+    def perform_create(self, serializer):
+        emp = self.request.user.employee_profile
+        if not emp:
+            raise serializers.ValidationError("Employee profile required to request reimbursement.")
+        
+        serializer.save(
+            employee=emp,
+            company=emp.company,
+            reporting_manager=emp.reporting_manager,
+            status='pending'
+        )
+
+    @action(detail=True, methods=['post'])
+    def approve(self, request, pk=None):
+        reimbursement = self.get_object()
+        user = request.user
+        emp = getattr(user, 'employee_profile', None)
+        
+        if user.role != 'admin' and (not emp or reimbursement.reporting_manager != emp):
+            return Response({"detail": "Not authorized to approve this request."}, status=status.HTTP_403_FORBIDDEN)
+            
+        reimbursement.status = 'approved'
+        reimbursement.save()
+        return Response({"status": "approved"})
+
+    @action(detail=True, methods=['post'])
+    def reject(self, request, pk=None):
+        reimbursement = self.get_object()
+        user = request.user
+        emp = getattr(user, 'employee_profile', None)
+        reason = request.data.get('rejection_reason', '')
+
+        if user.role != 'admin' and (not emp or reimbursement.reporting_manager != emp):
+            return Response({"detail": "Not authorized to reject this request."}, status=status.HTTP_403_FORBIDDEN)
+
+        reimbursement.status = 'rejected'
+        reimbursement.rejection_reason = reason
+        reimbursement.save()
+        return Response({"status": "rejected"})
 
     
 class RecruitmentViewSet(viewsets.ModelViewSet):
@@ -1325,7 +1414,7 @@ class ChatCompanyUsersAPIView(APIView):
             return
 
         missing_profile_users = (
-            UserRegister.objects.filter(role="employee", company=company, employee__isnull=True)
+            UserRegister.objects.filter(role__in=["employee", "admin"], company=company, employee__isnull=True)
             .only("id", "first_name", "last_name", "email", "company_id")
         )
         for u in missing_profile_users:

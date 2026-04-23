@@ -1679,3 +1679,34 @@ class ConferenceRoomConfigSerializer(serializers.ModelSerializer):
         fields = ['id', 'company', 'approval_limit_minutes']
         read_only_fields = ['company']
 
+
+class ReimbursementCategorySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ReimbursementCategory
+        fields = '__all__'
+        read_only_fields = ['company']
+
+class ReimbursementRequestSerializer(serializers.ModelSerializer):
+    employee_name = serializers.CharField(source='employee.full_name', read_only=True)
+    category_name = serializers.SerializerMethodField()
+    reporting_manager_name = serializers.SerializerMethodField()
+
+    class Meta:
+        model = ReimbursementRequest
+        fields = [
+            'id', 'company', 'employee', 'employee_name', 'category', 'category_name',
+            'custom_category', 'amount', 'description', 'bill_attachment', 'status', 
+            'reporting_manager', 'reporting_manager_name', 'rejection_reason', 'created_at', 'updated_at'
+        ]
+        read_only_fields = ['company', 'employee', 'status', 'reporting_manager', 'rejection_reason', 'created_at', 'updated_at']
+
+    def get_category_name(self, obj):
+        if obj.category:
+            return obj.category.name
+        return obj.custom_category or "Other"
+
+    def get_reporting_manager_name(self, obj):
+        if obj.reporting_manager:
+            return obj.reporting_manager.full_name
+        return None
+
