@@ -138,6 +138,7 @@ const AdminSeatBookingsOverview = lazy(() => import('../pages/Admin/SeatBookings
 const AdminConfRoomStructure = lazy(() => import('../pages/Admin/ConferenceRoomStructure'));
 const AdminConfRoomApproval = lazy(() => import('../pages/Admin/ConferenceRoomApproval'));
 const AdminConfRoomOverview = lazy(() => import('../pages/Admin/ConferenceRoomOverview'));
+const AdminNotifications = lazy(() => import('../pages/Admin/Notifications'));
 
 // Employee Pages
 const EmployeeDashboard = lazy(() => import('../pages/Employee/Dashboard'));
@@ -714,7 +715,7 @@ const routes = [
     },
     {
         path: '/admin/notifications',
-        element: <AdminComingSoon />,
+        element: <AdminNotifications />,
     },
     {
         path: '/admin/learning-corner',
