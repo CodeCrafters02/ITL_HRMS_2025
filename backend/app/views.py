@@ -1053,7 +1053,12 @@ class NotificationViewSet(viewsets.ModelViewSet):
         return Notification.objects.filter(company=user.company)
 
     def perform_create(self, serializer):
-        serializer.save(company=self.request.user.company)
+        # Ensure notifications are strictly tied to the admin's company.
+        company = self.request.user.company
+        if company:
+            serializer.save(company=company)
+        else:
+            serializer.save()
 
 class ShiftPolicyViewSet(viewsets.ModelViewSet):
     serializer_class = ShiftPolicySerializer

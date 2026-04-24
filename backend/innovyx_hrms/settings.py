@@ -17,9 +17,13 @@ from dotenv import load_dotenv
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
-
+DEBUG=True
 load_dotenv(BASE_DIR / '.env', override=True)
-GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID") or os.getenv("GMAIL_CLIENT_ID")
+GOOGLE_CLIENT_ID_RAW = os.getenv("GOOGLE_CLIENT_ID") or os.getenv("GMAIL_CLIENT_ID")
+if GOOGLE_CLIENT_ID_RAW and "," in GOOGLE_CLIENT_ID_RAW:
+    GOOGLE_CLIENT_ID = [cid.strip() for cid in GOOGLE_CLIENT_ID_RAW.split(",") if cid.strip()]
+else:
+    GOOGLE_CLIENT_ID = GOOGLE_CLIENT_ID_RAW
 if not GOOGLE_CLIENT_ID and DEBUG:
     import warnings
     warnings.warn(
@@ -35,7 +39,7 @@ if not GOOGLE_CLIENT_ID and DEBUG:
 SECRET_KEY = 'django-insecure-v++-2-a@y^9k1+kky5l^fg6#r1hc)hd(fwjox62c7@=ccvdkff'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+
 
 # ALLOWED_HOSTS = ['apihrms.innovyxtechlabs.com']
 ALLOWED_HOSTS = ['apihrms.innovyxtechlabs.com', 'localhost', '127.0.0.1', '10.209.43.199', '192.168.0.3', '192.168.1.10', '192.168.1.3']

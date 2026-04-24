@@ -11,8 +11,14 @@ logger = logging.getLogger(__name__)
 
 
 def _company_user_ids(company):
+    """
+    Get all user IDs associated with a specific company.
+    Includes both those with an Employee profile and those linked directly via UserRegister (like admins).
+    """
+    if not company:
+        return []
     return list(
-        Employee.objects.filter(company=company).select_related("user").values_list("user__id", flat=True)
+        UserRegister.objects.filter(company=company).values_list("id", flat=True)
     )
 # --- TASKS ---
 @receiver(post_save, sender=TaskAssignment)
@@ -134,7 +140,8 @@ def leave_status_change(sender, instance, **kwargs):
 
 @receiver(post_save, sender=Notification)
 def admin_notification_broadcast(sender, instance, created, **kwargs):
-    if created and instance.company_id:
+    # Strictly scope to company to avoid accidental global broadcasts
+    if created and instance.company:
         user_ids = _company_user_ids(instance.company)
         default_sender = UserRegister.objects.filter(role='admin').first()
         try:

@@ -544,6 +544,17 @@ class EmployeeService {
     }
   }
 
+  /// Helper method to safely extract a list from potentially paginated responses
+  static List<dynamic> _extractList(dynamic decodedBody) {
+    if (decodedBody is Map<String, dynamic> &&
+        decodedBody.containsKey('results')) {
+      return decodedBody['results'] as List<dynamic>;
+    } else if (decodedBody is List<dynamic>) {
+      return decodedBody;
+    }
+    return [];
+  }
+
   static Future<ApiResponse<List<Announcement>>> getAnnouncements({int limit = 3}) async {
     try {
       final token = await StorageService.getAccessToken();
@@ -557,7 +568,8 @@ class EmployeeService {
       );
 
       if (response.statusCode == 200) {
-        final data = jsonDecode(response.body) as List<dynamic>;
+        final decoded = jsonDecode(response.body);
+        final data = _extractList(decoded);
         final items = data.map((e) => Announcement.fromJson(e)).toList();
         return ApiResponse(success: true, data: items);
       } else if (response.statusCode == 401) {
@@ -848,7 +860,8 @@ class EmployeeService {
       );
 
       if (response.statusCode == 200) {
-        final List<dynamic> data = jsonDecode(response.body);
+        final decoded = jsonDecode(response.body);
+        final data = _extractList(decoded);
         final appliedLeaves = data
             .map((item) => AppliedLeave.fromJson(item))
             .toList();
@@ -996,7 +1009,8 @@ class EmployeeService {
       );
 
       if (response.statusCode == 200) {
-        final List<dynamic> data = jsonDecode(response.body);
+        final decoded = jsonDecode(response.body);
+        final data = _extractList(decoded);
         final notifications = data
             .map((item) => NotificationModel.fromJson(item))
             .toList();
@@ -1236,8 +1250,9 @@ class EmployeeService {
       );
 
       if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        final policies = (data as List<dynamic>)
+        final decoded = jsonDecode(response.body);
+        final data = _extractList(decoded);
+        final policies = data
             .map((json) => CompanyPolicy.fromJson(json))
             .toList();
         return ApiResponse(success: true, data: policies);
@@ -1280,8 +1295,9 @@ class EmployeeService {
       );
 
       if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        final reportees = (data as List<dynamic>)
+        final decoded = jsonDecode(response.body);
+        final data = _extractList(decoded);
+        final reportees = data
             .map((json) => Reportee.fromJson(json))
             .toList();
         return ApiResponse(success: true, data: reportees);
@@ -1322,8 +1338,9 @@ class EmployeeService {
       );
 
       if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        final tasks = (data as List<dynamic>)
+        final decoded = jsonDecode(response.body);
+        final data = _extractList(decoded);
+        final tasks = data
             .map((json) => Task.fromJson(json))
             .toList();
         return ApiResponse(success: true, data: tasks);
@@ -1604,8 +1621,9 @@ class EmployeeService {
       );
 
       if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        final requests = (data as List<dynamic>)
+        final decoded = jsonDecode(response.body);
+        final data = _extractList(decoded);
+        final requests = data
             .map((json) => LeaveRequest.fromJson(json))
             .toList();
         return ApiResponse(success: true, data: requests);
@@ -1726,8 +1744,9 @@ class EmployeeService {
       );
 
       if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        final references = (data as List<dynamic>)
+        final decoded = jsonDecode(response.body);
+        final data = _extractList(decoded);
+        final references = data
             .map((json) => EmployeeReference.fromJson(json))
             .toList();
         return ApiResponse(success: true, data: references);
@@ -2111,8 +2130,9 @@ class EmployeeService {
       });
 
       if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        final items = (data as List<dynamic>)
+        final decoded = jsonDecode(response.body);
+        final data = _extractList(decoded);
+        final items = data
             .map((json) => LearningCornerItem.fromJson(json))
             .toList();
         return ApiResponse(success: true, data: items);
