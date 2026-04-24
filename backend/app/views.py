@@ -17,7 +17,7 @@ from datetime import date
 import io
 from django.utils import timezone
 from .utils import generate_letter_pdf, fill_placeholders
-from decimal import Decimal
+from decimal import Decimal, ROUND_HALF_UP
 from django.core.mail import EmailMessage
 from .utils import generate_payslip_pdf
 from rest_framework import viewsets, permissions
@@ -1943,6 +1943,17 @@ class IncomeTaxConfigViewSet(viewsets.ModelViewSet):
         return IncomeTaxConfig.objects.filter(company=self.request.user.company)
 
 
+class FinalizedSalaryViewSet(viewsets.ModelViewSet):
+    queryset = FinalizedSalary.objects.all()
+    serializer_class = FinalizedSalarySerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        return self.queryset.filter(company=self.request.user.company)
+
+    def perform_create(self, serializer):
+        serializer.save(company=self.request.user.company)
+
 class AttendanceViewSet(viewsets.ModelViewSet):
     queryset = Attendance.objects.all()
     serializer_class = AttendanceSerializer
@@ -3784,6 +3795,363 @@ class PayrollAttendanceSummaryView(APIView):
             'reimbursement_details': reimbursement_details,
         })
 
+class SalaryDisbursementStatementView(APIView):
+    """Generate a salary disbursement statement for all employees in a date range."""
+    permission_classes = [IsAuthenticated, IsAdminUser | IsMaster]
+
+    def get(self, request):
+        print(f"SalaryDisbursementStatementView reached! download_excel: {request.query_params.get('download_excel')}")
+        try:
+            company = request.user.company
+            if not company:
+                return Response({'error': 'No company associated with your account.'}, status=400)
+
+            from_date = request.query_params.get('from_date')
+            to_date = request.query_params.get('to_date')
+
+            if not from_date or not to_date:
+                return Response({'error': 'from_date and to_date are required'}, status=400)
+
+            try:
+                from datetime import datetime as dt, timedelta
+                from_dt = dt.strptime(from_date, '%Y-%m-%d').date()
+                to_dt = dt.strptime(to_date, '%Y-%m-%d').date()
+            except ValueError:
+                return Response({'error': 'Invalid date format. Use YYYY-MM-DD.'}, status=400)
+
+            salary_structure = SalaryStructure.objects.filter(company=company).order_by('-created_at').first()
+            # Exclude employees who are also admins
+            employees = Employee.objects.filter(company=company, is_active=True).exclude(user__role='admin').select_related('department', 'designation', 'shift_assigned')
+            
+            # Fetch Payroll Components (Earning/Deduction)
+            gross_components = list(GrossSalaryComponent.objects.filter(company=company, is_active=True))
+            deduction_components = list(SalaryDeductionComponent.objects.filter(company=company, is_active=True))
+
+            # Fetch Holidays
+            holiday_dates = set(CalendarEvent.objects.filter(
+                company=company, is_holiday=True, date__gte=from_dt, date__lte=to_dt
+            ).values_list('date', flat=True))
+
+            # Fetch Department Working Days Config
+            dept_configs = {
+                cfg.department_id: cfg for cfg in DepartmentWiseWorkingDays.objects.filter(company=company)
+            }
+
+            # Pre-fetch all attendance records for the range
+            attendances_qs = Attendance.objects.filter(
+                employee__company=company,
+                date__gte=from_dt,
+                date__lte=to_dt
+            )
+
+            # Pre-fetch all approved leaves
+            leaves_qs = EmpLeave.objects.filter(
+                employee__company=company,
+                status='Approved',
+                from_date__lte=to_dt,
+                to_date__gte=from_dt
+            ).select_related('leave_type')
+
+            # Pre-fetch all approved reimbursements
+            reimbursements_qs = ReimbursementRequest.objects.filter(
+                employee__company=company,
+                status='approved',
+                created_at__date__gte=from_dt,
+                created_at__date__lte=to_dt
+            )
+
+            # Organize data by employee
+            emp_data = []
+            total_credit_amount = Decimal(0)
+            
+            # Pre-fetch finalized salaries for this period
+            finalized_salaries = {
+                fs.employee_id: fs for fs in FinalizedSalary.objects.filter(
+                    company=company, from_date=from_date, to_date=to_date
+                )
+            }
+
+            for emp in employees:
+                # Check if we have a finalized/saved payroll for this employee in this period
+                finalized = finalized_salaries.get(emp.id)
+                
+                if finalized:
+                    # Use saved configuration (exclusions) but re-calculate using current logic
+                    # to pick up any global changes in salary structure or component values.
+                    saved_g_chk = finalized.config.get('gChk', {})
+                    saved_d_chk = finalized.config.get('dChk', {})
+                    saved_ot_enabled = finalized.config.get('otEnabled', False)
+                    
+                    # --- 1. Calculate Expected Working Days ---
+                    cfg = dept_configs.get(emp.department_id)
+                    weekend_days = [d.lower() for d in cfg.weekend_days] if cfg and cfg.weekend_days else ["saturday", "sunday"]
+                    
+                    expected_days = 0
+                    curr = from_dt
+                    while curr <= to_dt:
+                        if curr.strftime('%A').lower() not in weekend_days and curr not in holiday_dates:
+                            expected_days += 1
+                        curr += timedelta(days=1)
+                    
+                    if expected_days == 0: expected_days = 30
+
+                    # --- 2. Calculate Payable Days ---
+                    emp_atts = [a for a in attendances_qs if a.employee_id == emp.id]
+                    present_days, half_days, ot_hours = 0, 0, 0
+                    for att in emp_atts:
+                        w_hours = att.total_work_duration.total_seconds() / 3600 if att.total_work_duration else 0
+                        s_full = emp.shift_assigned.full_day_hours() if emp.shift_assigned else 8.0
+                        s_half = emp.shift_assigned.half_day_hours() if emp.shift_assigned else 4.0
+                        if w_hours >= s_full: present_days += 1
+                        elif w_hours >= s_half: half_days += 1
+                        if att.overtime_duration:
+                            ot_hours += att.overtime_duration.total_seconds() / 3600
+                    ot_hours = round(ot_hours, 2)
+                    
+                    emp_leaves = [l for l in leaves_qs if l.employee_id == emp.id]
+                    paid_leave_days = 0
+                    for lv in emp_leaves:
+                        l_start, l_end = max(lv.from_date, from_dt), min(lv.to_date, to_dt)
+                        d = l_start
+                        while d <= l_end:
+                            if lv.leave_type and lv.leave_type.is_paid: paid_leave_days += 1
+                            d += timedelta(days=1)
+                    
+                    payable_days = Decimal(present_days) + (Decimal(half_days) * Decimal('0.5')) + Decimal(paid_leave_days)
+                    
+                    # --- 3. Salary Calculations ---
+                    fixed_basic = emp.basic_salary or (emp.gross_salary * (salary_structure.basic_percent / Decimal(100)) if salary_structure and salary_structure.basic_percent else Decimal(0))
+                    fixed_gross = emp.gross_salary or Decimal(0)
+                    earned_basic = ((fixed_basic / Decimal(expected_days)) * payable_days).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+                    
+                    hourly_rate = (fixed_basic / Decimal(expected_days)) / Decimal(8)
+                    ot_pay = (hourly_rate * Decimal(ot_hours)).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP) if saved_ot_enabled else Decimal(0)
+                    
+                    # --- 4. Earnings ---
+                    current_gross = earned_basic + ot_pay
+                    for gc in gross_components:
+                        if not saved_g_chk.get(f'g-{gc.id}', True): continue
+                        amount = (earned_basic * gc.value) / Decimal(100) if gc.calc_type == 'percentage' else gc.value
+                        current_gross += amount.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+                    
+                    emp_reim = [r for r in reimbursements_qs if r.employee_id == emp.id]
+                    current_gross += sum(Decimal(str(r.amount)) for r in emp_reim)
+                    
+                    # --- 5. Deductions ---
+                    total_ded = Decimal(0)
+                    for dc in deduction_components:
+                        if not saved_d_chk.get(f'd-{dc.id}', True): continue
+                        t_base = fixed_basic if dc.threshold_on == 'basic' else fixed_gross
+                        if dc.has_threshold and t_base < dc.threshold_amount: continue
+                        d_base = earned_basic if dc.deduct_from == 'basic' else current_gross
+                        amount = (d_base * dc.value) / Decimal(100) if dc.calc_type == 'percentage' else dc.value
+                        total_ded += amount.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+                    
+                    net_pay = (current_gross - total_ded).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+                    if net_pay < 0: net_pay = Decimal(0)
+                else:
+                    # Default dynamic calculation (same as above but with all components enabled)
+                    # --- 1. Calculate Expected Working Days ---
+                    cfg = dept_configs.get(emp.department_id)
+                    weekend_days = [d.lower() for d in cfg.weekend_days] if cfg and cfg.weekend_days else ["saturday", "sunday"]
+                    
+                    expected_days = 0
+                    curr = from_dt
+                    while curr <= to_dt:
+                        if curr.strftime('%A').lower() not in weekend_days and curr not in holiday_dates:
+                            expected_days += 1
+                        curr += timedelta(days=1)
+                    
+                    if expected_days == 0:
+                        expected_days = 30 # fallback to avoid div by zero
+
+                    # --- 2. Calculate Payable Days ---
+                    emp_atts = [a for a in attendances_qs if a.employee_id == emp.id]
+                    present_days = 0
+                    half_days = 0
+                    ot_hours = 0
+                    for att in emp_atts:
+                        w_hours = 0
+                        if att.total_work_duration:
+                            w_hours = att.total_work_duration.total_seconds() / 3600
+                        
+                        s_full = emp.shift_assigned.full_day_hours() if emp.shift_assigned else 8.0
+                        s_half = emp.shift_assigned.half_day_hours() if emp.shift_assigned else 4.0
+                        
+                        if w_hours >= s_full: present_days += 1
+                        elif w_hours >= s_half: half_days += 1
+                        
+                        if att.overtime_duration:
+                            ot_hours += att.overtime_duration.total_seconds() / 3600
+                    
+                    # Round OT hours to match the Summary API used by the frontend
+                    ot_hours = round(ot_hours, 2)
+                    
+                    emp_leaves = [l for l in leaves_qs if l.employee_id == emp.id]
+                    paid_leave_days = 0
+                    for lv in emp_leaves:
+                        l_start = max(lv.from_date, from_dt)
+                        l_end = min(lv.to_date, to_dt)
+                        d = l_start
+                        while d <= l_end:
+                            if lv.leave_type and lv.leave_type.is_paid:
+                                paid_leave_days += 1
+                            d += timedelta(days=1)
+                    
+                    payable_days = Decimal(present_days) + (Decimal(half_days) * Decimal('0.5')) + Decimal(paid_leave_days)
+                    
+                    # --- 3. Salary Calculations ---
+                    fixed_basic = emp.basic_salary or (emp.gross_salary * (salary_structure.basic_percent / Decimal(100)) if salary_structure and salary_structure.basic_percent else Decimal(0))
+                    fixed_gross = emp.gross_salary or Decimal(0)
+
+                    # Earned Basic (Prorated)
+                    earned_basic = ((fixed_basic / Decimal(expected_days)) * payable_days).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+                    
+                    # Overtime Pay
+                    hourly_rate = (fixed_basic / Decimal(expected_days)) / Decimal(8)
+                    ot_pay = (hourly_rate * Decimal(ot_hours)).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+                    
+                    # --- 4. Earnings (Gross Components) ---
+                    current_gross = earned_basic + ot_pay
+                    for gc in gross_components:
+                        amount = (earned_basic * gc.value) / Decimal(100) if gc.calc_type == 'percentage' else gc.value
+                        amount = amount.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+                        current_gross += amount
+                    
+                    # Reimbursements
+                    emp_reim = [r for r in reimbursements_qs if r.employee_id == emp.id]
+                    current_gross += sum(Decimal(str(r.amount)) for r in emp_reim) # Reimbursements are usually fixed amounts
+                    
+                    # --- 5. Deductions ---
+                    total_ded = Decimal(0)
+                    for dc in deduction_components:
+                        # Threshold check
+                        t_base = fixed_basic if dc.threshold_on == 'basic' else fixed_gross
+                        if dc.has_threshold and t_base < dc.threshold_amount:
+                            continue
+                        
+                        d_base = earned_basic if dc.deduct_from == 'basic' else current_gross
+                        amount = (d_base * dc.value) / Decimal(100) if dc.calc_type == 'percentage' else dc.value
+                        amount = amount.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+                        total_ded += amount
+                    
+                    # Final Net Pay
+                    net_pay = (current_gross - total_ded).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+                    if net_pay < 0: net_pay = Decimal(0)
+                
+                total_credit_amount += net_pay
+                emp_data.append({
+                    'id': emp.id,
+                    'employee_id': emp.employee_id,
+                    'full_name': emp.full_name,
+                    'bank_name': emp.bank_name,
+                    'account_no': emp.account_no,
+                    'ifsc_code': emp.ifsc_code,
+                    'gross_salary': float(current_gross.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)),
+                    'net_salary': float(net_pay),
+                    'days_paid': float(payable_days),
+                })
+
+            # Check for Excel export request
+            if request.query_params.get('download_excel') == 'true':
+                import openpyxl
+                from openpyxl.styles import Font, Alignment, Border, Side
+                from django.http import HttpResponse
+                from io import BytesIO
+
+                wb = openpyxl.Workbook()
+                ws = wb.active
+                ws.title = "Salary Disbursement"
+
+                # Header Styles
+                header_font = Font(bold=True, color="FFFFFF")
+                header_fill = openpyxl.styles.PatternFill(start_color="1E3A5F", end_color="1E3A5F", fill_type="solid")
+                alignment = Alignment(horizontal="center", vertical="center")
+                border = Border(left=Side(style='thin'), right=Side(style='thin'), top=Side(style='thin'), bottom=Side(style='thin'))
+
+                # Title and Company Info
+                ws.merge_cells('A1:I1')
+                ws['A1'] = f"SALARY DISBURSEMENT STATEMENT - {company.name.upper()}"
+                ws['A1'].font = Font(size=14, bold=True)
+                ws['A1'].alignment = Alignment(horizontal="center")
+                
+                ws.merge_cells('A2:I2')
+                ws['A2'] = f"For the Period: {from_date} to {to_date}"
+                ws['A2'].alignment = Alignment(horizontal="center")
+
+                # Company Bank Details
+                ws.merge_cells('A3:I3')
+                company_bank_info = f"Company Bank: {company.bank_name or 'N/A'} | A/c No: {company.account_no or 'N/A'} | IFSC: {company.ifsc_code or 'N/A'} | Branch: {company.branch_name or 'N/A'}"
+                ws['A3'] = company_bank_info
+                ws['A3'].font = Font(italic=True)
+                ws['A3'].alignment = Alignment(horizontal="center")
+
+                # Table Headers
+                headers = ['Sl. No', 'Employee ID', 'Employee Name', 'Bank Name', 'Account Number', 'IFSC Code', 'Gross Salary', 'Payable Days', 'Net Salary']
+                ws.append([]) # Spacer
+                ws.append(headers)
+                
+                header_row = ws.max_row
+                for cell in ws[header_row]:
+                    cell.font = header_font
+                    cell.fill = header_fill
+                    cell.alignment = alignment
+                    cell.border = border
+
+                # Data Rows
+                for idx, row_data in enumerate(emp_data, 1):
+                    ws.append([
+                        idx,
+                        row_data['employee_id'],
+                        row_data['full_name'],
+                        row_data['bank_name'],
+                        row_data['account_no'],
+                        row_data['ifsc_code'],
+                        row_data['gross_salary'],
+                        row_data['days_paid'],
+                        row_data['net_salary']
+                    ])
+                
+                # Total Row
+                last_row = ws.max_row + 1
+                ws.merge_cells(f'A{last_row}:H{last_row}')
+                ws[f'A{last_row}'] = "Total Disbursement Amount"
+                ws[f'A{last_row}'].font = Font(bold=True)
+                ws[f'A{last_row}'].alignment = Alignment(horizontal="right")
+                ws[f'I{last_row}'] = float(round(total_credit_amount, 2))
+                ws[f'I{last_row}'].font = Font(bold=True)
+
+                # Column Widths
+                column_widths = [8, 15, 25, 20, 20, 15, 15, 15, 15]
+                for i, width in enumerate(column_widths):
+                    ws.column_dimensions[openpyxl.utils.get_column_letter(i+1)].width = width
+
+                # Return as Response
+                output = BytesIO()
+                wb.save(output)
+                output.seek(0)
+
+                filename = f"Salary_Disbursement_{company.name}_{from_date}.xlsx"
+                response = HttpResponse(
+                    output.read(),
+                    content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+                )
+                response['Content-Disposition'] = f'attachment; filename="{filename}"'
+                return response
+
+            return Response({
+                'company': {
+                    'name': company.name, 'address': company.address,
+                    'bank_name': company.bank_name, 'account_no': company.account_no,
+                    'ifsc_code': company.ifsc_code, 'branch_name': company.branch_name,
+                },
+                'period': { 'from_date': from_date, 'to_date': to_date },
+                'summary': { 'total_employees': len(emp_data), 'total_amount': float(round(total_credit_amount, 2)) },
+                'employees': emp_data
+            })
+        except Exception as e:
+            return Response({'error': str(e)}, status=400)
+
 
 class EmployeeReporteesView(APIView):
     permission_classes = [IsAuthenticated]
@@ -4338,17 +4706,21 @@ class GoogleLoginAPIView(APIView):
                 user.set_unusable_password()
                 user.save()
 
-            # If this is an employee login and company is missing, try to link by Employee.email
-            if user.role == "employee" and not getattr(user, "company_id", None):
-                emp = Employee.objects.filter(email__iexact=email).select_related("company").first()
-                if emp and emp.company_id:
-                    user.company_id = emp.company_id
-                    user.save(update_fields=["company"])
+            # If this is an employee login, ensure profile is synced and ID generated
+            if user.role == "employee":
+                emp = Employee.objects.filter(email__iexact=email).first()
+                if emp:
+                    # Link to User account if needed
                     if not emp.user_id:
                         emp.user_id = user.id
-                        emp.save(update_fields=["user"])
-                else:
-                    # If no Employee exists yet, try auto-registering by allowed company domains
+                    # Link User to Company if missing
+                    if not getattr(user, "company_id", None) and emp.company_id:
+                        user.company_id = emp.company_id
+                        user.save(update_fields=["company"])
+                    # Trigger model save (generates employee_id if missing)
+                    emp.save()
+                elif not getattr(user, "company_id", None):
+                    # If no Employee profile yet, try auto-link via company domain
                     _ensure_employee_for_company_user(user=user, email=email, first_name=first_name, last_name=last_name)
 
             # Return tokens

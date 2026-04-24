@@ -41,6 +41,10 @@ const MasterCompany = () => {
         admin_password: '',
         admin_confirm_password: '',
         logo: null as File | null,
+        bank_name: '',
+        account_no: '',
+        ifsc_code: '',
+        branch_name: '',
     });
 
     const [addStep, setAddStep] = useState<1 | 2>(1);
@@ -184,6 +188,10 @@ const MasterCompany = () => {
             submitData.append('address', formData.address);
             submitData.append('location', formData.location);
             submitData.append('gmail_domains', formData.gmail_domains);
+            submitData.append('bank_name', formData.bank_name);
+            submitData.append('account_no', formData.account_no);
+            submitData.append('ifsc_code', formData.ifsc_code);
+            submitData.append('branch_name', formData.branch_name);
             // Step 2: create admin + assign to this company (backend will create admin if `admin` not provided)
             submitData.append('admin_username_input', formData.admin_username_input);
             submitData.append('admin_email_input', formData.admin_email_input);
@@ -254,6 +262,10 @@ const MasterCompany = () => {
             submitData.append('address', formData.address);
             submitData.append('location', formData.location);
             submitData.append('gmail_domains', formData.gmail_domains);
+            submitData.append('bank_name', formData.bank_name);
+            submitData.append('account_no', formData.account_no);
+            submitData.append('ifsc_code', formData.ifsc_code);
+            submitData.append('branch_name', formData.branch_name);
             if (formData.admin) {
                 submitData.append('admin', formData.admin);
             }
@@ -308,6 +320,10 @@ const MasterCompany = () => {
             admin_password: '',
             admin_confirm_password: '',
             logo: null,
+            bank_name: company.bank_name || '',
+            account_no: company.account_no || '',
+            ifsc_code: company.ifsc_code || '',
+            branch_name: company.branch_name || '',
         });
         fetchAvailableAdmins(company.admin_id);
         setEditStep(1);
@@ -330,6 +346,10 @@ const MasterCompany = () => {
             admin_password: '',
             admin_confirm_password: '',
             logo: null,
+            bank_name: '',
+            account_no: '',
+            ifsc_code: '',
+            branch_name: '',
         });
         setSelectedCompany(null);
         setAddStep(1);
@@ -570,6 +590,26 @@ const MasterCompany = () => {
                                                     </div>
                                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                                         <div>
+                                                            <label htmlFor="bank_name">Bank Name</label>
+                                                            <input id="bank_name" type="text" name="bank_name" className="form-input" value={formData.bank_name} onChange={handleInputChange} />
+                                                        </div>
+                                                        <div>
+                                                            <label htmlFor="account_no">Account Number</label>
+                                                            <input id="account_no" type="text" name="account_no" className="form-input" value={formData.account_no} onChange={handleInputChange} />
+                                                        </div>
+                                                    </div>
+                                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                        <div>
+                                                            <label htmlFor="ifsc_code">IFSC Code</label>
+                                                            <input id="ifsc_code" type="text" name="ifsc_code" className="form-input" value={formData.ifsc_code} onChange={handleInputChange} />
+                                                        </div>
+                                                        <div>
+                                                            <label htmlFor="branch_name">Branch Name</label>
+                                                            <input id="branch_name" type="text" name="branch_name" className="form-input" value={formData.branch_name} onChange={handleInputChange} />
+                                                        </div>
+                                                    </div>
+                                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                        <div>
                                                             <label htmlFor="location">Location</label>
                                                             <input id="location" type="text" name="location" className="form-input" value={formData.location} onChange={handleInputChange} />
                                                         </div>
@@ -774,6 +814,26 @@ const MasterCompany = () => {
                                                             value={formData.gmail_domains}
                                                             onChange={handleInputChange}
                                                         />
+                                                    </div>
+                                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                        <div>
+                                                            <label htmlFor="edit_bank_name">Bank Name</label>
+                                                            <input id="edit_bank_name" type="text" name="bank_name" className="form-input" value={formData.bank_name} onChange={handleInputChange} />
+                                                        </div>
+                                                        <div>
+                                                            <label htmlFor="edit_account_no">Account Number</label>
+                                                            <input id="edit_account_no" type="text" name="account_no" className="form-input" value={formData.account_no} onChange={handleInputChange} />
+                                                        </div>
+                                                    </div>
+                                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                        <div>
+                                                            <label htmlFor="edit_ifsc_code">IFSC Code</label>
+                                                            <input id="edit_ifsc_code" type="text" name="ifsc_code" className="form-input" value={formData.ifsc_code} onChange={handleInputChange} />
+                                                        </div>
+                                                        <div>
+                                                            <label htmlFor="edit_branch_name">Branch Name</label>
+                                                            <input id="edit_branch_name" type="text" name="branch_name" className="form-input" value={formData.branch_name} onChange={handleInputChange} />
+                                                        </div>
                                                     </div>
                                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                                         <div>

@@ -142,6 +142,7 @@ const AdminNotifications = lazy(() => import('../pages/Admin/Notifications'));
 const AdminDesignationSalary = lazy(() => import('../pages/Admin/DesignationSalary'));
 const AdminSalaryStructure = lazy(() => import('../pages/Admin/SalaryStructure'));
 const AdminPayrollReport = lazy(() => import('../pages/Admin/PayrollReport'));
+const AdminSalaryDisbursement = lazy(() => import('../pages/Admin/SalaryDisbursement'));
 
 // Employee Pages
 const EmployeeDashboard = lazy(() => import('../pages/Employee/Dashboard'));
@@ -686,6 +687,10 @@ const routes = [
     {
         path: '/admin/payroll-batches',
         element: <AdminPayrollReport />,
+    },
+    {
+        path: '/admin/salary-disbursement',
+        element: <AdminSalaryDisbursement />,
     },
     {
         path: '/admin/income-tax',

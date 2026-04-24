@@ -79,31 +79,47 @@ const PayrollReport = () => {
     useEffect(() => {
         if(!sel) return;
         
-        // Try to load saved configuration
-        const key = `payroll_${sel.id}_${fromDate}_${toDate}`;
-        const saved = localStorage.getItem(key);
-        
-        if (saved) {
+        const loadConfig = async () => {
+            // 1. Try backend first
             try {
-                const data = JSON.parse(saved);
-                if (data.gChk && data.dChk) {
-                    setGChk(data.gChk);
-                    setDChk(data.dChk);
-                    setOtEnabled(!!data.otEnabled);
+                const savedR = await fetch(`${API}/app/finalized-salary/?employee=${sel.id}&from_date=${fromDate}&to_date=${toDate}`, { headers: hdr() });
+                const savedData = await savedR.json();
+                const serverSaved = savedData.results?.[0] || (Array.isArray(savedData) ? savedData[0] : null);
+
+                if (serverSaved && serverSaved.config) {
+                    setGChk(serverSaved.config.gChk || {});
+                    setDChk(serverSaved.config.dChk || {});
+                    setOtEnabled(!!serverSaved.config.otEnabled);
                     fetchAtt(sel.id);
                     return;
                 }
-            } catch (e) { console.error("Error loading saved payroll", e); }
-        }
+            } catch (e) { console.error("Error loading server payroll", e); }
 
-        // Default: use all active components
-        const gc: Chk = {}; gComps.forEach(c => gc[`g-${c.id}`]=true); setGChk(gc);
-        const dc: Chk = {}; dComps.forEach(c => {
-            if(c.has_threshold){ const b = c.threshold_on==='basic'? basic : parseFloat(String(sel.gross_salary||0)); dc[`d-${c.id}`]= b>=c.threshold_amount; }
-            else dc[`d-${c.id}`]=true;
-        }); setDChk(dc);
-        setOtEnabled(false);
-        fetchAtt(sel.id);
+            // 2. Fallback to localStorage
+            const key = `payroll_${sel.id}_${fromDate}_${toDate}`;
+            const localSaved = localStorage.getItem(key);
+            if (localSaved) {
+                try {
+                    const data = JSON.parse(localSaved);
+                    setGChk(data.gChk || {});
+                    setDChk(data.dChk || {});
+                    setOtEnabled(!!data.otEnabled);
+                    fetchAtt(sel.id);
+                    return;
+                } catch (e) { console.error("Error loading local payroll", e); }
+            }
+
+            // 3. Default: use all active components
+            const gc: Chk = {}; gComps.forEach(c => gc[`g-${c.id}`]=true); setGChk(gc);
+            const dc: Chk = {}; dComps.forEach(c => {
+                if(c.has_threshold){ const b = c.threshold_on==='basic'? basic : parseFloat(String(sel.gross_salary||0)); dc[`d-${c.id}`]= b>=c.threshold_amount; }
+                else dc[`d-${c.id}`]=true;
+            }); setDChk(dc);
+            setOtEnabled(false);
+            fetchAtt(sel.id);
+        };
+
+        loadConfig();
     }, [sel, gComps, dComps, basic, fromDate, toDate]);
 
     const earnedBasic = useMemo(() => {
@@ -140,7 +156,7 @@ const PayrollReport = () => {
             if(!gChk[`g-${c.id}`]) return; 
             // Usually allowances are calculated on Fixed Basic, but some companies use Earned Basic.
             // We'll use Fixed Basic for the rule calculation as per standard HRMS patterns unless specified.
-            const a = c.calc_type==='percentage'?(basic*c.value)/100:c.value; 
+            const a = c.calc_type==='percentage'?(earnedBasic*c.value)/100:c.value; 
             items.push({label:c.name, amount:Math.round(a*100)/100, key:`g-${c.id}`}); 
         });
 
@@ -183,22 +199,58 @@ const PayrollReport = () => {
         setSaving(true);
         try {
             const payload = {
-                employee_id: sel.id, from_date: fromDate, to_date: toDate,
-                gChk, dChk, otEnabled,
-                gross_components: grossItems.filter(i => !i.secondary),
-                deduction_components: dedItems,
+                employee: sel.id,
+                from_date: fromDate,
+                to_date: toDate,
                 basic_salary: basic,
-                earned_basic: earnedBasic,
-                ot_pay: otPay,
-                total_gross: totGross, total_deductions: totDed, net_salary: net,
-                attendance: att,
+                earned_basic: Math.round(earnedBasic * 100) / 100,
+                ot_pay: Math.round(otPay * 100) / 100,
+                ot_hours: Math.round((att?.overtime_hours || 0) * 100) / 100,
+                total_gross: Math.round(totGross * 100) / 100,
+                total_deductions: Math.round(totDed * 100) / 100,
+                net_salary: Math.round(net * 100) / 100,
+                days_paid: att ? (att.present_days + ((att.half_days || 0)*0.5) + att.paid_leaves) : 0,
+                config: { gChk, dChk, otEnabled }
             };
-            // Store in localStorage for now until a dedicated backend endpoint is created
+
+            // First check if a record exists for this employee/period to decide between POST or PUT
+            // For simplicity in this demo, we'll try a specialized "upsert" logic or just POST and handle uniqueness in backend
+            // But since we have unique_together, we should ideally find the ID first.
+            // Simplified: we'll use a POST and if it fails with 400 (duplicate), we could try to find and PUT.
+            // Better: use a dedicated endpoint or just handle it here.
+            
+            const r = await fetch(`${API}/app/finalized-salary/`, {
+                method: 'POST',
+                headers: hdr(),
+                body: JSON.stringify(payload)
+            });
+
+            if (!r.ok) {
+                const errData = await r.json();
+                if (r.status === 400 && JSON.stringify(errData).includes('unique')) {
+                    // Try to find the existing one to update
+                    const searchR = await fetch(`${API}/app/finalized-salary/?employee=${sel.id}&from_date=${fromDate}&to_date=${toDate}`, { headers: hdr() });
+                    const existing = await searchR.json();
+                    const existingId = existing.results?.[0]?.id || existing[0]?.id;
+                    if (existingId) {
+                        await fetch(`${API}/app/finalized-salary/${existingId}/`, {
+                            method: 'PUT',
+                            headers: hdr(),
+                            body: JSON.stringify(payload)
+                        });
+                    }
+                } else {
+                    throw new Error('Failed to save');
+                }
+            }
+
+            // Also keep local storage for UI state persistence
             const key = `payroll_${sel.id}_${fromDate}_${toDate}`;
-            localStorage.setItem(key, JSON.stringify(payload));
-            Swal.fire({title:'Saved!', text:`Payroll report saved for ${sel.first_name} ${sel.last_name}`, icon:'success', timer:2000, showConfirmButton:false, customClass:{popup:'sweet-alerts'}});
+            localStorage.setItem(key, JSON.stringify({...payload, grossItems, dedItems, attendance: att}));
+            
+            Swal.fire({title:'Saved!', text:`Payroll finalized and saved for ${sel.first_name} ${sel.last_name}`, icon:'success', timer:2000, showConfirmButton:false, customClass:{popup:'sweet-alerts'}});
         } catch(e) {
-            Swal.fire({title:'Error', text:'Failed to save.', icon:'error', customClass:{popup:'sweet-alerts'}});
+            Swal.fire({title:'Error', text:'Failed to save payroll to server.', icon:'error', customClass:{popup:'sweet-alerts'}});
         } finally { setSaving(false); }
     };
 
@@ -343,7 +395,7 @@ const PayrollReport = () => {
                                                         <h4 className="text-[10px] font-bold text-gray-500 uppercase tracking-[0.2em]">Approved Reimbursements ({att.reimbursement_details.length})</h4>
                                                         <div className="flex items-center gap-2 text-primary text-xs font-bold uppercase tracking-wider group-hover:underline">
                                                             {showReimb ? 'Hide Details' : 'Show Details'}
-                                                            <svg className={`w-4 h-4 transition-transform ${showReimb ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="19 9l-7 7-7-7" /></svg>
+                                                            <svg className={`w-4 h-4 transition-transform ${showReimb ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
                                                         </div>
                                                     </button>
                                                     

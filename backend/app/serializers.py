@@ -197,6 +197,7 @@ class CompanyWithAdminSerializer(serializers.ModelSerializer):
         model = Company
         fields = [
             'id', 'name', 'address', 'location', 'email', 'phone_number', 'gmail_domains',
+            'bank_name', 'account_no', 'ifsc_code', 'branch_name',
             'logo', 'logo_url',
             'admin',
             'admin_username_input', 'admin_email_input', 'admin_first_name', 'admin_last_name', 'admin_password',
@@ -382,6 +383,10 @@ class CompanySerializer(serializers.ModelSerializer):
             'gmail_domains',
             'logo',
             'logo_url',
+            'bank_name',
+            'account_no',
+            'ifsc_code',
+            'branch_name',
             'created_at',
             'updated_at',
         ]
@@ -1187,6 +1192,12 @@ class IncomeTaxConfigSerializer(serializers.ModelSerializer):
         return super().create(validated_data) 
         
         
+class FinalizedSalarySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = FinalizedSalary
+        fields = '__all__'
+        read_only_fields = ['company']
+
 class AttendanceSerializer(serializers.ModelSerializer):
     employee_id = serializers.SerializerMethodField()
     employee_name = serializers.SerializerMethodField()

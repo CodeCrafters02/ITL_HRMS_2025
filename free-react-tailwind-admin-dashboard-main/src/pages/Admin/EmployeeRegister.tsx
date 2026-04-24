@@ -578,6 +578,7 @@ const AdminEmployeeRegister = () => {
                         <thead>
                             <tr>
                                 <th>#</th>
+                                <th>Emp ID</th>
                                 <th>Name</th>
                                 <th>Email</th>
                                 <th>Mobile</th>
@@ -598,6 +599,7 @@ const AdminEmployeeRegister = () => {
                                 displayEmployees.map((emp, index) => (
                                     <tr key={emp.id}>
                                         <td>{(page - 1) * pageSize + index + 1}</td>
+                                        <td className="font-mono text-xs font-bold text-primary">{emp.employee_id || '-'}</td>
                                         <td className="font-semibold">{fullName(emp)}</td>
                                         <td className="text-gray-500">{emp.email || '-'}</td>
                                         <td className="text-gray-500">{emp.mobile || '-'}</td>
@@ -900,6 +902,8 @@ const AdminEmployeeRegister = () => {
                                                             setFormData({
                                                                 ...formData,
                                                                 designation: nextDesignationId,
+                                                                department: des?.department ? String(des.department) : formData.department,
+                                                                level: des?.level ? String(des.level) : formData.level,
                                                                 basic_salary: des?.basic_pay ? String(des.basic_pay) : formData.basic_salary,
                                                             });
                                                         }}

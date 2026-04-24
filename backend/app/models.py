@@ -23,6 +23,10 @@ class Company(models.Model):
     phone_number = models.CharField(max_length=20)
     logo = models.ImageField(upload_to='company_logos/', blank=True, null=True)
     gmail_domains = models.TextField(blank=True, null=True)  # comma-separated domains
+    bank_name = models.CharField(max_length=255, blank=True, null=True)
+    account_no = models.CharField(max_length=50, blank=True, null=True)
+    ifsc_code = models.CharField(max_length=20, blank=True, null=True)
+    branch_name = models.CharField(max_length=255, blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -248,10 +252,24 @@ class Employee(models.Model):
 
     @property
     def full_name(self):
-        return f"{self.first_name} {self.last_name}"
-    
+        return f"{self.first_name or ''} {self.last_name or ''}".strip() or (self.user.username if self.user else "Unknown")
+
+    def save(self, *args, **kwargs):
+        if not self.employee_id:
+            prefix = "EMP"
+            # Use total count + 1 as starting point
+            count = Employee.objects.all().count()
+            new_num = count + 1
+            candidate = f"{prefix}{new_num:04d}"
+            # Ensure uniqueness
+            while Employee.objects.filter(employee_id=candidate).exists():
+                new_num += 1
+                candidate = f"{prefix}{new_num:04d}"
+            self.employee_id = candidate
+        super().save(*args, **kwargs)
+
     def __str__(self):
-        return f"{self.first_name} {self.last_name}"
+        return self.full_name
     
 class RelievedEmployee(models.Model):
     employee = models.OneToOneField(Employee, on_delete=models.SET_NULL, null=True, blank=True, related_name='relieved_info')
@@ -1110,4 +1128,33 @@ class ReimbursementRequest(models.Model):
         ordering = ['-created_at']
 
     def __str__(self):
-        return f"{self.employee.full_name} - {self.category.name} - {self.amount}"
+        return f"{self.employee.full_name} - {self.category.name if self.category else self.custom_category} - {self.amount}"
+
+class FinalizedSalary(models.Model):
+    employee = models.ForeignKey(Employee, on_delete=models.CASCADE, related_name='finalized_salaries')
+    company = models.ForeignKey(Company, on_delete=models.CASCADE, related_name='finalized_salaries')
+    from_date = models.DateField()
+    to_date = models.DateField()
+    
+    basic_salary = models.DecimalField(max_digits=10, decimal_places=2)
+    earned_basic = models.DecimalField(max_digits=10, decimal_places=2)
+    ot_pay = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    ot_hours = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    
+    total_gross = models.DecimalField(max_digits=10, decimal_places=2)
+    total_deductions = models.DecimalField(max_digits=10, decimal_places=2)
+    net_salary = models.DecimalField(max_digits=10, decimal_places=2)
+    days_paid = models.DecimalField(max_digits=10, decimal_places=2)
+    
+    # Store JSON of components and flags (gChk, dChk, otEnabled)
+    config = models.JSONField(default=dict)
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        unique_together = ('employee', 'from_date', 'to_date')
+        ordering = ['-from_date', 'employee']
+
+    def __str__(self):
+        return f"Finalized Salary {self.employee.full_name} ({self.from_date} to {self.to_date})"

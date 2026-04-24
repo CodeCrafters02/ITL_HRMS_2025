@@ -1,4 +1,5 @@
 from django.urls import path, include
+# Timestamp: 2026-04-24 16:20
 from rest_framework.routers import DefaultRouter
 from .views import *
 
@@ -48,8 +49,10 @@ router.register(r'reimbursement-requests', ReimbursementRequestViewSet, basename
 router.register(r'designation-salaries', DesignationSalaryViewSet, basename='designation-salary')
 router.register(r'gross-components', GrossSalaryComponentViewSet, basename='gross-components')
 router.register(r'deduction-components', SalaryDeductionComponentViewSet, basename='deduction-components')
+router.register(r'finalized-salary', FinalizedSalaryViewSet, basename='finalized-salary')
 
 urlpatterns = [
+    path('salary-disbursement-statement/', SalaryDisbursementStatementView.as_view(), name='salary-disbursement-statement'),
     # --- Manual API Views (Checked First) ---
     path('chat/users/', ChatCompanyUsersAPIView.as_view(), name='chat-company-users'),
     path('company-update/', CompanyUpdateAPIView.as_view(), name='company_get'),

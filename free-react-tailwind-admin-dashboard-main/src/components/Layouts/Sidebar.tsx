@@ -400,6 +400,7 @@ const Sidebar = () => {
                                                 <li><NavLink to="/admin/salary-structure">{t('Salary Structure')}</NavLink></li>
                                                 <li><NavLink to="/admin/designation-salary">{t('Salary per Designation')}</NavLink></li>
                                                 <li><NavLink to="/admin/payroll-batches">{t('Payroll Reports')}</NavLink></li>
+                                                <li><NavLink to="/admin/salary-disbursement">{t('Disbursement Statement')}</NavLink></li>
                                                 <li><NavLink to="/admin/income-tax">{t('Income Config')}</NavLink></li>
                                             </ul>
                                         </AnimateHeight>
