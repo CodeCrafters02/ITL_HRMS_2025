@@ -5,7 +5,7 @@ import string
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from django.utils.timezone import localtime
-from django.db.models import Sum, Q
+from django.db.models import Sum, Q, Count
 from django.utils import timezone
 from datetime import datetime, timedelta, time
 from calendar import monthrange
@@ -871,11 +871,59 @@ class ReimbursementRequestViewSet(viewsets.ModelViewSet):
         else:
             queryset = ReimbursementRequest.objects.none()
             
+        # Advanced Filtering
         status_param = self.request.query_params.get('status')
         if status_param:
             queryset = queryset.filter(status=status_param)
+
+        employee_param = self.request.query_params.get('employee')
+        if employee_param:
+            queryset = queryset.filter(employee_id=employee_param)
+
+        manager_param = self.request.query_params.get('reporting_manager')
+        if manager_param:
+            queryset = queryset.filter(reporting_manager_id=manager_param)
+
+        start_date = self.request.query_params.get('start_date')
+        if start_date:
+            queryset = queryset.filter(created_at__date__gte=start_date)
+
+        end_date = self.request.query_params.get('end_date')
+        if end_date:
+            queryset = queryset.filter(created_at__date__lte=end_date)
             
         return queryset.order_by('-created_at')
+
+    @action(detail=False, methods=['get'])
+    def stats(self, request):
+        user = self.request.user
+        if user.role not in ['admin', 'master']:
+            return Response({"detail": "Not authorized."}, status=status.HTTP_403_FORBIDDEN)
+            
+        queryset = self.get_queryset()
+        
+        # Overall totals
+        overall = queryset.aggregate(
+            total_amount=Sum('amount'),
+            approved_amount=Sum('amount', filter=Q(status='approved')),
+            pending_amount=Sum('amount', filter=Q(status='pending'))
+        )
+
+        # Employee-wise totals (only for approved ones usually, or based on filters)
+        employee_wise = queryset.values(
+            'employee_id', 
+            'employee__first_name', 
+            'employee__last_name'
+        ).annotate(
+            total=Sum('amount'),
+            approved=Sum('amount', filter=Q(status='approved')),
+            count=Count('id')
+        ).order_by('-total')
+
+        return Response({
+            "overall": overall,
+            "employee_wise": employee_wise
+        })
 
     def perform_create(self, serializer):
         emp = self.request.user.employee_profile

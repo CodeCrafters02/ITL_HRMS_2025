@@ -23,6 +23,7 @@ export interface ReimbursementRequest {
     reporting_manager_name: string | null;
     rejection_reason: string | null;
     created_at: string;
+    updated_at: string;
 }
 
 const getHeaders = () => {
@@ -61,6 +62,11 @@ export const deleteCategory = async (id: number) => {
 
 export const fetchReimbursements = async (params?: any): Promise<PaginatedResponse<ReimbursementRequest>> => {
     const response = await axios.get(`${API_URL}reimbursement-requests/`, { headers: getHeaders(), params });
+    return response.data;
+};
+
+export const fetchReimbursementStats = async (params?: any) => {
+    const response = await axios.get(`${API_URL}reimbursement-requests/stats/`, { headers: getHeaders(), params });
     return response.data;
 };
 
