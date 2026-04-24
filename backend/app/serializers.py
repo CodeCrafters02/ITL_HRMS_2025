@@ -410,9 +410,15 @@ class DesignationSerializer(serializers.ModelSerializer):
     department_name = serializers.SerializerMethodField(read_only=True)
     level_name = serializers.SerializerMethodField(read_only=True)
 
+    basic_pay = serializers.SerializerMethodField(read_only=True)
+
     class Meta:
         model = Designation
-        fields = ['id', 'designation_name', 'department', 'department_name', 'level', 'level_name']
+        fields = ['id', 'designation_name', 'department', 'department_name', 'level', 'level_name', 'basic_pay']
+
+    def get_basic_pay(self, obj):
+        salary_config = getattr(obj, 'salary_config', None)
+        return salary_config.basic_pay if salary_config else 0.00
 
     def get_department_name(self, obj):
         return obj.department.department_name if obj.department else None
@@ -439,6 +445,15 @@ class DesignationSerializer(serializers.ModelSerializer):
                 'designation_name': 'A designation with this name, department, and level already exists.'
             })
         return attrs
+
+class DesignationSalarySerializer(serializers.ModelSerializer):
+    designation_name = serializers.CharField(source='designation.designation_name', read_only=True)
+    department_name = serializers.CharField(source='designation.department.department_name', read_only=True)
+
+    class Meta:
+        model = DesignationSalary
+        fields = ['id', 'company', 'designation', 'designation_name', 'department_name', 'basic_pay', 'created_at', 'updated_at']
+        read_only_fields = ['company']
         
 
 
@@ -485,7 +500,7 @@ class EmployeeSerializer(serializers.ModelSerializer):
             'level', 'reporting_manager', 'reporting_level', 'reporting_level_name', 'reporting_manager_name',
             'payment_method', 'account_no', 'ifsc_code', 'bank_name', 'source_of_employment',
             'who_referred', 'date_of_joining', 'previous_employer', 'date_of_releaving',
-            'previous_designation_name', 'previous_salary', 'ctc', 'gross_salary',
+            'previous_designation_name', 'previous_salary', 'basic_salary', 'ctc', 'gross_salary',
             'epf_status', 'uan', 'asset_details', 'asset_names', 'esic_status', 'esic_no',
             'source_choices', 'shift_assigned', 'password'
         ]
@@ -1064,6 +1079,20 @@ class DeductionPolicySerializer(serializers.ModelSerializer):
     class Meta:
         model = DeductionPolicy
         fields = ['id', 'name', 'amount']
+
+class GrossSalaryComponentSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = GrossSalaryComponent
+        fields = ['id', 'company', 'name', 'calc_type', 'value', 'is_active', 'order', 'created_at']
+        read_only_fields = ['company', 'created_at']
+
+class SalaryDeductionComponentSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = SalaryDeductionComponent
+        fields = ['id', 'company', 'name', 'calc_type', 'value', 'deduct_from',
+                  'has_threshold', 'threshold_on', 'threshold_amount',
+                  'is_active', 'order', 'created_at']
+        read_only_fields = ['company', 'created_at']
 
 class SalaryStructureSerializer(serializers.ModelSerializer):
     allowances = AllowanceTypeSerializer(many=True, required=False)

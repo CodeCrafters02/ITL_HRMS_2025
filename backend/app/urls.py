@@ -45,6 +45,9 @@ router.register(r'chat-conversations', ChatConversationViewSet, basename='chat-c
 router.register(r'chat-messages', ChatMessageViewSet, basename='chat-messages')
 router.register(r'reimbursement-categories', ReimbursementCategoryViewSet, basename='reimbursement-category')
 router.register(r'reimbursement-requests', ReimbursementRequestViewSet, basename='reimbursement-request')
+router.register(r'designation-salaries', DesignationSalaryViewSet, basename='designation-salary')
+router.register(r'gross-components', GrossSalaryComponentViewSet, basename='gross-components')
+router.register(r'deduction-components', SalaryDeductionComponentViewSet, basename='deduction-components')
 
 urlpatterns = [
     # --- Manual API Views (Checked First) ---
@@ -76,6 +79,7 @@ urlpatterns = [
     path('verifyotp/', VerifyOTPView.as_view(),name='verifyotp'),
     path('resetpassword/', ResetPasswordView.as_view(), name='resetpassword'),
     path('getreportees/', EmployeeReporteesView.as_view(), name='getreportees'),
+    path('payroll-attendance-summary/', PayrollAttendanceSummaryView.as_view(), name='payroll-attendance-summary'),
 
     # --- Router URLs (Catch-all - Checked Last) ---
     path('', include(router.urls)),

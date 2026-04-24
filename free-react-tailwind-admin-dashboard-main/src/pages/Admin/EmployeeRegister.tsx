@@ -55,6 +55,7 @@ type EmployeeRecord = {
     date_of_releaving?: string | null;
     previous_designation_name?: string | null;
     previous_salary?: string | number | null;
+    basic_salary?: string | number | null;
     ctc?: string | number | null;
     gross_salary?: string | number | null;
     epf_status?: string | null;
@@ -74,6 +75,7 @@ type DesignationOption = {
     designation_name: string;
     department?: number | null;
     level?: number | null;
+    basic_pay?: string | number;
 };
 
 type LevelOption = {
@@ -125,6 +127,7 @@ const AdminEmployeeRegister = () => {
         previous_employer: '',
         previous_designation_name: '',
         previous_salary: '',
+        basic_salary: '',
         ctc: '',
         gross_salary: '',
         epf_status: '',
@@ -339,6 +342,7 @@ const AdminEmployeeRegister = () => {
             previous_employer: '',
             previous_designation_name: '',
             previous_salary: '',
+            basic_salary: '',
             ctc: '',
             gross_salary: '',
             epf_status: '',
@@ -387,6 +391,7 @@ const AdminEmployeeRegister = () => {
             previous_employer: emp.previous_employer || '',
             previous_designation_name: emp.previous_designation_name || '',
             previous_salary: emp.previous_salary ? String(emp.previous_salary) : '',
+            basic_salary: emp.basic_salary ? String(emp.basic_salary) : '',
             ctc: emp.ctc ? String(emp.ctc) : '',
             gross_salary: emp.gross_salary ? String(emp.gross_salary) : '',
             epf_status: emp.epf_status || '',
@@ -790,6 +795,7 @@ const AdminEmployeeRegister = () => {
                                                             <div><span className="font-semibold">Previous Employer:</span> {selectedEmployee.previous_employer || '-'}</div>
                                                             <div><span className="font-semibold">Previous Designation:</span> {selectedEmployee.previous_designation_name || '-'}</div>
                                                             <div><span className="font-semibold">Previous Salary:</span> {selectedEmployee.previous_salary || '-'}</div>
+                                                            <div><span className="font-semibold">Basic Salary:</span> {selectedEmployee.basic_salary || '-'}</div>
                                                             <div><span className="font-semibold">CTC:</span> {selectedEmployee.ctc || '-'}</div>
                                                             <div><span className="font-semibold">Gross Salary:</span> {selectedEmployee.gross_salary || '-'}</div>
                                                             <div><span className="font-semibold">EPF / UAN:</span> {selectedEmployee.epf_status || '-'} / {selectedEmployee.uan || '-'}</div>
@@ -875,6 +881,7 @@ const AdminEmployeeRegister = () => {
                                                                 department: nextDepartment,
                                                                 designation: nextDesignation ? String(nextDesignation.id) : '',
                                                                 level: nextDesignation?.level ? String(nextDesignation.level) : '',
+                                                                basic_salary: nextDesignation?.basic_pay ? String(nextDesignation.basic_pay) : formData.basic_salary,
                                                             });
                                                         }}
                                                     >
@@ -884,7 +891,19 @@ const AdminEmployeeRegister = () => {
                                                 </div>
                                                 <div>
                                                     <label className="font-semibold mb-1 block">Designation</label>
-                                                    <select className="form-select" value={formData.designation} onChange={(e) => setFormData({ ...formData, designation: e.target.value })}>
+                                                    <select
+                                                        className="form-select"
+                                                        value={formData.designation}
+                                                        onChange={(e) => {
+                                                            const nextDesignationId = e.target.value;
+                                                            const des = filteredDesignations.find((d) => String(d.id) === nextDesignationId);
+                                                            setFormData({
+                                                                ...formData,
+                                                                designation: nextDesignationId,
+                                                                basic_salary: des?.basic_pay ? String(des.basic_pay) : formData.basic_salary,
+                                                            });
+                                                        }}
+                                                    >
                                                         <option value="">Select</option>
                                                         {filteredDesignations.map((d) => <option key={d.id} value={d.id}>{d.designation_name}</option>)}
                                                     </select>
@@ -940,6 +959,7 @@ const AdminEmployeeRegister = () => {
                                                 <div><label className="font-semibold mb-1 block">Previous Employer</label><input className="form-input" value={formData.previous_employer} onChange={(e) => setFormData({ ...formData, previous_employer: e.target.value })} /></div>
                                                 <div><label className="font-semibold mb-1 block">Previous Designation</label><input className="form-input" value={formData.previous_designation_name} onChange={(e) => setFormData({ ...formData, previous_designation_name: e.target.value })} /></div>
                                                 <div><label className="font-semibold mb-1 block">Previous Salary</label><input className="form-input" value={formData.previous_salary} onChange={(e) => setFormData({ ...formData, previous_salary: e.target.value })} /></div>
+                                                <div><label className="font-semibold mb-1 block">Basic Salary</label><input className="form-input" value={formData.basic_salary} onChange={(e) => setFormData({ ...formData, basic_salary: e.target.value })} /></div>
                                                 <div><label className="font-semibold mb-1 block">CTC</label><input className="form-input" value={formData.ctc} onChange={(e) => setFormData({ ...formData, ctc: e.target.value })} /></div>
                                             </div>
 
@@ -1082,6 +1102,7 @@ const AdminEmployeeRegister = () => {
                                                                 department: nextDepartment,
                                                                 designation: nextDesignation ? String(nextDesignation.id) : '',
                                                                 level: nextDesignation?.level ? String(nextDesignation.level) : '',
+                                                                basic_salary: nextDesignation?.basic_pay ? String(nextDesignation.basic_pay) : formData.basic_salary,
                                                             });
                                                         }}
                                                     >
@@ -1095,12 +1116,14 @@ const AdminEmployeeRegister = () => {
                                                         className="form-select"
                                                         value={formData.designation}
                                                         onChange={(e) => {
-                                                            const nextDesignation = filteredDesignations.find((d) => String(d.id) === e.target.value);
+                                                            const nextDesignationId = e.target.value;
+                                                            const nextDesignation = filteredDesignations.find((d) => String(d.id) === nextDesignationId);
                                                             setFormData({
                                                                 ...formData,
-                                                                designation: e.target.value,
+                                                                designation: nextDesignationId,
                                                                 department: nextDesignation?.department ? String(nextDesignation.department) : formData.department,
                                                                 level: nextDesignation?.level ? String(nextDesignation.level) : formData.level,
+                                                                basic_salary: nextDesignation?.basic_pay ? String(nextDesignation.basic_pay) : formData.basic_salary,
                                                             });
                                                         }}
                                                     >
@@ -1164,6 +1187,7 @@ const AdminEmployeeRegister = () => {
                                                 <div><label className="font-semibold mb-1 block">Previous Employer</label><input className="form-input" value={formData.previous_employer} onChange={(e) => setFormData({ ...formData, previous_employer: e.target.value })} /></div>
                                                 <div><label className="font-semibold mb-1 block">Previous Designation</label><input className="form-input" value={formData.previous_designation_name} onChange={(e) => setFormData({ ...formData, previous_designation_name: e.target.value })} /></div>
                                                 <div><label className="font-semibold mb-1 block">Previous Salary</label><input className="form-input" value={formData.previous_salary} onChange={(e) => setFormData({ ...formData, previous_salary: e.target.value })} /></div>
+                                                <div><label className="font-semibold mb-1 block">Basic Salary</label><input className="form-input" value={formData.basic_salary} onChange={(e) => setFormData({ ...formData, basic_salary: e.target.value })} /></div>
                                                 <div><label className="font-semibold mb-1 block">CTC</label><input className="form-input" value={formData.ctc} onChange={(e) => setFormData({ ...formData, ctc: e.target.value })} /></div>
                                             </div>
 

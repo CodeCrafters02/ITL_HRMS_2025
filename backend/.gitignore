@@ -192,3 +192,5 @@ node_modules/
 # Django migrations
 */migrations/*
 !*/migrations/__init__.py
+# Media files
+media/

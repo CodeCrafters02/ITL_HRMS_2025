@@ -89,6 +89,16 @@ class Designation(models.Model):
     def __str__(self):
         return f"{self.designation_name} ({self.company.name})"
 
+class DesignationSalary(models.Model):
+    company = models.ForeignKey(Company, on_delete=models.CASCADE, related_name='designation_salaries')
+    designation = models.OneToOneField(Designation, on_delete=models.CASCADE, related_name='salary_config')
+    basic_pay = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"{self.designation.designation_name} - {self.basic_pay} ({self.company.name})"
+
 
 
 class ShiftPolicy(models.Model):
@@ -169,6 +179,7 @@ class Employee(models.Model):
     date_of_releaving = models.DateField(null=True, blank=True)
     previous_designation_name = models.CharField(max_length=100, null=True, blank=True)
     previous_salary = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True, default=0.0)
+    basic_salary = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True, default=0.0)
     ctc = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True, default=0.0)
     gross_salary = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True, default=0.0)
 
@@ -616,6 +627,57 @@ class AllowanceType(models.Model):
     def __str__(self):
         return f"{self.name} ({self.amount})"
 
+class GrossSalaryComponent(models.Model):
+    """Dynamic earning components added to gross salary (e.g., HRA, Special Allowance).
+    Company-wide: applies to all employees of this company."""
+    CALC_TYPE_CHOICES = (
+        ('percentage', 'Percentage of Basic'),
+        ('fixed', 'Fixed Amount'),
+    )
+    company = models.ForeignKey(Company, on_delete=models.CASCADE, related_name='gross_components')
+    name = models.CharField(max_length=100)
+    calc_type = models.CharField(max_length=20, choices=CALC_TYPE_CHOICES, default='fixed')
+    value = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    is_active = models.BooleanField(default=True)
+    order = models.PositiveIntegerField(default=0)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['order', 'id']
+
+    def __str__(self):
+        return f"{self.name} - {self.calc_type} ({self.value})"
+
+
+class SalaryDeductionComponent(models.Model):
+    """Dynamic deduction components (e.g., PF, ESI, Professional Tax).
+    Company-wide: applies to all employees of this company."""
+    CALC_TYPE_CHOICES = (
+        ('percentage', 'Percentage'),
+        ('fixed', 'Fixed Amount'),
+    )
+    DEDUCT_FROM_CHOICES = (
+        ('basic', 'Basic Salary'),
+        ('gross', 'Gross Salary'),
+    )
+    company = models.ForeignKey(Company, on_delete=models.CASCADE, related_name='deduction_components')
+    name = models.CharField(max_length=100)
+    calc_type = models.CharField(max_length=20, choices=CALC_TYPE_CHOICES, default='fixed')
+    value = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    deduct_from = models.CharField(max_length=10, choices=DEDUCT_FROM_CHOICES, default='gross')
+    has_threshold = models.BooleanField(default=False)
+    threshold_on = models.CharField(max_length=10, choices=DEDUCT_FROM_CHOICES, default='gross', blank=True)
+    threshold_amount = models.DecimalField(max_digits=10, decimal_places=2, default=0, blank=True)
+    is_active = models.BooleanField(default=True)
+    order = models.PositiveIntegerField(default=0)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['order', 'id']
+
+    def __str__(self):
+        return f"{self.name} - {self.calc_type} from {self.deduct_from} ({self.value})"
+
 
 class PayrollBatch(models.Model):
     company = models.ForeignKey(Company, on_delete=models.CASCADE, related_name='payroll_batches')
@@ -1048,4 +1110,4 @@ class ReimbursementRequest(models.Model):
         ordering = ['-created_at']
 
     def __str__(self):
-        return f"{self.employee.full_name} - {self.category.name} - {self.amount}"
+        return f"{self.employee.full_name} - {self.category.name} - {self.amount}"
