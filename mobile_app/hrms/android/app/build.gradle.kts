@@ -28,7 +28,8 @@ android {
     }
 
     kotlinOptions {
-        jvmTarget = JavaVersion.VERSION_17.toString()
+        // FIXED: Modern string-based assignment
+        jvmTarget = "17"
     }
 
     signingConfigs {
@@ -55,9 +56,10 @@ android {
             // 3. Apply the Release signing config (replaces debug)
             signingConfig = signingConfigs.getByName("release")
             
-            // 4. Enable Obfuscation and Shrinking for Production
-            minifyEnabled = true
+            // 4. FIXED: Enable Obfuscation and Shrinking (using 'is' prefix for Kotlin DSL)
+            isMinifyEnabled = true
             isShrinkResources = true
+            
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
