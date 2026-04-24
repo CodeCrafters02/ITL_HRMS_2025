@@ -161,6 +161,7 @@ const ReimbursementCategories = lazy(() => import('../pages/Reimbursement/Catego
 const ReimbursementRequest = lazy(() => import('../pages/Reimbursement/Request'));
 const ReimbursementStatus = lazy(() => import('../pages/Reimbursement/Status'));
 const ReimbursementApprovals = lazy(() => import('../pages/Reimbursement/Approvals'));
+const ReimbursementHistory = lazy(() => import('../pages/Reimbursement/History'));
 
 const routes = [
     // dashboard
@@ -827,6 +828,10 @@ const routes = [
     {
         path: '/employee/reimbursement/approvals',
         element: <ReimbursementApprovals />,
+    },
+    {
+        path: '/admin/reimbursement/history',
+        element: <ReimbursementHistory />,
     },
 ];
 

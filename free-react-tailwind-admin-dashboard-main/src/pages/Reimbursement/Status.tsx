@@ -4,6 +4,7 @@ import { setPageTitle } from '../../store/themeConfigSlice';
 import { fetchReimbursements, ReimbursementRequest } from './api';
 import IconListCheck from '../../components/Icon/IconListCheck';
 import IconCalendar from '../../components/Icon/IconCalendar';
+import IconFile from '../../components/Icon/IconFile';
 
 const Status = () => {
     const dispatch = useDispatch();
@@ -118,49 +119,58 @@ const Status = () => {
 
                 <div className="table-responsive min-h-[400px]">
                     <table className="table-hover">
-                        <thead>
-                            <tr className="bg-[#f8fafc] dark:bg-[#1a2234]">
-                                <th>Date</th>
-                                <th>Category</th>
-                                <th>Amount</th>
-                                <th>Status</th>
-                                <th>Manager</th>
-                                <th>Description / Reason</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {loading ? (
-                                <tr>
-                                    <td colSpan={6} className="text-center py-20">
-                                        <div className="flex flex-col items-center gap-3">
-                                            <div className="w-8 h-8 border-4 border-primary border-l-transparent rounded-full animate-spin"></div>
-                                            <span className="text-gray-500 font-semibold tracking-wide">Loading your requests...</span>
-                                        </div>
-                                    </td>
-                                </tr>
-                            ) : requests.length > 0 ? (
-                                requests.map((req) => (
-                                    <tr key={req.id}>
-                                        <td>
-                                            <div className="flex items-center gap-2">
-                                                <IconCalendar className="w-4 h-4 text-white-dark" />
-                                                <span className="font-medium text-gray-700 dark:text-gray-300">{new Date(req.created_at).toLocaleDateString()}</span>
-                                            </div>
-                                        </td>
-                                        <td className="font-semibold text-primary">{req.category_name}</td>
-                                        <td className="font-bold text-lg">₹{req.amount}</td>
-                                        <td>{getStatusBadge(req.status)}</td>
-                                        <td className="text-white-dark">{req.reporting_manager_name || 'System Admin'}</td>
-                                        <td className="max-w-xs">
-                                            <p className="truncate text-gray-600 dark:text-gray-400" title={req.description}>{req.description}</p>
-                                            {req.status === 'rejected' && req.rejection_reason && (
-                                                <p className="text-danger mt-1 text-xs whitespace-normal bg-danger-light/20 p-2 rounded border border-danger/10">
-                                                    <span className="font-bold">Rejected:</span> {req.rejection_reason}
-                                                </p>
-                                            )}
-                                        </td>
+                                <thead>
+                                    <tr className="bg-[#f8fafc] dark:bg-[#1a2234]">
+                                        <th>Date</th>
+                                        <th>Category</th>
+                                        <th>Amount</th>
+                                        <th>Status</th>
+                                        <th>Manager</th>
+                                        <th>Description / Reason</th>
                                     </tr>
-                                ))
+                                </thead>
+                                <tbody>
+                                    {loading ? (
+                                        <tr>
+                                            <td colSpan={6} className="text-center py-20">
+                                                <div className="flex flex-col items-center gap-3">
+                                                    <div className="w-8 h-8 border-4 border-primary border-l-transparent rounded-full animate-spin"></div>
+                                                    <span className="text-gray-500 font-semibold tracking-wide">Loading your requests...</span>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    ) : requests.length > 0 ? (
+                                        requests.map((req) => (
+                                            <tr key={req.id}>
+                                                <td>
+                                                    <div className="flex items-center gap-2">
+                                                        <IconCalendar className="w-4 h-4 text-white-dark" />
+                                                        <span className="font-medium text-gray-700 dark:text-gray-300">{new Date(req.created_at).toLocaleDateString()}</span>
+                                                    </div>
+                                                </td>
+                                                <td className="font-semibold text-primary">{req.category_name}</td>
+                                                <td className="font-bold text-lg">₹{req.amount}</td>
+                                                <td>{getStatusBadge(req.status)}</td>
+                                                <td className="text-white-dark">
+                                                    <div className="flex flex-col">
+                                                        <span>{req.reporting_manager_name || 'System Admin'}</span>
+                                                        {req.bill_attachment && (
+                                                            <a href={req.bill_attachment} target="_blank" rel="noreferrer" className="text-primary hover:underline text-[10px] flex items-center gap-1 mt-1">
+                                                                <IconFile className="w-2.5 h-2.5" /> View My Bill
+                                                            </a>
+                                                        )}
+                                                    </div>
+                                                </td>
+                                                <td className="max-w-xs">
+                                                    <p className="truncate text-gray-600 dark:text-gray-400" title={req.description}>{req.description}</p>
+                                                    {req.status === 'rejected' && req.rejection_reason && (
+                                                        <p className="text-danger mt-1 text-xs whitespace-normal bg-danger-light/20 p-2 rounded border border-danger/10">
+                                                            <span className="font-bold">Rejected:</span> {req.rejection_reason}
+                                                        </p>
+                                                    )}
+                                                </td>
+                                            </tr>
+                                        ))
                             ) : (
                                 <tr>
                                     <td colSpan={6} className="text-center py-20">

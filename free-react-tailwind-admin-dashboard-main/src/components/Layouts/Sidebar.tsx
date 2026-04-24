@@ -480,6 +480,7 @@ const Sidebar = () => {
                                             <ul className="sub-menu text-gray-500">
                                                 <li><NavLink to="/admin/reimbursement/categories">{t('Categories')}</NavLink></li>
                                                 <li><NavLink to="/employee/reimbursement/approvals">{t('Approvals')}</NavLink></li>
+                                                <li><NavLink to="/admin/reimbursement/history">{t('History & Stats')}</NavLink></li>
                                             </ul>
                                         </AnimateHeight>
                                     </li>
