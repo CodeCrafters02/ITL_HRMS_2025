@@ -43,8 +43,17 @@ export interface AttendanceHistoryResponse {
     total_pages: number;
 }
 
+export interface CalendarHolidayEvent {
+    id: number;
+    date: string;
+    name: string;
+    is_holiday: boolean;
+    description?: string;
+}
+
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000';
 const EMPLOYEE_API = `${API_BASE_URL}/employee`;
+const APP_API = `${API_BASE_URL}/app`;
 
 const parseJson = async <T>(res: Response): Promise<T> => {
     const data = await res.json().catch(() => ({}));
@@ -73,4 +82,11 @@ export const fetchAttendanceHistory = async (params: {
 
     const res = await authFetch(url.toString());
     return parseJson<AttendanceHistoryResponse>(res);
+};
+
+export const fetchCompanyHolidays = async (): Promise<CalendarHolidayEvent[]> => {
+    const res = await authFetch(`${APP_API}/calendar-events/`);
+    const data = await parseJson<CalendarHolidayEvent[] | { results?: CalendarHolidayEvent[] }>(res);
+    const events = Array.isArray(data) ? data : data.results || [];
+    return events.filter((event) => event?.is_holiday);
 };

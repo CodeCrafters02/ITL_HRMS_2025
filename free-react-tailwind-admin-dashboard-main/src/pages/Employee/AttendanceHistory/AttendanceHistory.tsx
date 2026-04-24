@@ -3,7 +3,7 @@ import { useDispatch } from 'react-redux';
 import { setPageTitle } from '../../../store/themeConfigSlice';
 import IconCalendar from '../../../components/Icon/IconCalendar';
 import IconSearch from '../../../components/Icon/IconSearch';
-import { AttendanceDayRecord, AttendanceHistoryResponse, AttendanceStatus, fetchAttendanceHistory } from './api';
+import { AttendanceHistoryResponse, AttendanceStatus, fetchAttendanceHistory, fetchCompanyHolidays } from './api';
 
 type StatusFilter = 'all' | AttendanceStatus;
 
@@ -27,11 +27,7 @@ const statusLabelMap: Record<AttendanceStatus, string> = {
     no_data: 'No Data',
 };
 
-const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    if (Number.isNaN(date.getTime())) return dateString;
-    return date.toLocaleDateString();
-};
+const weekDayHeaders = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
 const AttendanceHistory = () => {
     const dispatch = useDispatch();
@@ -43,15 +39,10 @@ const AttendanceHistory = () => {
     const [search, setSearch] = useState('');
     const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
     
-    // Pagination State
-    const [page, setPage] = useState(1);
-    const [pageSize, setPageSize] = useState(10);
-    const [totalCount, setTotalCount] = useState(0);
-    const [totalPages, setTotalPages] = useState(1);
-
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [attendanceData, setAttendanceData] = useState<AttendanceHistoryResponse | null>(null);
+    const [holidayMap, setHolidayMap] = useState<Record<string, string>>({});
 
     const loadAttendance = useCallback(async () => {
         setLoading(true);
@@ -62,20 +53,17 @@ const AttendanceHistory = () => {
                 year: selectedYear,
                 search: search.trim(),
                 status: statusFilter,
-                page,
-                page_size: pageSize
+                page: 1,
+                page_size: 100
             });
             setAttendanceData(response);
-            const fallbackCount = response.monthly_data?.length || 0;
-            setTotalCount(fallbackCount);
-            setTotalPages(Math.max(1, Math.ceil(fallbackCount / pageSize)));
         } catch (err) {
             const message = err instanceof Error ? err.message : 'Failed to load attendance history';
             setError(message);
         } finally {
             setLoading(false);
         }
-    }, [selectedMonth, selectedYear, search, statusFilter, page, pageSize]);
+    }, [selectedMonth, selectedYear, search, statusFilter]);
 
     useEffect(() => {
         dispatch(setPageTitle('Attendance History'));
@@ -88,22 +76,55 @@ const AttendanceHistory = () => {
         return () => clearTimeout(timer);
     }, [loadAttendance]);
 
+    useEffect(() => {
+        const loadHolidays = async () => {
+            try {
+                const events = await fetchCompanyHolidays();
+                const filtered = events.filter((event) => {
+                    const d = new Date(event.date);
+                    return !Number.isNaN(d.getTime()) && d.getMonth() + 1 === selectedMonth && d.getFullYear() === selectedYear;
+                });
+                const mapped: Record<string, string> = {};
+                filtered.forEach((event) => {
+                    mapped[event.date] = event.name || 'Holiday';
+                });
+                setHolidayMap(mapped);
+            } catch {
+                setHolidayMap({});
+            }
+        };
+
+        loadHolidays();
+    }, [selectedMonth, selectedYear]);
+
     const summary = attendanceData?.summary;
 
-    // Smart Pagination logic
-    const getPageNumbers = () => {
-        const pages: (number | '...')[] = [];
-        if (totalPages <= 7) {
-            for (let i = 1; i <= totalPages; i++) pages.push(i);
-        } else {
-            pages.push(1);
-            if (page > 3) pages.push('...');
-            for (let i = Math.max(2, page - 1); i <= Math.min(totalPages - 1, page + 1); i++) pages.push(i);
-            if (page < totalPages - 2) pages.push('...');
-            pages.push(totalPages);
+    const recordsByDate = useMemo(() => {
+        const map = new Map<string, AttendanceHistoryResponse['monthly_data'][number]>();
+        (attendanceData?.monthly_data || []).forEach((row) => map.set(row.date, row));
+        return map;
+    }, [attendanceData]);
+
+    const calendarWeeks = useMemo(() => {
+        const totalDays = new Date(selectedYear, selectedMonth, 0).getDate();
+        const firstDayIndex = new Date(selectedYear, selectedMonth - 1, 1).getDay();
+        const cells: ({ day: number; dateKey: string } | null)[] = [];
+
+        for (let i = 0; i < firstDayIndex; i++) cells.push(null);
+
+        for (let day = 1; day <= totalDays; day++) {
+            const dateKey = `${selectedYear}-${String(selectedMonth).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+            cells.push({ day, dateKey });
         }
-        return pages;
-    };
+
+        while (cells.length % 7 !== 0) cells.push(null);
+
+        const weeks: ({ day: number; dateKey: string } | null)[][] = [];
+        for (let i = 0; i < cells.length; i += 7) {
+            weeks.push(cells.slice(i, i + 7));
+        }
+        return weeks;
+    }, [selectedYear, selectedMonth]);
 
     return (
         <div className="space-y-6 animate__animated animate__fadeIn">
@@ -143,12 +164,12 @@ const AttendanceHistory = () => {
                 <div className="p-5 border-b border-[#ebedf2] dark:border-[#1b2e4b]">
                     <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-4">
                         <div className="flex flex-wrap items-center gap-3">
-                            <select className="form-select sm:w-[160px]" value={selectedMonth} onChange={(e) => { setSelectedMonth(Number(e.target.value)); setPage(1); }}>
+                            <select className="form-select sm:w-[160px]" value={selectedMonth} onChange={(e) => setSelectedMonth(Number(e.target.value))}>
                                 {(attendanceData?.months || []).map((month) => (
                                     <option key={month.value} value={month.value}>{month.name}</option>
                                 ))}
                             </select>
-                            <select className="form-select sm:w-[120px]" value={selectedYear} onChange={(e) => { setSelectedYear(Number(e.target.value)); setPage(1); }}>
+                            <select className="form-select sm:w-[120px]" value={selectedYear} onChange={(e) => setSelectedYear(Number(e.target.value))}>
                                 {(attendanceData?.years || []).map((year) => (
                                     <option key={year} value={year}>{year}</option>
                                 ))}
@@ -156,7 +177,7 @@ const AttendanceHistory = () => {
                         </div>
 
                         <div className="flex flex-wrap items-center gap-3">
-                            <select className="form-select sm:w-[170px]" value={statusFilter} onChange={(e) => { setStatusFilter(e.target.value as StatusFilter); setPage(1); }}>
+                            <select className="form-select sm:w-[170px]" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value as StatusFilter)}>
                                 <option value="all">All Statuses</option>
                                 <option value="present">Present</option>
                                 <option value="absent">Absent</option>
@@ -172,7 +193,7 @@ const AttendanceHistory = () => {
                                     type="text"
                                     className="form-input pl-10"
                                     value={search}
-                                    onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+                                    onChange={(e) => setSearch(e.target.value)}
                                     placeholder="Search by date, day or shift..."
                                 />
                                 <span className="absolute left-3 top-1/2 -translate-y-1/2 text-white-dark">
@@ -183,144 +204,75 @@ const AttendanceHistory = () => {
                     </div>
                 </div>
 
-                {totalCount > 0 && (
-                    <div className="flex flex-col sm:flex-row justify-between items-center p-4 gap-4 border-b border-[#ebedf2] dark:border-[#1b2e4b]">
-                        <div className="flex items-center gap-6">
-                            <div className="text-xs text-white-dark">
-                                Showing <span className="text-primary font-semibold">{(page - 1) * pageSize + 1}</span> to{' '}
-                                <span className="text-primary font-semibold">{Math.min(page * pageSize, totalCount)}</span> of{' '}
-                                <span className="text-primary font-semibold">{totalCount}</span> entries
-                            </div>
-                            <div className="flex items-center gap-2">
-                                <span className="text-xs text-white-dark">Per page:</span>
-                                <select
-                                    className="form-select w-16 text-xs"
-                                    value={pageSize}
-                                    onChange={(e) => { setPageSize(Number(e.target.value)); setPage(1); }}
-                                >
-                                    <option value="10">10</option>
-                                    <option value="20">20</option>
-                                    <option value="50">50</option>
-                                </select>
-                            </div>
-                        </div>
-
-                        <ul className="inline-flex items-center gap-1">
-                            <li>
-                                <button
-                                    type="button"
-                                    className="btn btn-sm btn-outline-primary px-2.5"
-                                    onClick={() => setPage(page > 1 ? page - 1 : 1)}
-                                    disabled={page === 1}
-                                >
-                                    Prev
-                                </button>
-                            </li>
-                            {getPageNumbers().map((p, idx) =>
-                                p === '...' ? (
-                                    <li key={`dots-${idx}`} className="px-1 text-white-dark">...</li>
-                                ) : (
-                                    <li key={p}>
-                                        <button
-                                            type="button"
-                                            className={`btn btn-sm ${page === p ? 'btn-primary' : 'btn-outline-primary'} min-w-[34px]`}
-                                            onClick={() => setPage(p as number)}
-                                        >
-                                            {p}
-                                        </button>
-                                    </li>
-                                )
-                            )}
-                            <li>
-                                <button
-                                    type="button"
-                                    className="btn btn-sm btn-outline-primary px-2.5"
-                                    onClick={() => setPage(page < totalPages ? page + 1 : totalPages)}
-                                    disabled={page === totalPages || totalPages === 0}
-                                >
-                                    Next
-                                </button>
-                            </li>
-                        </ul>
-                    </div>
-                )}
-
-                {/* Table Data */}
-                <div className="table-responsive">
-                    <table className="table-hover">
-                        <thead>
-                            <tr>
-                                <th>Date</th>
-                                <th>Day</th>
-                                <th>Status</th>
-                                <th>Check In</th>
-                                <th>Check Out</th>
-                                <th className="text-center">Hours</th>
-                                <th className="text-center">Break</th>
-                                <th>Late</th>
-                                <th>Shift</th>
-                                <th className="text-center">Overtime</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {loading && (!attendanceData || attendanceData.monthly_data.length === 0) ? (
-                                <tr>
-                                    <td colSpan={10} className="text-center py-20">
-                                        <div className="flex flex-col items-center gap-3">
-                                            <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-indigo-600"></div>
-                                            <span className="text-sm font-semibold text-white-dark tracking-wide">Syncing attendance data...</span>
-                                        </div>
-                                    </td>
-                                </tr>
-                            ) : (!attendanceData || attendanceData.monthly_data.length === 0) ? (
-                                <tr>
-                                    <td colSpan={10} className="text-center py-20">
-                                        <div className="flex flex-col items-center gap-2">
-                                            <div className="p-4 bg-gray-50 dark:bg-gray-800 rounded-full">
-                                                <IconCalendar className="w-10 h-10 text-gray-300 dark:text-gray-600" />
-                                            </div>
-                                            <span className="text-sm font-bold text-gray-400 mt-2">No records found for this period</span>
-                                        </div>
-                                    </td>
-                                </tr>
-                            ) : (
-                                attendanceData.monthly_data.map((row) => (
-                                    <tr key={row.date}>
-                                        <td>
-                                            <span className="font-semibold">{formatDate(row.date)}</span>
-                                        </td>
-                                        <td>{row.day_name}</td>
-                                        <td>
-                                            <span className={`badge ${statusClassMap[row.status]}`}>
-                                                {statusLabelMap[row.status]}
-                                            </span>
-                                        </td>
-                                        <td className="font-mono text-xs">{row.check_in}</td>
-                                        <td className="font-mono text-xs">{row.check_out}</td>
-                                        <td className="text-center">
-                                            <span className={row.total_hours !== '-' && Number(row.total_hours) < 8 ? 'text-warning font-semibold' : ''}>
-                                                {row.total_hours}
-                                            </span>
-                                        </td>
-                                        <td className="text-center text-xs text-white-dark">{row.break_time}</td>
-                                        <td>
-                                            {row.is_late ? (
-                                                <span className="text-danger text-xs font-semibold">{row.late_duration}</span>
-                                            ) : (
-                                                <span className="text-white-dark text-xs">-</span>
-                                            )}
-                                        </td>
-                                        <td className="max-w-[140px] truncate text-xs" title={row.shift}>{row.shift}</td>
-                                        <td className="text-center text-xs font-semibold text-success">
-                                            {row.overtime_hours !== 0 && row.overtime_hours !== '-' ? `+${row.overtime_hours}` : '-'}
-                                        </td>
-                                    </tr>
-                                ))
-                            )}
-                        </tbody>
-                    </table>
+                <div className="p-4 border-b border-[#ebedf2] dark:border-[#1b2e4b] flex flex-wrap gap-2">
+                    {(Object.keys(statusLabelMap) as AttendanceStatus[]).filter((status) => status !== 'no_data').map((status) => (
+                        <span key={status} className={`badge ${statusClassMap[status]}`}>
+                            {statusLabelMap[status]}
+                        </span>
+                    ))}
                 </div>
 
+                {loading && (!attendanceData || attendanceData.monthly_data.length === 0) ? (
+                    <div className="text-center py-20">
+                        <div className="flex flex-col items-center gap-3">
+                            <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-indigo-600"></div>
+                            <span className="text-sm font-semibold text-white-dark tracking-wide">Syncing attendance data...</span>
+                        </div>
+                    </div>
+                ) : (
+                    <div className="p-4">
+                        <div className="grid grid-cols-7 gap-2 mb-2">
+                            {weekDayHeaders.map((label) => (
+                                <div key={label} className="text-center text-xs font-bold uppercase text-white-dark py-2">
+                                    {label}
+                                </div>
+                            ))}
+                        </div>
+                        <div className="grid grid-cols-7 gap-2">
+                            {calendarWeeks.flat().map((cell, idx) => {
+                                if (!cell) {
+                                    return <div key={`blank-${idx}`} className="min-h-[128px] rounded-lg bg-transparent" />;
+                                }
+
+                                const row = recordsByDate.get(cell.dateKey);
+                                const holidayName = holidayMap[cell.dateKey];
+                                const status = row?.status || 'no_data';
+                                return (
+                                    <div
+                                        key={cell.dateKey}
+                                        className="min-h-[128px] rounded-lg border border-[#ebedf2] dark:border-[#1b2e4b] bg-white dark:bg-[#0e1726] p-2.5 flex flex-col gap-1"
+                                    >
+                                        <div className="flex items-center justify-between">
+                                            <span className="text-sm font-bold">{cell.day}</span>
+                                            {!holidayName && status !== 'no_data' && <span className={`badge ${statusClassMap[status]}`}>{statusLabelMap[status]}</span>}
+                                        </div>
+                                        <p className="text-[11px] text-white-dark truncate">{row?.day_name || '-'}</p>
+                                        {holidayName ? (
+                                            <div className="mt-1">
+                                                <span className="badge bg-info-light text-info">Holiday</span>
+                                                <p className="text-[11px] font-semibold text-info truncate mt-1" title={holidayName}>
+                                                    {holidayName}
+                                                </p>
+                                            </div>
+                                        ) : (
+                                            <div className="text-[11px] space-y-0.5 text-white-dark">
+                                                <p><span className="font-semibold">In:</span> {row?.check_in || '-'}</p>
+                                                <p><span className="font-semibold">Out:</span> {row?.check_out || '-'}</p>
+                                                <p><span className="font-semibold">Hours:</span> {row?.total_hours ?? '-'}</p>
+                                            </div>
+                                        )}
+                                        {row?.is_late && row.late_duration && <p className="text-[11px] font-semibold text-danger mt-auto">Late: {row.late_duration}</p>}
+                                    </div>
+                                );
+                            })}
+                        </div>
+                        {!loading && attendanceData && attendanceData.monthly_data.length === 0 && (
+                            <div className="text-center py-8">
+                                <span className="text-sm font-bold text-gray-400">No records found for this period</span>
+                            </div>
+                        )}
+                    </div>
+                )}
             </div>
         </div>
     );
