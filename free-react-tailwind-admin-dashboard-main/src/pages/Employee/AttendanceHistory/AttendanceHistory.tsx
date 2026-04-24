@@ -2,10 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useDispatch } from 'react-redux';
 import { setPageTitle } from '../../../store/themeConfigSlice';
 import IconCalendar from '../../../components/Icon/IconCalendar';
-import IconSearch from '../../../components/Icon/IconSearch';
 import { AttendanceHistoryResponse, AttendanceStatus, fetchAttendanceHistory, fetchCompanyHolidays } from './api';
-
-type StatusFilter = 'all' | AttendanceStatus;
 
 const statusClassMap: Record<AttendanceStatus, string> = {
     present: 'bg-success-light text-success',
@@ -36,8 +33,6 @@ const AttendanceHistory = () => {
     // Selection State
     const [selectedMonth, setSelectedMonth] = useState(now.getMonth() + 1);
     const [selectedYear, setSelectedYear] = useState(now.getFullYear());
-    const [search, setSearch] = useState('');
-    const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
     
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -51,8 +46,6 @@ const AttendanceHistory = () => {
             const response = await fetchAttendanceHistory({
                 month: selectedMonth,
                 year: selectedYear,
-                search: search.trim(),
-                status: statusFilter,
                 page: 1,
                 page_size: 100
             });
@@ -63,7 +56,7 @@ const AttendanceHistory = () => {
         } finally {
             setLoading(false);
         }
-    }, [selectedMonth, selectedYear, search, statusFilter]);
+    }, [selectedMonth, selectedYear]);
 
     useEffect(() => {
         dispatch(setPageTitle('Attendance History'));
@@ -176,31 +169,6 @@ const AttendanceHistory = () => {
                             </select>
                         </div>
 
-                        <div className="flex flex-wrap items-center gap-3">
-                            <select className="form-select sm:w-[170px]" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value as StatusFilter)}>
-                                <option value="all">All Statuses</option>
-                                <option value="present">Present</option>
-                                <option value="absent">Absent</option>
-                                <option value="leave">Leave</option>
-                                <option value="half_day">Half Day</option>
-                                <option value="weekend">Weekend</option>
-                                <option value="checked_in">Checked In</option>
-                                <option value="no_data">No Data</option>
-                            </select>
-
-                            <div className="relative sm:w-[260px]">
-                                <input
-                                    type="text"
-                                    className="form-input pl-10"
-                                    value={search}
-                                    onChange={(e) => setSearch(e.target.value)}
-                                    placeholder="Search by date, day or shift..."
-                                />
-                                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-white-dark">
-                                    <IconSearch className="w-4 h-4" />
-                                </span>
-                            </div>
-                        </div>
                     </div>
                 </div>
 
@@ -256,9 +224,17 @@ const AttendanceHistory = () => {
                                             </div>
                                         ) : (
                                             <div className="text-[11px] space-y-0.5 text-white-dark">
-                                                <p><span className="font-semibold">In:</span> {row?.check_in || '-'}</p>
-                                                <p><span className="font-semibold">Out:</span> {row?.check_out || '-'}</p>
+                                                <p className="whitespace-nowrap">
+                                                    <span className="font-semibold">In:</span>{' '}
+                                                    <span className="font-bold">{row?.check_in || '-'}</span>{' '}
+                                                    <span className="mx-1 text-white-dark/60">|</span>
+                                                    <span className="font-semibold">Out:</span>{' '}
+                                                    <span className="font-bold">{row?.check_out || '-'}</span>
+                                                </p>
                                                 <p><span className="font-semibold">Hours:</span> {row?.total_hours ?? '-'}</p>
+                                                <p className="truncate" title={row?.shift || '-'}>
+                                                    <span className="font-semibold">Shift:</span> {row?.shift || '-'}
+                                                </p>
                                             </div>
                                         )}
                                         {row?.is_late && row.late_duration && <p className="text-[11px] font-semibold text-danger mt-auto">Late: {row.late_duration}</p>}
