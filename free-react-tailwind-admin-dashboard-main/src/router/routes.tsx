@@ -139,6 +139,9 @@ const AdminConfRoomStructure = lazy(() => import('../pages/Admin/ConferenceRoomS
 const AdminConfRoomApproval = lazy(() => import('../pages/Admin/ConferenceRoomApproval'));
 const AdminConfRoomOverview = lazy(() => import('../pages/Admin/ConferenceRoomOverview'));
 const AdminNotifications = lazy(() => import('../pages/Admin/Notifications'));
+const AdminDesignationSalary = lazy(() => import('../pages/Admin/DesignationSalary'));
+const AdminSalaryStructure = lazy(() => import('../pages/Admin/SalaryStructure'));
+const AdminPayrollReport = lazy(() => import('../pages/Admin/PayrollReport'));
 
 // Employee Pages
 const EmployeeDashboard = lazy(() => import('../pages/Employee/Dashboard'));
@@ -678,15 +681,19 @@ const routes = [
     },
     {
         path: '/admin/salary-structure',
-        element: <AdminComingSoon />,
+        element: <AdminSalaryStructure />,
     },
     {
         path: '/admin/payroll-batches',
-        element: <AdminComingSoon />,
+        element: <AdminPayrollReport />,
     },
     {
         path: '/admin/income-tax',
         element: <AdminComingSoon />,
+    },
+    {
+        path: '/admin/designation-salary',
+        element: <AdminDesignationSalary />,
     },
     {
         path: '/admin/assets-inventory',

@@ -589,6 +589,25 @@ class DesignationViewSet(viewsets.ModelViewSet):
             raise serializers.ValidationError({"company": "No company found for the current user."})
         serializer.save(company=company)        
 
+class DesignationSalaryViewSet(viewsets.ModelViewSet):
+    serializer_class = DesignationSalarySerializer
+    permission_classes = [IsAuthenticated, IsAdminUser | IsMaster]
+    
+    def get_queryset(self):
+        user = self.request.user
+        qs = DesignationSalary.objects.all().select_related('designation', 'designation__department')
+        if user.role != 'master':
+            qs = qs.filter(company=user.company)
+        
+        dept_id = self.request.query_params.get('department')
+        if dept_id:
+            qs = qs.filter(designation__department_id=dept_id)
+            
+        return qs
+
+    def perform_create(self, serializer):
+        serializer.save(company=self.request.user.company)
+
 class EmployeeViewSet(viewsets.ModelViewSet):
     queryset = Employee.objects.all()
     serializer_class = EmployeeSerializer
@@ -683,7 +702,7 @@ class EmployeeViewSet(viewsets.ModelViewSet):
             if company:
                 # Keep the Employee register complete for this company
                 self._ensure_employee_profiles_for_company(company)
-                qs = qs.filter(company=company)
+                qs = qs.filter(company=company).exclude(user__role='admin')
             else:
                 qs = qs.none()
             
@@ -1610,6 +1629,26 @@ class SalaryStructureViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         return SalaryStructure.objects.filter(company=self.request.user.company).order_by('-created_at')
     
+    def perform_create(self, serializer):
+        serializer.save(company=self.request.user.company)
+
+class GrossSalaryComponentViewSet(viewsets.ModelViewSet):
+    serializer_class = GrossSalaryComponentSerializer
+    permission_classes = [IsAuthenticated, IsAdminUser | IsMaster]
+
+    def get_queryset(self):
+        return GrossSalaryComponent.objects.filter(company=self.request.user.company)
+
+    def perform_create(self, serializer):
+        serializer.save(company=self.request.user.company)
+
+class SalaryDeductionComponentViewSet(viewsets.ModelViewSet):
+    serializer_class = SalaryDeductionComponentSerializer
+    permission_classes = [IsAuthenticated, IsAdminUser | IsMaster]
+
+    def get_queryset(self):
+        return SalaryDeductionComponent.objects.filter(company=self.request.user.company)
+
     def perform_create(self, serializer):
         serializer.save(company=self.request.user.company)
 
@@ -3550,6 +3589,206 @@ class EmployeeStatusViewSet(viewsets.ModelViewSet):
         # Otherwise (admin, master), return all employees
         return Employee.objects.all()
     
+class PayrollAttendanceSummaryView(APIView):
+    """Return attendance summary for a given employee + date range."""
+    permission_classes = [IsAuthenticated, IsAdminUser | IsMaster]
+
+    def get(self, request):
+        emp_id = request.query_params.get('employee_id')
+        from_date = request.query_params.get('from_date')
+        to_date = request.query_params.get('to_date')
+
+        if not emp_id or not from_date or not to_date:
+            return Response({'error': 'employee_id, from_date, to_date are required'}, status=400)
+
+        try:
+            from datetime import datetime as dt, timedelta
+            from_dt = dt.strptime(from_date, '%Y-%m-%d').date()
+            to_dt = dt.strptime(to_date, '%Y-%m-%d').date()
+        except ValueError:
+            return Response({'error': 'Invalid date format. Use YYYY-MM-DD.'}, status=400)
+
+        # Get employee for department/company info
+        try:
+            employee = Employee.objects.get(id=emp_id)
+        except Employee.DoesNotExist:
+            return Response({'error': 'Employee not found'}, status=404)
+
+        # Fetch holidays for the company in this range
+        holidays = CalendarEvent.objects.filter(
+            company=employee.company,
+            is_holiday=True,
+            date__gte=from_dt,
+            date__lte=to_dt
+        ).values_list('date', flat=True)
+        holiday_dates = set(holidays)
+
+        # Fetch working days config for the department
+        working_days_cfg = DepartmentWiseWorkingDays.objects.filter(
+            department=employee.department,
+            company=employee.company
+        ).first()
+
+        weekend_days = []
+        if working_days_cfg and working_days_cfg.weekend_days:
+            # weekend_days is a list like ["Saturday", "Sunday"]
+            weekend_days = [d.lower() for d in working_days_cfg.weekend_days]
+        else:
+            # Default to Saturday/Sunday if not configured
+            weekend_days = ["saturday", "sunday"]
+
+        # Calculate stats by iterating through each date
+        present_days = 0
+        half_days = 0
+        full_day_leaves = 0
+        absent_days = 0
+        expected_working_days = 0
+        
+        # Get all approved leaves for the range
+        all_leaves = EmpLeave.objects.filter(
+            employee_id=emp_id,
+            from_date__lte=to_dt,
+            to_date__gte=from_dt,
+            status='Approved'
+        ).select_related('leave_type')
+
+        # Get all attendance records
+        attendances = Attendance.objects.filter(
+            employee_id=emp_id,
+            date__gte=from_dt,
+            date__lte=to_dt
+        ).select_related('leave', 'leave__leave_type')
+        
+        attendance_map = {att.date: att for att in attendances}
+        
+        # Pre-calculate leave dates
+        leave_dates_paid = set()
+        leave_dates_unpaid = set()
+        for lv in all_leaves:
+            l_start = max(lv.from_date, from_dt)
+            l_end = min(lv.to_date, to_dt)
+            d = l_start
+            while d <= l_end:
+                if lv.leave_type and lv.leave_type.is_paid:
+                    leave_dates_paid.add(d)
+                else:
+                    leave_dates_unpaid.add(d)
+                d += timedelta(days=1)
+
+        # Get shift info for status calculation
+        shift = employee.shift_assigned
+        # Logic helper to match AttendanceLogView status calculation
+        def get_att_status(att):
+            if att.leave:
+                return 'leave'
+            
+            # If they are currently checked in but haven't checked out, status is "Checked In"
+            if att.check_in and not att.check_out:
+                return 'checked_in'
+            
+            # Calculate worked hours (prioritize model's calculated duration)
+            w_hours = 0.0
+            if att.total_work_duration:
+                w_hours = att.total_work_duration.total_seconds() / 3600
+            elif att.check_in and att.check_out:
+                w_hours = (att.check_out - att.check_in).total_seconds() / 3600
+            
+            s_full = shift.full_day_hours() if shift else 8.0
+            s_half = shift.half_day_hours() if shift else 4.0
+            
+            if w_hours >= s_full:
+                return 'present'
+            elif w_hours >= s_half:
+                return 'half_day'
+            else:
+                return 'absent'
+
+        curr_date = from_dt
+        checked_in_days = 0
+        while curr_date <= to_dt:
+            day_name = curr_date.strftime('%A').lower()
+            is_holiday = curr_date in holiday_dates
+            is_weekend = day_name in weekend_days
+            is_work_day = not is_holiday and not is_weekend
+            
+            if is_work_day:
+                expected_working_days += 1
+
+            att_rec = attendance_map.get(curr_date)
+            if att_rec:
+                status = get_att_status(att_rec)
+                if status == 'present':
+                    present_days += 1
+                elif status == 'half_day':
+                    half_days += 1
+                elif status == 'full_day_leave':
+                    full_day_leaves += 1
+                elif status == 'checked_in':
+                    checked_in_days += 1
+                elif not att_rec.leave:
+                    absent_days += 1
+            elif curr_date in leave_dates_paid or curr_date in leave_dates_unpaid:
+                pass
+            elif is_work_day:
+                absent_days += 1
+            
+            curr_date += timedelta(days=1)
+
+        # Overtime total
+        total_overtime_seconds = 0
+        for att_rec in attendances:
+            if att_rec.overtime_duration:
+                total_overtime_seconds += att_rec.overtime_duration.total_seconds()
+        overtime_hours = round(total_overtime_seconds / 3600, 2)
+
+        # Leave details for UI table
+        leave_details = []
+        for lv in all_leaves:
+            l_start = max(lv.from_date, from_dt)
+            l_end = min(lv.to_date, to_dt)
+            num_days = (l_end - l_start).days + 1
+            leave_details.append({
+                'leave_type': lv.leave_type.leave_name if lv.leave_type else 'Unknown',
+                'is_paid': lv.leave_type.is_paid if lv.leave_type else False,
+                'from_date': str(lv.from_date),
+                'to_date': str(lv.to_date),
+                'days': num_days,
+                'status': lv.status,
+            })
+
+        # Fetch approved reimbursements in the range
+        reimbursements = ReimbursementRequest.objects.filter(
+            employee_id=emp_id,
+            status='approved',
+            created_at__date__gte=from_dt,
+            created_at__date__lte=to_dt
+        ).select_related('category')
+        
+        total_reimbursement = sum(r.amount for r in reimbursements)
+        reimbursement_details = [{
+            'category': r.category.name if r.category else r.custom_category,
+            'amount': float(r.amount),
+            'date': r.created_at.date().isoformat(),
+            'description': r.description
+        } for r in reimbursements]
+
+        return Response({
+            'total_days': (to_dt - from_dt).days + 1,
+            'expected_working_days': expected_working_days,
+            'present_days': present_days,
+            'half_days': half_days,
+            'full_day_leaves': full_day_leaves,
+            'checked_in_days': checked_in_days,
+            'absent_days': absent_days,
+            'overtime_hours': overtime_hours,
+            'paid_leaves': len(leave_dates_paid),
+            'unpaid_leaves': len(leave_dates_unpaid),
+            'total_leaves': len(leave_dates_paid) + len(leave_dates_unpaid),
+            'leave_details': leave_details,
+            'total_reimbursement': float(total_reimbursement),
+            'reimbursement_details': reimbursement_details,
+        })
+
 
 class EmployeeReporteesView(APIView):
     permission_classes = [IsAuthenticated]
