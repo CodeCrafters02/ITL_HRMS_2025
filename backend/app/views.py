@@ -3751,6 +3751,22 @@ class PayrollAttendanceSummaryView(APIView):
                 'status': lv.status,
             })
 
+        # Fetch approved reimbursements in the range
+        reimbursements = ReimbursementRequest.objects.filter(
+            employee_id=emp_id,
+            status='approved',
+            created_at__date__gte=from_dt,
+            created_at__date__lte=to_dt
+        ).select_related('category')
+        
+        total_reimbursement = sum(r.amount for r in reimbursements)
+        reimbursement_details = [{
+            'category': r.category.name if r.category else r.custom_category,
+            'amount': float(r.amount),
+            'date': r.created_at.date().isoformat(),
+            'description': r.description
+        } for r in reimbursements]
+
         return Response({
             'total_days': (to_dt - from_dt).days + 1,
             'expected_working_days': expected_working_days,
@@ -3764,6 +3780,8 @@ class PayrollAttendanceSummaryView(APIView):
             'unpaid_leaves': len(leave_dates_unpaid),
             'total_leaves': len(leave_dates_paid) + len(leave_dates_unpaid),
             'leave_details': leave_details,
+            'total_reimbursement': float(total_reimbursement),
+            'reimbursement_details': reimbursement_details,
         })
 
 

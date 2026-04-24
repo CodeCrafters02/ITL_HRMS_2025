@@ -22,6 +22,8 @@ type AttSummary = {
     unpaid_leaves: number; 
     total_leaves: number; 
     leave_details: any[]; 
+    total_reimbursement: number;
+    reimbursement_details: any[];
 };
 type Chk = Record<string, boolean>;
 
@@ -41,6 +43,7 @@ const PayrollReport = () => {
     const [att, setAtt] = useState<AttSummary|null>(null);
     const [attLoading, setAttLoading] = useState(false);
     const [otEnabled, setOtEnabled] = useState(false);
+    const [showReimb, setShowReimb] = useState(false);
 
     useEffect(() => { dispatch(setPageTitle('Payroll Report')); fetchData(); }, [dispatch]);
 
@@ -140,6 +143,11 @@ const PayrollReport = () => {
             const a = c.calc_type==='percentage'?(basic*c.value)/100:c.value; 
             items.push({label:c.name, amount:Math.round(a*100)/100, key:`g-${c.id}`}); 
         });
+
+        if (att && att.total_reimbursement > 0) {
+            items.push({label:'Reimbursement', amount: att.total_reimbursement, key:'reimbursement', highlight: true});
+        }
+
         return items;
     }, [basic, earnedBasic, otEnabled, otPay, gComps, gChk]);
 
@@ -150,9 +158,14 @@ const PayrollReport = () => {
 
     const dedItems = useMemo(() => {
         const items: {label:string;amount:number;key:string}[] = [];
-        dComps.forEach(c => { if(!dChk[`d-${c.id}`]) return; const b = c.deduct_from==='basic'?basic:totGross; const a = c.calc_type==='percentage'?(b*c.value)/100:c.value; items.push({label:c.name, amount:Math.round(a*100)/100, key:`d-${c.id}`}); });
+        dComps.forEach(c => { 
+            if(!dChk[`d-${c.id}`]) return; 
+            const base = c.deduct_from === 'basic' ? earnedBasic : totGross; 
+            const a = c.calc_type === 'percentage' ? (base * c.value) / 100 : c.value; 
+            items.push({label:c.name, amount:Math.round(a*100)/100, key:`d-${c.id}`}); 
+        });
         return items;
-    }, [dComps, dChk, basic, totGross]);
+    }, [dComps, dChk, earnedBasic, totGross]);
 
     const totDed = useMemo(() => dedItems.reduce((s,i)=>s+i.amount,0), [dedItems]);
     const net = useMemo(() => totGross - totDed, [totGross, totDed]);
@@ -250,28 +263,69 @@ const PayrollReport = () => {
                             <div className="panel p-0 overflow-hidden">
                                 <div className="bg-gradient-to-r from-indigo-500 to-blue-500 px-5 py-3"><h3 className="text-white font-bold text-sm">Attendance Summary</h3></div>
                                 <div className="p-4">
-                                    {attLoading ? <div className="flex justify-center py-6"><span className="animate-spin border-4 border-primary border-l-transparent rounded-full w-8 h-8"></span></div>
-                                    : !att ? <p className="text-gray-400 text-sm text-center py-4">No attendance data available.</p>
+                                    {attLoading ? <div className="flex justify-center py-12"><span className="animate-spin border-4 border-primary border-l-transparent rounded-full w-12 h-12"></span></div>
+                                    : !att ? <div className="flex flex-col items-center justify-center py-12 text-gray-400"><svg className="w-16 h-16 opacity-20 mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" /></svg><p>No attendance data available.</p></div>
                                     : (
-                                        <div className="space-y-4">
-                                            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 xl:grid-cols-10 gap-3">
-                                                {[
-                                                  {label:'Total Days', val:att.total_days, color:'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300'},
-                                                  {label:'Working Days', val:att.expected_working_days, color:'bg-blue-100 dark:bg-blue-900/40 text-blue-800 dark:text-blue-300'},
-                                                  {label:'Present Days', val:att.present_days, color:'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400'},
-                                                  {label:'Half Days', val:att.half_days || 0, color:'bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400'},
-                                                  {label:'Full Day Leave', val:att.full_day_leaves || 0, color:'bg-orange-50 dark:bg-orange-900/20 text-orange-700 dark:text-orange-400'},
-                                                  {label:'Checked In', val:att.checked_in_days || 0, color:'bg-blue-50 dark:bg-blue-900/10 text-blue-600 dark:text-blue-400'},
-                                                  {label:'Absent Days', val:att.absent_days, color:'bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400'},
-                                                  {label:'Overtime (hrs)', val:att.overtime_hours, color:'bg-purple-50 dark:bg-purple-900/20 text-purple-700 dark:text-purple-400'},
-                                                  {label:'Paid Leaves', val:att.paid_leaves, color:'bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400'},
-                                                  {label:'Unpaid Leaves', val:att.unpaid_leaves, color:'bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400'},
-                                                ].map(s => (
-                                                    <div key={s.label} className={`rounded-lg p-3 text-center ${s.color}`}>
-                                                        <p className="text-2xl font-extrabold">{s.val}</p>
-                                                        <p className="text-[10px] font-semibold uppercase tracking-wide mt-1 opacity-70 leading-tight">{s.label}</p>
-                                                    </div>
-                                                ))}
+                                        <div className="space-y-6">
+                                            {/* Overview Stats */}
+                                            <div>
+                                                <h4 className="text-[10px] font-bold text-gray-400 uppercase tracking-[0.2em] mb-3 px-1">Overview & Working Days</h4>
+                                                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+                                                    {[
+                                                      {label:'Total Days', val:att.total_days, icon:'📅', color:'from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-800/50', text:'text-gray-700 dark:text-gray-300'},
+                                                      {label:'Working Days', val:att.expected_working_days, icon:'💼', color:'from-blue-50 to-blue-100/50 dark:from-blue-900/20 dark:to-blue-900/10', text:'text-blue-700 dark:text-blue-400'},
+                                                      {label:'Present Days', val:att.present_days, icon:'✅', color:'from-emerald-50 to-emerald-100/50 dark:from-emerald-900/20 dark:to-emerald-900/10', text:'text-emerald-700 dark:text-emerald-400'},
+                                                      {label:'Overtime (hrs)', val:att.overtime_hours, icon:'🕒', color:'from-purple-50 to-purple-100/50 dark:from-purple-900/20 dark:to-purple-900/10', text:'text-purple-700 dark:text-purple-400'},
+                                                      {label:'Reimbursement', val: `₹${att.total_reimbursement}`, icon:'💰', color:'from-green-50 to-green-100/50 dark:from-green-900/20 dark:to-green-900/10', text:'text-green-700 dark:text-green-400'},
+                                                    ].map(s => (
+                                                        <div key={s.label} className={`relative overflow-hidden group bg-gradient-to-br ${s.color} rounded-2xl p-4 transition-all duration-300 hover:shadow-md hover:-translate-y-1 border border-white/50 dark:border-gray-700/30`}>
+                                                            <div className="flex items-center justify-between relative z-10">
+                                                                <div>
+                                                                    <p className="text-[10px] font-bold uppercase tracking-wider opacity-60 mb-1">{s.label}</p>
+                                                                    <p className={`text-2xl font-black ${s.text}`}>{s.val}</p>
+                                                                </div>
+                                                                <span className="text-2xl filter grayscale-[0.5] group-hover:grayscale-0 transition-all duration-300">{s.icon}</span>
+                                                            </div>
+                                                            <div className="absolute -bottom-2 -right-2 w-12 h-12 bg-white/10 rounded-full blur-xl group-hover:scale-150 transition-all duration-500"></div>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            </div>
+
+                                            {/* Status & Exceptions */}
+                                            <div>
+                                                <h4 className="text-[10px] font-bold text-gray-400 uppercase tracking-[0.2em] mb-3 px-1">Attendance Status & Exceptions</h4>
+                                                <div className="grid grid-cols-2 md:grid-cols-4 xl:grid-cols-5 gap-4">
+                                                    {[
+                                                      {label:'Half Days', val:att.half_days || 0, icon:'🌓', color:'from-amber-50 to-amber-100/50 dark:from-amber-900/20 dark:to-amber-900/10', text:'text-amber-700 dark:text-amber-400'},
+                                                      {label:'Full Day Leave', val:att.full_day_leaves || 0, icon:'🏠', color:'from-orange-50 to-orange-100/50 dark:from-orange-900/20 dark:to-orange-900/10', text:'text-orange-700 dark:text-orange-400'},
+                                                      {label:'Checked In', val:att.checked_in_days || 0, icon:'📍', color:'from-sky-50 to-sky-100/50 dark:from-sky-900/20 dark:to-sky-900/10', text:'text-sky-700 dark:text-sky-400'},
+                                                      {label:'Absent Days', val:att.absent_days, icon:'❌', color:'from-red-50 to-red-100/50 dark:from-red-900/20 dark:to-red-900/10', text:'text-red-700 dark:text-red-400'},
+                                                      {label:'Total Leaves', val:att.paid_leaves + att.unpaid_leaves, icon:'📄', color:'from-indigo-50 to-indigo-100/50 dark:from-indigo-900/20 dark:to-indigo-900/10', text:'text-indigo-700 dark:text-indigo-400'},
+                                                    ].map(s => (
+                                                        <div key={s.label} className={`relative overflow-hidden group bg-gradient-to-br ${s.color} rounded-2xl p-4 transition-all duration-300 hover:shadow-md hover:-translate-y-1 border border-white/50 dark:border-gray-700/30`}>
+                                                            <div className="flex items-center justify-between relative z-10">
+                                                                <div>
+                                                                    <p className="text-[10px] font-bold uppercase tracking-wider opacity-60 mb-1">{s.label}</p>
+                                                                    <p className={`text-xl font-bold ${s.text}`}>{s.val}</p>
+                                                                </div>
+                                                                <span className="text-xl filter grayscale-[0.5] group-hover:grayscale-0 transition-all duration-300">{s.icon}</span>
+                                                            </div>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            </div>
+
+                                            {/* Leave Breakdown (Sub-stats) */}
+                                            <div className="flex flex-wrap gap-4 px-1">
+                                                <div className="flex items-center gap-2 bg-blue-50/50 dark:bg-blue-900/10 px-3 py-1.5 rounded-full border border-blue-100/50 dark:border-blue-800/20">
+                                                    <span className="w-2 h-2 rounded-full bg-blue-500"></span>
+                                                    <span className="text-[10px] font-bold text-blue-700 dark:text-blue-400 uppercase tracking-wider">Paid Leaves: {att.paid_leaves}</span>
+                                                </div>
+                                                <div className="flex items-center gap-2 bg-amber-50/50 dark:bg-amber-900/10 px-3 py-1.5 rounded-full border border-amber-100/50 dark:border-amber-800/20">
+                                                    <span className="w-2 h-2 rounded-full bg-amber-500"></span>
+                                                    <span className="text-[10px] font-bold text-amber-700 dark:text-amber-400 uppercase tracking-wider">Unpaid Leaves: {att.unpaid_leaves}</span>
+                                                </div>
                                             </div>
                                             <div className="flex items-center gap-3 justify-end mt-2 p-2 bg-purple-50/50 dark:bg-purple-900/10 rounded-lg border border-purple-100 dark:border-purple-800/20">
                                                 <label className="flex items-center gap-2 cursor-pointer">
@@ -279,6 +333,47 @@ const PayrollReport = () => {
                                                     <span className="text-xs font-bold text-purple-700 dark:text-purple-400 uppercase tracking-wider">Enable Overtime Payment</span>
                                                 </label>
                                             </div>
+
+                                            {att.reimbursement_details.length > 0 && (
+                                                <div className="mt-4 border-t border-gray-100 dark:border-gray-800 pt-4">
+                                                    <button 
+                                                        onClick={() => setShowReimb(!showReimb)}
+                                                        className="flex items-center justify-between w-full group"
+                                                    >
+                                                        <h4 className="text-[10px] font-bold text-gray-500 uppercase tracking-[0.2em]">Approved Reimbursements ({att.reimbursement_details.length})</h4>
+                                                        <div className="flex items-center gap-2 text-primary text-xs font-bold uppercase tracking-wider group-hover:underline">
+                                                            {showReimb ? 'Hide Details' : 'Show Details'}
+                                                            <svg className={`w-4 h-4 transition-transform ${showReimb ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="19 9l-7 7-7-7" /></svg>
+                                                        </div>
+                                                    </button>
+                                                    
+                                                    {showReimb && (
+                                                        <div className="table-responsive mt-3 animate-fade-in-down">
+                                                            <table className="min-w-full text-xs">
+                                                                <thead>
+                                                                    <tr className="bg-gray-50 dark:bg-gray-800/50">
+                                                                        <th className="px-3 py-2 text-left">Date</th>
+                                                                        <th className="px-3 py-2 text-left">Category</th>
+                                                                        <th className="px-3 py-2 text-left">Description</th>
+                                                                        <th className="px-3 py-2 text-right">Amount</th>
+                                                                    </tr>
+                                                                </thead>
+                                                                <tbody>
+                                                                    {att.reimbursement_details.map((r, i) => (
+                                                                        <tr key={i} className="border-b border-gray-100 dark:border-gray-800 last:border-0 hover:bg-gray-50/50 dark:hover:bg-gray-800/30 transition-colors">
+                                                                            <td className="px-3 py-2 whitespace-nowrap">{r.date}</td>
+                                                                            <td className="px-3 py-2 font-medium">{r.category}</td>
+                                                                            <td className="px-3 py-2 text-gray-500">{r.description}</td>
+                                                                            <td className="px-3 py-2 text-right font-bold text-emerald-600 dark:text-emerald-400">₹{r.amount}</td>
+                                                                        </tr>
+                                                                    ))}
+                                                                </tbody>
+                                                            </table>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            )}
+
                                             {att.leave_details.length > 0 && (
                                                 <div className="mt-4">
                                                     <h4 className="text-xs font-bold text-gray-500 uppercase mb-2">Leave Details</h4>
@@ -363,18 +458,23 @@ const PayrollReport = () => {
                                     <div className="bg-gradient-to-r from-red-500 to-rose-500 px-5 py-3"><h3 className="text-white font-bold text-sm">Deduction Components</h3></div>
                                     <div className="p-4 space-y-2">
                                         {dComps.length===0 && <p className="text-sm text-gray-400 italic py-4 text-center">No deductions configured.</p>}
-                                        {dComps.map(c => { const ch=!!dChk[`d-${c.id}`]; const b=c.deduct_from==='basic'?basic:totGross; const a=c.calc_type==='percentage'?(b*c.value)/100:c.value; return (
-                                            <label key={c.id} className={`flex items-center justify-between py-2 px-3 rounded-lg cursor-pointer transition-all ${ch?'bg-red-50/50 dark:bg-red-900/10':'opacity-50 bg-gray-50/50 dark:bg-gray-800/20'}`}>
-                                                <div className="flex items-center gap-3">
-                                                    <input type="checkbox" className="form-checkbox text-danger rounded" checked={ch} onChange={e=>setDChk(p=>({...p,[`d-${c.id}`]:e.target.checked}))}/>
-                                                    <div>
-                                                        <span className={`text-sm font-medium ${ch?'text-gray-700 dark:text-gray-200':'text-gray-400 line-through'}`}>{c.name}</span>
-                                                        <p className="text-[10px] text-gray-400">{c.calc_type==='percentage'?`${c.value}%`:'₹ Fixed'} of {c.deduct_from==='basic'?'Basic':'Gross'}{c.has_threshold?` • Threshold: ${c.threshold_on} ≥ ₹${c.threshold_amount.toLocaleString('en-IN')}`:''}</p>
+                                        {dComps.map(c => { 
+                                            const ch = !!dChk[`d-${c.id}`]; 
+                                            const base = c.deduct_from === 'basic' ? earnedBasic : totGross; 
+                                            const a = c.calc_type === 'percentage' ? (base * c.value) / 100 : c.value; 
+                                            return (
+                                                <label key={c.id} className={`flex items-center justify-between py-2 px-3 rounded-lg cursor-pointer transition-all ${ch ? 'bg-red-50/50 dark:bg-red-900/10' : 'opacity-50 bg-gray-50/50 dark:bg-gray-800/20'}`}>
+                                                    <div className="flex items-center gap-3">
+                                                        <input type="checkbox" className="form-checkbox text-danger rounded" checked={ch} onChange={e => setDChk(p => ({...p, [`d-${c.id}`]: e.target.checked}))}/>
+                                                        <div>
+                                                            <span className={`text-sm font-medium ${ch ? 'text-gray-700 dark:text-gray-200' : 'text-gray-400 line-through'}`}>{c.name}</span>
+                                                            <p className="text-[10px] text-gray-400">{c.calc_type === 'percentage' ? `${c.value}%` : '₹ Fixed'} of {c.deduct_from === 'basic' ? 'Basic' : 'Gross'}{c.has_threshold ? ` • Threshold: ${c.threshold_on} ≥ ₹${c.threshold_amount.toLocaleString('en-IN')}` : ''}</p>
+                                                        </div>
                                                     </div>
-                                                </div>
-                                                <span className={`font-mono text-sm font-bold ${ch?'text-red-600 dark:text-red-400':'text-gray-300'}`}>−{fmt(Math.round(a*100)/100)}</span>
-                                            </label>
-                                        );})}
+                                                    <span className={`font-mono text-sm font-bold ${ch ? 'text-red-600 dark:text-red-400' : 'text-gray-300'}`}>−{fmt(Math.round(a * 100) / 100)}</span>
+                                                </label>
+                                            );
+                                        })}
                                         {dComps.length>0 && <div className="flex items-center justify-between py-3 px-3 mt-2 border-t-2 border-dashed border-red-200 dark:border-red-800/30"><span className="font-bold text-sm text-red-600 dark:text-red-400">Total Deductions</span><span className="font-mono font-extrabold text-lg text-red-600 dark:text-red-400">−{fmt(totDed)}</span></div>}
                                     </div>
                                 </div>
