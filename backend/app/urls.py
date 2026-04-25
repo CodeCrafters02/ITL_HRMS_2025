@@ -50,6 +50,9 @@ router.register(r'designation-salaries', DesignationSalaryViewSet, basename='des
 router.register(r'gross-components', GrossSalaryComponentViewSet, basename='gross-components')
 router.register(r'deduction-components', SalaryDeductionComponentViewSet, basename='deduction-components')
 router.register(r'finalized-salary', FinalizedSalaryViewSet, basename='finalized-salary')
+router.register(r'loan-categories', LoanCategoryViewSet, basename='loan-category')
+router.register(r'loan-interest-slabs', LoanInterestSlabViewSet, basename='loan-interest-slab')
+router.register(r'loan-applications', LoanApplicationViewSet, basename='loan-application')
 
 urlpatterns = [
     path('salary-disbursement-statement/', SalaryDisbursementStatementView.as_view(), name='salary-disbursement-statement'),

@@ -6,7 +6,7 @@ import IconSave from '../../components/Icon/IconSave';
 
 const API = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000';
 
-type Employee = { id: number; employee_id: string; first_name: string; last_name: string; department_name: string|null; designation_name: string|null; basic_salary: number|string|null; gross_salary: number|string|null; };
+type Employee = { id: number; employee_id: string; first_name: string; last_name: string; department_name: string|null; designation_name: string|null; basic_salary: number|string|null; gross_salary: number|string|null; active_loan_emi: number; active_loans_breakdown: any[]; };
 type GComp = { id: number; name: string; calc_type: 'percentage'|'fixed'; value: number; is_active: boolean; };
 type DComp = { id: number; name: string; calc_type: 'percentage'|'fixed'; value: number; deduct_from: 'basic'|'gross'; has_threshold: boolean; threshold_on: 'basic'|'gross'; threshold_amount: number; is_active: boolean; };
 type AttSummary = { 
@@ -44,6 +44,7 @@ const PayrollReport = () => {
     const [attLoading, setAttLoading] = useState(false);
     const [otEnabled, setOtEnabled] = useState(false);
     const [showReimb, setShowReimb] = useState(false);
+    const [showLoanBreakdown, setShowLoanBreakdown] = useState(false);
 
     useEffect(() => { dispatch(setPageTitle('Payroll Report')); fetchData(); }, [dispatch]);
 
@@ -136,6 +137,26 @@ const PayrollReport = () => {
         return hourlyRate * att.overtime_hours;
     }, [otEnabled, basic, att]);
 
+    const parseLocDate = (s: string) => {
+        if(!s) return new Date();
+        const [y, m, d] = s.split('-').map(Number);
+        return new Date(y, m - 1, d);
+    };
+
+    const loanDisbAmount = useMemo(() => {
+        if (!sel || !sel.active_loans_breakdown) return 0;
+        const fDate = parseLocDate(fromDate);
+        const tDate = parseLocDate(toDate);
+        tDate.setHours(23,59,59,999);
+        return sel.active_loans_breakdown.reduce((sum: number, loan: any) => {
+            const loanDate = parseLocDate(loan.date);
+            if (loanDate >= fDate && loanDate <= tDate) {
+                return sum + Number(loan.requested_amount);
+            }
+            return sum;
+        }, 0);
+    }, [sel, fromDate, toDate]);
+
     const grossItems = useMemo(() => {
         const items = [];
         // Show Full Basic for reference
@@ -164,8 +185,12 @@ const PayrollReport = () => {
             items.push({label:'Reimbursement', amount: att.total_reimbursement, key:'reimbursement', highlight: true});
         }
 
+        if (loanDisbAmount > 0) {
+            items.push({label:'Loan Credit', amount: loanDisbAmount, key:'loan-credit', highlight: true});
+        }
+
         return items;
-    }, [basic, earnedBasic, otEnabled, otPay, gComps, gChk]);
+    }, [basic, earnedBasic, otEnabled, otPay, gComps, gChk, att, loanDisbAmount]);
 
     const totGross = useMemo(() => {
         // Only sum items that are not 'secondary'
@@ -180,8 +205,65 @@ const PayrollReport = () => {
             const a = c.calc_type === 'percentage' ? (base * c.value) / 100 : c.value; 
             items.push({label:c.name, amount:Math.round(a*100)/100, key:`d-${c.id}`}); 
         });
+
+        if (sel && sel.active_loans_breakdown) {
+            let periodLoanEMI = 0;
+            const matchedDates: string[] = [];
+            const getOrdinal = (n: number) => {
+                const s = ["th", "st", "nd", "rd"], v = n % 100;
+                return s[(v - 20) % 10] || s[v] || s[0];
+            };
+            const fDate = parseLocDate(fromDate);
+            const tDate = parseLocDate(toDate);
+
+            sel.active_loans_breakdown.forEach((loan: any) => {
+                const loanStart = parseLocDate(loan.date);
+                const repaymentDay = loanStart.getDate();
+                
+                // Calculate end month
+                const endMonthDate = new Date(loanStart);
+                endMonthDate.setMonth(endMonthDate.getMonth() + loan.repayment_months);
+                
+                // Use the last day of the end month as the cutoff
+                const endCutoff = new Date(endMonthDate.getFullYear(), endMonthDate.getMonth() + 1, 0);
+                
+                if (fDate <= endCutoff) {
+                    // Check if repayment day falls between fDate and tDate
+                    let match = false;
+                    let curr = new Date(fDate);
+                    // Reset time to avoid comparison issues
+                    curr.setHours(0,0,0,0);
+                    const tDateCompare = new Date(tDate);
+                    tDateCompare.setHours(23,59,59,999);
+
+                    while (curr <= tDateCompare) {
+                        if (curr.getDate() === repaymentDay) {
+                            match = true;
+                            break;
+                        }
+                        // Handle end of month adjustment
+                        const lastDayInMonth = new Date(curr.getFullYear(), curr.getMonth() + 1, 0).getDate();
+                        if (repaymentDay > lastDayInMonth && curr.getDate() === lastDayInMonth) {
+                            match = true;
+                            break;
+                        }
+                        curr.setDate(curr.getDate() + 1);
+                    }
+                    if (match) {
+                        periodLoanEMI += Number(loan.emi);
+                        matchedDates.push(`${repaymentDay}${getOrdinal(repaymentDay)} ${curr.toLocaleString('default', { month: 'short' })} ${curr.getFullYear()}`);
+                    }
+                }
+            });
+            
+            if (periodLoanEMI > 0) {
+                const uniqueDates = Array.from(new Set(matchedDates)).join(', ');
+                items.push({label: `Loan EMI Deduction (${uniqueDates})`, amount: Math.round(periodLoanEMI * 100) / 100, key: 'loan-emi'});
+            }
+        }
+
         return items;
-    }, [dComps, dChk, earnedBasic, totGross]);
+    }, [dComps, dChk, earnedBasic, totGross, sel, fromDate, toDate]);
 
     const totDed = useMemo(() => dedItems.reduce((s,i)=>s+i.amount,0), [dedItems]);
     const net = useMemo(() => totGross - totDed, [totGross, totDed]);
@@ -208,6 +290,8 @@ const PayrollReport = () => {
                 ot_hours: Math.round((att?.overtime_hours || 0) * 100) / 100,
                 total_gross: Math.round(totGross * 100) / 100,
                 total_deductions: Math.round(totDed * 100) / 100,
+                loan_emi: Math.round((sel.active_loan_emi || 0) * 100) / 100,
+                loan_disbursement: Math.round(loanDisbAmount * 100) / 100,
                 net_salary: Math.round(net * 100) / 100,
                 days_paid: att ? (att.present_days + ((att.half_days || 0)*0.5) + att.paid_leaves) : 0,
                 config: { gChk, dChk, otEnabled }
@@ -329,6 +413,7 @@ const PayrollReport = () => {
                                                       {label:'Present Days', val:att.present_days, icon:'✅', color:'from-emerald-50 to-emerald-100/50 dark:from-emerald-900/20 dark:to-emerald-900/10', text:'text-emerald-700 dark:text-emerald-400'},
                                                       {label:'Overtime (hrs)', val:att.overtime_hours, icon:'🕒', color:'from-purple-50 to-purple-100/50 dark:from-purple-900/20 dark:to-purple-900/10', text:'text-purple-700 dark:text-purple-400'},
                                                       {label:'Reimbursement', val: `₹${att.total_reimbursement}`, icon:'💰', color:'from-green-50 to-green-100/50 dark:from-green-900/20 dark:to-green-900/10', text:'text-green-700 dark:text-green-400'},
+                                                      ...(loanDisbAmount > 0 ? [{label:'Loan Credit', val: `₹${loanDisbAmount.toLocaleString('en-IN')}`, icon:'🏦', color:'from-emerald-50 to-emerald-100/50 dark:from-emerald-900/20 dark:to-emerald-900/10', text:'text-emerald-700 dark:text-emerald-400'}] : []),
                                                     ].map(s => (
                                                         <div key={s.label} className={`relative overflow-hidden group bg-gradient-to-br ${s.color} rounded-2xl p-4 transition-all duration-300 hover:shadow-md hover:-translate-y-1 border border-white/50 dark:border-gray-700/30`}>
                                                             <div className="flex items-center justify-between relative z-10">
@@ -509,24 +594,69 @@ const PayrollReport = () => {
                                 <div className="panel p-0 overflow-hidden">
                                     <div className="bg-gradient-to-r from-red-500 to-rose-500 px-5 py-3"><h3 className="text-white font-bold text-sm">Deduction Components</h3></div>
                                     <div className="p-4 space-y-2">
-                                        {dComps.length===0 && <p className="text-sm text-gray-400 italic py-4 text-center">No deductions configured.</p>}
-                                        {dComps.map(c => { 
-                                            const ch = !!dChk[`d-${c.id}`]; 
-                                            const base = c.deduct_from === 'basic' ? earnedBasic : totGross; 
-                                            const a = c.calc_type === 'percentage' ? (base * c.value) / 100 : c.value; 
-                                            return (
-                                                <label key={c.id} className={`flex items-center justify-between py-2 px-3 rounded-lg cursor-pointer transition-all ${ch ? 'bg-red-50/50 dark:bg-red-900/10' : 'opacity-50 bg-gray-50/50 dark:bg-gray-800/20'}`}>
+                                        {dedItems.length===0 && <p className="text-sm text-gray-400 italic py-4 text-center">No deductions active.</p>}
+                                        {dedItems.map((item: any) => (
+                                            <div key={item.key} className="flex flex-col gap-1">
+                                                <div 
+                                                    onClick={() => item.key === 'loan-emi' && setShowLoanBreakdown(!showLoanBreakdown)}
+                                                    className={`flex items-center justify-between py-2.5 px-3 rounded-lg bg-red-50/50 dark:bg-red-900/10 border border-red-100 dark:border-red-800/20 ${item.key === 'loan-emi' ? 'cursor-pointer hover:bg-red-100/50 transition-colors' : ''}`}
+                                                >
                                                     <div className="flex items-center gap-3">
-                                                        <input type="checkbox" className="form-checkbox text-danger rounded" checked={ch} onChange={e => setDChk(p => ({...p, [`d-${c.id}`]: e.target.checked}))}/>
+                                                        {item.key.startsWith('d-') ? (
+                                                            <input 
+                                                                type="checkbox" 
+                                                                className="form-checkbox text-danger rounded" 
+                                                                checked={!!dChk[item.key]} 
+                                                                onChange={e => setDChk(p => ({...p, [item.key]: e.target.checked}))}
+                                                            />
+                                                        ) : (
+                                                            <span className="w-2 h-2 rounded-full bg-red-500"></span>
+                                                        )}
                                                         <div>
-                                                            <span className={`text-sm font-medium ${ch ? 'text-gray-700 dark:text-gray-200' : 'text-gray-400 line-through'}`}>{c.name}</span>
-                                                            <p className="text-[10px] text-gray-400">{c.calc_type === 'percentage' ? `${c.value}%` : '₹ Fixed'} of {c.deduct_from === 'basic' ? 'Basic' : 'Gross'}{c.has_threshold ? ` • Threshold: ${c.threshold_on} ≥ ₹${c.threshold_amount.toLocaleString('en-IN')}` : ''}</p>
+                                                            <span className="text-sm font-semibold text-gray-700 dark:text-gray-200">{item.label}</span>
+                                                            {item.key === 'loan-emi' && (
+                                                                <p className="text-[10px] text-gray-400 flex items-center gap-1">
+                                                                    {showLoanBreakdown ? 'Hide Breakdown' : 'Click to see breakdown'} 
+                                                                    <svg className={`w-3 h-3 transition-transform ${showLoanBreakdown ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
+                                                                </p>
+                                                            )}
                                                         </div>
                                                     </div>
-                                                    <span className={`font-mono text-sm font-bold ${ch ? 'text-red-600 dark:text-red-400' : 'text-gray-300'}`}>−{fmt(Math.round(a * 100) / 100)}</span>
-                                                </label>
-                                            );
-                                        })}
+                                                    <span className="font-mono text-sm font-bold text-red-600 dark:text-red-400">−{fmt(item.amount)}</span>
+                                                </div>
+                                                
+                                                {item.key === 'loan-emi' && showLoanBreakdown && sel?.active_loans_breakdown && (
+                                                    <div className="mx-3 mb-2 p-3 bg-white dark:bg-gray-800 rounded-b-lg border-x border-b border-red-100 dark:border-red-900/30 animate-fade-in-down shadow-inner">
+                                                        <h5 className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">Active Loans Detail</h5>
+                                                        <div className="space-y-2">
+                                                            {sel.active_loans_breakdown.map((loan: any) => (
+                                                                <div key={loan.id} className="flex justify-between items-center text-xs border-b border-gray-50 dark:border-gray-700 pb-1 last:border-0">
+                                                                    <div>
+                                                                        <p className="font-bold text-indigo-600">{loan.category}</p>
+                                                                        <p className="text-[9px] text-gray-400">Approved: {loan.date}</p>
+                                                                    </div>
+                                                                    <div className="text-right">
+                                                                        <p className="font-bold text-red-500">{fmt(loan.emi)}</p>
+                                                                        <p className="text-[9px] text-gray-400">Principal: {fmt(loan.requested_amount)}</p>
+                                                                    </div>
+                                                                </div>
+                                                            ))}
+                                                        </div>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        ))}
+
+                                        {/* Show inactive deductions for potential activation */}
+                                        {dComps.filter(c => !dChk[`d-${c.id}`]).map(c => (
+                                            <label key={c.id} className="flex items-center justify-between py-2 px-3 rounded-lg cursor-pointer opacity-40 grayscale bg-gray-50/50 dark:bg-gray-800/20 transition-all">
+                                                <div className="flex items-center gap-3">
+                                                    <input type="checkbox" className="form-checkbox text-danger rounded" checked={false} onChange={e => setDChk(p => ({...p, [`d-${c.id}`]: e.target.checked}))}/>
+                                                    <span className="text-sm font-medium text-gray-400 line-through">{c.name}</span>
+                                                </div>
+                                                <span className="font-mono text-sm font-bold text-gray-300">−{fmt(c.calc_type === 'percentage' ? ((c.deduct_from==='basic'?earnedBasic:totGross)*c.value/100) : c.value)}</span>
+                                            </label>
+                                        ))}
                                         {dComps.length>0 && <div className="flex items-center justify-between py-3 px-3 mt-2 border-t-2 border-dashed border-red-200 dark:border-red-800/30"><span className="font-bold text-sm text-red-600 dark:text-red-400">Total Deductions</span><span className="font-mono font-extrabold text-lg text-red-600 dark:text-red-400">−{fmt(totDed)}</span></div>}
                                     </div>
                                 </div>

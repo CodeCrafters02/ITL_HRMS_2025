@@ -494,6 +494,8 @@ class EmployeeSerializer(serializers.ModelSerializer):
     source_choices = serializers.SerializerMethodField()
     shift_assigned = ShiftPolicySerializer(read_only=True)
     company_name = serializers.SerializerMethodField()
+    active_loan_emi = serializers.SerializerMethodField()
+    active_loans_breakdown = serializers.SerializerMethodField()
 
     class Meta:
         model = Employee
@@ -507,7 +509,7 @@ class EmployeeSerializer(serializers.ModelSerializer):
             'who_referred', 'date_of_joining', 'previous_employer', 'date_of_releaving',
             'previous_designation_name', 'previous_salary', 'basic_salary', 'ctc', 'gross_salary',
             'epf_status', 'uan', 'asset_details', 'asset_names', 'esic_status', 'esic_no',
-            'source_choices', 'shift_assigned', 'password'
+            'source_choices', 'shift_assigned', 'password', 'active_loan_emi', 'active_loans_breakdown'
         ]
 
     def get_department_name(self, obj):
@@ -535,6 +537,33 @@ class EmployeeSerializer(serializers.ModelSerializer):
     
     def get_reporting_level_name(self, obj):
         return obj.reporting_level.level_name if obj.reporting_level else None
+
+    def get_active_loan_emi(self, obj):
+        if not obj.user:
+            return 0
+        # Sum all currently active loans (APPROVED status)
+        from django.db.models import Sum
+        total_emi = LoanApplication.objects.filter(
+            employee=obj.user, 
+            status='APPROVED'
+        ).aggregate(total=Sum('emi_amount'))['total'] or 0
+        return float(total_emi)
+
+    def get_active_loans_breakdown(self, obj):
+        if not obj.user:
+            return []
+        loans = LoanApplication.objects.filter(employee=obj.user, status='APPROVED').select_related('category')
+        return [
+            {
+                'id': loan.id,
+                'category': loan.category.name,
+                'emi': float(loan.emi_amount),
+                'requested_amount': float(loan.requested_amount),
+                'repayment_months': loan.repayment_months,
+                'date': loan.created_at.strftime('%Y-%m-%d')
+            }
+            for loan in loans
+        ]
 
     def validate(self, data):
         email = data.get('email')
@@ -583,6 +612,9 @@ class EmployeeSerializer(serializers.ModelSerializer):
 
             if reporting_level and reporting_manager.level_id != reporting_level.id:
                 raise serializers.ValidationError("Reporting manager is not assigned to the selected reporting level.")
+            
+            if self.instance and reporting_manager.id == self.instance.id:
+                raise serializers.ValidationError("An employee cannot be their own reporting manager.")
 
         # Non-master users can only create/update employees in their own company.
         if request.user.role != 'master':
@@ -1172,7 +1204,7 @@ class PayrollSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'employee_id', 'employee_name','designation','department', 'payroll_date',
             'gross_salary', 'basic_salary', 'hra', 'conveyance', 'medical',
-            'special_allowance', 'service_charges', 'pf', 'income_tax', 'net_pay',
+            'special_allowance', 'service_charges', 'pf', 'income_tax', 'loan_emi', 'loan_disbursement', 'net_pay',
             'total_working_days', 'days_paid', 'loss_of_pay_days',
             'other_allowances', 'other_deductions','payroll_date'
         ]
@@ -1749,4 +1781,50 @@ class ReimbursementRequestSerializer(serializers.ModelSerializer):
         if obj.reporting_manager:
             return obj.reporting_manager.full_name
         return None
+
+class LoanInterestSlabSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = LoanInterestSlab
+        fields = '__all__'
+
+class LoanCategorySerializer(serializers.ModelSerializer):
+    interest_slabs = LoanInterestSlabSerializer(many=True, read_only=True)
+    allowed_levels_display = serializers.SerializerMethodField()
+
+    class Meta:
+        model = LoanCategory
+        fields = '__all__'
+        read_only_fields = ['company']
+
+    def get_allowed_levels_display(self, obj):
+        return [{"id": l.id, "level_name": l.level_name} for l in obj.allowed_levels.all()]
+
+class LoanApplicationSerializer(serializers.ModelSerializer):
+    employee_details = serializers.SerializerMethodField()
+    category_name = serializers.ReadOnlyField(source='category.name')
+    repayment_end_month = serializers.SerializerMethodField()
+
+    class Meta:
+        model = LoanApplication
+        fields = '__all__'
+        read_only_fields = ['employee', 'interest_rate', 'emi_amount', 'status', 'manager_approved_by', 'admin_approved_by']
+
+    def get_employee_details(self, obj):
+        profile = obj.employee.employee_profile
+        return {
+            "full_name": profile.full_name if profile else obj.employee.get_full_name() or obj.employee.username,
+            "employee_id": profile.employee_id if profile else ""
+        }
+
+    def get_repayment_end_month(self, obj):
+        if not obj.created_at or not obj.repayment_months:
+            return None
+        # Calculate year and month after adding repayment_months
+        # obj.created_at is a datetime object
+        total_months = obj.created_at.month + obj.repayment_months
+        year = obj.created_at.year + (total_months - 1) // 12
+        month = (total_months - 1) % 12 + 1
+        import datetime
+        end_date = datetime.date(year, month, 1)
+        return end_date.strftime('%B %Y')
 

@@ -241,8 +241,8 @@ const AdminEmployeeRegister = () => {
                 setLevels(levelData.results || levelData);
             }
 
-            // Fetch all employees for manager dropdown
-            const empRes = await fetch(`${API_URL}?page_size=1000`, { headers });
+            // Fetch all employees (including admins) for manager dropdown
+            const empRes = await fetch(`${API_URL}?page_size=1000&include_admins=true`, { headers });
             if (empRes.ok) {
                 const empData = await empRes.json();
                 const list = (empData.results || empData).map((e: any) => ({
@@ -1154,11 +1154,13 @@ const AdminEmployeeRegister = () => {
                                                     <label className="font-semibold mb-1 block">Reporting Manager</label>
                                                     <select className="form-select" value={formData.reporting_manager} onChange={(e) => setFormData({ ...formData, reporting_manager: e.target.value })}>
                                                         <option value="">Select Manager (Optional)</option>
-                                                        {allEmployees.map((emp) => (
-                                                            <option key={emp.id} value={emp.id}>
-                                                                {emp.full_name}
-                                                            </option>
-                                                        ))}
+                                                        {allEmployees
+                                                            .filter(emp => !selectedEmployee || emp.id !== selectedEmployee.id)
+                                                            .map((emp) => (
+                                                                <option key={emp.id} value={emp.id}>
+                                                                    {emp.full_name}
+                                                                </option>
+                                                            ))}
                                                     </select>
                                                 </div>
                                             </div>

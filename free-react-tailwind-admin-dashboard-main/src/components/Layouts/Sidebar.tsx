@@ -255,6 +255,26 @@ const Sidebar = () => {
                                             </ul>
                                         </AnimateHeight>
                                     </li>
+
+                                    <li className="menu nav-item">
+                                        <NavLink to="/employee/loan-application" className="group">
+                                            <div className="flex items-center">
+                                                <IconMenuInvoice className="group-hover:!text-primary shrink-0" />
+                                                <span className="ltr:pl-3 rtl:pr-3 text-black dark:text-[#506690] dark:group-hover:text-white-dark">{t('Loan Application')}</span>
+                                            </div>
+                                        </NavLink>
+                                    </li>
+
+                                    {localStorage.getItem('is_reporting_manager') === 'true' && (
+                                        <li className="menu nav-item">
+                                            <NavLink to="/employee/loan-approvals" className="group">
+                                                <div className="flex items-center">
+                                                    <IconMenuInvoice className="group-hover:!text-primary shrink-0" />
+                                                    <span className="ltr:pl-3 rtl:pr-3 text-black dark:text-[#506690] dark:group-hover:text-white-dark">{t('Loan Approvals')}</span>
+                                                </div>
+                                            </NavLink>
+                                        </li>
+                                    )}
                                 </>
                             )}
 
@@ -298,6 +318,8 @@ const Sidebar = () => {
                                                 <li><NavLink to="/admin/configuration/leave-count">{t('Leave Count')}</NavLink></li>
                                                 <li><NavLink to="/admin/configuration/company-policies">{t('Company Policies')}</NavLink></li>
                                                 <li><NavLink to="/admin/configuration/office-structure">{t('Office Structure')}</NavLink></li>
+                                                <li><NavLink to="/admin/loan-configuration">{t('Loan Configuration')}</NavLink></li>
+                                                <li><NavLink to="/admin/loan-approvals">{t('Loan Approvals')}</NavLink></li>
                                                 <li><NavLink to="/admin/seat-approvals">{t('Seat Approvals')}</NavLink></li>
                                                 <li><NavLink to="/admin/seat-bookings-overview">{t('Seat Bookings Overview')}</NavLink></li>
                                             </ul>

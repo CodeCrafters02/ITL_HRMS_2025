@@ -143,10 +143,13 @@ const AdminDesignationSalary = lazy(() => import('../pages/Admin/DesignationSala
 const AdminSalaryStructure = lazy(() => import('../pages/Admin/SalaryStructure'));
 const AdminPayrollReport = lazy(() => import('../pages/Admin/PayrollReport'));
 const AdminSalaryDisbursement = lazy(() => import('../pages/Admin/SalaryDisbursement'));
+const AdminLoanConfig = lazy(() => import('../pages/Admin/LoanConfig'));
+const AdminLoanApprovals = lazy(() => import('../pages/Admin/LoanApprovals'));
 
 // Employee Pages
 const EmployeeDashboard = lazy(() => import('../pages/Employee/Dashboard'));
 const EmployeeChat = lazy(() => import('../pages/Employee/Chat'));
+const EmployeeLoanApplication = lazy(() => import('../pages/Employee/LoanApplication'));
 const EmployeeCalendar = lazy(() => import('../pages/Employee/Calendar'));
 const EmployeeMyTasks = lazy(() => import('../pages/Employee/MyTasks/Mytasks'));
 const EmployeeApplyLeave = lazy(() => import('../pages/Employee/LeaveApplication/ApplyLeave'));
@@ -729,6 +732,14 @@ const routes = [
         element: <AdminOfficeStructure />,
     },
     {
+        path: '/admin/loan-configuration',
+        element: <AdminLoanConfig />,
+    },
+    {
+        path: '/admin/loan-approvals',
+        element: <AdminLoanApprovals />,
+    },
+    {
         path: '/admin/calendar',
         element: <AdminCalendar />,
     },
@@ -844,6 +855,14 @@ const routes = [
     {
         path: '/admin/reimbursement/history',
         element: <ReimbursementHistory />,
+    },
+    {
+        path: '/employee/loan-application',
+        element: <EmployeeLoanApplication />,
+    },
+    {
+        path: '/employee/loan-approvals',
+        element: <AdminLoanApprovals />,
     },
 ];
 

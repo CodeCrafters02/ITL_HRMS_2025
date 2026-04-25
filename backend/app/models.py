@@ -57,6 +57,13 @@ class UserRegister(AbstractUser):
         emp = self.employee_profile
         return emp and emp.reportees.exists()
 
+    @property
+    def full_name(self):
+        profile = self.employee_profile
+        if profile:
+            return profile.full_name
+        return self.get_full_name() or self.username
+
     def __str__(self):
         return self.username
 
@@ -612,6 +619,61 @@ class CalendarEvent(models.Model):
         ordering = ['date']
         
         
+class LoanCategory(models.Model):
+    company = models.ForeignKey(Company, on_delete=models.CASCADE, related_name='loan_categories')
+    name = models.CharField(max_length=100)
+    description = models.TextField(blank=True, null=True)
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    # Eligibility
+    min_tenure_months = models.PositiveIntegerField(default=0) # Company tenure
+    max_repayment_months = models.PositiveIntegerField(default=12) # Repayment period
+    max_loan_limit = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    allowed_levels = models.ManyToManyField(Level, blank=True)
+    
+    def __str__(self):
+        return f"{self.name} ({self.company.name})"
+
+class LoanApplication(models.Model):
+    STATUS_CHOICES = [
+        ('PENDING', 'Pending Manager Approval'),
+        ('MANAGER_APPROVED', 'Pending Admin Approval'),
+        ('APPROVED', 'Approved'),
+        ('REJECTED', 'Rejected'),
+        ('CLEARED', 'Cleared/Paid Off'),
+    ]
+    
+    employee = models.ForeignKey(UserRegister, on_delete=models.CASCADE, related_name='loan_applications')
+    category = models.ForeignKey(LoanCategory, on_delete=models.CASCADE)
+    requested_amount = models.DecimalField(max_digits=12, decimal_places=2)
+    repayment_months = models.PositiveIntegerField()
+    interest_rate = models.DecimalField(max_digits=5, decimal_places=2) # Snapshotted rate
+    emi_amount = models.DecimalField(max_digits=12, decimal_places=2)
+    
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='PENDING')
+    reason = models.TextField(blank=True, null=True)
+    supporting_document = models.FileField(upload_to='loan/documents/', blank=True, null=True)
+    admin_remarks = models.TextField(blank=True, null=True)
+    
+    manager_approved_by = models.ForeignKey(UserRegister, on_delete=models.SET_NULL, null=True, blank=True, related_name='manager_approved_loans')
+    admin_approved_by = models.ForeignKey(UserRegister, on_delete=models.SET_NULL, null=True, blank=True, related_name='admin_approved_loans')
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"{self.employee.full_name} - {self.category.name} ({self.status})"
+
+class LoanInterestSlab(models.Model):
+    category = models.ForeignKey(LoanCategory, on_delete=models.CASCADE, related_name='interest_slabs')
+    min_amount = models.DecimalField(max_digits=12, decimal_places=2)
+    max_amount = models.DecimalField(max_digits=12, decimal_places=2)
+    interest_rate = models.DecimalField(max_digits=5, decimal_places=2) # percentage
+    
+    def __str__(self):
+        return f"{self.category.name}: {self.min_amount}-{self.max_amount} @ {self.interest_rate}%"
+
 class SalaryStructure(models.Model):
     company = models.ForeignKey(Company, on_delete=models.CASCADE, related_name='salary_structures')
     name = models.CharField(max_length=100, null=True, blank=True)  # optional descriptive name
@@ -722,7 +784,9 @@ class Payroll(models.Model):
     service_charges = models.DecimalField(max_digits=10, decimal_places=2)
     pf = models.DecimalField(max_digits=10, decimal_places=2)
     income_tax = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
-    net_pay = models.DecimalField(max_digits=10, decimal_places=2)
+    loan_emi = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    loan_disbursement = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    net_pay = models.DecimalField(max_digits=12, decimal_places=2)
 
     payroll_date = models.DateField(auto_now_add=True)
     total_working_days = models.PositiveIntegerField(null=True, blank=True)
@@ -1143,6 +1207,8 @@ class FinalizedSalary(models.Model):
     
     total_gross = models.DecimalField(max_digits=10, decimal_places=2)
     total_deductions = models.DecimalField(max_digits=10, decimal_places=2)
+    loan_emi = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    loan_disbursement = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     net_salary = models.DecimalField(max_digits=10, decimal_places=2)
     days_paid = models.DecimalField(max_digits=10, decimal_places=2)
     
