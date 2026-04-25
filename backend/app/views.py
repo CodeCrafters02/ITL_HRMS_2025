@@ -32,6 +32,7 @@ from .models import *
 from rest_framework import filters
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
+from django_filters.rest_framework import DjangoFilterBackend
 from .chat_serializers import (
     ChatConversationSerializer,
     ChatMessageSerializer,
@@ -628,6 +629,33 @@ class EmployeeViewSet(viewsets.ModelViewSet):
     ]
     parser_classes = [MultiPartParser, FormParser, JSONParser]
 
+    @action(detail=True, methods=['post'], permission_classes=[IsAuthenticated])
+    def toggle_work_location(self, request, pk=None):
+        if not (request.user.role == 'admin' or request.user.role == 'master'):
+            return Response({"detail": "Only admins can manually toggle work location."}, status=status.HTTP_403_FORBIDDEN)
+        
+        employee = self.get_object()
+        old_loc = employee.work_location
+        new_loc = 'home' if old_loc == 'office' else 'office'
+        reason = request.data.get('reason', f"Direct change by {request.user.username}")
+
+        employee.work_location = new_loc
+        employee.save()
+
+        # Create log
+        WorkLocationLog.objects.create(
+            employee=employee,
+            from_location=old_loc,
+            to_location=new_loc,
+            changed_by=request.user.employee_profile,
+            reason=reason
+        )
+
+        return Response({
+            "detail": f"Successfully changed {employee.full_name}'s location to {new_loc}",
+            "work_location": new_loc
+        }, status=status.HTTP_200_OK)
+
     @action(detail=False, methods=['get'])
     def me(self, request):
         if not hasattr(request.user, 'employee'):
@@ -770,8 +798,13 @@ class EmployeeViewSet(viewsets.ModelViewSet):
     
 class SupplyItemViewSet(viewsets.ModelViewSet):
     serializer_class = SupplyItemSerializer
-    permission_classes = [IsAuthenticated, IsAdminUser]
+    parser_classes = [MultiPartParser, FormParser, JSONParser]
     pagination_class = CustomPagination
+
+    def get_permissions(self):
+        if self.action in ['list', 'retrieve']:
+            return [IsAuthenticated()]
+        return [IsAuthenticated(), IsAdminUser()]
     filter_backends = [filters.SearchFilter]
     search_fields = ['item_code', 'item_name', 'vendor_details', 'sub_category']
 
@@ -781,18 +814,41 @@ class SupplyItemViewSet(viewsets.ModelViewSet):
 
 class FixedAssetViewSet(viewsets.ModelViewSet):
     serializer_class = FixedAssetSerializer
-    permission_classes = [IsAuthenticated, IsAdminUser]
+    permission_classes = [IsAuthenticated]
     pagination_class = CustomPagination
     parser_classes = [JSONParser, MultiPartParser, FormParser]
     filter_backends = [filters.SearchFilter]
     search_fields = ['asset_tag', 'serial_number', 'model_brand', 'category', 'status']
 
     def get_queryset(self):
-        return FixedAsset.objects.filter(company=self.request.user.company).select_related(
+        qs = FixedAsset.objects.filter(company=self.request.user.company).select_related(
             'assigned_to', 'variable_supply_item'
         )
+        if getattr(self.request.user, 'role', None) == 'employee':
+            emp = getattr(self.request.user, 'employee_profile', None)
+            if emp:
+                qs = qs.filter(assigned_to=emp)
+            else:
+                qs = qs.none()
+        return qs
+
+    def perform_create(self, serializer):
+        if self.request.user.role != 'admin':
+            from rest_framework.exceptions import PermissionDenied
+            raise PermissionDenied("Only admins can create assets.")
+        serializer.save()
+
+    def perform_update(self, serializer):
+        if self.request.user.role != 'admin':
+            from rest_framework.exceptions import PermissionDenied
+            raise PermissionDenied("Only admins can update assets.")
+        print(f"DEBUG: FixedAsset update data: {serializer.validated_data}")
+        serializer.save()
 
     def perform_destroy(self, instance):
+        if self.request.user.role != 'admin':
+            from rest_framework.exceptions import PermissionDenied
+            raise PermissionDenied("Only admins can delete assets.")
         instance.delete()
 
 
@@ -800,7 +856,8 @@ class AssetRequestViewSet(viewsets.ModelViewSet):
     serializer_class = AssetRequestSerializer
     pagination_class = CustomPagination
     parser_classes = [JSONParser, MultiPartParser, FormParser]
-    filter_backends = [filters.SearchFilter]
+    filter_backends = [filters.SearchFilter, DjangoFilterBackend]
+    filterset_fields = ['approval_status', 'batch_id']
     search_fields = ['remarks', 'approval_status', 'requested_by__first_name', 'requested_by__last_name']
 
     def get_permissions(self):
@@ -823,11 +880,106 @@ class AssetRequestViewSet(viewsets.ModelViewSet):
         return qs
     def perform_create(self, serializer):
         u = self.request.user
-        if getattr(u, 'role', None) == 'employee':
-            emp = getattr(u, 'employee_profile', None)
+        emp = getattr(u, 'employee_profile', None) if getattr(u, 'role', None) == 'employee' else None
+        
+        supply_item = serializer.validated_data.get('related_supply_item')
+        qty = serializer.validated_data.get('requested_quantity', 1)
+        
+        if supply_item:
+            if supply_item.available_quantity < qty:
+                from rest_framework.exceptions import ValidationError
+                raise ValidationError({"detail": f"Out of stock. Only {supply_item.available_quantity} available."})
+            if supply_item.max_per_order and qty > supply_item.max_per_order:
+                from rest_framework.exceptions import ValidationError
+                raise ValidationError({"detail": f"Maximum allowed is {supply_item.max_per_order} per order."})
+
+            supply_item.available_quantity -= qty
+            supply_item.save()
+            
+        if emp:
             serializer.save(company=u.company, requested_by=emp)
         else:
             serializer.save(company=u.company)
+
+    @action(detail=False, methods=['post'], url_path='batch-action')
+    def batch_action(self, request):
+        batch_id = request.data.get('batch_id')
+        new_status = request.data.get('status')
+        if not batch_id or not new_status:
+            return Response({"detail": "batch_id and status required."}, status=400)
+            
+        from django.db.models import Q
+        reqs = AssetRequest.objects.filter(
+            Q(batch_id=batch_id) | Q(id=batch_id if str(batch_id).isdigit() else -1),
+            company=request.user.company
+        )
+        if not reqs.exists():
+            return Response({"detail": f"No requests found for ID/Batch: {batch_id}."}, status=404)
+
+        for r in reqs:
+            # If changing from pending to rejected, add stock back
+            if new_status == 'rejected' and r.approval_status != 'rejected':
+                if r.related_supply_item:
+                    r.related_supply_item.available_quantity += r.requested_quantity
+                    r.related_supply_item.save()
+            
+            # If changing from rejected back to approved/pending, reduce stock (if enough)
+            elif new_status != 'rejected' and r.approval_status == 'rejected':
+                if r.related_supply_item:
+                    if r.related_supply_item.available_quantity < r.requested_quantity:
+                         pass
+                    r.related_supply_item.available_quantity -= r.requested_quantity
+                    r.related_supply_item.save()
+
+            r.approval_status = new_status
+            if new_status == 'approved':
+                # Capture action type and payment amount for any asset type if provided
+                r.admin_action_type = request.data.get('admin_action_type', r.admin_action_type)
+                payment_val = request.data.get('employee_payment_amount')
+                if payment_val is not None:
+                    try:
+                        r.employee_payment_amount = Decimal(str(payment_val))
+                    except:
+                        pass
+            r.save()
+
+        return Response({"detail": f"Batch {batch_id} set to {new_status}."})
+
+    def perform_update(self, serializer):
+        instance = self.get_object()
+        new_status = serializer.validated_data.get('approval_status')
+        old_status = instance.approval_status
+        # Capture asset details if approving
+        if new_status == 'approved':
+            serializer.validated_data['admin_action_type'] = self.request.data.get('admin_action_type', instance.admin_action_type)
+            payment_val = self.request.data.get('employee_payment_amount')
+            if payment_val is not None:
+                try:
+                    serializer.validated_data['employee_payment_amount'] = Decimal(str(payment_val))
+                except:
+                    pass
+        
+        serializer.save()
+       # If changing TO rejected from something else -> add stock back
+        if new_status == 'rejected' and old_status != 'rejected':
+            if instance.related_supply_item:
+                instance.related_supply_item.available_quantity += instance.requested_quantity
+                instance.related_supply_item.save()
+        
+        # If changing FROM rejected to something else -> reduce stock
+        elif new_status != 'rejected' and old_status == 'rejected':
+            if instance.related_supply_item:
+                instance.related_supply_item.available_quantity -= instance.requested_quantity
+                instance.related_supply_item.save()
+                
+        serializer.save()
+
+    def perform_destroy(self, instance):
+        # If we delete a request that wasn't rejected, return the reserved stock
+        if instance.approval_status != 'rejected' and instance.related_supply_item:
+            instance.related_supply_item.available_quantity += instance.requested_quantity
+            instance.related_supply_item.save()
+        instance.delete()
 
 class AssetSupportingDocumentViewSet(viewsets.ModelViewSet):
     serializer_class = AssetSupportingDocumentSerializer
@@ -1903,20 +2055,13 @@ class GeneratePayrollView(APIView):
                 curr = first_day
                 match = False
                 while curr <= last_day:
-                    # Repayment triggers on the anniversary day
-                    if curr.day == r_day:
-                        match = True
-                        break
-                    # Handle end-of-month adjustments (e.g., loan started on 31st, but month has 30 days)
                     _, lday = calendar.monthrange(curr.year, curr.month)
-                    if r_day > lday and curr.day == lday:
-                        match = True
-                        break
+                    is_m = (curr.day == r_day)
+                    if not is_m and r_day > lday and curr.day == lday:
+                        is_m = True
+                    if is_m and curr <= end_dt:
+                        loan_emi += Decimal(str(l.emi_amount))
                     curr += timedelta(days=1)
-                
-                if match:
-                    loan_emi += Decimal(str(l.emi_amount))
-
             # Loan Disbursement (Principal if approved in this month)
             loan_disb = LoanApplication.objects.filter(
                 employee=emp.user,
@@ -3842,6 +3987,68 @@ class PayrollAttendanceSummaryView(APIView):
             'description': r.description
         } for r in reimbursements]
 
+        # Fetch approved asset requests in the range
+        # We fetch ALL requests that were approved in this range
+        asset_reqs = AssetRequest.objects.filter(
+            requested_by_id=int(emp_id),
+            approval_status='approved',
+            updated_at__date__range=[from_dt, to_dt]
+        ).select_related('related_fixed_asset', 'related_supply_item').distinct()
+        
+        asset_deduction_details = []
+        supply_batches = {}
+        total_asset_deduction = Decimal('0.00')
+        
+        for r in asset_reqs:
+            amt = r.employee_payment_amount or Decimal('0')
+            if r.related_fixed_asset:
+                # Core assets are always individual
+                asset_name = f"{r.related_fixed_asset.asset_tag} ({r.related_fixed_asset.model_brand or 'No Brand'})"
+                asset_deduction_details.append({
+                    'id': str(r.id),
+                    'item_name': asset_name,
+                    'amount': float(amt),
+                    'date': r.updated_at.date().isoformat(),
+                    'action_type': r.admin_action_type or 'Asset Deduction'
+                })
+                total_asset_deduction += amt
+            elif r.related_supply_item:
+                # Group supply items by batch and calculate based on (Price * Qty)
+                b_id = r.batch_id if r.batch_id else f"REQ-{r.id}"
+                if b_id not in supply_batches:
+                    supply_batches[b_id] = {
+                        'amount': Decimal('0.00'),
+                        'date': r.updated_at.date().isoformat(),
+                        'action_type': r.admin_action_type or 'Supply Order'
+                    }
+                
+                # Calculate subtotal for this item
+                item_price = r.related_supply_item.unit_price or Decimal('0.00')
+                subtotal = item_price * (r.requested_quantity or 1)
+                
+                supply_batches[b_id]['amount'] += subtotal
+                total_asset_deduction += subtotal
+            else:
+                asset_deduction_details.append({
+                    'id': str(r.id),
+                    'item_name': "Other Asset",
+                    'amount': float(amt),
+                    'date': r.updated_at.date().isoformat(),
+                    'action_type': r.admin_action_type or 'Asset Deduction'
+                })
+                total_asset_deduction += amt
+
+        # Add the combined supply batches to the final list
+        for b_id, data in supply_batches.items():
+            display_name = f"Supply Asset Order ({b_id})" if b_id.startswith('BATCH') else "Supply Asset Order"
+            asset_deduction_details.append({
+                'id': b_id,
+                'item_name': display_name,
+                'amount': float(data['amount']),
+                'date': data['date'],
+                'action_type': data['action_type']
+            })
+
         return Response({
             'total_days': (to_dt - from_dt).days + 1,
             'expected_working_days': expected_working_days,
@@ -3857,6 +4064,8 @@ class PayrollAttendanceSummaryView(APIView):
             'leave_details': leave_details,
             'total_reimbursement': float(total_reimbursement),
             'reimbursement_details': reimbursement_details,
+            'total_asset_deduction': float(total_asset_deduction),
+            'asset_deduction_details': asset_deduction_details,
         })
 
 class SalaryDisbursementStatementView(APIView):
@@ -4057,6 +4266,9 @@ class SalaryDisbursementStatementView(APIView):
                     ).aggregate(total=Sum('requested_amount'))['total'] or Decimal(0)
                     loan_disb_dec = Decimal(str(loan_disbursement))
                     net_pay += loan_disb_dec
+                    # Asset Deduction from finalized record
+                    asset_ded_dec = Decimal(str(finalized.asset_deduction))
+                    net_pay = (net_pay - asset_ded_dec).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
                     if net_pay < 0: net_pay = Decimal(0)
                 else:
                     # Default dynamic calculation (same as above but with all components enabled)
@@ -4161,17 +4373,13 @@ class SalaryDisbursementStatementView(APIView):
                         curr_v = from_dt
                         match_found = False
                         while curr_v <= to_dt:
-                            if curr_v.day == r_d:
-                                match_found = True
-                                break
-                            _, l_d_m = calendar.monthrange(curr_v.year, curr_v.month)
-                            if r_d > l_d_m and curr_v.day == l_d_m:
-                                match_found = True
-                                break
+                            _, lday_m = calendar.monthrange(curr_v.year, curr_v.month)
+                            is_m = (curr_v.day == r_d)
+                            if not is_m and r_d > lday_m and curr_v.day == lday_m:
+                                is_m = True
+                            if is_m and curr_v <= e_dt:
+                                loan_emi_dec += Decimal(str(l_act.emi_amount))
                             curr_v += timedelta(days=1)
-                        if match_found:
-                            loan_emi_dec += Decimal(str(l_act.emi_amount))
-                    
                     net_pay = (net_pay - loan_emi_dec).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
                     # Loan Disbursement (Principal amount if approved in this period)
                     loan_disbursement = LoanApplication.objects.filter(
@@ -4182,6 +4390,29 @@ class SalaryDisbursementStatementView(APIView):
                     ).aggregate(total=Sum('requested_amount'))['total'] or Decimal(0)
                     loan_disb_dec = Decimal(str(loan_disbursement))
                     net_pay += loan_disb_dec
+                    # Asset Deduction (Re-calc for non-finalized)
+                    # Fetch approved asset requests in the range
+                    asset_reqs = AssetRequest.objects.filter(
+                        requested_by_id=emp.id,
+                        approval_status='approved',
+                        updated_at__date__range=[from_dt, to_dt]
+                    )
+                    
+                    # Deduplicate by batch_id for supply items
+                    asset_ded_dec = Decimal('0.00')
+                    processed_batches = set()
+                    
+                    for ar in asset_reqs:
+                        if ar.related_supply_item:
+                            # Use (Price * Qty) for supply assets to match order total
+                            item_price = ar.related_supply_item.unit_price or Decimal('0.00')
+                            subtotal = item_price * (ar.requested_quantity or 1)
+                            asset_ded_dec += subtotal
+                        else:
+                            # Core assets and others
+                            asset_ded_dec += (ar.employee_payment_amount or Decimal('0'))
+                            
+                    net_pay = (net_pay - asset_ded_dec).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
                     if net_pay < 0: net_pay = Decimal(0)
                 
                 total_credit_amount += net_pay
@@ -4195,6 +4426,7 @@ class SalaryDisbursementStatementView(APIView):
                     'gross_salary': float(current_gross.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)),
                     'loan_emi': float(loan_emi_dec),
                     'loan_disbursement': float(loan_disb_dec),
+                    'asset_deduction': float(asset_ded_dec),
                     'net_salary': float(net_pay),
                     'days_paid': float(payable_days),
                 })
@@ -4234,7 +4466,7 @@ class SalaryDisbursementStatementView(APIView):
                 ws['A3'].alignment = Alignment(horizontal="center")
 
                 # Table Headers
-                headers = ['Sl. No', 'Employee ID', 'Employee Name', 'Bank Name', 'Account Number', 'IFSC Code', 'Gross Salary', 'Payable Days', 'Loan EMI', 'Loan Disb.', 'Net Salary']
+                headers = ['Sl. No', 'Employee ID', 'Employee Name', 'Bank Name', 'Account Number', 'IFSC Code', 'Gross Salary', 'Payable Days', 'Loan EMI', 'Loan Disb.', 'Asset Ded.', 'Net Salary']
                 ws.append([]) # Spacer
                 ws.append(headers)
                 
@@ -4258,20 +4490,20 @@ class SalaryDisbursementStatementView(APIView):
                         row_data['days_paid'],
                         row_data['loan_emi'],
                         row_data['loan_disbursement'],
+                        row_data['asset_deduction'],
                         row_data['net_salary']
                     ])
                 
-                # Total Row
                 last_row = ws.max_row + 1
-                ws.merge_cells(f'A{last_row}:H{last_row}')
+                ws.merge_cells(f'A{last_row}:J{last_row}')
                 ws[f'A{last_row}'] = "Total Disbursement Amount"
                 ws[f'A{last_row}'].font = Font(bold=True)
                 ws[f'A{last_row}'].alignment = Alignment(horizontal="right")
-                ws[f'I{last_row}'] = float(round(total_credit_amount, 2))
-                ws[f'I{last_row}'].font = Font(bold=True)
+                ws[f'K{last_row}'] = float(round(total_credit_amount, 2))
+                ws[f'K{last_row}'].font = Font(bold=True)
 
                 # Column Widths
-                column_widths = [8, 15, 25, 20, 20, 15, 15, 15, 15]
+                column_widths = [8, 15, 25, 20, 20, 15, 15, 15, 15, 15, 15]
                 for i, width in enumerate(column_widths):
                     ws.column_dimensions[openpyxl.utils.get_column_letter(i+1)].width = width
 
@@ -4916,6 +5148,16 @@ class LoanApplicationViewSet(viewsets.ModelViewSet):
     filter_backends = [filters.SearchFilter]
     search_fields = ['category__name', 'status', 'employee__first_name', 'employee__last_name']
 
+    def destroy(self, request, *args, **kwargs):
+        user = request.user
+        instance = self.get_object()
+        if user.role in ['admin', 'master']:
+            return super().destroy(request, *args, **kwargs)
+        if instance.employee == user and instance.status == 'PENDING':
+            return super().destroy(request, *args, **kwargs)
+        from rest_framework.response import Response
+        return Response({"error": "You do not have permission to delete this loan."}, status=403)
+
     def get_queryset(self):
         user = self.request.user
         qs = LoanApplication.objects.filter(employee__company=user.company).order_by('-created_at')
@@ -5125,3 +5367,91 @@ class LoanInterestSlabViewSet(viewsets.ModelViewSet):
         if category_id:
             return LoanInterestSlab.objects.filter(category_id=category_id)
         return LoanInterestSlab.objects.all()
+
+class WFHRequestViewSet(viewsets.ModelViewSet):
+    serializer_class = WFHRequestSerializer
+    permission_classes = [IsAuthenticated]
+    pagination_class = CustomPagination
+
+    def get_queryset(self):
+        user = self.request.user
+        mine = self.request.query_params.get('mine') == 'true'
+        
+        emp_profile = user.employee_profile
+        if not emp_profile:
+            # If a user doesn't have an employee profile, they can't request or approve WFH
+            # (Admins/Masters usually have a linked profile if they manage people)
+            return WFHRequest.objects.none()
+
+        if mine:
+            # ONLY show requests where user is the requester
+            return WFHRequest.objects.filter(employee=emp_profile).order_by('-created_at')
+            
+        # APPROVALS: Only show requests where current user is the reporting manager
+        return WFHRequest.objects.filter(reporting_manager=emp_profile).order_by('-created_at')
+
+    def perform_create(self, serializer):
+        emp_profile = self.request.user.employee_profile
+        if not emp_profile:
+            raise serializers.ValidationError("User must have an employee profile to request WFH.")
+        
+        # Automatically assign the employee's reporting manager
+        serializer.save(
+            employee=emp_profile,
+            reporting_manager=emp_profile.reporting_manager
+        )
+
+    @action(detail=True, methods=['post'])
+    def approve(self, request, pk=None):
+        wfh_request = self.get_object()
+        
+        # Permission check: Only reporting manager or admin can approve
+        if request.user.role not in ['admin', 'master'] and request.user.employee_profile != wfh_request.reporting_manager:
+            return Response({"detail": "You do not have permission to approve this request."}, status=status.HTTP_403_FORBIDDEN)
+
+        if wfh_request.status != 'pending':
+            return Response({"detail": "Only pending requests can be approved."}, status=status.HTTP_400_BAD_REQUEST)
+
+        with transaction.atomic():
+            wfh_request.status = 'approved'
+            wfh_request.save()
+
+            employee = wfh_request.employee
+            old_loc = employee.work_location
+            new_loc = 'home' # Assuming approval means starting WFH
+
+            employee.work_location = new_loc
+            employee.save()
+
+            # Create log
+            WorkLocationLog.objects.create(
+                employee=employee,
+                from_location=old_loc,
+                to_location=new_loc,
+                changed_by=request.user.employee_profile,
+                reason=f"WFH Request Approved: {wfh_request.reason}"
+            )
+
+        return Response({"status": "approved", "work_location": new_loc})
+
+    @action(detail=True, methods=['post'])
+    def reject(self, request, pk=None):
+        wfh_request = self.get_object()
+        rejection_reason = request.data.get('rejection_reason', 'No reason provided')
+
+        # Permission check
+        if request.user.role not in ['admin', 'master'] and request.user.employee_profile != wfh_request.reporting_manager:
+            return Response({"detail": "You do not have permission to reject this request."}, status=status.HTTP_403_FORBIDDEN)
+
+        wfh_request.status = 'rejected'
+        wfh_request.rejection_reason = rejection_reason
+        wfh_request.save()
+
+        return Response({"status": "rejected"})
+
+class WorkLocationLogViewSet(viewsets.ReadOnlyModelViewSet):
+    serializer_class = WorkLocationLogSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        return WorkLocationLog.objects.all().order_by('-date')

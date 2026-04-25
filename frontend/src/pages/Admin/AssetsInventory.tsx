@@ -90,6 +90,7 @@ const AdminAssetsInventory = () => {
         unit_of_measure: 'pcs',
         notes: '',
     });
+    const [siImage, setSiImage] = useState<File | null>(null);
 
     // Requests
     const [arList, setArList] = useState<any[]>([]);
@@ -350,6 +351,7 @@ const AdminAssetsInventory = () => {
 
     const resetSi = () => {
         setSiEditId(null);
+        setSiImage(null);
         setSiForm({
             item_code: '',
             item_name: '',
@@ -367,26 +369,49 @@ const AdminAssetsInventory = () => {
 
     const saveSi = async (e: React.FormEvent) => {
         e.preventDefault();
-        const body: any = {
-            item_code: siForm.item_code.trim(),
-            item_name: siForm.item_name.trim(),
-            sub_category: siForm.sub_category,
-            total_stock: Number(siForm.total_stock),
-            available_quantity: Number(siForm.available_quantity),
-            reorder_level: Number(siForm.reorder_level),
-            unit_price: siForm.unit_price ? Number(siForm.unit_price) : null,
-            last_restocked: siForm.last_restocked || null,
-            vendor_details: siForm.vendor_details.trim() || null,
-            unit_of_measure: siForm.unit_of_measure,
-            notes: siForm.notes.trim() || null,
-        };
         try {
             const url = siEditId ? `${API_BASE_URL}/app/supply-items/${siEditId}/` : `${API_BASE_URL}/app/supply-items/`;
-            const res = await fetch(url, {
-                method: siEditId ? 'PATCH' : 'POST',
-                headers: authJsonHeaders(),
-                body: JSON.stringify(body),
-            });
+            let res: Response;
+            if (siEditId && !siImage) {
+                const body: any = {
+                    item_code: siForm.item_code.trim(),
+                    item_name: siForm.item_name.trim(),
+                    sub_category: siForm.sub_category,
+                    total_stock: Number(siForm.total_stock),
+                    available_quantity: Number(siForm.available_quantity),
+                    reorder_level: Number(siForm.reorder_level),
+                    unit_price: siForm.unit_price ? Number(siForm.unit_price) : null,
+                    last_restocked: siForm.last_restocked || null,
+                    vendor_details: siForm.vendor_details.trim() || null,
+                    unit_of_measure: siForm.unit_of_measure,
+                    notes: siForm.notes.trim() || null,
+                };
+                res = await fetch(url, {
+                    method: 'PATCH',
+                    headers: authJsonHeaders(),
+                    body: JSON.stringify(body),
+                });
+            } else {
+                const fd = new FormData();
+                fd.append('item_code', siForm.item_code.trim());
+                fd.append('item_name', siForm.item_name.trim());
+                fd.append('sub_category', siForm.sub_category);
+                fd.append('total_stock', String(siForm.total_stock));
+                fd.append('available_quantity', String(siForm.available_quantity));
+                fd.append('reorder_level', String(siForm.reorder_level));
+                if (siForm.unit_price) fd.append('unit_price', String(siForm.unit_price));
+                if (siForm.last_restocked) fd.append('last_restocked', siForm.last_restocked);
+                if (siForm.vendor_details) fd.append('vendor_details', siForm.vendor_details.trim());
+                fd.append('unit_of_measure', siForm.unit_of_measure);
+                if (siForm.notes) fd.append('notes', siForm.notes.trim());
+                if (siImage) fd.append('image', siImage);
+
+                res = await fetch(url, {
+                    method: siEditId ? 'PATCH' : 'POST',
+                    headers: authHeaders(),
+                    body: fd,
+                });
+            }
             const data = await res.json().catch(() => ({}));
             if (!res.ok) throw new Error(typeof data?.detail === 'string' ? data.detail : JSON.stringify(data));
             Swal.fire('Saved', '', 'success');
@@ -676,6 +701,7 @@ const AdminAssetsInventory = () => {
                                 <table className="table-hover">
                                     <thead>
                                         <tr>
+                                            <th>Image</th>
                                             <th>Code</th>
                                             <th>Name</th>
                                             <th>Sub-category</th>
@@ -704,6 +730,21 @@ const AdminAssetsInventory = () => {
                                         ) : (
                                             siList.map((row) => (
                                                 <tr key={row.id}>
+                                                    <td className="py-2">
+                                                        {row.image ? (
+                                                            <div className="w-12 h-12 rounded-lg overflow-hidden border border-gray-100 dark:border-gray-800 shadow-sm">
+                                                                <img 
+                                                                    src={row.image.startsWith('http') ? row.image : `${API_BASE_URL}${row.image}`} 
+                                                                    className="w-full h-full object-cover" 
+                                                                    alt={row.item_name}
+                                                                />
+                                                            </div>
+                                                        ) : (
+                                                            <div className="w-12 h-12 rounded-lg bg-gray-50 dark:bg-gray-900/50 flex items-center justify-center border border-dashed border-gray-200 dark:border-gray-700">
+                                                                <span className="text-[10px] text-gray-400 font-bold uppercase tracking-tighter">No Pic</span>
+                                                            </div>
+                                                        )}
+                                                    </td>
                                                     <td className="font-semibold">{row.item_code}</td>
                                                     <td>{row.item_name}</td>
                                                     <td className="text-sm text-gray-600 dark:text-gray-400">{row.sub_category || '—'}</td>
@@ -1108,6 +1149,22 @@ const AdminAssetsInventory = () => {
                                         <div>
                                             <label className="form-label">Vendor</label>
                                             <textarea className="form-textarea" rows={2} value={siForm.vendor_details} onChange={(e) => setSiForm({ ...siForm, vendor_details: e.target.value })} />
+                                        </div>
+                                        <div>
+                                            <label className="form-label text-indigo-600 font-bold">Item Image (Optional)</label>
+                                            <div className="flex items-center gap-4">
+                                                <input 
+                                                    type="file" 
+                                                    className="form-input flex-1 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100 cursor-pointer" 
+                                                    accept="image/*" 
+                                                    onChange={(e) => setSiImage(e.target.files?.[0] || null)} 
+                                                />
+                                                {siImage && (
+                                                    <div className="w-12 h-12 rounded-lg overflow-hidden border border-indigo-200">
+                                                        <img src={URL.createObjectURL(siImage)} className="w-full h-full object-cover" alt="Preview" />
+                                                    </div>
+                                                )}
+                                            </div>
                                         </div>
                                         <div>
                                             <label className="form-label">Notes</label>

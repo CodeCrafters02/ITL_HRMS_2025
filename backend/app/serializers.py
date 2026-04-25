@@ -509,7 +509,8 @@ class EmployeeSerializer(serializers.ModelSerializer):
             'who_referred', 'date_of_joining', 'previous_employer', 'date_of_releaving',
             'previous_designation_name', 'previous_salary', 'basic_salary', 'ctc', 'gross_salary',
             'epf_status', 'uan', 'asset_details', 'asset_names', 'esic_status', 'esic_no',
-            'source_choices', 'shift_assigned', 'password', 'active_loan_emi', 'active_loans_breakdown'
+            'source_choices', 'shift_assigned', 'password', 'active_loan_emi', 'active_loans_breakdown',
+            'work_location'
         ]
 
     def get_department_name(self, obj):
@@ -898,6 +899,7 @@ class FixedAssetSerializer(serializers.ModelSerializer):
     assigned_to_name = serializers.SerializerMethodField(read_only=True)
     variable_catalog_code = serializers.SerializerMethodField(read_only=True)
     variable_catalog_name = serializers.SerializerMethodField(read_only=True)
+    assignee_emp_id = serializers.SerializerMethodField(read_only=True)
 
     class Meta:
         model = FixedAsset
@@ -915,6 +917,9 @@ class FixedAssetSerializer(serializers.ModelSerializer):
 
     def get_variable_catalog_name(self, obj):
         return obj.variable_supply_item.item_name if obj.variable_supply_item_id else None
+
+    def get_assignee_emp_id(self, obj):
+        return obj.assigned_to.employee_id if obj.assigned_to else None
 
     def create(self, validated_data):
         request = self.context['request']
@@ -939,22 +944,55 @@ class FixedAssetSerializer(serializers.ModelSerializer):
 
 
 class AssetRequestSerializer(serializers.ModelSerializer):
+    requested_by = serializers.PrimaryKeyRelatedField(
+        queryset=Employee.objects.all(), 
+        required=False, 
+        allow_null=True
+    )
     requested_by_name = serializers.SerializerMethodField(read_only=True)
     image_url = serializers.SerializerMethodField(read_only=True)
+    item_name = serializers.SerializerMethodField(read_only=True)
+    item_image = serializers.SerializerMethodField(read_only=True)
+    item_price = serializers.SerializerMethodField(read_only=True)
+    requester_emp_id = serializers.SerializerMethodField(read_only=True)
 
     class Meta:
         model = AssetRequest
         fields = '__all__'
         read_only_fields = ('company', 'created_at', 'updated_at')
 
+    def get_item_price(self, obj):
+        if obj.related_supply_item:
+            return float(obj.related_supply_item.unit_price or 0)
+        return 0.0
+
     def get_requested_by_name(self, obj):
         e = obj.requested_by
         return f"{(e.first_name or '').strip()} {(e.last_name or '').strip()}".strip() or str(e.employee_id)
+
+    def get_requester_emp_id(self, obj):
+        return obj.requested_by.employee_id if obj.requested_by else None
 
     def get_image_url(self, obj):
         request = self.context.get('request')
         if obj.image and request:
             return request.build_absolute_uri(obj.image.url)
+        return None
+
+    def get_item_name(self, obj):
+        if obj.related_fixed_asset:
+            return f"{obj.related_fixed_asset.asset_tag} ({obj.related_fixed_asset.model_brand})"
+        if obj.related_supply_item:
+            return obj.related_supply_item.item_name
+        return "General Request"
+
+    def get_item_image(self, obj):
+        request = self.context.get('request')
+        img = None
+        if obj.related_supply_item and obj.related_supply_item.image:
+            img = obj.related_supply_item.image
+        if img and request:
+            return request.build_absolute_uri(img.url)
         return None
 
     def create(self, validated_data):
@@ -1828,3 +1866,22 @@ class LoanApplicationSerializer(serializers.ModelSerializer):
         end_date = datetime.date(year, month, 1)
         return end_date.strftime('%B %Y')
 
+
+class WFHRequestSerializer(serializers.ModelSerializer):
+    employee_name = serializers.ReadOnlyField(source='employee.full_name')
+    employee_username = serializers.ReadOnlyField(source='employee.user.username')
+    reporting_manager_name = serializers.ReadOnlyField(source='reporting_manager.full_name')
+    status_display = serializers.CharField(source='get_status_display', read_only=True)
+
+    class Meta:
+        model = WFHRequest
+        fields = '__all__'
+        read_only_fields = ['employee', 'reporting_manager', 'status']
+
+class WorkLocationLogSerializer(serializers.ModelSerializer):
+    employee_name = serializers.ReadOnlyField(source='employee.full_name')
+    changed_by_name = serializers.ReadOnlyField(source='changed_by.full_name')
+
+    class Meta:
+        model = WorkLocationLog
+        fields = '__all__'

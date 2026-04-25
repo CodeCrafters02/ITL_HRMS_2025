@@ -253,6 +253,12 @@ class Employee(models.Model):
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='offline')
     last_active = models.DateTimeField(auto_now=True)
 
+    WORK_LOCATION_CHOICES = [
+        ('office', 'Office'),
+        ('home', 'Home'),
+    ]
+    work_location = models.CharField(max_length=20, choices=WORK_LOCATION_CHOICES, default='office')
+
     @property
     def is_reporting_manager(self):
         return self.employees_reporting_to_me.exists()
@@ -389,12 +395,14 @@ class SupplyItem(models.Model):
     sub_category = models.CharField(max_length=32, choices=SUBCATEGORY_CHOICES, default='other')
     total_stock = models.PositiveIntegerField(default=0)
     available_quantity = models.PositiveIntegerField(default=0)
+    max_per_order = models.PositiveIntegerField(default=10)
     reorder_level = models.PositiveIntegerField(default=0)
     unit_price = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
     last_restocked = models.DateField(null=True, blank=True)
     vendor_details = models.TextField(blank=True, null=True)
     unit_of_measure = models.CharField(max_length=16, choices=UOM_CHOICES, default='pcs')
     notes = models.TextField(blank=True, null=True)
+    image = models.ImageField(upload_to='supply_items/', null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -446,11 +454,20 @@ class AssetRequest(models.Model):
     related_supply_item = models.ForeignKey(
         SupplyItem, on_delete=models.SET_NULL, null=True, blank=True, related_name='requests'
     )
+    requested_quantity = models.PositiveIntegerField(default=1)
+    batch_id = models.CharField(max_length=64, null=True, blank=True, db_index=True)
+    ADMIN_ACTION_CHOICES = [
+        ('repair', 'Repair'),
+        ('change', 'Change'),
+        ('other', 'Other'),
+    ]
+    admin_action_type = models.CharField(max_length=16, choices=ADMIN_ACTION_CHOICES, null=True, blank=True)
+    employee_payment_amount = models.DecimalField(max_digits=12, decimal_places=2, default=0.0)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
-        ordering = ['-created_at']
+        ordering = ['-batch_id', '-created_at']
 
 
 class AssetSupportingDocument(models.Model):
@@ -1212,7 +1229,9 @@ class FinalizedSalary(models.Model):
     net_salary = models.DecimalField(max_digits=10, decimal_places=2)
     days_paid = models.DecimalField(max_digits=10, decimal_places=2)
     
-    # Store JSON of components and flags (gChk, dChk, otEnabled)
+    asset_deduction = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    
+    # Store JSON of components and flags (gChk, dChk, otEnabled, asset_details)
     config = models.JSONField(default=dict)
     
     created_at = models.DateTimeField(auto_now_add=True)
@@ -1224,3 +1243,36 @@ class FinalizedSalary(models.Model):
 
     def __str__(self):
         return f"Finalized Salary {self.employee.full_name} ({self.from_date} to {self.to_date})"
+
+#--------------------------- WORK FROM HOME ---------------------------------
+
+class WFHRequest(models.Model):
+    STATUS_CHOICES = [
+        ('pending', 'Pending'),
+        ('approved', 'Approved'),
+        ('rejected', 'Rejected'),
+    ]
+
+    employee = models.ForeignKey(Employee, on_delete=models.CASCADE, related_name='wfh_requests')
+    reason = models.TextField()
+    from_date = models.DateField(null=True, blank=True)
+    to_date = models.DateField(null=True, blank=True)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
+    reporting_manager = models.ForeignKey(Employee, on_delete=models.SET_NULL, null=True, blank=True, related_name='managed_wfh_requests')
+    rejection_reason = models.TextField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"WFH Request: {self.employee.full_name} ({self.status})"
+
+class WorkLocationLog(models.Model):
+    employee = models.ForeignKey(Employee, on_delete=models.CASCADE, related_name='location_logs')
+    from_location = models.CharField(max_length=20)
+    to_location = models.CharField(max_length=20)
+    date = models.DateTimeField(auto_now_add=True)
+    changed_by = models.ForeignKey(Employee, on_delete=models.SET_NULL, null=True, blank=True, related_name='location_changes_made')
+    reason = models.TextField(null=True, blank=True)
+
+    def __str__(self):
+        return f"{self.employee.full_name}: {self.from_location} -> {self.to_location}"

@@ -114,6 +114,39 @@ const LoanApprovals = () => {
         }
     };
 
+    const handleDelete = async (id: number) => {
+        const result = await Swal.fire({
+            title: 'Are you sure?',
+            text: "You won't be able to revert this! This will permanently delete the loan record.",
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#e7515a',
+            cancelButtonColor: '#4f46e5',
+            confirmButtonText: 'Yes, delete it!',
+            customClass: {
+                popup: 'sweet-alerts'
+            }
+        });
+
+        if (result.isConfirmed) {
+            try {
+                const res = await fetch(`${API_BASE_URL}/app/loan-applications/${id}/`, {
+                    method: 'DELETE',
+                    headers: hdr(),
+                });
+                if (res.ok) {
+                    Swal.fire('Deleted!', 'Loan record has been deleted.', 'success');
+                    fetchData();
+                } else {
+                    Swal.fire('Error', 'Failed to delete record.', 'error');
+                }
+            } catch (e) {
+                console.error(e);
+                Swal.fire('Error', 'An error occurred while deleting.', 'error');
+            }
+        }
+    };
+
     const getStatusBadge = (status: string) => {
         switch (status) {
             case 'APPROVED': return <span className="badge badge-outline-success uppercase font-black text-[9px]">Approved</span>;
@@ -171,7 +204,7 @@ const LoanApprovals = () => {
                                             </div>
                                             {getStatusBadge(app.status)}
                                         </div>
-                                        
+
                                         <div className="bg-gray-50 dark:bg-gray-900/50 p-4 rounded-xl mb-6">
                                             <p className="text-[10px] font-black text-indigo-600 uppercase tracking-widest mb-1">{app.category_name}</p>
                                             <p className="text-2xl font-black text-emerald-600">₹{Number(app.requested_amount).toLocaleString()}</p>
@@ -181,12 +214,20 @@ const LoanApprovals = () => {
                                             </div>
                                         </div>
 
-                                        <button 
-                                            onClick={() => handleAction(app)}
-                                            className="mt-auto w-full btn btn-primary font-black uppercase tracking-widest text-[10px] py-3 rounded-xl shadow-lg shadow-indigo-500/20"
-                                        >
-                                            Review & Action
-                                        </button>
+                                        <div className="mt-auto flex flex-col gap-2">
+                                            <button 
+                                                onClick={() => handleAction(app)}
+                                                className="w-full btn btn-primary font-black uppercase tracking-widest text-[10px] py-3 rounded-xl shadow-lg shadow-indigo-500/20"
+                                            >
+                                                Review & Action
+                                            </button>
+                                            <button 
+                                                onClick={() => handleDelete(app.id)}
+                                                className="w-full btn btn-outline-danger font-black uppercase tracking-widest text-[10px] py-2 rounded-xl border-dashed opacity-70 hover:opacity-100"
+                                            >
+                                                Delete Request
+                                            </button>
+                                        </div>
                                     </div>
                                 ))}
                             </div>
@@ -233,14 +274,22 @@ const LoanApprovals = () => {
                                             </td>
                                             <td className="text-[10px] font-bold text-gray-400">{new Date(app.created_at).toLocaleDateString()}</td>
                                             <td className="text-center">
-                                                {app.status === 'APPROVED' && (
-                                                    <button 
-                                                        onClick={() => handleClear(app.id)}
-                                                        className="btn btn-sm btn-outline-success text-[9px] font-black uppercase px-2 py-1"
+                                                <div className="flex items-center justify-center gap-2">
+                                                    {app.status === 'APPROVED' && (
+                                                        <button
+                                                            onClick={() => handleClear(app.id)}
+                                                            className="btn btn-sm btn-outline-success text-[9px] font-black uppercase px-2 py-1"
+                                                        >
+                                                            Mark Cleared
+                                                        </button>
+                                                    )}
+                                                    <button
+                                                        onClick={() => handleDelete(app.id)}
+                                                        className="btn btn-sm btn-outline-danger text-[9px] font-black uppercase px-2 py-1"
                                                     >
-                                                        Mark Cleared
+                                                        Delete
                                                     </button>
-                                                )}
+                                                </div>
                                             </td>
                                         </tr>
                                     ))}
@@ -265,7 +314,7 @@ const LoanApprovals = () => {
                                         <h5 className="text-xl font-black text-indigo-600 uppercase tracking-tight italic">Review Loan Request</h5>
                                         <button onClick={() => setModal(false)} className="text-gray-400 hover:text-red-500 transition-colors"><IconX /></button>
                                     </div>
-                                    
+
                                     <div className="p-6 space-y-6">
                                         <div className="flex items-center gap-4 p-4 bg-indigo-50/50 dark:bg-indigo-900/10 rounded-2xl">
                                             <div className="bg-indigo-600 text-white p-3 rounded-xl font-black text-xl">
@@ -298,9 +347,9 @@ const LoanApprovals = () => {
                                         {selectedApp?.supporting_document && (
                                             <div className="panel border-gray-100 dark:border-gray-800 p-4">
                                                 <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">Supporting Document</p>
-                                                <a 
-                                                    href={`${selectedApp.supporting_document}`} 
-                                                    target="_blank" 
+                                                <a
+                                                    href={`${selectedApp.supporting_document}`}
+                                                    target="_blank"
                                                     rel="noopener noreferrer"
                                                     className="inline-flex items-center gap-2 text-indigo-600 hover:text-indigo-700 font-bold text-sm"
                                                 >
@@ -312,8 +361,8 @@ const LoanApprovals = () => {
 
                                         <div>
                                             <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1 block">Decision Remarks</label>
-                                            <textarea 
-                                                className="form-textarea min-h-[100px] border-gray-200 focus:border-indigo-500" 
+                                            <textarea
+                                                className="form-textarea min-h-[100px] border-gray-200 focus:border-indigo-500"
                                                 placeholder="Add any internal remarks or reason for rejection..."
                                                 value={remarks}
                                                 onChange={e => setRemarks(e.target.value)}
@@ -322,15 +371,15 @@ const LoanApprovals = () => {
                                     </div>
 
                                     <div className="flex items-center justify-end px-6 py-4 bg-gray-50/50 dark:bg-gray-900/20 gap-3 border-t border-gray-100 dark:border-gray-800">
-                                        <button 
-                                            onClick={() => processApproval('REJECTED')} 
+                                        <button
+                                            onClick={() => processApproval('REJECTED')}
                                             disabled={processing}
                                             className="btn btn-outline-danger font-bold uppercase tracking-widest text-[10px] px-6"
                                         >
                                             Reject Request
                                         </button>
-                                        <button 
-                                            onClick={() => processApproval('APPROVED')} 
+                                        <button
+                                            onClick={() => processApproval('APPROVED')}
                                             disabled={processing}
                                             className="btn btn-success font-bold uppercase tracking-widest text-[10px] px-8 shadow-emerald-500/20 shadow-lg"
                                         >

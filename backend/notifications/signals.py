@@ -264,7 +264,12 @@ def asset_request_status_change(sender, instance, **kwargs):
         if instance.requested_by and instance.requested_by.user and instance.requested_by.user.id:
             default_sender = UserRegister.objects.filter(role='admin').first()
             status = instance.approval_status.capitalize()
-            asset_name = instance.related_fixed_asset.name if instance.related_fixed_asset else (instance.related_supply_item.item_name if instance.related_supply_item else "Asset")
+            if instance.related_fixed_asset:
+                asset_name = f"{instance.related_fixed_asset.asset_tag} ({instance.related_fixed_asset.model_brand or 'No Brand'})"
+            elif instance.related_supply_item:
+                asset_name = instance.related_supply_item.item_name
+            else:
+                asset_name = "Asset"
             
             body = f"Your request for {asset_name} has been {status}."
             data = {"type": "asset_request", "request_id": instance.id, "status": instance.approval_status}

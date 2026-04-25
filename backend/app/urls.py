@@ -53,6 +53,8 @@ router.register(r'finalized-salary', FinalizedSalaryViewSet, basename='finalized
 router.register(r'loan-categories', LoanCategoryViewSet, basename='loan-category')
 router.register(r'loan-interest-slabs', LoanInterestSlabViewSet, basename='loan-interest-slab')
 router.register(r'loan-applications', LoanApplicationViewSet, basename='loan-application')
+router.register(r'wfh-requests', WFHRequestViewSet, basename='wfh-request')
+router.register(r'work-location-logs', WorkLocationLogViewSet, basename='work-location-log')
 
 urlpatterns = [
     path('salary-disbursement-statement/', SalaryDisbursementStatementView.as_view(), name='salary-disbursement-statement'),

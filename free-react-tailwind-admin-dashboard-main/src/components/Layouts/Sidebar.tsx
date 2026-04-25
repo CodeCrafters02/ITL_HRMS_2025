@@ -178,7 +178,7 @@ const Sidebar = () => {
                                             </div>
                                         </NavLink>
                                     </li>
-                                    
+
                                     <li className="menu nav-item">
                                         <NavLink to="/employee/company-policy" className="group">
                                             <div className="flex items-center">
@@ -265,15 +265,26 @@ const Sidebar = () => {
                                         </NavLink>
                                     </li>
 
+                                    <li className="menu nav-item">
+                                        <NavLink to="/employee/wfh-request" className="group">
+                                            <div className="flex items-center">
+                                                <IconMenuDashboard className="group-hover:!text-primary shrink-0" />
+                                                <span className="ltr:pl-3 rtl:pr-3 text-black dark:text-[#506690] dark:group-hover:text-white-dark">{t('Work From Home')}</span>
+                                            </div>
+                                        </NavLink>
+                                    </li>
+
                                     {localStorage.getItem('is_reporting_manager') === 'true' && (
-                                        <li className="menu nav-item">
-                                            <NavLink to="/employee/loan-approvals" className="group">
-                                                <div className="flex items-center">
-                                                    <IconMenuInvoice className="group-hover:!text-primary shrink-0" />
-                                                    <span className="ltr:pl-3 rtl:pr-3 text-black dark:text-[#506690] dark:group-hover:text-white-dark">{t('Loan Approvals')}</span>
-                                                </div>
-                                            </NavLink>
-                                        </li>
+                                        <>
+                                            <li className="menu nav-item">
+                                                <NavLink to="/employee/loan-approvals" className="group">
+                                                    <div className="flex items-center">
+                                                        <IconMenuInvoice className="group-hover:!text-primary shrink-0" />
+                                                        <span className="ltr:pl-3 rtl:pr-3 text-black dark:text-[#506690] dark:group-hover:text-white-dark">{t('Loan Approvals')}</span>
+                                                    </div>
+                                                </NavLink>
+                                            </li>
+                                        </>
                                     )}
                                 </>
                             )}
@@ -437,7 +448,14 @@ const Sidebar = () => {
                                             </div>
                                         </NavLink>
                                     </li>
-
+                                    <li className="menu nav-item">
+                                        <NavLink to="/admin/wfh-management" className="group">
+                                            <div className="flex items-center">
+                                                <IconMenuDashboard className="group-hover:!text-primary shrink-0" />
+                                                <span className="ltr:pl-3 rtl:pr-3 text-black dark:text-[#506690] dark:group-hover:text-white-dark">{t('Work From Home')}</span>
+                                            </div>
+                                        </NavLink>
+                                    </li>
 
                                     {/* Calendar */}
                                     <li className="menu nav-item">
