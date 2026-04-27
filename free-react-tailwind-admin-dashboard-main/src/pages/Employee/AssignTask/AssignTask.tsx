@@ -5,10 +5,12 @@ import Swal from 'sweetalert2';
 import { setPageTitle } from '../../../store/themeConfigSlice';
 import IconListCheck from '../../../components/Icon/IconListCheck';
 import IconSearch from '../../../components/Icon/IconSearch';
+import IconTrashLines from '../../../components/Icon/IconTrashLines';
 import { fetchMyReportees, Reportee } from '../Reportees/api';
 import {
     createManagerSubtask,
     createManagerTask,
+    deleteManagerTask,
     fetchManagerTaskDetail,
     fetchManagerTasks,
     ManagerTask,
@@ -43,6 +45,12 @@ const statusLabel: Record<ManagerTask['status'], string> = {
     done: 'Done',
 };
 
+const formatDateTime = (value?: string) => {
+    if (!value) return '-';
+    // Backend already sends local timezone-formatted datetime (settings TIME_ZONE).
+    return value.replace('T', ' ');
+};
+
 const AssignTask = () => {
     const dispatch = useDispatch();
 
@@ -57,14 +65,6 @@ const AssignTask = () => {
     const [showCreateForm, setShowCreateForm] = useState(false);
     const [hasSubtasks, setHasSubtasks] = useState(false);
     const [subtasks, setSubtasks] = useState<NewSubtask[]>([]);
-    const [subtaskDraft, setSubtaskDraft] = useState<NewSubtask>({
-        title: '',
-        description: '',
-        deadline: '',
-        priority: 'medium',
-        assignedEmployees: [],
-        taskOwner: null,
-    });
 
     const [tasks, setTasks] = useState<ManagerTask[]>([]);
     const [totalCount, setTotalCount] = useState(0);
@@ -127,11 +127,6 @@ const AssignTask = () => {
 
         setSelectedEmployees((prev) => (prev.length === 0 ? [onlyReporteeId] : prev));
         setOwnerId((prev) => (prev ?? onlyReporteeId));
-        setSubtaskDraft((prev) => ({
-            ...prev,
-            assignedEmployees: prev.assignedEmployees.length === 0 ? [onlyReporteeId] : prev.assignedEmployees,
-            taskOwner: prev.taskOwner ?? onlyReporteeId,
-        }));
     }, [reportees]);
 
     useEffect(() => {
@@ -150,30 +145,6 @@ const AssignTask = () => {
     };
 
     const submitTask = async () => {
-        const draftHasInput =
-            !!subtaskDraft.title.trim() ||
-            !!subtaskDraft.description.trim() ||
-            !!subtaskDraft.deadline ||
-            subtaskDraft.assignedEmployees.length > 0 ||
-            !!subtaskDraft.taskOwner;
-
-        let effectiveSubtasks = [...subtasks];
-        if (hasSubtasks && draftHasInput) {
-            if (!subtaskDraft.title.trim() || !subtaskDraft.deadline || subtaskDraft.assignedEmployees.length === 0 || !subtaskDraft.taskOwner) {
-                Swal.fire('Validation', 'Draft subtask is incomplete. Fill all required subtask fields or clear it.', 'warning');
-                return;
-            }
-            if (!subtaskDraft.assignedEmployees.includes(subtaskDraft.taskOwner)) {
-                Swal.fire('Validation', 'Draft subtask owner must be one of subtask assignees.', 'warning');
-                return;
-            }
-            effectiveSubtasks.push({
-                ...subtaskDraft,
-                title: subtaskDraft.title.trim(),
-                description: subtaskDraft.description.trim(),
-            });
-        }
-
         const effectiveSelectedEmployees = selectedEmployees.length === 0 && ownerId ? [ownerId] : selectedEmployees;
         if (!title.trim() || !deadline || effectiveSelectedEmployees.length === 0 || !ownerId) {
             Swal.fire('Validation', 'Please fill title, deadline, assignees, and task owner.', 'warning');
@@ -184,11 +155,13 @@ const AssignTask = () => {
             return;
         }
         const parentDeadlineMs = new Date(deadline).getTime();
-        const normalizedSubtasks = effectiveSubtasks.map((sub) => {
+        const normalizedSubtasks = subtasks.map((sub) => {
             const assignees = sub.assignedEmployees.length === 0 && sub.taskOwner ? [sub.taskOwner] : sub.assignedEmployees;
-            return { ...sub, assignedEmployees: assignees };
+            return { ...sub, title: sub.title.trim(), description: sub.description.trim(), assignedEmployees: assignees };
         });
         const invalidSubtask = normalizedSubtasks.find((sub) => {
+            if (!sub.title || !sub.deadline) return true;
+            if (sub.assignedEmployees.length === 0) return true;
             if (!sub.taskOwner || !sub.assignedEmployees.includes(sub.taskOwner)) return true;
             const subDeadlineMs = new Date(sub.deadline).getTime();
             return Number.isFinite(parentDeadlineMs) && Number.isFinite(subDeadlineMs) && subDeadlineMs > parentDeadlineMs;
@@ -259,14 +232,6 @@ const AssignTask = () => {
             setEditingTaskId(null);
             setSubtasks([]);
             setHasSubtasks(false);
-            setSubtaskDraft({
-                title: '',
-                description: '',
-                deadline: '',
-                priority: 'medium',
-                assignedEmployees: [],
-                taskOwner: null,
-            });
             setShowCreateForm(false);
             loadTasks();
         } catch (err) {
@@ -284,49 +249,56 @@ const AssignTask = () => {
 
     const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
 
-    const toggleSubtaskDraftEmployee = (empId: number) => {
-        setSubtaskDraft((prev) => {
-            const exists = prev.assignedEmployees.includes(empId);
-            const nextAssigned = exists ? prev.assignedEmployees.filter((id) => id !== empId) : [...prev.assignedEmployees, empId];
-            const nextOwner = nextAssigned.includes(prev.taskOwner || -1) ? prev.taskOwner : (nextAssigned[0] ?? null);
-            return {
-                ...prev,
-                assignedEmployees: nextAssigned,
-                taskOwner: nextOwner,
-            };
-        });
-    };
-
     const addSubtask = () => {
-        if (!subtaskDraft.title.trim() || !subtaskDraft.deadline || subtaskDraft.assignedEmployees.length === 0 || !subtaskDraft.taskOwner) {
-            Swal.fire('Validation', 'Please fill subtask title, deadline, assignees, and owner.', 'warning');
-            return;
-        }
-        if (!subtaskDraft.assignedEmployees.includes(subtaskDraft.taskOwner)) {
-            Swal.fire('Validation', 'Subtask owner must be one of subtask assignees.', 'warning');
-            return;
-        }
-        if (deadline) {
-            const subMs = new Date(subtaskDraft.deadline).getTime();
-            const parentMs = new Date(deadline).getTime();
-            if (Number.isFinite(subMs) && Number.isFinite(parentMs) && subMs > parentMs) {
-                Swal.fire('Validation', 'Subtask deadline cannot be after parent task deadline.', 'warning');
-                return;
-            }
-        }
-
-        setSubtasks((prev) => [...prev, { ...subtaskDraft, title: subtaskDraft.title.trim(), description: subtaskDraft.description.trim() }]);
-        setSubtaskDraft({
-            title: '',
-            description: '',
-            deadline: '',
-            priority: 'medium',
-            assignedEmployees: [],
-            taskOwner: null,
-        });
+        const defaultAssignee = reportees.length === 1 ? [reportees[0].id] : [];
+        setSubtasks((prev) => [
+            ...prev,
+            {
+                title: '',
+                description: '',
+                deadline: '',
+                priority: 'medium',
+                assignedEmployees: defaultAssignee,
+                taskOwner: defaultAssignee[0] ?? null,
+            },
+        ]);
     };
 
     const removeSubtask = (index: number) => {
+        setSubtasks((prev) => prev.filter((_, idx) => idx !== index));
+    };
+
+    const deleteSubtask = async (index: number) => {
+        const target = subtasks[index];
+        if (!target) return;
+
+        const confirm = await Swal.fire({
+            title: 'Delete subtask?',
+            text: 'This subtask will be removed permanently.',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonText: 'Delete',
+            cancelButtonText: 'Cancel',
+            confirmButtonColor: '#d33',
+        });
+        if (!confirm.isConfirmed) return;
+
+        if (target.id) {
+            try {
+                setSubmitting(true);
+                await deleteManagerTask(target.id);
+                setSubtasks((prev) => prev.filter((_, idx) => idx !== index));
+                await loadTasks();
+                Swal.fire('Deleted', 'Subtask removed successfully.', 'success');
+            } catch (err) {
+                const message = err instanceof Error ? err.message : 'Failed to delete subtask';
+                Swal.fire('Error', message, 'error');
+            } finally {
+                setSubmitting(false);
+            }
+            return;
+        }
+
         setSubtasks((prev) => prev.filter((_, idx) => idx !== index));
     };
 
@@ -576,7 +548,10 @@ const AssignTask = () => {
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <input className="form-input" placeholder="Task title" value={title} onChange={(e) => setTitle(e.target.value)} />
                         <div className="grid grid-cols-2 gap-3">
-                            <input type="date" className="form-input" value={deadline} onChange={(e) => setDeadline(e.target.value)} />
+                            <div>
+                                <label className="mb-1 block text-xs font-semibold text-white-dark">Deadline</label>
+                                <input type="date" className="form-input" value={deadline} onChange={(e) => setDeadline(e.target.value)} />
+                            </div>
                             <select className="form-select" value={priority} onChange={(e) => setPriority(e.target.value as TaskPriority)}>
                                 <option value="high">High</option>
                                 <option value="medium">Medium</option>
@@ -643,66 +618,6 @@ const AssignTask = () => {
                                 Add Subtask
                             </button>
                         </div>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <input
-                                className="form-input"
-                                placeholder="Subtask title"
-                                value={subtaskDraft.title}
-                                onChange={(e) => setSubtaskDraft((prev) => ({ ...prev, title: e.target.value }))}
-                            />
-                            <div className="grid grid-cols-2 gap-3">
-                                <input
-                                    type="date"
-                                    className="form-input"
-                                    value={subtaskDraft.deadline}
-                                    onChange={(e) => setSubtaskDraft((prev) => ({ ...prev, deadline: e.target.value }))}
-                                />
-                                <select
-                                    className="form-select"
-                                    value={subtaskDraft.priority}
-                                    onChange={(e) => setSubtaskDraft((prev) => ({ ...prev, priority: e.target.value as TaskPriority }))}
-                                >
-                                    <option value="high">High</option>
-                                    <option value="medium">Medium</option>
-                                    <option value="low">Low</option>
-                                </select>
-                            </div>
-                        </div>
-                        <textarea
-                            className="form-textarea min-h-[80px]"
-                            placeholder="Subtask description"
-                            value={subtaskDraft.description}
-                            onChange={(e) => setSubtaskDraft((prev) => ({ ...prev, description: e.target.value }))}
-                        />
-                        <div>
-                            <p className="text-sm font-semibold mb-2">Subtask Assignees</p>
-                            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-2 max-h-40 overflow-auto border border-white-light dark:border-[#1b2e4b] rounded-lg p-3">
-                                {reportees.map((emp) => (
-                                    <label key={`sub-${emp.id}`} className="inline-flex items-center gap-2 text-sm">
-                                        <input type="checkbox" checked={subtaskDraft.assignedEmployees.includes(emp.id)} onChange={() => toggleSubtaskDraftEmployee(emp.id)} />
-                                        <span>{emp.full_name}</span>
-                                    </label>
-                                ))}
-                            </div>
-                        </div>
-                        <div>
-                            <p className="text-sm font-semibold mb-2">Subtask Owner</p>
-                            <select
-                                className="form-select"
-                                value={subtaskDraft.taskOwner ?? ''}
-                                onChange={(e) => setSubtaskDraft((prev) => ({ ...prev, taskOwner: e.target.value ? Number(e.target.value) : null }))}
-                                disabled={subtaskDraft.assignedEmployees.length === 0}
-                            >
-                                <option value="">Select owner</option>
-                                {reportees
-                                    .filter((emp) => subtaskDraft.assignedEmployees.includes(emp.id))
-                                    .map((emp) => (
-                                        <option key={`sub-owner-${emp.id}`} value={emp.id}>
-                                            {emp.full_name}
-                                        </option>
-                                    ))}
-                            </select>
-                        </div>
                         <div className="space-y-3">
                             {subtasks.length === 0 ? (
                                 <p className="text-xs text-white-dark">{editingTaskId ? 'No subtasks found for this task.' : 'No subtasks added yet.'}</p>
@@ -710,12 +625,17 @@ const AssignTask = () => {
                                 subtasks.map((sub, idx) => (
                                     <div key={`${sub.id || 'new'}-${idx}`} className="rounded-md border border-white-light dark:border-[#1b2e4b] p-3 space-y-3">
                                         <div className="flex items-center justify-between gap-3">
-                                            <p className="font-semibold text-sm">{sub.id ? `Subtask #${sub.id}` : `New Subtask ${idx + 1}`}</p>
-                                            {!sub.id && (
-                                                <button type="button" className="btn btn-sm btn-outline-danger" onClick={() => removeSubtask(idx)}>
-                                                    Remove
-                                                </button>
-                                            )}
+                                            <p className="font-semibold text-sm">Subtask {idx + 1}</p>
+                                            <button
+                                                type="button"
+                                                className="btn btn-sm btn-outline-danger p-2"
+                                                onClick={() => (sub.id ? deleteSubtask(idx) : removeSubtask(idx))}
+                                                title="Delete subtask"
+                                                aria-label="Delete subtask"
+                                                disabled={submitting}
+                                            >
+                                                <IconTrashLines className="h-4 w-4" />
+                                            </button>
                                         </div>
                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                                             <input
@@ -853,6 +773,7 @@ const AssignTask = () => {
                                     <th>Priority</th>
                                     <th>Status</th>
                                     <th>Deadline</th>
+                                    <th>Created On</th>
                                     <th>Progress</th>
                                     <th>Assignees</th>
                                     <th>Actions</th>
@@ -870,6 +791,7 @@ const AssignTask = () => {
                                         </td>
                                         <td>{statusLabel[task.status]}</td>
                                         <td>{task.deadline ? new Date(task.deadline).toLocaleDateString() : '-'}</td>
+                                        <td>{formatDateTime(task.created_at)}</td>
                                         <td>{task.progress}%</td>
                                         <td>{task.assignments?.length || 0}</td>
                                         <td>
@@ -925,6 +847,10 @@ const AssignTask = () => {
                                                 <div>
                                                     <p className="text-[11px] uppercase tracking-wide text-white-dark">Deadline</p>
                                                     <p className="font-semibold mt-1">{selectedTask.deadline ? new Date(selectedTask.deadline).toLocaleDateString() : '-'}</p>
+                                                </div>
+                                                <div>
+                                                    <p className="text-[11px] uppercase tracking-wide text-white-dark">Created On</p>
+                                                    <p className="font-semibold mt-1">{formatDateTime(selectedTask.created_at)}</p>
                                                 </div>
                                                 <div>
                                                     <p className="text-[11px] uppercase tracking-wide text-white-dark">Progress</p>
@@ -986,10 +912,14 @@ const AssignTask = () => {
                                                                     </span>
                                                                 </div>
                                                             </div>
-                                                            <div className="grid grid-cols-3 gap-3 mt-3 text-xs">
+                                                            <div className="grid grid-cols-4 gap-3 mt-3 text-xs">
                                                                 <div>
                                                                     <p className="text-white-dark">Deadline</p>
                                                                     <p className="font-semibold mt-1">{sub.deadline ? new Date(sub.deadline).toLocaleDateString() : '-'}</p>
+                                                                </div>
+                                                                <div>
+                                                                    <p className="text-white-dark">Created On</p>
+                                                                    <p className="font-semibold mt-1">{formatDateTime(sub.created_at)}</p>
                                                                 </div>
                                                                 <div>
                                                                     <p className="text-white-dark">Progress</p>

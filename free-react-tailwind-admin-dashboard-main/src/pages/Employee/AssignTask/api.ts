@@ -15,6 +15,7 @@ export interface ManagerSubtask {
     id: number;
     title: string;
     description: string;
+    created_at: string;
     deadline: string;
     priority: TaskPriority;
     status: TaskStatus;
@@ -26,6 +27,7 @@ export interface ManagerTask {
     id: number;
     title: string;
     description: string;
+    created_at: string;
     deadline: string;
     priority: TaskPriority;
     status: TaskStatus;
@@ -116,6 +118,22 @@ export const updateManagerTask = async (
         body: JSON.stringify(payload),
     });
     return parseJson<ManagerTask>(res, 'Failed to update task');
+};
+
+export const deleteManagerTask = async (taskId: number): Promise<void> => {
+    const res = await authFetch(`${EMPLOYEE_API}/tasks/${taskId}/`, {
+        method: 'DELETE',
+    });
+    if (!res.ok) {
+        let detail = 'Failed to delete task';
+        try {
+            const data = await res.json();
+            detail = data?.detail || detail;
+        } catch {
+            // ignore non-json response bodies
+        }
+        throw new Error(detail);
+    }
 };
 
 export const reassignManagerTask = async (taskId: number, owner: number, employees: number[]) => {

@@ -1,4 +1,5 @@
 from rest_framework import serializers
+from django.utils import timezone
 from app.models import Notification,LearningCorner,BreakConfig, BreakLog,Attendance, ShiftPolicy, Employee,EmpLeave,Leave,CompanyPolicies
 from .models import *
 
@@ -233,7 +234,7 @@ class TaskSerializer(serializers.ModelSerializer):
     
     def get_created_at(self, obj):
         # Format: YYYY-MM-DD HH:MM
-        return obj.created_at.strftime("%Y-%m-%d %H:%M")
+        return timezone.localtime(obj.created_at).strftime("%Y-%m-%d %I:%M %p")
 
 class MyTaskSerializer(serializers.ModelSerializer):
     assignments = TaskAssignmentSerializer(many=True, read_only=True)
@@ -289,7 +290,7 @@ class MyTaskSerializer(serializers.ModelSerializer):
         return obj.progress()
 
     def get_created_at(self, obj):
-        return obj.created_at.strftime("%Y-%m-%d %H:%M")
+        return timezone.localtime(obj.created_at).strftime("%Y-%m-%d %I:%M %p")
 
 # serializers.py
 class TaskAssignmentStatusUpdateSerializer(serializers.ModelSerializer):

@@ -49,6 +49,11 @@ const formatDate = (value: string) => {
     return date.toLocaleDateString();
 };
 
+const formatDateTime = (value: string) => {
+    if (!value) return '-';
+    return value.replace('T', ' ');
+};
+
 const fullNameFromLocalStorage = () => {
     const first = (localStorage.getItem('first_name') || '').trim();
     const last = (localStorage.getItem('last_name') || '').trim();
@@ -361,6 +366,7 @@ const MyTasks = () => {
                                     <div className="min-w-0">
                                         <h3 className="font-semibold text-base truncate">{task.title}</h3>
                                         <p className="text-xs text-white-dark mt-1 line-clamp-2 min-h-[34px]">{task.description || 'No description provided.'}</p>
+                                        <p className="text-[11px] text-white-dark mt-1">Created: {formatDateTime(task.created_at)}</p>
                                     </div>
                                     <div className="flex items-center gap-2 shrink-0">
                                         <span className={`badge ${priorityStyleMap[task.priority]}`}>{priorityLabelMap[task.priority]}</span>
@@ -411,6 +417,7 @@ const MyTasks = () => {
                                     <th>Task</th>
                                     <th>Priority</th>
                                     <th>Deadline</th>
+                                    <th>Created On</th>
                                     <th>Progress</th>
                                     <th>My Assignment</th>
                                     <th className="text-center">Details</th>
@@ -434,6 +441,7 @@ const MyTasks = () => {
                                                 <span className={`badge ${priorityStyleMap[task.priority]}`}>{priorityLabelMap[task.priority]}</span>
                                             </td>
                                             <td className={isOverdue ? 'text-danger font-semibold' : ''}>{formatDate(task.deadline)}</td>
+                                            <td>{formatDateTime(task.created_at)}</td>
                                             <td>
                                                 <div className="flex items-center gap-2 min-w-[130px]">
                                                     <div className="flex-1 h-1.5 bg-[#ebedf2] dark:bg-[#1b2e4b] rounded-full overflow-hidden">
@@ -470,7 +478,7 @@ const MyTasks = () => {
                             </button>
                         </div>
 
-                        <div className="mt-4 grid grid-cols-1 sm:grid-cols-3 gap-3">
+                        <div className="mt-4 grid grid-cols-1 sm:grid-cols-4 gap-3">
                             <div className="rounded-md bg-[#f8f9fa] dark:bg-[#060818] p-3">
                                 <p className="text-xs text-white-dark">Priority</p>
                                 <p className="font-semibold mt-1">{priorityLabelMap[selectedTask.priority]}</p>
@@ -484,6 +492,10 @@ const MyTasks = () => {
                             <div className="rounded-md bg-[#f8f9fa] dark:bg-[#060818] p-3">
                                 <p className="text-xs text-white-dark">Deadline</p>
                                 <p className="font-semibold mt-1">{formatDate(selectedTask.deadline)}</p>
+                            </div>
+                            <div className="rounded-md bg-[#f8f9fa] dark:bg-[#060818] p-3">
+                                <p className="text-xs text-white-dark">Created On</p>
+                                <p className="font-semibold mt-1">{formatDateTime(selectedTask.created_at)}</p>
                             </div>
                         </div>
 

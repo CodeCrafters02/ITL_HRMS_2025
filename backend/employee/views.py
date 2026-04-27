@@ -628,6 +628,40 @@ class AttendanceHistoryAPIView(APIView):
         except Employee.DoesNotExist:
             return Response({"detail": "Employee not found."}, status=404)
 
+        working_days_config = None
+        if employee.department:
+            working_days_config = DepartmentWiseWorkingDays.objects.filter(
+                department=employee.department,
+                company=employee.company
+            ).first()
+
+        day_aliases = {
+            'mon': 'monday', 'monday': 'monday',
+            'tue': 'tuesday', 'tues': 'tuesday', 'tuesday': 'tuesday',
+            'wed': 'wednesday', 'wednesday': 'wednesday',
+            'thu': 'thursday', 'thur': 'thursday', 'thurs': 'thursday', 'thursday': 'thursday',
+            'fri': 'friday', 'friday': 'friday',
+            'sat': 'saturday', 'saturday': 'saturday',
+            'sun': 'sunday', 'sunday': 'sunday',
+        }
+
+        def normalize_day_name(value):
+            key = str(value or '').strip().lower()
+            return day_aliases.get(key, key)
+
+        configured_working_days = working_days_config.working_days if working_days_config else []
+        configured_weekend_days = working_days_config.weekend_days if working_days_config else []
+        working_day_names = {
+            normalize_day_name(day_name)
+            for day_name in (configured_working_days if isinstance(configured_working_days, list) else [])
+            if normalize_day_name(day_name)
+        }
+        weekend_day_names = {
+            normalize_day_name(day_name)
+            for day_name in (configured_weekend_days if isinstance(configured_weekend_days, list) else [])
+            if normalize_day_name(day_name)
+        }
+
         start_date = datetime(selected_year, selected_month, 1).date()
         if selected_month == 12:
             end_date = datetime(selected_year + 1, 1, 1).date() - timedelta(days=1)
@@ -669,7 +703,16 @@ class AttendanceHistoryAPIView(APIView):
 
         day = start_date
         while day <= end_date:
-            is_weekend = day.weekday() >= 5  # Saturday (5) and Sunday (6)
+            day_name = normalize_day_name(day.strftime('%A'))
+            if working_day_names:
+                # Prefer explicit department working-days configuration.
+                is_weekend = day_name not in working_day_names
+            elif weekend_day_names:
+                # Fallback to explicit weekend list when working days are not configured.
+                is_weekend = day_name in weekend_day_names
+            else:
+                # Final fallback only when no department config exists.
+                is_weekend = day.weekday() >= 5
             status = None  # Don't initialize as 'absent' to avoid double counting
             is_late = False
             late_duration = None
