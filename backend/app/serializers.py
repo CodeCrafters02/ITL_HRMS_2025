@@ -494,6 +494,8 @@ class EmployeeSerializer(serializers.ModelSerializer):
     source_choices = serializers.SerializerMethodField()
     shift_assigned = ShiftPolicySerializer(read_only=True)
     company_name = serializers.SerializerMethodField()
+    active_loan_emi = serializers.SerializerMethodField()
+    active_loans_breakdown = serializers.SerializerMethodField()
 
     class Meta:
         model = Employee
@@ -507,7 +509,8 @@ class EmployeeSerializer(serializers.ModelSerializer):
             'who_referred', 'date_of_joining', 'previous_employer', 'date_of_releaving',
             'previous_designation_name', 'previous_salary', 'basic_salary', 'ctc', 'gross_salary',
             'epf_status', 'uan', 'asset_details', 'asset_names', 'esic_status', 'esic_no',
-            'source_choices', 'shift_assigned', 'password'
+            'source_choices', 'shift_assigned', 'password', 'active_loan_emi', 'active_loans_breakdown',
+            'work_location'
         ]
 
     def get_department_name(self, obj):
@@ -535,6 +538,33 @@ class EmployeeSerializer(serializers.ModelSerializer):
     
     def get_reporting_level_name(self, obj):
         return obj.reporting_level.level_name if obj.reporting_level else None
+
+    def get_active_loan_emi(self, obj):
+        if not obj.user:
+            return 0
+        # Sum all currently active loans (APPROVED status)
+        from django.db.models import Sum
+        total_emi = LoanApplication.objects.filter(
+            employee=obj.user, 
+            status='APPROVED'
+        ).aggregate(total=Sum('emi_amount'))['total'] or 0
+        return float(total_emi)
+
+    def get_active_loans_breakdown(self, obj):
+        if not obj.user:
+            return []
+        loans = LoanApplication.objects.filter(employee=obj.user, status='APPROVED').select_related('category')
+        return [
+            {
+                'id': loan.id,
+                'category': loan.category.name,
+                'emi': float(loan.emi_amount),
+                'requested_amount': float(loan.requested_amount),
+                'repayment_months': loan.repayment_months,
+                'date': loan.created_at.strftime('%Y-%m-%d')
+            }
+            for loan in loans
+        ]
 
     def validate(self, data):
         email = data.get('email')
@@ -583,6 +613,9 @@ class EmployeeSerializer(serializers.ModelSerializer):
 
             if reporting_level and reporting_manager.level_id != reporting_level.id:
                 raise serializers.ValidationError("Reporting manager is not assigned to the selected reporting level.")
+            
+            if self.instance and reporting_manager.id == self.instance.id:
+                raise serializers.ValidationError("An employee cannot be their own reporting manager.")
 
         # Non-master users can only create/update employees in their own company.
         if request.user.role != 'master':
@@ -866,6 +899,7 @@ class FixedAssetSerializer(serializers.ModelSerializer):
     assigned_to_name = serializers.SerializerMethodField(read_only=True)
     variable_catalog_code = serializers.SerializerMethodField(read_only=True)
     variable_catalog_name = serializers.SerializerMethodField(read_only=True)
+    assignee_emp_id = serializers.SerializerMethodField(read_only=True)
 
     class Meta:
         model = FixedAsset
@@ -883,6 +917,9 @@ class FixedAssetSerializer(serializers.ModelSerializer):
 
     def get_variable_catalog_name(self, obj):
         return obj.variable_supply_item.item_name if obj.variable_supply_item_id else None
+
+    def get_assignee_emp_id(self, obj):
+        return obj.assigned_to.employee_id if obj.assigned_to else None
 
     def create(self, validated_data):
         request = self.context['request']
@@ -907,22 +944,55 @@ class FixedAssetSerializer(serializers.ModelSerializer):
 
 
 class AssetRequestSerializer(serializers.ModelSerializer):
+    requested_by = serializers.PrimaryKeyRelatedField(
+        queryset=Employee.objects.all(), 
+        required=False, 
+        allow_null=True
+    )
     requested_by_name = serializers.SerializerMethodField(read_only=True)
     image_url = serializers.SerializerMethodField(read_only=True)
+    item_name = serializers.SerializerMethodField(read_only=True)
+    item_image = serializers.SerializerMethodField(read_only=True)
+    item_price = serializers.SerializerMethodField(read_only=True)
+    requester_emp_id = serializers.SerializerMethodField(read_only=True)
 
     class Meta:
         model = AssetRequest
         fields = '__all__'
         read_only_fields = ('company', 'created_at', 'updated_at')
 
+    def get_item_price(self, obj):
+        if obj.related_supply_item:
+            return float(obj.related_supply_item.unit_price or 0)
+        return 0.0
+
     def get_requested_by_name(self, obj):
         e = obj.requested_by
         return f"{(e.first_name or '').strip()} {(e.last_name or '').strip()}".strip() or str(e.employee_id)
+
+    def get_requester_emp_id(self, obj):
+        return obj.requested_by.employee_id if obj.requested_by else None
 
     def get_image_url(self, obj):
         request = self.context.get('request')
         if obj.image and request:
             return request.build_absolute_uri(obj.image.url)
+        return None
+
+    def get_item_name(self, obj):
+        if obj.related_fixed_asset:
+            return f"{obj.related_fixed_asset.asset_tag} ({obj.related_fixed_asset.model_brand})"
+        if obj.related_supply_item:
+            return obj.related_supply_item.item_name
+        return "General Request"
+
+    def get_item_image(self, obj):
+        request = self.context.get('request')
+        img = None
+        if obj.related_supply_item and obj.related_supply_item.image:
+            img = obj.related_supply_item.image
+        if img and request:
+            return request.build_absolute_uri(img.url)
         return None
 
     def create(self, validated_data):
@@ -1172,7 +1242,7 @@ class PayrollSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'employee_id', 'employee_name','designation','department', 'payroll_date',
             'gross_salary', 'basic_salary', 'hra', 'conveyance', 'medical',
-            'special_allowance', 'service_charges', 'pf', 'income_tax', 'net_pay',
+            'special_allowance', 'service_charges', 'pf', 'income_tax', 'loan_emi', 'loan_disbursement', 'net_pay',
             'total_working_days', 'days_paid', 'loss_of_pay_days',
             'other_allowances', 'other_deductions','payroll_date'
         ]
@@ -1750,3 +1820,68 @@ class ReimbursementRequestSerializer(serializers.ModelSerializer):
             return obj.reporting_manager.full_name
         return None
 
+class LoanInterestSlabSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = LoanInterestSlab
+        fields = '__all__'
+
+class LoanCategorySerializer(serializers.ModelSerializer):
+    interest_slabs = LoanInterestSlabSerializer(many=True, read_only=True)
+    allowed_levels_display = serializers.SerializerMethodField()
+
+    class Meta:
+        model = LoanCategory
+        fields = '__all__'
+        read_only_fields = ['company']
+
+    def get_allowed_levels_display(self, obj):
+        return [{"id": l.id, "level_name": l.level_name} for l in obj.allowed_levels.all()]
+
+class LoanApplicationSerializer(serializers.ModelSerializer):
+    employee_details = serializers.SerializerMethodField()
+    category_name = serializers.ReadOnlyField(source='category.name')
+    repayment_end_month = serializers.SerializerMethodField()
+
+    class Meta:
+        model = LoanApplication
+        fields = '__all__'
+        read_only_fields = ['employee', 'interest_rate', 'emi_amount', 'status', 'manager_approved_by', 'admin_approved_by']
+
+    def get_employee_details(self, obj):
+        profile = obj.employee.employee_profile
+        return {
+            "full_name": profile.full_name if profile else obj.employee.get_full_name() or obj.employee.username,
+            "employee_id": profile.employee_id if profile else ""
+        }
+
+    def get_repayment_end_month(self, obj):
+        if not obj.created_at or not obj.repayment_months:
+            return None
+        # Calculate year and month after adding repayment_months
+        # obj.created_at is a datetime object
+        total_months = obj.created_at.month + obj.repayment_months
+        year = obj.created_at.year + (total_months - 1) // 12
+        month = (total_months - 1) % 12 + 1
+        import datetime
+        end_date = datetime.date(year, month, 1)
+        return end_date.strftime('%B %Y')
+
+
+class WFHRequestSerializer(serializers.ModelSerializer):
+    employee_name = serializers.ReadOnlyField(source='employee.full_name')
+    employee_username = serializers.ReadOnlyField(source='employee.user.username')
+    reporting_manager_name = serializers.ReadOnlyField(source='reporting_manager.full_name')
+    status_display = serializers.CharField(source='get_status_display', read_only=True)
+
+    class Meta:
+        model = WFHRequest
+        fields = '__all__'
+        read_only_fields = ['employee', 'reporting_manager', 'status']
+
+class WorkLocationLogSerializer(serializers.ModelSerializer):
+    employee_name = serializers.ReadOnlyField(source='employee.full_name')
+    changed_by_name = serializers.ReadOnlyField(source='changed_by.full_name')
+
+    class Meta:
+        model = WorkLocationLog
+        fields = '__all__'

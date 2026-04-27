@@ -143,10 +143,15 @@ const AdminDesignationSalary = lazy(() => import('../pages/Admin/DesignationSala
 const AdminSalaryStructure = lazy(() => import('../pages/Admin/SalaryStructure'));
 const AdminPayrollReport = lazy(() => import('../pages/Admin/PayrollReport'));
 const AdminSalaryDisbursement = lazy(() => import('../pages/Admin/SalaryDisbursement'));
+const AdminLoanConfig = lazy(() => import('../pages/Admin/LoanConfig'));
+const AdminLoanApprovals = lazy(() => import('../pages/Admin/LoanApprovals'));
+const WFHManagement = lazy(() => import('../pages/Admin/WFHManagement'));
 
 // Employee Pages
 const EmployeeDashboard = lazy(() => import('../pages/Employee/Dashboard'));
 const EmployeeChat = lazy(() => import('../pages/Employee/Chat'));
+const LoanApplication = lazy(() => import('../pages/Employee/LoanApplication'));
+const WFHRequest = lazy(() => import('../pages/Employee/WFHRequest'));
 const EmployeeCalendar = lazy(() => import('../pages/Employee/Calendar'));
 const EmployeeMyTasks = lazy(() => import('../pages/Employee/MyTasks/Mytasks'));
 const EmployeeApplyLeave = lazy(() => import('../pages/Employee/LeaveApplication/ApplyLeave'));
@@ -494,6 +499,16 @@ const routes = [
         layout: 'blank',
     },
     {
+        path: '/admin/payroll-report',
+        element: <AdminPayrollReport />,
+        layout: 'default',
+    },
+    {
+        path: '/admin/wfh-management',
+        element: <WFHManagement />,
+        layout: 'default',
+    },
+    {
         path: '/pages/maintenence',
         element: <Maintenence />,
         layout: 'blank',
@@ -729,6 +744,14 @@ const routes = [
         element: <AdminOfficeStructure />,
     },
     {
+        path: '/admin/loan-configuration',
+        element: <AdminLoanConfig />,
+    },
+    {
+        path: '/admin/loan-approvals',
+        element: <AdminLoanApprovals />,
+    },
+    {
         path: '/admin/calendar',
         element: <AdminCalendar />,
     },
@@ -844,6 +867,18 @@ const routes = [
     {
         path: '/admin/reimbursement/history',
         element: <ReimbursementHistory />,
+    },
+    {
+        path: '/employee/loan-application',
+        element: <LoanApplication />,
+    },
+    {
+        path: '/employee/wfh-request',
+        element: <WFHRequest />,
+    },
+    {
+        path: '/employee/loan-approvals',
+        element: <AdminLoanApprovals />,
     },
 ];
 

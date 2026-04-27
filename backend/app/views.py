@@ -32,6 +32,7 @@ from .models import *
 from rest_framework import filters
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
+from django_filters.rest_framework import DjangoFilterBackend
 from .chat_serializers import (
     ChatConversationSerializer,
     ChatMessageSerializer,
@@ -221,7 +222,8 @@ class LoginAPIView(APIView):
                 "username": user.username,
                 "first_name": user.first_name,
                 "last_name": user.last_name,
-                "role": user.role  # ✅ This lets frontend redirect properly!
+                "role": user.role,
+                "is_reporting_manager": user.is_reporting_manager
             }, status=status.HTTP_200_OK)
 
         return Response({"detail": "Invalid credentials"}, status=status.HTTP_401_UNAUTHORIZED)
@@ -637,6 +639,33 @@ class EmployeeViewSet(viewsets.ModelViewSet):
     ]
     parser_classes = [MultiPartParser, FormParser, JSONParser]
 
+    @action(detail=True, methods=['post'], permission_classes=[IsAuthenticated])
+    def toggle_work_location(self, request, pk=None):
+        if not (request.user.role == 'admin' or request.user.role == 'master'):
+            return Response({"detail": "Only admins can manually toggle work location."}, status=status.HTTP_403_FORBIDDEN)
+        
+        employee = self.get_object()
+        old_loc = employee.work_location
+        new_loc = 'home' if old_loc == 'office' else 'office'
+        reason = request.data.get('reason', f"Direct change by {request.user.username}")
+
+        employee.work_location = new_loc
+        employee.save()
+
+        # Create log
+        WorkLocationLog.objects.create(
+            employee=employee,
+            from_location=old_loc,
+            to_location=new_loc,
+            changed_by=request.user.employee_profile,
+            reason=reason
+        )
+
+        return Response({
+            "detail": f"Successfully changed {employee.full_name}'s location to {new_loc}",
+            "work_location": new_loc
+        }, status=status.HTTP_200_OK)
+
     @action(detail=False, methods=['get'])
     def me(self, request):
         if not hasattr(request.user, 'employee'):
@@ -712,7 +741,10 @@ class EmployeeViewSet(viewsets.ModelViewSet):
             if company:
                 # Keep the Employee register complete for this company
                 self._ensure_employee_profiles_for_company(company)
-                qs = qs.filter(company=company).exclude(user__role='admin')
+                qs = qs.filter(company=company)
+                include_admins = self.request.query_params.get('include_admins', 'false').lower() == 'true'
+                if not include_admins:
+                    qs = qs.exclude(user__role='admin')
             else:
                 qs = qs.none()
             
@@ -776,8 +808,13 @@ class EmployeeViewSet(viewsets.ModelViewSet):
     
 class SupplyItemViewSet(viewsets.ModelViewSet):
     serializer_class = SupplyItemSerializer
-    permission_classes = [IsAuthenticated, IsAdminUser]
+    parser_classes = [MultiPartParser, FormParser, JSONParser]
     pagination_class = CustomPagination
+
+    def get_permissions(self):
+        if self.action in ['list', 'retrieve']:
+            return [IsAuthenticated()]
+        return [IsAuthenticated(), IsAdminUser()]
     filter_backends = [filters.SearchFilter]
     search_fields = ['item_code', 'item_name', 'vendor_details', 'sub_category']
 
@@ -787,18 +824,41 @@ class SupplyItemViewSet(viewsets.ModelViewSet):
 
 class FixedAssetViewSet(viewsets.ModelViewSet):
     serializer_class = FixedAssetSerializer
-    permission_classes = [IsAuthenticated, IsAdminUser]
+    permission_classes = [IsAuthenticated]
     pagination_class = CustomPagination
     parser_classes = [JSONParser, MultiPartParser, FormParser]
     filter_backends = [filters.SearchFilter]
     search_fields = ['asset_tag', 'serial_number', 'model_brand', 'category', 'status']
 
     def get_queryset(self):
-        return FixedAsset.objects.filter(company=self.request.user.company).select_related(
+        qs = FixedAsset.objects.filter(company=self.request.user.company).select_related(
             'assigned_to', 'variable_supply_item'
         )
+        if getattr(self.request.user, 'role', None) == 'employee':
+            emp = getattr(self.request.user, 'employee_profile', None)
+            if emp:
+                qs = qs.filter(assigned_to=emp)
+            else:
+                qs = qs.none()
+        return qs
+
+    def perform_create(self, serializer):
+        if self.request.user.role != 'admin':
+            from rest_framework.exceptions import PermissionDenied
+            raise PermissionDenied("Only admins can create assets.")
+        serializer.save()
+
+    def perform_update(self, serializer):
+        if self.request.user.role != 'admin':
+            from rest_framework.exceptions import PermissionDenied
+            raise PermissionDenied("Only admins can update assets.")
+        print(f"DEBUG: FixedAsset update data: {serializer.validated_data}")
+        serializer.save()
 
     def perform_destroy(self, instance):
+        if self.request.user.role != 'admin':
+            from rest_framework.exceptions import PermissionDenied
+            raise PermissionDenied("Only admins can delete assets.")
         instance.delete()
 
 
@@ -806,7 +866,8 @@ class AssetRequestViewSet(viewsets.ModelViewSet):
     serializer_class = AssetRequestSerializer
     pagination_class = CustomPagination
     parser_classes = [JSONParser, MultiPartParser, FormParser]
-    filter_backends = [filters.SearchFilter]
+    filter_backends = [filters.SearchFilter, DjangoFilterBackend]
+    filterset_fields = ['approval_status', 'batch_id']
     search_fields = ['remarks', 'approval_status', 'requested_by__first_name', 'requested_by__last_name']
 
     def get_permissions(self):
@@ -829,11 +890,106 @@ class AssetRequestViewSet(viewsets.ModelViewSet):
         return qs
     def perform_create(self, serializer):
         u = self.request.user
-        if getattr(u, 'role', None) == 'employee':
-            emp = getattr(u, 'employee_profile', None)
+        emp = getattr(u, 'employee_profile', None) if getattr(u, 'role', None) == 'employee' else None
+        
+        supply_item = serializer.validated_data.get('related_supply_item')
+        qty = serializer.validated_data.get('requested_quantity', 1)
+        
+        if supply_item:
+            if supply_item.available_quantity < qty:
+                from rest_framework.exceptions import ValidationError
+                raise ValidationError({"detail": f"Out of stock. Only {supply_item.available_quantity} available."})
+            if supply_item.max_per_order and qty > supply_item.max_per_order:
+                from rest_framework.exceptions import ValidationError
+                raise ValidationError({"detail": f"Maximum allowed is {supply_item.max_per_order} per order."})
+
+            supply_item.available_quantity -= qty
+            supply_item.save()
+            
+        if emp:
             serializer.save(company=u.company, requested_by=emp)
         else:
             serializer.save(company=u.company)
+
+    @action(detail=False, methods=['post'], url_path='batch-action')
+    def batch_action(self, request):
+        batch_id = request.data.get('batch_id')
+        new_status = request.data.get('status')
+        if not batch_id or not new_status:
+            return Response({"detail": "batch_id and status required."}, status=400)
+            
+        from django.db.models import Q
+        reqs = AssetRequest.objects.filter(
+            Q(batch_id=batch_id) | Q(id=batch_id if str(batch_id).isdigit() else -1),
+            company=request.user.company
+        )
+        if not reqs.exists():
+            return Response({"detail": f"No requests found for ID/Batch: {batch_id}."}, status=404)
+
+        for r in reqs:
+            # If changing from pending to rejected, add stock back
+            if new_status == 'rejected' and r.approval_status != 'rejected':
+                if r.related_supply_item:
+                    r.related_supply_item.available_quantity += r.requested_quantity
+                    r.related_supply_item.save()
+            
+            # If changing from rejected back to approved/pending, reduce stock (if enough)
+            elif new_status != 'rejected' and r.approval_status == 'rejected':
+                if r.related_supply_item:
+                    if r.related_supply_item.available_quantity < r.requested_quantity:
+                         pass
+                    r.related_supply_item.available_quantity -= r.requested_quantity
+                    r.related_supply_item.save()
+
+            r.approval_status = new_status
+            if new_status == 'approved':
+                # Capture action type and payment amount for any asset type if provided
+                r.admin_action_type = request.data.get('admin_action_type', r.admin_action_type)
+                payment_val = request.data.get('employee_payment_amount')
+                if payment_val is not None:
+                    try:
+                        r.employee_payment_amount = Decimal(str(payment_val))
+                    except:
+                        pass
+            r.save()
+
+        return Response({"detail": f"Batch {batch_id} set to {new_status}."})
+
+    def perform_update(self, serializer):
+        instance = self.get_object()
+        new_status = serializer.validated_data.get('approval_status')
+        old_status = instance.approval_status
+        # Capture asset details if approving
+        if new_status == 'approved':
+            serializer.validated_data['admin_action_type'] = self.request.data.get('admin_action_type', instance.admin_action_type)
+            payment_val = self.request.data.get('employee_payment_amount')
+            if payment_val is not None:
+                try:
+                    serializer.validated_data['employee_payment_amount'] = Decimal(str(payment_val))
+                except:
+                    pass
+        
+        serializer.save()
+       # If changing TO rejected from something else -> add stock back
+        if new_status == 'rejected' and old_status != 'rejected':
+            if instance.related_supply_item:
+                instance.related_supply_item.available_quantity += instance.requested_quantity
+                instance.related_supply_item.save()
+        
+        # If changing FROM rejected to something else -> reduce stock
+        elif new_status != 'rejected' and old_status == 'rejected':
+            if instance.related_supply_item:
+                instance.related_supply_item.available_quantity -= instance.requested_quantity
+                instance.related_supply_item.save()
+                
+        serializer.save()
+
+    def perform_destroy(self, instance):
+        # If we delete a request that wasn't rejected, return the reserved stock
+        if instance.approval_status != 'rejected' and instance.related_supply_item:
+            instance.related_supply_item.available_quantity += instance.requested_quantity
+            instance.related_supply_item.save()
+        instance.delete()
 
 class AssetSupportingDocumentViewSet(viewsets.ModelViewSet):
     serializer_class = AssetSupportingDocumentSerializer
@@ -1884,11 +2040,50 @@ class GeneratePayrollView(APIView):
             ).first()
 
             income_tax = gross * (tax_slab.tax_percent / Decimal('100')) if tax_slab else Decimal(0)
+            
+            # Loan EMI deduction (Period-aware: only deduct if repayment day falls in this period)
+            loan_emi = Decimal(0)
+            loans = LoanApplication.objects.filter(employee=emp.user, status='APPROVED')
+            
+            from datetime import timedelta
+            import calendar
+            
+            for l in loans:
+                start_dt = l.created_at.date()
+                # Calculate end date of tenure
+                m_total = start_dt.month + l.repayment_months
+                e_year = start_dt.year + (m_total - 1) // 12
+                e_month = (m_total - 1) % 12 + 1
+                _, e_last = calendar.monthrange(e_year, e_month)
+                end_dt = date(e_year, e_month, e_last)
+                
+                # Skip if loan period has ended
+                if first_day > end_dt:
+                    continue
+                
+                r_day = start_dt.day
+                curr = first_day
+                match = False
+                while curr <= last_day:
+                    _, lday = calendar.monthrange(curr.year, curr.month)
+                    is_m = (curr.day == r_day)
+                    if not is_m and r_day > lday and curr.day == lday:
+                        is_m = True
+                    if is_m and curr <= end_dt:
+                        loan_emi += Decimal(str(l.emi_amount))
+                    curr += timedelta(days=1)
+            # Loan Disbursement (Principal if approved in this month)
+            loan_disb = LoanApplication.objects.filter(
+                employee=emp.user,
+                status__in=['APPROVED', 'CLEARED'],
+                created_at__date__range=(first_day, last_day)
+            ).aggregate(total=Sum('requested_amount'))['total'] or Decimal(0)
+            loan_disb = Decimal(str(loan_disb))
 
             extra_allowances = sum(a.amount for a in salary_structure.allowances.all()) or Decimal(0)
             extra_deductions = sum(d.amount for d in salary_structure.deductions.all()) or Decimal(0)
 
-            net_pay = adjusted_gross + extra_allowances - (pf + income_tax + extra_deductions)
+            net_pay = adjusted_gross + extra_allowances + loan_disb - (pf + income_tax + extra_deductions + loan_emi)
             net_pay = max(net_pay, Decimal(0))
 
             # Create unsaved Payroll instance
@@ -1905,11 +2100,13 @@ class GeneratePayrollView(APIView):
                 special_allowance=special,
                 service_charges=service,
                 pf=pf,
+                income_tax=income_tax,
+                loan_emi=loan_emi,
+                loan_disbursement=loan_disb,
                 net_pay=net_pay,
                 total_working_days=total_days,
                 days_paid=days_paid,
                 loss_of_pay_days=lop_days,
-                income_tax=income_tax,
                 payroll_date=timezone.now().date(),
             )
 
@@ -3664,6 +3861,7 @@ class PayrollAttendanceSummaryView(APIView):
         full_day_leaves = 0
         absent_days = 0
         expected_working_days = 0
+        total_overtime_seconds = 0
         
         # Get all approved leaves for the range
         all_leaves = EmpLeave.objects.filter(
@@ -3737,17 +3935,28 @@ class PayrollAttendanceSummaryView(APIView):
 
             att_rec = attendance_map.get(curr_date)
             if att_rec:
-                status = get_att_status(att_rec)
-                if status == 'present':
-                    present_days += 1
-                elif status == 'half_day':
-                    half_days += 1
-                elif status == 'full_day_leave':
-                    full_day_leaves += 1
-                elif status == 'checked_in':
-                    checked_in_days += 1
-                elif not att_rec.leave:
-                    absent_days += 1
+                if is_holiday or is_weekend:
+                    # Entire work duration on holiday/weekend is OT
+                    if att_rec.total_work_duration:
+                        total_overtime_seconds += att_rec.total_work_duration.total_seconds()
+                    elif att_rec.check_in and att_rec.check_out:
+                        total_overtime_seconds += (att_rec.check_out - att_rec.check_in).total_seconds()
+                else:
+                    status = get_att_status(att_rec)
+                    if status == 'present':
+                        present_days += 1
+                    elif status == 'half_day':
+                        half_days += 1
+                    elif status == 'full_day_leave':
+                        full_day_leaves += 1
+                    elif status == 'checked_in':
+                        checked_in_days += 1
+                    elif not att_rec.leave:
+                        absent_days += 1
+                    
+                    # Also add any manual OT duration for work days
+                    if att_rec.overtime_duration:
+                        total_overtime_seconds += att_rec.overtime_duration.total_seconds()
             elif curr_date in leave_dates_paid or curr_date in leave_dates_unpaid:
                 pass
             elif is_work_day:
@@ -3755,11 +3964,6 @@ class PayrollAttendanceSummaryView(APIView):
             
             curr_date += timedelta(days=1)
 
-        # Overtime total
-        total_overtime_seconds = 0
-        for att_rec in attendances:
-            if att_rec.overtime_duration:
-                total_overtime_seconds += att_rec.overtime_duration.total_seconds()
         overtime_hours = round(total_overtime_seconds / 3600, 2)
 
         # Leave details for UI table
@@ -3793,6 +3997,68 @@ class PayrollAttendanceSummaryView(APIView):
             'description': r.description
         } for r in reimbursements]
 
+        # Fetch approved asset requests in the range
+        # We fetch ALL requests that were approved in this range
+        asset_reqs = AssetRequest.objects.filter(
+            requested_by_id=int(emp_id),
+            approval_status='approved',
+            updated_at__date__range=[from_dt, to_dt]
+        ).select_related('related_fixed_asset', 'related_supply_item').distinct()
+        
+        asset_deduction_details = []
+        supply_batches = {}
+        total_asset_deduction = Decimal('0.00')
+        
+        for r in asset_reqs:
+            amt = r.employee_payment_amount or Decimal('0')
+            if r.related_fixed_asset:
+                # Core assets are always individual
+                asset_name = f"{r.related_fixed_asset.asset_tag} ({r.related_fixed_asset.model_brand or 'No Brand'})"
+                asset_deduction_details.append({
+                    'id': str(r.id),
+                    'item_name': asset_name,
+                    'amount': float(amt),
+                    'date': r.updated_at.date().isoformat(),
+                    'action_type': r.admin_action_type or 'Asset Deduction'
+                })
+                total_asset_deduction += amt
+            elif r.related_supply_item:
+                # Group supply items by batch and calculate based on (Price * Qty)
+                b_id = r.batch_id if r.batch_id else f"REQ-{r.id}"
+                if b_id not in supply_batches:
+                    supply_batches[b_id] = {
+                        'amount': Decimal('0.00'),
+                        'date': r.updated_at.date().isoformat(),
+                        'action_type': r.admin_action_type or 'Supply Order'
+                    }
+                
+                # Calculate subtotal for this item
+                item_price = r.related_supply_item.unit_price or Decimal('0.00')
+                subtotal = item_price * (r.requested_quantity or 1)
+                
+                supply_batches[b_id]['amount'] += subtotal
+                total_asset_deduction += subtotal
+            else:
+                asset_deduction_details.append({
+                    'id': str(r.id),
+                    'item_name': "Other Asset",
+                    'amount': float(amt),
+                    'date': r.updated_at.date().isoformat(),
+                    'action_type': r.admin_action_type or 'Asset Deduction'
+                })
+                total_asset_deduction += amt
+
+        # Add the combined supply batches to the final list
+        for b_id, data in supply_batches.items():
+            display_name = f"Supply Asset Order ({b_id})" if b_id.startswith('BATCH') else "Supply Asset Order"
+            asset_deduction_details.append({
+                'id': b_id,
+                'item_name': display_name,
+                'amount': float(data['amount']),
+                'date': data['date'],
+                'action_type': data['action_type']
+            })
+
         return Response({
             'total_days': (to_dt - from_dt).days + 1,
             'expected_working_days': expected_working_days,
@@ -3808,6 +4074,8 @@ class PayrollAttendanceSummaryView(APIView):
             'leave_details': leave_details,
             'total_reimbursement': float(total_reimbursement),
             'reimbursement_details': reimbursement_details,
+            'total_asset_deduction': float(total_asset_deduction),
+            'asset_deduction_details': asset_deduction_details,
         })
 
 class SalaryDisbursementStatementView(APIView):
@@ -3914,13 +4182,18 @@ class SalaryDisbursementStatementView(APIView):
                     emp_atts = [a for a in attendances_qs if a.employee_id == emp.id]
                     present_days, half_days, ot_hours = 0, 0, 0
                     for att in emp_atts:
+                        is_holiday_work = att.date in holiday_dates or att.date.strftime('%A').lower() in weekend_days
                         w_hours = att.total_work_duration.total_seconds() / 3600 if att.total_work_duration else 0
-                        s_full = emp.shift_assigned.full_day_hours() if emp.shift_assigned else 8.0
-                        s_half = emp.shift_assigned.half_day_hours() if emp.shift_assigned else 4.0
-                        if w_hours >= s_full: present_days += 1
-                        elif w_hours >= s_half: half_days += 1
-                        if att.overtime_duration:
-                            ot_hours += att.overtime_duration.total_seconds() / 3600
+                        
+                        if is_holiday_work:
+                            ot_hours += w_hours # Entire work on holiday is OT
+                        else:
+                            s_full = emp.shift_assigned.full_day_hours() if emp.shift_assigned else 8.0
+                            s_half = emp.shift_assigned.half_day_hours() if emp.shift_assigned else 4.0
+                            if w_hours >= s_full: present_days += 1
+                            elif w_hours >= s_half: half_days += 1
+                            if att.overtime_duration:
+                                ot_hours += att.overtime_duration.total_seconds() / 3600
                     ot_hours = round(ot_hours, 2)
                     
                     emp_leaves = [l for l in leaves_qs if l.employee_id == emp.id]
@@ -3963,6 +4236,49 @@ class SalaryDisbursementStatementView(APIView):
                         total_ded += amount.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
                     
                     net_pay = (current_gross - total_ded).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+                    
+                    # Loan EMI deduction (Sum of all active loans)
+                    # Loan EMI deduction (Period-aware)
+                    loan_emi_dec = Decimal(0)
+                    loans_list = LoanApplication.objects.filter(employee=emp.user, status='APPROVED')
+                    for l_obj in loans_list:
+                        s_date = l_obj.created_at.date()
+                        m_cnt = s_date.month + l_obj.repayment_months
+                        e_yr = s_date.year + (m_cnt - 1) // 12
+                        e_mn = (m_cnt - 1) % 12 + 1
+                        import calendar
+                        _, e_lst = calendar.monthrange(e_yr, e_mn)
+                        e_date = date(e_yr, e_mn, e_lst)
+                        if from_dt > e_date: continue
+                        
+                        rep_day = s_date.day
+                        c_date = from_dt
+                        is_match = False
+                        while c_date <= to_dt:
+                            if c_date.day == rep_day:
+                                is_match = True
+                                break
+                            _, l_d_m = calendar.monthrange(c_date.year, c_date.month)
+                            if rep_day > l_d_m and c_date.day == l_d_m:
+                                is_match = True
+                                break
+                            c_date += timedelta(days=1)
+                        if is_match:
+                            loan_emi_dec += Decimal(str(l_obj.emi_amount))
+                    
+                    net_pay = (net_pay - loan_emi_dec).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+                    # Loan Disbursement (Principal amount if approved in this period)
+                    loan_disbursement = LoanApplication.objects.filter(
+                        employee=emp.user,
+                        status__in=['APPROVED', 'CLEARED'],
+                        created_at__date__gte=from_dt,
+                        created_at__date__lte=to_dt
+                    ).aggregate(total=Sum('requested_amount'))['total'] or Decimal(0)
+                    loan_disb_dec = Decimal(str(loan_disbursement))
+                    net_pay += loan_disb_dec
+                    # Asset Deduction from finalized record
+                    asset_ded_dec = Decimal(str(finalized.asset_deduction))
+                    net_pay = (net_pay - asset_ded_dec).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
                     if net_pay < 0: net_pay = Decimal(0)
                 else:
                     # Default dynamic calculation (same as above but with all components enabled)
@@ -3982,24 +4298,20 @@ class SalaryDisbursementStatementView(APIView):
 
                     # --- 2. Calculate Payable Days ---
                     emp_atts = [a for a in attendances_qs if a.employee_id == emp.id]
-                    present_days = 0
-                    half_days = 0
-                    ot_hours = 0
+                    present_days, half_days, ot_hours = 0, 0, 0
                     for att in emp_atts:
-                        w_hours = 0
-                        if att.total_work_duration:
-                            w_hours = att.total_work_duration.total_seconds() / 3600
+                        is_holiday_work = att.date in holiday_dates or att.date.strftime('%A').lower() in weekend_days
+                        w_hours = (att.total_work_duration.total_seconds() / 3600) if att.total_work_duration else 0
                         
-                        s_full = emp.shift_assigned.full_day_hours() if emp.shift_assigned else 8.0
-                        s_half = emp.shift_assigned.half_day_hours() if emp.shift_assigned else 4.0
-                        
-                        if w_hours >= s_full: present_days += 1
-                        elif w_hours >= s_half: half_days += 1
-                        
-                        if att.overtime_duration:
-                            ot_hours += att.overtime_duration.total_seconds() / 3600
-                    
-                    # Round OT hours to match the Summary API used by the frontend
+                        if is_holiday_work:
+                            ot_hours += w_hours
+                        else:
+                            s_full = emp.shift_assigned.full_day_hours() if emp.shift_assigned else 8.0
+                            s_half = emp.shift_assigned.half_day_hours() if emp.shift_assigned else 4.0
+                            if w_hours >= s_full: present_days += 1
+                            elif w_hours >= s_half: half_days += 1
+                            if att.overtime_duration:
+                                ot_hours += att.overtime_duration.total_seconds() / 3600
                     ot_hours = round(ot_hours, 2)
                     
                     emp_leaves = [l for l in leaves_qs if l.employee_id == emp.id]
@@ -4052,6 +4364,65 @@ class SalaryDisbursementStatementView(APIView):
                     
                     # Final Net Pay
                     net_pay = (current_gross - total_ded).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+                    
+                    # Loan EMI deduction (Sum of all active loans)
+                    # Loan EMI deduction (Period-aware)
+                    loan_emi_dec = Decimal(0)
+                    loans_active = LoanApplication.objects.filter(employee=emp.user, status='APPROVED')
+                    for l_act in loans_active:
+                        s_dt = l_act.created_at.date()
+                        m_all = s_dt.month + l_act.repayment_months
+                        e_y = s_dt.year + (m_all - 1) // 12
+                        e_m = (m_all - 1) % 12 + 1
+                        import calendar
+                        _, e_l = calendar.monthrange(e_y, e_m)
+                        e_dt = date(e_y, e_m, e_l)
+                        if from_dt > e_dt: continue
+                        
+                        r_d = s_dt.day
+                        curr_v = from_dt
+                        match_found = False
+                        while curr_v <= to_dt:
+                            _, lday_m = calendar.monthrange(curr_v.year, curr_v.month)
+                            is_m = (curr_v.day == r_d)
+                            if not is_m and r_d > lday_m and curr_v.day == lday_m:
+                                is_m = True
+                            if is_m and curr_v <= e_dt:
+                                loan_emi_dec += Decimal(str(l_act.emi_amount))
+                            curr_v += timedelta(days=1)
+                    net_pay = (net_pay - loan_emi_dec).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+                    # Loan Disbursement (Principal amount if approved in this period)
+                    loan_disbursement = LoanApplication.objects.filter(
+                        employee=emp.user,
+                        status__in=['APPROVED', 'CLEARED'],
+                        created_at__date__gte=from_dt,
+                        created_at__date__lte=to_dt
+                    ).aggregate(total=Sum('requested_amount'))['total'] or Decimal(0)
+                    loan_disb_dec = Decimal(str(loan_disbursement))
+                    net_pay += loan_disb_dec
+                    # Asset Deduction (Re-calc for non-finalized)
+                    # Fetch approved asset requests in the range
+                    asset_reqs = AssetRequest.objects.filter(
+                        requested_by_id=emp.id,
+                        approval_status='approved',
+                        updated_at__date__range=[from_dt, to_dt]
+                    )
+                    
+                    # Deduplicate by batch_id for supply items
+                    asset_ded_dec = Decimal('0.00')
+                    processed_batches = set()
+                    
+                    for ar in asset_reqs:
+                        if ar.related_supply_item:
+                            # Use (Price * Qty) for supply assets to match order total
+                            item_price = ar.related_supply_item.unit_price or Decimal('0.00')
+                            subtotal = item_price * (ar.requested_quantity or 1)
+                            asset_ded_dec += subtotal
+                        else:
+                            # Core assets and others
+                            asset_ded_dec += (ar.employee_payment_amount or Decimal('0'))
+                            
+                    net_pay = (net_pay - asset_ded_dec).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
                     if net_pay < 0: net_pay = Decimal(0)
                 
                 total_credit_amount += net_pay
@@ -4063,6 +4434,9 @@ class SalaryDisbursementStatementView(APIView):
                     'account_no': emp.account_no,
                     'ifsc_code': emp.ifsc_code,
                     'gross_salary': float(current_gross.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)),
+                    'loan_emi': float(loan_emi_dec),
+                    'loan_disbursement': float(loan_disb_dec),
+                    'asset_deduction': float(asset_ded_dec),
                     'net_salary': float(net_pay),
                     'days_paid': float(payable_days),
                 })
@@ -4102,7 +4476,7 @@ class SalaryDisbursementStatementView(APIView):
                 ws['A3'].alignment = Alignment(horizontal="center")
 
                 # Table Headers
-                headers = ['Sl. No', 'Employee ID', 'Employee Name', 'Bank Name', 'Account Number', 'IFSC Code', 'Gross Salary', 'Payable Days', 'Net Salary']
+                headers = ['Sl. No', 'Employee ID', 'Employee Name', 'Bank Name', 'Account Number', 'IFSC Code', 'Gross Salary', 'Payable Days', 'Loan EMI', 'Loan Disb.', 'Asset Ded.', 'Net Salary']
                 ws.append([]) # Spacer
                 ws.append(headers)
                 
@@ -4124,20 +4498,22 @@ class SalaryDisbursementStatementView(APIView):
                         row_data['ifsc_code'],
                         row_data['gross_salary'],
                         row_data['days_paid'],
+                        row_data['loan_emi'],
+                        row_data['loan_disbursement'],
+                        row_data['asset_deduction'],
                         row_data['net_salary']
                     ])
                 
-                # Total Row
                 last_row = ws.max_row + 1
-                ws.merge_cells(f'A{last_row}:H{last_row}')
+                ws.merge_cells(f'A{last_row}:J{last_row}')
                 ws[f'A{last_row}'] = "Total Disbursement Amount"
                 ws[f'A{last_row}'].font = Font(bold=True)
                 ws[f'A{last_row}'].alignment = Alignment(horizontal="right")
-                ws[f'I{last_row}'] = float(round(total_credit_amount, 2))
-                ws[f'I{last_row}'].font = Font(bold=True)
+                ws[f'K{last_row}'] = float(round(total_credit_amount, 2))
+                ws[f'K{last_row}'].font = Font(bold=True)
 
                 # Column Widths
-                column_widths = [8, 15, 25, 20, 20, 15, 15, 15, 15]
+                column_widths = [8, 15, 25, 20, 20, 15, 15, 15, 15, 15, 15]
                 for i, width in enumerate(column_widths):
                     ws.column_dimensions[openpyxl.utils.get_column_letter(i+1)].width = width
 
@@ -4747,7 +5123,8 @@ class GoogleLoginAPIView(APIView):
                 "username": user.username,
                 "first_name": user.first_name,
                 "last_name": user.last_name,
-                "role": user.role
+                "role": user.role,
+                "is_reporting_manager": user.is_reporting_manager
             }, status=status.HTTP_200_OK)
 
         except ValueError as e:
@@ -4756,3 +5133,335 @@ class GoogleLoginAPIView(APIView):
         except Exception as e:
             return Response({"detail": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
+class LoanCategoryViewSet(viewsets.ModelViewSet):
+    serializer_class = LoanCategorySerializer
+    permission_classes = [IsAuthenticated]
+    pagination_class = CustomPagination
+
+    def get_queryset(self):
+        user = self.request.user
+        if user.role == 'master':
+            return LoanCategory.objects.all().order_by('-created_at')
+        if hasattr(user, 'company') and user.company:
+            return LoanCategory.objects.filter(company=user.company).order_by('-created_at')
+        return LoanCategory.objects.none()
+
+    def perform_create(self, serializer):
+        serializer.save(company=self.request.user.company)
+
+class LoanApplicationViewSet(viewsets.ModelViewSet):
+    queryset = LoanApplication.objects.all()
+    serializer_class = LoanApplicationSerializer
+    permission_classes = [permissions.IsAuthenticated]
+    parser_classes = [MultiPartParser, FormParser, JSONParser]
+    pagination_class = CustomPagination
+    filter_backends = [filters.SearchFilter]
+    search_fields = ['category__name', 'status', 'employee__first_name', 'employee__last_name']
+
+    def destroy(self, request, *args, **kwargs):
+        user = request.user
+        instance = self.get_object()
+        if user.role in ['admin', 'master']:
+            return super().destroy(request, *args, **kwargs)
+        if instance.employee == user and instance.status == 'PENDING':
+            return super().destroy(request, *args, **kwargs)
+        from rest_framework.response import Response
+        return Response({"error": "You do not have permission to delete this loan."}, status=403)
+
+    def get_queryset(self):
+        user = self.request.user
+        qs = LoanApplication.objects.filter(employee__company=user.company).order_by('-created_at')
+        
+        if user.role in ['admin', 'master']:
+            # Admins see:
+            # 1. All non-PENDING applications (APPROVED, REJECTED, MANAGER_APPROVED)
+            # 2. PENDING applications ONLY IF the applicant's reporting manager is NOT an employee
+            # (meaning they report to an admin or have no manager assigned)
+            return qs.exclude(
+                status='PENDING', 
+                employee__employee__reporting_manager__user__role='employee'
+            )
+            
+        # For managers (even if they are employees), show their reportees' applications + their own
+        if user.is_reporting_manager:
+            try:
+                employee_profile = user.employee_profile
+                reportee_user_ids = Employee.objects.filter(reporting_manager=employee_profile).values_list('user_id', flat=True)
+                # Combine reportees' applications and user's own applications
+                return qs.filter(employee_id__in=reportee_user_ids) | qs.filter(employee=user)
+            except:
+                return qs.filter(employee=user)
+        
+        # Regular employees only see their own
+        return qs.filter(employee=user)
+
+    @action(detail=False, methods=['post'])
+    def check_eligibility(self, request):
+        employee = request.user.employee_profile
+        category_id = request.data.get('category_id')
+        amount = float(request.data.get('amount', 0))
+        
+        try:
+            category = LoanCategory.objects.get(id=category_id, company=request.user.company)
+        except LoanCategory.DoesNotExist:
+            return Response({"eligible": False, "reason": "Invalid loan category"}, status=400)
+
+        # 0. Active Loan Check
+        active_loan = LoanApplication.objects.filter(
+            employee=request.user, 
+            status__in=['PENDING', 'MANAGER_APPROVED', 'APPROVED']
+        ).exists()
+        if active_loan:
+            return Response({
+                "eligible": False, 
+                "reason": "You already have an active or pending loan. Please clear your current loan before applying for a new one."
+            })
+
+        # 1. Tenure Check
+        if employee.date_of_joining:
+            from datetime import date
+            tenure_months = (date.today() - employee.date_of_joining).days // 30
+            if tenure_months < category.min_tenure_months:
+                return Response({
+                    "eligible": False, 
+                    "reason": f"Minimum company tenure required: {category.min_tenure_months} months. Your tenure: {tenure_months} months."
+                })
+        else:
+            return Response({"eligible": False, "reason": "Date of joining not set. Please contact HR."})
+
+        # 2. Level Check
+        if not category.allowed_levels.filter(id=employee.level_id).exists():
+            return Response({"eligible": False, "reason": f"Your level ({employee.level.level_name}) is not eligible for this loan type."})
+
+        # 3. Max Amount Check
+        if amount > float(category.max_loan_limit):
+            return Response({"eligible": False, "reason": f"Requested amount exceeds the maximum limit of ₹{category.max_loan_limit} for this loan."})
+
+        # 4. Interest Slab
+        slab = category.interest_slabs.filter(min_amount__lte=amount, max_amount__gte=amount).first()
+        if not slab:
+            # Fallback to highest slab if amount exceeds all slabs but is within max limit
+            slab = category.interest_slabs.order_by('-max_amount').first()
+        
+        rate = float(slab.interest_rate) if slab else 0
+
+        return Response({
+            "eligible": True,
+            "interest_rate": rate,
+            "max_repayment_months": category.max_repayment_months
+        })
+
+    def perform_create(self, serializer):
+        # Final safety check for active loans
+        active_loan = LoanApplication.objects.filter(
+            employee=self.request.user, 
+            status__in=['PENDING', 'MANAGER_APPROVED', 'APPROVED']
+        ).exists()
+        if active_loan:
+            from rest_framework.exceptions import ValidationError
+            raise ValidationError("You already have an active loan. Please clear it before applying for a new one.")
+
+        # Additional validation on save
+        employee = self.request.user.employee_profile
+        category = serializer.validated_data['category']
+        amount = serializer.validated_data['requested_amount']
+        months = serializer.validated_data['repayment_months']
+        
+        # Calculate EMI and Rate
+        slab = category.interest_slabs.filter(min_amount__lte=amount, max_amount__gte=amount).first()
+        if not slab:
+            slab = category.interest_slabs.order_by('-max_amount').first()
+        
+        rate = slab.interest_rate if slab else 0
+        
+        # Simple EMI calculation: (Principal + Total Interest) / Months
+        total_interest = (float(amount) * float(rate) * (months / 12)) / 100
+        emi = (float(amount) + total_interest) / months
+        
+        serializer.save(
+            employee=self.request.user,
+            interest_rate=rate,
+            emi_amount=emi
+        )
+
+    @action(detail=True, methods=['post'])
+    def approve(self, request, pk=None):
+        application = self.get_object()
+        user = request.user
+        status = request.data.get('status') # 'APPROVED' or 'REJECTED'
+        remarks = request.data.get('remarks', '')
+
+        if status == 'REJECTED':
+            application.status = 'REJECTED'
+            application.admin_remarks = remarks
+            application.save()
+            return Response({"message": "Application rejected"})
+
+        # Approval Logic
+        is_admin = user.role == 'admin'
+        
+        # Check if user is the reporting manager
+        is_manager = False
+        try:
+            manager_emp = user.employee_profile
+            if application.employee.employee_profile.reporting_manager == manager_emp:
+                is_manager = True
+        except:
+            pass
+
+        if is_manager and application.status == 'PENDING':
+            # Manager Approval
+            application.manager_approved_by = user
+            if is_admin:
+                # If manager is also admin, approve fully
+                application.status = 'APPROVED'
+                application.admin_approved_by = user
+            else:
+                application.status = 'MANAGER_APPROVED'
+            application.save()
+            return Response({"message": "Manager approved. Pending Admin approval." if application.status == 'MANAGER_APPROVED' else "Loan fully approved."})
+
+        if is_admin and application.status in ['MANAGER_APPROVED', 'PENDING']:
+            # Admin Approval
+            application.admin_approved_by = user
+            application.status = 'APPROVED'
+            application.admin_remarks = remarks
+            application.save()
+            return Response({"message": "Loan fully approved."})
+
+        return Response({"error": "You do not have permission to approve this application at this stage."}, status=403)
+        
+    @action(detail=True, methods=['post'])
+    def reject(self, request, pk=None):
+        user = request.user
+        application = self.get_object()
+        remarks = request.data.get('remarks', '')
+        
+        is_admin = user.role in ['admin', 'master']
+        is_manager = False
+        try:
+            manager_emp = user.employee_profile
+            if application.employee.employee_profile.reporting_manager == manager_emp:
+                is_manager = True
+        except:
+            pass
+
+        if is_admin or is_manager:
+            application.status = 'REJECTED'
+            application.admin_remarks = remarks
+            application.save()
+            return Response({"status": "REJECTED"})
+            
+        return Response({"error": "Not authorized"}, status=403)
+
+    @action(detail=True, methods=['post'])
+    def clear(self, request, pk=None):
+        """Mark an approved loan as cleared (repaid)."""
+        if request.user.role not in ['admin', 'master']:
+            return Response({"error": "Only admins can clear loans"}, status=403)
+            
+        application = self.get_object()
+        if application.status != 'APPROVED':
+            return Response({"error": "Only approved loans can be cleared"}, status=400)
+            
+        application.status = 'CLEARED'
+        application.save()
+        return Response({"status": "CLEARED"})
+
+class LoanInterestSlabViewSet(viewsets.ModelViewSet):
+    serializer_class = LoanInterestSlabSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        category_id = self.request.query_params.get('category_id')
+        if category_id:
+            return LoanInterestSlab.objects.filter(category_id=category_id)
+        return LoanInterestSlab.objects.all()
+
+class WFHRequestViewSet(viewsets.ModelViewSet):
+    serializer_class = WFHRequestSerializer
+    permission_classes = [IsAuthenticated]
+    pagination_class = CustomPagination
+
+    def get_queryset(self):
+        user = self.request.user
+        mine = self.request.query_params.get('mine') == 'true'
+        
+        emp_profile = user.employee_profile
+        if not emp_profile:
+            # If a user doesn't have an employee profile, they can't request or approve WFH
+            # (Admins/Masters usually have a linked profile if they manage people)
+            return WFHRequest.objects.none()
+
+        if mine:
+            # ONLY show requests where user is the requester
+            return WFHRequest.objects.filter(employee=emp_profile).order_by('-created_at')
+            
+        # APPROVALS: Only show requests where current user is the reporting manager
+        return WFHRequest.objects.filter(reporting_manager=emp_profile).order_by('-created_at')
+
+    def perform_create(self, serializer):
+        emp_profile = self.request.user.employee_profile
+        if not emp_profile:
+            raise serializers.ValidationError("User must have an employee profile to request WFH.")
+        
+        # Automatically assign the employee's reporting manager
+        serializer.save(
+            employee=emp_profile,
+            reporting_manager=emp_profile.reporting_manager
+        )
+
+    @action(detail=True, methods=['post'])
+    def approve(self, request, pk=None):
+        wfh_request = self.get_object()
+        
+        # Permission check: Only reporting manager or admin can approve
+        if request.user.role not in ['admin', 'master'] and request.user.employee_profile != wfh_request.reporting_manager:
+            return Response({"detail": "You do not have permission to approve this request."}, status=status.HTTP_403_FORBIDDEN)
+
+        if wfh_request.status != 'pending':
+            return Response({"detail": "Only pending requests can be approved."}, status=status.HTTP_400_BAD_REQUEST)
+
+        with transaction.atomic():
+            wfh_request.status = 'approved'
+            wfh_request.save()
+
+            employee = wfh_request.employee
+            old_loc = employee.work_location
+            new_loc = 'home' # Assuming approval means starting WFH
+
+            employee.work_location = new_loc
+            employee.save()
+
+            # Create log
+            WorkLocationLog.objects.create(
+                employee=employee,
+                from_location=old_loc,
+                to_location=new_loc,
+                changed_by=request.user.employee_profile,
+                reason=f"WFH Request Approved: {wfh_request.reason}"
+            )
+
+        return Response({"status": "approved", "work_location": new_loc})
+
+    @action(detail=True, methods=['post'])
+    def reject(self, request, pk=None):
+        wfh_request = self.get_object()
+        rejection_reason = request.data.get('rejection_reason', 'No reason provided')
+
+        # Permission check
+        if request.user.role not in ['admin', 'master'] and request.user.employee_profile != wfh_request.reporting_manager:
+            return Response({"detail": "You do not have permission to reject this request."}, status=status.HTTP_403_FORBIDDEN)
+
+        wfh_request.status = 'rejected'
+        wfh_request.rejection_reason = rejection_reason
+        wfh_request.save()
+
+        return Response({"status": "rejected"})
+
+class WorkLocationLogViewSet(viewsets.ReadOnlyModelViewSet):
+    serializer_class = WorkLocationLogSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        return WorkLocationLog.objects.all().order_by('-date')

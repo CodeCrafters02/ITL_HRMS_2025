@@ -27,6 +27,8 @@ type DisbursementEmployee = {
     account_no: string;
     ifsc_code: string;
     gross_salary: number;
+    loan_emi: number;
+    loan_disbursement: number;
     net_salary: number;
     days_paid: number;
 };
@@ -132,8 +134,16 @@ const SalaryDisbursement = () => {
 
     return (
         <div className="space-y-6">
-            <div className="flex flex-wrap items-center justify-between gap-4 mb-6 print:hidden">
-                <h2 className="text-2xl font-bold text-gray-800 dark:text-white">Salary Disbursement Statement</h2>
+
+            <div className="bg-gradient-to-r from-[#1e3a5f] to-[#14b8a6] p-6 rounded-xl shadow-lg mb-6 relative overflow-hidden">
+                <div className="relative z-10">
+                    <h1 className="text-3xl font-extrabold text-white tracking-tight">Salary Disbursement Statement</h1>
+                    <p className="text-white/80 mt-1 text-sm font-medium">Generate and manage professional salary transfer letters for bank disbursements.</p>
+                </div>
+                <div className="absolute top-0 right-0 -mt-10 -mr-10 w-48 h-48 bg-white opacity-5 rounded-full blur-2xl"></div>
+            </div>
+
+            <div className="flex flex-wrap items-center justify-end gap-4 mb-6 print:hidden">
                 <div className="flex items-center gap-2">
                     <button onClick={handleDownloadExcel} className="btn btn-outline-success gap-2">
                         <IconDownload className="w-5 h-5" />
@@ -234,7 +244,9 @@ const SalaryDisbursement = () => {
                                         <th className="p-3 text-left border-r">Emp ID</th>
                                         <th className="p-3 text-left border-r">Bank Details</th>
                                         <th className="p-3 text-left border-r">Account No</th>
-                                        <th className="p-3 text-right">Amount (INR)</th>
+                                        <th className="p-3 text-right border-r">Loan EMI</th>
+                                        <th className="p-3 text-right border-r">Loan Disb.</th>
+                                        <th className="p-3 text-right">Net Credit (INR)</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -248,7 +260,13 @@ const SalaryDisbursement = () => {
                                                 <div className="text-[10px] text-gray-400">IFSC: {emp.ifsc_code || 'N/A'}</div>
                                             </td>
                                             <td className="p-3 border-r font-mono tracking-wider">{emp.account_no || 'N/A'}</td>
-                                            <td className="p-3 text-right font-bold">₹{emp.net_salary.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
+                                            <td className="p-3 border-r text-right text-red-500 font-bold">
+                                                {emp.loan_emi > 0 ? `−₹${emp.loan_emi.toLocaleString('en-IN', { minimumFractionDigits: 2 })}` : '—'}
+                                            </td>
+                                            <td className="p-3 border-r text-right text-emerald-600 font-bold">
+                                                {emp.loan_disbursement > 0 ? `+₹${emp.loan_disbursement.toLocaleString('en-IN', { minimumFractionDigits: 2 })}` : '—'}
+                                            </td>
+                                            <td className="p-3 text-right font-bold text-primary">₹{emp.net_salary.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
                                         </tr>
                                     ))}
                                 </tbody>

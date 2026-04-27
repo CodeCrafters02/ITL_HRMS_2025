@@ -57,6 +57,13 @@ class UserRegister(AbstractUser):
         emp = self.employee_profile
         return emp and emp.reportees.exists()
 
+    @property
+    def full_name(self):
+        profile = self.employee_profile
+        if profile:
+            return profile.full_name
+        return self.get_full_name() or self.username
+
     def __str__(self):
         return self.username
 
@@ -246,6 +253,12 @@ class Employee(models.Model):
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='offline')
     last_active = models.DateTimeField(auto_now=True)
 
+    WORK_LOCATION_CHOICES = [
+        ('office', 'Office'),
+        ('home', 'Home'),
+    ]
+    work_location = models.CharField(max_length=20, choices=WORK_LOCATION_CHOICES, default='office')
+
     @property
     def is_reporting_manager(self):
         return self.employees_reporting_to_me.exists()
@@ -382,12 +395,14 @@ class SupplyItem(models.Model):
     sub_category = models.CharField(max_length=32, choices=SUBCATEGORY_CHOICES, default='other')
     total_stock = models.PositiveIntegerField(default=0)
     available_quantity = models.PositiveIntegerField(default=0)
+    max_per_order = models.PositiveIntegerField(default=10)
     reorder_level = models.PositiveIntegerField(default=0)
     unit_price = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
     last_restocked = models.DateField(null=True, blank=True)
     vendor_details = models.TextField(blank=True, null=True)
     unit_of_measure = models.CharField(max_length=16, choices=UOM_CHOICES, default='pcs')
     notes = models.TextField(blank=True, null=True)
+    image = models.ImageField(upload_to='supply_items/', null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -439,11 +454,20 @@ class AssetRequest(models.Model):
     related_supply_item = models.ForeignKey(
         SupplyItem, on_delete=models.SET_NULL, null=True, blank=True, related_name='requests'
     )
+    requested_quantity = models.PositiveIntegerField(default=1)
+    batch_id = models.CharField(max_length=64, null=True, blank=True, db_index=True)
+    ADMIN_ACTION_CHOICES = [
+        ('repair', 'Repair'),
+        ('change', 'Change'),
+        ('other', 'Other'),
+    ]
+    admin_action_type = models.CharField(max_length=16, choices=ADMIN_ACTION_CHOICES, null=True, blank=True)
+    employee_payment_amount = models.DecimalField(max_digits=12, decimal_places=2, default=0.0)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
-        ordering = ['-created_at']
+        ordering = ['-batch_id', '-created_at']
 
 
 class AssetSupportingDocument(models.Model):
@@ -612,6 +636,61 @@ class CalendarEvent(models.Model):
         ordering = ['date']
         
         
+class LoanCategory(models.Model):
+    company = models.ForeignKey(Company, on_delete=models.CASCADE, related_name='loan_categories')
+    name = models.CharField(max_length=100)
+    description = models.TextField(blank=True, null=True)
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    # Eligibility
+    min_tenure_months = models.PositiveIntegerField(default=0) # Company tenure
+    max_repayment_months = models.PositiveIntegerField(default=12) # Repayment period
+    max_loan_limit = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    allowed_levels = models.ManyToManyField(Level, blank=True)
+    
+    def __str__(self):
+        return f"{self.name} ({self.company.name})"
+
+class LoanApplication(models.Model):
+    STATUS_CHOICES = [
+        ('PENDING', 'Pending Manager Approval'),
+        ('MANAGER_APPROVED', 'Pending Admin Approval'),
+        ('APPROVED', 'Approved'),
+        ('REJECTED', 'Rejected'),
+        ('CLEARED', 'Cleared/Paid Off'),
+    ]
+    
+    employee = models.ForeignKey(UserRegister, on_delete=models.CASCADE, related_name='loan_applications')
+    category = models.ForeignKey(LoanCategory, on_delete=models.CASCADE)
+    requested_amount = models.DecimalField(max_digits=12, decimal_places=2)
+    repayment_months = models.PositiveIntegerField()
+    interest_rate = models.DecimalField(max_digits=5, decimal_places=2) # Snapshotted rate
+    emi_amount = models.DecimalField(max_digits=12, decimal_places=2)
+    
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='PENDING')
+    reason = models.TextField(blank=True, null=True)
+    supporting_document = models.FileField(upload_to='loan/documents/', blank=True, null=True)
+    admin_remarks = models.TextField(blank=True, null=True)
+    
+    manager_approved_by = models.ForeignKey(UserRegister, on_delete=models.SET_NULL, null=True, blank=True, related_name='manager_approved_loans')
+    admin_approved_by = models.ForeignKey(UserRegister, on_delete=models.SET_NULL, null=True, blank=True, related_name='admin_approved_loans')
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"{self.employee.full_name} - {self.category.name} ({self.status})"
+
+class LoanInterestSlab(models.Model):
+    category = models.ForeignKey(LoanCategory, on_delete=models.CASCADE, related_name='interest_slabs')
+    min_amount = models.DecimalField(max_digits=12, decimal_places=2)
+    max_amount = models.DecimalField(max_digits=12, decimal_places=2)
+    interest_rate = models.DecimalField(max_digits=5, decimal_places=2) # percentage
+    
+    def __str__(self):
+        return f"{self.category.name}: {self.min_amount}-{self.max_amount} @ {self.interest_rate}%"
+
 class SalaryStructure(models.Model):
     company = models.ForeignKey(Company, on_delete=models.CASCADE, related_name='salary_structures')
     name = models.CharField(max_length=100, null=True, blank=True)  # optional descriptive name
@@ -722,7 +801,9 @@ class Payroll(models.Model):
     service_charges = models.DecimalField(max_digits=10, decimal_places=2)
     pf = models.DecimalField(max_digits=10, decimal_places=2)
     income_tax = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
-    net_pay = models.DecimalField(max_digits=10, decimal_places=2)
+    loan_emi = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    loan_disbursement = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    net_pay = models.DecimalField(max_digits=12, decimal_places=2)
 
     payroll_date = models.DateField(auto_now_add=True)
     total_working_days = models.PositiveIntegerField(null=True, blank=True)
@@ -1143,10 +1224,14 @@ class FinalizedSalary(models.Model):
     
     total_gross = models.DecimalField(max_digits=10, decimal_places=2)
     total_deductions = models.DecimalField(max_digits=10, decimal_places=2)
+    loan_emi = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    loan_disbursement = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     net_salary = models.DecimalField(max_digits=10, decimal_places=2)
     days_paid = models.DecimalField(max_digits=10, decimal_places=2)
     
-    # Store JSON of components and flags (gChk, dChk, otEnabled)
+    asset_deduction = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    
+    # Store JSON of components and flags (gChk, dChk, otEnabled, asset_details)
     config = models.JSONField(default=dict)
     
     created_at = models.DateTimeField(auto_now_add=True)
@@ -1158,3 +1243,36 @@ class FinalizedSalary(models.Model):
 
     def __str__(self):
         return f"Finalized Salary {self.employee.full_name} ({self.from_date} to {self.to_date})"
+
+#--------------------------- WORK FROM HOME ---------------------------------
+
+class WFHRequest(models.Model):
+    STATUS_CHOICES = [
+        ('pending', 'Pending'),
+        ('approved', 'Approved'),
+        ('rejected', 'Rejected'),
+    ]
+
+    employee = models.ForeignKey(Employee, on_delete=models.CASCADE, related_name='wfh_requests')
+    reason = models.TextField()
+    from_date = models.DateField(null=True, blank=True)
+    to_date = models.DateField(null=True, blank=True)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
+    reporting_manager = models.ForeignKey(Employee, on_delete=models.SET_NULL, null=True, blank=True, related_name='managed_wfh_requests')
+    rejection_reason = models.TextField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"WFH Request: {self.employee.full_name} ({self.status})"
+
+class WorkLocationLog(models.Model):
+    employee = models.ForeignKey(Employee, on_delete=models.CASCADE, related_name='location_logs')
+    from_location = models.CharField(max_length=20)
+    to_location = models.CharField(max_length=20)
+    date = models.DateTimeField(auto_now_add=True)
+    changed_by = models.ForeignKey(Employee, on_delete=models.SET_NULL, null=True, blank=True, related_name='location_changes_made')
+    reason = models.TextField(null=True, blank=True)
+
+    def __str__(self):
+        return f"{self.employee.full_name}: {self.from_location} -> {self.to_location}"

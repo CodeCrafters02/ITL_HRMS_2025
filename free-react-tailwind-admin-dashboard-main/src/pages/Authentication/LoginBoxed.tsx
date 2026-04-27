@@ -43,6 +43,7 @@ const LoginBoxed = () => {
                 localStorage.setItem('user_role', data.role);
                 localStorage.setItem('user_id', data.id);
                 localStorage.setItem('username', data.username);
+                localStorage.setItem('is_reporting_manager', data.is_reporting_manager ? 'true' : 'false');
                 if (data.username && String(data.username).includes('@')) {
                     localStorage.setItem('user_email', String(data.username));
                 }
@@ -88,6 +89,7 @@ const LoginBoxed = () => {
                 localStorage.setItem('user_role', data.role);
                 localStorage.setItem('user_id', data.id);
                 localStorage.setItem('username', data.username);
+                localStorage.setItem('is_reporting_manager', data.is_reporting_manager ? 'true' : 'false');
                 if (data.username && String(data.username).includes('@')) {
                     localStorage.setItem('user_email', String(data.username));
                 }

@@ -3,7 +3,7 @@ from app.models import UserRegister
 from django.db.models.signals import post_save, pre_save, post_migrate
 from django.dispatch import receiver
 from employee.models import TaskAssignment, Task
-from app.models import Employee, EmpLeave, CalendarEvent, LearningCorner, Notification, ChatMessage, AssetRequest, SeatBooking, ConferenceRoomBooking
+from app.models import Employee, EmpLeave, CalendarEvent, LearningCorner, Notification, ChatMessage, AssetRequest, SeatBooking, ConferenceRoomBooking, LoanApplication
 from notifications.models import UserNotification
 import logging
 
@@ -264,7 +264,12 @@ def asset_request_status_change(sender, instance, **kwargs):
         if instance.requested_by and instance.requested_by.user and instance.requested_by.user.id:
             default_sender = UserRegister.objects.filter(role='admin').first()
             status = instance.approval_status.capitalize()
-            asset_name = instance.related_fixed_asset.name if instance.related_fixed_asset else (instance.related_supply_item.item_name if instance.related_supply_item else "Asset")
+            if instance.related_fixed_asset:
+                asset_name = f"{instance.related_fixed_asset.asset_tag} ({instance.related_fixed_asset.model_brand or 'No Brand'})"
+            elif instance.related_supply_item:
+                asset_name = instance.related_supply_item.item_name
+            else:
+                asset_name = "Asset"
             
             body = f"Your request for {asset_name} has been {status}."
             data = {"type": "asset_request", "request_id": instance.id, "status": instance.approval_status}
@@ -365,3 +370,88 @@ def room_booking_status_change(sender, instance, **kwargs):
                 )
             except Exception as e:
                 logger.error(f"Failed to send FCM for room booking status change: {e}")
+@receiver(post_save, sender=LoanApplication)
+def loan_application_notify(sender, instance, created, **kwargs):
+    """
+    Notify relevant parties about loan application updates.
+    """
+    default_sender = UserRegister.objects.filter(role='admin').first()
+    
+    if created:
+        # 1. Notify Reporting Manager
+        try:
+            manager = instance.employee.employee_profile.reporting_manager
+            if manager and manager.user:
+                body = f"{instance.employee.full_name} has applied for a {instance.category.name} of ₹{instance.requested_amount}."
+                send_fcm_to_users(
+                    [manager.user.id],
+                    "loan",
+                    body,
+                    sender=default_sender,
+                    title="New Loan Application",
+                    extra_data={"type": "loan_request", "loan_id": instance.id}
+                )
+                UserNotification.objects.create(
+                    recipient=manager,
+                    title="New Loan Application",
+                    message=body,
+                    related_object_id=instance.id,
+                    sender=default_sender
+                )
+        except Exception as e:
+            logger.error(f"Failed to notify manager about loan: {e}")
+
+@receiver(pre_save, sender=LoanApplication)
+def loan_status_change_notify(sender, instance, **kwargs):
+    if not instance.pk:
+        return
+    try:
+        prev = LoanApplication.objects.get(pk=instance.pk)
+    except LoanApplication.DoesNotExist:
+        return
+
+    if prev.status != instance.status:
+        default_sender = UserRegister.objects.filter(role='admin').first()
+        status_label = instance.status.replace('_', ' ').capitalize()
+        
+        # 1. Notify Employee of any status change
+        if instance.employee and instance.employee.id:
+            body = f"Your loan application for {instance.category.name} is now {status_label}."
+            try:
+                send_fcm_to_users(
+                    [instance.employee.id],
+                    "loan",
+                    body,
+                    sender=default_sender,
+                    title="Loan Status Updated",
+                    extra_data={"type": "loan_status", "loan_id": instance.id, "status": instance.status}
+                )
+                # Create UserNotification for employee
+                emp_profile = instance.employee.employee_profile
+                if emp_profile:
+                    UserNotification.objects.create(
+                        recipient=emp_profile,
+                        title="Loan Status Updated",
+                        message=body,
+                        related_object_id=instance.id,
+                        sender=default_sender
+                    )
+            except Exception as e:
+                logger.error(f"Failed to notify employee about loan status: {e}")
+
+        # 2. If MANAGER_APPROVED, notify Admins
+        if instance.status == 'MANAGER_APPROVED':
+            admin_ids = list(UserRegister.objects.filter(role='admin', company=instance.employee.company).values_list('id', flat=True))
+            body = f"A loan from {instance.employee.full_name} has been approved by the manager and requires your final review."
+            try:
+                send_fcm_to_users(
+                    admin_ids,
+                    "loan",
+                    body,
+                    sender=default_sender,
+                    title="Loan Manager Approved",
+                    extra_data={"type": "loan_admin_review", "loan_id": instance.id}
+                )
+                # Also create UserNotifications for admins if possible (optional but good)
+            except Exception as e:
+                logger.error(f"Failed to notify admins about manager-approved loan: {e}")
