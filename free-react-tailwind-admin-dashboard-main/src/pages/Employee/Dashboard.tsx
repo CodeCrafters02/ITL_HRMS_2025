@@ -14,6 +14,7 @@ import IconListCheck from '../../components/Icon/IconListCheck';
 import IconTrendingUp from '../../components/Icon/IconTrendingUp';
 import IconSun from '../../components/Icon/IconSun';
 import CountUp from 'react-countup';
+import Dropdown from '../../components/Dropdown';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000';
 
@@ -30,6 +31,7 @@ interface DashboardData {
         type: string | null;
         break_choice: string | null;
         break_config_id: number | null;
+        duration_minutes?: number | null;
         start_time: string;
     } | null;
     recent_breaks: any[] | null;
@@ -64,6 +66,17 @@ const parseDurationToMinutes = (duration: string | null | undefined) => {
     return hours * 60 + mins;
 };
 
+const formatCountdown = (seconds: number) => {
+    const safe = Math.max(0, seconds);
+    const hh = Math.floor(safe / 3600);
+    const mm = Math.floor((safe % 3600) / 60);
+    const ss = safe % 60;
+    if (hh > 0) {
+        return `${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}:${String(ss).padStart(2, '0')}`;
+    }
+    return `${String(mm).padStart(2, '0')}:${String(ss).padStart(2, '0')}`;
+};
+
 const EmployeeDashboard = () => {
     const dispatch = useDispatch();
     const [data, setData] = useState<DashboardData | null>(null);
@@ -88,6 +101,18 @@ const EmployeeDashboard = () => {
 
     const [liveTime, setLiveTime] = useState('0h 0m');
     const [liveRawSeconds, setLiveRawSeconds] = useState('--:--:--');
+    const [nowMs, setNowMs] = useState(Date.now());
+
+    const groupedBreaks = useMemo(() => {
+        const groups: { [key: string]: BreakConfig[] } = {};
+        breakConfigs.forEach((bc) => {
+            if (!groups[bc.break_choice]) {
+                groups[bc.break_choice] = [];
+            }
+            groups[bc.break_choice].push(bc);
+        });
+        return groups;
+    }, [breakConfigs]);
 
     const first = (localStorage.getItem('first_name') || '').trim();
     const last = (localStorage.getItem('last_name') || '').trim();
@@ -237,6 +262,12 @@ const EmployeeDashboard = () => {
         };
     }, [data]);
 
+    useEffect(() => {
+        if (!data?.active_break) return;
+        const timer = setInterval(() => setNowMs(Date.now()), 1000);
+        return () => clearInterval(timer);
+    }, [data?.active_break]);
+
     const fetchChartData = async (range: string, background = false, offset = 0) => {
         if (!background) setChartLoading(true);
         try {
@@ -373,6 +404,19 @@ const EmployeeDashboard = () => {
     const isCheckedIn = Boolean(checkin_time && !checkout_time);
     const attendanceStatusLabel = isCheckedIn ? (active_break ? 'On Break' : 'Checked In') : checkout_time ? 'Checked Out' : 'Not Checked In';
     const attendanceStatusColor = isCheckedIn ? (active_break ? '#e2a03f' : '#00ab55') : checkout_time ? '#805dca' : '#e7515a';
+    const activeBreakDurationMinutes = active_break?.duration_minutes ?? breakConfigs.find((bc) => bc.id === active_break?.break_config_id)?.duration_minutes ?? null;
+    const breakRemainingSeconds = (() => {
+        if (!active_break?.start_time || !activeBreakDurationMinutes) return null;
+        const [h, m, s] = active_break.start_time.split(':').map(Number);
+        if ([h, m, s].some((v) => Number.isNaN(v))) return null;
+
+        const start = new Date();
+        start.setHours(h, m, s, 0);
+        let elapsedSeconds = Math.floor((nowMs - start.getTime()) / 1000);
+        if (elapsedSeconds < 0) elapsedSeconds += 24 * 60 * 60;
+
+        return Math.max(0, activeBreakDurationMinutes * 60 - elapsedSeconds);
+    })();
 
     return (
         <div className="space-y-6 animate__animated animate__fadeIn">
@@ -453,21 +497,69 @@ const EmployeeDashboard = () => {
                         <div className="flex flex-wrap items-center gap-2 border-t border-dashed border-white/20 pt-3">
                             <p className="text-xs font-semibold uppercase tracking-wider text-blue-100 mr-1">Breaks</p>
                             {!active_break ? (
-                                breakConfigs.map((bc) => (
-                                    <button
-                                        key={bc.id}
-                                        type="button"
-                                        className="px-3 py-1.5 text-xs font-semibold rounded-lg border border-cyan-200/45 bg-cyan-200/10 text-cyan-100 hover:bg-cyan-200/20 transition-colors"
-                                        style={{ textTransform: 'capitalize' }}
-                                        onClick={() => handleStartBreak(bc.id)}
-                                    >
-                                        Start {bc.break_choice.replace(/_/g, ' ')}
-                                    </button>
-                                ))
+                                Object.entries(groupedBreaks).map(([choice, configs]) => {
+                                    const formattedChoice = choice.replace(/_/g, ' ');
+                                    if (configs.length === 1) {
+                                        const bc = configs[0];
+                                        return (
+                                            <button
+                                                key={bc.id}
+                                                type="button"
+                                                className="px-3 py-1.5 text-xs font-semibold rounded-lg border border-cyan-200/45 bg-cyan-200/10 text-cyan-100 hover:bg-cyan-200/20 transition-colors capitalize"
+                                                onClick={() => handleStartBreak(bc.id)}
+                                            >
+                                                Start {formattedChoice}
+                                            </button>
+                                        );
+                                    } else {
+                                        return (
+                                            <div className="dropdown relative" key={choice}>
+                                                <Dropdown
+                                                    offset={[0, 5]}
+                                                    placement="bottom-start"
+                                                    usePortal={true}
+                                                    strategy="fixed"
+                                                    btnClassName="px-3 py-1.5 text-xs font-semibold rounded-lg border border-cyan-200/45 bg-cyan-200/10 text-cyan-100 hover:bg-cyan-200/20 transition-colors capitalize flex items-center gap-1"
+                                                    button={
+                                                        <>
+                                                            Start {formattedChoice}
+                                                            <svg className="w-4 h-4 ml-1" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                                                <polyline points="6 9 12 15 18 9"></polyline>
+                                                            </svg>
+                                                        </>
+                                                    }
+                                                >
+                                                    <ul className="text-black dark:text-white-dark bg-white dark:bg-[#1b2e4b] shadow-[0_0_10px_rgba(0,0,0,0.1)] dark:shadow-[0_0_10px_rgba(0,0,0,0.4)] rounded-md border border-white-light dark:border-[#253b5c] py-1 min-w-[150px]">
+                                                        {configs.map(bc => (
+                                                            <li key={bc.id}>
+                                                                <button
+                                                                    type="button"
+                                                                    className="w-full text-left px-4 py-2 hover:bg-black/5 dark:hover:bg-black/10 text-sm capitalize"
+                                                                    onClick={() => handleStartBreak(bc.id)}
+                                                                >
+                                                                    {bc.duration_minutes ? `${bc.duration_minutes} Mins` : `Start ${formattedChoice}`}
+                                                                </button>
+                                                            </li>
+                                                        ))}
+                                                    </ul>
+                                                </Dropdown>
+                                            </div>
+                                        );
+                                    }
+                                })
                             ) : (
-                                <button type="button" className="btn btn-warning rounded-xl animate-pulse" onClick={handleEndBreak}>
-                                    End Active Break ({active_break.type?.replace(/_/g, ' ') || 'Break'})
-                                </button>
+                                <div className="flex flex-wrap items-center gap-2">
+                                    <button type="button" className="btn btn-warning rounded-xl animate-pulse" onClick={handleEndBreak}>
+                                        End Active Break ({active_break.type?.replace(/_/g, ' ') || 'Break'})
+                                    </button>
+                                    <span className="text-xs font-bold text-amber-100 px-2.5 py-1 rounded-md bg-amber-500/20 border border-amber-300/40">
+                                        {breakRemainingSeconds === null
+                                            ? 'Running...'
+                                            : breakRemainingSeconds > 0
+                                              ? `Remaining ${formatCountdown(breakRemainingSeconds)}`
+                                              : 'Break time over'}
+                                    </span>
+                                </div>
                             )}
                         </div>
                     )}
@@ -727,12 +819,12 @@ const EmployeeDashboard = () => {
                             data.recent_breaks.map((b, i) => (
                                 <div key={i} className="flex gap-3.5 relative">
                                     {i !== data.recent_breaks!.length - 1 && <div className="absolute left-[10px] top-6 bottom-0 w-0.5 bg-slate-200 dark:bg-slate-800"></div>}
-                                    <div className={`w-5 h-5 rounded-full border-4 ${b.end ? 'border-emerald-500 bg-emerald-500' : 'border-amber-500 bg-amber-500 animate-pulse'} z-10`}></div>
+                                    <div className={`w-5 h-5 rounded-full border-4 ${b.end_time ? 'border-emerald-500 bg-emerald-500' : 'border-amber-500 bg-amber-500 animate-pulse'} z-10`}></div>
                                     <div className="flex-1 pb-4">
                                         <p className="text-sm font-bold text-slate-900 dark:text-white capitalize">{b.type?.replace(/_/g, ' ')}</p>
                                         <p className="text-xs text-slate-500 mt-0.5">{b.start_time} - {b.end_time || 'Active'}</p>
                                         <span className="inline-flex mt-1.5 text-[10px] font-semibold uppercase tracking-wide bg-emerald-50 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300 rounded px-2 py-0.5">
-                                            {b.duration || 'Running...'}
+                                            {b.end_time ? b.duration || '--' : 'Running...'}
                                         </span>
                                     </div>
                                 </div>
