@@ -1253,7 +1253,13 @@ class WFHRequest(models.Model):
         ('rejected', 'Rejected'),
     ]
 
+    REQUEST_TYPE_CHOICES = [
+        ('wfh', 'Work From Home'),
+        ('wfo', 'Work From Office'),
+    ]
+
     employee = models.ForeignKey(Employee, on_delete=models.CASCADE, related_name='wfh_requests')
+    request_type = models.CharField(max_length=10, choices=REQUEST_TYPE_CHOICES, default='wfh')
     reason = models.TextField()
     from_date = models.DateField(null=True, blank=True)
     to_date = models.DateField(null=True, blank=True)

@@ -312,27 +312,28 @@ class AdminDashboardAPIView(APIView):
             status='Approved'
         ).count()
 
-        # Employee Overview
-        total_employees = Employee.objects.filter(company=company, is_active=True).count()
-        active_employees_count = Employee.objects.filter(company=company, is_active=True).count()
-        inactive_employees = Employee.objects.filter(company=company, is_active=False).count()
+        # Employee Overview (excluding admin/master roles)
+        base_employee_qs = Employee.objects.filter(company=company, is_active=True).exclude(user__role__in=['admin', 'master'])
+        total_employees = base_employee_qs.count()
+        active_employees_count = total_employees
+        inactive_employees = Employee.objects.filter(company=company, is_active=False).exclude(user__role__in=['admin', 'master']).count()
         new_joinees = Employee.objects.filter(
             company=company,
             date_of_joining__year=today.year,
             date_of_joining__month=today.month
-        ).count()
+        ).exclude(user__role__in=['admin', 'master']).count()
         
         exits_this_month = Employee.objects.filter(
             company=company,
             relieved_info__relieving_date__year=today.year,
             relieved_info__relieving_date__month=today.month
-        ).count()
+        ).exclude(user__role__in=['admin', 'master']).count()
         # Upcoming Birthdays (next 30 days)
         # NOTE: month/day range filtering breaks across month/year boundaries.
         # Compute each employee's next birthday date and filter in Python (company sizes are typically manageable).
         next_30 = today + timezone.timedelta(days=30)
         upcoming_birthdays = []
-        for e in Employee.objects.filter(company=company, is_active=True).only('id', 'first_name', 'last_name', 'date_of_birth'):
+        for e in base_employee_qs.only('id', 'first_name', 'last_name', 'date_of_birth'):
             dob = e.date_of_birth
             if not dob:
                 continue
@@ -352,7 +353,7 @@ class AdminDashboardAPIView(APIView):
         
 
         # Attendance Snapshot - Calculate based on shift timing
-        employees_for_attendance = Employee.objects.filter(company=company, is_active=True)
+        employees_for_attendance = base_employee_qs
         attendance_snapshot = self._calculate_attendance_snapshot(company, today, employees_for_attendance)
 
         # Pending Leave Requests
@@ -668,9 +669,10 @@ class EmployeeViewSet(viewsets.ModelViewSet):
 
     @action(detail=False, methods=['get'])
     def me(self, request):
-        if not hasattr(request.user, 'employee'):
+        emp_profile = getattr(request.user, 'employee_profile', None)
+        if not emp_profile:
             return Response({"error": "No employee profile found"}, status=status.HTTP_404_NOT_FOUND)
-        serializer = self.get_serializer(request.user.employee)
+        serializer = self.get_serializer(emp_profile)
         return Response(serializer.data)
 
     def _ensure_employee_profiles_for_company(self, company):
@@ -723,7 +725,7 @@ class EmployeeViewSet(viewsets.ModelViewSet):
     def get_permissions(self):
         # Employees can view (list/retrieve) employees from their company,
         # but cannot create/update/delete.
-        if self.action in ['list', 'retrieve', 'get_reporting_manager_choices']:
+        if self.action in ['list', 'retrieve', 'get_reporting_manager_choices', 'me']:
             permission_classes = [IsAuthenticated]
         else:
             permission_classes = [IsAuthenticated, IsAdminUser | IsMaster]
@@ -2207,8 +2209,8 @@ class AttendanceViewSet(viewsets.ModelViewSet):
         except (ValueError, TypeError):
             from_date = to_date = today
 
-        # 1. Get all active employees for the company (applying employee-level search)
-        employee_qs = Employee.objects.filter(company=company, is_active=True).select_related('department', 'shift_assigned')
+        # 1. Get all active employees for the company (excluding admin/master roles)
+        employee_qs = Employee.objects.filter(company=company, is_active=True).exclude(user__role__in=['admin', 'master']).select_related('department', 'shift_assigned')
         if search:
             employee_qs = employee_qs.filter(
                 Q(employee_id__icontains=search) |
@@ -2320,7 +2322,7 @@ class AttendanceViewSet(viewsets.ModelViewSet):
         except (ValueError, TypeError):
             from_date = to_date = today
 
-        employee_qs = Employee.objects.filter(company=company, is_active=True)
+        employee_qs = Employee.objects.filter(company=company, is_active=True).exclude(user__role__in=['admin', 'master'])
         if search:
             employee_qs = employee_qs.filter(
                 Q(employee_id__icontains=search) | Q(first_name__icontains=search) | Q(last_name__icontains=search)
@@ -2387,7 +2389,7 @@ class AttendanceViewSet(viewsets.ModelViewSet):
         month_dates = [datetime(year, month, day).date() for day in range(1, num_days + 1)]
 
         company = request.user.company
-        employees = Employee.objects.filter(company=company)
+        employees = Employee.objects.filter(company=company).exclude(user__role__in=['admin', 'master'])
 
         attendance_qs = Attendance.objects.filter(
             date__year=year,
@@ -2631,11 +2633,11 @@ class AttendanceLogView(APIView):
         )
         holidays_dict = {h.date: h.name for h in holidays}
 
-        # Get employees with related data
+        # Get employees with related data (excluding admin/master roles)
         employees = Employee.objects.filter(
             company=request.user.company,
             is_active=True
-        ).select_related('department').prefetch_related('attendances')
+        ).exclude(user__role__in=['admin', 'master']).select_related('department').prefetch_related('attendances')
 
         # Apply search filter on employees
         if search_query:
@@ -5428,10 +5430,12 @@ class WFHRequestViewSet(viewsets.ModelViewSet):
 
             employee = wfh_request.employee
             old_loc = employee.work_location
-            new_loc = 'home' # Assuming approval means starting WFH
+            new_loc = 'office' if wfh_request.request_type == 'wfo' else 'home'
 
             employee.work_location = new_loc
             employee.save()
+
+            req_type_str = "Work From Office" if wfh_request.request_type == 'wfo' else "Work From Home"
 
             # Create log
             WorkLocationLog.objects.create(
@@ -5439,7 +5443,7 @@ class WFHRequestViewSet(viewsets.ModelViewSet):
                 from_location=old_loc,
                 to_location=new_loc,
                 changed_by=request.user.employee_profile,
-                reason=f"WFH Request Approved: {wfh_request.reason}"
+                reason=f"{req_type_str} Request Approved: {wfh_request.reason}"
             )
 
         return Response({"status": "approved", "work_location": new_loc})

@@ -1870,6 +1870,7 @@ class LoanApplicationSerializer(serializers.ModelSerializer):
 class WFHRequestSerializer(serializers.ModelSerializer):
     employee_name = serializers.ReadOnlyField(source='employee.full_name')
     employee_username = serializers.ReadOnlyField(source='employee.user.username')
+    employee_current_location = serializers.ReadOnlyField(source='employee.work_location')
     reporting_manager_name = serializers.ReadOnlyField(source='reporting_manager.full_name')
     status_display = serializers.CharField(source='get_status_display', read_only=True)
 
@@ -1877,6 +1878,21 @@ class WFHRequestSerializer(serializers.ModelSerializer):
         model = WFHRequest
         fields = '__all__'
         read_only_fields = ['employee', 'reporting_manager', 'status']
+
+    def validate(self, attrs):
+        request = self.context.get('request')
+        if request and request.user.is_authenticated and hasattr(request.user, 'employee_profile'):
+            emp_profile = request.user.employee_profile
+            req_type = attrs.get('request_type', 'wfh')
+            
+            current_loc = emp_profile.work_location if hasattr(emp_profile, 'work_location') else 'office'
+            
+            if req_type == 'wfh' and current_loc == 'home':
+                raise serializers.ValidationError({"detail": "You are already working from home."})
+            if req_type == 'wfo' and current_loc == 'office':
+                raise serializers.ValidationError({"detail": "You are already working from the office."})
+                
+        return attrs
 
 class WorkLocationLogSerializer(serializers.ModelSerializer):
     employee_name = serializers.ReadOnlyField(source='employee.full_name')

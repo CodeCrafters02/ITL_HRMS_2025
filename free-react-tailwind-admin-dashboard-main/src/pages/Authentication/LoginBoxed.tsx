@@ -18,8 +18,23 @@ const LoginBoxed = () => {
     const isDark = useSelector((state: IRootState) => state.themeConfig.theme === 'dark' || state.themeConfig.isDarkMode);
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
+    const [rememberMe, setRememberMe] = useState(false);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
+
+    useEffect(() => {
+        const token = localStorage.getItem('access_token');
+        const role = localStorage.getItem('user_role');
+        if (token) {
+            const isRemembered = localStorage.getItem('remember_me') === 'true';
+            const sessionActive = document.cookie.includes('session_active=true');
+            if (isRemembered || sessionActive) {
+                if (role === 'master') navigate('/master/dashboard');
+                else if (role === 'admin') navigate('/admin/dashboard');
+                else if (role === 'employee') navigate('/employee/dashboard');
+            }
+        }
+    }, [navigate]);
 
     const submitForm = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -49,6 +64,9 @@ const LoginBoxed = () => {
                 }
                 if (data.first_name !== undefined) localStorage.setItem('first_name', data.first_name || '');
                 if (data.last_name !== undefined) localStorage.setItem('last_name', data.last_name || '');
+                
+                localStorage.setItem('remember_me', rememberMe ? 'true' : 'false');
+                document.cookie = "session_active=true; path=/";
                 
                 // Navigate based on role
                 if (data.role === 'master') {
@@ -95,6 +113,9 @@ const LoginBoxed = () => {
                 }
                 if (data.first_name !== undefined) localStorage.setItem('first_name', data.first_name || '');
                 if (data.last_name !== undefined) localStorage.setItem('last_name', data.last_name || '');
+                
+                localStorage.setItem('remember_me', rememberMe ? 'true' : 'false');
+                document.cookie = "session_active=true; path=/";
                 
                 if (data.role === 'master') {
                     navigate('/master/dashboard');
@@ -173,7 +194,12 @@ const LoginBoxed = () => {
                                 {error && <div className="text-danger font-semibold">{error}</div>}
                                 <div>
                                     <label className="flex cursor-pointer items-center">
-                                        <input type="checkbox" className="form-checkbox bg-white dark:bg-black" />
+                                        <input 
+                                            type="checkbox" 
+                                            className="form-checkbox bg-white dark:bg-black" 
+                                            checked={rememberMe}
+                                            onChange={(e) => setRememberMe(e.target.checked)}
+                                        />
                                         <span className="text-white-dark">Remember me</span>
                                     </label>
                                 </div>
