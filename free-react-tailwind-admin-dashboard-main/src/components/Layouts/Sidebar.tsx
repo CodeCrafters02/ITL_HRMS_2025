@@ -277,6 +277,22 @@ const Sidebar = () => {
                                     {localStorage.getItem('is_reporting_manager') === 'true' && (
                                         <>
                                             <li className="menu nav-item">
+                                                <NavLink to="/employee/leave-approval" className="group">
+                                                    <div className="flex items-center">
+                                                        <IconMenuCalendar className="group-hover:!text-primary shrink-0" />
+                                                        <span className="ltr:pl-3 rtl:pr-3 text-black dark:text-[#506690] dark:group-hover:text-white-dark">{t('Leave Request')}</span>
+                                                    </div>
+                                                </NavLink>
+                                            </li>
+                                            <li className="menu nav-item">
+                                                <NavLink to="/employee/assign-task" className="group">
+                                                    <div className="flex items-center">
+                                                        <IconMenuNotes className="group-hover:!text-primary shrink-0" />
+                                                        <span className="ltr:pl-3 rtl:pr-3 text-black dark:text-[#506690] dark:group-hover:text-white-dark">{t('Assign Task')}</span>
+                                                    </div>
+                                                </NavLink>
+                                            </li>
+                                            <li className="menu nav-item">
                                                 <NavLink to="/employee/loan-approvals" className="group">
                                                     <div className="flex items-center">
                                                         <IconMenuInvoice className="group-hover:!text-primary shrink-0" />

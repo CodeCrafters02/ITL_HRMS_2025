@@ -164,6 +164,8 @@ const EmployeeSeatBooking = lazy(() => import('../pages/Employee/SeatBooking'));
 const EmployeeConfRoomBooking = lazy(() => import('../pages/Employee/ConfRoomBooking'));
 const EmployeeReferences = lazy(() => import('../pages/Employee/References/References'));
 const EmployeeReportees = lazy(() => import('../pages/Employee/Reportees/Reportees'));
+const EmployeeAssignTask = lazy(() => import('../pages/Employee/AssignTask/AssignTask'));
+const EmployeeLeaveApprovals = lazy(() => import('../pages/Employee/LeaveApprovals/LeaveApprovals'));
 
 // Reimbursement Pages
 const ReimbursementCategories = lazy(() => import('../pages/Reimbursement/Categories'));
@@ -834,6 +836,14 @@ const routes = [
     {
         path: '/employee/reportees',
         element: <EmployeeReportees />,
+    },
+    {
+        path: '/employee/assign-task',
+        element: <EmployeeAssignTask />,
+    },
+    {
+        path: '/employee/leave-approval',
+        element: <EmployeeLeaveApprovals />,
     },
     {
         path: '/employee/asset-requests',

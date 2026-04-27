@@ -114,6 +114,14 @@ const MyTasks = () => {
         return () => clearTimeout(timer);
     }, [loadTasks]);
 
+    useEffect(() => {
+        if (!selectedTask) return;
+        const refreshedSelected = tasks.find((task) => task.id === selectedTask.id);
+        if (refreshedSelected) {
+            setSelectedTask(refreshedSelected);
+        }
+    }, [tasks, selectedTask]);
+
     const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
 
     const handleStatusUpdate = async (assignmentId: number, status: TaskStatus) => {
@@ -495,6 +503,17 @@ const MyTasks = () => {
                                             <div className="mt-3 flex items-center justify-between text-xs text-white-dark">
                                                 <span>Progress: {sub.progress}%</span>
                                                 <span>Deadline: {formatDate(sub.deadline)}</span>
+                                            </div>
+                                            <div className="mt-3">
+                                                <p className="text-[11px] text-white-dark mb-1.5">My Subtask Assignment</p>
+                                                {(() => {
+                                                    const ownSubtaskAssignment = getOwnAssignment(sub.assignments, currentUserName);
+                                                    return ownSubtaskAssignment ? (
+                                                        statusSelect(ownSubtaskAssignment)
+                                                    ) : (
+                                                        <span className="text-xs text-white-dark">Not directly assigned</span>
+                                                    );
+                                                })()}
                                             </div>
                                         </div>
                                     ))}

@@ -141,6 +141,41 @@ class TaskSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = ['created_at']
 
+    def validate(self, attrs):
+        assigned_employees = self.initial_data.get('assignedEmployees', []) or []
+        task_owner = self.initial_data.get('taskOwner', None)
+        subtasks_data = self.initial_data.get('subtasks', []) or []
+        parent_deadline = attrs.get('deadline') or getattr(self.instance, 'deadline', None)
+
+        # Enforce assignee/owner only on create, or when these fields are explicitly provided.
+        is_create = self.instance is None
+        has_assignment_payload = ('assignedEmployees' in self.initial_data) or ('taskOwner' in self.initial_data)
+        if is_create or has_assignment_payload:
+            if not assigned_employees:
+                raise serializers.ValidationError({'assignedEmployees': 'At least one assignee is required.'})
+            if task_owner is None:
+                raise serializers.ValidationError({'taskOwner': 'Task owner is required.'})
+            if str(task_owner) not in [str(emp_id) for emp_id in assigned_employees]:
+                raise serializers.ValidationError({'taskOwner': 'Task owner must be one of assigned employees.'})
+
+        for idx, subtask in enumerate(subtasks_data):
+            sub_assignees = subtask.get('assignedEmployees', []) or []
+            sub_owner = subtask.get('taskOwner')
+            sub_deadline = subtask.get('deadline')
+
+            if not subtask.get('title'):
+                raise serializers.ValidationError({f'subtasks[{idx}].title': 'Subtask title is required.'})
+            if not sub_assignees:
+                raise serializers.ValidationError({f'subtasks[{idx}].assignedEmployees': 'At least one assignee is required for subtask.'})
+            if sub_owner is None:
+                raise serializers.ValidationError({f'subtasks[{idx}].taskOwner': 'Subtask owner is required.'})
+            if str(sub_owner) not in [str(emp_id) for emp_id in sub_assignees]:
+                raise serializers.ValidationError({f'subtasks[{idx}].taskOwner': 'Subtask owner must be one of subtask assignees.'})
+            if parent_deadline and sub_deadline and str(sub_deadline) > str(parent_deadline):
+                raise serializers.ValidationError({f'subtasks[{idx}].deadline': 'Subtask deadline cannot be after parent task deadline.'})
+
+        return attrs
+
     def create(self, validated_data):
         request_user = validated_data.pop('request_user', None)
         assigned_employees = self.initial_data.get('assignedEmployees', [])
@@ -177,6 +212,12 @@ class TaskSerializer(serializers.ModelSerializer):
                     employee_id=emp_id,
                     role='owner' if str(emp_id) == str(sub_task_owner) else 'contributor'
                 )
+
+            subtask.status = subtask.compute_status_from_assignments()
+            subtask.save(update_fields=['status'])
+
+        task.status = task.compute_status_from_subtasks()
+        task.save(update_fields=['status'])
 
         return task
 

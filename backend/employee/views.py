@@ -931,6 +931,9 @@ class EmployeeCalendarAPIView(APIView):
 class TaskListCreateAPIView(generics.ListCreateAPIView):
     permission_classes = [IsAuthenticated]
     serializer_class = TaskSerializer
+    pagination_class = EmployeePagination
+    filter_backends = [filters.SearchFilter]
+    search_fields = ['title', 'description']
 
     def get_queryset(self):
         user = self.request.user
@@ -1256,7 +1259,13 @@ class UpdateAssignmentStatusAPIView(generics.UpdateAPIView):
         # --- Recalculate task status ---
         new_task_status = task.compute_status_from_assignments()
         task.status = new_task_status
-        task.save()
+        task.save(update_fields=['status'])
+
+        # If this assignment is for a subtask, refresh parent rollup.
+        if task.parent_task_id:
+            parent_task = task.parent_task
+            parent_task.status = parent_task.compute_status_from_subtasks()
+            parent_task.save(update_fields=['status'])
 
         return Response({"detail": "Assignment status updated."})
 

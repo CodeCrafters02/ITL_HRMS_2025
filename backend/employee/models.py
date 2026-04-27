@@ -101,6 +101,20 @@ class Task(models.Model):
         else:
             return 'inreview'
 
+    def compute_status_from_subtasks(self):
+        subtasks = self.subtasks.all()
+        if not subtasks.exists():
+            return self.compute_status_from_assignments()
+
+        subtask_statuses = [sub.status for sub in subtasks]
+        if all(s == 'done' for s in subtask_statuses):
+            return 'done'
+        if any(s == 'inprogress' for s in subtask_statuses):
+            return 'inprogress'
+        if any(s == 'inreview' for s in subtask_statuses):
+            return 'inreview'
+        return 'todo'
+
 class TaskAssignment(models.Model):
    
     ROLE = [
