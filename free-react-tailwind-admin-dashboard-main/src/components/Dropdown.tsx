@@ -1,5 +1,6 @@
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react';
 import { usePopper } from 'react-popper';
+import { createPortal } from 'react-dom';
 
 const Dropdown = (props : any, forwardedRef: any) => {
     const [visibility, setVisibility] = useState<any>(false);
@@ -9,6 +10,7 @@ const Dropdown = (props : any, forwardedRef: any) => {
 
     const { styles, attributes } = usePopper(referenceRef.current, popperRef.current, {
         placement: props.placement || 'bottom-end',
+        strategy: props.strategy || 'absolute',
         modifiers: [
             {
                 name: 'offset',
@@ -51,15 +53,30 @@ const Dropdown = (props : any, forwardedRef: any) => {
                 {props.button}
             </button>
 
+            {props.usePortal ? (
+                createPortal(
+                    <div
+                        ref={popperRef}
+                        style={styles.popper}
+                        {...attributes.popper}
+                        className="z-[9999]"
+                        onClick={() => setVisibility(!visibility)}
+                    >
+                        {visibility && props.children}
+                    </div>,
+                    document.getElementById('popper-portal') || document.body
+                )
+            ) : (
                 <div
-                ref={popperRef}
-                style={styles.popper}
-                {...attributes.popper}
-                className="z-50"
-                onClick={() => setVisibility(!visibility)}
+                    ref={popperRef}
+                    style={styles.popper}
+                    {...attributes.popper}
+                    className="z-50"
+                    onClick={() => setVisibility(!visibility)}
                 >
                     {visibility && props.children}
                 </div>
+            )}
 
         </>
     );

@@ -193,7 +193,17 @@ class LoginAPIView(APIView):
         username = request.data.get("username")
         password = request.data.get("password")
 
-        user = authenticate(username=username, password=password)
+        user = None
+        try:
+            # allow login with either username or email
+            user_obj = UserRegister.objects.get(Q(username=username) | Q(email=username))
+            user = authenticate(username=user_obj.username, password=password)
+        except UserRegister.DoesNotExist:
+            user = None
+        except UserRegister.MultipleObjectsReturned:
+            # fallback if multiple matching emails exists
+            user_obj = UserRegister.objects.filter(Q(username=username) | Q(email=username)).first()
+            user = authenticate(username=user_obj.username, password=password)
 
         if user is not None:
             if not user.is_active:
