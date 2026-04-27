@@ -1,5 +1,6 @@
 import { PropsWithChildren, Suspense, useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
+import { useNavigate, useLocation } from 'react-router-dom';
 import App from '../../App';
 import { IRootState } from '../../store';
 import { toggleSidebar } from '../../store/themeConfigSlice';
@@ -13,6 +14,8 @@ import ChatFloatingButton from '../ChatFloatingButton';
 const DefaultLayout = ({ children }: PropsWithChildren) => {
     const themeConfig = useSelector((state: IRootState) => state.themeConfig);
     const dispatch = useDispatch();
+    const navigate = useNavigate();
+    const location = useLocation();
 
     const [showLoader, setShowLoader] = useState(true);
     const [showTopButton, setShowTopButton] = useState(false);
@@ -45,6 +48,35 @@ const DefaultLayout = ({ children }: PropsWithChildren) => {
             window.removeEventListener('onscroll', onScrollHandler);
         };
     }, []);
+
+    // Authentication Guard & Remember Me Logic
+    useEffect(() => {
+        const token = localStorage.getItem('access_token');
+        const rememberMe = localStorage.getItem('remember_me') === 'true';
+        const sessionActive = document.cookie.includes('session_active=true');
+        const role = localStorage.getItem('user_role');
+
+        if (!token) {
+            navigate('/auth/boxed-signin', { replace: true });
+        } else if (!rememberMe && !sessionActive) {
+            // Token exists but session is dead and remember me is false -> WIPE & LOGOUT
+            ['access_token', 'refresh_token', 'user_role', 'user_id', 'username', 'is_reporting_manager', 'user_email', 'first_name', 'last_name', 'remember_me'].forEach(k => localStorage.removeItem(k));
+            document.cookie = "session_active=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+            navigate('/auth/boxed-signin', { replace: true });
+        } else {
+            // Session is alive, ensure sessionActive cookie is set for safety across all tabs
+            document.cookie = "session_active=true; path=/";
+            
+            // Role-Based Access Control (RBAC)
+            if (location.pathname.startsWith('/master') && role !== 'master') {
+                navigate(role ? `/${role}/dashboard` : '/auth/boxed-signin', { replace: true });
+            } else if (location.pathname.startsWith('/admin') && role !== 'admin') {
+                navigate(role ? `/${role}/dashboard` : '/auth/boxed-signin', { replace: true });
+            } else if (location.pathname.startsWith('/employee') && role !== 'employee') {
+                navigate(role ? `/${role}/dashboard` : '/auth/boxed-signin', { replace: true });
+            }
+        }
+    }, [navigate, location.pathname]);
 
     return (
         <App>
