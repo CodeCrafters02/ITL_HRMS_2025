@@ -224,6 +224,8 @@ const WFHRequest = () => {
                                             <thead>
                                                 <tr className="bg-gray-50 dark:bg-gray-900/50">
                                                     <th className="text-[10px] font-black uppercase">Employee</th>
+                                                    <th className="text-[10px] font-black uppercase text-center">Current Status</th>
+                                                    <th className="text-[10px] font-black uppercase text-center">Req Type</th>
                                                     <th className="text-[10px] font-black uppercase">Reason</th>
                                                     <th className="text-[10px] font-black uppercase text-center">Duration</th>
                                                     <th className="text-[10px] font-black uppercase text-center">Actions</th>
@@ -238,8 +240,18 @@ const WFHRequest = () => {
                                                                 <span className="text-[9px] font-bold uppercase text-gray-400 italic">ID: {req.employee_id}</span>
                                                             </div>
                                                         </td>
+                                                        <td className="text-center">
+                                                            <span className={`badge uppercase text-[9px] font-black tracking-widest ${req.employee_current_location === 'home' ? 'badge-outline-secondary' : 'badge-outline-info'}`}>
+                                                                {req.employee_current_location === 'home' ? 'Home' : 'Office'}
+                                                            </span>
+                                                        </td>
+                                                        <td className="text-center">
+                                                            <span className={`badge uppercase text-[9px] font-black tracking-widest ${req.request_type === 'wfo' ? 'badge-outline-info' : 'badge-outline-secondary'}`}>
+                                                                {req.request_type === 'wfo' ? 'Office' : 'Home'}
+                                                            </span>
+                                                        </td>
                                                         <td className="whitespace-normal min-w-[250px] text-xs font-medium italic text-gray-600">{req.reason}</td>
-                                                        <td className="text-center font-bold text-xs">{req.from_date || 'N/A'} {req.to_date ? `â†’ ${req.to_date}` : ''}</td>
+                                                        <td className="text-center font-bold text-xs">{req.from_date || 'N/A'} {req.to_date ? `→ ${req.to_date}` : ''}</td>
                                                         <td>
                                                             <div className="flex items-center justify-center gap-3">
                                                                 <Tippy content="Approve"><button onClick={() => handleApprove(req.id)} className="btn btn-sm btn-outline-success p-2 rounded-lg"><IconChecks className="w-4 h-4" /></button></Tippy>
@@ -318,7 +330,7 @@ const WFHRequest = () => {
                                                 {logs.map((log: any) => (
                                                     <tr key={log.id}>
                                                         <td className="font-black text-indigo-600">{log.employee_name}</td>
-                                                        <td>{log.from_location} â†’ {log.to_location}</td>
+                                                        <td>{log.from_location} &rarr; {log.to_location}</td>
                                                         <td className="text-xs font-bold">{log.changed_by_name}</td>
                                                         <td className="text-[10px] font-bold text-gray-400 italic">{new Date(log.date).toLocaleString('en-GB')}</td>
                                                     </tr>

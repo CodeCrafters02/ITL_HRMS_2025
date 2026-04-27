@@ -26,8 +26,10 @@ const WFHRequest = () => {
     const [logs, setLogs] = useState<any[]>([]);
     const [search, setSearch] = useState('');
     const [showModal, setShowModal] = useState(false);
+    const [myLocation, setMyLocation] = useState<string | null>(null);
     
     const [formData, setFormData] = useState({
+        request_type: 'wfh',
         reason: '',
         from_date: '',
         to_date: '',
@@ -52,11 +54,13 @@ const WFHRequest = () => {
             const promises: any[] = [
                 axios.get(`${API_BASE_URL}/app/wfh-requests/?mine=true`, { headers }),
                 axios.get(`${API_BASE_URL}/app/wfh-requests/`, { headers }),
+                axios.get(`${API_BASE_URL}/app/employee/me/`, { headers }).catch(() => ({ data: {} })),
             ];
 
             const results = await Promise.all(promises);
             
             setRequests(results[0].data.results || results[0].data);
+            if (results[2].data.work_location) setMyLocation(results[2].data.work_location);
             
             const approvalRes = results[1].data.results || results[1].data;
             setPendingRequests(approvalRes.filter((r: any) => r.status === 'pending' && r.employee_username !== myUsername));
@@ -84,7 +88,7 @@ const WFHRequest = () => {
                 customClass: { popup: 'sweet-alerts' },
             });
             setShowModal(false);
-            setFormData({ reason: '', from_date: '', to_date: '' });
+            setFormData({ request_type: 'wfh', reason: '', from_date: '', to_date: '' });
             fetchAllData();
         } catch (error: any) {
             console.error('WFH Error:', error.response?.data);
@@ -181,6 +185,15 @@ const WFHRequest = () => {
                         </p>
                     </div>
                     <div className="flex flex-col sm:flex-row items-center gap-4">
+                        {myLocation && (
+                            <div className="bg-white/10 backdrop-blur-md px-6 py-3 rounded-2xl border border-white/20 shadow-inner">
+                                <span className="text-white/80 text-[10px] font-black uppercase tracking-widest block mb-1">Live Status</span>
+                                <span className="text-white font-black uppercase text-xl flex items-center gap-2">
+                                    <span className={`w-3 h-3 rounded-full ${myLocation === 'home' ? 'bg-indigo-400' : 'bg-green-400'} animate-pulse`}></span>
+                                    {myLocation === 'home' ? 'At Home' : 'In Office'}
+                                </span>
+                            </div>
+                        )}
                         <button 
                             type="button" 
                             className="btn bg-white text-indigo-600 hover:bg-indigo-50 border-0 font-black uppercase tracking-widest px-8 py-3 rounded-2xl shadow-2xl transition-all hover:scale-105"
@@ -219,6 +232,7 @@ const WFHRequest = () => {
                                         <table className="table-hover">
                                             <thead>
                                                 <tr className="bg-gray-50 dark:bg-gray-900/50">
+                                                    <th className="text-[10px] font-black uppercase">Type</th>
                                                     <th className="text-[10px] font-black uppercase">Reason</th>
                                                     <th className="text-[10px] font-black uppercase">Duration</th>
                                                     <th className="text-[10px] font-black uppercase text-center">Status</th>
@@ -229,6 +243,11 @@ const WFHRequest = () => {
                                             <tbody>
                                                 {requests.map((req: any) => (
                                                     <tr key={req.id}>
+                                                        <td>
+                                                            <span className={`badge uppercase text-[9px] font-black tracking-widest ${req.request_type === 'wfo' ? 'badge-outline-info' : 'badge-outline-secondary'}`}>
+                                                                {req.request_type === 'wfo' ? 'Office' : 'Home'}
+                                                            </span>
+                                                        </td>
                                                         <td className="whitespace-normal min-w-[250px] text-sm font-semibold">{req.reason}</td>
                                                         <td>
                                                             <div className="flex flex-col">
@@ -265,6 +284,8 @@ const WFHRequest = () => {
                                             <thead>
                                                 <tr className="bg-gray-50 dark:bg-gray-900/50">
                                                     <th className="text-[10px] font-black uppercase">Employee</th>
+                                                    <th className="text-[10px] font-black uppercase text-center">Current Status</th>
+                                                    <th className="text-[10px] font-black uppercase text-center">Req Type</th>
                                                     <th className="text-[10px] font-black uppercase">Reason</th>
                                                     <th className="text-[10px] font-black uppercase text-center">Duration</th>
                                                     <th className="text-[10px] font-black uppercase text-center">Actions</th>
@@ -278,6 +299,16 @@ const WFHRequest = () => {
                                                                 <span className="font-black text-indigo-600">{req.employee_name}</span>
                                                                 <span className="text-[9px] font-bold uppercase text-gray-400 italic">ID: {req.employee_id}</span>
                                                             </div>
+                                                        </td>
+                                                        <td className="text-center">
+                                                            <span className={`badge uppercase text-[9px] font-black tracking-widest ${req.employee_current_location === 'home' ? 'badge-outline-secondary' : 'badge-outline-info'}`}>
+                                                                {req.employee_current_location === 'home' ? 'Home' : 'Office'}
+                                                            </span>
+                                                        </td>
+                                                        <td className="text-center">
+                                                            <span className={`badge uppercase text-[9px] font-black tracking-widest ${req.request_type === 'wfo' ? 'badge-outline-info' : 'badge-outline-secondary'}`}>
+                                                                {req.request_type === 'wfo' ? 'Office' : 'Home'}
+                                                            </span>
                                                         </td>
                                                         <td className="whitespace-normal min-w-[250px] text-xs font-medium italic text-gray-600">{req.reason}</td>
                                                         <td className="text-center font-bold text-xs">{req.from_date || 'N/A'} {req.to_date ? `→ ${req.to_date}` : ''}</td>
@@ -318,6 +349,13 @@ const WFHRequest = () => {
                                     </div>
                                     <form onSubmit={handleSubmit}>
                                         <div className="p-6 space-y-6">
+                                            <div>
+                                                <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1 block">Request Type</label>
+                                                <select className="form-select text-sm font-semibold" value={formData.request_type} onChange={(e) => setFormData({ ...formData, request_type: e.target.value })}>
+                                                    <option value="wfh">Work From Home</option>
+                                                    <option value="wfo">Work From Office</option>
+                                                </select>
+                                            </div>
                                             <div>
                                                 <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1 block">Reason</label>
                                                 <textarea className="form-textarea min-h-[120px] text-sm" placeholder="Details..." required value={formData.reason} onChange={(e) => setFormData({ ...formData, reason: e.target.value })}></textarea>

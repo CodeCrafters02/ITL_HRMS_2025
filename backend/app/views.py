@@ -658,9 +658,10 @@ class EmployeeViewSet(viewsets.ModelViewSet):
 
     @action(detail=False, methods=['get'])
     def me(self, request):
-        if not hasattr(request.user, 'employee'):
+        emp_profile = getattr(request.user, 'employee_profile', None)
+        if not emp_profile:
             return Response({"error": "No employee profile found"}, status=status.HTTP_404_NOT_FOUND)
-        serializer = self.get_serializer(request.user.employee)
+        serializer = self.get_serializer(emp_profile)
         return Response(serializer.data)
 
     def _ensure_employee_profiles_for_company(self, company):
@@ -713,7 +714,7 @@ class EmployeeViewSet(viewsets.ModelViewSet):
     def get_permissions(self):
         # Employees can view (list/retrieve) employees from their company,
         # but cannot create/update/delete.
-        if self.action in ['list', 'retrieve', 'get_reporting_manager_choices']:
+        if self.action in ['list', 'retrieve', 'get_reporting_manager_choices', 'me']:
             permission_classes = [IsAuthenticated]
         else:
             permission_classes = [IsAuthenticated, IsAdminUser | IsMaster]
@@ -5418,10 +5419,12 @@ class WFHRequestViewSet(viewsets.ModelViewSet):
 
             employee = wfh_request.employee
             old_loc = employee.work_location
-            new_loc = 'home' # Assuming approval means starting WFH
+            new_loc = 'office' if wfh_request.request_type == 'wfo' else 'home'
 
             employee.work_location = new_loc
             employee.save()
+
+            req_type_str = "Work From Office" if wfh_request.request_type == 'wfo' else "Work From Home"
 
             # Create log
             WorkLocationLog.objects.create(
@@ -5429,7 +5432,7 @@ class WFHRequestViewSet(viewsets.ModelViewSet):
                 from_location=old_loc,
                 to_location=new_loc,
                 changed_by=request.user.employee_profile,
-                reason=f"WFH Request Approved: {wfh_request.reason}"
+                reason=f"{req_type_str} Request Approved: {wfh_request.reason}"
             )
 
         return Response({"status": "approved", "work_location": new_loc})
