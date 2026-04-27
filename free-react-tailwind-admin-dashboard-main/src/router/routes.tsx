@@ -865,6 +865,10 @@ const routes = [
         element: <ReimbursementApprovals />,
     },
     {
+        path: '/admin/reimbursement/approvals',
+        element: <ReimbursementApprovals />,
+    },
+    {
         path: '/admin/reimbursement/history',
         element: <ReimbursementHistory />,
     },
