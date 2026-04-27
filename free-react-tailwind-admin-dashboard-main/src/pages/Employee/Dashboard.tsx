@@ -404,6 +404,16 @@ const EmployeeDashboard = () => {
     const isCheckedIn = Boolean(checkin_time && !checkout_time);
     const attendanceStatusLabel = isCheckedIn ? (active_break ? 'On Break' : 'Checked In') : checkout_time ? 'Checked Out' : 'Not Checked In';
     const attendanceStatusColor = isCheckedIn ? (active_break ? '#e2a03f' : '#00ab55') : checkout_time ? '#805dca' : '#e7515a';
+    const punctualityScore = data.is_late ? 65 : 100;
+    const dayTargetMinutes = 8 * 60;
+    const productiveScore = Math.min(100, Math.round((productiveMinutes / dayTargetMinutes) * 100));
+    const attendanceHealthScore = (() => {
+        if (!checkin_time) return 20;
+
+        // Blend punctuality, consistency (weekly progress), focus, and daily worked minutes.
+        const weightedScore = Math.round((punctualityScore * 0.3) + (weeklyProgress * 0.25) + (focusScore * 0.25) + (productiveScore * 0.2));
+        return Math.max(0, Math.min(100, weightedScore));
+    })();
     const activeBreakDurationMinutes = active_break?.duration_minutes ?? breakConfigs.find((bc) => bc.id === active_break?.break_config_id)?.duration_minutes ?? null;
     const breakRemainingSeconds = (() => {
         if (!active_break?.start_time || !activeBreakDurationMinutes) return null;
@@ -736,7 +746,7 @@ const EmployeeDashboard = () => {
                         <ReactApexChart
                             type="radialBar"
                             height={220}
-                            series={[isCheckedIn ? 100 : checkout_time ? 68 : 30]}
+                            series={[attendanceHealthScore]}
                             options={{
                                 chart: { sparkline: { enabled: true } },
                                 colors: [attendanceStatusColor],
