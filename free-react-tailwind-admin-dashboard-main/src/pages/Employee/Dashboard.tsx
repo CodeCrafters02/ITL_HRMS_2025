@@ -109,6 +109,8 @@ const EmployeeDashboard = () => {
     const [liveRawSeconds, setLiveRawSeconds] = useState('--:--:--');
     const [nowMs, setNowMs] = useState(Date.now());
     const breakEndingAlertedRef = useRef<string | null>(null);
+    const breakEndingBrowserAlertedRef = useRef<string | null>(null);
+    const breakEndedBrowserAlertedRef = useRef<string | null>(null);
 
     const groupedBreaks = useMemo(() => {
         const groups: { [key: string]: BreakConfig[] } = {};
@@ -128,14 +130,17 @@ const EmployeeDashboard = () => {
     const formattedName = display.charAt(0).toUpperCase() + display.slice(1);
 
     const activeHour = new Date().getHours();
-    let greeting = 'Good Evening';
+    let greeting = 'Good Night';
     let GreetingEmoji = '🌙';
-    if (activeHour < 12) {
+    if (activeHour >= 5 && activeHour < 12) {
         greeting = 'Good Morning';
         GreetingEmoji = '☀️';
-    } else if (activeHour < 18) {
+    } else if (activeHour >= 12 && activeHour < 17) {
         greeting = 'Good Afternoon';
         GreetingEmoji = '🌤️';
+    } else if (activeHour >= 17 && activeHour < 21) {
+        greeting = 'Good Evening';
+        GreetingEmoji = '🌆';
     }
 
     const todayFormatted = new Date().toLocaleDateString('en-US', {
@@ -275,6 +280,14 @@ const EmployeeDashboard = () => {
         return () => clearInterval(timer);
     }, [data?.active_break]);
 
+    useEffect(() => {
+        // Ask once so system notifications can be shown when user is on another page/tab.
+        if (typeof Notification === 'undefined') return;
+        if (Notification.permission === 'default') {
+            Notification.requestPermission().catch(() => undefined);
+        }
+    }, []);
+
     const fetchChartData = async (range: string, background = false, offset = 0) => {
         if (!background) setChartLoading(true);
         try {
@@ -405,25 +418,52 @@ const EmployeeDashboard = () => {
         return Math.max(0, activeBreakDurationMinutesForAlert * 60 - elapsedSeconds);
     })();
 
+    const sendBrowserBreakAlert = (title: string, body: string, tag: string) => {
+        if (typeof Notification === 'undefined') return;
+        if (Notification.permission !== 'granted') return;
+        new Notification(title, {
+            body,
+            tag,
+        });
+    };
+
     useEffect(() => {
         if (!activeBreakForAlert?.start_time) {
             breakEndingAlertedRef.current = null;
+            breakEndingBrowserAlertedRef.current = null;
+            breakEndedBrowserAlertedRef.current = null;
             return;
         }
-        if (breakRemainingSecondsForAlert === null || breakRemainingSecondsForAlert <= 0 || breakRemainingSecondsForAlert > 120) return;
+        if (breakRemainingSecondsForAlert === null) return;
 
         const alertKey = `${activeBreakForAlert.start_time}-${activeBreakForAlert.break_config_id ?? 'na'}`;
-        if (breakEndingAlertedRef.current === alertKey) return;
-        breakEndingAlertedRef.current = alertKey;
-
-        Swal.fire({
-            toast: true,
-            position: 'top-end',
-            icon: 'warning',
-            title: `Break ending soon (${formatCountdown(breakRemainingSecondsForAlert)} left)`,
-            showConfirmButton: false,
-            timer: 4000,
-        });
+        if (breakRemainingSecondsForAlert > 0 && breakRemainingSecondsForAlert <= 120 && breakEndingAlertedRef.current !== alertKey) {
+            breakEndingAlertedRef.current = alertKey;
+            Swal.fire({
+                toast: true,
+                position: 'top-end',
+                icon: 'warning',
+                title: `Break ending soon (${formatCountdown(breakRemainingSecondsForAlert)} left)`,
+                showConfirmButton: false,
+                timer: 4000,
+            });
+        }
+        if (breakRemainingSecondsForAlert > 0 && breakRemainingSecondsForAlert <= 120 && breakEndingBrowserAlertedRef.current !== alertKey) {
+            breakEndingBrowserAlertedRef.current = alertKey;
+            sendBrowserBreakAlert(
+                'Break Ending Soon',
+                `Your break ends in ${formatCountdown(breakRemainingSecondsForAlert)}.`,
+                `break-ending-${alertKey}`
+            );
+        }
+        if (breakRemainingSecondsForAlert <= 0 && breakEndedBrowserAlertedRef.current !== alertKey) {
+            breakEndedBrowserAlertedRef.current = alertKey;
+            sendBrowserBreakAlert(
+                'Break Time Over',
+                'Your break has ended. Please return and end your break.',
+                `break-ended-${alertKey}`
+            );
+        }
     }, [activeBreakForAlert?.start_time, activeBreakForAlert?.break_config_id, breakRemainingSecondsForAlert]);
 
     if (loading) {

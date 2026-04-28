@@ -26,6 +26,8 @@ import IconMenuElements from '../Icon/Menu/IconMenuElements';
 import IconMenuInvoice from '../Icon/Menu/IconMenuInvoice';
 import IconMenuNotes from '../Icon/Menu/IconMenuNotes';
 
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000';
+
 const Sidebar = () => {
     const [currentMenu, setCurrentMenu] = useState<string>('');
     const [errorSubMenu, setErrorSubMenu] = useState(false);
@@ -35,6 +37,26 @@ const Sidebar = () => {
     const dispatch = useDispatch();
     const { t } = useTranslation();
     const userRole = localStorage.getItem('user_role') || '';
+    const [employeeCounts, setEmployeeCounts] = useState({
+        myTasks: 0,
+        assetRequests: 0,
+        loanApprovals: 0,
+        reimbursementApprovals: 0,
+        leaveApplicationUpdates: 0,
+        leaveApprovals: 0,
+        assignTask: 0,
+    });
+    const [seenCounts, setSeenCounts] = useState<Record<string, number>>({});
+    const SEEN_KEY = 'employee_sidebar_seen_counts';
+
+    const statusIsPending = (status: unknown) => String(status || '').toLowerCase() === 'pending';
+    const countBadge = (count: number) =>
+        count > 0 ? (
+            <span className="ltr:ml-2 rtl:mr-2 inline-flex min-w-[18px] h-[18px] px-1 items-center justify-center rounded-full bg-danger text-white text-[10px] font-bold">
+                {count > 99 ? '99+' : count}
+            </span>
+        ) : null;
+    const unreadCount = (key: string, total: number) => Math.max(0, total - (seenCounts[key] || 0));
 
     const toggleMenu = (value: string) => {
         setCurrentMenu((oldValue) => {
@@ -65,6 +87,123 @@ const Sidebar = () => {
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [location]);
+
+    useEffect(() => {
+        try {
+            const raw = localStorage.getItem(SEEN_KEY);
+            if (!raw) return;
+            const parsed = JSON.parse(raw);
+            if (parsed && typeof parsed === 'object') setSeenCounts(parsed);
+        } catch {
+            setSeenCounts({});
+        }
+    }, []);
+
+    useEffect(() => {
+        if (userRole !== 'employee') return;
+        const token = localStorage.getItem('access_token');
+        if (!token) return;
+        const headers: HeadersInit = { Authorization: `Bearer ${token}` };
+
+        const loadEmployeeCounts = async () => {
+            try {
+                const [myTasksRes, managerTasksRes, leaveRes, loanRes, reimburseRes, assetRes] = await Promise.all([
+                    fetch(`${API_BASE_URL}/employee/my-tasks/?page=1&page_size=1`, { headers }),
+                    fetch(`${API_BASE_URL}/employee/tasks/?page=1&page_size=200`, { headers }),
+                    fetch(`${API_BASE_URL}/employee/emp-leaves/`, { headers }),
+                    fetch(`${API_BASE_URL}/app/loan-applications/?page=1&page_size=200`, { headers }),
+                    fetch(`${API_BASE_URL}/app/reimbursement-requests/?status=pending&page=1&page_size=1`, { headers }),
+                    fetch(`${API_BASE_URL}/app/asset-requests/?page=1&page_size=200`, { headers }),
+                ]);
+
+                const myTasksData = myTasksRes.ok ? await myTasksRes.json().catch(() => ({})) : {};
+                const managerTasksData = managerTasksRes.ok ? await managerTasksRes.json().catch(() => ({})) : {};
+                const leavesData = leaveRes.ok ? await leaveRes.json().catch(() => []) : [];
+                const loansData = loanRes.ok ? await loanRes.json().catch(() => ({})) : {};
+                const reimburseData = reimburseRes.ok ? await reimburseRes.json().catch(() => ({})) : {};
+                const assetsData = assetRes.ok ? await assetRes.json().catch(() => ({})) : {};
+
+                const myTasksSummary = myTasksData?.summary || {};
+                const myTasksOpen = Number(myTasksSummary.in_progress || 0) + Number(myTasksSummary.overdue || 0);
+
+                const managerTaskList = Array.isArray(managerTasksData)
+                    ? managerTasksData
+                    : Array.isArray(managerTasksData?.results)
+                      ? managerTasksData.results
+                      : [];
+                const assignTaskOpen = managerTaskList.filter((task: any) => String(task?.status || '').toLowerCase() !== 'done').length;
+
+                const leavesList = Array.isArray(leavesData) ? leavesData : Array.isArray((leavesData as any)?.results) ? (leavesData as any).results : [];
+                const leaveApprovals = leavesList.filter((l: any) => statusIsPending(l?.status)).length;
+                const leaveApplicationUpdates = leavesList.filter((l: any) => {
+                    const status = String(l?.status || '').toLowerCase();
+                    return status === 'approved' || status === 'rejected';
+                }).length;
+
+                const loansList = Array.isArray(loansData) ? loansData : Array.isArray(loansData?.results) ? loansData.results : [];
+                const loanApprovals = loansList.filter((l: any) => statusIsPending(l?.status)).length;
+
+                const reimbursementApprovals = Number(reimburseData?.count || 0);
+
+                const assetsList = Array.isArray(assetsData) ? assetsData : Array.isArray(assetsData?.results) ? assetsData.results : [];
+                const assetRequests = assetsList.filter((a: any) => statusIsPending(a?.approval_status)).length;
+
+                setEmployeeCounts({
+                    myTasks: myTasksOpen,
+                    assetRequests,
+                    loanApprovals,
+                    reimbursementApprovals,
+                    leaveApplicationUpdates,
+                    leaveApprovals,
+                    assignTask: assignTaskOpen,
+                });
+            } catch {
+                setEmployeeCounts({
+                    myTasks: 0,
+                    assetRequests: 0,
+                    loanApprovals: 0,
+                    reimbursementApprovals: 0,
+                    leaveApplicationUpdates: 0,
+                    leaveApprovals: 0,
+                    assignTask: 0,
+                });
+            }
+        };
+
+        loadEmployeeCounts();
+        const timer = setInterval(loadEmployeeCounts, 60000);
+        return () => clearInterval(timer);
+    }, [userRole]);
+
+    useEffect(() => {
+        if (userRole !== 'employee') return;
+        const path = location.pathname;
+        const nextSeen = { ...seenCounts };
+        let changed = false;
+
+        const markSeen = (key: keyof typeof employeeCounts, routePrefix: string) => {
+            if (path.startsWith(routePrefix)) {
+                const latest = employeeCounts[key] || 0;
+                if ((nextSeen[key] || 0) < latest) {
+                    nextSeen[key] = latest;
+                    changed = true;
+                }
+            }
+        };
+
+        markSeen('myTasks', '/employee/my-tasks');
+        markSeen('assetRequests', '/employee/asset-requests');
+        markSeen('loanApprovals', '/employee/loan-approvals');
+        markSeen('reimbursementApprovals', '/employee/reimbursement/approvals');
+        markSeen('leaveApplicationUpdates', '/employee/leave-application');
+        markSeen('leaveApprovals', '/employee/leave-approval');
+        markSeen('assignTask', '/employee/assign-task');
+
+        if (changed) {
+            setSeenCounts(nextSeen);
+            localStorage.setItem(SEEN_KEY, JSON.stringify(nextSeen));
+        }
+    }, [location.pathname, userRole, employeeCounts, seenCounts]);
 
     return (
         <div className={semidark ? 'dark' : ''}>
@@ -143,6 +282,7 @@ const Sidebar = () => {
                                             <div className="flex items-center">
                                                 <IconMenuNotes className="group-hover:!text-primary shrink-0" />
                                                 <span className="ltr:pl-3 rtl:pr-3 text-black dark:text-[#506690] dark:group-hover:text-white-dark">{t('My Tasks')}</span>
+                                                {countBadge(unreadCount('myTasks', employeeCounts.myTasks))}
                                             </div>
                                         </NavLink>
                                     </li>
@@ -151,6 +291,7 @@ const Sidebar = () => {
                                             <div className="flex items-center">
                                                 <IconMenuCalendar className="group-hover:!text-primary shrink-0" />
                                                 <span className="ltr:pl-3 rtl:pr-3 text-black dark:text-[#506690] dark:group-hover:text-white-dark">{t('Leave Application')}</span>
+                                                {countBadge(unreadCount('leaveApplicationUpdates', employeeCounts.leaveApplicationUpdates))}
                                             </div>
                                         </NavLink>
                                     </li>
@@ -233,11 +374,21 @@ const Sidebar = () => {
                                         </button>
                                         <AnimateHeight duration={300} height={currentMenu === 'emp-requests' ? 'auto' : 0}>
                                             <ul className="sub-menu text-gray-500">
-                                                <li><NavLink to="/employee/asset-requests">{t('Asset Requests')}</NavLink></li>
+                                                <li>
+                                                    <NavLink to="/employee/asset-requests" className="flex items-center gap-2">
+                                                        <span>{t('Asset Requests')}</span>
+                                                        {countBadge(unreadCount('assetRequests', employeeCounts.assetRequests))}
+                                                    </NavLink>
+                                                </li>
                                                 <li><NavLink to="/employee/loan-application">{t('Loan Application')}</NavLink></li>
                                                 <li><NavLink to="/employee/wfh-request">{t('Work From Home')}</NavLink></li>
                                                 {localStorage.getItem('is_reporting_manager') === 'true' && (
-                                                    <li><NavLink to="/employee/loan-approvals">{t('Loan Approvals')}</NavLink></li>
+                                                    <li>
+                                                        <NavLink to="/employee/loan-approvals" className="flex items-center gap-2">
+                                                            <span>{t('Loan Approvals')}</span>
+                                                            {countBadge(unreadCount('loanApprovals', employeeCounts.loanApprovals))}
+                                                        </NavLink>
+                                                    </li>
                                                 )}
                                             </ul>
                                         </AnimateHeight>
@@ -258,7 +409,12 @@ const Sidebar = () => {
                                             <ul className="sub-menu text-gray-500">
                                                 <li><NavLink to="/employee/reimbursement/request">{t('Request Reimbursement')}</NavLink></li>
                                                 <li><NavLink to="/employee/reimbursement/status">{t('My Requests')}</NavLink></li>
-                                                <li><NavLink to="/employee/reimbursement/approvals">{t('Approvals')}</NavLink></li>
+                                                <li>
+                                                    <NavLink to="/employee/reimbursement/approvals" className="flex items-center gap-2">
+                                                        <span>{t('Approvals')}</span>
+                                                        {countBadge(unreadCount('reimbursementApprovals', employeeCounts.reimbursementApprovals))}
+                                                    </NavLink>
+                                                </li>
                                             </ul>
                                         </AnimateHeight>
                                     </li>
@@ -270,6 +426,7 @@ const Sidebar = () => {
                                                     <div className="flex items-center">
                                                         <IconMenuCalendar className="group-hover:!text-primary shrink-0" />
                                                         <span className="ltr:pl-3 rtl:pr-3 text-black dark:text-[#506690] dark:group-hover:text-white-dark">{t('Leave Request')}</span>
+                                                        {countBadge(unreadCount('leaveApprovals', employeeCounts.leaveApprovals))}
                                                     </div>
                                                 </NavLink>
                                             </li>
@@ -278,6 +435,7 @@ const Sidebar = () => {
                                                     <div className="flex items-center">
                                                         <IconMenuNotes className="group-hover:!text-primary shrink-0" />
                                                         <span className="ltr:pl-3 rtl:pr-3 text-black dark:text-[#506690] dark:group-hover:text-white-dark">{t('Assign Task')}</span>
+                                                        {countBadge(unreadCount('assignTask', employeeCounts.assignTask))}
                                                     </div>
                                                 </NavLink>
                                             </li>
