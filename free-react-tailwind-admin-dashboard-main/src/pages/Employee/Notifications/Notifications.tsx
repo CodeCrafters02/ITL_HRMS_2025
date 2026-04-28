@@ -101,13 +101,13 @@ const Notifications = () => {
             ]);
 
             let todayTotal = 0;
-            let currentPage = 1;
-            const maxPagesToScan = 20;
-            const scanPageSize = 50;
-            const now = new Date();
-            const todayKey = `${now.getFullYear()}-${now.getMonth()}-${now.getDate()}`;
+            const scanPageSize = 100;
+            const totalPages = Math.max(1, Math.ceil((allMeta.count || 0) / scanPageSize));
+            const today = new Date();
+            const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate()).getTime();
+            const todayEnd = todayStart + 24 * 60 * 60 * 1000;
 
-            while (currentPage <= maxPagesToScan) {
+            for (let currentPage = 1; currentPage <= totalPages; currentPage += 1) {
                 const pageData = await fetchEmployeeNotifications({
                     page: currentPage,
                     page_size: scanPageSize,
@@ -116,25 +116,12 @@ const Notifications = () => {
 
                 if (!pageData.results.length) break;
 
-                let hasAnyToday = false;
-                let allOlderThanToday = true;
-
                 for (const n of pageData.results) {
-                    const d = new Date(n.date);
-                    if (Number.isNaN(d.getTime())) continue;
-                    const itemKey = `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
-                    if (itemKey === todayKey) {
-                        hasAnyToday = true;
+                    const timestamp = new Date(n.date).getTime();
+                    if (!Number.isNaN(timestamp) && timestamp >= todayStart && timestamp < todayEnd) {
                         todayTotal += 1;
                     }
-                    if (d >= new Date(now.getFullYear(), now.getMonth(), now.getDate())) {
-                        allOlderThanToday = false;
-                    }
                 }
-
-                if (!hasAnyToday && allOlderThanToday) break;
-                if (currentPage >= pageData.total_pages) break;
-                currentPage += 1;
             }
 
             setSummary({
@@ -160,6 +147,8 @@ const Notifications = () => {
 
     useEffect(() => {
         loadSummary();
+        const intervalId = window.setInterval(loadSummary, 30000);
+        return () => window.clearInterval(intervalId);
     }, [loadSummary]);
 
     const groupedItems = useMemo(() => {
@@ -220,14 +209,10 @@ const Notifications = () => {
                 </div>
             )}
 
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="panel">
                     <p className="text-white-dark text-xs uppercase tracking-wide">Total Notifications</p>
                     <p className="text-2xl font-bold mt-2">{summary.total}</p>
-                </div>
-                <div className="panel">
-                    <p className="text-white-dark text-xs uppercase tracking-wide">Unread</p>
-                    <p className="text-2xl font-bold mt-2 text-warning">{summary.unread}</p>
                 </div>
                 <div className="panel">
                     <p className="text-white-dark text-xs uppercase tracking-wide">Today</p>
