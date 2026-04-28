@@ -1192,6 +1192,7 @@ class ReimbursementCategory(models.Model):
     company = models.ForeignKey(Company, on_delete=models.CASCADE, related_name='reimbursement_categories')
     name = models.CharField(max_length=100)
     description = models.TextField(blank=True, null=True)
+    min_tenure_months = models.PositiveIntegerField(default=0, help_text="Minimum months of service required to apply")
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):

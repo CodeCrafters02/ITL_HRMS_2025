@@ -3,6 +3,9 @@ import { useDispatch } from 'react-redux';
 import Swal from 'sweetalert2';
 import { setPageTitle } from '../../store/themeConfigSlice';
 import IconSearch from '../../components/Icon/IconSearch';
+import { Fragment } from 'react';
+import { Dialog, Transition } from '@headlessui/react';
+import IconX from '../../components/Icon/IconX';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000';
 
@@ -38,6 +41,12 @@ type AttendanceRecord = {
     total_working_days: number;
     total_late_days: number;
     daily_attendance: DailyRecord[];
+    shift_info: {
+        full_day: number;
+        half_day: number;
+        checkin: string;
+        checkout: string;
+    };
 };
 
 const pad2 = (n: number) => String(n).padStart(2, '0');
@@ -69,6 +78,29 @@ const AdminAttendanceLogs = () => {
 
     const tooltipRef = useRef<HTMLDivElement | null>(null);
     const [tooltip, setTooltip] = useState<{ x: number; y: number; text: string } | null>(null);
+
+    // Edit Modal State
+    const [editModalOpen, setEditModalOpen] = useState(false);
+    const [editingData, setEditingData] = useState<{
+        employee: AttendanceRecord;
+        record: DailyRecord | null;
+        date: string;
+    } | null>(null);
+    const [editForm, setEditForm] = useState({
+        status: 'Present',
+        check_in: '',
+        check_out: '',
+        remarks: '',
+    });
+    const [saving, setSaving] = useState(false);
+
+    const todayISO = useMemo(() => new Date().toISOString().split('T')[0], []);
+
+    const lastWorkingDayISO = useMemo(() => {
+        const d = new Date();
+        d.setDate(d.getDate() - 1);
+        return d.toISOString().split('T')[0];
+    }, []);
 
     useEffect(() => {
         dispatch(setPageTitle('Attendance Logs'));
@@ -124,11 +156,6 @@ const AdminAttendanceLogs = () => {
 
     const resetPage = () => setPage(1);
 
-    const todayISO = useMemo(() => {
-        const t = new Date();
-        return `${t.getFullYear()}-${pad2(t.getMonth() + 1)}-${pad2(t.getDate())}`;
-    }, []);
-
     const monthDates = useMemo(() => {
         const n = daysInMonth(year, month0);
         return Array.from({ length: n }, (_, i) => {
@@ -160,6 +187,57 @@ const AdminAttendanceLogs = () => {
     };
     const hideTip = () => setTooltip(null);
 
+    const openEditModal = (emp: AttendanceRecord, record: DailyRecord | undefined, isoDate: string) => {
+        setEditingData({ employee: emp, record: record || null, date: isoDate });
+        setEditForm({
+            status: record?.status || 'Present',
+            check_in: record?.check_in || '09:00',
+            check_out: record?.check_out || '18:00',
+            remarks: record?.remarks || '',
+        });
+        setEditModalOpen(true);
+    };
+
+    const handleSaveAttendance = async () => {
+        if (!editingData) return;
+        setSaving(true);
+        try {
+            const resp = await fetch(`${API_BASE_URL}/app/attendance-logs/`, {
+                method: 'POST',
+                headers: {
+                    ...headers(),
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    employee_id: editingData.employee.employee_id,
+                    date: editingData.date,
+                    status: editForm.status,
+                    check_in: editForm.status === 'Present' ? editForm.check_in : null,
+                    check_out: editForm.status === 'Present' ? (editForm.check_out || null) : null,
+                    remarks: editForm.remarks,
+                }),
+            });
+
+            const data = await resp.json();
+            if (!resp.ok) throw new Error(data.error || 'Failed to update attendance');
+
+            Swal.fire({
+                title: 'Success',
+                text: 'Attendance updated successfully',
+                icon: 'success',
+                timer: 2000,
+                showConfirmButton: false,
+                customClass: { popup: 'sweet-alerts' },
+            });
+            setEditModalOpen(false);
+            fetchMonth();
+        } catch (e: any) {
+            Swal.fire('Error', e.message, 'error');
+        } finally {
+            setSaving(false);
+        }
+    };
+
     const renderDayCell = (r: AttendanceRecord, day: { iso: string; dayName: string; dayNum: number }) => {
         const isFuture = day.iso > todayISO;
         const d = r.daily_attendance?.find((x) => x.date === day.iso);
@@ -188,13 +266,28 @@ const AdminAttendanceLogs = () => {
         return (
             <td key={day.iso} className={`px-0.5 py-1.5 text-center ${isFuture && !isHolidayCell ? 'opacity-35' : ''}`}>
                 <div
-                    className={`${chip.cls} mx-auto hover:scale-110 hover:shadow-sm`}
+                    className={`${chip.cls} mx-auto hover:scale-110 hover:shadow-sm cursor-pointer`}
                     onMouseEnter={(ev) => showTip(ev, tipParts.join('\n'))}
                     onMouseLeave={hideTip}
                     role="button"
                     tabIndex={0}
                     onFocus={(ev) => showTip(ev as any, tipParts.join('\n'))}
                     onBlur={hideTip}
+                    onClick={() => {
+                        const canEdit = (day.iso === lastWorkingDayISO || day.iso === todayISO);
+                        if (canEdit) {
+                            openEditModal(r, d, day.iso);
+                        } else {
+                            Swal.fire({
+                                title: 'Restricted',
+                                text: `You can only edit attendance for today or the last working day.`,
+                                icon: 'info',
+                                timer: 2500,
+                                showConfirmButton: false,
+                                customClass: { popup: 'sweet-alerts' },
+                            });
+                        }
+                    }}
                 >
                     {chip.label}
                 </div>
@@ -363,19 +456,16 @@ const AdminAttendanceLogs = () => {
                                     {monthDates.map((d) => (
                                         <th
                                             key={d.iso}
-                                            className={`!py-2 text-center min-w-[36px] ${d.iso > todayISO ? 'opacity-35' : ''} ${
-                                                d.iso === todayISO ? 'bg-blue-50 dark:bg-blue-900/20' : ''
-                                            }`}
+                                            className={`!py-2 text-center min-w-[36px] ${d.iso > todayISO ? 'opacity-35' : ''} ${d.iso === todayISO ? 'bg-blue-50 dark:bg-blue-900/20' : ''
+                                                }`}
                                         >
                                             <div className="flex flex-col items-center leading-none gap-0.5">
-                                                <span className={`text-[9px] font-semibold uppercase tracking-wider ${
-                                                    d.iso === todayISO ? 'text-blue-500' : 'text-gray-400 dark:text-gray-500'
-                                                }`}>
+                                                <span className={`text-[9px] font-semibold uppercase tracking-wider ${d.iso === todayISO ? 'text-blue-500' : 'text-gray-400 dark:text-gray-500'
+                                                    }`}>
                                                     {d.dayName}
                                                 </span>
-                                                <span className={`text-xs font-bold ${
-                                                    d.iso === todayISO ? 'text-blue-600 dark:text-blue-400' : ''
-                                                }`}>
+                                                <span className={`text-xs font-bold ${d.iso === todayISO ? 'text-blue-600 dark:text-blue-400' : ''
+                                                    }`}>
                                                     {pad2(d.dayNum)}
                                                 </span>
                                                 {d.iso === todayISO && (
@@ -494,11 +584,10 @@ const AdminAttendanceLogs = () => {
                                     <li key={p}>
                                         <button
                                             type="button"
-                                            className={`flex justify-center font-semibold px-3.5 py-2 rounded-full transition ${
-                                                page === p
-                                                    ? 'bg-primary text-white shadow-[0_10px_20px_-10px_rgba(67,97,238,0.44)]'
-                                                    : 'bg-white-light text-dark hover:text-white hover:bg-primary dark:text-white-light dark:bg-[#191e3a] dark:hover:bg-primary'
-                                            }`}
+                                            className={`flex justify-center font-semibold px-3.5 py-2 rounded-full transition ${page === p
+                                                ? 'bg-primary text-white shadow-[0_10px_20px_-10px_rgba(67,97,238,0.44)]'
+                                                : 'bg-white-light text-dark hover:text-white hover:bg-primary dark:text-white-light dark:bg-[#191e3a] dark:hover:bg-primary'
+                                                }`}
                                             onClick={() => setPage(p as number)}
                                         >
                                             {p}
@@ -520,6 +609,127 @@ const AdminAttendanceLogs = () => {
                     </div>
                 )}
             </div>
+
+            {/* ─── Edit Attendance Modal ─── */}
+            <Transition appear show={editModalOpen} as={Fragment}>
+                <Dialog as="div" open={editModalOpen} onClose={() => setEditModalOpen(false)} className="relative z-[51]">
+                    <Transition.Child
+                        as={Fragment}
+                        enter="ease-out duration-300"
+                        enterFrom="opacity-0"
+                        enterTo="opacity-100"
+                        leave="ease-in duration-200"
+                        leaveFrom="opacity-100"
+                        leaveTo="opacity-0"
+                    >
+                        <div className="fixed inset-0 bg-[black]/60" />
+                    </Transition.Child>
+
+                    <div className="fixed inset-0 overflow-y-auto">
+                        <div className="flex min-h-full items-center justify-center px-4 py-8">
+                            <Transition.Child
+                                as={Fragment}
+                                enter="ease-out duration-300"
+                                enterFrom="opacity-0 scale-95"
+                                enterTo="opacity-100 scale-100"
+                                leave="ease-in duration-200"
+                                leaveFrom="opacity-100 scale-100"
+                                leaveTo="opacity-0 scale-95"
+                            >
+                                <Dialog.Panel className="panel border-0 p-0 rounded-2xl overflow-hidden w-full max-w-lg text-black dark:text-white-dark shadow-2xl">
+                                    <div className="flex items-center justify-between p-5 border-b border-[#ebedf2] dark:border-[#1b2e4b]">
+                                        <h5 className="text-lg font-bold">Manual Attendance Adjustment</h5>
+                                        <button type="button" onClick={() => setEditModalOpen(false)} className="text-white-dark hover:text-dark">
+                                            <IconX />
+                                        </button>
+                                    </div>
+                                    <div className="p-6 space-y-5">
+                                        <div className="flex items-center gap-4 p-3 bg-gray-50 dark:bg-gray-800/50 rounded-xl">
+                                            <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-xl">
+                                                {editingData?.employee.employee_name.charAt(0).toUpperCase()}
+                                            </div>
+                                            <div>
+                                                <p className="font-bold text-gray-900 dark:text-white-light">{editingData?.employee.employee_name}</p>
+                                                <p className="text-xs text-white-dark">
+                                                    ID: {editingData?.employee.employee_id} • Date: {editingData?.date}
+                                                </p>
+                                            </div>
+                                        </div>
+
+                                        <div className="space-y-4">
+                                            <div>
+                                                <label className="text-sm font-bold mb-2 block text-gray-700 dark:text-gray-300 uppercase tracking-wider">Attendance Status</label>
+                                                <div className="grid grid-cols-2 gap-3">
+                                                    {['Present', 'Absent'].map((s) => (
+                                                        <button
+                                                            key={s}
+                                                            type="button"
+                                                            className={`py-2.5 rounded-xl border-2 font-bold transition-all duration-200 ${
+                                                                editForm.status === s
+                                                                    ? 'border-primary bg-primary text-white shadow-lg'
+                                                                    : 'border-gray-200 dark:border-gray-700 hover:border-primary/50 text-gray-500'
+                                                            }`}
+                                                            onClick={() => setEditForm({ ...editForm, status: s })}
+                                                        >
+                                                            {s}
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                            </div>
+
+                                            {editForm.status === 'Present' && (
+                                                <div className="space-y-4">
+                                                    <div className="grid grid-cols-2 gap-4">
+                                                        <div>
+                                                            <label className="text-sm font-bold mb-2 block text-gray-700 dark:text-gray-300">Login Time</label>
+                                                            <input
+                                                                type="time"
+                                                                className="form-input"
+                                                                value={editForm.check_in}
+                                                                onChange={(e) => setEditForm({ ...editForm, check_in: e.target.value })}
+                                                            />
+                                                        </div>
+                                                        <div>
+                                                            <label className="text-sm font-bold mb-2 block text-gray-700 dark:text-gray-300">Logout Time</label>
+                                                            <input
+                                                                type="time"
+                                                                className="form-input"
+                                                                value={editForm.check_out}
+                                                                onChange={(e) => setEditForm({ ...editForm, check_out: e.target.value })}
+                                                            />
+                                                        </div>
+                                                    </div>
+                                                    <div className="text-[11px] text-white-dark bg-gray-50 dark:bg-gray-800/50 p-2 rounded-lg border border-dashed border-gray-200 dark:border-gray-700">
+                                                        Standard Shift: <span className="font-bold">{editingData?.employee?.shift_info?.checkin} - {editingData?.employee?.shift_info?.checkout}</span>
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </div>
+
+                                            <div>
+                                                <label className="text-sm font-bold mb-2 block text-gray-700 dark:text-gray-300">Administrative Remarks</label>
+                                                <textarea
+                                                    className="form-textarea min-h-[100px]"
+                                                    placeholder="Reason for manual adjustment..."
+                                                    value={editForm.remarks}
+                                                    onChange={(e) => setEditForm({ ...editForm, remarks: e.target.value })}
+                                                ></textarea>
+                                            </div>
+                                        </div>
+                                    <div className="flex items-center justify-end p-5 border-t border-[#ebedf2] dark:border-[#1b2e4b] gap-3">
+                                        <button type="button" className="btn btn-outline-danger" onClick={() => setEditModalOpen(false)}>
+                                            Cancel
+                                        </button>
+                                        <button type="button" className="btn btn-primary" onClick={handleSaveAttendance} disabled={saving}>
+                                            {saving ? 'Updating...' : 'Update Attendance'}
+                                        </button>
+                                    </div>
+                                </Dialog.Panel>
+                            </Transition.Child>
+                        </div>
+                    </div>
+                </Dialog>
+            </Transition>
         </div>
     );
 };

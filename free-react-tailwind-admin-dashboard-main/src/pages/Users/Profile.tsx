@@ -10,18 +10,24 @@ import IconPhone from '../../components/Icon/IconPhone';
 import IconMapPin from '../../components/Icon/IconMapPin';
 import { authFetch } from '../../utils/authFetch';
 import IconUsers from '../../components/Icon/IconUsers';
+import { Dialog, Transition } from '@headlessui/react';
+import { Fragment } from 'react';
+import IconX from '../../components/Icon/IconX';
 
 const Profile = () => {
     const dispatch = useDispatch();
     const [userData, setUserData] = useState<any>(null);
     const [activeTab, setActiveTab] = useState('profile');
-
     const [hierarchyData, setHierarchyData] = useState<any[]>([]);
+    const [reportingLineData, setReportingLineData] = useState<any[]>([]);
+    const [selectedNode, setSelectedNode] = useState<any>(null);
+    const [isInfoModalOpen, setIsInfoModalOpen] = useState(false);
 
     useEffect(() => {
         dispatch(setPageTitle('Profile'));
         fetchUserProfile();
         fetchHierarchy();
+        fetchReportingLine();
     }, []);
 
     const fetchUserProfile = async () => {
@@ -56,15 +62,30 @@ const Profile = () => {
         }
     };
 
-    const HierarchyNode = ({ node, currentUserId }: { node: any, currentUserId: any }) => {
+    const fetchReportingLine = async () => {
+        try {
+            const response = await authFetch(`${import.meta.env.VITE_API_BASE_URL}/app/personal-reporting-line/`);
+            if (response.ok) {
+                const data = await response.json();
+                setReportingLineData(data);
+            }
+        } catch (error) {
+            console.error('Error fetching reporting line:', error);
+        }
+    };
+
+    const HierarchyNode = ({ node, currentUserId, onNodeClick }: { node: any, currentUserId: any, onNodeClick: (node: any) => void }) => {
         const isYou = node.user_id === currentUserId;
         
         return (
             <div className="flex flex-col items-center">
                 {/* The Node Box */}
-                <div className={`p-4 rounded-xl border-2 flex flex-col items-center min-w-[160px] max-w-[220px] transition-all duration-300 relative
-                    ${isYou ? 'border-primary bg-primary/5 ring-4 ring-primary/10 z-30 scale-105 shadow-xl' : 'border-gray-200 dark:border-gray-700 bg-white dark:bg-[#1b2e4b] z-20 shadow-md hover:border-primary/40'}
-                `}>
+                <div 
+                    className={`p-4 rounded-xl border-2 flex flex-col items-center min-w-[160px] max-w-[220px] transition-all duration-300 relative cursor-pointer
+                        ${isYou ? 'border-primary bg-primary/5 ring-4 ring-primary/10 z-30 scale-105 shadow-xl' : 'border-gray-200 dark:border-gray-700 bg-white dark:bg-[#1b2e4b] z-20 shadow-md hover:border-primary/40 hover:scale-105'}
+                    `}
+                    onClick={() => onNodeClick(node)}
+                >
                     <div className="relative mb-3">
                         <img 
                             src={node.photo || "/assets/images/profile-34.jpeg"} 
@@ -111,7 +132,7 @@ const Profile = () => {
                                         </>
                                     )}
                                     
-                                    <HierarchyNode node={child} currentUserId={currentUserId} />
+                                    <HierarchyNode node={child} currentUserId={currentUserId} onNodeClick={onNodeClick} />
                                 </div>
                             ))}
                         </div>
@@ -119,6 +140,11 @@ const Profile = () => {
                 )}
             </div>
         );
+    };
+
+    const handleNodeClick = (node: any) => {
+        setSelectedNode(node);
+        setIsInfoModalOpen(true);
     };
 
     return (
@@ -148,6 +174,13 @@ const Profile = () => {
                         onClick={() => setActiveTab('hierarchy')}
                     >
                         Organizational Hierarchy
+                    </button>
+                    <button 
+                        type="button" 
+                        className={`${activeTab === 'reporting-line' ? 'border-b-2 border-primary text-primary' : 'text-white-dark hover:text-primary'} pb-3 px-4 font-semibold text-sm transition-all duration-300`}
+                        onClick={() => setActiveTab('reporting-line')}
+                    >
+                        My Reporting Line
                     </button>
                 </div>
 
@@ -333,7 +366,7 @@ const Profile = () => {
                                 {hierarchyData.length > 0 ? (
                                     <div className="flex flex-col items-center gap-16 py-4">
                                         {hierarchyData.map((root) => (
-                                            <HierarchyNode key={root.id} node={root} currentUserId={userData?.id} />
+                                            <HierarchyNode key={root.id} node={root} currentUserId={userData?.id} onNodeClick={handleNodeClick} />
                                         ))}
                                     </div>
                                 ) : (
@@ -346,7 +379,124 @@ const Profile = () => {
                         </div>
                     </div>
                 )}
+
+                {activeTab === 'reporting-line' && (
+                    <div className="panel overflow-hidden">
+                        <div className="flex items-center gap-2 mb-5">
+                            <IconUsers className="text-primary w-6 h-6" />
+                            <h5 className="font-semibold text-lg dark:text-white-light uppercase tracking-wider">My Reporting Line</h5>
+                        </div>
+                        
+                        <div className="overflow-x-auto pb-4">
+                            <div className="min-w-fit flex justify-center">
+                                {reportingLineData.length > 0 ? (
+                                    <div className="flex flex-col items-center gap-16 py-4">
+                                        {reportingLineData.map((root) => (
+                                            <HierarchyNode key={root.id} node={root} currentUserId={userData?.id} onNodeClick={handleNodeClick} />
+                                        ))}
+                                    </div>
+                                ) : (
+                                    <div className="flex flex-col items-center justify-center py-10 text-white-dark">
+                                        <IconUsers className="w-12 h-12 mb-3 opacity-20" />
+                                        <p>No reporting line data available.</p>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+                )}
             </div>
+            {/* Employee Info Modal */}
+            <Transition appear show={isInfoModalOpen} as={Fragment}>
+                <Dialog as="div" open={isInfoModalOpen} onClose={() => setIsInfoModalOpen(false)} className="relative z-[51]">
+                    <Transition.Child
+                        as={Fragment}
+                        enter="ease-out duration-300"
+                        enterFrom="opacity-0"
+                        enterTo="opacity-100"
+                        leave="ease-in duration-200"
+                        leaveFrom="opacity-100"
+                        leaveTo="opacity-0"
+                    >
+                        <div className="fixed inset-0 bg-[black]/60" />
+                    </Transition.Child>
+
+                    <div className="fixed inset-0 overflow-y-auto">
+                        <div className="flex min-h-full items-center justify-center px-4 py-8">
+                            <Transition.Child
+                                as={Fragment}
+                                enter="ease-out duration-300"
+                                enterFrom="opacity-0 scale-95"
+                                enterTo="opacity-100 scale-100"
+                                leave="ease-in duration-200"
+                                leaveFrom="opacity-100 scale-100"
+                                leaveTo="opacity-0 scale-95"
+                            >
+                                <Dialog.Panel className="panel border-0 p-0 rounded-2xl overflow-hidden w-full max-w-lg text-black dark:text-white-dark shadow-2xl">
+                                    <button
+                                        type="button"
+                                        onClick={() => setIsInfoModalOpen(false)}
+                                        className="absolute top-4 right-4 text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 outline-none transition-all duration-300 z-10"
+                                    >
+                                        <IconX />
+                                    </button>
+                                    
+                                    <div className="relative h-32 bg-gradient-to-r from-primary to-info"></div>
+                                    
+                                    <div className="px-6 pb-8">
+                                        <div className="relative -mt-16 mb-6 flex justify-center">
+                                            <img 
+                                                src={selectedNode?.photo || "/assets/images/profile-34.jpeg"} 
+                                                alt={selectedNode?.name} 
+                                                className="w-32 h-32 rounded-full object-cover border-4 border-white dark:border-[#191e3a] shadow-lg" 
+                                            />
+                                        </div>
+                                        
+                                        <div className="text-center mb-8">
+                                            <h3 className="text-2xl font-bold text-gray-900 dark:text-white-light">{selectedNode?.name}</h3>
+                                            <p className="text-primary font-medium">{selectedNode?.designation}</p>
+                                        </div>
+
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                            <div className="flex flex-col p-4 rounded-xl bg-gray-50 dark:bg-gray-800/50 border border-gray-100 dark:border-gray-700">
+                                                <span className="text-xs text-white-dark mb-1 uppercase tracking-wider font-bold">Employee ID</span>
+                                                <span className="font-semibold text-gray-900 dark:text-white-light">{selectedNode?.employee_id || 'N/A'}</span>
+                                            </div>
+                                            <div className="flex flex-col p-4 rounded-xl bg-gray-50 dark:bg-gray-800/50 border border-gray-100 dark:border-gray-700">
+                                                <span className="text-xs text-white-dark mb-1 uppercase tracking-wider font-bold">Department</span>
+                                                <span className="font-semibold text-gray-900 dark:text-white-light">{selectedNode?.department || 'N/A'}</span>
+                                            </div>
+                                            <div className="flex flex-col p-4 rounded-xl bg-gray-50 dark:bg-gray-800/50 border border-gray-100 dark:border-gray-700 md:col-span-2">
+                                                <span className="text-xs text-white-dark mb-1 uppercase tracking-wider font-bold">Email Address</span>
+                                                <div className="flex items-center gap-2">
+                                                    <IconMail className="w-4 h-4 text-primary" />
+                                                    <span className="font-semibold text-gray-900 dark:text-white-light truncate">{selectedNode?.email || 'N/A'}</span>
+                                                </div>
+                                            </div>
+                                            <div className="flex flex-col p-4 rounded-xl bg-gray-50 dark:bg-gray-800/50 border border-gray-100 dark:border-gray-700 md:col-span-2">
+                                                <span className="text-xs text-white-dark mb-1 uppercase tracking-wider font-bold">Mobile Number</span>
+                                                <div className="flex items-center gap-2">
+                                                    <IconPhone className="w-4 h-4 text-primary" />
+                                                    <span className="font-semibold text-gray-900 dark:text-white-light">{selectedNode?.mobile || 'N/A'}</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div className="p-4 bg-gray-50 dark:bg-gray-800/30 flex justify-end px-6">
+                                        <button 
+                                            type="button" 
+                                            className="btn btn-outline-primary"
+                                            onClick={() => setIsInfoModalOpen(false)}
+                                        >
+                                            Close Details
+                                        </button>
+                                    </div>
+                                </Dialog.Panel>
+                            </Transition.Child>
+                        </div>
+                    </div>
+                </Dialog>
+            </Transition>
         </div>
     );
 };

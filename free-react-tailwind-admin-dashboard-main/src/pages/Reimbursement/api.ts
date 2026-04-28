@@ -6,6 +6,7 @@ export interface ReimbursementCategory {
     id: number;
     name: string;
     description: string;
+    min_tenure_months: number;
     company: number;
 }
 

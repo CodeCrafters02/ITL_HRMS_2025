@@ -1118,6 +1118,28 @@ class ReimbursementRequestViewSet(viewsets.ModelViewSet):
         if not emp:
             raise serializers.ValidationError("Employee profile required to request reimbursement.")
         
+        category_id = self.request.data.get('category')
+        if category_id:
+            try:
+                category = ReimbursementCategory.objects.get(id=category_id)
+                if category.min_tenure_months > 0:
+                    if not emp.date_of_joining:
+                        raise serializers.ValidationError(f"This category requires {category.min_tenure_months} months of tenure. Your joining date is not set.")
+                    
+                    # Calculate tenure in months
+                    today = timezone.localdate()
+                    joining = emp.date_of_joining
+                    tenure_months = (today.year - joining.year) * 12 + (today.month - joining.month)
+                    
+                    # Adjust if day of month hasn't reached yet
+                    if today.day < joining.day:
+                        tenure_months -= 1
+                        
+                    if tenure_months < category.min_tenure_months:
+                        raise serializers.ValidationError(f"You must complete at least {category.min_tenure_months} months of tenure to apply for this reimbursement. Current tenure: {tenure_months} months.")
+            except ReimbursementCategory.DoesNotExist:
+                pass
+
         serializer.save(
             employee=emp,
             company=emp.company,
@@ -2423,7 +2445,7 @@ class AttendanceViewSet(viewsets.ModelViewSet):
 
         for emp in employees:
             emp_id = emp.id
-            dw = DepartmentWiseWorkingDays.objects.filter(department=emp.department_name).first()
+            dw = DepartmentWiseWorkingDays.objects.filter(department=emp.department).first() if emp.department else None
             valid_days = build_valid_days(dw.week_start_day, dw.week_end_day) if dw else []
 
             daily_records = {}
@@ -2543,6 +2565,15 @@ class AttendanceViewSet(viewsets.ModelViewSet):
             num_working_days = len(emp_data['daily_records'])
             emp_data['total_hours'] = round(total_hours, 2)
             emp_data['attendance_percentage'] = round((total_present / num_working_days) * 100, 2) if num_working_days else 0.0
+            
+            # Add shift info for frontend
+            shift = emp.shift_assigned
+            emp_data['shift_info'] = {
+                'full_day': shift.full_day_hours() if shift else 8.0,
+                'half_day': shift.half_day_hours() if shift else 4.0,
+                'checkin': shift.checkin.strftime('%H:%M') if shift else '09:00',
+                'checkout': shift.checkout.strftime('%H:%M') if shift else '18:00',
+            }
 
         return Response({
             'month_dates': month_dates,
@@ -2584,25 +2615,61 @@ class AttendanceLogView(APIView):
             prefill['check_in'] = att.check_in.strftime('%H:%M')
 
         # Update fields if provided
-        if check_in:
-            att.check_in = datetime.combine(date_obj, datetime.strptime(check_in, '%H:%M').time())
-        if check_out:
-            att.check_out = datetime.combine(date_obj, datetime.strptime(check_out, '%H:%M').time())
-        if remarks:
-            att.remarks = remarks
         if status_val:
-            att.status = status_val  # If you have a status field
+            if status_val.lower() == 'present':
+                att.is_present = True
+                if check_in:
+                    dt = datetime.combine(date_obj, datetime.strptime(check_in, '%H:%M').time())
+                    att.check_in = timezone.make_aware(dt)
+                else:
+                    att.check_in = None
+                    
+                if check_out:
+                    dt = datetime.combine(date_obj, datetime.strptime(check_out, '%H:%M').time())
+                    att.check_out = timezone.make_aware(dt)
+                else:
+                    att.check_out = None
+                
+                # Recalculate duration if we have times
+                att.calculate_work_duration()
+            elif status_val.lower() == 'absent':
+                att.is_present = False
+                att.check_in = None
+                att.check_out = None
+                att.total_work_duration = None
+                att.overtime_duration = None
+                att.total_break_time = None
+        else:
+            # Default behavior if status not provided: update what's sent
+            if check_in is not None:
+                if check_in:
+                    dt = datetime.combine(date_obj, datetime.strptime(check_in, '%H:%M').time())
+                    att.check_in = timezone.make_aware(dt)
+                else:
+                    att.check_in = None
+                    
+            if check_out is not None:
+                if check_out:
+                    dt = datetime.combine(date_obj, datetime.strptime(check_out, '%H:%M').time())
+                    att.check_out = timezone.make_aware(dt)
+                else:
+                    att.check_out = None
+            
+            att.calculate_work_duration()
+
+        if remarks is not None:
+            att.remarks = remarks
 
         att.save()
 
         return Response({
-            'message': 'Attendance updated.',
+            'message': 'Attendance updated successfully.',
             'employee_id': emp.employee_id,
             'date': date_str,
+            'is_present': att.is_present,
             'check_in': att.check_in.strftime('%H:%M') if att.check_in else None,
             'check_out': att.check_out.strftime('%H:%M') if att.check_out else None,
             'remarks': att.remarks,
-            'prefill': prefill
         }, status=status.HTTP_200_OK)
         
     def get(self, request):
@@ -4690,6 +4757,10 @@ class OrganizationHierarchyView(APIView):
                 'name': f"{(emp.first_name or '').strip()} {(emp.last_name or '').strip()}".strip() or (emp.user.username if emp.user else "Unknown"),
                 'designation': emp.designation.designation_name if emp.designation else (emp.user.role.capitalize() if emp.user else "Employee"),
                 'photo': request.build_absolute_uri(emp.photo.url) if emp.photo and hasattr(emp.photo, 'url') else None,
+                'email': emp.email,
+                'mobile': emp.mobile,
+                'employee_id': emp.employee_id,
+                'department': emp.department.department_name if emp.department else None,
                 'children': [build_node(child) for child in manager_map.get(emp.id, [])]
             }
 
@@ -4698,6 +4769,62 @@ class OrganizationHierarchyView(APIView):
         roots = [emp for emp in employees if emp.reporting_manager_id is None or emp.reporting_manager_id not in all_ids]
         
         tree = [build_node(root) for root in roots]
+        return Response(tree)
+
+
+class PersonalReportingLineView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        user = request.user
+        try:
+            # Get the employee profile for the current user
+            employee = Employee.objects.select_related('reporting_manager', 'user', 'designation').get(user=user)
+        except Employee.DoesNotExist:
+            return Response([])
+
+        def build_node_simple(emp, depth=0, max_depth=2):
+            """
+            Builds a node and potentially its children up to a certain depth.
+            depth 0: Root (Manager or Employee if no manager)
+            depth 1: Children (Employee/Peers or Employee's Reportees)
+            depth 2: Grandchildren (Employee's Reportees if depth 0 was Manager)
+            """
+            node = {
+                'id': emp.id,
+                'user_id': emp.user.id if emp.user else None,
+                'name': f"{(emp.first_name or '').strip()} {(emp.last_name or '').strip()}".strip() or (emp.user.username if emp.user else "Unknown"),
+                'designation': emp.designation.designation_name if emp.designation else (emp.user.role.capitalize() if emp.user else "Employee"),
+                'photo': request.build_absolute_uri(emp.photo.url) if emp.photo and hasattr(emp.photo, 'url') else None,
+                'email': emp.email,
+                'mobile': emp.mobile,
+                'employee_id': emp.employee_id,
+                'department': emp.department.department_name if emp.department else None,
+                'children': []
+            }
+
+            # Decide whether to fetch children based on depth and identity
+            should_fetch_children = False
+            if depth < max_depth:
+                if depth == 0:
+                    should_fetch_children = True # Manager always gets their reportees
+                elif depth == 1 and emp.id == employee.id:
+                    should_fetch_children = True # Only the current employee gets their reportees at this level
+
+            if should_fetch_children:
+                children_qs = Employee.objects.filter(reporting_manager=emp).exclude(user__role='master').select_related('user', 'designation')
+                node['children'] = [build_node_simple(child, depth=depth+1, max_depth=max_depth) for child in children_qs]
+            
+            return node
+
+        manager = employee.reporting_manager
+        if manager:
+            # Start from manager to show peers
+            tree = [build_node_simple(manager, depth=0, max_depth=2)]
+        else:
+            # No manager, start from employee
+            tree = [build_node_simple(employee, depth=0, max_depth=1)]
+
         return Response(tree)
 
 
