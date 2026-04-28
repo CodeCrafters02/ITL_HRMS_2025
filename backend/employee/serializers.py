@@ -438,7 +438,7 @@ class EmployeeUpdateSerializer(serializers.ModelSerializer):
 class EmployeeBreakConfigSerializer(serializers.ModelSerializer):
     class Meta:
         model = BreakConfig
-        fields = ['id', 'break_choice', 'duration_minutes', 'enabled']
+        fields = ['id', 'break_choice', 'duration_minutes', 'max_short_break_daily_minutes', 'enabled']
 
 class EmployeeBreakLogSerializer(serializers.ModelSerializer):
     break_config = EmployeeBreakConfigSerializer(read_only=True)

@@ -1563,8 +1563,30 @@ class BreakConfigSerializer(serializers.ModelSerializer):
             'break_choice',
             'break_choice_display',
             'duration_minutes',
+            'max_short_break_daily_minutes',
             'enabled'
         ]
+
+    def validate(self, attrs):
+        break_choice = attrs.get('break_choice', getattr(self.instance, 'break_choice', None))
+        duration_minutes = attrs.get('duration_minutes', getattr(self.instance, 'duration_minutes', None))
+        max_short_break_daily_minutes = attrs.get(
+            'max_short_break_daily_minutes',
+            getattr(self.instance, 'max_short_break_daily_minutes', None),
+        )
+
+        if break_choice == 'short_break':
+            if not duration_minutes or duration_minutes <= 0:
+                raise serializers.ValidationError({'duration_minutes': 'Duration is required for short break.'})
+            if not max_short_break_daily_minutes or max_short_break_daily_minutes <= 0:
+                raise serializers.ValidationError(
+                    {'max_short_break_daily_minutes': 'Daily max short break minutes is required.'}
+                )
+        else:
+            # Non-short breaks should not carry daily short-break cap.
+            attrs['max_short_break_daily_minutes'] = None
+
+        return attrs
              
 
 
