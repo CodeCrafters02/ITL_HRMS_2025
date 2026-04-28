@@ -36,7 +36,6 @@ import IconMenuMore from '../Icon/Menu/IconMenuMore';
 import { notificationService } from '../../services/notificationService';
 
 const Header = () => {
-    const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000';
     const location = useLocation();
     useEffect(() => {
         const selector = document.querySelector('ul.horizontal-menu a[href="' + window.location.pathname + '"]');
@@ -116,48 +115,8 @@ const Header = () => {
 
     const { t } = useTranslation();
     const userRole = localStorage.getItem('user_role') || '';
-    const firstName = (localStorage.getItem('first_name') || '').trim();
-    const lastName = (localStorage.getItem('last_name') || '').trim();
-    const storedUsername = (localStorage.getItem('username') || '').trim();
-    const storedEmail = (localStorage.getItem('user_email') || '').trim();
-    const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
-    const [profileName, setProfileName] = useState<string>('');
-    const [profileEmail, setProfileEmail] = useState<string>('');
     const calendarRoute = userRole === 'employee' ? '/employee/calendar' : userRole === 'admin' ? '/admin/calendar' : '/apps/calendar';
     const notificationRoute = userRole === 'employee' ? '/employee/notifications' : userRole === 'admin' ? '/admin/notifications' : '/apps/mailbox';
-
-    const displayName = profileName || `${firstName} ${lastName}`.trim() || storedUsername || 'User';
-    const initials = `${firstName[0] || ''}${lastName[0] || ''}`.toUpperCase() || (displayName[0] || 'U').toUpperCase();
-    const displayEmail = profileEmail || storedEmail || '-';
-
-    useEffect(() => {
-        const token = localStorage.getItem('access_token');
-        if (!token) return;
-
-        const loadAvatar = async () => {
-            try {
-                if (userRole === 'employee') {
-                    const res = await fetch(`${API_BASE_URL}/employee/employee-profile/`, {
-                        headers: { Authorization: `Bearer ${token}` },
-                    });
-                    if (!res.ok) return;
-                    const data = await res.json();
-                    const fullName = [data?.first_name, data?.middle_name, data?.last_name].filter(Boolean).join(' ').trim();
-                    setProfileName(data?.full_name || fullName || '');
-                    setProfileEmail(data?.email || '');
-                    const photo = data?.photo;
-                    if (photo) {
-                        const fullUrl = /^https?:\/\//i.test(photo) ? photo : `${API_BASE_URL}${photo.startsWith('/') ? '' : '/'}${photo}`;
-                        setAvatarUrl(fullUrl);
-                    }
-                }
-            } catch {
-                setAvatarUrl(null);
-            }
-        };
-
-        loadAvatar();
-    }, [API_BASE_URL, userRole]);
 
     return (
         <header className={`z-40 ${themeConfig.semidark && themeConfig.menu === 'horizontal' ? 'dark' : ''}`}>
@@ -379,30 +338,19 @@ const Header = () => {
                                 offset={[0, 8]}
                                 placement={`${isRtl ? 'bottom-start' : 'bottom-end'}`}
                                 btnClassName="relative group block"
-                                button={
-                                    avatarUrl ? (
-                                        <img className="w-9 h-9 rounded-full object-cover saturate-50 group-hover:saturate-100" src={avatarUrl} alt="userProfile" />
-                                    ) : (
-                                        <div className="w-9 h-9 rounded-full bg-primary text-white flex items-center justify-center text-xs font-bold">
-                                            {initials}
-                                        </div>
-                                    )
-                                }
+                                button={<img className="w-9 h-9 rounded-full object-cover saturate-50 group-hover:saturate-100" src="/assets/images/user-profile.jpeg" alt="userProfile" />}
                             >
                                 <ul className="text-dark dark:text-white-dark !py-0 w-[230px] font-semibold dark:text-white-light/90">
                                     <li>
                                         <div className="flex items-center px-4 py-4">
-                                            {avatarUrl ? (
-                                                <img className="rounded-md w-10 h-10 object-cover" src={avatarUrl} alt="userProfile" />
-                                            ) : (
-                                                <div className="rounded-md w-10 h-10 bg-primary text-white flex items-center justify-center text-sm font-bold">
-                                                    {initials}
-                                                </div>
-                                            )}
+                                            <img className="rounded-md w-10 h-10 object-cover" src="/assets/images/user-profile.jpeg" alt="userProfile" />
                                             <div className="ltr:pl-4 rtl:pr-4 truncate">
-                                                <h4 className="text-base">{displayName}</h4>
+                                                <h4 className="text-base">
+                                                    John Doe
+                                                    <span className="text-xs bg-success-light rounded text-success px-1 ltr:ml-2 rtl:ml-2">Pro</span>
+                                                </h4>
                                                 <button type="button" className="text-black/60 hover:text-primary dark:text-dark-light/60 dark:hover:text-white">
-                                                    {displayEmail}
+                                                    johndoe@gmail.com
                                                 </button>
                                             </div>
                                         </div>

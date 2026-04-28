@@ -284,6 +284,7 @@ const LearningCorner = () => {
                                     {imageUrl && <span className="badge bg-info-light text-info">Image</span>}
                                     {videoUrl && <span className="badge bg-success-light text-success">Video</span>}
                                     {documentUrl && <span className="badge bg-primary-light text-primary">Document</span>}
+                                    {resource.links && resource.links.length > 0 && <span className="badge bg-warning-light text-warning">{resource.links.length} Link(s)</span>}
                                 </div>
                                 <div className="mt-4 space-y-1 text-sm">
                                     {imageUrl && (
@@ -305,6 +306,11 @@ const LearningCorner = () => {
                                             Open document
                                         </a>
                                     )}
+                                    {resource.links && resource.links.map((link, idx) => (
+                                        <a key={idx} href={link.url} target="_blank" rel="noreferrer" className="text-warning hover:underline block">
+                                            {link.title || link.url}
+                                        </a>
+                                    ))}
                                 </div>
                             </div>
                         );
@@ -336,7 +342,8 @@ const LearningCorner = () => {
                                                     {imageUrl && <span className="badge bg-info-light text-info">Image</span>}
                                                     {videoUrl && <span className="badge bg-success-light text-success">Video</span>}
                                                     {documentUrl && <span className="badge bg-primary-light text-primary">Document</span>}
-                                                    {!imageUrl && !videoUrl && !documentUrl && <span className="text-white-dark text-xs">No assets</span>}
+                                                    {resource.links && resource.links.length > 0 && <span className="badge bg-warning-light text-warning">{resource.links.length} Link(s)</span>}
+                                                    {!imageUrl && !videoUrl && !documentUrl && (!resource.links || resource.links.length === 0) && <span className="text-white-dark text-xs">No assets</span>}
                                                 </div>
                                             </td>
                                             <td className="text-center">
@@ -395,6 +402,28 @@ const LearningCorner = () => {
                                 )}
                             </div>
                         </div>
+
+                        {selectedItem.links && selectedItem.links.length > 0 && (
+                            <div className="mt-5 panel bg-warning-light/20 dark:bg-warning/10 border-warning/20">
+                                <h4 className="font-semibold mb-3 flex items-center gap-2">
+                                    <span className="w-2 h-2 rounded-full bg-warning"></span>
+                                    External Resources
+                                </h4>
+                                <div className="flex flex-wrap gap-3">
+                                    {selectedItem.links.map((link, idx) => (
+                                        <a 
+                                            key={idx} 
+                                            href={link.url} 
+                                            target="_blank" 
+                                            rel="noreferrer" 
+                                            className="btn btn-sm btn-outline-warning bg-white dark:bg-[#060818] shadow-sm hover:scale-105 transition-transform"
+                                        >
+                                            {link.title || 'Visit Link'}
+                                        </a>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
                     </div>
                 </div>
             )}

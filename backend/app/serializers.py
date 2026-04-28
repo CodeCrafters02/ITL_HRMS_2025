@@ -12,6 +12,7 @@ from django.utils import timezone
 from rest_framework_simplejwt.tokens import RefreshToken
 from .models import *
 from rest_framework import viewsets, permissions
+import json
 
 User = get_user_model()
 
@@ -79,10 +80,39 @@ class UserSerializer(serializers.ModelSerializer):
     )
     company_name = serializers.SerializerMethodField(read_only=True)
     designation = serializers.SerializerMethodField(read_only=True)
+    mobile = serializers.SerializerMethodField(read_only=True)
+    address = serializers.SerializerMethodField(read_only=True)
+    location = serializers.SerializerMethodField(read_only=True)
+    employee_id = serializers.SerializerMethodField(read_only=True)
+    department_name = serializers.SerializerMethodField(read_only=True)
+    reporting_manager_name = serializers.SerializerMethodField(read_only=True)
+    date_of_joining = serializers.SerializerMethodField(read_only=True)
+    gender = serializers.SerializerMethodField(read_only=True)
+    aadhar_no = serializers.SerializerMethodField(read_only=True)
+    pan_no = serializers.SerializerMethodField(read_only=True)
+    guardian_name = serializers.SerializerMethodField(read_only=True)
+    guardian_mobile = serializers.SerializerMethodField(read_only=True)
+    date_of_birth = serializers.SerializerMethodField(read_only=True)
+    bank_name = serializers.SerializerMethodField(read_only=True)
+    account_no = serializers.SerializerMethodField(read_only=True)
+    ifsc_code = serializers.SerializerMethodField(read_only=True)
+    payment_method = serializers.SerializerMethodField(read_only=True)
+    photo = serializers.SerializerMethodField(read_only=True)
+    aadhar_card = serializers.SerializerMethodField(read_only=True)
+    pan_card = serializers.SerializerMethodField(read_only=True)
 
     class Meta:
         model = UserRegister
-        fields = ['id', 'username', 'email', 'password', 'role', 'is_active', 'first_name', 'last_name', 'company', 'company_name', 'designation']
+        fields = [
+            'id', 'username', 'email', 'password', 'role', 'is_active', 
+            'first_name', 'last_name', 'company', 'company_name', 
+            'designation', 'mobile', 'address', 'location', 'photo',
+            'employee_id', 'department_name', 'reporting_manager_name', 
+            'date_of_joining', 'gender', 'aadhar_no', 'pan_no', 
+            'aadhar_card', 'pan_card',
+            'guardian_name', 'guardian_mobile', 'date_of_birth', 
+            'bank_name', 'account_no', 'ifsc_code', 'payment_method'
+        ]
         read_only_fields = ['created_by'] 
 
     def get_company_name(self, obj):
@@ -90,9 +120,87 @@ class UserSerializer(serializers.ModelSerializer):
 
     def get_designation(self, obj):
         try:
-            return obj.employee_profile.designation.name if obj.employee_profile and obj.employee_profile.designation else obj.role.capitalize()
+            return obj.employee_profile.designation.designation_name if obj.employee_profile and obj.employee_profile.designation else obj.role.capitalize()
         except:
             return obj.role.capitalize()
+
+    def get_mobile(self, obj):
+        return obj.employee_profile.mobile if obj.employee_profile else None
+
+    def get_address(self, obj):
+        return obj.employee_profile.permanent_address if obj.employee_profile else None
+
+    def get_location(self, obj):
+        return obj.employee_profile.temporary_address if obj.employee_profile else None
+
+    def get_employee_id(self, obj):
+        return obj.employee_profile.employee_id if obj.employee_profile else None
+
+    def get_department_name(self, obj):
+        return obj.employee_profile.department.department_name if obj.employee_profile and obj.employee_profile.department else None
+
+    def get_reporting_manager_name(self, obj):
+        if obj.employee_profile and obj.employee_profile.reporting_manager:
+            rm = obj.employee_profile.reporting_manager
+            return f"{rm.first_name or ''} {rm.last_name or ''}".strip() or rm.user.username
+        return None
+
+    def get_date_of_joining(self, obj):
+        return obj.employee_profile.date_of_joining if obj.employee_profile else None
+
+    def get_gender(self, obj):
+        return obj.employee_profile.gender if obj.employee_profile else None
+
+    def get_aadhar_no(self, obj):
+        return obj.employee_profile.aadhar_no if obj.employee_profile else None
+
+    def get_pan_no(self, obj):
+        return obj.employee_profile.pan_no if obj.employee_profile else None
+
+    def get_guardian_name(self, obj):
+        return obj.employee_profile.guardian_name if obj.employee_profile else None
+
+    def get_guardian_mobile(self, obj):
+        return obj.employee_profile.guardian_mobile if obj.employee_profile else None
+
+    def get_date_of_birth(self, obj):
+        return obj.employee_profile.date_of_birth if obj.employee_profile else None
+
+    def get_bank_name(self, obj):
+        return obj.employee_profile.bank_name if obj.employee_profile else None
+
+    def get_account_no(self, obj):
+        return obj.employee_profile.account_no if obj.employee_profile else None
+
+    def get_ifsc_code(self, obj):
+        return obj.employee_profile.ifsc_code if obj.employee_profile else None
+
+    def get_payment_method(self, obj):
+        return obj.employee_profile.payment_method if obj.employee_profile else None
+
+    def get_photo(self, obj):
+        if obj.employee_profile and obj.employee_profile.photo:
+            request = self.context.get('request')
+            if request:
+                return request.build_absolute_uri(obj.employee_profile.photo.url)
+            return obj.employee_profile.photo.url
+        return None
+
+    def get_aadhar_card(self, obj):
+        if obj.employee_profile and obj.employee_profile.aadhar_card:
+            request = self.context.get('request')
+            if request:
+                return request.build_absolute_uri(obj.employee_profile.aadhar_card.url)
+            return obj.employee_profile.aadhar_card.url
+        return None
+
+    def get_pan_card(self, obj):
+        if obj.employee_profile and obj.employee_profile.pan_card:
+            request = self.context.get('request')
+            if request:
+                return request.build_absolute_uri(obj.employee_profile.pan_card.url)
+            return obj.employee_profile.pan_card.url
+        return None
 
     def validate_role(self, value):
         if value not in ['master', 'admin', 'employee']:
@@ -1047,7 +1155,19 @@ class LeaveSerializer(serializers.ModelSerializer):
         model = Leave
         fields = ['id', 'leave_name', 'count', 'is_paid']
 
+class FlexibleJSONField(serializers.JSONField):
+    def to_internal_value(self, data):
+        if isinstance(data, str):
+            if not data.strip():
+                return []
+            try:
+                return json.loads(data)
+            except (ValueError, TypeError):
+                self.fail('invalid')
+        return super().to_internal_value(data)
+
 class LearningCornerSerializer(serializers.ModelSerializer):
+    links = FlexibleJSONField(required=False, allow_null=True)
     image_url = serializers.SerializerMethodField()
     video_url = serializers.SerializerMethodField()
     document_url = serializers.SerializerMethodField()
@@ -1056,7 +1176,7 @@ class LearningCornerSerializer(serializers.ModelSerializer):
         model = LearningCorner
         fields = [
             'id', 'title', 'description',
-            'image', 'video', 'document',
+            'image', 'video', 'document', 'links',
             'image_url', 'video_url', 'document_url'
         ]
         read_only_fields = ['id', 'image_url', 'video_url', 'document_url']
@@ -1472,7 +1592,25 @@ class BreakConfigSerializer(serializers.ModelSerializer):
 
 class UserUpdateSerializer(serializers.Serializer):
     username = serializers.CharField(required=False)
+    first_name = serializers.CharField(required=False)
+    last_name = serializers.CharField(required=False)
+    mobile = serializers.CharField(required=False)
+    address = serializers.CharField(required=False)
+    location = serializers.CharField(required=False)
     new_password = serializers.CharField(required=False, write_only=True)
+    photo = serializers.FileField(required=False)
+    aadhar_card = serializers.FileField(required=False)
+    pan_card = serializers.FileField(required=False)
+    aadhar_no = serializers.CharField(required=False)
+    pan_no = serializers.CharField(required=False)
+    guardian_name = serializers.CharField(required=False)
+    guardian_mobile = serializers.CharField(required=False)
+    gender = serializers.CharField(required=False)
+    date_of_birth = serializers.DateField(required=False)
+    bank_name = serializers.CharField(required=False)
+    account_no = serializers.CharField(required=False)
+    ifsc_code = serializers.CharField(required=False)
+    payment_method = serializers.CharField(required=False)
 
     def validate_username(self, value):
         user = self.context['request'].user
@@ -1515,6 +1653,8 @@ class ReportingEmployeesSerializer(serializers.ModelSerializer):
     department_name = serializers.SerializerMethodField()
     designation_name = serializers.SerializerMethodField()
     photo = serializers.SerializerMethodField()
+    aadhar_card = serializers.SerializerMethodField()
+    pan_card = serializers.SerializerMethodField()
     is_checked_in = serializers.SerializerMethodField()
  
     class Meta:

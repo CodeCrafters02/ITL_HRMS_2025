@@ -381,7 +381,7 @@ class EmpLearningCornerSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = LearningCorner
-        fields = ['id', 'title', 'description', 'image', 'video', 'document']
+        fields = ['id', 'title', 'description', 'image', 'video', 'document', 'links']
 
     def get_image(self, obj):
         request = self.context.get('request')

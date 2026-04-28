@@ -82,11 +82,13 @@ urlpatterns = [
     path('generate-letter-content/', GenerateLetterContentAPIView.as_view(), name='generate-letter-content'),
     path('token/refresh/', RefreshTokenView.as_view(), name='token_refresh'),
     path('assignshift/', AssignShiftAPIView.as_view(), name='assignshift'),
+    path('user-profile/', UserProfileView.as_view(), name='user-profile'),
     path('updateusernamepassword/', UserUpdateView.as_view(), name='updateusernamepassword'),
     path('sendotp/', SendOtpView.as_view(),name='sendotp'),
     path('verifyotp/', VerifyOTPView.as_view(),name='verifyotp'),
     path('resetpassword/', ResetPasswordView.as_view(), name='resetpassword'),
     path('getreportees/', EmployeeReporteesView.as_view(), name='getreportees'),
+    path('organization-hierarchy/', OrganizationHierarchyView.as_view(), name='organization-hierarchy'),
     path('payroll-attendance-summary/', PayrollAttendanceSummaryView.as_view(), name='payroll-attendance-summary'),
 
     # --- Router URLs (Catch-all - Checked Last) ---

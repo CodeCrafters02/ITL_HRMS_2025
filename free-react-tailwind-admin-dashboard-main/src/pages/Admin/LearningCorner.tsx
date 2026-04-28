@@ -23,6 +23,7 @@ type LearningCornerItem = {
     image_url?: string | null;
     video_url?: string | null;
     document_url?: string | null;
+    links?: { title: string; url: string }[] | null;
 };
 
 type FilterType = 'all' | 'image' | 'video' | 'document';
@@ -49,6 +50,7 @@ const AdminLearningCorner = () => {
     const [formData, setFormData] = useState({
         title: '',
         description: '',
+        links: [] as { title: string; url: string }[],
     });
     const [files, setFiles] = useState<{
         image: File | null;
@@ -133,7 +135,7 @@ const AdminLearningCorner = () => {
     }, [search, itemsPerPage]);
 
     const resetForm = () => {
-        setFormData({ title: '', description: '' });
+        setFormData({ title: '', description: '', links: [] });
         setFiles({ image: null, video: null, document: null });
         setEditingItem(null);
     };
@@ -148,6 +150,7 @@ const AdminLearningCorner = () => {
         setFormData({
             title: item.title || '',
             description: item.description || '',
+            links: Array.isArray(item.links) ? [...item.links] : [],
         });
         setFiles({ image: null, video: null, document: null });
         setModalOpen(true);
@@ -165,6 +168,7 @@ const AdminLearningCorner = () => {
             const payload = new FormData();
             payload.append('title', formData.title);
             payload.append('description', formData.description);
+            payload.append('links', JSON.stringify(formData.links));
             if (files.image) payload.append('image', files.image);
             if (files.video) payload.append('video', files.video);
             if (files.document) payload.append('document', files.document);
@@ -237,6 +241,7 @@ const AdminLearningCorner = () => {
         if (item.image_url || item.image) badges.push('Image');
         if (item.video_url || item.video) badges.push('Video');
         if (item.document_url || item.document) badges.push('Document');
+        if (item.links && item.links.length > 0) badges.push(`${item.links.length} Link(s)`);
         return badges;
     };
 
@@ -330,6 +335,11 @@ const AdminLearningCorner = () => {
                                     {imageUrl && <a href={imageUrl} target="_blank" rel="noreferrer" className="text-primary underline block">View Image</a>}
                                     {videoUrl && <a href={videoUrl} target="_blank" rel="noreferrer" className="text-primary underline block">View Video</a>}
                                     {documentUrl && <a href={documentUrl} target="_blank" rel="noreferrer" className="text-primary underline block">View Document</a>}
+                                    {item.links && item.links.map((link, idx) => (
+                                        <a key={idx} href={link.url} target="_blank" rel="noreferrer" className="text-primary underline block">
+                                            {link.title || link.url}
+                                        </a>
+                                    ))}
                                 </div>
                             </div>
                         );
@@ -489,6 +499,65 @@ const AdminLearningCorner = () => {
                                                     <input type="file" className="form-input" onChange={(e) => setFiles({ ...files, document: e.target.files?.[0] || null })} />
                                                 </div>
                                             </div>
+
+                                            <div className="border-t border-[#ebedf2] dark:border-[#1b2e4b] pt-4 mt-4">
+                                                <div className="flex items-center justify-between mb-4">
+                                                    <label className="font-bold text-primary uppercase text-xs tracking-wider">External Links</label>
+                                                    <button 
+                                                        type="button" 
+                                                        className="btn btn-xs btn-outline-primary flex items-center gap-1"
+                                                        onClick={() => setFormData({ ...formData, links: [...formData.links, { title: '', url: '' }] })}
+                                                    >
+                                                        <IconPlus className="w-3 h-3" /> Add Link
+                                                    </button>
+                                                </div>
+                                                
+                                                {formData.links.length === 0 ? (
+                                                    <div className="text-center py-4 bg-gray-50 dark:bg-gray-800/50 rounded-lg border border-dashed border-gray-200 dark:border-gray-700">
+                                                        <p className="text-xs text-white-dark italic">No external links added yet.</p>
+                                                    </div>
+                                                ) : (
+                                                    <div className="space-y-3">
+                                                        {formData.links.map((link, idx) => (
+                                                            <div key={idx} className="flex gap-2 items-start animate-fade-in">
+                                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-2 flex-1">
+                                                                    <input 
+                                                                        className="form-input text-xs" 
+                                                                        placeholder="Link Title (e.g. Documentation)" 
+                                                                        value={link.title} 
+                                                                        onChange={(e) => {
+                                                                            const newLinks = [...formData.links];
+                                                                            newLinks[idx].title = e.target.value;
+                                                                            setFormData({ ...formData, links: newLinks });
+                                                                        }}
+                                                                    />
+                                                                    <input 
+                                                                        className="form-input text-xs" 
+                                                                        placeholder="URL (e.g. https://example.com)" 
+                                                                        value={link.url} 
+                                                                        onChange={(e) => {
+                                                                            const newLinks = [...formData.links];
+                                                                            newLinks[idx].url = e.target.value;
+                                                                            setFormData({ ...formData, links: newLinks });
+                                                                        }}
+                                                                    />
+                                                                </div>
+                                                                <button 
+                                                                    type="button" 
+                                                                    className="text-danger hover:text-red-700 p-2"
+                                                                    onClick={() => {
+                                                                        const newLinks = formData.links.filter((_, i) => i !== idx);
+                                                                        setFormData({ ...formData, links: newLinks });
+                                                                    }}
+                                                                >
+                                                                    <IconTrashLines className="w-4 h-4" />
+                                                                </button>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                )}
+                                            </div>
+
                                             <div className="flex justify-end gap-3 pt-3">
                                                 <button type="button" className="btn btn-outline-danger" onClick={() => setModalOpen(false)}>
                                                     Cancel
@@ -554,6 +623,25 @@ const AdminLearningCorner = () => {
                                                         )}
                                                     </div>
                                                 </div>
+                                                
+                                                {previewItem.links && previewItem.links.length > 0 && (
+                                                    <div>
+                                                        <div className="font-semibold mb-2">External Links</div>
+                                                        <div className="flex flex-wrap gap-3">
+                                                            {previewItem.links.map((link, idx) => (
+                                                                <a 
+                                                                    key={idx} 
+                                                                    href={link.url} 
+                                                                    target="_blank" 
+                                                                    rel="noreferrer" 
+                                                                    className="btn btn-sm btn-outline-primary"
+                                                                >
+                                                                    {link.title || 'Link'}
+                                                                </a>
+                                                            ))}
+                                                        </div>
+                                                    </div>
+                                                )}
                                             </div>
                                         )}
                                     </div>

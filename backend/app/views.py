@@ -1,4 +1,5 @@
 from rest_framework import viewsets, generics, status
+from rest_framework.exceptions import ValidationError
 from django.shortcuts import get_object_or_404
 import pytz
 import string
@@ -746,7 +747,7 @@ class EmployeeViewSet(viewsets.ModelViewSet):
                 qs = qs.filter(company=company)
                 include_admins = self.request.query_params.get('include_admins', 'false').lower() == 'true'
                 if not include_admins:
-                    qs = qs.exclude(user__role='admin')
+                    qs = qs.exclude(user__role__in=['admin', 'master'])
             else:
                 qs = qs.none()
             
@@ -3676,28 +3677,111 @@ class AssignShiftAPIView(APIView):
         serializer = AssignShiftSerializer(employee)
         return Response(serializer.data, status=status.HTTP_200_OK)
     
+class UserProfileView(generics.RetrieveAPIView):
+    serializer_class = UserSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_object(self):
+        return self.request.user
+
 class UserUpdateView(generics.UpdateAPIView):
     serializer_class = UserUpdateSerializer
     permission_classes = [IsAuthenticated]
+    parser_classes = [MultiPartParser, FormParser, JSONParser]
 
     def get_object(self):
         return self.request.user
 
     def update(self, request, *args, **kwargs):
         user = self.get_object()
+        # Use request.data which handles both JSON and Multipart
         serializer = self.get_serializer(data=request.data, context={'request': request})
-        serializer.is_valid(raise_exception=True)
+        try:
+            serializer.is_valid(raise_exception=True)
+            data = serializer.validated_data
+            files = request.FILES
 
-        # Update username if provided
-        if 'username' in serializer.validated_data:
-            user.username = serializer.validated_data['username']
+            # Update User fields (Restrict sensitive fields for employees if needed, 
+            # but usually first_name/last_name are okay)
+            if 'username' in data:
+                new_username = data['username']
+                if UserRegister.objects.exclude(pk=user.pk).filter(username=new_username).exists():
+                    return Response({"detail": "Username already exists."}, status=status.HTTP_400_BAD_REQUEST)
+                user.username = new_username
+            
+            if 'first_name' in data:
+                user.first_name = data['first_name']
+            if 'last_name' in data:
+                user.last_name = data['last_name']
+            
+            # Update password if provided
+            if 'new_password' in data:
+                user.set_password(data['new_password'])
 
-        # Update password if provided
-        if 'new_password' in serializer.validated_data:
-            user.set_password(serializer.validated_data['new_password'])
+            user.save()
 
-        user.save()
-        return Response({"detail": "Profile updated successfully."}, status=status.HTTP_200_OK)
+            # Update Employee Profile (Ensure it exists for Master/Admin too if they want a photo)
+            employee = user.employee_profile
+            if not employee:
+                # Create profile if missing (needed for photo/mobile/address storage)
+                company = user.company or Company.objects.first()
+                if company:
+                    employee = Employee.objects.create(
+                        user=user, 
+                        company=company,
+                        first_name=user.first_name,
+                        last_name=user.last_name
+                    )
+
+            if employee:
+                if 'first_name' in data:
+                    employee.first_name = data['first_name']
+                if 'last_name' in data:
+                    employee.last_name = data['last_name']
+                if 'mobile' in data:
+                    employee.mobile = data['mobile']
+                if 'address' in data:
+                    employee.permanent_address = data['address']
+                if 'location' in data:
+                    employee.temporary_address = data['location']
+                
+                # Handle missing details
+                if 'aadhar_no' in data:
+                    employee.aadhar_no = data['aadhar_no']
+                if 'pan_no' in data:
+                    employee.pan_no = data['pan_no']
+                if 'guardian_name' in data:
+                    employee.guardian_name = data['guardian_name']
+                if 'guardian_mobile' in data:
+                    employee.guardian_mobile = data['guardian_mobile']
+                if 'gender' in data:
+                    employee.gender = data['gender']
+                if 'date_of_birth' in data:
+                    employee.date_of_birth = data['date_of_birth']
+                if 'bank_name' in data:
+                    employee.bank_name = data['bank_name']
+                if 'account_no' in data:
+                    employee.account_no = data['account_no']
+                if 'ifsc_code' in data:
+                    employee.ifsc_code = data['ifsc_code']
+                if 'payment_method' in data:
+                    employee.payment_method = data['payment_method']
+                
+                # Handle Files
+                if 'photo' in files:
+                    employee.photo = files['photo']
+                if 'aadhar_card' in files:
+                    employee.aadhar_card = files['aadhar_card']
+                if 'pan_card' in files:
+                    employee.pan_card = files['pan_card']
+                
+                employee.save()
+
+            return Response({"detail": "Profile updated successfully."}, status=status.HTTP_200_OK)
+        except ValidationError as e:
+            return Response(e.detail, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            return Response({"detail": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
     
 import random
 from django.contrib.auth.hashers import make_password
@@ -4577,6 +4661,44 @@ class EmployeeReporteesView(APIView):
         paginated_qs = paginator.paginate_queryset(reportees, request, view=self)
         serializer = ReportingEmployeesSerializer(paginated_qs, many=True, context={"request": request})
         return paginator.get_paginated_response(serializer.data)
+
+
+class OrganizationHierarchyView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        user = request.user
+        company = user.company
+        if not company:
+            return Response([])
+
+        # Fetch all employees in the company (excluding 'master' role)
+        employees = Employee.objects.filter(company=company).exclude(user__role='master').select_related('designation', 'user', 'reporting_manager')
+        
+        # Build map of manager_id -> list of direct reportees
+        manager_map = {}
+        for emp in employees:
+            mid = emp.reporting_manager_id
+            if mid not in manager_map:
+                manager_map[mid] = []
+            manager_map[mid].append(emp)
+
+        def build_node(emp):
+            return {
+                'id': emp.id,
+                'user_id': emp.user.id if emp.user else None,
+                'name': f"{(emp.first_name or '').strip()} {(emp.last_name or '').strip()}".strip() or (emp.user.username if emp.user else "Unknown"),
+                'designation': emp.designation.designation_name if emp.designation else (emp.user.role.capitalize() if emp.user else "Employee"),
+                'photo': request.build_absolute_uri(emp.photo.url) if emp.photo and hasattr(emp.photo, 'url') else None,
+                'children': [build_node(child) for child in manager_map.get(emp.id, [])]
+            }
+
+        # Identify roots (those with no reporting manager or manager not in the same dataset)
+        all_ids = set(emp.id for emp in employees)
+        roots = [emp for emp in employees if emp.reporting_manager_id is None or emp.reporting_manager_id not in all_ids]
+        
+        tree = [build_node(root) for root in roots]
+        return Response(tree)
 
 
 # Office Structure ViewSets
