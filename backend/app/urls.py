@@ -89,6 +89,7 @@ urlpatterns = [
     path('resetpassword/', ResetPasswordView.as_view(), name='resetpassword'),
     path('getreportees/', EmployeeReporteesView.as_view(), name='getreportees'),
     path('organization-hierarchy/', OrganizationHierarchyView.as_view(), name='organization-hierarchy'),
+    path('personal-reporting-line/', PersonalReportingLineView.as_view(), name='personal-reporting-line'),
     path('payroll-attendance-summary/', PayrollAttendanceSummaryView.as_view(), name='payroll-attendance-summary'),
 
     # --- Router URLs (Catch-all - Checked Last) ---
