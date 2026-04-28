@@ -1,4 +1,5 @@
 from rest_framework import viewsets, generics, status
+from rest_framework.exceptions import ValidationError
 from django.shortcuts import get_object_or_404
 import pytz
 import string
@@ -3676,28 +3677,100 @@ class AssignShiftAPIView(APIView):
         serializer = AssignShiftSerializer(employee)
         return Response(serializer.data, status=status.HTTP_200_OK)
     
+class UserProfileView(generics.RetrieveAPIView):
+    serializer_class = UserSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_object(self):
+        return self.request.user
+
 class UserUpdateView(generics.UpdateAPIView):
     serializer_class = UserUpdateSerializer
     permission_classes = [IsAuthenticated]
+    parser_classes = [MultiPartParser, FormParser, JSONParser]
 
     def get_object(self):
         return self.request.user
 
     def update(self, request, *args, **kwargs):
         user = self.get_object()
+        # Use request.data which handles both JSON and Multipart
         serializer = self.get_serializer(data=request.data, context={'request': request})
-        serializer.is_valid(raise_exception=True)
+        try:
+            serializer.is_valid(raise_exception=True)
+            data = serializer.validated_data
+            files = request.FILES
 
-        # Update username if provided
-        if 'username' in serializer.validated_data:
-            user.username = serializer.validated_data['username']
+            # Update User fields (Restrict sensitive fields for employees if needed, 
+            # but usually first_name/last_name are okay)
+            if 'username' in data:
+                new_username = data['username']
+                if UserRegister.objects.exclude(pk=user.pk).filter(username=new_username).exists():
+                    return Response({"detail": "Username already exists."}, status=status.HTTP_400_BAD_REQUEST)
+                user.username = new_username
+            
+            if 'first_name' in data:
+                user.first_name = data['first_name']
+            if 'last_name' in data:
+                user.last_name = data['last_name']
+            
+            # Update password if provided
+            if 'new_password' in data:
+                user.set_password(data['new_password'])
 
-        # Update password if provided
-        if 'new_password' in serializer.validated_data:
-            user.set_password(serializer.validated_data['new_password'])
+            user.save()
 
-        user.save()
-        return Response({"detail": "Profile updated successfully."}, status=status.HTTP_200_OK)
+            # Update Employee Profile if exists
+            employee = user.employee_profile
+            if employee:
+                if 'first_name' in data:
+                    employee.first_name = data['first_name']
+                if 'last_name' in data:
+                    employee.last_name = data['last_name']
+                if 'mobile' in data:
+                    employee.mobile = data['mobile']
+                if 'address' in data:
+                    employee.permanent_address = data['address']
+                if 'location' in data:
+                    employee.temporary_address = data['location']
+                
+                # Handle missing details
+                if 'aadhar_no' in data:
+                    employee.aadhar_no = data['aadhar_no']
+                if 'pan_no' in data:
+                    employee.pan_no = data['pan_no']
+                if 'guardian_name' in data:
+                    employee.guardian_name = data['guardian_name']
+                if 'guardian_mobile' in data:
+                    employee.guardian_mobile = data['guardian_mobile']
+                if 'gender' in data:
+                    employee.gender = data['gender']
+                if 'date_of_birth' in data:
+                    employee.date_of_birth = data['date_of_birth']
+                if 'bank_name' in data:
+                    employee.bank_name = data['bank_name']
+                if 'account_no' in data:
+                    employee.account_no = data['account_no']
+                if 'ifsc_code' in data:
+                    employee.ifsc_code = data['ifsc_code']
+                if 'payment_method' in data:
+                    employee.payment_method = data['payment_method']
+                
+                # Handle Files
+                if 'photo' in files:
+                    employee.photo = files['photo']
+                if 'aadhar_card' in files:
+                    employee.aadhar_card = files['aadhar_card']
+                if 'pan_card' in files:
+                    employee.pan_card = files['pan_card']
+                
+                employee.save()
+
+            return Response({"detail": "Profile updated successfully."}, status=status.HTTP_200_OK)
+        except ValidationError as e:
+            return Response(e.detail, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            return Response({"detail": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
     
 import random
 from django.contrib.auth.hashers import make_password

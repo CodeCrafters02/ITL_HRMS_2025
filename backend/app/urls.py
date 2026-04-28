@@ -82,6 +82,7 @@ urlpatterns = [
     path('generate-letter-content/', GenerateLetterContentAPIView.as_view(), name='generate-letter-content'),
     path('token/refresh/', RefreshTokenView.as_view(), name='token_refresh'),
     path('assignshift/', AssignShiftAPIView.as_view(), name='assignshift'),
+    path('user-profile/', UserProfileView.as_view(), name='user-profile'),
     path('updateusernamepassword/', UserUpdateView.as_view(), name='updateusernamepassword'),
     path('sendotp/', SendOtpView.as_view(),name='sendotp'),
     path('verifyotp/', VerifyOTPView.as_view(),name='verifyotp'),

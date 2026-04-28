@@ -1,30 +1,44 @@
 import { Link } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { IRootState } from '../../store';
-import Dropdown from '../../components/Dropdown';
 import { setPageTitle } from '../../store/themeConfigSlice';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import IconPencilPaper from '../../components/Icon/IconPencilPaper';
 import IconCoffee from '../../components/Icon/IconCoffee';
-import IconCalendar from '../../components/Icon/IconCalendar';
-import IconMapPin from '../../components/Icon/IconMapPin';
 import IconMail from '../../components/Icon/IconMail';
 import IconPhone from '../../components/Icon/IconPhone';
-import IconTwitter from '../../components/Icon/IconTwitter';
-import IconDribbble from '../../components/Icon/IconDribbble';
-import IconGithub from '../../components/Icon/IconGithub';
-import IconShoppingBag from '../../components/Icon/IconShoppingBag';
-import IconTag from '../../components/Icon/IconTag';
-import IconCreditCard from '../../components/Icon/IconCreditCard';
-import IconClock from '../../components/Icon/IconClock';
-import IconHorizontalDots from '../../components/Icon/IconHorizontalDots';
+import IconMapPin from '../../components/Icon/IconMapPin';
+import { authFetch } from '../../utils/authFetch';
 
 const Profile = () => {
     const dispatch = useDispatch();
+    const [userData, setUserData] = useState<any>(null);
+
     useEffect(() => {
         dispatch(setPageTitle('Profile'));
-    });
-    const isRtl = useSelector((state: IRootState) => state.themeConfig.rtlClass) === 'rtl' ? true : false;
+        fetchUserProfile();
+    }, []);
+
+    const fetchUserProfile = async () => {
+        try {
+            const response = await authFetch(`${import.meta.env.VITE_API_BASE_URL}/app/user-profile/`);
+            if (response.ok) {
+                const text = await response.text();
+                try {
+                    const data = JSON.parse(text);
+                    console.log('User Profile Data Received:', data);
+                    setUserData(data);
+                } catch (e) {
+                    console.error('Failed to parse profile JSON. Response was:', text);
+                }
+            } else {
+                console.error('Profile fetch failed with status:', response.status);
+            }
+        } catch (error) {
+            console.error('Error fetching profile:', error);
+        }
+    };
+
     return (
         <div>
             <ul className="flex space-x-2 rtl:space-x-reverse">
@@ -38,8 +52,8 @@ const Profile = () => {
                 </li>
             </ul>
             <div className="pt-5">
-                <div className="grid grid-cols-1 lg:grid-cols-3 xl:grid-cols-4 gap-5 mb-5">
-                    <div className="panel">
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 mb-5">
+                    <div className="panel lg:col-span-1">
                         <div className="flex items-center justify-between mb-5">
                             <h5 className="font-semibold text-lg dark:text-white-light">Profile</h5>
                             <Link to="/users/user-account-settings" className="ltr:ml-auto rtl:mr-auto btn btn-primary p-2 rounded-full">
@@ -48,346 +62,143 @@ const Profile = () => {
                         </div>
                         <div className="mb-5">
                             <div className="flex flex-col justify-center items-center">
-                                <img src="/assets/images/profile-34.jpeg" alt="img" className="w-24 h-24 rounded-full object-cover  mb-5" />
-                                <p className="font-semibold text-primary text-xl">Jimmy Turner</p>
-                            </div>
-                            <ul className="mt-5 flex flex-col max-w-[160px] m-auto space-y-4 font-semibold text-white-dark">
-                                <li className="flex items-center gap-2">
-                                    <IconCoffee className="shrink-0" />
-                                    Web Developer
-                                </li>
-                                <li className="flex items-center gap-2">
-                                    <IconCalendar className="shrink-0" />
-                                    Jan 20, 1989
-                                </li>
-                                <li className="flex items-center gap-2">
-                                    <IconMapPin className="shrink-0" />
-                                    New York, USA
-                                </li>
-                                <li>
-                                    <button className="flex items-center gap-2">
-                                        <IconMail className="w-5 h-5 shrink-0" />
-                                        <span className="text-primary truncate">jimmy@gmail.com</span>
-                                    </button>
-                                </li>
-                                <li className="flex items-center gap-2">
-                                    <IconPhone />
-                                    <span className="whitespace-nowrap" dir="ltr">
-                                        +1 (530) 555-12121
-                                    </span>
-                                </li>
-                            </ul>
-                            <ul className="mt-7 flex items-center justify-center gap-2">
-                                <li>
-                                    <button className="btn btn-info flex items-center justify-center rounded-full w-10 h-10 p-0">
-                                        <IconTwitter className="w-5 h-5" />
-                                    </button>
-                                </li>
-                                <li>
-                                    <button className="btn btn-danger flex items-center justify-center rounded-full w-10 h-10 p-0">
-                                        <IconDribbble />
-                                    </button>
-                                </li>
-                                <li>
-                                    <button className="btn btn-dark flex items-center justify-center rounded-full w-10 h-10 p-0">
-                                        <IconGithub />
-                                    </button>
-                                </li>
-                            </ul>
-                        </div>
-                    </div>
-                    <div className="panel lg:col-span-2 xl:col-span-3">
-                        <div className="mb-5">
-                            <h5 className="font-semibold text-lg dark:text-white-light">Task</h5>
-                        </div>
-                        <div className="mb-5">
-                            <div className="table-responsive text-[#515365] dark:text-white-light font-semibold">
-                                <table className="whitespace-nowrap">
-                                    <thead>
-                                        <tr>
-                                            <th>Projects</th>
-                                            <th>Progress</th>
-                                            <th>Task Done</th>
-                                            <th className="text-center">Time</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody className="dark:text-white-dark">
-                                        <tr>
-                                            <td>Figma Design</td>
-                                            <td>
-                                                <div className="h-1.5 bg-[#ebedf2] dark:bg-dark/40 rounded-full flex w-full">
-                                                    <div className="bg-danger rounded-full w-[29.56%]"></div>
-                                                </div>
-                                            </td>
-                                            <td className="text-danger">29.56%</td>
-                                            <td className="text-center">2 mins ago</td>
-                                        </tr>
-                                        <tr>
-                                            <td>Vue Migration</td>
-                                            <td>
-                                                <div className="h-1.5 bg-[#ebedf2] dark:bg-dark/40 rounded-full flex w-full">
-                                                    <div className="bg-info rounded-full w-1/2"></div>
-                                                </div>
-                                            </td>
-                                            <td className="text-success">50%</td>
-                                            <td className="text-center">4 hrs ago</td>
-                                        </tr>
-                                        <tr>
-                                            <td>Flutter App</td>
-                                            <td>
-                                                <div className="h-1.5 bg-[#ebedf2] dark:bg-dark/40 rounded-full flex w-full">
-                                                    <div className="bg-warning rounded-full  w-[39%]"></div>
-                                                </div>
-                                            </td>
-                                            <td className="text-danger">39%</td>
-                                            <td className="text-center">a min ago</td>
-                                        </tr>
-                                        <tr>
-                                            <td>API Integration</td>
-                                            <td>
-                                                <div className="h-1.5 bg-[#ebedf2] dark:bg-dark/40 rounded-full flex w-full">
-                                                    <div className="bg-success rounded-full  w-[78.03%]"></div>
-                                                </div>
-                                            </td>
-                                            <td className="text-success">78.03%</td>
-                                            <td className="text-center">2 weeks ago</td>
-                                        </tr>
-
-                                        <tr>
-                                            <td>Blog Update</td>
-                                            <td>
-                                                <div className="h-1.5 bg-[#ebedf2] dark:bg-dark/40 rounded-full flex w-full">
-                                                    <div className="bg-secondary  rounded-full  w-full"></div>
-                                                </div>
-                                            </td>
-                                            <td className="text-success">100%</td>
-                                            <td className="text-center">18 hrs ago</td>
-                                        </tr>
-                                        <tr>
-                                            <td>Landing Page</td>
-                                            <td>
-                                                <div className="h-1.5 bg-[#ebedf2] dark:bg-dark/40 rounded-full flex w-full">
-                                                    <div className="bg-danger rounded-full  w-[19.15%]"></div>
-                                                </div>
-                                            </td>
-                                            <td className="text-danger">19.15%</td>
-                                            <td className="text-center">5 days ago</td>
-                                        </tr>
-                                        <tr>
-                                            <td>Shopify Dev</td>
-                                            <td>
-                                                <div className="h-1.5 bg-[#ebedf2] dark:bg-dark/40 rounded-full flex w-full">
-                                                    <div className="bg-primary rounded-full w-[60.55%]"></div>
-                                                </div>
-                                            </td>
-                                            <td className="text-success">60.55%</td>
-                                            <td className="text-center">8 days ago</td>
-                                        </tr>
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                    <div className="panel">
-                        <div className="mb-5">
-                            <h5 className="font-semibold text-lg dark:text-white-light">Summary</h5>
-                        </div>
-                        <div className="space-y-4">
-                            <div className="border border-[#ebedf2] rounded dark:bg-[#1b2e4b] dark:border-0">
-                                <div className="flex items-center justify-between p-4 py-2">
-                                    <div className="grid place-content-center w-9 h-9 rounded-md bg-secondary-light dark:bg-secondary text-secondary dark:text-secondary-light">
-                                        <IconShoppingBag />
-                                    </div>
-                                    <div className="ltr:ml-4 rtl:mr-4 flex items-start justify-between flex-auto font-semibold">
-                                        <h6 className="text-white-dark text-[13px] dark:text-white-dark">
-                                            Income
-                                            <span className="block text-base text-[#515365] dark:text-white-light">$92,600</span>
-                                        </h6>
-                                        <p className="ltr:ml-auto rtl:mr-auto text-secondary">90%</p>
-                                    </div>
-                                </div>
-                            </div>
-                            <div className="border border-[#ebedf2] rounded dark:bg-[#1b2e4b] dark:border-0">
-                                <div className="flex items-center justify-between p-4 py-2">
-                                    <div className="grid place-content-center w-9 h-9 rounded-md bg-info-light dark:bg-info text-info dark:text-info-light">
-                                        <IconTag />
-                                    </div>
-                                    <div className="ltr:ml-4 rtl:mr-4 flex items-start justify-between flex-auto font-semibold">
-                                        <h6 className="text-white-dark text-[13px] dark:text-white-dark">
-                                            Profit
-                                            <span className="block text-base text-[#515365] dark:text-white-light">$37,515</span>
-                                        </h6>
-                                        <p className="ltr:ml-auto rtl:mr-auto text-info">65%</p>
-                                    </div>
-                                </div>
-                            </div>
-                            <div className="border border-[#ebedf2] rounded dark:bg-[#1b2e4b] dark:border-0">
-                                <div className="flex items-center justify-between p-4 py-2">
-                                    <div className="grid place-content-center w-9 h-9 rounded-md bg-warning-light dark:bg-warning text-warning dark:text-warning-light">
-                                        <IconCreditCard />
-                                    </div>
-                                    <div className="ltr:ml-4 rtl:mr-4 flex items-start justify-between flex-auto font-semibold">
-                                        <h6 className="text-white-dark text-[13px] dark:text-white-dark">
-                                            Expenses
-                                            <span className="block text-base text-[#515365] dark:text-white-light">$55,085</span>
-                                        </h6>
-                                        <p className="ltr:ml-auto rtl:mr-auto text-warning">80%</p>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    <div className="panel">
-                        <div className="flex items-center justify-between mb-10">
-                            <h5 className="font-semibold text-lg dark:text-white-light">Pro Plan</h5>
-                            <button className="btn btn-primary">Renew Now</button>
-                        </div>
-                        <div className="group">
-                            <ul className="list-inside list-disc text-white-dark font-semibold mb-7 space-y-2">
-                                <li>10,000 Monthly Visitors</li>
-                                <li>Unlimited Reports</li>
-                                <li>2 Years Data Storage</li>
-                            </ul>
-                            <div className="flex items-center justify-between mb-4 font-semibold">
-                                <p className="flex items-center rounded-full bg-dark px-2 py-1 text-xs text-white-light font-semibold">
-                                    <IconClock className="w-3 h-3 ltr:mr-1 rtl:ml-1" />5 Days Left
+                                <img 
+                                    src={userData?.photo || "/assets/images/profile-34.jpeg"} 
+                                    alt="img" 
+                                    className="w-24 h-24 rounded-full object-cover mb-5 border-2 border-primary p-0.5" 
+                                />
+                                <p className="font-bold text-primary text-2xl">
+                                    {userData?.first_name || userData?.last_name 
+                                        ? `${userData?.first_name || ''} ${userData?.last_name || ''}`.trim() 
+                                        : userData?.username || 'User'}
                                 </p>
-                                <p className="text-info">$25 / month</p>
+                                <span className="badge badge-outline-primary mt-2 uppercase">{userData?.role || 'User'}</span>
                             </div>
-                            <div className="rounded-full h-2.5 p-0.5 bg-dark-light overflow-hidden mb-5 dark:bg-dark-light/10">
-                                <div className="bg-gradient-to-r from-[#f67062] to-[#fc5296] w-full h-full rounded-full relative" style={{ width: '65%' }}></div>
-                            </div>
+                            <ul className="mt-7 flex flex-col space-y-4 font-semibold text-white-dark px-4">
+                                <li className="flex items-center gap-3">
+                                    <IconCoffee className="shrink-0 text-primary" />
+                                    <span className="text-sm">{userData?.designation || 'No Designation'}</span>
+                                </li>
+                                <li className="flex items-center gap-3">
+                                    <IconMail className="w-5 h-5 shrink-0 text-primary" />
+                                    <span className="text-sm truncate">{userData?.email || 'No Email'}</span>
+                                </li>
+                                {userData?.mobile && (
+                                    <li className="flex items-center gap-3">
+                                        <IconPhone className="w-5 h-5 shrink-0 text-primary" />
+                                        <span className="text-sm">{userData.mobile}</span>
+                                    </li>
+                                )}
+                                {userData?.location && (
+                                    <li className="flex items-center gap-3">
+                                        <IconMapPin className="w-5 h-5 shrink-0 text-primary" />
+                                        <span className="text-sm">{userData.location}</span>
+                                    </li>
+                                )}
+                            </ul>
                         </div>
                     </div>
-                    <div className="panel">
+
+                    <div className="panel lg:col-span-2">
                         <div className="flex items-center justify-between mb-5">
-                            <h5 className="font-semibold text-lg dark:text-white-light">Payment History</h5>
+                            <h5 className="font-semibold text-lg dark:text-white-light uppercase tracking-wider">
+                                {userData?.role === 'employee' ? 'Employment Details' : 'Account Details'}
+                            </h5>
                         </div>
-                        <div>
-                            <div className="border-b border-[#ebedf2] dark:border-[#1b2e4b]">
-                                <div className="flex items-center justify-between py-2">
-                                    <h6 className="text-[#515365] font-semibold dark:text-white-dark">
-                                        March
-                                        <span className="block text-white-dark dark:text-white-light">Pro Membership</span>
-                                    </h6>
-                                    <div className="flex items-start justify-between ltr:ml-auto rtl:mr-auto">
-                                        <p className="font-semibold">90%</p>
-                                        <div className="dropdown ltr:ml-4 rtl:mr-4">
-                                            <Dropdown
-                                                offset={[0, 5]}
-                                                placement={`${isRtl ? 'bottom-start' : 'bottom-end'}`}
-                                                btnClassName="hover:text-primary"
-                                                button={<IconHorizontalDots className="opacity-80 hover:opacity-100" />}
-                                            >
-                                                <ul className="!min-w-[150px]">
-                                                    <li>
-                                                        <button type="button">View Invoice</button>
-                                                    </li>
-                                                    <li>
-                                                        <button type="button">Download Invoice</button>
-                                                    </li>
-                                                </ul>
-                                            </Dropdown>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div className="space-y-4">
+                                {userData?.employee_id && (
+                                    <div className="flex justify-between items-center border-b border-[#ebedf2] dark:border-[#1b2e4b] pb-2">
+                                        <span className="text-white-dark">Employee ID</span>
+                                        <span className="font-bold text-primary">{userData.employee_id}</span>
+                                    </div>
+                                )}
+                                {userData?.department_name && (
+                                    <div className="flex justify-between items-center border-b border-[#ebedf2] dark:border-[#1b2e4b] pb-2">
+                                        <span className="text-white-dark">Department</span>
+                                        <span className="font-bold">{userData.department_name}</span>
+                                    </div>
+                                )}
+                                {userData?.reporting_manager_name && (
+                                    <div className="flex justify-between items-center border-b border-[#ebedf2] dark:border-[#1b2e4b] pb-2">
+                                        <span className="text-white-dark">Reporting Manager</span>
+                                        <span className="font-bold text-info">{userData.reporting_manager_name}</span>
+                                    </div>
+                                )}
+                            </div>
+                            <div className="space-y-4">
+                                {userData?.date_of_joining && (
+                                    <div className="flex justify-between items-center border-b border-[#ebedf2] dark:border-[#1b2e4b] pb-2">
+                                        <span className="text-white-dark">Date of Joining</span>
+                                        <span className="font-bold">{new Date(userData.date_of_joining).toLocaleDateString()}</span>
+                                    </div>
+                                )}
+                                {userData?.gender && (
+                                    <div className="flex justify-between items-center border-b border-[#ebedf2] dark:border-[#1b2e4b] pb-2">
+                                        <span className="text-white-dark">Gender</span>
+                                        <span className="font-bold text-capitalize">{userData.gender}</span>
+                                    </div>
+                                )}
+                                <div className="flex justify-between items-center border-b border-[#ebedf2] dark:border-[#1b2e4b] pb-2">
+                                    <span className="text-white-dark">Status</span>
+                                    <span className="badge badge-outline-success">Active</span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        {userData?.role === 'employee' && (
+                            <>
+                                <div className="mt-8 border-t border-[#ebedf2] dark:border-[#1b2e4b] pt-6">
+                                    <h6 className="text-md font-bold mb-4 text-primary uppercase">Identity & Documents</h6>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <div className="flex flex-col bg-gray-50 dark:bg-gray-900/40 p-3 rounded-lg">
+                                            <div className="flex justify-between items-center mb-2">
+                                                <span className="text-white-dark text-sm">Aadhar Number</span>
+                                                <span className="font-bold text-sm">{userData.aadhar_no || 'Not Verified'}</span>
+                                            </div>
+                                            {userData.aadhar_card && (
+                                                <a href={userData.aadhar_card} target="_blank" rel="noreferrer" className="btn btn-xs btn-outline-primary w-fit">View Aadhar</a>
+                                            )}
+                                        </div>
+                                        <div className="flex flex-col bg-gray-50 dark:bg-gray-900/40 p-3 rounded-lg">
+                                            <div className="flex justify-between items-center mb-2">
+                                                <span className="text-white-dark text-sm">PAN Number</span>
+                                                <span className="font-bold text-sm">{userData.pan_no || 'Not Verified'}</span>
+                                            </div>
+                                            {userData.pan_card && (
+                                                <a href={userData.pan_card} target="_blank" rel="noreferrer" className="btn btn-xs btn-outline-primary w-fit">View PAN</a>
+                                            )}
                                         </div>
                                     </div>
                                 </div>
-                            </div>
-                            <div className="border-b border-[#ebedf2] dark:border-[#1b2e4b]">
-                                <div className="flex items-center justify-between py-2">
-                                    <h6 className="text-[#515365] font-semibold dark:text-white-dark">
-                                        February
-                                        <span className="block text-white-dark dark:text-white-light">Pro Membership</span>
-                                    </h6>
-                                    <div className="flex items-start justify-between ltr:ml-auto rtl:mr-auto">
-                                        <p className="font-semibold">90%</p>
-                                        <div className="dropdown ltr:ml-4 rtl:mr-4">
-                                            <Dropdown offset={[0, 5]} placement={`${isRtl ? 'bottom-start' : 'bottom-end'}`} button={<IconHorizontalDots className="opacity-80 hover:opacity-100" />}>
-                                                <ul className="!min-w-[150px]">
-                                                    <li>
-                                                        <button type="button">View Invoice</button>
-                                                    </li>
-                                                    <li>
-                                                        <button type="button">Download Invoice</button>
-                                                    </li>
-                                                </ul>
-                                            </Dropdown>
+
+                                <div className="mt-6 border-t border-[#ebedf2] dark:border-[#1b2e4b] pt-6">
+                                    <h6 className="text-md font-bold mb-4 text-primary uppercase">Banking Details</h6>
+                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                        <div className="panel bg-primary/5 border-none shadow-none p-3">
+                                            <p className="text-white-dark text-xs mb-1">Bank Name</p>
+                                            <p className="font-bold text-sm">{userData.bank_name || 'Not Set'}</p>
+                                        </div>
+                                        <div className="panel bg-primary/5 border-none shadow-none p-3">
+                                            <p className="text-white-dark text-xs mb-1">Account Number</p>
+                                            <p className="font-bold text-sm">{userData.account_no || 'Not Set'}</p>
+                                        </div>
+                                        <div className="panel bg-primary/5 border-none shadow-none p-3">
+                                            <p className="text-white-dark text-xs mb-1">IFSC Code</p>
+                                            <p className="font-bold text-sm">{userData.ifsc_code || 'Not Set'}</p>
                                         </div>
                                     </div>
                                 </div>
-                            </div>
-                            <div>
-                                <div className="flex items-center justify-between py-2">
-                                    <h6 className="text-[#515365] font-semibold dark:text-white-dark">
-                                        January
-                                        <span className="block text-white-dark dark:text-white-light">Pro Membership</span>
-                                    </h6>
-                                    <div className="flex items-start justify-between ltr:ml-auto rtl:mr-auto">
-                                        <p className="font-semibold">90%</p>
-                                        <div className="dropdown ltr:ml-4 rtl:mr-4">
-                                            <Dropdown offset={[0, 5]} placement={`${isRtl ? 'bottom-start' : 'bottom-end'}`} button={<IconHorizontalDots className="opacity-80 hover:opacity-100" />}>
-                                                <ul className="!min-w-[150px]">
-                                                    <li>
-                                                        <button type="button">View Invoice</button>
-                                                    </li>
-                                                    <li>
-                                                        <button type="button">Download Invoice</button>
-                                                    </li>
-                                                </ul>
-                                            </Dropdown>
-                                        </div>
-                                    </div>
+
+                                <div className="mt-8">
+                                    <h6 className="text-md font-bold mb-4 text-primary">About Me</h6>
+                                    <p className="text-white-dark leading-relaxed">
+                                        Working as a {userData?.designation || 'professional'} in the {userData?.department_name || 'organization'}. 
+                                        Dedicated to contributing to the company's growth and achieving professional excellence.
+                                    </p>
                                 </div>
-                            </div>
-                        </div>
-                    </div>
-                    <div className="panel">
-                        <div className="flex items-center justify-between mb-5">
-                            <h5 className="font-semibold text-lg dark:text-white-light">Card Details</h5>
-                        </div>
-                        <div>
-                            <div className="border-b border-[#ebedf2] dark:border-[#1b2e4b]">
-                                <div className="flex items-center justify-between py-2">
-                                    <div className="flex-none">
-                                        <img src="/assets/images/card-americanexpress.svg" alt="img" />
-                                    </div>
-                                    <div className="flex items-center justify-between flex-auto ltr:ml-4 rtl:mr-4">
-                                        <h6 className="text-[#515365] font-semibold dark:text-white-dark">
-                                            American Express
-                                            <span className="block text-white-dark dark:text-white-light">Expires on 12/2025</span>
-                                        </h6>
-                                        <span className="badge bg-success ltr:ml-auto rtl:mr-auto">Primary</span>
-                                    </div>
-                                </div>
-                            </div>
-                            <div className="border-b border-[#ebedf2] dark:border-[#1b2e4b]">
-                                <div className="flex items-center justify-between py-2">
-                                    <div className="flex-none">
-                                        <img src="/assets/images/card-mastercard.svg" alt="img" />
-                                    </div>
-                                    <div className="flex items-center justify-between flex-auto ltr:ml-4 rtl:mr-4">
-                                        <h6 className="text-[#515365] font-semibold dark:text-white-dark">
-                                            Mastercard
-                                            <span className="block text-white-dark dark:text-white-light">Expires on 03/2025</span>
-                                        </h6>
-                                    </div>
-                                </div>
-                            </div>
-                            <div>
-                                <div className="flex items-center justify-between py-2">
-                                    <div className="flex-none">
-                                        <img src="/assets/images/card-visa.svg" alt="img" />
-                                    </div>
-                                    <div className="flex items-center justify-between flex-auto ltr:ml-4 rtl:mr-4">
-                                        <h6 className="text-[#515365] font-semibold dark:text-white-dark">
-                                            Visa
-                                            <span className="block text-white-dark dark:text-white-light">Expires on 10/2025</span>
-                                        </h6>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
+                            </>
+                        )}
                     </div>
                 </div>
             </div>

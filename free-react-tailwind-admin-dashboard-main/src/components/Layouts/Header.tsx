@@ -34,9 +34,28 @@ import IconMenuForms from '../Icon/Menu/IconMenuForms';
 import IconMenuPages from '../Icon/Menu/IconMenuPages';
 import IconMenuMore from '../Icon/Menu/IconMenuMore';
 import { notificationService } from '../../services/notificationService';
+import { authFetch } from '../../utils/authFetch';
 
 const Header = () => {
     const location = useLocation();
+    const [userData, setUserData] = useState<any>(null);
+
+    useEffect(() => {
+        fetchUserProfile();
+    }, []);
+
+    const fetchUserProfile = async () => {
+        try {
+            const response = await authFetch(`${import.meta.env.VITE_API_BASE_URL}/app/user-profile/`);
+            if (response.ok) {
+                const data = await response.json();
+                setUserData(data);
+            }
+        } catch (error) {
+            console.error('Error fetching profile in header:', error);
+        }
+    };
+
     useEffect(() => {
         const selector = document.querySelector('ul.horizontal-menu a[href="' + window.location.pathname + '"]');
         if (selector) {
@@ -338,19 +357,19 @@ const Header = () => {
                                 offset={[0, 8]}
                                 placement={`${isRtl ? 'bottom-start' : 'bottom-end'}`}
                                 btnClassName="relative group block"
-                                button={<img className="w-9 h-9 rounded-full object-cover saturate-50 group-hover:saturate-100" src="/assets/images/user-profile.jpeg" alt="userProfile" />}
+                                button={<img className="w-9 h-9 rounded-full object-cover saturate-50 group-hover:saturate-100" src={userData?.photo || "/assets/images/user-profile.jpeg"} alt="userProfile" />}
                             >
                                 <ul className="text-dark dark:text-white-dark !py-0 w-[230px] font-semibold dark:text-white-light/90">
                                     <li>
                                         <div className="flex items-center px-4 py-4">
-                                            <img className="rounded-md w-10 h-10 object-cover" src="/assets/images/user-profile.jpeg" alt="userProfile" />
+                                            <img className="rounded-md w-10 h-10 object-cover" src={userData?.photo || "/assets/images/user-profile.jpeg"} alt="userProfile" />
                                             <div className="ltr:pl-4 rtl:pr-4 truncate">
                                                 <h4 className="text-base">
-                                                    John Doe
-                                                    <span className="text-xs bg-success-light rounded text-success px-1 ltr:ml-2 rtl:ml-2">Pro</span>
+                                                    {userData?.first_name || userData?.username || 'User'}
+                                                    <span className="text-xs bg-success-light rounded text-success px-1 ltr:ml-2 rtl:ml-2 uppercase">{userData?.role || 'User'}</span>
                                                 </h4>
-                                                <button type="button" className="text-black/60 hover:text-primary dark:text-dark-light/60 dark:hover:text-white">
-                                                    johndoe@gmail.com
+                                                <button type="button" className="text-black/60 hover:text-primary dark:text-dark-light/60 dark:hover:text-white text-xs truncate">
+                                                    {userData?.email || ''}
                                                 </button>
                                             </div>
                                         </div>
