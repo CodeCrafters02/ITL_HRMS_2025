@@ -9,14 +9,19 @@ import IconMail from '../../components/Icon/IconMail';
 import IconPhone from '../../components/Icon/IconPhone';
 import IconMapPin from '../../components/Icon/IconMapPin';
 import { authFetch } from '../../utils/authFetch';
+import IconUsers from '../../components/Icon/IconUsers';
 
 const Profile = () => {
     const dispatch = useDispatch();
     const [userData, setUserData] = useState<any>(null);
+    const [activeTab, setActiveTab] = useState('profile');
+
+    const [hierarchyData, setHierarchyData] = useState<any[]>([]);
 
     useEffect(() => {
         dispatch(setPageTitle('Profile'));
         fetchUserProfile();
+        fetchHierarchy();
     }, []);
 
     const fetchUserProfile = async () => {
@@ -39,6 +44,83 @@ const Profile = () => {
         }
     };
 
+    const fetchHierarchy = async () => {
+        try {
+            const response = await authFetch(`${import.meta.env.VITE_API_BASE_URL}/app/organization-hierarchy/`);
+            if (response.ok) {
+                const data = await response.json();
+                setHierarchyData(data);
+            }
+        } catch (error) {
+            console.error('Error fetching hierarchy:', error);
+        }
+    };
+
+    const HierarchyNode = ({ node, currentUserId }: { node: any, currentUserId: any }) => {
+        const isYou = node.user_id === currentUserId;
+        
+        return (
+            <div className="flex flex-col items-center">
+                {/* The Node Box */}
+                <div className={`p-4 rounded-xl border-2 flex flex-col items-center min-w-[160px] max-w-[220px] transition-all duration-300 relative
+                    ${isYou ? 'border-primary bg-primary/5 ring-4 ring-primary/10 z-30 scale-105 shadow-xl' : 'border-gray-200 dark:border-gray-700 bg-white dark:bg-[#1b2e4b] z-20 shadow-md hover:border-primary/40'}
+                `}>
+                    <div className="relative mb-3">
+                        <img 
+                            src={node.photo || "/assets/images/profile-34.jpeg"} 
+                            alt={node.name} 
+                            className={`w-16 h-16 rounded-full object-cover border-4 ${isYou ? 'border-primary' : 'border-gray-200 dark:border-gray-700'}`} 
+                        />
+                        {isYou && (
+                            <span className="absolute -bottom-2 left-1/2 -translate-x-1/2 bg-primary text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow-sm">
+                                YOU
+                            </span>
+                        )}
+                    </div>
+                    <span className={`font-bold text-sm text-center truncate w-full ${isYou ? 'text-primary' : 'dark:text-white-light'}`}>
+                        {node.name}
+                    </span>
+                    <span className="text-[11px] text-white-dark text-center truncate w-full mt-1 font-medium bg-gray-100 dark:bg-gray-800/50 px-2 py-0.5 rounded">
+                        {node.designation}
+                    </span>
+                </div>
+
+                {/* Children Section with Connecting Lines */}
+                {node.children && node.children.length > 0 && (
+                    <div className="flex flex-col items-center pt-8 relative w-full">
+                        {/* Parent Vertical Line (Down) */}
+                        <div className="absolute top-0 h-8 w-0.5 bg-gray-300 dark:bg-gray-600"></div>
+                        
+                        <div className="flex gap-8 px-4">
+                            {node.children.map((child: any, index: number) => (
+                                <div key={child.id} className="relative pt-8">
+                                    {/* Child Vertical Line (Up) */}
+                                    <div className="absolute top-0 left-1/2 -translate-x-1/2 h-8 w-0.5 bg-gray-300 dark:bg-gray-600"></div>
+                                    
+                                    {/* Horizontal Connector Bar */}
+                                    {node.children.length > 1 && (
+                                        <>
+                                            {/* Left half of the horizontal bar */}
+                                            {index > 0 && (
+                                                <div className="absolute top-0 left-0 right-1/2 h-0.5 bg-gray-300 dark:bg-gray-600"></div>
+                                            )}
+                                            {/* Right half of the horizontal bar */}
+                                            {index < node.children.length - 1 && (
+                                                <div className="absolute top-0 left-1/2 right-0 h-0.5 bg-gray-300 dark:bg-gray-600"></div>
+                                            )}
+                                        </>
+                                    )}
+                                    
+                                    <HierarchyNode node={child} currentUserId={currentUserId} />
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                )}
+            </div>
+        );
+    };
+
     return (
         <div>
             <ul className="flex space-x-2 rtl:space-x-reverse">
@@ -52,174 +134,218 @@ const Profile = () => {
                 </li>
             </ul>
             <div className="pt-5">
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 mb-5">
-                    <div className="panel lg:col-span-1">
-                        <div className="flex items-center justify-between mb-5">
-                            <h5 className="font-semibold text-lg dark:text-white-light">Profile</h5>
-                            <Link to="/users/user-account-settings" className="ltr:ml-auto rtl:mr-auto btn btn-primary p-2 rounded-full">
-                                <IconPencilPaper />
-                            </Link>
-                        </div>
-                        <div className="mb-5">
-                            <div className="flex flex-col justify-center items-center">
-                                <img 
-                                    src={userData?.photo || "/assets/images/profile-34.jpeg"} 
-                                    alt="img" 
-                                    className="w-24 h-24 rounded-full object-cover mb-5 border-2 border-primary p-0.5" 
-                                />
-                                <p className="font-bold text-primary text-2xl">
-                                    {userData?.first_name || userData?.last_name 
-                                        ? `${userData?.first_name || ''} ${userData?.last_name || ''}`.trim() 
-                                        : userData?.username || 'User'}
-                                </p>
-                                <span className="badge badge-outline-primary mt-2 uppercase">{userData?.role || 'User'}</span>
+                <div className="flex items-center gap-3 mb-5 border-b border-[#ebedf2] dark:border-[#191e3a]">
+                    <button 
+                        type="button" 
+                        className={`${activeTab === 'profile' ? 'border-b-2 border-primary text-primary' : 'text-white-dark hover:text-primary'} pb-3 px-4 font-semibold text-sm transition-all duration-300`}
+                        onClick={() => setActiveTab('profile')}
+                    >
+                        Profile Details
+                    </button>
+                    <button 
+                        type="button" 
+                        className={`${activeTab === 'hierarchy' ? 'border-b-2 border-primary text-primary' : 'text-white-dark hover:text-primary'} pb-3 px-4 font-semibold text-sm transition-all duration-300`}
+                        onClick={() => setActiveTab('hierarchy')}
+                    >
+                        Organizational Hierarchy
+                    </button>
+                </div>
+
+                {activeTab === 'profile' && (
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 mb-5">
+                        <div className="panel lg:col-span-1">
+                            <div className="flex items-center justify-between mb-5">
+                                <h5 className="font-semibold text-lg dark:text-white-light">Profile</h5>
+                                <Link to="/users/user-account-settings" className="ltr:ml-auto rtl:mr-auto btn btn-primary p-2 rounded-full">
+                                    <IconPencilPaper />
+                                </Link>
                             </div>
-                            <ul className="mt-7 flex flex-col space-y-4 font-semibold text-white-dark px-4">
-                                <li className="flex items-center gap-3">
-                                    <IconCoffee className="shrink-0 text-primary" />
-                                    <span className="text-sm">{userData?.designation || 'No Designation'}</span>
-                                </li>
-                                <li className="flex items-center gap-3">
-                                    <IconMail className="w-5 h-5 shrink-0 text-primary" />
-                                    <span className="text-sm truncate">{userData?.email || 'No Email'}</span>
-                                </li>
-                                {userData?.mobile && (
+                            <div className="mb-5">
+                                <div className="flex flex-col justify-center items-center">
+                                    <img 
+                                        src={userData?.photo || "/assets/images/profile-34.jpeg"} 
+                                        alt="img" 
+                                        className="w-24 h-24 rounded-full object-cover mb-5 border-2 border-primary p-0.5" 
+                                    />
+                                    <p className="font-bold text-primary text-2xl">
+                                        {userData?.first_name || userData?.last_name 
+                                            ? `${userData?.first_name || ''} ${userData?.last_name || ''}`.trim() 
+                                            : userData?.username || 'User'}
+                                    </p>
+                                    <span className="badge badge-outline-primary mt-2 uppercase">{userData?.role || 'User'}</span>
+                                </div>
+                                <ul className="mt-7 flex flex-col space-y-4 font-semibold text-white-dark px-4">
                                     <li className="flex items-center gap-3">
-                                        <IconPhone className="w-5 h-5 shrink-0 text-primary" />
-                                        <span className="text-sm">{userData.mobile}</span>
+                                        <IconCoffee className="shrink-0 text-primary" />
+                                        <span className="text-sm">{userData?.designation || 'No Designation'}</span>
                                     </li>
-                                )}
-                                {userData?.location && (
                                     <li className="flex items-center gap-3">
-                                        <IconMapPin className="w-5 h-5 shrink-0 text-primary" />
-                                        <span className="text-sm">{userData.location}</span>
+                                        <IconMail className="w-5 h-5 shrink-0 text-primary" />
+                                        <span className="text-sm truncate">{userData?.email || 'No Email'}</span>
                                     </li>
-                                )}
-                            </ul>
+                                    {userData?.mobile && (
+                                        <li className="flex items-center gap-3">
+                                            <IconPhone className="w-5 h-5 shrink-0 text-primary" />
+                                            <span className="text-sm">{userData.mobile}</span>
+                                        </li>
+                                    )}
+                                    {userData?.location && (
+                                        <li className="flex items-center gap-3">
+                                            <IconMapPin className="w-5 h-5 shrink-0 text-primary" />
+                                            <span className="text-sm">{userData.location}</span>
+                                        </li>
+                                    )}
+                                </ul>
+                            </div>
+                        </div>
+                        <div className="panel lg:col-span-2">
+                            <div className="flex items-center justify-between mb-5">
+                                <h5 className="font-semibold text-lg dark:text-white-light uppercase tracking-wider">
+                                    {userData?.role === 'employee' ? 'Employment Details' : 'Account Details'}
+                                </h5>
+                            </div>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div className="space-y-4">
+                                    <div className="flex justify-between items-center border-b border-[#ebedf2] dark:border-[#1b2e4b] pb-2">
+                                        <span className="text-white-dark">System Role</span>
+                                        <span className="font-bold text-primary">{userData?.role === 'master' ? 'Super Administrator' : userData?.role.toUpperCase()}</span>
+                                    </div>
+                                    {userData?.role === 'master' ? (
+                                        <>
+                                            <div className="flex justify-between items-center border-b border-[#ebedf2] dark:border-[#1b2e4b] pb-2">
+                                                <span className="text-white-dark">Platform Access</span>
+                                                <span className="font-bold text-info">Full Access (All Companies)</span>
+                                            </div>
+                                            <div className="flex justify-between items-center border-b border-[#ebedf2] dark:border-[#1b2e4b] pb-2">
+                                                <span className="text-white-dark">Account Status</span>
+                                                <span className="font-bold text-success">Active (Owner)</span>
+                                            </div>
+                                        </>
+                                    ) : (
+                                        <>
+                                            {userData?.employee_id && (
+                                                <div className="flex justify-between items-center border-b border-[#ebedf2] dark:border-[#1b2e4b] pb-2">
+                                                    <span className="text-white-dark">Employee ID</span>
+                                                    <span className="font-bold text-primary">{userData.employee_id}</span>
+                                                </div>
+                                            )}
+                                            {userData?.department_name && (
+                                                <div className="flex justify-between items-center border-b border-[#ebedf2] dark:border-[#1b2e4b] pb-2">
+                                                    <span className="text-white-dark">Department</span>
+                                                    <span className="font-bold">{userData.department_name}</span>
+                                                </div>
+                                            )}
+                                        </>
+                                    )}
+                                </div>
+                                <div className="space-y-4">
+                                    {userData?.role !== 'master' && userData?.reporting_manager_name && (
+                                        <div className="flex justify-between items-center border-b border-[#ebedf2] dark:border-[#1b2e4b] pb-2">
+                                            <span className="text-white-dark">Reporting Manager</span>
+                                            <span className="font-bold text-info">{userData.reporting_manager_name}</span>
+                                        </div>
+                                    )}
+                                    {userData?.date_of_joining && (
+                                        <div className="flex justify-between items-center border-b border-[#ebedf2] dark:border-[#1b2e4b] pb-2">
+                                            <span className="text-white-dark">Date of Joining</span>
+                                            <span className="font-bold">{new Date(userData.date_of_joining).toLocaleDateString()}</span>
+                                        </div>
+                                    )}
+                                    {userData?.gender && (
+                                        <div className="flex justify-between items-center border-b border-[#ebedf2] dark:border-[#1b2e4b] pb-2">
+                                            <span className="text-white-dark">Gender</span>
+                                            <span className="font-bold text-capitalize">{userData.gender}</span>
+                                        </div>
+                                    )}
+                                    <div className="flex justify-between items-center border-b border-[#ebedf2] dark:border-[#1b2e4b] pb-2">
+                                        <span className="text-white-dark">Status</span>
+                                        <span className="badge badge-outline-success">Active</span>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            {userData?.role === 'employee' && (
+                                <>
+                                    <div className="mt-8 border-t border-[#ebedf2] dark:border-[#1b2e4b] pt-6">
+                                        <h6 className="text-md font-bold mb-4 text-primary uppercase">Identity & Documents</h6>
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                            <div className="flex flex-col bg-gray-50 dark:bg-gray-900/40 p-3 rounded-lg">
+                                                <div className="flex justify-between items-center mb-2">
+                                                    <span className="text-white-dark text-sm">Aadhar Number</span>
+                                                    <span className="font-bold text-sm">{userData.aadhar_no || 'Not Verified'}</span>
+                                                </div>
+                                                {userData.aadhar_card && (
+                                                    <a href={userData.aadhar_card} target="_blank" rel="noreferrer" className="btn btn-xs btn-outline-primary w-fit">View Aadhar</a>
+                                                )}
+                                            </div>
+                                            <div className="flex flex-col bg-gray-50 dark:bg-gray-900/40 p-3 rounded-lg">
+                                                <div className="flex justify-between items-center mb-2">
+                                                    <span className="text-white-dark text-sm">PAN Number</span>
+                                                    <span className="font-bold text-sm">{userData.pan_no || 'Not Verified'}</span>
+                                                </div>
+                                                {userData.pan_card && (
+                                                    <a href={userData.pan_card} target="_blank" rel="noreferrer" className="btn btn-xs btn-outline-primary w-fit">View PAN</a>
+                                                )}
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div className="mt-6 border-t border-[#ebedf2] dark:border-[#1b2e4b] pt-6">
+                                        <h6 className="text-md font-bold mb-4 text-primary uppercase">Banking Details</h6>
+                                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                            <div className="panel bg-primary/5 border-none shadow-none p-3">
+                                                <p className="text-white-dark text-xs mb-1">Bank Name</p>
+                                                <p className="font-bold text-sm">{userData.bank_name || 'Not Set'}</p>
+                                            </div>
+                                            <div className="panel bg-primary/5 border-none shadow-none p-3">
+                                                <p className="text-white-dark text-xs mb-1">Account Number</p>
+                                                <p className="font-bold text-sm">{userData.account_no || 'Not Set'}</p>
+                                            </div>
+                                            <div className="panel bg-primary/5 border-none shadow-none p-3">
+                                                <p className="text-white-dark text-xs mb-1">IFSC Code</p>
+                                                <p className="font-bold text-sm">{userData.ifsc_code || 'Not Set'}</p>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div className="mt-8">
+                                        <h6 className="text-md font-bold mb-4 text-primary">About Me</h6>
+                                        <p className="text-white-dark leading-relaxed">
+                                            Working as a {userData?.designation || 'professional'} in the {userData?.department_name || 'organization'}. 
+                                            Dedicated to contributing to the company's growth and achieving professional excellence.
+                                        </p>
+                                    </div>
+                                </>
+                            )}
                         </div>
                     </div>
+                )}
 
-                    <div className="panel lg:col-span-2">
-                        <div className="flex items-center justify-between mb-5">
-                            <h5 className="font-semibold text-lg dark:text-white-light uppercase tracking-wider">
-                                {userData?.role === 'employee' ? 'Employment Details' : 'Account Details'}
-                            </h5>
-                        </div>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            <div className="space-y-4">
-                                <div className="flex justify-between items-center border-b border-[#ebedf2] dark:border-[#1b2e4b] pb-2">
-                                    <span className="text-white-dark">System Role</span>
-                                    <span className="font-bold text-primary">{userData?.role === 'master' ? 'Super Administrator' : userData?.role.toUpperCase()}</span>
-                                </div>
-                                {userData?.role === 'master' ? (
-                                    <>
-                                        <div className="flex justify-between items-center border-b border-[#ebedf2] dark:border-[#1b2e4b] pb-2">
-                                            <span className="text-white-dark">Platform Access</span>
-                                            <span className="font-bold text-info">Full Access (All Companies)</span>
-                                        </div>
-                                        <div className="flex justify-between items-center border-b border-[#ebedf2] dark:border-[#1b2e4b] pb-2">
-                                            <span className="text-white-dark">Account Status</span>
-                                            <span className="font-bold text-success">Active (Owner)</span>
-                                        </div>
-                                    </>
-                                ) : (
-                                    <>
-                                        {userData?.employee_id && (
-                                            <div className="flex justify-between items-center border-b border-[#ebedf2] dark:border-[#1b2e4b] pb-2">
-                                                <span className="text-white-dark">Employee ID</span>
-                                                <span className="font-bold text-primary">{userData.employee_id}</span>
-                                            </div>
-                                        )}
-                                        {userData?.department_name && (
-                                            <div className="flex justify-between items-center border-b border-[#ebedf2] dark:border-[#1b2e4b] pb-2">
-                                                <span className="text-white-dark">Department</span>
-                                                <span className="font-bold">{userData.department_name}</span>
-                                            </div>
-                                        )}
-                                    </>
-                                )}
-                            </div>
-                            <div className="space-y-4">
-                                {userData?.role !== 'master' && userData?.reporting_manager_name && (
-                                    <div className="flex justify-between items-center border-b border-[#ebedf2] dark:border-[#1b2e4b] pb-2">
-                                        <span className="text-white-dark">Reporting Manager</span>
-                                        <span className="font-bold text-info">{userData.reporting_manager_name}</span>
-                                    </div>
-                                )}
-                                {userData?.date_of_joining && (
-                                    <div className="flex justify-between items-center border-b border-[#ebedf2] dark:border-[#1b2e4b] pb-2">
-                                        <span className="text-white-dark">Date of Joining</span>
-                                        <span className="font-bold">{new Date(userData.date_of_joining).toLocaleDateString()}</span>
-                                    </div>
-                                )}
-                                {userData?.gender && (
-                                    <div className="flex justify-between items-center border-b border-[#ebedf2] dark:border-[#1b2e4b] pb-2">
-                                        <span className="text-white-dark">Gender</span>
-                                        <span className="font-bold text-capitalize">{userData.gender}</span>
-                                    </div>
-                                )}
-                                <div className="flex justify-between items-center border-b border-[#ebedf2] dark:border-[#1b2e4b] pb-2">
-                                    <span className="text-white-dark">Status</span>
-                                    <span className="badge badge-outline-success">Active</span>
-                                </div>
-                            </div>
+                {activeTab === 'hierarchy' && (
+                    <div className="panel overflow-hidden">
+                        <div className="flex items-center gap-2 mb-5">
+                            <IconUsers className="text-primary w-6 h-6" />
+                            <h5 className="font-semibold text-lg dark:text-white-light uppercase tracking-wider">Organizational Hierarchy</h5>
                         </div>
                         
-                        {userData?.role === 'employee' && (
-                            <>
-                                <div className="mt-8 border-t border-[#ebedf2] dark:border-[#1b2e4b] pt-6">
-                                    <h6 className="text-md font-bold mb-4 text-primary uppercase">Identity & Documents</h6>
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                        <div className="flex flex-col bg-gray-50 dark:bg-gray-900/40 p-3 rounded-lg">
-                                            <div className="flex justify-between items-center mb-2">
-                                                <span className="text-white-dark text-sm">Aadhar Number</span>
-                                                <span className="font-bold text-sm">{userData.aadhar_no || 'Not Verified'}</span>
-                                            </div>
-                                            {userData.aadhar_card && (
-                                                <a href={userData.aadhar_card} target="_blank" rel="noreferrer" className="btn btn-xs btn-outline-primary w-fit">View Aadhar</a>
-                                            )}
-                                        </div>
-                                        <div className="flex flex-col bg-gray-50 dark:bg-gray-900/40 p-3 rounded-lg">
-                                            <div className="flex justify-between items-center mb-2">
-                                                <span className="text-white-dark text-sm">PAN Number</span>
-                                                <span className="font-bold text-sm">{userData.pan_no || 'Not Verified'}</span>
-                                            </div>
-                                            {userData.pan_card && (
-                                                <a href={userData.pan_card} target="_blank" rel="noreferrer" className="btn btn-xs btn-outline-primary w-fit">View PAN</a>
-                                            )}
-                                        </div>
+                        <div className="overflow-x-auto pb-4">
+                            <div className="min-w-fit flex justify-center">
+                                {hierarchyData.length > 0 ? (
+                                    <div className="flex flex-col items-center gap-16 py-4">
+                                        {hierarchyData.map((root) => (
+                                            <HierarchyNode key={root.id} node={root} currentUserId={userData?.id} />
+                                        ))}
                                     </div>
-                                </div>
-
-                                <div className="mt-6 border-t border-[#ebedf2] dark:border-[#1b2e4b] pt-6">
-                                    <h6 className="text-md font-bold mb-4 text-primary uppercase">Banking Details</h6>
-                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                        <div className="panel bg-primary/5 border-none shadow-none p-3">
-                                            <p className="text-white-dark text-xs mb-1">Bank Name</p>
-                                            <p className="font-bold text-sm">{userData.bank_name || 'Not Set'}</p>
-                                        </div>
-                                        <div className="panel bg-primary/5 border-none shadow-none p-3">
-                                            <p className="text-white-dark text-xs mb-1">Account Number</p>
-                                            <p className="font-bold text-sm">{userData.account_no || 'Not Set'}</p>
-                                        </div>
-                                        <div className="panel bg-primary/5 border-none shadow-none p-3">
-                                            <p className="text-white-dark text-xs mb-1">IFSC Code</p>
-                                            <p className="font-bold text-sm">{userData.ifsc_code || 'Not Set'}</p>
-                                        </div>
+                                ) : (
+                                    <div className="flex flex-col items-center justify-center py-10 text-white-dark">
+                                        <IconUsers className="w-12 h-12 mb-3 opacity-20" />
+                                        <p>No hierarchy data available for this company.</p>
                                     </div>
-                                </div>
-
-                                <div className="mt-8">
-                                    <h6 className="text-md font-bold mb-4 text-primary">About Me</h6>
-                                    <p className="text-white-dark leading-relaxed">
-                                        Working as a {userData?.designation || 'professional'} in the {userData?.department_name || 'organization'}. 
-                                        Dedicated to contributing to the company's growth and achieving professional excellence.
-                                    </p>
-                                </div>
-                            </>
-                        )}
+                                )}
+                            </div>
+                        </div>
                     </div>
-                </div>
+                )}
             </div>
         </div>
     );

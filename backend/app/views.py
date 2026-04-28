@@ -747,7 +747,7 @@ class EmployeeViewSet(viewsets.ModelViewSet):
                 qs = qs.filter(company=company)
                 include_admins = self.request.query_params.get('include_admins', 'false').lower() == 'true'
                 if not include_admins:
-                    qs = qs.exclude(user__role='admin')
+                    qs = qs.exclude(user__role__in=['admin', 'master'])
             else:
                 qs = qs.none()
             
@@ -4661,6 +4661,44 @@ class EmployeeReporteesView(APIView):
         paginated_qs = paginator.paginate_queryset(reportees, request, view=self)
         serializer = ReportingEmployeesSerializer(paginated_qs, many=True, context={"request": request})
         return paginator.get_paginated_response(serializer.data)
+
+
+class OrganizationHierarchyView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        user = request.user
+        company = user.company
+        if not company:
+            return Response([])
+
+        # Fetch all employees in the company (excluding 'master' role)
+        employees = Employee.objects.filter(company=company).exclude(user__role='master').select_related('designation', 'user', 'reporting_manager')
+        
+        # Build map of manager_id -> list of direct reportees
+        manager_map = {}
+        for emp in employees:
+            mid = emp.reporting_manager_id
+            if mid not in manager_map:
+                manager_map[mid] = []
+            manager_map[mid].append(emp)
+
+        def build_node(emp):
+            return {
+                'id': emp.id,
+                'user_id': emp.user.id if emp.user else None,
+                'name': f"{(emp.first_name or '').strip()} {(emp.last_name or '').strip()}".strip() or (emp.user.username if emp.user else "Unknown"),
+                'designation': emp.designation.designation_name if emp.designation else (emp.user.role.capitalize() if emp.user else "Employee"),
+                'photo': request.build_absolute_uri(emp.photo.url) if emp.photo and hasattr(emp.photo, 'url') else None,
+                'children': [build_node(child) for child in manager_map.get(emp.id, [])]
+            }
+
+        # Identify roots (those with no reporting manager or manager not in the same dataset)
+        all_ids = set(emp.id for emp in employees)
+        roots = [emp for emp in employees if emp.reporting_manager_id is None or emp.reporting_manager_id not in all_ids]
+        
+        tree = [build_node(root) for root in roots]
+        return Response(tree)
 
 
 # Office Structure ViewSets

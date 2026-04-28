@@ -88,6 +88,7 @@ urlpatterns = [
     path('verifyotp/', VerifyOTPView.as_view(),name='verifyotp'),
     path('resetpassword/', ResetPasswordView.as_view(), name='resetpassword'),
     path('getreportees/', EmployeeReporteesView.as_view(), name='getreportees'),
+    path('organization-hierarchy/', OrganizationHierarchyView.as_view(), name='organization-hierarchy'),
     path('payroll-attendance-summary/', PayrollAttendanceSummaryView.as_view(), name='payroll-attendance-summary'),
 
     # --- Router URLs (Catch-all - Checked Last) ---
