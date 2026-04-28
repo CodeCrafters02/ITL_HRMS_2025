@@ -12,6 +12,7 @@ from django.utils import timezone
 from rest_framework_simplejwt.tokens import RefreshToken
 from .models import *
 from rest_framework import viewsets, permissions
+import json
 
 User = get_user_model()
 
@@ -1154,7 +1155,19 @@ class LeaveSerializer(serializers.ModelSerializer):
         model = Leave
         fields = ['id', 'leave_name', 'count', 'is_paid']
 
+class FlexibleJSONField(serializers.JSONField):
+    def to_internal_value(self, data):
+        if isinstance(data, str):
+            if not data.strip():
+                return []
+            try:
+                return json.loads(data)
+            except (ValueError, TypeError):
+                self.fail('invalid')
+        return super().to_internal_value(data)
+
 class LearningCornerSerializer(serializers.ModelSerializer):
+    links = FlexibleJSONField(required=False, allow_null=True)
     image_url = serializers.SerializerMethodField()
     video_url = serializers.SerializerMethodField()
     document_url = serializers.SerializerMethodField()
@@ -1163,7 +1176,7 @@ class LearningCornerSerializer(serializers.ModelSerializer):
         model = LearningCorner
         fields = [
             'id', 'title', 'description',
-            'image', 'video', 'document',
+            'image', 'video', 'document', 'links',
             'image_url', 'video_url', 'document_url'
         ]
         read_only_fields = ['id', 'image_url', 'video_url', 'document_url']

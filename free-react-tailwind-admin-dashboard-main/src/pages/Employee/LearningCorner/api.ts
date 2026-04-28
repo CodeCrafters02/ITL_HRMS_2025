@@ -7,6 +7,7 @@ export interface LearningResource {
     image: string | null;
     video: string | null;
     document: string | null;
+    links?: { title: string; url: string }[] | null;
 }
 
 export interface PaginatedLearningResources {

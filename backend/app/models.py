@@ -583,6 +583,7 @@ class LearningCorner(models.Model):
     image = models.ImageField(upload_to='learning_corner/images', null=True, blank=True)
     document = models.FileField(upload_to='learning_corner/documents', null=True, blank=True)
     video = models.FileField(upload_to='learning_corner/videos', null=True, blank=True)
+    links = models.JSONField(default=list, blank=True, null=True)
 
     company = models.ForeignKey('Company', on_delete=models.CASCADE, null=True, blank=True)
 
