@@ -13,6 +13,7 @@ type BreakConfig = {
     break_choice: 'short_break' | 'meal_break' | 'dont_disturb' | string;
     break_choice_display?: string;
     duration_minutes: number | null;
+    max_short_break_daily_minutes?: number | null;
     enabled: boolean;
 };
 
@@ -175,16 +176,32 @@ const AdminBreakConfig = () => {
 
     const addShortBreak = async () => {
         try {
+            const existingDailyMax = shortBreaks[0]?.max_short_break_daily_minutes ?? 60;
             const resp = await fetch(API_URL, {
                 method: 'POST',
                 headers: headers(),
-                body: JSON.stringify({ break_choice: 'short_break', duration_minutes: 5, enabled: true }),
+                body: JSON.stringify({
+                    break_choice: 'short_break',
+                    duration_minutes: 5,
+                    max_short_break_daily_minutes: existingDailyMax,
+                    enabled: true,
+                }),
             });
             const data = await resp.json();
             if (!resp.ok) throw new Error(data?.detail || 'Failed to add');
             await fetchAll();
         } catch (e: any) {
             Swal.fire('Error', e?.message || 'Failed to add', 'error');
+        }
+    };
+
+    const updateShortBreakDailyLimit = async (value: number) => {
+        const normalized = Math.max(1, Math.min(720, value || 0));
+        const targets = shortBreaks;
+        if (!targets.length) return;
+        for (const sb of targets) {
+            // eslint-disable-next-line no-await-in-loop
+            await patch(sb.id, { max_short_break_daily_minutes: normalized });
         }
     };
 
@@ -242,7 +259,7 @@ const AdminBreakConfig = () => {
                         <div className="text-lg font-bold flex items-center gap-2">
                             <IconClock className="w-5 h-5 text-primary" /> Short Breaks
                         </div>
-                        <div className="text-sm text-white-dark">You can add multiple short breaks with different durations.</div>
+                        <div className="text-sm text-white-dark">You can add multiple short breaks with different durations and one daily total cap.</div>
                     </div>
                     <button type="button" className="btn btn-primary gap-2" onClick={addShortBreak}>
                         <IconPlus /> Add Short Break
@@ -254,6 +271,18 @@ const AdminBreakConfig = () => {
                     </div>
                 ) : (
                     <div className="space-y-3">
+                        <div className="p-4 rounded-lg border border-[#e0e6ed] dark:border-[#1b2e4b] bg-primary-light/20">
+                            <div className="text-xs text-white-dark mb-1">Max total short break per day (minutes)</div>
+                            <div className="flex items-center gap-2">
+                                <InlineDurationInput
+                                    value={shortBreaks[0]?.max_short_break_daily_minutes ?? 60}
+                                    min={1}
+                                    max={720}
+                                    onSave={updateShortBreakDailyLimit}
+                                />
+                                <span className="text-sm text-white-dark">min/day</span>
+                            </div>
+                        </div>
                         {shortBreaks.map((b) => (
                             <div
                                 key={b.id}

@@ -9,7 +9,7 @@ from datetime import datetime, timedelta
 import pytz
 import calendar
 from datetime import date
-from django.db.models import Q,Prefetch
+from django.db.models import Q, Prefetch, Max
 from rest_framework.views import APIView
 from calendar import month_name
 from django_filters.rest_framework import DjangoFilterBackend
@@ -25,6 +25,15 @@ import re
 from app.models import Attendance,Notification,LearningCorner, ShiftPolicy, Employee, BreakLog,Payroll,CalendarEvent,EmpLeave,CompanyPolicies,Level,Designation,DepartmentWiseWorkingDays
 from .models import *
 from .serializers import *
+
+def get_short_break_daily_quota_minutes(company):
+    """
+    Company-level daily short-break quota configured in Break Config.
+    """
+    configured_max = (
+        BreakConfig.objects.filter( company=company, enabled=True,break_choice='short_break',
+            max_short_break_daily_minutes__isnull=False,).aggregate(max_daily=Max('max_short_break_daily_minutes')).get('max_daily')or 0)
+    return int(configured_max)
 
 
 class EmployeeCompanyInfoAPIView(APIView):
@@ -263,6 +272,18 @@ class CheckOutAPIView(APIView):
         if attendance.check_out:
             return Response({"detail": "Already checked out today."}, status=400)
 
+        # Auto-end any active break before checkout so break duration is always captured.
+        active_break = BreakLog.objects.filter(
+            employee=employee,
+            start__date=today,
+            end__isnull=True,
+        ).last()
+        if active_break:
+            active_break.end = now_dt
+            if active_break.start:
+                active_break.duration_minutes = max(0, int((active_break.end - active_break.start).total_seconds() // 60))
+            active_break.save()
+
         attendance.check_out = now_dt
         attendance.calculate_work_duration()
         attendance.save()
@@ -447,9 +468,29 @@ class DashboardAPIView(APIView):
                 end__isnull=False
             ).order_by('-start')[:5]
 
-            # Total break minutes
+            # Total completed break minutes for today
             breaks = BreakLog.objects.filter(employee=employee, start__date=today, end__isnull=False)
             break_minutes = sum(int((b.end - b.start).total_seconds() // 60) for b in breaks)
+            short_break_minutes = sum(
+                int((b.end - b.start).total_seconds() // 60)
+                for b in breaks
+                if b.break_config and b.break_config.break_choice == 'short_break'
+            )
+            # Active break contribution (live)
+            active_break_live_minutes = 0
+            if active_break and active_break.start:
+                active_break_live_minutes = max(
+                    0,
+                    int((now - timezone.localtime(active_break.start, tz)).total_seconds() // 60),
+                )
+            total_break_minutes_live = break_minutes + active_break_live_minutes
+            active_short_break_live_minutes = (
+                active_break_live_minutes
+                if active_break and active_break.break_config and active_break.break_config.break_choice == 'short_break'
+                else 0
+            )
+            short_break_minutes_live = short_break_minutes + active_short_break_live_minutes
+            short_break_quota_minutes = get_short_break_daily_quota_minutes(employee.company)
 
             # Employee's assigned shift
             shift = getattr(employee, 'shift_assigned', None)
@@ -539,7 +580,7 @@ class DashboardAPIView(APIView):
                 end_time = punch_out or now
                 worked_minutes_today = int((end_time - punch_in).total_seconds() // 60)
                 # Subtract today's break time
-                effective_minutes_today = max(0, worked_minutes_today - break_minutes)
+                effective_minutes_today = max(0, worked_minutes_today - total_break_minutes_live)
                 worked_hours_today = effective_minutes_today // 60
                 worked_mins_today = effective_minutes_today % 60
                 today_work_duration = f"{worked_hours_today}h {worked_mins_today}m"
@@ -557,8 +598,18 @@ class DashboardAPIView(APIView):
                 'checkout_time': timezone.localtime(punch_out, tz).strftime('%H:%M:%S') if punch_out else None,
                 'is_late': is_late,
                 'total_worked': calculate_worked_time(punch_in, punch_out, now)[0],
-                'effective_time': calculate_effective_time(punch_in, break_minutes, punch_out, now)['formatted'],
+                'effective_time': calculate_effective_time(punch_in, total_break_minutes_live, punch_out, now)['formatted'],
                 'total_break_minutes': break_minutes,
+                'total_break_minutes_live': total_break_minutes_live,
+                'short_break_minutes': short_break_minutes,
+                'short_break_minutes_live': short_break_minutes_live,
+                'short_break_quota_minutes': short_break_quota_minutes,
+                # Backward-compatible keys used by current dashboard UI.
+                'break_quota_minutes': short_break_quota_minutes,
+                'break_quota_used_percent': min(
+                    100,
+                    int(round((short_break_minutes_live / short_break_quota_minutes) * 100))
+                ) if short_break_quota_minutes > 0 else 0,
                 'today_work_duration': today_work_duration,
                 'total_work_duration_week': total_work_duration_week,
                 'shift_name': shift.shift_type if shift else 'Not assigned',
@@ -719,11 +770,25 @@ class AttendanceHistoryAPIView(APIView):
             total_hours = None
             overtime_hours = None
             break_time = '-'
+            total_break = 0
 
             att = att_map.get(day)
 
             # Get shift from employee
             shift = getattr(employee, 'shift_assigned', None)
+
+            # Always compute completed break time when attendance exists, even on leave days.
+            if att and att.check_in:
+                day_breaks = BreakLog.objects.filter(
+                    employee=employee,
+                    start__date=day,
+                    end__isnull=False
+                )
+                total_break = sum(
+                    (b.end - b.start).total_seconds()
+                    for b in day_breaks if b.end and b.start
+                )
+                break_time = f'{int(total_break // 60)} min' if total_break else '-'
 
             if is_weekend:
                 status = 'weekend'
@@ -736,15 +801,6 @@ class AttendanceHistoryAPIView(APIView):
 
                 # Calculate work hours and breaks
                 if check_out:
-                    breaks = BreakLog.objects.filter(
-                        employee=employee,
-                        start__date=day,
-                        end__isnull=False
-                    )
-                    total_break = sum(
-                        (b.end - b.start).total_seconds()
-                        for b in breaks if b.end and b.start
-                    )
                     work_duration = (check_out - check_in).total_seconds() / 3600
                     work_duration -= total_break / 3600
                     total_hours = round(work_duration, 2)
@@ -790,8 +846,6 @@ class AttendanceHistoryAPIView(APIView):
 
                     if att.overtime_duration:
                         overtime_hours = round(att.overtime_duration.total_seconds() / 3600, 2)
-
-                    break_time = f'{int(total_break // 60)} min' if total_break else '-'
 
                 else:
                     # Check if the day has passed (not today)
@@ -1516,6 +1570,13 @@ class BreakLogAPIView(APIView):
     def post(self, request):
         employee = request.user.employee_profile
         action = request.data.get("action")  # "start" or "end"
+        today = timezone.localdate()
+
+        attendance = Attendance.objects.filter(employee=employee, date=today).first()
+        if not attendance or not attendance.check_in:
+            return Response({"detail": "You must check in before using breaks."}, status=400)
+        if attendance.check_out:
+            return Response({"detail": "Breaks are not allowed after checkout."}, status=400)
 
         if action == "start":
             break_config_id = request.data.get("break_config_id")
@@ -1537,8 +1598,59 @@ class BreakLogAPIView(APIView):
             if active_break:
                 return Response({"detail": "You already have an active break."}, status=400)
 
+            # Allow only one meal break per day per employee.
+            if break_config.break_choice == 'meal_break':
+                meal_break_exists_today = BreakLog.objects.filter(
+                    employee=employee,
+                    start__date=today,
+                    break_config__break_choice='meal_break',
+                ).exists()
+                if meal_break_exists_today:
+                    return Response(
+                        {"detail": "Meal break already used for today. Only one meal break is allowed per day."},
+                        status=400,
+                    )
+
+            # Enforce quota only for short breaks.
+            if break_config.break_choice == 'short_break':
+                short_break_quota_minutes = get_short_break_daily_quota_minutes(employee.company)
+                completed_short_break_minutes = sum(
+                    int((b.end - b.start).total_seconds() // 60)
+                    for b in BreakLog.objects.filter(
+                        employee=employee,
+                        start__date=today,
+                        end__isnull=False,
+                        break_config__break_choice='short_break',
+                    )
+                )
+                requested_short_break_minutes = int(break_config.duration_minutes or 0)
+                projected_short_break_minutes = completed_short_break_minutes + requested_short_break_minutes
+
+                if short_break_quota_minutes > 0 and completed_short_break_minutes >= short_break_quota_minutes:
+                    return Response(
+                        {
+                            "detail": (
+                                f"Daily short-break quota exceeded "
+                                f"({completed_short_break_minutes}/{short_break_quota_minutes} mins)."
+                            )
+                        },
+                        status=400,
+                    )
+                if short_break_quota_minutes > 0 and projected_short_break_minutes > short_break_quota_minutes:
+                    remaining = max(0, short_break_quota_minutes - completed_short_break_minutes)
+                    return Response(
+                        {
+                            "detail": (
+                                f"Cannot start this short break. Remaining short-break quota is {remaining} mins, "
+                                f"but selected break is {requested_short_break_minutes} mins."
+                            )
+                        },
+                        status=400,
+                    )
+
             break_log = BreakLog.objects.create(
                 employee=employee,
+                attendance=attendance,
                 break_config=break_config,  
                 start=timezone.now()
             )

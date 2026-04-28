@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState, useMemo, useRef } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { setPageTitle } from '../../store/themeConfigSlice';
 import { Link } from 'react-router-dom';
@@ -38,6 +38,12 @@ interface DashboardData {
     overtime: { hours: number; minutes: number; total: number } | null;
     latest_payroll: { amount: number; date: string } | null;
     total_break_minutes: number;
+    total_break_minutes_live?: number;
+    short_break_minutes?: number;
+    short_break_minutes_live?: number;
+    short_break_quota_minutes?: number;
+    break_quota_minutes?: number;
+    break_quota_used_percent?: number;
     server_time: string;
     birthday_message: string | null;
 }
@@ -102,6 +108,7 @@ const EmployeeDashboard = () => {
     const [liveTime, setLiveTime] = useState('0h 0m');
     const [liveRawSeconds, setLiveRawSeconds] = useState('--:--:--');
     const [nowMs, setNowMs] = useState(Date.now());
+    const breakEndingAlertedRef = useRef<string | null>(null);
 
     const groupedBreaks = useMemo(() => {
         const groups: { [key: string]: BreakConfig[] } = {};
@@ -298,6 +305,16 @@ const EmployeeDashboard = () => {
         return () => clearInterval(interval);
     }, [chartRange, navOffset, data?.checkin_time, data?.checkout_time]);
 
+    const showCompactError = (message: string) =>
+        Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: message,
+            width: '22rem',
+            padding: '1rem',
+            confirmButtonText: 'OK',
+        });
+
     const handleCheckIn = async () => {
         try {
             const res = await fetch(`${API_BASE_URL}/employee/checkin/`, {
@@ -309,10 +326,10 @@ const EmployeeDashboard = () => {
                 Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Successfully Checked In!', showConfirmButton: false, timer: 3000 });
                 fetchAllData(true);
             } else {
-                Swal.fire('Error', result.detail || 'Could not check in', 'error');
+                showCompactError(result.detail || 'Could not check in');
             }
         } catch (e: any) {
-            Swal.fire('Error', e.message || 'Could not check in', 'error');
+            showCompactError(e.message || 'Could not check in');
         }
     };
 
@@ -327,10 +344,10 @@ const EmployeeDashboard = () => {
                 Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Successfully Checked Out!', showConfirmButton: false, timer: 3000 });
                 fetchAllData(true);
             } else {
-                Swal.fire('Error', result.detail || 'Could not check out', 'error');
+                showCompactError(result.detail || 'Could not check out');
             }
         } catch (e: any) {
-            Swal.fire('Error', e.message || 'Could not check out', 'error');
+            showCompactError(e.message || 'Could not check out');
         }
     };
 
@@ -346,10 +363,10 @@ const EmployeeDashboard = () => {
                 Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Break Started', showConfirmButton: false, timer: 3000 });
                 fetchAllData(true);
             } else {
-                Swal.fire('Error', result.detail || 'Could not start break', 'error');
+                showCompactError(result.detail || 'Could not start break');
             }
         } catch (e: any) {
-            Swal.fire('Error', e.message || 'Could not start break', 'error');
+            showCompactError(e.message || 'Could not start break');
         }
     };
 
@@ -365,12 +382,49 @@ const EmployeeDashboard = () => {
                 Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Break Ended', showConfirmButton: false, timer: 3000 });
                 fetchAllData(true);
             } else {
-                Swal.fire('Error', result.detail || 'Could not end break', 'error');
+                showCompactError(result.detail || 'Could not end break');
             }
         } catch (e: any) {
-            Swal.fire('Error', e.message || 'Could not end break', 'error');
+            showCompactError(e.message || 'Could not end break');
         }
     };
+
+    const activeBreakForAlert = data?.active_break;
+    const activeBreakDurationMinutesForAlert =
+        activeBreakForAlert?.duration_minutes ?? breakConfigs.find((bc) => bc.id === activeBreakForAlert?.break_config_id)?.duration_minutes ?? null;
+    const breakRemainingSecondsForAlert = (() => {
+        if (!activeBreakForAlert?.start_time || !activeBreakDurationMinutesForAlert) return null;
+        const [h, m, s] = activeBreakForAlert.start_time.split(':').map(Number);
+        if ([h, m, s].some((v) => Number.isNaN(v))) return null;
+
+        const start = new Date();
+        start.setHours(h, m, s, 0);
+        let elapsedSeconds = Math.floor((nowMs - start.getTime()) / 1000);
+        if (elapsedSeconds < 0) elapsedSeconds += 24 * 60 * 60;
+
+        return Math.max(0, activeBreakDurationMinutesForAlert * 60 - elapsedSeconds);
+    })();
+
+    useEffect(() => {
+        if (!activeBreakForAlert?.start_time) {
+            breakEndingAlertedRef.current = null;
+            return;
+        }
+        if (breakRemainingSecondsForAlert === null || breakRemainingSecondsForAlert <= 0 || breakRemainingSecondsForAlert > 120) return;
+
+        const alertKey = `${activeBreakForAlert.start_time}-${activeBreakForAlert.break_config_id ?? 'na'}`;
+        if (breakEndingAlertedRef.current === alertKey) return;
+        breakEndingAlertedRef.current = alertKey;
+
+        Swal.fire({
+            toast: true,
+            position: 'top-end',
+            icon: 'warning',
+            title: `Break ending soon (${formatCountdown(breakRemainingSecondsForAlert)} left)`,
+            showConfirmButton: false,
+            timer: 4000,
+        });
+    }, [activeBreakForAlert?.start_time, activeBreakForAlert?.break_config_id, breakRemainingSecondsForAlert]);
 
     if (loading) {
         return (
@@ -399,7 +453,7 @@ const EmployeeDashboard = () => {
     const weeklyProgress = Math.min(100, Math.round((Number(data.weekly_hours || 0) / weeklyTargetHours) * 100));
     const overtimeTotalMinutes = data.overtime ? data.overtime.hours * 60 + data.overtime.minutes : 0;
     const productiveMinutes = Math.max(0, parseDurationToMinutes(liveTime));
-    const breakMinutes = Math.max(0, data.total_break_minutes || 0);
+    const breakMinutes = Math.max(0, data.total_break_minutes_live ?? data.total_break_minutes ?? 0);
     const focusScore = productiveMinutes + breakMinutes > 0 ? Math.round((productiveMinutes / (productiveMinutes + breakMinutes)) * 100) : 100;
     const isCheckedIn = Boolean(checkin_time && !checkout_time);
     const attendanceStatusLabel = isCheckedIn ? (active_break ? 'On Break' : 'Checked In') : checkout_time ? 'Checked Out' : 'Not Checked In';
@@ -430,7 +484,7 @@ const EmployeeDashboard = () => {
 
     return (
         <div className="space-y-6 animate__animated animate__fadeIn">
-            <div className="panel relative overflow-hidden border-0 bg-gradient-to-r from-[#220fb6] via-[#4f6be5] to-[#0f52af] text-white p-4 md:p-5">
+            <div className="panel relative overflow-hidden border-0 bg-gradient-to-r from-[#220fb6] via-[#4f6be5] to-[#0f52af] text-white p-1 md:p-2">
                 <div className="absolute inset-0 bg-[radial-gradient(circle_at_18%_22%,rgba(255,255,255,0.18),transparent_34%),radial-gradient(circle_at_84%_20%,rgba(128,224,255,0.22),transparent_36%)] pointer-events-none"></div>
                 <div className="absolute -top-12 -right-12 w-56 h-56 rounded-full bg-cyan-200/25 blur-3xl"></div>
                 <div className="absolute -bottom-14 -left-12 w-52 h-52 rounded-full bg-indigo-200/25 blur-3xl"></div>
@@ -446,7 +500,7 @@ const EmployeeDashboard = () => {
                 <div className="absolute z-[1] left-[52%] bottom-9 h-3.5 w-3.5 rounded-full border border-cyan-100/60 bg-cyan-100/28 backdrop-blur-md shadow-[0_0_12px_rgba(175,230,255,0.34)] animate-particle-drift [animation-delay:920ms]"></div>
                 <div className="absolute z-[1] left-[60%] top-[48%] h-3 w-3 rounded-full border border-blue-100/60 bg-blue-100/28 backdrop-blur-md shadow-[0_0_12px_rgba(180,215,255,0.32)] animate-particle-float [animation-delay:1.25s]"></div>
 
-                <div className="relative z-10 space-y-4">
+                <div className="relative z-10 space-y-3">
                     <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-3">
                         <div>
                             <p className="text-sm font-medium tracking-wide text-white/85">Welcome back, {formattedName}</p>

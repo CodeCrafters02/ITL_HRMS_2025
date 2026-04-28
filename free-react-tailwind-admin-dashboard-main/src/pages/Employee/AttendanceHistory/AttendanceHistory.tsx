@@ -28,16 +28,18 @@ const weekDayHeaders = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
 const AttendanceHistory = () => {
     const dispatch = useDispatch();
-    const now = new Date();
+    const today = useMemo(() => new Date(), []);
     
     // Selection State
-    const [selectedMonth, setSelectedMonth] = useState(now.getMonth() + 1);
-    const [selectedYear, setSelectedYear] = useState(now.getFullYear());
+    const [selectedMonth, setSelectedMonth] = useState(today.getMonth() + 1);
+    const [selectedYear, setSelectedYear] = useState(today.getFullYear());
     
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [attendanceData, setAttendanceData] = useState<AttendanceHistoryResponse | null>(null);
     const [holidayMap, setHolidayMap] = useState<Record<string, string>>({});
+    const [selectedDateKey, setSelectedDateKey] = useState<string | null>(null);
+    const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
 
     const loadAttendance = useCallback(async () => {
         setLoading(true);
@@ -118,6 +120,46 @@ const AttendanceHistory = () => {
         }
         return weeks;
     }, [selectedYear, selectedMonth]);
+
+    const selectedDayRow = selectedDateKey ? recordsByDate.get(selectedDateKey) : undefined;
+    const selectedHolidayName = selectedDateKey ? holidayMap[selectedDateKey] : undefined;
+    const selectedStatus: AttendanceStatus = selectedDayRow?.status || 'no_data';
+
+    const selectedDateLabel = useMemo(() => {
+        if (!selectedDateKey) return '-';
+        const parsed = new Date(`${selectedDateKey}T00:00:00`);
+        if (Number.isNaN(parsed.getTime())) return selectedDateKey;
+        return parsed.toLocaleDateString('en-IN', {
+            weekday: 'long',
+            day: '2-digit',
+            month: 'long',
+            year: 'numeric',
+        });
+    }, [selectedDateKey]);
+
+    useEffect(() => {
+        if (!calendarWeeks.length) {
+            setSelectedDateKey(null);
+            return;
+        }
+
+        const firstAvailable = calendarWeeks.flat().find((cell) => cell !== null)?.dateKey ?? null;
+        if (!firstAvailable) {
+            setSelectedDateKey(null);
+            return;
+        }
+
+        const todayKey = `${selectedYear}-${String(selectedMonth).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+        const shouldSelectToday =
+            selectedYear === today.getFullYear() &&
+            selectedMonth === today.getMonth() + 1 &&
+            recordsByDate.has(todayKey);
+
+        const nextSelection = shouldSelectToday ? todayKey : firstAvailable;
+        if (!selectedDateKey || !recordsByDate.has(selectedDateKey)) {
+            setSelectedDateKey(nextSelection);
+        }
+    }, [calendarWeeks, recordsByDate, selectedDateKey, selectedMonth, selectedYear, today]);
 
     return (
         <div className="space-y-6 animate__animated animate__fadeIn">
@@ -205,10 +247,20 @@ const AttendanceHistory = () => {
                                 const row = recordsByDate.get(cell.dateKey);
                                 const holidayName = holidayMap[cell.dateKey];
                                 const status = row?.status || 'no_data';
+                                const isSelected = selectedDateKey === cell.dateKey;
                                 return (
-                                    <div
+                                    <button
+                                        type="button"
                                         key={cell.dateKey}
-                                        className="min-h-[128px] rounded-lg border border-[#ebedf2] dark:border-[#1b2e4b] bg-white dark:bg-[#0e1726] p-2.5 flex flex-col gap-1"
+                                        onClick={() => {
+                                            setSelectedDateKey(cell.dateKey);
+                                            setIsDetailsModalOpen(true);
+                                        }}
+                                        className={`min-h-[128px] rounded-lg border bg-white dark:bg-[#0e1726] p-2.5 flex flex-col gap-1 text-left transition ${
+                                            isSelected
+                                                ? 'border-primary ring-1 ring-primary/40 shadow-md shadow-primary/10'
+                                                : 'border-[#ebedf2] dark:border-[#1b2e4b] hover:border-primary/50'
+                                        }`}
                                     >
                                         <div className="flex items-center justify-between">
                                             <span className="text-sm font-bold">{cell.day}</span>
@@ -231,14 +283,10 @@ const AttendanceHistory = () => {
                                                     <span className="font-semibold">Out:</span>{' '}
                                                     <span className="font-bold">{row?.check_out || '-'}</span>
                                                 </p>
-                                                <p><span className="font-semibold">Hours:</span> {row?.total_hours ?? '-'}</p>
-                                                <p className="truncate" title={row?.shift || '-'}>
-                                                    <span className="font-semibold">Shift:</span> {row?.shift || '-'}
-                                                </p>
                                             </div>
                                         )}
                                         {row?.is_late && row.late_duration && <p className="text-[11px] font-semibold text-danger mt-auto">Late: {row.late_duration}</p>}
-                                    </div>
+                                    </button>
                                 );
                             })}
                         </div>
@@ -250,6 +298,54 @@ const AttendanceHistory = () => {
                     </div>
                 )}
             </div>
+
+            {isDetailsModalOpen && selectedDateKey && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+                    <button
+                        type="button"
+                        className="absolute inset-0 bg-black/50"
+                        onClick={() => setIsDetailsModalOpen(false)}
+                        aria-label="Close attendance details popup"
+                    />
+                    <div className="relative w-full max-w-3xl rounded-lg bg-white dark:bg-[#0e1726] border border-[#ebedf2] dark:border-[#1b2e4b] shadow-2xl">
+                        <div className="flex items-start justify-between gap-4 p-5 border-b border-[#ebedf2] dark:border-[#1b2e4b]">
+                            <div>
+                                <h3 className="text-lg font-semibold">Attendance Details</h3>
+                                <p className="text-sm text-white-dark mt-1">{selectedDateLabel}</p>
+                            </div>
+                            <button type="button" className="btn btn-outline-danger btn-sm" onClick={() => setIsDetailsModalOpen(false)}>
+                                Close
+                            </button>
+                        </div>
+
+                        <div className="p-5">
+                            <div className="flex flex-wrap items-center gap-2">
+                                {selectedStatus !== 'no_data' && (
+                                    <span className={`badge ${statusClassMap[selectedStatus]}`}>{statusLabelMap[selectedStatus]}</span>
+                                )}
+                                {selectedHolidayName && <span className="badge bg-info-light text-info">Holiday</span>}
+                            </div>
+
+                            {selectedHolidayName ? (
+                                <div className="mt-4 rounded-md bg-info-light/40 p-3">
+                                    <p className="text-sm font-semibold text-info">{selectedHolidayName}</p>
+                                </div>
+                            ) : (
+                                <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3 text-sm">
+                                    <div><span className="text-white-dark">Day:</span> <span className="font-semibold">{selectedDayRow?.day_name || '-'}</span></div>
+                                    <div><span className="text-white-dark">In:</span> <span className="font-semibold">{selectedDayRow?.check_in || '-'}</span></div>
+                                    <div><span className="text-white-dark">Out:</span> <span className="font-semibold">{selectedDayRow?.check_out || '-'}</span></div>
+                                    <div><span className="text-white-dark">Working Hours:</span> <span className="font-semibold">{selectedDayRow?.total_hours ?? '-'}</span></div>
+                                    <div><span className="text-white-dark">Total Break:</span> <span className="font-semibold">{selectedDayRow?.break_time || '-'}</span></div>
+                                    <div><span className="text-white-dark">Shift:</span> <span className="font-semibold">{selectedDayRow?.shift || '-'}</span></div>
+                                    <div><span className="text-white-dark">Overtime:</span> <span className="font-semibold">{selectedDayRow?.overtime_hours ?? '-'}</span></div>
+                                    <div><span className="text-white-dark">Late:</span> <span className="font-semibold">{selectedDayRow?.late_duration || (selectedDayRow?.is_late ? 'Yes' : 'No')}</span></div>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

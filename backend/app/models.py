@@ -894,9 +894,19 @@ class BreakConfig(models.Model):
     company = models.ForeignKey(Company, on_delete=models.CASCADE, related_name='break_configs')
     break_choice = models.CharField(max_length=20, choices=BREAK_CHOICES,null=True, blank=True)
     duration_minutes = models.PositiveIntegerField(null=True, blank=True)  # Null for Don't Disturb
+    max_short_break_daily_minutes = models.PositiveIntegerField(
+        null=True,
+        blank=True,
+        help_text='Daily cap for short breaks (minutes). Applies when break_choice is short_break.',
+    )
     enabled = models.BooleanField(default=True) 
 
     def __str__(self):
+        if self.break_choice == 'short_break' and self.max_short_break_daily_minutes:
+            return (
+                f"{self.company} - {self.get_break_choice_display()} "
+                f"({self.duration_minutes or 0} min, daily max {self.max_short_break_daily_minutes} min)"
+            )
         if self.duration_minutes:
             return f"{self.company} - {self.get_break_choice_display()} ({self.duration_minutes} min)"
         return f"{self.company} - {self.get_break_choice_display()} (No fixed duration)"
