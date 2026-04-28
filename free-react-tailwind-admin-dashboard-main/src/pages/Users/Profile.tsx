@@ -107,26 +107,45 @@ const Profile = () => {
                         </div>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div className="space-y-4">
-                                {userData?.employee_id && (
-                                    <div className="flex justify-between items-center border-b border-[#ebedf2] dark:border-[#1b2e4b] pb-2">
-                                        <span className="text-white-dark">Employee ID</span>
-                                        <span className="font-bold text-primary">{userData.employee_id}</span>
-                                    </div>
+                                <div className="flex justify-between items-center border-b border-[#ebedf2] dark:border-[#1b2e4b] pb-2">
+                                    <span className="text-white-dark">System Role</span>
+                                    <span className="font-bold text-primary">{userData?.role === 'master' ? 'Super Administrator' : userData?.role.toUpperCase()}</span>
+                                </div>
+                                {userData?.role === 'master' ? (
+                                    <>
+                                        <div className="flex justify-between items-center border-b border-[#ebedf2] dark:border-[#1b2e4b] pb-2">
+                                            <span className="text-white-dark">Platform Access</span>
+                                            <span className="font-bold text-info">Full Access (All Companies)</span>
+                                        </div>
+                                        <div className="flex justify-between items-center border-b border-[#ebedf2] dark:border-[#1b2e4b] pb-2">
+                                            <span className="text-white-dark">Account Status</span>
+                                            <span className="font-bold text-success">Active (Owner)</span>
+                                        </div>
+                                    </>
+                                ) : (
+                                    <>
+                                        {userData?.employee_id && (
+                                            <div className="flex justify-between items-center border-b border-[#ebedf2] dark:border-[#1b2e4b] pb-2">
+                                                <span className="text-white-dark">Employee ID</span>
+                                                <span className="font-bold text-primary">{userData.employee_id}</span>
+                                            </div>
+                                        )}
+                                        {userData?.department_name && (
+                                            <div className="flex justify-between items-center border-b border-[#ebedf2] dark:border-[#1b2e4b] pb-2">
+                                                <span className="text-white-dark">Department</span>
+                                                <span className="font-bold">{userData.department_name}</span>
+                                            </div>
+                                        )}
+                                    </>
                                 )}
-                                {userData?.department_name && (
-                                    <div className="flex justify-between items-center border-b border-[#ebedf2] dark:border-[#1b2e4b] pb-2">
-                                        <span className="text-white-dark">Department</span>
-                                        <span className="font-bold">{userData.department_name}</span>
-                                    </div>
-                                )}
-                                {userData?.reporting_manager_name && (
+                            </div>
+                            <div className="space-y-4">
+                                {userData?.role !== 'master' && userData?.reporting_manager_name && (
                                     <div className="flex justify-between items-center border-b border-[#ebedf2] dark:border-[#1b2e4b] pb-2">
                                         <span className="text-white-dark">Reporting Manager</span>
                                         <span className="font-bold text-info">{userData.reporting_manager_name}</span>
                                     </div>
                                 )}
-                            </div>
-                            <div className="space-y-4">
                                 {userData?.date_of_joining && (
                                     <div className="flex justify-between items-center border-b border-[#ebedf2] dark:border-[#1b2e4b] pb-2">
                                         <span className="text-white-dark">Date of Joining</span>

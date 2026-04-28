@@ -3720,8 +3720,19 @@ class UserUpdateView(generics.UpdateAPIView):
 
             user.save()
 
-            # Update Employee Profile if exists
+            # Update Employee Profile (Ensure it exists for Master/Admin too if they want a photo)
             employee = user.employee_profile
+            if not employee:
+                # Create profile if missing (needed for photo/mobile/address storage)
+                company = user.company or Company.objects.first()
+                if company:
+                    employee = Employee.objects.create(
+                        user=user, 
+                        company=company,
+                        first_name=user.first_name,
+                        last_name=user.last_name
+                    )
+
             if employee:
                 if 'first_name' in data:
                     employee.first_name = data['first_name']

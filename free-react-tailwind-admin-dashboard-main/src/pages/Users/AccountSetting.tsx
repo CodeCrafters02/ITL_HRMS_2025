@@ -147,6 +147,7 @@ const AccountSetting = () => {
                 });
                 setUserData((prev) => ({ ...prev, new_password: '' }));
                 setFiles({ photo: null, aadhar_card: null, pan_card: null });
+                fetchUserProfile(); // Refresh data to update photo URL etc.
             } else {
                 const errorMsg = result.detail || 'Failed to update profile';
                 Swal.fire({
@@ -284,66 +285,70 @@ const AccountSetting = () => {
                         </div>
                     </div>
 
-                    <div className="border border-[#ebedf2] dark:border-[#191e3a] rounded-md p-4 mb-5 bg-white dark:bg-black">
-                        <h6 className="text-lg font-bold mb-5">Personal & Family Details</h6>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-                            <div>
-                                <label htmlFor="dob">Date of Birth</label>
-                                <input id="dob" type="date" value={userData.date_of_birth} onChange={(e) => setUserData({ ...userData, date_of_birth: e.target.value })} className="form-input" />
-                            </div>
-                            <div>
-                                <label htmlFor="gender">Gender</label>
-                                <select id="gender" value={userData.gender} onChange={(e) => setUserData({ ...userData, gender: e.target.value })} className="form-select">
-                                    <option value="">Select Gender</option>
-                                    <option value="male">Male</option>
-                                    <option value="female">Female</option>
-                                    <option value="other">Other</option>
-                                </select>
-                            </div>
-                            <div>
-                                <label htmlFor="aadhar_no">Aadhar Number</label>
-                                <input id="aadhar_no" type="text" value={userData.aadhar_no} onChange={(e) => setUserData({ ...userData, aadhar_no: e.target.value })} className="form-input" />
-                            </div>
-                            <div>
-                                <label htmlFor="pan_no">PAN Number</label>
-                                <input id="pan_no" type="text" value={userData.pan_no} onChange={(e) => setUserData({ ...userData, pan_no: e.target.value })} className="form-input" />
-                            </div>
-                            <div>
-                                <label htmlFor="guardian">Guardian Name</label>
-                                <input id="guardian" type="text" value={userData.guardian_name} onChange={(e) => setUserData({ ...userData, guardian_name: e.target.value })} className="form-input" />
-                            </div>
-                            <div>
-                                <label htmlFor="g_mobile">Guardian Mobile</label>
-                                <input id="g_mobile" type="text" value={userData.guardian_mobile} onChange={(e) => setUserData({ ...userData, guardian_mobile: e.target.value })} className="form-input" />
+                    {userData.role === 'employee' && (
+                        <div className="border border-[#ebedf2] dark:border-[#191e3a] rounded-md p-4 mb-5 bg-white dark:bg-black">
+                            <h6 className="text-lg font-bold mb-5">Personal & Family Details</h6>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                                <div>
+                                    <label htmlFor="dob">Date of Birth</label>
+                                    <input id="dob" type="date" value={userData.date_of_birth} onChange={(e) => setUserData({ ...userData, date_of_birth: e.target.value })} className="form-input" />
+                                </div>
+                                <div>
+                                    <label htmlFor="gender">Gender</label>
+                                    <select id="gender" value={userData.gender} onChange={(e) => setUserData({ ...userData, gender: e.target.value })} className="form-select">
+                                        <option value="">Select Gender</option>
+                                        <option value="male">Male</option>
+                                        <option value="female">Female</option>
+                                        <option value="other">Other</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label htmlFor="aadhar_no">Aadhar Number</label>
+                                    <input id="aadhar_no" type="text" value={userData.aadhar_no} onChange={(e) => setUserData({ ...userData, aadhar_no: e.target.value })} className="form-input" />
+                                </div>
+                                <div>
+                                    <label htmlFor="pan_no">PAN Number</label>
+                                    <input id="pan_no" type="text" value={userData.pan_no} onChange={(e) => setUserData({ ...userData, pan_no: e.target.value })} className="form-input" />
+                                </div>
+                                <div>
+                                    <label htmlFor="guardian">Guardian Name</label>
+                                    <input id="guardian" type="text" value={userData.guardian_name} onChange={(e) => setUserData({ ...userData, guardian_name: e.target.value })} className="form-input" />
+                                </div>
+                                <div>
+                                    <label htmlFor="g_mobile">Guardian Mobile</label>
+                                    <input id="g_mobile" type="text" value={userData.guardian_mobile} onChange={(e) => setUserData({ ...userData, guardian_mobile: e.target.value })} className="form-input" />
+                                </div>
                             </div>
                         </div>
-                    </div>
+                    )}
 
-                    <div className="border border-[#ebedf2] dark:border-[#191e3a] rounded-md p-4 mb-5 bg-white dark:bg-black">
-                        <h6 className="text-lg font-bold mb-5">Bank & Payment Details</h6>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-                            <div>
-                                <label htmlFor="bank_name">Bank Name</label>
-                                <input id="bank_name" type="text" value={userData.bank_name} onChange={(e) => setUserData({ ...userData, bank_name: e.target.value })} className="form-input" />
-                            </div>
-                            <div>
-                                <label htmlFor="acc_no">Account Number</label>
-                                <input id="acc_no" type="text" value={userData.account_no} onChange={(e) => setUserData({ ...userData, account_no: e.target.value })} className="form-input" />
-                            </div>
-                            <div>
-                                <label htmlFor="ifsc">IFSC Code</label>
-                                <input id="ifsc" type="text" value={userData.ifsc_code} onChange={(e) => setUserData({ ...userData, ifsc_code: e.target.value })} className="form-input" />
-                            </div>
-                            <div>
-                                <label htmlFor="pay_method">Payment Method</label>
-                                <select id="pay_method" value={userData.payment_method} onChange={(e) => setUserData({ ...userData, payment_method: e.target.value })} className="form-select">
-                                    <option value="">Select Method</option>
-                                    <option value="bank">Bank Transfer</option>
-                                    <option value="cash">Cash</option>
-                                </select>
+                    {userData.role === 'employee' && (
+                        <div className="border border-[#ebedf2] dark:border-[#191e3a] rounded-md p-4 mb-5 bg-white dark:bg-black">
+                            <h6 className="text-lg font-bold mb-5">Bank & Payment Details</h6>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                                <div>
+                                    <label htmlFor="bank_name">Bank Name</label>
+                                    <input id="bank_name" type="text" value={userData.bank_name} onChange={(e) => setUserData({ ...userData, bank_name: e.target.value })} className="form-input" />
+                                </div>
+                                <div>
+                                    <label htmlFor="acc_no">Account Number</label>
+                                    <input id="acc_no" type="text" value={userData.account_no} onChange={(e) => setUserData({ ...userData, account_no: e.target.value })} className="form-input" />
+                                </div>
+                                <div>
+                                    <label htmlFor="ifsc">IFSC Code</label>
+                                    <input id="ifsc" type="text" value={userData.ifsc_code} onChange={(e) => setUserData({ ...userData, ifsc_code: e.target.value })} className="form-input" />
+                                </div>
+                                <div>
+                                    <label htmlFor="pay_method">Payment Method</label>
+                                    <select id="pay_method" value={userData.payment_method} onChange={(e) => setUserData({ ...userData, payment_method: e.target.value })} className="form-select">
+                                        <option value="">Select Method</option>
+                                        <option value="bank">Bank Transfer</option>
+                                        <option value="cash">Cash</option>
+                                    </select>
+                                </div>
                             </div>
                         </div>
-                    </div>
+                    )}
 
                     <div className="border border-[#ebedf2] dark:border-[#191e3a] rounded-md p-4 mb-5 bg-white dark:bg-black">
                         <h6 className="text-lg font-bold mb-5">Profile & Documents</h6>
@@ -353,43 +358,71 @@ const AccountSetting = () => {
                                 <input id="photo" type="file" accept="image/*" onChange={(e) => handleFileChange(e, 'photo')} className="form-input p-1" />
                                 {userData.photo && <p className="text-xs mt-1 text-primary"><a href={userData.photo} target="_blank" rel="noreferrer">View Current Photo</a></p>}
                             </div>
-                            <div>
-                                <label htmlFor="aadhar">Aadhar Card</label>
-                                <input id="aadhar" type="file" onChange={(e) => handleFileChange(e, 'aadhar_card')} className="form-input p-1" />
-                                {userData.aadhar_card && <p className="text-xs mt-1 text-primary"><a href={userData.aadhar_card} target="_blank" rel="noreferrer">View Current Aadhar</a></p>}
-                            </div>
-                            <div>
-                                <label htmlFor="pan">PAN Card</label>
-                                <input id="pan" type="file" onChange={(e) => handleFileChange(e, 'pan_card')} className="form-input p-1" />
-                                {userData.pan_card && <p className="text-xs mt-1 text-primary"><a href={userData.pan_card} target="_blank" rel="noreferrer">View Current PAN</a></p>}
-                            </div>
+                            {userData.role === 'employee' && (
+                                <>
+                                    <div>
+                                        <label htmlFor="aadhar">Aadhar Card</label>
+                                        <input id="aadhar" type="file" onChange={(e) => handleFileChange(e, 'aadhar_card')} className="form-input p-1" />
+                                        {userData.aadhar_card && <p className="text-xs mt-1 text-primary"><a href={userData.aadhar_card} target="_blank" rel="noreferrer">View Current Aadhar</a></p>}
+                                    </div>
+                                    <div>
+                                        <label htmlFor="pan">PAN Card</label>
+                                        <input id="pan" type="file" onChange={(e) => handleFileChange(e, 'pan_card')} className="form-input p-1" />
+                                        {userData.pan_card && <p className="text-xs mt-1 text-primary"><a href={userData.pan_card} target="_blank" rel="noreferrer">View Current PAN</a></p>}
+                                    </div>
+                                </>
+                            )}
                         </div>
                     </div>
 
-                    {userData.role === 'employee' && (
-                        <div className="border border-[#ebedf2] dark:border-[#191e3a] rounded-md p-4 mb-5 bg-gray-50 dark:bg-gray-900/20">
-                            <h6 className="text-lg font-bold mb-5 text-warning">Employment Information (Read-Only)</h6>
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-                                <div>
-                                    <label>Employee ID</label>
-                                    <input type="text" value={userData.employee_id} className="form-input cursor-not-allowed bg-gray-100 dark:bg-gray-800" readOnly />
-                                </div>
-                                <div>
-                                    <label>Designation</label>
-                                    <input type="text" value={userData.designation} className="form-input cursor-not-allowed bg-gray-100 dark:bg-gray-800" readOnly />
-                                </div>
-                                <div>
-                                    <label>Department</label>
-                                    <input type="text" value={userData.department_name} className="form-input cursor-not-allowed bg-gray-100 dark:bg-gray-800" readOnly />
-                                </div>
-                                <div>
-                                    <label>Reporting Manager</label>
-                                    <input type="text" value={userData.reporting_manager_name} className="form-input cursor-not-allowed bg-gray-100 dark:bg-gray-800" readOnly />
-                                </div>
+                    {/* Employment & Organizational Information */}
+                    <div className="border border-[#ebedf2] dark:border-[#191e3a] rounded-md p-4 mb-5 bg-gray-50 dark:bg-gray-900/20">
+                        <h6 className="text-lg font-bold mb-5 text-warning">
+                            {userData.role === 'master' ? 'Platform Administration Details' : 
+                             userData.role === 'admin' ? 'Administrative Information' : 
+                             'Employment Information (Read-Only)'}
+                        </h6>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                            <div>
+                                <label>System Role</label>
+                                <input type="text" value={userData.role === 'master' ? 'Super Administrator' : userData.role.charAt(0).toUpperCase() + userData.role.slice(1)} className="form-input cursor-not-allowed bg-gray-100 dark:bg-gray-800" readOnly />
                             </div>
-                            <p className="text-xs text-white-dark mt-4">* Please contact HR or your Manager to update these fields.</p>
+                            {userData.role !== 'master' ? (
+                                <>
+                                    <div>
+                                        <label>Employee ID</label>
+                                        <input type="text" value={userData.employee_id} className="form-input cursor-not-allowed bg-gray-100 dark:bg-gray-800" readOnly />
+                                    </div>
+                                    <div>
+                                        <label>Designation</label>
+                                        <input type="text" value={userData.designation} className="form-input cursor-not-allowed bg-gray-100 dark:bg-gray-800" readOnly />
+                                    </div>
+                                    <div>
+                                        <label>Department</label>
+                                        <input type="text" value={userData.department_name} className="form-input cursor-not-allowed bg-gray-100 dark:bg-gray-800" readOnly />
+                                    </div>
+                                    <div>
+                                        <label>Reporting Manager</label>
+                                        <input type="text" value={userData.reporting_manager_name} className="form-input cursor-not-allowed bg-gray-100 dark:bg-gray-800" readOnly />
+                                    </div>
+                                </>
+                            ) : (
+                                <>
+                                    <div>
+                                        <label>Platform Access</label>
+                                        <input type="text" value="Full Access (All Companies)" className="form-input cursor-not-allowed bg-gray-100 dark:bg-gray-800" readOnly />
+                                    </div>
+                                    <div>
+                                        <label>Account Status</label>
+                                        <input type="text" value="Active (Master Owner)" className="form-input cursor-not-allowed bg-gray-100 dark:bg-gray-800" readOnly />
+                                    </div>
+                                </>
+                            )}
                         </div>
-                    )}
+                        {userData.role === 'employee' && (
+                            <p className="text-xs text-white-dark mt-4">* Please contact HR or your Manager to update these fields.</p>
+                        )}
+                    </div>
 
                     <div className="flex justify-end mt-5">
                         <button type="button" className="btn btn-primary" onClick={handleSave} disabled={loading}>
