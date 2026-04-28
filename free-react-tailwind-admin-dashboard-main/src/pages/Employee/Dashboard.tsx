@@ -130,14 +130,17 @@ const EmployeeDashboard = () => {
     const formattedName = display.charAt(0).toUpperCase() + display.slice(1);
 
     const activeHour = new Date().getHours();
-    let greeting = 'Good Evening';
+    let greeting = 'Good Night';
     let GreetingEmoji = '🌙';
-    if (activeHour < 12) {
+    if (activeHour >= 5 && activeHour < 12) {
         greeting = 'Good Morning';
         GreetingEmoji = '☀️';
-    } else if (activeHour < 18) {
+    } else if (activeHour >= 12 && activeHour < 17) {
         greeting = 'Good Afternoon';
         GreetingEmoji = '🌤️';
+    } else if (activeHour >= 17 && activeHour < 21) {
+        greeting = 'Good Evening';
+        GreetingEmoji = '🌆';
     }
 
     const todayFormatted = new Date().toLocaleDateString('en-US', {
