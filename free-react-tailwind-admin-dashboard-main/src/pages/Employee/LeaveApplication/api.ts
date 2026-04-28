@@ -83,7 +83,7 @@ export const fetchMyLeaveRequests = async (params?: { page?: number; page_size?:
     }
     const res = await authFetch(url.toString(), { headers: authHeaders(false) });
     const data = await parseJson<any>(res);
-    
+
     // Handle both paginated and non-paginated (backward compatibility) responses
     if (data.results && Array.isArray(data.results)) {
         return {
@@ -92,7 +92,7 @@ export const fetchMyLeaveRequests = async (params?: { page?: number; page_size?:
             total_pages: data.total_pages || 1
         };
     }
-    
+
     const arr = Array.isArray(data) ? data : [];
     return {
         results: arr,

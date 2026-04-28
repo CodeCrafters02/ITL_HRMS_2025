@@ -146,6 +146,8 @@ const AdminSalaryDisbursement = lazy(() => import('../pages/Admin/SalaryDisburse
 const AdminLoanConfig = lazy(() => import('../pages/Admin/LoanConfig'));
 const AdminLoanApprovals = lazy(() => import('../pages/Admin/LoanApprovals'));
 const WFHManagement = lazy(() => import('../pages/Admin/WFHManagement'));
+const AdminReportees = lazy(() => import('../pages/Admin/Reportees'));
+const AdminAssignTask = lazy(() => import('../pages/Admin/AssignTask'));
 
 // Employee Pages
 const EmployeeDashboard = lazy(() => import('../pages/Employee/Dashboard'));
@@ -792,6 +794,14 @@ const routes = [
     {
         path: '/admin/conference-room/overview',
         element: <AdminConfRoomOverview />,
+    },
+    {
+        path: '/admin/reportees',
+        element: <AdminReportees />,
+    },
+    {
+        path: '/admin/assign-task',
+        element: <AdminAssignTask />,
     },
     {
         path: '/employee/dashboard',

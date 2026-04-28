@@ -261,7 +261,7 @@ class Employee(models.Model):
 
     @property
     def is_reporting_manager(self):
-        return self.employees_reporting_to_me.exists()
+        return self.reportees.exists()
 
     @property
     def full_name(self):

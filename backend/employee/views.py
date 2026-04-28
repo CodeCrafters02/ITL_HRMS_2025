@@ -1322,24 +1322,31 @@ class EmpLeaveListCreateAPIView(generics.ListCreateAPIView):
     filterset_fields = ['status']
 
     def get_queryset(self):
-        emp = self.request.user.employee_profile
+        user = self.request.user
+        if not hasattr(user, 'employee_profile') or user.employee_profile is None:
+            return EmpLeave.objects.none()
+        emp = user.employee_profile
         return EmpLeave.objects.filter(employee=emp).order_by('-created_at')
 
     def perform_create(self, serializer):
-        emp = self.request.user.employee_profile
+        user = self.request.user
+        if not hasattr(user, 'employee_profile') or user.employee_profile is None:
+            raise ValidationError("You do not have an employee profile. Only employees can apply for leave.")
+            
+        emp = user.employee_profile
         start_date = serializer.validated_data.get("from_date")
         end_date = serializer.validated_data.get("to_date")
         leave_type = serializer.validated_data.get("leave_type")
 
-        # Check if leave already exists in the given date range
+        # Check if leave already exists in the given date range (ignore Rejected and Cancelled)
         exists = EmpLeave.objects.filter(
             employee=emp,
             from_date__lte=end_date,
             to_date__gte=start_date
-        ).exists()
+        ).exclude(status__in=['Rejected', 'Cancelled']).exists()
 
         if exists:
-            raise ValidationError("Leave already exists for the given dates.")
+            raise ValidationError("An active leave application (Pending or Approved) already exists for the given dates.")
 
         # Calculate requested leave days
         days_requested = (end_date - start_date).days + 1

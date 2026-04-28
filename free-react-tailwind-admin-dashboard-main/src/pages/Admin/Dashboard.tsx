@@ -639,6 +639,8 @@ const AdminDashboard = () => {
                             { label: 'Payroll', icon: <IconMenuInvoice className="w-5 h-5" />, to: '/admin/payroll-batches', color: 'text-warning', bg: 'bg-warning/10 dark:bg-warning/20', hoverBg: 'hover:bg-warning/20 dark:hover:bg-warning/30', border: 'border-warning/20' },
                             { label: 'Departments', icon: <IconMenuContacts className="w-5 h-5" />, to: '/admin/branch-mgt/department', color: 'text-danger', bg: 'bg-danger/10 dark:bg-danger/20', hoverBg: 'hover:bg-danger/20 dark:hover:bg-danger/30', border: 'border-danger/20' },
                             { label: 'Settings', icon: <IconSettings className="w-5 h-5" />, to: '/admin/configuration/shift', color: 'text-info', bg: 'bg-info/10 dark:bg-info/20', hoverBg: 'hover:bg-info/20 dark:hover:bg-info/30', border: 'border-info/20' },
+                            { label: 'Reportees', icon: <IconMenuUsers className="w-5 h-5" />, to: '/admin/reportees', color: 'text-primary', bg: 'bg-primary/10 dark:bg-primary/20', hoverBg: 'hover:bg-primary/20 dark:hover:bg-primary/30', border: 'border-primary/20' },
+                            { label: 'Assign Task', icon: <IconListCheck className="w-5 h-5" />, to: '/admin/assign-task', color: 'text-success', bg: 'bg-success/10 dark:bg-success/20', hoverBg: 'hover:bg-success/20 dark:hover:bg-success/30', border: 'border-success/20' },
                         ].map((action) => (
                             <Link
                                 key={action.label}

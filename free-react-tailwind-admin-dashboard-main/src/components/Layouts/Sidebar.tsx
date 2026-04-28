@@ -312,6 +312,25 @@ const Sidebar = () => {
                                         </NavLink>
                                     </li>
 
+                                    {/* Task Management */}
+                                    <li className="menu nav-item">
+                                        <NavLink to="/admin/reportees" className="group">
+                                            <div className="flex items-center">
+                                                <IconMenuUsers className="group-hover:!text-primary shrink-0" />
+                                                <span className="ltr:pl-3 rtl:pr-3 text-black dark:text-[#506690] dark:group-hover:text-white-dark">{t('Reportees')}</span>
+                                            </div>
+                                        </NavLink>
+                                    </li>
+
+                                    <li className="menu nav-item">
+                                        <NavLink to="/admin/assign-task" className="group">
+                                            <div className="flex items-center">
+                                                <IconMenuNotes className="group-hover:!text-primary shrink-0" />
+                                                <span className="ltr:pl-3 rtl:pr-3 text-black dark:text-[#506690] dark:group-hover:text-white-dark">{t('Assign Task')}</span>
+                                            </div>
+                                        </NavLink>
+                                    </li>
+
                                     {/* Configurator */}
                                     <li className="menu nav-item">
                                         <button type="button" className={`${currentMenu === 'configurator' ? 'active' : ''} nav-link group w-full`} onClick={() => toggleMenu('configurator')}>
