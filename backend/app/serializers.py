@@ -1659,7 +1659,18 @@ class ReportingEmployeesSerializer(serializers.ModelSerializer):
  
     class Meta:
         model = Employee
-        fields = ['id', 'employee_id', 'full_name', 'status', 'department_name', 'designation_name', 'photo', 'is_checked_in']
+        fields = [
+            'id',
+            'employee_id',
+            'full_name',
+            'status',
+            'department_name',
+            'designation_name',
+            'photo',
+            'aadhar_card',
+            'pan_card',
+            'is_checked_in',
+        ]
  
     def get_department_name(self, obj):
         return obj.department.department_name if obj.department else None
@@ -1677,6 +1688,28 @@ class ReportingEmployeesSerializer(serializers.ModelSerializer):
                     # Fallback to relative URL if build_absolute_uri fails
                     return obj.photo.url
             return obj.photo.url
+        return None
+
+    def get_aadhar_card(self, obj):
+        if obj.aadhar_card:
+            request = self.context.get('request')
+            if request:
+                try:
+                    return request.build_absolute_uri(obj.aadhar_card.url)
+                except Exception:
+                    return obj.aadhar_card.url
+            return obj.aadhar_card.url
+        return None
+
+    def get_pan_card(self, obj):
+        if obj.pan_card:
+            request = self.context.get('request')
+            if request:
+                try:
+                    return request.build_absolute_uri(obj.pan_card.url)
+                except Exception:
+                    return obj.pan_card.url
+            return obj.pan_card.url
         return None
     
     def get_is_checked_in(self, obj):

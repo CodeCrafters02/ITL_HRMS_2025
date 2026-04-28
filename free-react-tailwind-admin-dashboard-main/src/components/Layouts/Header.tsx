@@ -116,6 +116,7 @@ const Header = () => {
 
     const { t } = useTranslation();
     const userRole = localStorage.getItem('user_role') || '';
+    const userId = localStorage.getItem('user_id') || 'anonymous';
     const firstName = (localStorage.getItem('first_name') || '').trim();
     const lastName = (localStorage.getItem('last_name') || '').trim();
     const storedUsername = (localStorage.getItem('username') || '').trim();
@@ -123,11 +124,15 @@ const Header = () => {
     const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
     const [profileName, setProfileName] = useState<string>('');
     const [profileEmail, setProfileEmail] = useState<string>('');
+    const [notificationUnreadCount, setNotificationUnreadCount] = useState(0);
+    const [notificationSeenCount, setNotificationSeenCount] = useState(0);
     const calendarRoute = userRole === 'employee' ? '/employee/calendar' : userRole === 'admin' ? '/admin/calendar' : '/apps/calendar';
     const notificationRoute = userRole === 'employee' ? '/employee/notifications' : userRole === 'admin' ? '/admin/notifications' : '/apps/mailbox';
+    const notificationSeenKey = `header_notification_seen_count_${userId}`;
     const displayName = profileName || `${firstName} ${lastName}`.trim() || storedUsername || 'User';
     const displayEmail = profileEmail || storedEmail || '-';
     const initials = `${firstName[0] || ''}${lastName[0] || ''}`.toUpperCase() || (displayName[0] || 'U').toUpperCase();
+    const notificationBadgeCount = Math.max(0, notificationUnreadCount - notificationSeenCount);
 
     useEffect(() => {
         const token = localStorage.getItem('access_token');
@@ -154,6 +159,48 @@ const Header = () => {
         };
         loadProfile();
     }, [API_BASE_URL, userRole]);
+
+    useEffect(() => {
+        const savedSeenCount = Number(localStorage.getItem(notificationSeenKey) || 0);
+        setNotificationSeenCount(Number.isFinite(savedSeenCount) ? savedSeenCount : 0);
+    }, [notificationSeenKey]);
+
+    useEffect(() => {
+        const token = localStorage.getItem('access_token');
+        if (!token || userRole !== 'employee') {
+            setNotificationUnreadCount(0);
+            return;
+        }
+
+        let isMounted = true;
+        const loadUnreadCount = async () => {
+            try {
+                const res = await fetch(`${API_BASE_URL}/employee/all-notifications/?unread=true&page=1&page_size=1`, {
+                    headers: { Authorization: `Bearer ${token}` },
+                });
+                if (!res.ok) return;
+                const data = await res.json();
+                const nextCount = Number(data?.count ?? 0);
+                if (isMounted) setNotificationUnreadCount(Number.isFinite(nextCount) ? nextCount : 0);
+            } catch {
+                if (isMounted) setNotificationUnreadCount(0);
+            }
+        };
+
+        loadUnreadCount();
+        const intervalId = window.setInterval(loadUnreadCount, 30000);
+        return () => {
+            isMounted = false;
+            window.clearInterval(intervalId);
+        };
+    }, [API_BASE_URL, userRole]);
+
+    useEffect(() => {
+        if (location.pathname === notificationRoute && userRole === 'employee') {
+            setNotificationSeenCount(notificationUnreadCount);
+            localStorage.setItem(notificationSeenKey, String(notificationUnreadCount));
+        }
+    }, [location.pathname, notificationRoute, notificationSeenKey, notificationUnreadCount, userRole]);
 
     return (
         <header className={`z-40 ${themeConfig.semidark && themeConfig.menu === 'horizontal' ? 'dark' : ''}`}>
@@ -361,13 +408,20 @@ const Header = () => {
                             <Link 
                                 to={notificationRoute} 
                                 className="relative block p-2 rounded-full bg-white-light/40 dark:bg-dark/40 hover:text-primary hover:bg-white-light/90 dark:hover:bg-dark/60"
-                                onClick={() => notificationService.requestPermission()}
+                                onClick={() => {
+                                    notificationService.requestPermission();
+                                    if (userRole === 'employee') {
+                                        setNotificationSeenCount(notificationUnreadCount);
+                                        localStorage.setItem(notificationSeenKey, String(notificationUnreadCount));
+                                    }
+                                }}
                             >
                                 <IconBellBing />
-                                <span className="flex absolute w-3 h-3 ltr:right-0 rtl:left-0 top-0">
-                                    <span className="animate-ping absolute ltr:-left-[3px] rtl:-right-[3px] -top-[3px] inline-flex h-full w-full rounded-full bg-success/50 opacity-75"></span>
-                                    <span className="relative inline-flex rounded-full w-[6px] h-[6px] bg-success"></span>
-                                </span>
+                                {notificationBadgeCount > 0 && (
+                                    <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-danger text-white text-[10px] leading-[18px] text-center font-semibold">
+                                        {notificationBadgeCount > 99 ? '99+' : notificationBadgeCount}
+                                    </span>
+                                )}
                             </Link>
                         </div>
                         <div className="dropdown shrink-0 flex">

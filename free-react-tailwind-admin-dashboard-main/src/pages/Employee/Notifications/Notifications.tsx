@@ -39,6 +39,21 @@ const formatDateTime = (value: string) => {
     return date.toLocaleString();
 };
 
+const getDateHeading = (value: string) => {
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return 'Unknown Date';
+
+    const today = new Date();
+    const startOfToday = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+    const startOfDate = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+    const oneDayMs = 24 * 60 * 60 * 1000;
+    const dayDiff = Math.round((startOfToday.getTime() - startOfDate.getTime()) / oneDayMs);
+
+    if (dayDiff === 0) return 'Today';
+    if (dayDiff === 1) return 'Yesterday';
+    return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+};
+
 const Notifications = () => {
     const dispatch = useDispatch();
     const [items, setItems] = useState<EmployeeNotification[]>([]);
@@ -50,6 +65,11 @@ const Notifications = () => {
     const [pageSize, setPageSize] = useState(10);
     const [totalCount, setTotalCount] = useState(0);
     const [totalPages, setTotalPages] = useState(1);
+    const [summary, setSummary] = useState({
+        total: 0,
+        unread: 0,
+        today: 0,
+    });
 
     const loadNotifications = useCallback(async () => {
         setLoading(true);
@@ -73,6 +93,60 @@ const Notifications = () => {
         }
     }, [page, pageSize, search, filter]);
 
+    const loadSummary = useCallback(async () => {
+        try {
+            const [allMeta, unreadMeta] = await Promise.all([
+                fetchEmployeeNotifications({ page: 1, page_size: 1, type: 'all' }),
+                fetchEmployeeNotifications({ page: 1, page_size: 1, unread: true, type: 'all' }),
+            ]);
+
+            let todayTotal = 0;
+            let currentPage = 1;
+            const maxPagesToScan = 20;
+            const scanPageSize = 50;
+            const now = new Date();
+            const todayKey = `${now.getFullYear()}-${now.getMonth()}-${now.getDate()}`;
+
+            while (currentPage <= maxPagesToScan) {
+                const pageData = await fetchEmployeeNotifications({
+                    page: currentPage,
+                    page_size: scanPageSize,
+                    type: 'all',
+                });
+
+                if (!pageData.results.length) break;
+
+                let hasAnyToday = false;
+                let allOlderThanToday = true;
+
+                for (const n of pageData.results) {
+                    const d = new Date(n.date);
+                    if (Number.isNaN(d.getTime())) continue;
+                    const itemKey = `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
+                    if (itemKey === todayKey) {
+                        hasAnyToday = true;
+                        todayTotal += 1;
+                    }
+                    if (d >= new Date(now.getFullYear(), now.getMonth(), now.getDate())) {
+                        allOlderThanToday = false;
+                    }
+                }
+
+                if (!hasAnyToday && allOlderThanToday) break;
+                if (currentPage >= pageData.total_pages) break;
+                currentPage += 1;
+            }
+
+            setSummary({
+                total: allMeta.count || 0,
+                unread: unreadMeta.count || 0,
+                today: todayTotal,
+            });
+        } catch {
+            setSummary((prev) => prev);
+        }
+    }, []);
+
     useEffect(() => {
         dispatch(setPageTitle('Notifications'));
     }, [dispatch]);
@@ -84,13 +158,32 @@ const Notifications = () => {
         return () => clearTimeout(timer);
     }, [loadNotifications]);
 
-    const unreadCount = useMemo(() => items.filter((n) => n.read === false).length, [items]);
-    const todayCount = useMemo(() => {
-        const today = new Date();
-        return items.filter((n) => {
-            const d = new Date(n.date);
-            return !Number.isNaN(d.getTime()) && d.toDateString() === today.toDateString();
-        }).length;
+    useEffect(() => {
+        loadSummary();
+    }, [loadSummary]);
+
+    const groupedItems = useMemo(() => {
+        const sortedItems = [...items].sort((a, b) => {
+            const aTime = new Date(a.date).getTime();
+            const bTime = new Date(b.date).getTime();
+            return (Number.isNaN(bTime) ? 0 : bTime) - (Number.isNaN(aTime) ? 0 : aTime);
+        });
+
+        const groups: { heading: string; items: EmployeeNotification[] }[] = [];
+        const indexByHeading = new Map<string, number>();
+
+        for (const item of sortedItems) {
+            const heading = getDateHeading(item.date);
+            const existingIdx = indexByHeading.get(heading);
+            if (existingIdx !== undefined) {
+                groups[existingIdx].items.push(item);
+                continue;
+            }
+            indexByHeading.set(heading, groups.length);
+            groups.push({ heading, items: [item] });
+        }
+
+        return groups;
     }, [items]);
 
     const getPageNumbers = () => {
@@ -130,15 +223,15 @@ const Notifications = () => {
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div className="panel">
                     <p className="text-white-dark text-xs uppercase tracking-wide">Total Notifications</p>
-                    <p className="text-2xl font-bold mt-2">{totalCount}</p>
+                    <p className="text-2xl font-bold mt-2">{summary.total}</p>
                 </div>
                 <div className="panel">
                     <p className="text-white-dark text-xs uppercase tracking-wide">Unread</p>
-                    <p className="text-2xl font-bold mt-2 text-warning">{unreadCount}</p>
+                    <p className="text-2xl font-bold mt-2 text-warning">{summary.unread}</p>
                 </div>
                 <div className="panel">
                     <p className="text-white-dark text-xs uppercase tracking-wide">Today</p>
-                    <p className="text-2xl font-bold mt-2 text-primary">{todayCount}</p>
+                    <p className="text-2xl font-bold mt-2 text-primary">{summary.today}</p>
                 </div>
             </div>
 
@@ -244,22 +337,26 @@ const Notifications = () => {
                     <div className="py-12 text-center text-white-dark">No notifications found.</div>
                 ) : (
                     <div className="space-y-3">
-                        {items.map((item) => (
-                            <div key={item.id} className="border border-white-light dark:border-[#1b2e4b] rounded-md p-4">
-                                <div className="flex items-start gap-3">
-                                    <div className="w-10 h-10 rounded-full bg-primary-light text-primary flex items-center justify-center mt-1 shrink-0">
-                                        <IconBell className="w-5 h-5" />
-                                    </div>
-                                    <div className="flex-1 min-w-0">
-                                        <div className="flex flex-wrap items-center gap-2">
-                                            <h3 className="font-semibold">{item.title || 'Notification'}</h3>
-                                            <span className={`badge ${typeBadgeClass(item.type)}`}>{typeLabel(item.type)}</span>
-                                            {item.read === false && <span className="badge bg-danger-light text-danger">Unread</span>}
+                        {groupedItems.map((group) => (
+                            <div key={group.heading} className="space-y-3">
+                                <h3 className="text-sm font-semibold text-white-dark uppercase tracking-wide">{group.heading}</h3>
+                                {group.items.map((item) => (
+                                    <div key={item.id} className="border border-white-light dark:border-[#1b2e4b] rounded-md p-4">
+                                        <div className="flex items-start gap-3">
+                                            <div className="w-10 h-10 rounded-full bg-primary-light text-primary flex items-center justify-center mt-1 shrink-0">
+                                                <IconBell className="w-5 h-5" />
+                                            </div>
+                                            <div className="flex-1 min-w-0">
+                                                <div className="flex flex-wrap items-center gap-2">
+                                                    <h3 className="font-semibold">{item.title || 'Notification'}</h3>
+                                                    <span className={`badge ${typeBadgeClass(item.type)}`}>{typeLabel(item.type)}</span>
+                                                </div>
+                                                <p className="text-sm text-white-dark mt-1">{item.description || '-'}</p>
+                                                <p className="text-xs text-white-dark mt-2">{formatDateTime(item.date)}</p>
+                                            </div>
                                         </div>
-                                        <p className="text-sm text-white-dark mt-1">{item.description || '-'}</p>
-                                        <p className="text-xs text-white-dark mt-2">{formatDateTime(item.date)}</p>
                                     </div>
-                                </div>
+                                ))}
                             </div>
                         ))}
                     </div>
