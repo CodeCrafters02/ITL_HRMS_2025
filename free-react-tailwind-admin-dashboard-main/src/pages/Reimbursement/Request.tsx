@@ -57,8 +57,9 @@ const Request = () => {
             await createReimbursement(data);
             Swal.fire('Success', 'Reimbursement request submitted successfully', 'success');
             setFormData({ category: '', custom_category: '', amount: '', description: '', bill: null });
-        } catch (error) {
-            Swal.fire('Error', 'Failed to submit request', 'error');
+        } catch (error: any) {
+            const message = error?.response?.data?.[0] || error?.response?.data?.error || error?.response?.data?.non_field_errors?.[0] || 'Failed to submit request';
+            Swal.fire('Error', message, 'error');
         } finally {
             setLoading(false);
         }
@@ -103,7 +104,7 @@ const Request = () => {
                                 <option value="">Select Category</option>
                                 {categories.map((cat) => (
                                     <option key={cat.id} value={cat.id}>
-                                        {cat.name}
+                                        {cat.name} {cat.min_tenure_months > 0 ? `(${cat.min_tenure_months}m tenure req.)` : ''}
                                     </option>
                                 ))}
                                 <option value="other" className="text-primary font-bold">Other (Manual Entry)</option>

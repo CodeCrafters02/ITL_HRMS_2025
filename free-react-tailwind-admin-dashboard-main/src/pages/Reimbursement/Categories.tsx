@@ -12,7 +12,7 @@ const Categories = () => {
     const [loading, setLoading] = useState(true);
     const [showModal, setShowModal] = useState(false);
     const [editMode, setEditMode] = useState(false);
-    const [currentCategory, setCurrentCategory] = useState<Partial<ReimbursementCategory>>({ name: '', description: '' });
+    const [currentCategory, setCurrentCategory] = useState<Partial<ReimbursementCategory>>({ name: '', description: '', min_tenure_months: 0 });
     
     // Pagination and Search
     const [search, setSearch] = useState('');
@@ -60,8 +60,9 @@ const Categories = () => {
             }
             setShowModal(false);
             loadCategories();
-        } catch (error) {
-            Swal.fire('Error', 'Failed to save category', 'error');
+        } catch (error: any) {
+            const message = error?.response?.data?.error || error?.response?.data?.[0] || 'Failed to save category';
+            Swal.fire('Error', message, 'error');
         }
     };
 
@@ -105,7 +106,7 @@ const Categories = () => {
                         type="button"
                         className="btn bg-white text-primary border-0 hover:bg-white/90 shadow-md flex items-center gap-2"
                         onClick={() => {
-                            setCurrentCategory({ name: '', description: '' });
+                            setCurrentCategory({ name: '', description: '', min_tenure_months: 0 });
                             setEditMode(false);
                             setShowModal(true);
                         }}
@@ -145,6 +146,7 @@ const Categories = () => {
                             <tr className="bg-[#f6f8fa] dark:bg-[#1a2234]">
                                 <th>Name</th>
                                 <th>Description</th>
+                                <th className="text-center">Min Tenure</th>
                                 <th className="text-center">Action</th>
                             </tr>
                         </thead>
@@ -173,6 +175,13 @@ const Categories = () => {
                                     <tr key={cat.id}>
                                         <td className="font-semibold text-primary">{cat.name}</td>
                                         <td className="text-gray-600 dark:text-gray-400">{cat.description || '-'}</td>
+                                        <td className="text-center font-bold">
+                                            {cat.min_tenure_months > 0 ? (
+                                                <span className="badge badge-outline-warning">{cat.min_tenure_months} Months</span>
+                                            ) : (
+                                                <span className="badge badge-outline-success text-xs">Immediate</span>
+                                            )}
+                                        </td>
                                         <td className="text-center">
                                             <div className="flex justify-center gap-3">
                                                 <button
@@ -279,13 +288,15 @@ const Categories = () => {
                                 />
                             </div>
                             <div>
-                                <label className="form-label">Description</label>
-                                <textarea
-                                    className="form-textarea min-h-[100px]"
-                                    placeholder="Enter category description..."
-                                    value={currentCategory.description}
-                                    onChange={(e) => setCurrentCategory({ ...currentCategory, description: e.target.value })}
+                                <label className="form-label">Min Tenure (Months)</label>
+                                <input
+                                    type="number"
+                                    className="form-input"
+                                    placeholder="Months after joining (0 for immediate)"
+                                    value={currentCategory.min_tenure_months || 0}
+                                    onChange={(e) => setCurrentCategory({ ...currentCategory, min_tenure_months: Number(e.target.value) })}
                                 />
+                                <p className="text-xs text-white-dark mt-1 italic">Employees must complete this many months after joining to apply.</p>
                             </div>
                         </div>
                         <div className="flex justify-end gap-3 mt-8">

@@ -1118,6 +1118,28 @@ class ReimbursementRequestViewSet(viewsets.ModelViewSet):
         if not emp:
             raise serializers.ValidationError("Employee profile required to request reimbursement.")
         
+        category_id = self.request.data.get('category')
+        if category_id:
+            try:
+                category = ReimbursementCategory.objects.get(id=category_id)
+                if category.min_tenure_months > 0:
+                    if not emp.date_of_joining:
+                        raise serializers.ValidationError(f"This category requires {category.min_tenure_months} months of tenure. Your joining date is not set.")
+                    
+                    # Calculate tenure in months
+                    today = timezone.localdate()
+                    joining = emp.date_of_joining
+                    tenure_months = (today.year - joining.year) * 12 + (today.month - joining.month)
+                    
+                    # Adjust if day of month hasn't reached yet
+                    if today.day < joining.day:
+                        tenure_months -= 1
+                        
+                    if tenure_months < category.min_tenure_months:
+                        raise serializers.ValidationError(f"You must complete at least {category.min_tenure_months} months of tenure to apply for this reimbursement. Current tenure: {tenure_months} months.")
+            except ReimbursementCategory.DoesNotExist:
+                pass
+
         serializer.save(
             employee=emp,
             company=emp.company,
