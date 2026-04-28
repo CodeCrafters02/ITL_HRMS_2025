@@ -806,7 +806,7 @@ class Payroll(models.Model):
     loan_disbursement = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     net_pay = models.DecimalField(max_digits=12, decimal_places=2)
 
-    payroll_date = models.DateField(auto_now_add=True)
+    payroll_date = models.DateField(default=timezone.now)
     total_working_days = models.PositiveIntegerField(null=True, blank=True)
     days_paid = models.PositiveIntegerField(null=True, blank=True)
     loss_of_pay_days = models.PositiveIntegerField(null=True, blank=True)
@@ -814,11 +814,27 @@ class Payroll(models.Model):
     # Optional: JSON for extra items
     other_allowances = models.JSONField(null=True, blank=True)
     other_deductions = models.JSONField(null=True, blank=True)
-
-    payroll_date = models.DateField(default=timezone.now)
     
     def __str__(self):
         return f"{self.employee} - {self.batch}"
+
+class Payslip(models.Model):
+    employee = models.ForeignKey(Employee, on_delete=models.CASCADE, related_name='payslips')
+    company = models.ForeignKey(Company, on_delete=models.CASCADE, related_name='payslips')
+    payroll = models.OneToOneField(Payroll, on_delete=models.CASCADE, related_name='payslip_record')
+    payslip_id = models.CharField(max_length=100, unique=True)
+    month = models.IntegerField()
+    year = models.IntegerField()
+    file = models.FileField(upload_to='payslips/', null=True, blank=True)
+    STATUS_CHOICES = [
+        ('Draft', 'Draft'),
+        ('Published', 'Published'),
+    ]
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='Draft')
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"Payslip {self.payslip_id} - {self.employee.full_name}"
 
 
 class IncomeTaxConfig(models.Model):

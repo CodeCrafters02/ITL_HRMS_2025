@@ -162,6 +162,14 @@ const Sidebar = () => {
                                             </div>
                                         </NavLink>
                                     </li>
+                                    <li className="menu nav-item">
+                                        <NavLink to="/employee/my-payslips" className="group">
+                                            <div className="flex items-center">
+                                                <IconMenuInvoice className="group-hover:!text-primary shrink-0" />
+                                                <span className="ltr:pl-3 rtl:pr-3 text-black dark:text-[#506690] dark:group-hover:text-white-dark">{t('My Payslips')}</span>
+                                            </div>
+                                        </NavLink>
+                                    </li>
                                     {/* <li className="menu nav-item">
                                         <NavLink to="/employee/notifications" className="group">
                                             <div className="flex items-center">
@@ -458,6 +466,7 @@ const Sidebar = () => {
                                                 <li><NavLink to="/admin/designation-salary">{t('Salary per Designation')}</NavLink></li>
                                                 <li><NavLink to="/admin/payroll-batches">{t('Payroll Reports')}</NavLink></li>
                                                 <li><NavLink to="/admin/salary-disbursement">{t('Disbursement Statement')}</NavLink></li>
+                                                <li><NavLink to="/admin/payslip-rollout">{t('Payslip Rollout')}</NavLink></li>
                                                 <li><NavLink to="/admin/income-tax">{t('Income Config')}</NavLink></li>
                                             </ul>
                                         </AnimateHeight>

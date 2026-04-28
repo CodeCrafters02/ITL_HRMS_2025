@@ -148,6 +148,7 @@ const AdminLoanApprovals = lazy(() => import('../pages/Admin/LoanApprovals'));
 const WFHManagement = lazy(() => import('../pages/Admin/WFHManagement'));
 const AdminReportees = lazy(() => import('../pages/Admin/Reportees'));
 const AdminAssignTask = lazy(() => import('../pages/Admin/AssignTask'));
+const AdminPayslipRollout = lazy(() => import('../pages/Admin/PayslipRollout'));
 
 // Employee Pages
 const EmployeeDashboard = lazy(() => import('../pages/Employee/Dashboard'));
@@ -168,6 +169,7 @@ const EmployeeReferences = lazy(() => import('../pages/Employee/References/Refer
 const EmployeeReportees = lazy(() => import('../pages/Employee/Reportees/Reportees'));
 const EmployeeAssignTask = lazy(() => import('../pages/Employee/AssignTask/AssignTask'));
 const EmployeeLeaveApprovals = lazy(() => import('../pages/Employee/LeaveApprovals/LeaveApprovals'));
+const EmployeeMyPayslips = lazy(() => import('../pages/Employee/MyPayslips'));
 
 // Reimbursement Pages
 const ReimbursementCategories = lazy(() => import('../pages/Reimbursement/Categories'));
@@ -712,6 +714,10 @@ const routes = [
         element: <AdminSalaryDisbursement />,
     },
     {
+        path: '/admin/payslip-rollout',
+        element: <AdminPayslipRollout />,
+    },
+    {
         path: '/admin/income-tax',
         element: <AdminComingSoon />,
     },
@@ -834,6 +840,10 @@ const routes = [
     {
         path: '/employee/notifications',
         element: <EmployeeNotifications />,
+    },
+    {
+        path: '/employee/my-payslips',
+        element: <EmployeeMyPayslips />,
     },
     {
         path: '/employee/company-policy',

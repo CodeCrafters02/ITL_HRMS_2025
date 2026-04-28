@@ -20,8 +20,9 @@ from django.utils import timezone
 from .utils import generate_letter_pdf, fill_placeholders
 from decimal import Decimal, ROUND_HALF_UP
 from django.core.mail import EmailMessage
+from django.core.files.base import ContentFile
+import uuid
 from .utils import generate_payslip_pdf
-from rest_framework import viewsets, permissions
 from rest_framework.views import APIView
 from rest_framework.response import Response
 import re
@@ -1846,6 +1847,7 @@ class SalaryDeductionComponentViewSet(viewsets.ModelViewSet):
 class PayrollBatchViewSet(viewsets.ModelViewSet):
     serializer_class = PayrollBatchSerializer
     permission_classes = [IsAuthenticated, IsAdminUser]
+    pagination_class = CustomPagination
 
     def get_queryset(self):
         return PayrollBatch.objects.filter(company=self.request.user.company).order_by('-year', '-month')
@@ -1960,31 +1962,51 @@ class PayrollBatchViewSet(viewsets.ModelViewSet):
         except PayrollBatch.DoesNotExist:
             return Response({'error': 'Batch not found'}, status=status.HTTP_404_NOT_FOUND)
         
-    @action(detail=True, methods=['post'], url_path='send-payslips')
-    def send_payslips(self, request, pk=None):
+        return Response({'message': 'Payslips sent to all employees.'})
+
+    @action(detail=True, methods=['post'], url_path='rollout-payslips')
+    def rollout_payslips(self, request, pk=None):
         batch = self.get_object()
         if batch.status != 'Locked':
-            return Response({'error': 'Batch must be locked before sending payslips.'}, status=400)
+            return Response({'error': 'Batch must be locked before rolling out payslips.'}, status=400)
 
         company = batch.company
         logo_path = company.logo.path if company.logo and hasattr(company.logo, 'path') else None
 
+        # Filter employees if provided (optional)
+        employee_ids = request.data.get('employee_ids', None)
         payrolls = Payroll.objects.filter(batch=batch)
+        if employee_ids:
+            payrolls = payrolls.filter(employee_id__in=employee_ids)
+
+        count = 0
         for payroll in payrolls:
             employee = payroll.employee
-            if not employee.email:
-                continue
-
-            pdf_buffer = generate_payslip_pdf(employee, payroll, batch, company=company, logo_path=logo_path)
-            email = EmailMessage(
-                subject=f"Payslip for {batch.month}/{batch.year}",
-                body=f"Dear {employee.full_name},\n\nPlease find attached your payslip for {batch.month}/{batch.year}.\n\nRegards,\nHR Team",
-                to=[employee.email]
+            
+            # Generate Unique Payslip ID
+            payslip_id = f"PS-{batch.year}{str(batch.month).zfill(2)}-{employee.employee_id}-{uuid.uuid4().hex[:6].upper()}"
+            
+            # Use transaction or update_or_create to avoid duplicates
+            payslip, created = Payslip.objects.get_or_create(
+                payroll=payroll,
+                defaults={
+                    'employee': employee,
+                    'company': company,
+                    'payslip_id': payslip_id,
+                    'month': batch.month,
+                    'year': batch.year,
+                    'status': 'Draft'
+                }
             )
-            email.attach(f"Payslip_{employee.employee_id}_{batch.month}_{batch.year}.pdf", pdf_buffer.read(), 'application/pdf')
-            email.send()
 
-        return Response({'message': 'Payslips sent to all employees.'})
+            if created or not payslip.file:
+                # Generate PDF with QR Code and ID
+                pdf_buffer = generate_payslip_pdf(employee, payroll, batch, company=company, logo_path=logo_path, payslip_id=payslip.payslip_id)
+                filename = f"Payslip_{payslip.payslip_id}.pdf"
+                payslip.file.save(filename, ContentFile(pdf_buffer.read()), save=True)
+                count += 1
+
+        return Response({'message': f'Payslips rolled out to {count} employees.'})
 
            
 class GeneratePayrollView(APIView):
@@ -2171,7 +2193,171 @@ class PayrollViewSet(viewsets.ReadOnlyModelViewSet):
 
         return queryset.order_by('-payroll_date')
 
+class PayslipViewSet(viewsets.ReadOnlyModelViewSet):
+    serializer_class = PayslipSerializer
+    permission_classes = [IsAuthenticated]
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter]
+    search_fields = ['payslip_id', 'employee__first_name', 'employee__last_name', 'employee__employee_id']
 
+    def get_queryset(self):
+        user = self.request.user
+        if user.role in ['admin', 'master']:
+            return Payslip.objects.filter(company=user.company).order_by('-year', '-month')
+        return Payslip.objects.filter(employee__user=user, status='Published').order_by('-year', '-month')
+
+    @action(detail=False, methods=['post'], url_path='generate')
+    def generate(self, request):
+        payroll_id = request.data.get('payroll_id')
+        is_report = request.data.get('is_report', False)
+        regenerate = request.data.get('regenerate', False)
+        
+        try:
+            if is_report:
+                record = FinalizedSalary.objects.get(id=payroll_id)
+                employee = record.employee
+                month = record.from_date.month
+                year = record.from_date.year
+            else:
+                record = Payroll.objects.get(id=payroll_id)
+                employee = record.employee
+                month = record.batch.month
+                year = record.batch.year
+                
+            # Check if payslip already exists
+            payslip = getattr(record, 'payslip_record', None)
+            if payslip and not regenerate:
+                return Response({'detail': 'Payslip already generated', 'file': payslip.file.url}, status=200)
+            
+            # Generate unique payslip ID or reuse existing
+            unique_id = payslip.payslip_id if payslip else f"PAY-{uuid.uuid4().hex[:8].upper()}"
+            
+            # Generate PDF
+            from .utils import generate_payslip_pdf
+            pdf_file = generate_payslip_pdf(
+                employee=employee,
+                payroll=record if not is_report else None,
+                batch=record.batch if not is_report else None,
+                company=request.user.company,
+                payslip_id=unique_id,
+                finalized_salary=record if is_report else None
+            )
+            
+            # Create or Update Payslip record
+            if not payslip:
+                payslip = Payslip.objects.create(
+                    employee=employee,
+                    company=request.user.company,
+                    payroll=record if not is_report else None,
+                    finalized_salary=record if is_report else None,
+                    payslip_id=unique_id,
+                    month=month,
+                    year=year,
+                    status='Draft'
+                )
+            
+            # Save file (this will overwrite if the filename is the same or create a new version)
+            payslip.file.save(f"payslip_{unique_id}.pdf", ContentFile(pdf_file.read()))
+            payslip.save()
+            
+            return Response({
+                'message': 'Payslip generated successfully',
+                'file': payslip.file.url,
+                'payslip_id': payslip.payslip_id
+            })
+            
+        except Exception as e:
+            import traceback
+            traceback.print_exc()
+            return Response({'error': str(e)}, status=400)
+
+    @action(detail=False, methods=['get'], url_path='rollout-dashboard')
+    def rollout_dashboard(self, request):
+        start_date = request.query_params.get('start_date')
+        end_date = request.query_params.get('end_date')
+        
+        company = request.user.company
+        payrolls = Payroll.objects.filter(company=company)
+        
+        if start_date and end_date:
+            try:
+                from datetime import datetime
+                s_dt = datetime.strptime(start_date, '%Y-%m-%d').date()
+                e_dt = datetime.strptime(end_date, '%Y-%m-%d').date()
+                
+                # Filter payrolls where the batch period overlaps with the selected range
+                payrolls = payrolls.filter(
+                    Q(batch__year__gt=s_dt.year) | Q(batch__year=s_dt.year, batch__month__gte=s_dt.month)
+                ).filter(
+                    Q(batch__year__lt=e_dt.year) | Q(batch__year=e_dt.year, batch__month__lte=e_dt.month)
+                )
+            except Exception as e:
+                print(f"Error parsing dates: {e}")
+                payrolls = payrolls.filter(payroll_date__range=[start_date, end_date])
+        else:
+            month = request.query_params.get('month')
+            year = request.query_params.get('year')
+            if month and year:
+                payrolls = payrolls.filter(batch__month=month, batch__year=year)
+            else:
+                today = timezone.now().date()
+                payrolls = payrolls.filter(batch__month=today.month, batch__year=today.year)
+        
+        data = []
+        employees = Employee.objects.filter(company=company, is_active=True, user__role='employee')
+        
+        from app.models import FinalizedSalary
+        finalized_salaries = FinalizedSalary.objects.filter(company=company)
+        if start_date and end_date:
+            finalized_salaries = finalized_salaries.filter(from_date__gte=start_date, to_date__lte=end_date)
+        
+        final_map = {fs.employee_id: fs for fs in finalized_salaries}
+        payroll_map = {p.employee_id: p for p in payrolls}
+        
+        data = []
+        employees = Employee.objects.filter(company=company, is_active=True, user__role='employee')
+        
+        for emp in employees:
+            p = payroll_map.get(emp.id)
+            fs = final_map.get(emp.id)
+            
+            # Use finalized salary if available, otherwise payroll
+            main_record = fs if fs else p
+            payslip = getattr(main_record, 'payslip_record', None) if main_record else None
+            
+            data.append({
+                'employee_id_str': emp.employee_id,
+                'employee_name': emp.full_name,
+                'payroll_id': p.id if p else (fs.id if fs else None),
+                'batch_id': p.batch.id if p else None,
+                'is_report': True if fs and not p else False,
+                'net_pay': fs.net_salary if fs else (p.net_pay if p else emp.gross_salary),
+                'details': {
+                    'gross': fs.total_gross if fs else (p.gross_salary if p else emp.gross_salary),
+                    'deductions': fs.total_deductions if fs else (p.total_deductions if p else 0),
+                    'ot_pay': fs.ot_pay if fs else (p.ot_pay if p and hasattr(p, 'ot_pay') else 0),
+                    'loan_emi': fs.loan_emi if fs else 0,
+                    'asset_deduction': fs.asset_deduction if fs else 0,
+                    'days_paid': fs.days_paid if fs else (p.days_paid if p else 0),
+                } if main_record else None,
+                'payslip_id': payslip.payslip_id if payslip else None,
+                'payslip_status': payslip.status if payslip else ('Not Generated' if main_record else 'Payroll Pending'),
+                'file': payslip.file.url if payslip and payslip.file else None,
+                'id': payslip.id if payslip else None
+            })
+        return Response(data)
+
+    @action(detail=True, methods=['post'], url_path='publish')
+    def publish(self, request, pk=None):
+        payslip = self.get_object()
+        payslip.status = 'Published'
+        payslip.save()
+        return Response({'message': 'Payslip published successfully'})
+
+    @action(detail=False, methods=['post'], url_path='bulk-publish')
+    def bulk_publish(self, request):
+        ids = request.data.get('ids', [])
+        Payslip.objects.filter(id__in=ids, company=request.user.company).update(status='Published')
+        return Response({'message': f'{len(ids)} payslips published.'})
 
 class IncomeTaxConfigViewSet(viewsets.ModelViewSet):
     serializer_class = IncomeTaxConfigSerializer

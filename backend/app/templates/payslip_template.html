@@ -173,7 +173,13 @@
   </style>
 </head>
 <body>
-  <div class="payslip-container">
+  <div class="payslip-container" style="position: relative;">
+    {% if qr_code %}
+    <div style="position: absolute; top: 20px; right: 20px; text-align: center;">
+      <img src="{{ qr_code }}" style="width: 70px; height: 70px;" /><br>
+      <span style="font-size: 8px; color: #718096;">Scan to Verify</span>
+    </div>
+    {% endif %}
 
     <div class="header">
       {% if logo_path %}
@@ -185,6 +191,7 @@
     </div>
 
     <div class="info-grid">
+      <div class="info-item"><span class="info-label">Payslip ID:</span> <span style="color: var(--secondary); font-weight: bold;">{{ payslip_id|default:'GEN-00000' }}</span></div>
       <div class="info-item"><span class="info-label">Employee Name:</span> {{ employee.full_name }}</div>
       <div class="info-item"><span class="info-label">Employee ID:</span> {{ employee.employee_id }}</div>
       <div class="info-item"><span class="info-label">Designation:</span> {{ employee.designation.designation_name }}</div>
@@ -192,6 +199,8 @@
       <div class="info-item"><span class="info-label">Pay Date:</span> {{ payroll.payroll_date }}</div>
       <div class="info-item"><span class="info-label">Payment Mode:</span> Bank Transfer</div>
       <div class="info-item"><span class="info-label">Working Days:</span> {{ payroll.total_working_days }}</div>
+      <div class="info-item"><span class="info-label">Present Days:</span> {{ payroll.present_days|default:'0' }}</div>
+      <div class="info-item"><span class="info-label">Paid Leaves:</span> {{ payroll.paid_leaves|default:'0' }}</div>
       <div class="info-item"><span class="info-label">Days Paid:</span> {{ payroll.days_paid }}</div>
       <div class="info-item"><span class="info-label">LOP Days:</span> {{ payroll.loss_of_pay_days }}</div>
     </div>
@@ -205,11 +214,24 @@
           </thead>
           <tbody>
             <tr><td>Basic Salary</td><td class="amount">{{ payroll.basic_salary }}</td></tr>
+            {% if payroll.hra > 0 %}
             <tr><td>HRA</td><td class="amount">{{ payroll.hra }}</td></tr>
+            {% endif %}
+            {% if payroll.conveyance > 0 %}
             <tr><td>Conveyance</td><td class="amount">{{ payroll.conveyance }}</td></tr>
+            {% endif %}
+            {% if payroll.medical > 0 %}
             <tr><td>Medical</td><td class="amount">{{ payroll.medical }}</td></tr>
+            {% endif %}
+            {% if payroll.special_allowance > 0 %}
             <tr><td>Special Allowance</td><td class="amount">{{ payroll.special_allowance }}</td></tr>
-            <tr><td>Service Charges</td><td class="amount">{{ payroll.service_charges }}</td></tr>
+            {% endif %}
+            {% if payroll.ot_pay > 0 %}
+            <tr><td>OT Pay ({{ payroll.ot_hours }} hrs)</td><td class="amount">{{ payroll.ot_pay }}</td></tr>
+            {% endif %}
+            {% for item in extra_allowances_list %}
+            <tr><td>{{ item.name }}</td><td class="amount">{{ item.amount }}</td></tr>
+            {% endfor %}
             {% if extra_allowances %}
             <tr><td>Other Allowances</td><td class="amount">{{ extra_allowances }}</td></tr>
             {% endif %}
@@ -223,8 +245,21 @@
             <tr><th>Deductions</th><th class="amount">Amount (₹)</th></tr>
           </thead>
           <tbody>
+            {% for item in extra_deductions_list %}
+            <tr><td>{{ item.name }}</td><td class="amount">{{ item.amount }}</td></tr>
+            {% endfor %}
+            {% if payroll.pf > 0 %}
             <tr><td>Provident Fund</td><td class="amount">{{ payroll.pf }}</td></tr>
+            {% endif %}
+            {% if payroll.income_tax > 0 %}
             <tr><td>Income Tax</td><td class="amount">{{ payroll.income_tax }}</td></tr>
+            {% endif %}
+            {% if payroll.loan_emi > 0 %}
+            <tr><td>Loan EMI</td><td class="amount">{{ payroll.loan_emi }}</td></tr>
+            {% endif %}
+            {% if payroll.asset_deduction > 0 %}
+            <tr><td>Asset Deduction</td><td class="amount">{{ payroll.asset_deduction }}</td></tr>
+            {% endif %}
             {% if extra_deductions %}
             <tr><td>Other Deductions</td><td class="amount">{{ extra_deductions }}</td></tr>
             {% endif %}

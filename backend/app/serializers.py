@@ -1368,6 +1368,19 @@ class PayrollSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = ['payroll_date']
 
+class PayslipSerializer(serializers.ModelSerializer):
+    employee_name = serializers.CharField(source='employee.full_name', read_only=True)
+    employee_id_str = serializers.CharField(source='employee.employee_id', read_only=True)
+    company_name = serializers.CharField(source='company.name', read_only=True)
+    
+    class Meta:
+        model = Payslip
+        fields = [
+            'id', 'payslip_id', 'employee', 'employee_name', 'employee_id_str',
+            'company', 'company_name', 'month', 'year', 'file', 'status', 'created_at'
+        ]
+        read_only_fields = ['id', 'payslip_id', 'created_at']
+
 class IncomeTaxConfigSerializer(serializers.ModelSerializer):
     class Meta:
         model = IncomeTaxConfig

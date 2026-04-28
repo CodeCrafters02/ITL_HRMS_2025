@@ -26,6 +26,7 @@ router.register(r'relieved-employees', RelievedEmployeeViewSet, basename='reliev
 router.register(r'salary-structures', SalaryStructureViewSet, basename='salary-structures')
 router.register(r'payroll-batches', PayrollBatchViewSet, basename='payroll-batches')
 router.register(r'payrolls', PayrollViewSet, basename='payrolls')
+router.register(r'payslips', PayslipViewSet, basename='payslips')
 router.register(r'income-tax-configs', IncomeTaxConfigViewSet, basename='income-tax-configs')
 router.register(r'attendance', AttendanceViewSet, basename='attendance')
 router.register(r'policies', CompanyPoliciesViewSet, basename='company-policies')
