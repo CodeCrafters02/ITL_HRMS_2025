@@ -616,6 +616,11 @@ const EmployeeDashboard = () => {
                                             </button>
                                         );
                                     } else {
+                                        const sortedConfigs = [...configs].sort((a, b) => {
+                                            const aDuration = Number(a.duration_minutes || 0);
+                                            const bDuration = Number(b.duration_minutes || 0);
+                                            return aDuration - bDuration;
+                                        });
                                         return (
                                             <div className="dropdown relative" key={choice}>
                                                 <Dropdown
@@ -634,7 +639,7 @@ const EmployeeDashboard = () => {
                                                     }
                                                 >
                                                     <ul className="text-black dark:text-white-dark bg-white dark:bg-[#1b2e4b] shadow-[0_0_10px_rgba(0,0,0,0.1)] dark:shadow-[0_0_10px_rgba(0,0,0,0.4)] rounded-md border border-white-light dark:border-[#253b5c] py-1 min-w-[150px]">
-                                                        {configs.map(bc => (
+                                                        {sortedConfigs.map(bc => (
                                                             <li key={bc.id}>
                                                                 <button
                                                                     type="button"
