@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../../models/task_model.dart';
 import '../../services/employee_service.dart';
 import '../../services/notification_service.dart';
@@ -20,6 +21,7 @@ class _MyTasksPageState extends State<MyTasksPage>
   String? _error;
   int? _expandedTaskId;
   late AnimationController _animationController;
+  final Set<int> _updatingAssignmentIds = {};
 
   final List<Map<String, String>> _assignmentStatuses = const [
     {'value': 'todo', 'label': 'To Do'},
@@ -91,6 +93,12 @@ class _MyTasksPageState extends State<MyTasksPage>
     int? parentId,
     bool isSubtask = false,
   }) async {
+    if (_updatingAssignmentIds.contains(assignmentId)) return;
+
+    setState(() {
+      _updatingAssignmentIds.add(assignmentId);
+    });
+
     try {
       final response = await EmployeeService.updateAssignmentStatus(
         assignmentId,
@@ -98,6 +106,11 @@ class _MyTasksPageState extends State<MyTasksPage>
       );
 
       if (mounted) {
+        setState(() {
+          _updatingAssignmentIds.remove(assignmentId);
+        });
+        HapticFeedback.mediumImpact();
+
         if (response.success) {
           setState(() {
             if (!isSubtask) {
@@ -206,6 +219,9 @@ class _MyTasksPageState extends State<MyTasksPage>
       }
     } catch (e) {
       if (mounted) {
+        setState(() {
+          _updatingAssignmentIds.remove(assignmentId);
+        });
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Error: ${e.toString()}'),
@@ -303,32 +319,20 @@ class _MyTasksPageState extends State<MyTasksPage>
                               : RefreshIndicator(
                                   onRefresh: _fetchTasks,
                                   color: AppStitchTheme.primary,
-                                  child: LayoutBuilder(
-                                    builder: (context, constraints) {
-                                      final crossAxisCount =
-                                          constraints.maxWidth > 600 ? 2 : 1;
-                                      return GridView.builder(
-                                        padding: const EdgeInsets.only(
-                                          top: 0,
-                                          left: 0,
-                                          right: 0,
-                                          bottom: 6,
-                                        ),
-                                        gridDelegate:
-                                            SliverGridDelegateWithFixedCrossAxisCount(
-                                          crossAxisCount: crossAxisCount,
-                                          crossAxisSpacing: 14,
-                                          mainAxisSpacing: 14,
-                                          childAspectRatio:
-                                              crossAxisCount == 1 ? 0.92 : 0.98,
-                                        ),
-                                        itemCount: _tasks.length,
-                                        itemBuilder: (context, index) {
-                                          return _buildTaskCard(
-                                            _tasks[index],
-                                            index,
-                                          );
-                                        },
+                                  child: ListView.separated(
+                                    padding: const EdgeInsets.only(
+                                      top: 0,
+                                      left: 0,
+                                      right: 0,
+                                      bottom: 24,
+                                    ),
+                                    itemCount: _tasks.length,
+                                    separatorBuilder: (context, index) =>
+                                        const SizedBox(height: 12),
+                                    itemBuilder: (context, index) {
+                                      return _buildTaskCard(
+                                        _tasks[index],
+                                        index,
                                       );
                                     },
                                   ),
@@ -444,489 +448,305 @@ class _MyTasksPageState extends State<MyTasksPage>
 
   Widget _buildTaskCard(Task task, int index) {
     final isExpanded = _expandedTaskId == task.id;
-    final firstAssignment = task.assignments.isNotEmpty
-        ? task.assignments[0]
-        : null;
+    final firstAssignment = task.assignments.isNotEmpty ? task.assignments[0] : null;
     final isDone = firstAssignment?.status == 'done' || task.status == 'done';
+    final isUpdating = firstAssignment != null && _updatingAssignmentIds.contains(firstAssignment.id);
 
     return TweenAnimationBuilder<double>(
       tween: Tween(begin: 0.0, end: 1.0),
       duration: Duration(milliseconds: 300 + (index * 50)),
       curve: Curves.easeOut,
       builder: (context, value, child) {
-        return Transform.scale(
-          scale: value,
+        return Transform.translate(
+          offset: Offset(0, 20 * (1 - value)),
           child: Opacity(opacity: value, child: child),
         );
       },
       child: GlassCard(
         padding: EdgeInsets.zero,
         child: InkWell(
-          onTap: () => _toggleExpand(task.id),
+          onTap: () {
+            _toggleExpand(task.id);
+            HapticFeedback.selectionClick();
+          },
           borderRadius: BorderRadius.circular(28),
           child: Padding(
-            padding: const EdgeInsets.fromLTRB(16, 16, 16, 14),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                // Header with title and checkbox
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Row(
-                            children: [
-                              Expanded(
-                                child: Text(
-                                  task.title,
-                                  style: TextStyle(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.w600,
-                                    color: isDone
-                                        ? AppStitchTheme.lightOnSurfaceMuted
-                                        : AppStitchTheme.lightOnSurface,
-                                    decoration: isDone
-                                        ? TextDecoration.lineThrough
-                                        : null,
-                                  ),
-                                  maxLines: 2,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ),
-                              const SizedBox(width: 6),
-                              // Priority indicator
-                              Container(
-                                padding: const EdgeInsets.all(3),
-                                decoration: BoxDecoration(
-                                  color: _getPriorityColor(
-                                    task.priority,
-                                  ).withValues(alpha: 0.1),
-                                  borderRadius: BorderRadius.circular(4),
-                                ),
-                                child: Icon(
-                                  _getPriorityIcon(task.priority),
-                                  size: 14,
-                                  color: _getPriorityColor(task.priority),
-                                ),
-                              ),
-                            ],
+            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 20),
+            child: AnimatedSize(
+              duration: const Duration(milliseconds: 300),
+              curve: Curves.easeInOut,
+              alignment: Alignment.topCenter,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // --- COMPACT HEADER (Always visible) ---
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      // Status Icon / Loader
+                      if (isUpdating)
+                        const SizedBox(
+                          width: 26,
+                          height: 26,
+                          child: CircularProgressIndicator(strokeWidth: 2.5),
+                        )
+                      else if (firstAssignment != null)
+                        GestureDetector(
+                          onTap: () => _handleAssignmentStatusChange(
+                            firstAssignment.id,
+                            isDone ? 'todo' : 'done',
                           ),
-                          const SizedBox(height: 6),
-                          // Progress bar
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Row(
-                                mainAxisAlignment:
-                                    MainAxisAlignment.spaceBetween,
-                                children: [
-                                  const Text(
-                                    'Progress',
-                                    style: TextStyle(
-                                      fontSize: 11,
-                                      fontWeight: FontWeight.w500,
-                                      color: Color(0xFF6B7280),
-                                    ),
-                                  ),
-                                  Text(
-                                    '${task.progress}%',
-                                    style: const TextStyle(
-                                      fontSize: 11,
-                                      fontWeight: FontWeight.w600,
-                                      color: AppStitchTheme.lightOnSurface,
-                                    ),
-                                  ),
-                                ],
+                          child: AnimatedContainer(
+                            duration: const Duration(milliseconds: 300),
+                            width: 26,
+                            height: 26,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: isDone 
+                                ? const Color(0xFF10B981) 
+                                : Colors.white.withValues(alpha: 0.8),
+                              border: Border.all(
+                                color: isDone
+                                    ? const Color(0xFF10B981)
+                                    : AppStitchTheme.lightOutline.withValues(alpha: 0.8),
+                                width: 2,
                               ),
-                              const SizedBox(height: 3),
-                              ClipRRect(
-                                borderRadius: BorderRadius.circular(4),
-                                child: LinearProgressIndicator(
-                                  value: task.progress / 100,
-                                  minHeight: 5,
-                                  backgroundColor:
-                                      Colors.white.withValues(alpha: 0.55),
-                                  valueColor: AlwaysStoppedAnimation<Color>(
-                                    _getStatusColor(task.status),
-                                  ),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withValues(alpha: 0.05),
+                                  blurRadius: 4,
+                                  offset: const Offset(0, 2),
                                 ),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ),
-                    // Checkbox
-                    if (firstAssignment != null)
-                      GestureDetector(
-                        onTap: isDone
-                            ? null
-                            : () => _handleAssignmentStatusChange(
-                                firstAssignment.id,
-                                'done',
-                              ),
-                        child: AnimatedContainer(
-                          duration: const Duration(milliseconds: 200),
-                          width: 24,
-                          height: 24,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            color: isDone
-                                ? const Color(0xFF10B981)
-                                : Colors.white,
-                            border: Border.all(
-                              color: isDone
-                                  ? const Color(0xFF10B981)
-                                  : AppStitchTheme.lightOutline
-                                      .withValues(alpha: 0.7),
-                              width: 2.5,
+                              ],
                             ),
-                            boxShadow: isDone
-                                ? [
-                                    BoxShadow(
-                                      color: const Color(
-                                        0xFF10B981,
-                                      ).withValues(alpha: 0.3),
-                                      blurRadius: 8,
-                                      spreadRadius: 0,
-                                    ),
-                                  ]
+                            child: isDone
+                                ? const Icon(Icons.check, size: 16, color: Colors.white)
                                 : null,
                           ),
-                          child: isDone
-                              ? const Icon(
-                                  Icons.check,
-                                  size: 16,
-                                  color: Colors.white,
-                                )
-                              : null,
+                        ),
+                      const SizedBox(width: 14),
+                      // Title
+                      Expanded(
+                        child: Text(
+                          task.title,
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: -0.3,
+                            color: isDone
+                                ? AppStitchTheme.lightOnSurfaceMuted
+                                : AppStitchTheme.lightOnSurface,
+                            decoration: isDone ? TextDecoration.lineThrough : null,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ),
-                  ],
-                ),
-                const SizedBox(height: 8),
-
-                // Description (only show if not empty)
-                if (task.description.isNotEmpty) ...[
-                  Text(
-                    task.description,
-                    style: const TextStyle(
-                      fontSize: 13,
-                      color: AppStitchTheme.lightOnSurfaceVariant,
-                      height: 1.4,
-                    ),
-                    maxLines: isExpanded ? null : 2,
-                    overflow: isExpanded ? null : TextOverflow.ellipsis,
-                  ),
-                  const SizedBox(height: 10),
-                ],
-
-                // Status and Tags in one row
-                Row(
-                  children: [
-                    // Status badge
-                    Expanded(
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 10,
-                          vertical: 6,
-                        ),
+                      const SizedBox(width: 10),
+                      // Priority Badge
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                         decoration: BoxDecoration(
-                          color: _getStatusColor(
-                            firstAssignment?.status ?? task.status,
-                          ).withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(6),
+                          color: _getPriorityColor(task.priority).withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(8),
                           border: Border.all(
-                            color: _getStatusColor(
-                              firstAssignment?.status ?? task.status,
-                            ).withValues(alpha: 0.3),
+                            color: _getPriorityColor(task.priority).withValues(alpha: 0.15),
                             width: 1,
                           ),
                         ),
                         child: Row(
-                          mainAxisSize: MainAxisSize.min,
                           children: [
                             Icon(
-                              _getStatusIcon(
-                                firstAssignment?.status ?? task.status,
-                              ),
-                              size: 14,
-                              color: _getStatusColor(
-                                firstAssignment?.status ?? task.status,
+                              _getPriorityIcon(task.priority),
+                              size: 10,
+                              color: _getPriorityColor(task.priority),
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              task.priority.toUpperCase(),
+                              style: TextStyle(
+                                fontSize: 9,
+                                fontWeight: FontWeight.w900,
+                                color: _getPriorityColor(task.priority),
                               ),
                             ),
-                            const SizedBox(width: 6),
-                            if (firstAssignment != null)
-                              Expanded(
-                                child: DropdownButtonHideUnderline(
-                                  child: DropdownButton<String>(
-                                    value: firstAssignment.status,
-                                    isDense: true,
-                                    icon: const Icon(
-                                      Icons.arrow_drop_down,
-                                      size: 16,
-                                    ),
-                                    style: TextStyle(
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.w500,
-                                      color: _getStatusColor(
-                                        firstAssignment.status,
-                                      ),
-                                    ),
-                                    items: _assignmentStatuses.map((status) {
-                                      return DropdownMenuItem<String>(
-                                        value: status['value'],
-                                        child: Text(status['label']!),
-                                      );
-                                    }).toList(),
-                                    onChanged: isDone
-                                        ? null
-                                        : (value) {
-                                            if (value != null) {
-                                              _handleAssignmentStatusChange(
-                                                firstAssignment.id,
-                                                value,
-                                              );
-                                            }
-                                          },
-                                  ),
-                                ),
-                              )
-                            else
-                              Expanded(
-                                child: Text(
-                                  _assignmentStatuses.firstWhere(
-                                    (s) =>
-                                        s['value'] ==
-                                        (firstAssignment?.status ??
-                                            task.status),
-                                    orElse: () => _assignmentStatuses[0],
-                                  )['label']!,
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.w500,
-                                    color: _getStatusColor(
-                                      firstAssignment?.status ?? task.status,
-                                    ),
-                                  ),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ),
                           ],
                         ),
                       ),
-                    ),
-                    const SizedBox(width: 8),
-                    // Subtasks toggle
-                    if (task.subtaskDetails.isNotEmpty)
-                      TextButton.icon(
-                        onPressed: () => _toggleExpand(task.id),
-                        icon: Icon(
-                          isExpanded
-                              ? Icons.keyboard_arrow_up
-                              : Icons.keyboard_arrow_down,
-                          size: 16,
-                        ),
-                        label: Text(
-                          '${task.subtaskDetails.length}',
-                          style: const TextStyle(fontSize: 12),
-                        ),
-                        style: TextButton.styleFrom(
-                          foregroundColor: AppStitchTheme.primary,
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 6,
-                            vertical: 4,
-                          ),
-                          minimumSize: Size.zero,
-                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                        ),
+                      const SizedBox(width: 10),
+                      Icon(
+                        isExpanded ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
+                        size: 22,
+                        color: AppStitchTheme.lightOnSurfaceMuted.withValues(alpha: 0.6),
                       ),
-                  ],
-                ),
-                const SizedBox(height: 8),
-
-                // Tags row
-                Wrap(
-                  spacing: 6,
-                  runSpacing: 6,
-                  children: [
-                    _buildInfoChip(
-                      Icons.calendar_today,
-                      task.deadline,
-                      AppStitchTheme.primary,
-                    ),
-                    _buildInfoChip(
-                      _getPriorityIcon(task.priority),
-                      task.priority.toUpperCase(),
-                      _getPriorityColor(task.priority),
-                    ),
-                  ],
-                ),
-
-                // Contributors and Assignments in compact row
-                if (task.contributors.isNotEmpty ||
-                    task.assignments.isNotEmpty) ...[
-                  const SizedBox(height: 8),
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: [
-                      if (task.contributors.isNotEmpty) ...[
-                        const Icon(
-                          Icons.people_outline,
-                          size: 14,
-                          color: AppStitchTheme.lightOnSurfaceMuted,
-                        ),
-                        const SizedBox(width: 4),
-                        Expanded(
-                          child: Wrap(
-                            spacing: 4,
-                            runSpacing: 4,
-                            children: task.contributors.take(2).map((name) {
-                              return Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 6,
-                                  vertical: 3,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: Colors.white.withValues(alpha: 0.55),
-                                  borderRadius: BorderRadius.circular(4),
-                                  border: Border.all(
-                                    color: AppStitchTheme.lightOutline
-                                        .withValues(alpha: 0.55),
-                                    width: 1,
-                                  ),
-                                ),
-                                child: Text(
-                                  name,
-                                  style: const TextStyle(
-                                    fontSize: 10,
-                                    fontWeight: FontWeight.w500,
-                                    color: AppStitchTheme.lightOnSurface,
-                                  ),
-                                ),
-                              );
-                            }).toList(),
-                          ),
-                        ),
-                      ],
-                      if (task.assignments.isNotEmpty) ...[
-                        if (task.contributors.isNotEmpty)
-                          const SizedBox(width: 8),
-                        const Icon(
-                          Icons.assignment_ind,
-                          size: 14,
-                          color: AppStitchTheme.lightOnSurfaceMuted,
-                        ),
-                        const SizedBox(width: 4),
-                        Expanded(
-                          child: Wrap(
-                            spacing: 4,
-                            runSpacing: 4,
-                            children: task.assignments.take(2).map((assign) {
-                              return Container(
-                                padding: const EdgeInsets.all(4),
-                                decoration: BoxDecoration(
-                                  color: Colors.white.withValues(alpha: 0.45),
-                                  borderRadius: BorderRadius.circular(4),
-                                  border: Border.all(
-                                    color: AppStitchTheme.lightOutline
-                                        .withValues(alpha: 0.55),
-                                    width: 1,
-                                  ),
-                                ),
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    if (assign.avatarUrl != null)
-                                      CircleAvatar(
-                                        radius: 10,
-                                        backgroundImage: NetworkImage(
-                                          assign.avatarUrl!,
-                                        ),
-                                      )
-                                    else
-                                      CircleAvatar(
-                                        radius: 10,
-                                        backgroundColor: const Color(
-                                          0xFFE5E7EB,
-                                        ),
-                                        child: Text(
-                                          assign.employeeName.isNotEmpty
-                                              ? assign.employeeName[0]
-                                                    .toUpperCase()
-                                              : '?',
-                                          style: const TextStyle(
-                                            fontSize: 9,
-                                            fontWeight: FontWeight.w600,
-                                            color:
-                                                AppStitchTheme.lightOnSurfaceMuted,
-                                          ),
-                                        ),
-                                      ),
-                                    const SizedBox(width: 4),
-                                    Flexible(
-                                      child: Text(
-                                        assign.employeeName,
-                                        style: const TextStyle(
-                                          fontSize: 10,
-                                          fontWeight: FontWeight.w500,
-                                          color: AppStitchTheme.lightOnSurface,
-                                        ),
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              );
-                            }).toList(),
-                          ),
-                        ),
-                      ],
                     ],
                   ),
-                ],
 
-                // Subtasks section
-                if (isExpanded && task.subtaskDetails.isNotEmpty)
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
+                  // --- PROGRESS BAR ---
+                  const SizedBox(height: 18),
+                  Stack(
                     children: [
-                      const SizedBox(height: 12),
-                      const Divider(height: 1),
+                      Container(
+                        height: 6,
+                        width: double.infinity,
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.3),
+                          borderRadius: BorderRadius.circular(3),
+                        ),
+                      ),
+                      AnimatedContainer(
+                        duration: const Duration(milliseconds: 500),
+                        curve: Curves.easeOut,
+                        height: 6,
+                        width: (MediaQuery.of(context).size.width - 68) * (task.progress / 100),
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: [
+                              _getStatusColor(task.status).withValues(alpha: 0.8),
+                              _getStatusColor(task.status),
+                            ],
+                          ),
+                          borderRadius: BorderRadius.circular(3),
+                          boxShadow: [
+                            BoxShadow(
+                              color: _getStatusColor(task.status).withValues(alpha: 0.2),
+                              blurRadius: 4,
+                              offset: const Offset(0, 1),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                  // Progress % Text
+                  if (isExpanded) ...[
+                    const SizedBox(height: 6),
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: Text(
+                        '${task.progress}% Complete',
+                        style: TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.w700,
+                          color: _getStatusColor(task.status),
+                        ),
+                      ),
+                    ),
+                  ],
+
+                  // --- EXPANDABLE DETAILS ---
+                  if (isExpanded) ...[
+                    const SizedBox(height: 16),
+                    // Description
+                    if (task.description.isNotEmpty)
+                      Text(
+                        task.description,
+                        style: const TextStyle(
+                          fontSize: 13,
+                          color: AppStitchTheme.lightOnSurfaceVariant,
+                          height: 1.5,
+                        ),
+                      ),
+                    const SizedBox(height: 16),
+                    // Metadata Chips (Deadline, Status Dropdown)
+                    Row(
+                      children: [
+                        _buildInfoChip(
+                          Icons.calendar_today_rounded,
+                          task.deadline,
+                          AppStitchTheme.primary,
+                        ),
+                        const Spacer(),
+                        if (firstAssignment != null)
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withValues(alpha: 0.6),
+                              borderRadius: BorderRadius.circular(10),
+                              border: Border.all(
+                                color: AppStitchTheme.lightOutline.withValues(alpha: 0.4),
+                              ),
+                            ),
+                            child: DropdownButtonHideUnderline(
+                              child: DropdownButton<String>(
+                                value: firstAssignment.status,
+                                isDense: true,
+                                icon: const Icon(Icons.arrow_drop_down, size: 20),
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w800,
+                                  color: _getStatusColor(firstAssignment.status),
+                                ),
+                                items: _assignmentStatuses.map((status) {
+                                  return DropdownMenuItem<String>(
+                                    value: status['value'],
+                                    child: Text(status['label']!),
+                                  );
+                                }).toList(),
+                                onChanged: (value) {
+                                  if (value != null) {
+                                    _handleAssignmentStatusChange(
+                                      firstAssignment.id,
+                                      value,
+                                    );
+                                  }
+                                },
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
+
+                    // Contributors
+                    if (task.contributors.isNotEmpty || task.assignments.isNotEmpty) ...[
+                      const SizedBox(height: 20),
+                      Text(
+                        'TEAM',
+                        style: TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: 1.2,
+                          color: AppStitchTheme.lightOnSurfaceMuted.withValues(alpha: 0.8),
+                        ),
+                      ),
                       const SizedBox(height: 10),
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: [
+                          ...task.contributors.map((name) => _buildAvatarChip(name)),
+                          ...task.assignments.map((a) => _buildAvatarChip(a.employeeName, a.avatarUrl)),
+                        ],
+                      ),
+                    ],
+
+                    // Subtasks
+                    if (task.subtaskDetails.isNotEmpty) ...[
+                      const SizedBox(height: 24),
                       Row(
                         children: [
-                          const Icon(
-                            Icons.list_alt,
-                            size: 14,
-                            color: AppStitchTheme.lightOnSurfaceMuted,
-                          ),
-                          const SizedBox(width: 6),
+                          const Icon(Icons.list_alt_rounded, size: 16, color: AppStitchTheme.primary),
+                          const SizedBox(width: 8),
                           Text(
-                            'Subtasks (${task.subtaskDetails.length})',
-                            style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                                  fontWeight: FontWeight.w900,
-                                  color: AppStitchTheme.lightOnSurface,
-                                ),
+                            'SUBTASKS (${task.subtaskDetails.length})',
+                            style: const TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w900,
+                              letterSpacing: 1,
+                              color: AppStitchTheme.lightOnSurface,
+                            ),
                           ),
                         ],
                       ),
-                      const SizedBox(height: 10),
+                      const SizedBox(height: 14),
                       ...task.subtaskDetails.map((subtask) {
                         return _buildSubtaskCard(subtask, task.id);
                       }),
                     ],
-                  ),
-              ],
+                  ],
+                ],
+              ),
             ),
           ),
         ),
@@ -934,187 +754,193 @@ class _MyTasksPageState extends State<MyTasksPage>
     );
   }
 
-  Widget _buildSubtaskCard(Subtask subtask, int parentId) {
-    final firstAssignment = subtask.assignments.isNotEmpty
-        ? subtask.assignments[0]
-        : null;
-    final isDone = firstAssignment?.status == 'done';
-
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 10),
-      child: GlassCard(
-        padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
-        child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Expanded(
-                child: Text(
-                  subtask.title,
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    color: isDone
-                        ? AppStitchTheme.lightOnSurfaceMuted
-                        : AppStitchTheme.lightOnSurface,
-                    decoration: isDone ? TextDecoration.lineThrough : null,
-                  ),
-                ),
-              ),
-              if (firstAssignment != null)
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 4,
-                  ),
-                  decoration: BoxDecoration(
-                    color: _getStatusColor(
-                      firstAssignment.status,
-                    ).withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(6),
-                    border: Border.all(
-                      color: _getStatusColor(
-                        firstAssignment.status,
-                      ).withValues(alpha: 0.3),
-                      width: 1,
-                    ),
-                  ),
-                  child: DropdownButtonHideUnderline(
-                    child: DropdownButton<String>(
-                      value: firstAssignment.status,
-                      isDense: true,
-                      icon: const Icon(Icons.arrow_drop_down, size: 16),
-                      style: TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w500,
-                        color: _getStatusColor(firstAssignment.status),
-                      ),
-                      items: _assignmentStatuses.map((status) {
-                        return DropdownMenuItem<String>(
-                          value: status['value'],
-                          child: Text(status['label']!),
-                        );
-                      }).toList(),
-                      onChanged: isDone
-                          ? null
-                          : (value) {
-                              if (value != null) {
-                                _handleAssignmentStatusChange(
-                                  firstAssignment.id,
-                                  value,
-                                  parentId: parentId,
-                                  isSubtask: true,
-                                );
-                              }
-                            },
-                    ),
-                  ),
-                ),
-              const SizedBox(width: 8),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFE5E7EB),
-                  borderRadius: BorderRadius.circular(6),
-                ),
-                child: Text(
-                  '${subtask.progress}%',
-                  style: const TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w600,
-                    color: Color(0xFF111827),
-                  ),
-                ),
-              ),
-            ],
+  Widget _buildAvatarChip(String name, [String? avatarUrl]) {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(4, 4, 10, 4),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.5),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: AppStitchTheme.lightOutline.withValues(alpha: 0.3)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.03),
+            blurRadius: 2,
+            offset: const Offset(0, 1),
           ),
-          const SizedBox(height: 8),
-          Text(
-            subtask.description,
-            style: const TextStyle(
-              fontSize: 12,
-              color: AppStitchTheme.lightOnSurfaceVariant,
-              height: 1.4,
-            ),
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-          ),
-          const SizedBox(height: 8),
-          Wrap(
-            spacing: 6,
-            runSpacing: 6,
-            children: [
-              _buildInfoChip(
-                Icons.calendar_today,
-                subtask.deadline,
-                AppStitchTheme.primary,
-                size: 11,
-              ),
-              _buildInfoChip(
-                _getPriorityIcon(subtask.priority),
-                subtask.priority.toUpperCase(),
-                _getPriorityColor(subtask.priority),
-                size: 11,
-              ),
-            ],
-          ),
-          if (subtask.assignments.isNotEmpty) ...[
-            const SizedBox(height: 8),
-            Wrap(
-              spacing: 6,
-              runSpacing: 6,
-              children: subtask.assignments.map((assign) {
-                return Container(
-                  padding: const EdgeInsets.all(6),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.55),
-                    borderRadius: BorderRadius.circular(6),
-                    border: Border.all(
-                      color: AppStitchTheme.lightOutline.withValues(alpha: 0.55),
-                      width: 1,
-                    ),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      if (assign.avatarUrl != null)
-                        CircleAvatar(
-                          radius: 10,
-                          backgroundImage: NetworkImage(assign.avatarUrl!),
-                        )
-                      else
-                        CircleAvatar(
-                          radius: 10,
-                          backgroundColor: AppStitchTheme.lightOutline,
-                          child: Text(
-                            assign.employeeName.isNotEmpty
-                                ? assign.employeeName[0].toUpperCase()
-                                : '?',
-                            style: const TextStyle(
-                              fontSize: 9,
-                              fontWeight: FontWeight.w600,
-                              color: AppStitchTheme.lightOnSurfaceMuted,
-                            ),
-                          ),
-                        ),
-                      const SizedBox(width: 6),
-                      Text(
-                        assign.employeeName,
-                        style: const TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w500,
-                          color: AppStitchTheme.lightOnSurface,
-                        ),
-                      ),
-                    ],
-                  ),
-                );
-              }).toList(),
-            ),
-          ],
         ],
       ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(1.5),
+            decoration: const BoxDecoration(
+              shape: BoxShape.circle,
+              gradient: LinearGradient(
+                colors: [AppStitchTheme.primary, Color(0xFF8B5CF6)],
+              ),
+            ),
+            child: CircleAvatar(
+              radius: 10,
+              backgroundImage: avatarUrl != null ? NetworkImage(avatarUrl) : null,
+              backgroundColor: Colors.white,
+              child: avatarUrl == null
+                  ? Text(
+                      name.isNotEmpty ? name[0].toUpperCase() : '?',
+                      style: const TextStyle(
+                        fontSize: 8,
+                        fontWeight: FontWeight.w900,
+                        color: AppStitchTheme.primary,
+                      ),
+                    )
+                  : null,
+            ),
+          ),
+          const SizedBox(width: 8),
+          Text(
+            name,
+            style: const TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w700,
+              color: AppStitchTheme.lightOnSurface,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSubtaskCard(Subtask subtask, int parentId) {
+    final firstAssignment = subtask.assignments.isNotEmpty ? subtask.assignments[0] : null;
+    final isDone = firstAssignment?.status == 'done';
+    final isUpdating = firstAssignment != null && _updatingAssignmentIds.contains(firstAssignment.id);
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: GlassCard(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    subtask.title,
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w800,
+                      color: isDone ? AppStitchTheme.lightOnSurfaceMuted : AppStitchTheme.lightOnSurface,
+                      decoration: isDone ? TextDecoration.lineThrough : null,
+                    ),
+                  ),
+                ),
+                if (isUpdating)
+                  const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                else if (firstAssignment != null)
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: _getStatusColor(firstAssignment.status).withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(
+                        color: _getStatusColor(firstAssignment.status).withValues(alpha: 0.3),
+                      ),
+                    ),
+                    child: DropdownButtonHideUnderline(
+                      child: DropdownButton<String>(
+                        value: firstAssignment.status,
+                        isDense: true,
+                        icon: const Icon(Icons.arrow_drop_down, size: 18),
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w800,
+                          color: _getStatusColor(firstAssignment.status),
+                        ),
+                        items: _assignmentStatuses.map((status) {
+                          return DropdownMenuItem<String>(
+                            value: status['value'],
+                            child: Text(status['label']!),
+                          );
+                        }).toList(),
+                        onChanged: (value) {
+                          if (value != null) {
+                            _handleAssignmentStatusChange(
+                              firstAssignment.id,
+                              value,
+                              parentId: parentId,
+                              isSubtask: true,
+                            );
+                          }
+                        },
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+            if (subtask.description.isNotEmpty) ...[
+              const SizedBox(height: 10),
+              Text(
+                subtask.description,
+                style: const TextStyle(
+                  fontSize: 12,
+                  color: AppStitchTheme.lightOnSurfaceVariant,
+                  height: 1.5,
+                ),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ],
+            const SizedBox(height: 14),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Wrap(
+                  spacing: 6,
+                  runSpacing: 6,
+                  children: [
+                    _buildInfoChip(
+                      Icons.calendar_today_rounded,
+                      subtask.deadline,
+                      AppStitchTheme.primary,
+                      size: 10,
+                    ),
+                  ],
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.4),
+                    borderRadius: BorderRadius.circular(6),
+                    border: Border.all(color: AppStitchTheme.lightOutline.withValues(alpha: 0.2)),
+                  ),
+                  child: Text(
+                    '${subtask.progress}%',
+                    style: const TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w900,
+                      color: AppStitchTheme.lightOnSurface,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            if (subtask.assignments.isNotEmpty) ...[
+              const SizedBox(height: 12),
+              Wrap(
+                spacing: 6,
+                runSpacing: 6,
+                children: subtask.assignments.map((assign) {
+                  return _buildAvatarChip(assign.employeeName, assign.avatarUrl);
+                }).toList(),
+              ),
+            ],
+          ],
+        ),
       ),
     );
   }
@@ -1126,13 +952,12 @@ class _MyTasksPageState extends State<MyTasksPage>
     double size = 12,
   }) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
-        // Premium minimal: neutral glass chip, color only on icon/text.
-        color: Colors.white.withValues(alpha: 0.55),
-        borderRadius: BorderRadius.circular(6),
+        color: Colors.white.withValues(alpha: 0.6),
+        borderRadius: BorderRadius.circular(10),
         border: Border.all(
-          color: AppStitchTheme.lightOutline.withValues(alpha: 0.65),
+          color: AppStitchTheme.lightOutline.withValues(alpha: 0.4),
           width: 1,
         ),
       ),
@@ -1140,12 +965,12 @@ class _MyTasksPageState extends State<MyTasksPage>
         mainAxisSize: MainAxisSize.min,
         children: [
           Icon(icon, size: size, color: color),
-          const SizedBox(width: 4),
+          const SizedBox(width: 6),
           Text(
             label,
             style: TextStyle(
               fontSize: size,
-              fontWeight: FontWeight.w700,
+              fontWeight: FontWeight.w800,
               color: AppStitchTheme.lightOnSurface,
             ),
           ),
@@ -1169,32 +994,39 @@ class _FrostHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return GlassCard(
-      padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
       child: Row(
         children: [
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  title,
-                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                        fontWeight: FontWeight.w900,
-                        color: AppStitchTheme.lightOnSurface,
-                      ),
+                ShaderMask(
+                  shaderCallback: (bounds) => const LinearGradient(
+                    colors: [AppStitchTheme.lightOnSurface, AppStitchTheme.primary],
+                  ).createShader(bounds),
+                  child: Text(
+                    title,
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: -0.5,
+                          color: Colors.white,
+                        ),
+                  ),
                 ),
-                const SizedBox(height: 2),
+                const SizedBox(height: 4),
                 Text(
                   subtitle,
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
                         color: AppStitchTheme.lightOnSurfaceMuted,
-                        fontWeight: FontWeight.w600,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: 0.2,
                       ),
                 ),
               ],
             ),
           ),
-          const SizedBox(width: 10),
+          const SizedBox(width: 12),
           trailing,
         ],
       ),
@@ -1210,28 +1042,35 @@ class _CountPill extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(AppStitchTheme.radiusPill),
-        color: Colors.white.withValues(alpha: 0.55),
+        borderRadius: BorderRadius.circular(16),
+        color: AppStitchTheme.primary.withValues(alpha: 0.1),
         border: Border.all(
-          color: AppStitchTheme.lightOutline.withValues(alpha: 0.60),
+          color: AppStitchTheme.primary.withValues(alpha: 0.2),
         ),
+        boxShadow: [
+          BoxShadow(
+            color: AppStitchTheme.primary.withValues(alpha: 0.05),
+            blurRadius: 10,
+            spreadRadius: -2,
+          ),
+        ],
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
           const Icon(
-            Icons.layers_rounded,
+            Icons.auto_awesome_motion_rounded,
             size: 16,
             color: AppStitchTheme.primary,
           ),
-          const SizedBox(width: 6),
+          const SizedBox(width: 8),
           Text(
             '$count',
             style: Theme.of(context).textTheme.labelLarge?.copyWith(
                   fontWeight: FontWeight.w900,
-                  color: AppStitchTheme.lightOnSurface,
+                  color: AppStitchTheme.primary,
                 ),
           ),
         ],

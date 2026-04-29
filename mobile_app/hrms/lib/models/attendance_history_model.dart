@@ -46,8 +46,8 @@ class MonthlyAttendance {
 }
 
 class AttendanceSummary {
-  final int present;
-  final int absent;
+  final double present;
+  final double absent;
   final int leave;
   final int halfDay;
   final int late;
@@ -64,8 +64,8 @@ class AttendanceSummary {
 
   factory AttendanceSummary.fromJson(Map<String, dynamic> json) {
     return AttendanceSummary(
-      present: json['present'] ?? 0,
-      absent: json['absent'] ?? 0,
+      present: (json['present'] as num?)?.toDouble() ?? 0.0,
+      absent: (json['absent'] as num?)?.toDouble() ?? 0.0,
       leave: json['leave'] ?? 0,
       halfDay: json['half_day'] ?? 0,
       late: json['late'] ?? 0,
@@ -121,7 +121,7 @@ class AttendanceHistoryData {
               ?.map((item) => MonthOption.fromJson(item))
               .toList() ??
           [],
-      years: (json['years'] as List?)?.map((item) => item as int).toList() ?? [],
+      years: (json['years'] as List?)?.map((item) => (item as num).toInt()).toList() ?? [],
       selectedMonth: json['selected_month'] ?? DateTime.now().month,
       selectedYear: json['selected_year'] ?? DateTime.now().year,
       selectedMonthName: json['selected_month_name'] ?? '',

@@ -1,6 +1,8 @@
 import 'dart:convert';
 import 'dart:math';
 
+import 'dart:io' show Platform;
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/services.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:http/http.dart' as http;
@@ -24,6 +26,9 @@ class AuthService {
     return _googleSignIn ??= GoogleSignIn(
       scopes: const ['email', 'profile'],
       serverClientId: kGoogleServerClientId,
+      // On iOS, providing the clientId explicitly is often required for 6.x+ versions
+      // to avoid configuration errors when serverClientId is also used.
+      clientId: (!kIsWeb && Platform.isIOS) ? kGoogleIosClientId : null,
     );
   }
 
@@ -107,10 +112,13 @@ class AuthService {
         return ApiResponse(
           success: false,
           message:
-              'Google Sign-In could not start on this device. Stop the app, run '
-              '`flutter clean` then `flutter run`, and ensure Google Play services '
-              'is updated. If it persists, add your debug SHA-1 in Firebase and '
-              're-download android/app/google-services.json.',
+              'Google Sign-In could not start on this device. ' +
+              (Platform.isIOS 
+                ? 'On iOS, ensure GoogleService-Info.plist is correctly added to the Xcode project '
+                  'and REVERSED_CLIENT_ID is in Info.plist URL types.'
+                : 'Stop the app, run `flutter clean` then `flutter run`, and ensure Google Play services '
+                  'is updated. If it persists, add your debug SHA-1 in Firebase and '
+                  're-download android/app/google-services.json.'),
         );
       }
       // ApiException 10 = DEVELOPER_ERROR: SHA-1 / package name mismatch in Firebase or GCP.
@@ -120,13 +128,14 @@ class AuthService {
         return ApiResponse(
           success: false,
           message:
-              'Google Sign-In setup (error 10): Firebase does not trust this build yet. '
-              'In Firebase Console → Project settings → Your apps → Android '
-              '(com.innovyx.peoplesuite), add the SHA-1 fingerprint of the keystore '
-              'you use to run the app (debug: from ~/.android/debug.keystore). '
-              'Then download a fresh google-services.json. '
-              'In Google Cloud Console → APIs & Services → Credentials, ensure an '
-              'Android OAuth client exists for this package + SHA-1.',
+              'Google Sign-In setup error: Firebase does not trust this build yet. ' +
+              (Platform.isIOS
+                ? 'Check that the Bundle ID (com.innovyx.peoplesuite) matches your Firebase/GCP registration '
+                  'and that GoogleService-Info.plist is bundled in the app.'
+                : 'In Firebase Console → Project settings → Your apps → Android '
+                  '(com.innovyx.peoplesuite), add the SHA-1 fingerprint of the keystore '
+                  'you use to run the app (debug: from ~/.android/debug.keystore). '
+                  'Then download a fresh google-services.json.'),
         );
       }
       return ApiResponse(

@@ -43,21 +43,38 @@ const authHeaders = (json = true): HeadersInit => {
     return headers;
 };
 
+const collectErrorMessages = (value: unknown, bucket: string[]) => {
+    if (!value) return;
+    if (typeof value === 'string') {
+        const msg = value.trim();
+        if (msg) bucket.push(msg);
+        return;
+    }
+    if (Array.isArray(value)) {
+        value.forEach((item) => collectErrorMessages(item, bucket));
+        return;
+    }
+    if (typeof value === 'object') {
+        Object.values(value as Record<string, unknown>).forEach((item) => collectErrorMessages(item, bucket));
+    }
+};
+
 const parseApiError = (data: unknown): string => {
-    if (typeof data === 'string') return data;
-    if (!data || typeof data !== 'object') return 'Request failed';
-
-    const obj = data as Record<string, unknown>;
-    if (typeof obj.detail === 'string') return obj.detail;
-    if (Array.isArray(obj.non_field_errors) && typeof obj.non_field_errors[0] === 'string') return obj.non_field_errors[0];
-
-    const firstValue = Object.values(obj)[0];
-    if (Array.isArray(firstValue) && typeof firstValue[0] === 'string') return firstValue[0];
-    return 'Request failed';
+    const messages: string[] = [];
+    collectErrorMessages(data, messages);
+    const uniqueMessages = Array.from(new Set(messages.filter(Boolean)));
+    if (uniqueMessages.length > 0) return uniqueMessages.join('\n');
+    return 'Unable to process request. Please verify required fields and try again.';
 };
 
 const parseJson = async <T>(res: Response): Promise<T> => {
-    const data = await res.json().catch(() => ({}));
+    const rawText = await res.text();
+    let data: unknown = {};
+    try {
+        data = rawText ? JSON.parse(rawText) : {};
+    } catch {
+        data = rawText;
+    }
     if (!res.ok) throw new Error(parseApiError(data));
     return data as T;
 };

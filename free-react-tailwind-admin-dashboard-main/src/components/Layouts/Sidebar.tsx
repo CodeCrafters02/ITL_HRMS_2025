@@ -48,6 +48,9 @@ const Sidebar = () => {
     });
     const [seenCounts, setSeenCounts] = useState<Record<string, number>>({});
     const SEEN_KEY = 'employee_sidebar_seen_counts';
+    const [pendingLeaveApprovalIds, setPendingLeaveApprovalIds] = useState<number[]>([]);
+    const [seenLeaveApprovalIds, setSeenLeaveApprovalIds] = useState<number[]>([]);
+    const LEAVE_APPROVAL_SEEN_IDS_KEY = 'employee_sidebar_seen_leave_approval_ids';
 
     const statusIsPending = (status: unknown) => String(status || '').toLowerCase() === 'pending';
     const countBadge = (count: number) =>
@@ -100,6 +103,19 @@ const Sidebar = () => {
     }, []);
 
     useEffect(() => {
+        try {
+            const raw = localStorage.getItem(LEAVE_APPROVAL_SEEN_IDS_KEY);
+            if (!raw) return;
+            const parsed = JSON.parse(raw);
+            if (Array.isArray(parsed)) {
+                setSeenLeaveApprovalIds(parsed.map((v) => Number(v)).filter((v) => Number.isFinite(v)));
+            }
+        } catch {
+            setSeenLeaveApprovalIds([]);
+        }
+    }, []);
+
+    useEffect(() => {
         if (userRole !== 'employee') return;
         const token = localStorage.getItem('access_token');
         if (!token) return;
@@ -134,7 +150,10 @@ const Sidebar = () => {
                 const assignTaskOpen = managerTaskList.filter((task: any) => String(task?.status || '').toLowerCase() !== 'done').length;
 
                 const leavesList = Array.isArray(leavesData) ? leavesData : Array.isArray((leavesData as any)?.results) ? (leavesData as any).results : [];
-                const leaveApprovals = leavesList.filter((l: any) => statusIsPending(l?.status)).length;
+                const pendingLeaves = leavesList.filter((l: any) => statusIsPending(l?.status));
+                const leaveApprovals = pendingLeaves.length;
+                const leaveApprovalIds = pendingLeaves.map((l: any) => Number(l?.id)).filter((id: number) => Number.isFinite(id));
+                setPendingLeaveApprovalIds(leaveApprovalIds);
                 const leaveApplicationUpdates = leavesList.filter((l: any) => {
                     const status = String(l?.status || '').toLowerCase();
                     return status === 'approved' || status === 'rejected';
@@ -158,6 +177,7 @@ const Sidebar = () => {
                     assignTask: assignTaskOpen,
                 });
             } catch {
+                setPendingLeaveApprovalIds([]);
                 setEmployeeCounts({
                     myTasks: 0,
                     assetRequests: 0,
@@ -203,7 +223,18 @@ const Sidebar = () => {
             setSeenCounts(nextSeen);
             localStorage.setItem(SEEN_KEY, JSON.stringify(nextSeen));
         }
-    }, [location.pathname, userRole, employeeCounts, seenCounts]);
+
+        if (path.startsWith('/employee/leave-approval')) {
+            setSeenLeaveApprovalIds(pendingLeaveApprovalIds);
+            localStorage.setItem(LEAVE_APPROVAL_SEEN_IDS_KEY, JSON.stringify(pendingLeaveApprovalIds));
+        }
+    }, [location.pathname, userRole, employeeCounts, seenCounts, pendingLeaveApprovalIds]);
+
+    const unreadLeaveApprovalCount = Math.max(0, pendingLeaveApprovalIds.filter((id) => !seenLeaveApprovalIds.includes(id)).length);
+    const unreadRequestsFolderCount =
+        unreadCount('assetRequests', employeeCounts.assetRequests) +
+        unreadCount('loanApprovals', employeeCounts.loanApprovals);
+    const unreadReimbursementFolderCount = unreadCount('reimbursementApprovals', employeeCounts.reimbursementApprovals);
 
     return (
         <div className={semidark ? 'dark' : ''}>
@@ -286,7 +317,7 @@ const Sidebar = () => {
                                             </div>
                                         </NavLink>
                                     </li>
-                                    <li className="menu nav-item">
+                                    {/* <li className="menu nav-item">
                                         <NavLink to="/employee/leave-application" className="group">
                                             <div className="flex items-center">
                                                 <IconMenuCalendar className="group-hover:!text-primary shrink-0" />
@@ -294,7 +325,7 @@ const Sidebar = () => {
                                                 {countBadge(unreadCount('leaveApplicationUpdates', employeeCounts.leaveApplicationUpdates))}
                                             </div>
                                         </NavLink>
-                                    </li>
+                                    </li> */}
                                     <li className="menu nav-item">
                                         <NavLink to="/employee/attendance-history" className="group">
                                             <div className="flex items-center">
@@ -367,6 +398,7 @@ const Sidebar = () => {
                                             <div className="flex items-center">
                                                 <IconMenuNotes className="group-hover:!text-primary shrink-0" />
                                                 <span className="ltr:pl-3 rtl:pr-3 text-black dark:text-[#506690] dark:group-hover:text-white-dark">{t('Requests')}</span>
+                                                {countBadge(unreadRequestsFolderCount)}
                                             </div>
                                             <div className={currentMenu !== 'emp-requests' ? 'rtl:rotate-90 -rotate-90' : ''}>
                                                 <IconCaretDown />
@@ -400,6 +432,7 @@ const Sidebar = () => {
                                             <div className="flex items-center">
                                                 <IconMenuInvoice className="group-hover:!text-primary shrink-0" />
                                                 <span className="ltr:pl-3 rtl:pr-3 text-black dark:text-[#506690] dark:group-hover:text-white-dark">{t('Reimbursement')}</span>
+                                                {countBadge(unreadReimbursementFolderCount)}
                                             </div>
                                             <div className={currentMenu !== 'reimbursement' ? 'rtl:rotate-90 -rotate-90' : ''}>
                                                 <IconCaretDown />
@@ -426,7 +459,7 @@ const Sidebar = () => {
                                                     <div className="flex items-center">
                                                         <IconMenuCalendar className="group-hover:!text-primary shrink-0" />
                                                         <span className="ltr:pl-3 rtl:pr-3 text-black dark:text-[#506690] dark:group-hover:text-white-dark">{t('Leave Request')}</span>
-                                                        {countBadge(unreadCount('leaveApprovals', employeeCounts.leaveApprovals))}
+                                                        {countBadge(unreadLeaveApprovalCount)}
                                                     </div>
                                                 </NavLink>
                                             </li>

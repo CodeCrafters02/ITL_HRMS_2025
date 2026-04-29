@@ -43,7 +43,7 @@ class NotificationService {
 
     async sendTokenToBackend(token: string) {
         const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000';
-        const accessToken = localStorage.getItem('accessToken');
+        const accessToken = localStorage.getItem('access_token') || localStorage.getItem('accessToken');
 
         if (!accessToken) {
             console.warn('No access token found, skipping FCM token registration.');
@@ -71,6 +71,11 @@ class NotificationService {
 
     initForegroundListener() {
         if (!messaging) return;
+
+        if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
+            // Re-register token on app load so backend always has a current token.
+            this.registerToken();
+        }
 
         onMessage(messaging, (payload: MessagePayload) => {
             console.log('Message received. ', payload);

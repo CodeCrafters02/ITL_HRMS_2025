@@ -18,7 +18,10 @@ const formatDate = (date?: string) => {
     if (!date) return '-';
     const parsed = new Date(date);
     if (Number.isNaN(parsed.getTime())) return date;
-    return parsed.toLocaleDateString();
+    const day = String(parsed.getDate()).padStart(2, '0');
+    const month = String(parsed.getMonth() + 1).padStart(2, '0');
+    const year = parsed.getFullYear();
+    return `${day}/${month}/${year}`;
 };
 
 const dateDiff = (fromDate: string, toDate: string) => {
@@ -30,6 +33,18 @@ const dateDiff = (fromDate: string, toDate: string) => {
     return Math.max(0, diff);
 };
 
+const canCancelLeaveRequest = (request: LeaveRequest) => {
+    if (!(request.status === 'Pending' || request.status === 'Approved')) return false;
+    if (!request.from_date) return false;
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const from = new Date(request.from_date);
+    from.setHours(0, 0, 0, 0);
+    if (Number.isNaN(from.getTime())) return false;
+    // Allow cancellation only before leave starts, or on the start date.
+    return today.getTime() <= from.getTime();
+};
+
 const ApplyLeave = () => {
     const dispatch = useDispatch();
     const [leaveBalances, setLeaveBalances] = useState<LeaveBalance[]>([]);
@@ -38,6 +53,7 @@ const ApplyLeave = () => {
     const [submitting, setSubmitting] = useState(false);
     const [cancellingId, setCancellingId] = useState<number | null>(null);
     const [error, setError] = useState<string | null>(null);
+    const [formError, setFormError] = useState<string | null>(null);
     const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
     const [search, setSearch] = useState('');
     const [isApplyModalOpen, setIsApplyModalOpen] = useState(false);
@@ -122,22 +138,23 @@ const ApplyLeave = () => {
         setFromDate('');
         setToDate('');
         setReason('');
+        setFormError(null);
     };
 
     const submitLeave = async (event: FormEvent) => {
         event.preventDefault();
-        setError(null);
+        setFormError(null);
 
         if (!leaveType) {
-            setError('Please select a leave type.');
+            setFormError('Please select a leave type.');
             return;
         }
         if (!fromDate || !toDate) {
-            setError('Please choose both from and to dates.');
+            setFormError('Please choose both from and to dates.');
             return;
         }
         if (new Date(fromDate).getTime() > new Date(toDate).getTime()) {
-            setError('From date cannot be after to date.');
+            setFormError('From date cannot be after to date.');
             return;
         }
 
@@ -155,7 +172,7 @@ const ApplyLeave = () => {
             await loadData();
         } catch (err) {
             const message = err instanceof Error ? err.message : 'Failed to apply leave';
-            setError(message);
+            setFormError(message);
         } finally {
             setSubmitting(false);
         }
@@ -387,7 +404,7 @@ const ApplyLeave = () => {
                                             )}
                                         </td>
                                         <td className="text-center">
-                                            {(request.status === 'Pending' || request.status === 'Approved') ? (
+                                            {canCancelLeaveRequest(request) ? (
                                                 <button
                                                     type="button"
                                                     className="btn btn-sm btn-outline-danger"
@@ -418,6 +435,11 @@ const ApplyLeave = () => {
                                 Close
                             </button>
                         </div>
+                        {formError && (
+                            <div className="mb-4 rounded-md border border-danger/30 bg-danger-light text-danger px-3 py-2 text-sm whitespace-pre-line">
+                                {formError}
+                            </div>
+                        )}
                         <form className="space-y-4" onSubmit={submitLeave}>
                             <div>
                                 <label className="form-label">Leave Type</label>

@@ -2,7 +2,7 @@ import { Link } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { IRootState } from '../../store';
 import { setPageTitle } from '../../store/themeConfigSlice';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import IconPencilPaper from '../../components/Icon/IconPencilPaper';
 import IconCoffee from '../../components/Icon/IconCoffee';
 import IconMail from '../../components/Icon/IconMail';
@@ -13,6 +13,7 @@ import IconUsers from '../../components/Icon/IconUsers';
 import { Dialog, Transition } from '@headlessui/react';
 import { Fragment } from 'react';
 import IconX from '../../components/Icon/IconX';
+import Swal from 'sweetalert2';
 
 const Profile = () => {
     const dispatch = useDispatch();
@@ -22,6 +23,8 @@ const Profile = () => {
     const [reportingLineData, setReportingLineData] = useState<any[]>([]);
     const [selectedNode, setSelectedNode] = useState<any>(null);
     const [isInfoModalOpen, setIsInfoModalOpen] = useState(false);
+    const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
+    const profilePhotoInputRef = useRef<HTMLInputElement | null>(null);
 
     useEffect(() => {
         dispatch(setPageTitle('Profile'));
@@ -147,18 +150,78 @@ const Profile = () => {
         setIsInfoModalOpen(true);
     };
 
+    const handleProfilePhotoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const selectedFile = e.target.files?.[0];
+        if (!selectedFile) return;
+
+        const formData = new FormData();
+        Object.entries(userData || {}).forEach(([key, value]) => {
+            if (value === null || value === undefined) return;
+            if (['photo', 'aadhar_card', 'pan_card'].includes(key)) return;
+            if (typeof value === 'object') return;
+            formData.append(key, String(value));
+        });
+        formData.append('photo', selectedFile);
+
+        setIsUploadingPhoto(true);
+        try {
+            const response = await authFetch(`${import.meta.env.VITE_API_BASE_URL}/app/updateusernamepassword/`, {
+                method: 'PUT',
+                body: formData,
+            });
+
+            const text = await response.text();
+            let result: any = {};
+            try {
+                result = JSON.parse(text);
+            } catch {
+                // Ignore JSON parse failure and show fallback message.
+            }
+
+            if (response.ok) {
+                await fetchUserProfile();
+                Swal.fire({
+                    title: 'Updated',
+                    text: 'Profile photo updated successfully.',
+                    icon: 'success',
+                    customClass: {
+                        popup: 'sweet-alerts',
+                    },
+                });
+            } else {
+                Swal.fire({
+                    title: 'Error',
+                    text: result.detail || 'Failed to update profile photo.',
+                    icon: 'error',
+                    customClass: {
+                        popup: 'sweet-alerts',
+                    },
+                });
+            }
+        } catch (error) {
+            console.error('Error updating profile photo:', error);
+            Swal.fire({
+                title: 'Error',
+                text: 'An unexpected error occurred while updating your profile photo.',
+                icon: 'error',
+                customClass: {
+                    popup: 'sweet-alerts',
+                },
+            });
+        } finally {
+            setIsUploadingPhoto(false);
+            e.target.value = '';
+        }
+    };
+
     return (
         <div>
-            <ul className="flex space-x-2 rtl:space-x-reverse">
-                <li>
-                    <Link to="#" className="text-primary hover:underline">
-                        Users
-                    </Link>
-                </li>
+            {/* <ul className="flex space-x-2 rtl:space-x-reverse">
+              
                 <li className="before:content-['/'] ltr:before:mr-2 rtl:before:ml-2">
                     <span>Profile</span>
                 </li>
-            </ul>
+            </ul> */}
             <div className="pt-5">
                 <div className="flex items-center gap-3 mb-5 border-b border-[#ebedf2] dark:border-[#191e3a]">
                     <button 
@@ -195,11 +258,37 @@ const Profile = () => {
                             </div>
                             <div className="mb-5">
                                 <div className="flex flex-col justify-center items-center">
-                                    <img 
-                                        src={userData?.photo || "/assets/images/profile-34.jpeg"} 
-                                        alt="img" 
-                                        className="w-24 h-24 rounded-full object-cover mb-5 border-2 border-primary p-0.5" 
-                                    />
+                                    <div className="relative mb-3">
+                                        <img
+                                            src={userData?.photo || "/assets/images/profile-34.jpeg"}
+                                            alt="img"
+                                            className="w-24 h-24 rounded-full object-cover border-2 border-primary p-0.5"
+                                        />
+                                        <button
+                                            type="button"
+                                            className="absolute -bottom-1 -right-1 w-8 h-8 rounded-full bg-primary text-white flex items-center justify-center shadow-lg hover:bg-primary/90 disabled:opacity-60"
+                                            onClick={() => profilePhotoInputRef.current?.click()}
+                                            disabled={isUploadingPhoto}
+                                            title="Change profile photo"
+                                        >
+                                            <IconPencilPaper className="w-4 h-4" />
+                                        </button>
+                                        <input
+                                            ref={profilePhotoInputRef}
+                                            type="file"
+                                            accept="image/*"
+                                            className="hidden"
+                                            onChange={handleProfilePhotoChange}
+                                        />
+                                    </div>
+                                    {/* <button
+                                        type="button"
+                                        className="btn btn-sm btn-outline-primary mb-2"
+                                        onClick={() => profilePhotoInputRef.current?.click()}
+                                        disabled={isUploadingPhoto}
+                                    >
+                                        {isUploadingPhoto ? 'Uploading...' : 'Edit Photo'}
+                                    </button> */}
                                     <p className="font-bold text-primary text-2xl">
                                         {userData?.first_name || userData?.last_name 
                                             ? `${userData?.first_name || ''} ${userData?.last_name || ''}`.trim() 

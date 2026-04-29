@@ -14,7 +14,15 @@
 const String _kDefaultWebClientId =
     '482392351722-9ps8jbabvg72cgfn8n9i2udl1i9obfrd.apps.googleusercontent.com';
 
+const String _kDefaultIosClientId =
+    '482392351722-4t91e445h429erfeje0vgh8f396cmbfh.apps.googleusercontent.com';
+
 const String kGoogleServerClientId = String.fromEnvironment(
   'GOOGLE_SERVER_CLIENT_ID',
   defaultValue: _kDefaultWebClientId,
+);
+
+const String kGoogleIosClientId = String.fromEnvironment(
+  'GOOGLE_IOS_CLIENT_ID',
+  defaultValue: _kDefaultIosClientId,
 );

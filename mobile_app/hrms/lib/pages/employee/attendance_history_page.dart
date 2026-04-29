@@ -37,6 +37,7 @@ class _AttendanceHistoryPageState extends State<AttendanceHistoryPage> {
       final response = await EmployeeService.getAttendanceHistory(
         month: _selectedMonth,
         year: _selectedYear,
+        pageSize: 100,
       );
 
       if (mounted) {
@@ -499,7 +500,7 @@ class _AttendanceHistoryPageState extends State<AttendanceHistoryPage> {
 
   Widget _buildSummaryCard(
     String label,
-    int value,
+    num value,
     Color textColor,
     Color bgColor,
     IconData icon,

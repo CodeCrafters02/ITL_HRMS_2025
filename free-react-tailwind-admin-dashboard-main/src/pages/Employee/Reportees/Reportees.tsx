@@ -109,7 +109,7 @@ const Reportees = () => {
                 </div>
             </div>
 
-            <div className="panel">
+            <div className="panel space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                     <div className="md:col-span-2 relative">
                         <input
@@ -143,140 +143,142 @@ const Reportees = () => {
                         </button>
                     </div>
                 </div>
-            </div>
 
-            {totalCount > 0 && (
-                <div className="panel">
-                    <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
-                        <div className="text-xs text-white-dark">
-                            Showing <span className="text-primary font-semibold">{(page - 1) * pageSize + 1}</span> to{' '}
-                            <span className="text-primary font-semibold">{Math.min(page * pageSize, totalCount)}</span> of{' '}
-                            <span className="text-primary font-semibold">{totalCount}</span> entries
-                        </div>
-                        <div className="flex items-center gap-2">
-                            <label className="text-xs text-white-dark">Per page</label>
-                            <select
-                                className="form-select w-20 text-xs"
-                                value={pageSize}
-                                onChange={(e) => {
-                                    setPageSize(Number(e.target.value));
-                                    setPage(1);
-                                }}
-                            >
-                                <option value={10}>10</option>
-                                <option value={20}>20</option>
-                                <option value={50}>50</option>
-                            </select>
-                        </div>
-
-                        <ul className="inline-flex items-center gap-1">
-                            <li>
-                                <button type="button" className="btn btn-sm btn-outline-primary px-2.5" onClick={() => setPage(page > 1 ? page - 1 : 1)} disabled={page === 1}>
-                                    Prev
-                                </button>
-                            </li>
-                            {getPageNumbers().map((p, idx) =>
-                                p === '...' ? <li key={`dots-${idx}`} className="px-2 text-white-dark">...</li> : (
-                                    <li key={p}>
-                                        <button
-                                            type="button"
-                                            className={`btn btn-sm ${page === p ? 'btn-primary' : 'btn-outline-primary'} min-w-[34px]`}
-                                            onClick={() => setPage(p as number)}
-                                        >
-                                            {p}
-                                        </button>
-                                    </li>
-                                ),
-                            )}
-                            <li>
-                                <button
-                                    type="button"
-                                    className="btn btn-sm btn-outline-primary px-2.5"
-                                    onClick={() => setPage(page < totalPages ? page + 1 : totalPages)}
-                                    disabled={page === totalPages || totalPages === 0}
-                                >
-                                    Next
-                                </button>
-                            </li>
-                        </ul>
-                    </div>
-                </div>
-            )}
-
-            {loading ? (
-                <div className="panel text-center py-12 text-white-dark">Loading reportees...</div>
-            ) : items.length === 0 ? (
-                <div className="panel text-center py-12 text-white-dark">No reportees found.</div>
-            ) : viewMode === 'card' ? (
-                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
-                    {items.map((item) => (
-                        <div key={item.id} className="panel border border-white-light dark:border-[#1b2e4b]">
-                            <div className="flex items-start justify-between gap-3">
-                                <div className="flex items-center gap-3 min-w-0">
-                                    <div className="w-12 h-12 rounded-full overflow-hidden bg-primary-light text-primary flex items-center justify-center shrink-0">
-                                        {item.photo ? <img src={item.photo} alt={item.full_name} className="w-full h-full object-cover" /> : <IconUser className="w-6 h-6" />}
-                                    </div>
-                                    <div className="min-w-0">
-                                        <h3 className="font-semibold truncate">{item.full_name || '-'}</h3>
-                                        <p className="text-xs text-white-dark truncate">{item.employee_id || '-'}</p>
-                                    </div>
-                                </div>
-                                <span className={`badge ${statusBadgeClass(item.status)}`}>{item.status || 'Offline'}</span>
-                            </div>
-                            <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
-                                <div className="rounded-md bg-[#f8f9fa] dark:bg-[#060818] p-2">
-                                    <p className="text-xs text-white-dark">Department</p>
-                                    <p className="font-semibold truncate">{item.department_name || '-'}</p>
-                                </div>
-                                <div className="rounded-md bg-[#f8f9fa] dark:bg-[#060818] p-2">
-                                    <p className="text-xs text-white-dark">Designation</p>
-                                    <p className="font-semibold truncate">{item.designation_name || '-'}</p>
-                                </div>
-                            </div>
-                            <div className="mt-3 text-xs">
-                                <span className={`badge ${item.is_checked_in ? 'bg-success-light text-success' : 'bg-dark-light text-white-dark'}`}>
-                                    {item.is_checked_in ? 'Checked In' : 'Not Checked In'}
-                                </span>
-                            </div>
-                        </div>
-                    ))}
-                </div>
-            ) : (
-                <div className="panel p-0 overflow-hidden">
-                    <div className="table-responsive">
-                        <table className="table-hover">
-                            <thead>
-                                <tr>
-                                    <th>Employee</th>
-                                    <th>Employee ID</th>
-                                    <th>Department</th>
-                                    <th>Designation</th>
-                                    <th>Status</th>
-                                    <th>Attendance</th>
-                                </tr>
-                            </thead>
-                            <tbody>
+                <div className="rounded-md border border-white-light dark:border-[#1b2e4b] overflow-hidden">
+                    <div className="p-4">
+                        {loading ? (
+                            <div className="text-center py-12 text-white-dark">Loading reportees...</div>
+                        ) : items.length === 0 ? (
+                            <div className="text-center py-12 text-white-dark">No reportees found.</div>
+                        ) : viewMode === 'card' ? (
+                            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
                                 {items.map((item) => (
-                                    <tr key={item.id}>
-                                        <td className="font-semibold">{item.full_name || '-'}</td>
-                                        <td>{item.employee_id || '-'}</td>
-                                        <td>{item.department_name || '-'}</td>
-                                        <td>{item.designation_name || '-'}</td>
-                                        <td>
+                                    <div key={item.id} className="rounded-md border border-white-light dark:border-[#1b2e4b] p-4 bg-white dark:bg-[#111c2d]">
+                                        <div className="flex items-start justify-between gap-3">
+                                            <div className="flex items-center gap-3 min-w-0">
+                                                <div className="w-12 h-12 rounded-full overflow-hidden bg-primary-light text-primary flex items-center justify-center shrink-0">
+                                                    {item.photo ? <img src={item.photo} alt={item.full_name} className="w-full h-full object-cover" /> : <IconUser className="w-6 h-6" />}
+                                                </div>
+                                                <div className="min-w-0">
+                                                    <h3 className="font-semibold truncate">{item.full_name || '-'}</h3>
+                                                    <p className="text-xs text-white-dark truncate">{item.employee_id || '-'}</p>
+                                                </div>
+                                            </div>
                                             <span className={`badge ${statusBadgeClass(item.status)}`}>{item.status || 'Offline'}</span>
-                                        </td>
-                                        <td>
+                                        </div>
+                                        <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
+                                            <div className="rounded-md bg-[#f8f9fa] dark:bg-[#060818] p-2">
+                                                <p className="text-xs text-white-dark">Department</p>
+                                                <p className="font-semibold truncate">{item.department_name || '-'}</p>
+                                            </div>
+                                            <div className="rounded-md bg-[#f8f9fa] dark:bg-[#060818] p-2">
+                                                <p className="text-xs text-white-dark">Designation</p>
+                                                <p className="font-semibold truncate">{item.designation_name || '-'}</p>
+                                            </div>
+                                        </div>
+                                        <div className="mt-3 text-xs">
                                             <span className={`badge ${item.is_checked_in ? 'bg-success-light text-success' : 'bg-dark-light text-white-dark'}`}>
                                                 {item.is_checked_in ? 'Checked In' : 'Not Checked In'}
                                             </span>
-                                        </td>
-                                    </tr>
+                                        </div>
+                                    </div>
                                 ))}
-                            </tbody>
-                        </table>
+                            </div>
+                        ) : (
+                            <div className="table-responsive -m-4">
+                                <table className="table-hover">
+                                    <thead>
+                                        <tr>
+                                            <th>Employee</th>
+                                            <th>Employee ID</th>
+                                            <th>Department</th>
+                                            <th>Designation</th>
+                                            <th>Status</th>
+                                            <th>Attendance</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {items.map((item) => (
+                                            <tr key={item.id}>
+                                                <td className="font-semibold">{item.full_name || '-'}</td>
+                                                <td>{item.employee_id || '-'}</td>
+                                                <td>{item.department_name || '-'}</td>
+                                                <td>{item.designation_name || '-'}</td>
+                                                <td>
+                                                    <span className={`badge ${statusBadgeClass(item.status)}`}>{item.status || 'Offline'}</span>
+                                                </td>
+                                                <td>
+                                                    <span className={`badge ${item.is_checked_in ? 'bg-success-light text-success' : 'bg-dark-light text-white-dark'}`}>
+                                                        {item.is_checked_in ? 'Checked In' : 'Not Checked In'}
+                                                    </span>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        )}
                     </div>
+
+                    {totalCount > 0 && (
+                        <div className="border-t border-white-light dark:border-[#1b2e4b] px-4 py-3">
+                            <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
+                                <div className="text-xs text-white-dark">
+                                    Showing <span className="text-primary font-semibold">{(page - 1) * pageSize + 1}</span> to{' '}
+                                    <span className="text-primary font-semibold">{Math.min(page * pageSize, totalCount)}</span> of{' '}
+                                    <span className="text-primary font-semibold">{totalCount}</span> entries
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    <label className="text-xs text-white-dark">Per page</label>
+                                    <select
+                                        className="form-select w-20 text-xs"
+                                        value={pageSize}
+                                        onChange={(e) => {
+                                            setPageSize(Number(e.target.value));
+                                            setPage(1);
+                                        }}
+                                    >
+                                        <option value={10}>10</option>
+                                        <option value={20}>20</option>
+                                        <option value={50}>50</option>
+                                    </select>
+                                </div>
+
+                                <ul className="inline-flex items-center gap-1">
+                                    <li>
+                                        <button type="button" className="btn btn-sm btn-outline-primary px-2.5" onClick={() => setPage(page > 1 ? page - 1 : 1)} disabled={page === 1}>
+                                            Prev
+                                        </button>
+                                    </li>
+                                    {getPageNumbers().map((p, idx) =>
+                                        p === '...' ? <li key={`dots-${idx}`} className="px-2 text-white-dark">...</li> : (
+                                            <li key={p}>
+                                                <button
+                                                    type="button"
+                                                    className={`btn btn-sm ${page === p ? 'btn-primary' : 'btn-outline-primary'} min-w-[34px]`}
+                                                    onClick={() => setPage(p as number)}
+                                                >
+                                                    {p}
+                                                </button>
+                                            </li>
+                                        ),
+                                    )}
+                                    <li>
+                                        <button
+                                            type="button"
+                                            className="btn btn-sm btn-outline-primary px-2.5"
+                                            onClick={() => setPage(page < totalPages ? page + 1 : totalPages)}
+                                            disabled={page === totalPages || totalPages === 0}
+                                        >
+                                            Next
+                                        </button>
+                                    </li>
+                                </ul>
+                            </div>
+                        </div>
+                    )}
                 </div>
-            )}
+            </div>
 
         </div>
     );
