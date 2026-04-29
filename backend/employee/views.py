@@ -1547,7 +1547,17 @@ class EmployeeProfileAPIView(generics.RetrieveUpdateAPIView):
         return EmployeeDetailSerializer
 
     def get_object(self):
-        return Employee.objects.get(user=self.request.user)
+        try:
+            return Employee.objects.get(user=self.request.user)
+        except Employee.DoesNotExist:
+            # Fallback for users (Master/Admin) who don't have an Employee profile yet
+            user = self.request.user
+            return Employee(
+                user=user,
+                first_name=user.first_name,
+                last_name=user.last_name,
+                email=user.email,
+            )
 
 
 class EmployeeProfileByIdAPIView(generics.RetrieveAPIView):

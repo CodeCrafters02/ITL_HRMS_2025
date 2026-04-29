@@ -127,7 +127,7 @@ const Header = () => {
     const [notificationUnreadCount, setNotificationUnreadCount] = useState(0);
     const [notificationSeenCount, setNotificationSeenCount] = useState(0);
     const calendarRoute = userRole === 'employee' ? '/employee/calendar' : userRole === 'admin' ? '/admin/calendar' : '/apps/calendar';
-    const notificationRoute = userRole === 'employee' ? '/employee/notifications' : userRole === 'admin' ? '/admin/notifications' : '/apps/mailbox';
+    const notificationRoute = userRole === 'employee' ? '/employee/notifications' : userRole === 'admin' ? '/admin/notifications' : '/master/dashboard';
     const notificationSeenKey = `header_notification_seen_count_${userId}`;
     const displayName = profileName || `${firstName} ${lastName}`.trim() || storedUsername || 'User';
     const displayEmail = profileEmail || storedEmail || '-';
@@ -140,7 +140,7 @@ const Header = () => {
 
         const loadProfile = async () => {
             try {
-                if (userRole !== 'employee') return;
+                if (!['employee', 'admin', 'master'].includes(userRole)) return;
                 const res = await fetch(`${API_BASE_URL}/employee/employee-profile/`, {
                     headers: { Authorization: `Bearer ${token}` },
                 });
@@ -463,18 +463,22 @@ const Header = () => {
                                             Profile
                                         </Link>
                                     </li>
-                                    <li>
-                                        <Link to="/apps/mailbox" className="dark:hover:text-white">
-                                            <IconMail className="w-4.5 h-4.5 ltr:mr-2 rtl:ml-2 shrink-0" />
-                                            Inbox
-                                        </Link>
-                                    </li>
-                                    <li>
-                                        <Link to="/auth/boxed-lockscreen" className="dark:hover:text-white">
-                                            <IconLockDots className="w-4.5 h-4.5 ltr:mr-2 rtl:ml-2 shrink-0" />
-                                            Lock Screen
-                                        </Link>
-                                    </li>
+                                    {userRole !== 'master' && (
+                                        <li>
+                                            <Link to="/apps/mailbox" className="dark:hover:text-white">
+                                                <IconMail className="w-4.5 h-4.5 ltr:mr-2 rtl:ml-2 shrink-0" />
+                                                Inbox
+                                            </Link>
+                                        </li>
+                                    )}
+                                    {userRole !== 'master' && (
+                                        <li>
+                                            <Link to="/auth/boxed-lockscreen" className="dark:hover:text-white">
+                                                <IconLockDots className="w-4.5 h-4.5 ltr:mr-2 rtl:ml-2 shrink-0" />
+                                                Lock Screen
+                                            </Link>
+                                        </li>
+                                    )}
                                     <li className="border-t border-white-light dark:border-white-light/10">
                                         <Link to="/auth/boxed-signin" className="text-danger !py-3 flex items-center" onClick={() => {
                                             ['access_token', 'refresh_token', 'user_role', 'user_id', 'username', 'is_reporting_manager', 'user_email', 'first_name', 'last_name', 'remember_me'].forEach(k => localStorage.removeItem(k));
@@ -531,9 +535,11 @@ const Header = () => {
                             <li>
                                 <NavLink to="/apps/chat">{t('chat')}</NavLink>
                             </li>
-                            <li>
-                                <NavLink to="/apps/mailbox">{t('mailbox')}</NavLink>
-                            </li>
+                            {userRole !== 'master' && (
+                                <li>
+                                    <NavLink to="/apps/mailbox">{t('mailbox')}</NavLink>
+                                </li>
+                            )}
                             <li>
                                 <NavLink to="/apps/todolist">{t('todo_list')}</NavLink>
                             </li>
@@ -955,26 +961,28 @@ const Header = () => {
                                     </li>
                                 </ul>
                             </li>
-                            <li className="relative">
-                                <button type="button">
-                                    {t('lockscreen')}
-                                    <div className="ltr:ml-auto rtl:mr-auto rtl:rotate-90 -rotate-90">
-                                        <IconCaretDown />
-                                    </div>
-                                </button>
-                                <ul className="rounded absolute top-0 ltr:left-[95%] rtl:right-[95%] min-w-[180px] bg-white z-[10] text-dark dark:text-white-dark dark:bg-[#1b2e4b] shadow p-0 py-2 hidden">
-                                    <li>
-                                        <NavLink to="/auth/cover-lockscreen" target="_blank">
-                                            {t('unlock_cover')}
-                                        </NavLink>
-                                    </li>
-                                    <li>
-                                        <NavLink to="/auth/boxed-lockscreen" target="_blank">
-                                            {t('unlock_boxed')}
-                                        </NavLink>
-                                    </li>
-                                </ul>
-                            </li>
+                            {userRole !== 'master' && (
+                                <li className="relative">
+                                    <button type="button">
+                                        {t('lockscreen')}
+                                        <div className="ltr:ml-auto rtl:mr-auto rtl:rotate-90 -rotate-90">
+                                            <IconCaretDown />
+                                        </div>
+                                    </button>
+                                    <ul className="rounded absolute top-0 ltr:left-[95%] rtl:right-[95%] min-w-[180px] bg-white z-[10] text-dark dark:text-white-dark dark:bg-[#1b2e4b] shadow p-0 py-2 hidden">
+                                        <li>
+                                            <NavLink to="/auth/cover-lockscreen" target="_blank">
+                                                {t('unlock_cover')}
+                                            </NavLink>
+                                        </li>
+                                        <li>
+                                            <NavLink to="/auth/boxed-lockscreen" target="_blank">
+                                                {t('unlock_boxed')}
+                                            </NavLink>
+                                        </li>
+                                    </ul>
+                                </li>
+                            )}
                         </ul>
                     </li>
                     <li className="menu nav-item relative">
