@@ -66,6 +66,27 @@ class EmployeeService {
     final token = await StorageService.getAccessToken();
     return ApiConfig.getAuthHeaders(token ?? '');
   }
+  // Get current employee ID
+  static Future<int?> getCurrentEmployeeId() async {
+    try {
+      final token = await StorageService.getAccessToken();
+      if (token == null) return null;
+
+      final response = await http.get(
+        Uri.parse(ApiConfig.employeeIdUrl),
+        headers: ApiConfig.getAuthHeaders(token),
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        return data['employee_id'] ?? data['id'];
+      }
+      return null;
+    } catch (e) {
+      return null;
+    }
+  }
+
   // Get dashboard data
   static Future<ApiResponse<DashboardData>> getDashboardData() async {
     try {
@@ -769,6 +790,7 @@ class EmployeeService {
   static Future<ApiResponse<AttendanceHistoryData>> getAttendanceHistory({
     int? month,
     int? year,
+    int? pageSize,
   }) async {
     try {
       final token = await StorageService.getAccessToken();
@@ -781,7 +803,11 @@ class EmployeeService {
       final selectedYear = year ?? now.year;
 
       final response = await http.get(
-        Uri.parse(ApiConfig.attendanceHistoryUrl(selectedMonth, selectedYear)),
+        Uri.parse(ApiConfig.attendanceHistoryUrl(
+          selectedMonth,
+          selectedYear,
+          pageSize: pageSize,
+        )),
         headers: ApiConfig.getAuthHeaders(token),
       );
 

@@ -21,56 +21,95 @@ def _company_user_ids(company):
         UserRegister.objects.filter(company=company).values_list("id", flat=True)
     )
 # --- TASKS ---
+
+@receiver(pre_save, sender=TaskAssignment)
+def task_assignment_pre_save(sender, instance, **kwargs):
+    """
+    Capture the old status before saving to detect changes in post_save.
+    """
+    if instance.pk:
+        try:
+            instance._old_status = TaskAssignment.objects.get(pk=instance.pk).status
+        except TaskAssignment.DoesNotExist:
+            instance._old_status = None
+    else:
+        instance._old_status = None
+
 @receiver(post_save, sender=TaskAssignment)
-def task_assigned_updated(sender, instance, created, **kwargs):
+def task_assignment_notification_handler(sender, instance, created, **kwargs):
     """
-    When a manager assigns/updates a task assignment, notify only the assigned employee.
-    Also create a UserNotification so the frontend gets live notification via SSE and API.
+    Handles all task-related notifications:
+    1. New Assignment: Notify the employee.
+    2. Status Change (by anyone): Notify the relevant parties.
     """
-    emp_user_id = instance.employee.user.id if hasattr(instance.employee, 'user') else None
-    if not emp_user_id:
-        return
     task = instance.task
-    body = f"{task.title} (deadline: {task.deadline})"
-    data = {"type": "task", "task_id": task.id, "assignment_id": instance.id, "status": instance.status}
+    employee = instance.employee
+    manager = task.created_by
+    
+    # Common variables
+    manager_name = manager.full_name if hasattr(manager, 'full_name') else (manager.username if hasattr(manager, 'username') else "Manager")
+    employee_name = employee.full_name if hasattr(employee, 'full_name') else (employee.username if hasattr(employee, 'username') else "Employee")
+    priority_label = dict(Task.PRIORITY).get(task.priority, task.priority).upper()
+    deadline_str = task.deadline.strftime('%Y-%m-%d') if task.deadline else "No Deadline"
+    
     default_sender = UserRegister.objects.filter(role='admin').first()
-    try:
-        send_fcm_to_users([emp_user_id], "task", body, sender=default_sender, extra_data=data)
-    except Exception as e:
-        logger.error(f"Failed to send FCM notification for task assignment: {e}")
-    # Create UserNotification for live notification
+    
+    # 1. NEW ASSIGNMENT
     if created:
-        try:
-            UserNotification.objects.create(
-                recipient=instance.employee,
-                title=f"Task Assigned: {task.title}",
-                message=f"You have been assigned a task: {task.title} (deadline: {task.deadline})",
-                related_object_id=task.id,
-                sender=default_sender
-            )
-        except Exception as e:
-            logger.error(f"Failed to create UserNotification for task assignment: {e}")
-
-@receiver(post_save, sender=TaskAssignment)
-def notify_employees_on_assignment(sender, instance, created, **kwargs):
-    if created:
-        # all users currently assigned to this task
-        assigned_user_ids = list(
-            instance.task.assignments.select_related("employee__user").values_list("employee__user__id", flat=True)
-        )
-
+        title = f"🚀 New Task: {task.title}"
+        message = f"You have been assigned a {priority_label} priority task by {manager_name}. Deadline: {deadline_str}."
         
-        default_sender = UserRegister.objects.filter(role="admin").first()
-        try:
-            send_fcm_to_users(
-                assigned_user_ids,
-                "task",
-                f"{instance.task.title} assigned to you",
-                sender=default_sender,
-                extra_data={"type": "task", "task_id": instance.task.id},
-            )
-        except Exception as e:
-            logger.error(f"Failed to send FCM notification for task assignment: {e}")
+        data = {
+            "type": "task_assignment",
+            "task_id": task.id,
+            "assignment_id": instance.id,
+            "priority": task.priority
+        }
+        
+        if employee.user:
+            try:
+                send_fcm_to_users([employee.user.id], "task", message, sender=default_sender, title=title, extra_data=data)
+                UserNotification.objects.create(
+                    recipient=employee,
+                    title=title,
+                    message=message,
+                    related_object_id=task.id,
+                    sender=default_sender
+                )
+            except Exception as e:
+                logger.error(f"Failed to send/create notification for new task assignment: {e}")
+
+    # 2. STATUS CHANGE
+    elif hasattr(instance, '_old_status') and instance._old_status != instance.status:
+        status_label = dict(Task.STATUS).get(instance.status, instance.status).title()
+        
+        # If employee updated the status -> Notify Manager
+        # If manager/other updated the status -> Notify Employee
+        
+        # We'll assume for now: 
+        # - Notify Employee if status changed (general update)
+        # - Notify Manager specifically if status is 'done' or 'inreview'
+        
+        title = f"📝 Task Status Updated: {task.title}"
+        body = f"The task '{task.title}' status is now: {status_label}."
+        
+        # Notify Employee
+        if employee.user:
+            try:
+                send_fcm_to_users([employee.user.id], "task", body, sender=default_sender, title=title, extra_data={"type": "task_status", "status": instance.status})
+                UserNotification.objects.create(recipient=employee, title=title, message=body, related_object_id=task.id, sender=default_sender)
+            except Exception as e:
+                logger.error(f"Failed to notify employee of status change: {e}")
+        
+        # Notify Manager/Creator if status is significant (Done/In Review)
+        if instance.status in ['done', 'inreview'] and manager and manager.user:
+            m_title = f"✅ Task {status_label}: {task.title}"
+            m_body = f"{employee_name} has marked the task as {status_label}."
+            try:
+                send_fcm_to_users([manager.user.id], "task", m_body, sender=default_sender, title=m_title, extra_data={"type": "task_completion", "task_id": task.id})
+                UserNotification.objects.create(recipient=manager, title=m_title, message=m_body, related_object_id=task.id, sender=default_sender)
+            except Exception as e:
+                logger.error(f"Failed to notify manager of task completion: {e}")
        
 @receiver(post_save, sender=EmpLeave)
 def leave_created_notify_manager(sender, instance, created, **kwargs):
