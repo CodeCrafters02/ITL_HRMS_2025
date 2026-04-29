@@ -107,6 +107,10 @@ const PayslipRollout = () => {
         setViewedIds(prev => new Set(prev).add(payslipId));
     };
 
+    const handleVerify = (payslipId: number) => {
+        setViewedIds(prev => new Set(prev).add(payslipId));
+    };
+
     const handleSend = async (payslipId: number) => {
         if (!viewedIds.has(payslipId)) {
             Swal.fire('Notice', 'Please view the payslip before sending to verify details.', 'info');
