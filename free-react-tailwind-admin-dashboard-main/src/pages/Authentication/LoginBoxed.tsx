@@ -21,6 +21,7 @@ const LoginBoxed = () => {
     const [rememberMe, setRememberMe] = useState(false);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
+    const [acceptedTerms, setAcceptedTerms] = useState(false);
 
     useEffect(() => {
         const token = localStorage.getItem('access_token');
@@ -203,7 +204,23 @@ const LoginBoxed = () => {
                                         <span className="text-white-dark">Remember me</span>
                                     </label>
                                 </div>
-                                <button type="submit" disabled={loading} className="btn btn-gradient !mt-6 w-full border-0 uppercase shadow-[0_10px_20px_-10px_rgba(67,97,238,0.44)]">
+                                <div>
+                                    <label className="flex cursor-pointer items-center">
+                                        <input 
+                                            type="checkbox" 
+                                            className="form-checkbox bg-white dark:bg-black" 
+                                            checked={acceptedTerms}
+                                            onChange={(e) => setAcceptedTerms(e.target.checked)}
+                                            required
+                                        />
+                                        <span className="text-white-dark">I agree to the <Link to="/privacy-policy" className="text-primary hover:underline ml-1">Terms and Conditions</Link></span>
+                                    </label>
+                                </div>
+                                <button 
+                                    type="submit" 
+                                    disabled={loading || !acceptedTerms} 
+                                    className={`btn btn-gradient !mt-6 w-full border-0 uppercase shadow-[0_10px_20px_-10px_rgba(67,97,238,0.44)] ${(!acceptedTerms) ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                >
                                     {loading ? 'Signing in...' : 'Sign in'}
                                 </button>
                             </form>
@@ -211,7 +228,7 @@ const LoginBoxed = () => {
                                 <span className="absolute inset-x-0 top-1/2 h-px w-full -translate-y-1/2 bg-white-light dark:bg-white-dark"></span>
                                 <span className="relative bg-white px-2 font-bold uppercase text-white-dark dark:bg-dark dark:text-white-light">or</span>
                             </div>
-                            <div className="mb-10 md:mb-[60px] flex justify-center">
+                            <div className={`mb-10 md:mb-[60px] flex justify-center ${!acceptedTerms ? 'pointer-events-none opacity-50' : ''}`}>
                                 <GoogleLogin
                                     onSuccess={handleGoogleSuccess}
                                     onError={() => {

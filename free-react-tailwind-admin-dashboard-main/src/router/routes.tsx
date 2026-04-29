@@ -82,6 +82,7 @@ const RegisterCover = lazy(() => import('../pages/Authentication/RegisterCover')
 const RecoverIdCover = lazy(() => import('../pages/Authentication/RecoverIdCover'));
 const UnlockCover = lazy(() => import('../pages/Authentication/UnlockCover'));
 const About = lazy(() => import('../pages/About'));
+const Terms = lazy(() => import('../pages/Terms'));
 const Error = lazy(() => import('../components/Error'));
 const Charts = lazy(() => import('../pages/Charts'));
 const FormBasic = lazy(() => import('../pages/Forms/Basic'));
@@ -183,6 +184,11 @@ const routes = [
     {
         path: '/',
         element: <LoginBoxed />,
+        layout: 'blank',
+    },
+    {
+        path: '/privacy-policy',
+        element: <Terms />,
         layout: 'blank',
     },
     {
