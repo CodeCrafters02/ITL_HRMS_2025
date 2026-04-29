@@ -148,6 +148,7 @@ const AdminLoanConfig = lazy(() => import('../pages/Admin/LoanConfig'));
 const AdminLoanApprovals = lazy(() => import('../pages/Admin/LoanApprovals'));
 const WFHManagement = lazy(() => import('../pages/Admin/WFHManagement'));
 const AdminReportees = lazy(() => import('../pages/Admin/Reportees'));
+const AdminGeofencing = lazy(() => import('../pages/Admin/Geofencing'));
 const AdminAssignTask = lazy(() => import('../pages/Admin/AssignTask'));
 const AdminPayslipRollout = lazy(() => import('../pages/Admin/PayslipRollout'));
 
@@ -814,6 +815,10 @@ const routes = [
     {
         path: '/admin/assign-task',
         element: <AdminAssignTask />,
+    },
+    {
+        path: '/admin/geofencing',
+        element: <AdminGeofencing />,
     },
     {
         path: '/employee/dashboard',

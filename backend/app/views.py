@@ -17,7 +17,7 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from datetime import date
 import io
 from django.utils import timezone
-from .utils import generate_letter_pdf, fill_placeholders
+from .utils import generate_letter_pdf, fill_placeholders, validate_geofence
 from decimal import Decimal, ROUND_HALF_UP
 from django.core.mail import EmailMessage
 from django.core.files.base import ContentFile
@@ -45,6 +45,18 @@ class CustomPagination(PageNumberPagination):
     page_size = 10
     page_size_query_param = 'page_size'
     max_page_size = 100
+class MyIPAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
+        if x_forwarded_for:
+            ip = x_forwarded_for.split(',')[0]
+        else:
+            ip = request.META.get('REMOTE_ADDR')
+        return Response({'ip': ip})
+
+
 class CustomPasswordChangeAPIView(generics.UpdateAPIView):
     serializer_class = CustomPasswordChangeSerializer
     permission_classes = [IsAuthenticated]
@@ -190,11 +202,21 @@ class MasterDashboardView(APIView):
             "total_employees": UserRegister.objects.filter(role='employee').count()
         })
 
+def get_client_ip(request):
+    x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
+    if x_forwarded_for:
+        ip = x_forwarded_for.split(',')[0]
+    else:
+        ip = request.META.get('REMOTE_ADDR')
+    return ip
+
 class LoginAPIView(APIView):
 
     def post(self, request):
         username = request.data.get("username")
         password = request.data.get("password")
+        lat = request.data.get("lat")
+        lon = request.data.get("lon")
 
         user = None
         try:
@@ -211,6 +233,11 @@ class LoginAPIView(APIView):
         if user is not None:
             if not user.is_active:
                 return Response({"detail": "User account is disabled."}, status=status.HTTP_403_FORBIDDEN)
+
+            # Geofencing check
+            is_allowed, error_msg = validate_geofence(user, lat, lon, get_client_ip(request))
+            if not is_allowed:
+                return Response({"detail": error_msg}, status=status.HTTP_403_FORBIDDEN)
 
             # ✅ Issue JWT tokens
             refresh = RefreshToken.for_user(user)
@@ -5534,6 +5561,13 @@ class GoogleLoginAPIView(APIView):
                 user.set_unusable_password()
                 user.save()
 
+            # Geofencing check
+            lat = request.data.get("lat")
+            lon = request.data.get("lon")
+            is_allowed, error_msg = validate_geofence(user, lat, lon, get_client_ip(request))
+            if not is_allowed:
+                return Response({"detail": error_msg}, status=status.HTTP_403_FORBIDDEN)
+
             # If this is an employee login, ensure profile is synced and ID generated
             if user.role == "employee":
                 emp = Employee.objects.filter(email__iexact=email).first()
@@ -5904,3 +5938,5 @@ class WorkLocationLogViewSet(viewsets.ReadOnlyModelViewSet):
 
     def get_queryset(self):
         return WorkLocationLog.objects.all().order_by('-date')
+
+

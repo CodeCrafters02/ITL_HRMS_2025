@@ -1,5 +1,6 @@
 import qrcode
 import base64
+import math
 from io import BytesIO
 from weasyprint import HTML
 from django.utils import timezone
@@ -249,3 +250,99 @@ def fill_placeholders(text, data):
         key = match.group(1)
         return str(data.get(key, f'<{key}>'))
     return re.sub(r'<([a-zA-Z0-9_]+)>', replacer, text)
+
+def haversine_distance(lat1, lon1, lat2, lon2):
+    """
+    Calculate the great circle distance between two points 
+    on the earth (specified in decimal degrees)
+    Returns distance in meters.
+    """
+    try:
+        # Convert decimal degrees to radians 
+        lat1, lon1, lat2, lon2 = map(math.radians, [float(lat1), float(lon1), float(lat2), float(lon2)])
+
+        # Haversine formula 
+        dlon = lon2 - lon1 
+        dlat = lat2 - lat1 
+        a = math.sin(dlat/2)**2 + math.cos(lat1) * math.cos(lat2) * math.sin(dlon/2)**2
+        c = 2 * math.asin(math.sqrt(a)) 
+        r = 6371 # Radius of earth in kilometers
+        return c * r * 1000
+    except (TypeError, ValueError):
+        return float('inf')
+
+def validate_geofence(user, lat, lon, request_ip):
+    """
+    Validate if the user is allowed to login based on geofencing/IP restrictions.
+    Returns (is_allowed, error_message).
+    """
+    # Geofencing only applies to employees
+    if user.role != 'employee':
+        print(f"DEBUG: Geofence bypassed for {user.username} - Role is {user.role}")
+        return True, ""
+
+    emp = getattr(user, 'employee_profile', None)
+    if not emp:
+        print(f"DEBUG: Geofence bypassed for {user.username} - No employee profile found")
+        return True, ""
+
+    # No restriction for WFH employees
+    if emp.work_location == 'home':
+        print(f"DEBUG: Geofence bypassed for {user.username} - Work location is 'home'")
+        return True, ""
+
+    from .models import OfficeLocation
+    office_configs = OfficeLocation.objects.filter(company=user.company, is_active=True)
+    
+    if not office_configs.exists():
+        print(f"DEBUG: Geofence bypassed for {user.username} - No active office configurations for company")
+        return True, ""
+
+    # Gather all active restrictions for the company
+    all_allowed_ips = set()
+    all_office_coords = []
+    
+    global_gps_required = False
+    global_ip_required = False
+
+    for config in office_configs:
+        if config.enable_geofencing and config.latitude and config.longitude:
+            global_gps_required = True
+            all_office_coords.append({
+                'lat': config.latitude,
+                'lon': config.longitude,
+                'radius': config.radius,
+                'name': config.name
+            })
+        
+        if config.enable_ip_restriction and config.allowed_ips:
+            global_ip_required = True
+            ips = [ip.strip() for ip in config.allowed_ips.split(',') if ip.strip()]
+            all_allowed_ips.update(ips)
+
+    # 1. Check Global GPS Requirement
+    is_in_any_radius = False
+    if global_gps_required:
+        if lat and lon:
+            for coord in all_office_coords:
+                dist = haversine_distance(lat, lon, coord['lat'], coord['lon'])
+                if dist <= coord['radius']:
+                    is_in_any_radius = True
+                    break
+        if not is_in_any_radius:
+            print(f"DEBUG: Geofence REJECTED for {user.username} - Not in any authorized office radius")
+            return False, "Access denied: You are not within the GPS radius of any authorized office."
+
+    # 2. Check Global IP Requirement
+    is_on_any_allowed_ip = False
+    if global_ip_required:
+        if request_ip and request_ip in all_allowed_ips:
+            is_on_any_allowed_ip = True
+        
+        if not is_on_any_allowed_ip:
+            print(f"DEBUG: Geofence REJECTED for {user.username} - Unauthorized IP address: {request_ip}")
+            return False, "Access denied: You are not connected to an authorized office network (WiFi)."
+
+    # If we reached here, the user passed all enabled global restrictions
+    print(f"DEBUG: Geofence ALLOWED for {user.username} - Passed global company policy")
+    return True, ""

@@ -37,19 +37,46 @@ const LoginBoxed = () => {
         }
     }, [navigate]);
 
+    const getGeolocation = (): Promise<{ lat: number | null, lon: number | null }> => {
+        return new Promise((resolve) => {
+            if (!navigator.geolocation) {
+                resolve({ lat: null, lon: null });
+                return;
+            }
+            navigator.geolocation.getCurrentPosition(
+                (position) => {
+                    resolve({
+                        lat: position.coords.latitude,
+                        lon: position.coords.longitude,
+                    });
+                },
+                () => {
+                    resolve({ lat: null, lon: null });
+                },
+                { timeout: 5000 }
+            );
+        });
+    };
+
     const submitForm = async (e: React.FormEvent) => {
         e.preventDefault();
         setLoading(true);
         setError('');
         
         try {
+            const coords = await getGeolocation();
             const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000';
             const response = await fetch(`${API_BASE_URL}/app/login/`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify({ username, password }),
+                body: JSON.stringify({ 
+                    username, 
+                    password,
+                    lat: coords.lat,
+                    lon: coords.lon
+                }),
             });
 
             if (response.ok) {
@@ -94,11 +121,16 @@ const LoginBoxed = () => {
         setLoading(true);
         setError('');
         try {
+            const coords = await getGeolocation();
             const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000';
             const response = await fetch(`${API_BASE_URL}/app/google-login/`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ credential: credentialResponse.credential }),
+                body: JSON.stringify({ 
+                    credential: credentialResponse.credential,
+                    lat: coords.lat,
+                    lon: coords.lon
+                }),
             });
 
             if (response.ok) {
