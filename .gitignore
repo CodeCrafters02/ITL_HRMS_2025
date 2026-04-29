@@ -189,3 +189,7 @@ dist-ssr
 *.sw?
 node_modules/
 /backend/app/migrations
+*/migrations/*
+!*/migrations/__init__.py
+backend/employee/migrations/__init__.py
+backend/firebase-service-account.json

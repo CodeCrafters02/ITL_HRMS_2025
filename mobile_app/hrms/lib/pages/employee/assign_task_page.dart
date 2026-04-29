@@ -1,15 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import '../../models/task_model.dart';
 import '../../models/reportee_model.dart';
 import '../../services/employee_service.dart';
-import '../../services/storage_service.dart';
-import '../../config/api_config.dart';
 import '../../theme/app_stitch_theme.dart';
 import '../../widgets/glass_card.dart';
-import '../../widgets/stitch_background.dart';
-import 'dart:convert';
-import 'package:http/http.dart' as http;
 
 class AssignTaskPage extends StatefulWidget {
   const AssignTaskPage({super.key});
@@ -19,1072 +15,125 @@ class AssignTaskPage extends StatefulWidget {
 }
 
 class _AssignTaskPageState extends State<AssignTaskPage> {
+  bool _isLoadingTasks = true;
+  bool _isSubmitting = false;
+  bool _showCreateForm = false;
   List<Task> _tasks = [];
-  Task? _selectedTask;
   List<Reportee> _reportees = [];
-  bool _isLoading = false;
-  bool _isLoadingDetails = false;
-  String? _error;
+  String _searchQuery = '';
+
+  // Form Controllers
+  final _titleController = TextEditingController();
+  final _descController = TextEditingController();
+  DateTime? _selectedDeadline;
+  String _priority = 'medium';
+  List<int> _selectedEmployeeIds = [];
+  int? _ownerId;
+  bool _hasSubtasks = false;
+  List<Map<String, dynamic>> _subtasks = [];
 
   @override
   void initState() {
     super.initState();
-    _fetchTasks();
-    _fetchReportees();
+    _loadInitialData();
   }
 
-  Future<int?> _getEmployeeId() async {
-    try {
-      final token = await StorageService.getAccessToken();
-      if (token == null) return null;
-
-      final response = await http.get(
-        Uri.parse(ApiConfig.employeeIdUrl),
-        headers: ApiConfig.getAuthHeaders(token),
-      );
-
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        return data['employee_id'] ?? data['id'];
-      }
-      return null;
-    } catch (e) {
-      return null;
-    }
+  Future<void> _loadInitialData() async {
+    setState(() => _isLoadingTasks = true);
+    await Future.wait([
+      _loadTasks(),
+      _loadReportees(),
+    ]);
+    setState(() => _isLoadingTasks = false);
   }
 
-  Future<void> _fetchReportees() async {
-    final employeeId = await _getEmployeeId();
-    if (employeeId == null) return;
-
-    final response = await EmployeeService.getReportees(employeeId);
-    if (response.success && response.data != null) {
-      setState(() {
-        _reportees = response.data!;
-      });
-    }
-  }
-
-  Future<void> _fetchTasks() async {
-    setState(() {
-      _isLoading = true;
-      _error = null;
-    });
-
+  Future<void> _loadTasks() async {
     final response = await EmployeeService.getAllTasks();
-
     if (response.success && response.data != null) {
       setState(() {
         _tasks = response.data!;
-        _isLoading = false;
-      });
-    } else {
-      setState(() {
-        _error = response.message ?? 'Failed to load tasks';
-        _isLoading = false;
       });
     }
   }
 
-  Future<void> _loadTaskDetails(int taskId) async {
+  Future<void> _loadReportees() async {
+    final empId = await EmployeeService.getCurrentEmployeeId();
+    if (empId != null) {
+      final reporteesResponse = await EmployeeService.getReportees(empId);
+      if (reporteesResponse.success && reporteesResponse.data != null) {
+        setState(() {
+          _reportees = reporteesResponse.data!;
+        });
+      }
+    }
+  }
+
+  void _toggleCreateForm() {
     setState(() {
-      _isLoadingDetails = true;
+      _showCreateForm = !_showCreateForm;
+      if (!_showCreateForm) {
+        _resetForm();
+      }
     });
-
-    final response = await EmployeeService.getTaskDetails(taskId);
-
-    if (response.success && response.data != null) {
-      setState(() {
-        _selectedTask = response.data!;
-        _isLoadingDetails = false;
-      });
-    } else {
-      setState(() {
-        _isLoadingDetails = false;
-      });
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(response.message ?? 'Failed to load task details'),
-          ),
-        );
-      }
-    }
   }
 
-  Future<void> _deleteTask(int taskId) async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Delete Task'),
-        content: const Text('Are you sure you want to delete this task?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(context, true),
-            style: TextButton.styleFrom(foregroundColor: Colors.red),
-            child: const Text('Delete'),
-          ),
-        ],
-      ),
-    );
-
-    if (confirmed == true) {
-      final response = await EmployeeService.deleteTask(taskId);
-
-      if (response.success) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Task deleted successfully')),
-          );
-          _fetchTasks();
-          if (_selectedTask?.id == taskId) {
-            setState(() {
-              _selectedTask = null;
-            });
-          }
-        }
-      } else {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(response.message ?? 'Failed to delete task'),
-            ),
-          );
-        }
-      }
-    }
+  void _resetForm() {
+    _titleController.clear();
+    _descController.clear();
+    _selectedDeadline = null;
+    _priority = 'medium';
+    _selectedEmployeeIds = [];
+    _ownerId = null;
+    _hasSubtasks = false;
+    _subtasks = [];
   }
 
-  Future<void> _createTask() async {
-    final result = await showDialog<Map<String, dynamic>>(
-      context: context,
-      builder: (context) => _CreateTaskDialog(reportees: _reportees),
-    );
-
-    if (result != null) {
-      final response = await EmployeeService.createTask(
-        title: result['title'] as String,
-        description: result['description'] as String,
-        deadline: result['deadline'] as String,
-        priority: result['priority'] as String,
-        status: result['status'] as String,
-        subtasks: result['subtasks'] as List<Map<String, dynamic>>?,
-      );
-
-      if (response.success) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Task created successfully')),
-          );
-          _fetchTasks();
-
-          // If employees were selected, assign them
-          if (result['assignedEmployees'] != null &&
-              (result['assignedEmployees'] as List<int>).isNotEmpty) {
-            final taskId = response.data!.id;
-            final owner = result['taskOwner'] as String?;
-            final employees = result['assignedEmployees'] as List<int>;
-
-            if (owner != null) {
-              await EmployeeService.assignTask(
-                taskId: taskId,
-                owner: owner,
-                employees: employees,
-              );
-            }
-          }
-        }
-      } else {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(response.message ?? 'Failed to create task'),
-            ),
-          );
-        }
-      }
-    }
-  }
-
-  Future<void> _editTask(Task task) async {
-    final result = await showDialog<Map<String, dynamic>>(
-      context: context,
-      builder: (context) => _EditTaskDialog(task: task),
-    );
-
-    if (result != null) {
-      final response = await EmployeeService.updateTask(
-        taskId: task.id,
-        title: result['title'] as String?,
-        description: result['description'] as String?,
-        deadline: result['deadline'] as String?,
-        priority: result['priority'] as String?,
-        status: result['status'] as String?,
-      );
-
-      if (response.success) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Task updated successfully')),
-          );
-          _fetchTasks();
-          if (_selectedTask?.id == task.id) {
-            _loadTaskDetails(task.id);
-          }
-        }
-      } else {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(response.message ?? 'Failed to update task'),
-            ),
-          );
-        }
-      }
-    }
-  }
-
-  Future<void> _assignTask(Task task) async {
-    if (_reportees.isEmpty) {
+  Future<void> _handleSubmit() async {
+    if (_titleController.text.isEmpty || _selectedDeadline == null || _selectedEmployeeIds.isEmpty || _ownerId == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('No reportees available to assign')),
+        const SnackBar(content: Text('Please fill all required fields')),
       );
       return;
     }
 
-    final result = await showDialog<Map<String, dynamic>>(
-      context: context,
-      builder: (context) =>
-          _AssignTaskDialog(task: task, reportees: _reportees),
+    setState(() => _isSubmitting = true);
+
+    final response = await EmployeeService.createTask(
+      title: _titleController.text,
+      description: _descController.text,
+      deadline: DateFormat('yyyy-MM-dd').format(_selectedDeadline!),
+      priority: _priority,
+      status: 'todo',
+      subtasks: _hasSubtasks ? _subtasks : null,
     );
 
-    if (result != null) {
-      final owner = result['owner'] as String;
-      final employees = result['employees'] as List<int>;
-
-      final response = await EmployeeService.assignTask(
-        taskId: task.id,
-        owner: owner,
-        employees: employees,
+    if (response.success && response.data != null) {
+      // Now assign the task
+      final assignResponse = await EmployeeService.assignTask(
+        taskId: response.data!.id,
+        owner: _ownerId.toString(),
+        employees: _selectedEmployeeIds,
       );
 
-      if (response.success) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Task assigned successfully')),
-          );
-          _loadTaskDetails(task.id);
-        }
+      if (assignResponse.success) {
+        HapticFeedback.heavyImpact();
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Task assigned successfully!')),
+        );
+        _toggleCreateForm();
+        _loadTasks();
       } else {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(response.message ?? 'Failed to assign task'),
-            ),
-          );
-        }
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(assignResponse.message ?? 'Assignment failed')),
+        );
       }
-    }
-  }
-
-  Color _getPriorityColor(String priority) {
-    switch (priority.toLowerCase()) {
-      case 'high':
-        return const Color(0xFFDC2626);
-      case 'medium':
-        return const Color(0xFFF59E0B);
-      case 'low':
-        return const Color(0xFF10B981);
-      default:
-        return const Color(0xFF6B7280);
-    }
-  }
-
-  Color _getStatusColor(String status) {
-    switch (status.toLowerCase()) {
-      case 'completed':
-        return const Color(0xFF10B981);
-      case 'in_progress':
-        return const Color(0xFF3B82F6);
-      case 'todo':
-      case 'pending':
-        return const Color(0xFFF59E0B);
-      default:
-        return const Color(0xFF6B7280);
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.transparent,
-      body: StitchBackground(
-        child: SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
-            child: Column(
-              children: [
-                GlassCard(
-                  padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
-                  child: Row(
-                    children: [
-                      IconButton(
-                        onPressed: () {
-                          if (_selectedTask != null) {
-                            setState(() => _selectedTask = null);
-                          } else {
-                            Navigator.pop(context);
-                          }
-                        },
-                        icon: const Icon(Icons.arrow_back_ios_new_rounded),
-                      ),
-                      const SizedBox(width: 6),
-                      Expanded(
-                        child: Text(
-                          _selectedTask != null ? 'Task details' : 'Assign tasks',
-                          style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                                fontWeight: FontWeight.w900,
-                                color: AppStitchTheme.lightOnSurface,
-                              ),
-                        ),
-                      ),
-                      if (_selectedTask == null)
-                        IconButton(
-                          onPressed: _createTask,
-                          tooltip: 'Create Task',
-                          icon: const Icon(Icons.add_rounded),
-                        )
-                      else
-                        IconButton(
-                          onPressed: _fetchTasks,
-                          tooltip: 'Refresh',
-                          icon: const Icon(Icons.refresh_rounded),
-                        ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 12),
-                Expanded(
-                  child: _isLoading
-                      ? const Center(child: CircularProgressIndicator())
-                      : _error != null
-                          ? _buildErrorState()
-                          : _selectedTask != null
-                              ? _buildTaskDetails()
-                              : _buildTasksList(),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildErrorState() {
-    return Center(
-      child: GlassCard(
-        padding: const EdgeInsets.all(18),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: 56,
-              height: 56,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: const Color(0xFFEF4444).withValues(alpha: 0.10),
-                border: Border.all(
-                  color: const Color(0xFFEF4444).withValues(alpha: 0.20),
-                ),
-              ),
-              child: const Icon(Icons.error_outline_rounded, color: Color(0xFFEF4444)),
-            ),
-            const SizedBox(height: 10),
-            Text(
-              _error ?? 'Unknown error',
-              textAlign: TextAlign.center,
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    fontWeight: FontWeight.w600,
-                    color: AppStitchTheme.lightOnSurfaceMuted,
-                  ),
-            ),
-            const SizedBox(height: 12),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: _fetchTasks,
-                child: const Text('Retry'),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildTasksList() {
-    if (_tasks.isEmpty) {
-      return Center(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Icon(
-                Icons.task_outlined,
-                size: 64,
-                color: Color(0xFF6B7280),
-              ),
-              const SizedBox(height: 16),
-              const Text(
-                'No tasks found',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w500,
-                  color: Color(0xFF111827),
-                ),
-              ),
-              const SizedBox(height: 8),
-              const Text(
-                'Create a task to get started',
-                textAlign: TextAlign.center,
-                style: TextStyle(color: Color(0xFF6B7280)),
-              ),
-            ],
-          ),
-        ),
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(response.message ?? 'Failed to create task')),
       );
     }
 
-    return RefreshIndicator(
-      onRefresh: _fetchTasks,
-      color: AppStitchTheme.primary,
-      child: ListView.builder(
-        padding: EdgeInsets.zero,
-        itemCount: _tasks.length,
-        itemBuilder: (context, index) {
-          return _buildTaskCard(_tasks[index]);
-        },
-      ),
-    );
-  }
-
-  Widget _buildTaskCard(Task task) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
-      child: GlassCard(
-        padding: const EdgeInsets.all(0),
-        child: InkWell(
-          onTap: () => _loadTaskDetails(task.id),
-          borderRadius: BorderRadius.circular(28),
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        task.title,
-                        style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                              fontWeight: FontWeight.w900,
-                              color: AppStitchTheme.lightOnSurface,
-                            ),
-                      ),
-                    ),
-                    Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        IconButton(
-                          icon: const Icon(Icons.edit_outlined, size: 20),
-                          color: AppStitchTheme.primary,
-                          onPressed: () => _editTask(task),
-                        ),
-                        IconButton(
-                          icon: const Icon(Icons.delete_outline, size: 20),
-                          color: Colors.red,
-                          onPressed: () => _deleteTask(task.id),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-                if (task.description.isNotEmpty) ...[
-                  const SizedBox(height: 8),
-                  Text(
-                    task.description,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          fontWeight: FontWeight.w600,
-                          color: AppStitchTheme.lightOnSurfaceMuted,
-                          height: 1.35,
-                        ),
-                  ),
-                ],
-              const SizedBox(height: 12),
-              Row(
-                children: [
-                  _buildChip(
-                    'Priority',
-                    task.priority,
-                    _getPriorityColor(task.priority),
-                  ),
-                  const SizedBox(width: 8),
-                  _buildChip(
-                    'Status',
-                    task.status,
-                    _getStatusColor(task.status),
-                  ),
-                  const Spacer(),
-                  if (task.deadline.isNotEmpty)
-                    Text(
-                      'Due: ${DateFormat('MMM dd, yyyy').format(DateTime.parse(task.deadline))}',
-                      style: const TextStyle(
-                        fontSize: 12,
-                        color: Color(0xFF6B7280),
-                      ),
-                    ),
-                ],
-              ),
-              if (task.assignments.isNotEmpty) ...[
-                const SizedBox(height: 12),
-                Row(
-                  children: [
-                    const Icon(
-                      Icons.people,
-                      size: 16,
-                      color: Color(0xFF6B7280),
-                    ),
-                    const SizedBox(width: 6),
-                    Text(
-                      '${task.assignments.length} assigned',
-                      style: const TextStyle(
-                        fontSize: 12,
-                        color: Color(0xFF6B7280),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-              const SizedBox(height: 12),
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton(
-                    onPressed: () => _assignTask(task),
-                    child: const Text('Assign Task'),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildChip(String label, String value, Color color) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(6),
-        border: Border.all(color: color.withValues(alpha: 0.3), width: 1),
-      ),
-      child: Text(
-        '$label: ${value.toUpperCase()}',
-        style: TextStyle(
-          fontSize: 12,
-          fontWeight: FontWeight.w500,
-          color: color,
-        ),
-      ),
-    );
-  }
-
-  Widget _buildTaskDetails() {
-    if (_isLoadingDetails) {
-      return const Center(child: CircularProgressIndicator());
-    }
-
-    if (_selectedTask == null) {
-      return const Center(child: Text('No task selected'));
-    }
-
-    final task = _selectedTask!;
-
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Card(
-            elevation: 2,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          task.title,
-                          style: const TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.w600,
-                            color: Color(0xFF111827),
-                          ),
-                        ),
-                      ),
-                      Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          IconButton(
-                            icon: const Icon(Icons.edit_outlined),
-                            color: const Color(0xFF4F46E5),
-                            onPressed: () => _editTask(task),
-                          ),
-                          IconButton(
-                            icon: const Icon(Icons.delete_outline),
-                            color: Colors.red,
-                            onPressed: () => _deleteTask(task.id),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                  if (task.description.isNotEmpty) ...[
-                    const SizedBox(height: 12),
-                    Text(
-                      task.description,
-                      style: const TextStyle(
-                        fontSize: 14,
-                        color: Color(0xFF6B7280),
-                      ),
-                    ),
-                  ],
-                  const SizedBox(height: 16),
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: [
-                      _buildChip(
-                        'Priority',
-                        task.priority,
-                        _getPriorityColor(task.priority),
-                      ),
-                      _buildChip(
-                        'Status',
-                        task.status,
-                        _getStatusColor(task.status),
-                      ),
-                      if (task.deadline.isNotEmpty)
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 4,
-                          ),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFF6B7280)
-                                .withValues(alpha: 0.1),
-                            borderRadius: BorderRadius.circular(6),
-                          ),
-                          child: Text(
-                            'Deadline: ${DateFormat('MMM dd, yyyy').format(DateTime.parse(task.deadline))}',
-                            style: const TextStyle(
-                              fontSize: 12,
-                              color: Color(0xFF6B7280),
-                            ),
-                          ),
-                        ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-          ),
-          const SizedBox(height: 16),
-          if (task.subtaskDetails.isNotEmpty) ...[
-            Card(
-              elevation: 2,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'Subtasks',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                        color: Color(0xFF111827),
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    ...task.subtaskDetails.map((subtask) {
-                      return Container(
-                        margin: const EdgeInsets.only(bottom: 12),
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFF9FAFB),
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: const Color(0xFFE5E7EB)),
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              children: [
-                                Expanded(
-                                  child: Text(
-                                    subtask.title,
-                                    style: const TextStyle(
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.w600,
-                                      color: Color(0xFF111827),
-                                    ),
-                                  ),
-                                ),
-                                _buildChip(
-                                  'Priority',
-                                  subtask.priority,
-                                  _getPriorityColor(subtask.priority),
-                                ),
-                                const SizedBox(width: 8),
-                                _buildChip(
-                                  'Status',
-                                  subtask.status,
-                                  _getStatusColor(subtask.status),
-                                ),
-                              ],
-                            ),
-                            if (subtask.description.isNotEmpty) ...[
-                              const SizedBox(height: 8),
-                              Text(
-                                subtask.description,
-                                style: const TextStyle(
-                                  fontSize: 12,
-                                  color: Color(0xFF6B7280),
-                                ),
-                              ),
-                            ],
-                            if (subtask.deadline.isNotEmpty) ...[
-                              const SizedBox(height: 8),
-                              Text(
-                                'Due: ${DateFormat('MMM dd, yyyy').format(DateTime.parse(subtask.deadline))}',
-                                style: const TextStyle(
-                                  fontSize: 12,
-                                  color: Color(0xFF6B7280),
-                                ),
-                              ),
-                            ],
-                            if (subtask.assignments.isNotEmpty) ...[
-                              const SizedBox(height: 8),
-                              Row(
-                                children: [
-                                  const Icon(
-                                    Icons.people,
-                                    size: 14,
-                                    color: Color(0xFF6B7280),
-                                  ),
-                                  const SizedBox(width: 6),
-                                  Text(
-                                    '${subtask.assignments.length} assigned',
-                                    style: const TextStyle(
-                                      fontSize: 12,
-                                      color: Color(0xFF6B7280),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ],
-                          ],
-                        ),
-                      );
-                    }),
-                  ],
-                ),
-              ),
-            ),
-            const SizedBox(height: 16),
-          ],
-          if (task.assignments.isNotEmpty) ...[
-            Card(
-              elevation: 2,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'Assigned Employees',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                        color: Color(0xFF111827),
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    ...task.assignments.map((assignment) {
-                      return Padding(
-                        padding: const EdgeInsets.only(bottom: 8),
-                        child: Row(
-                          children: [
-                            if (assignment.avatarUrl != null)
-                              CircleAvatar(
-                                radius: 16,
-                                backgroundImage: NetworkImage(
-                                  assignment.avatarUrl!,
-                                ),
-                              )
-                            else
-                              CircleAvatar(
-                                radius: 16,
-                                backgroundColor: const Color(0xFFE5E7EB),
-                                child: Text(
-                                  assignment.employeeName.isNotEmpty
-                                      ? assignment.employeeName[0].toUpperCase()
-                                      : '?',
-                                  style: const TextStyle(
-                                    fontSize: 12,
-                                    color: Color(0xFF111827),
-                                  ),
-                                ),
-                              ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    assignment.employeeName,
-                                    style: const TextStyle(
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.w500,
-                                      color: Color(0xFF111827),
-                                    ),
-                                  ),
-                                  Text(
-                                    '${assignment.role} • ${assignment.status}',
-                                    style: const TextStyle(
-                                      fontSize: 12,
-                                      color: Color(0xFF6B7280),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-                      );
-                    }),
-                  ],
-                ),
-              ),
-            ),
-            const SizedBox(height: 16),
-          ],
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton(
-              onPressed: () => _assignTask(task),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF4F46E5),
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(vertical: 16),
-              ),
-              child: const Text('Assign to Employees'),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _AssignTaskDialog extends StatefulWidget {
-  final Task task;
-  final List<Reportee> reportees;
-
-  const _AssignTaskDialog({required this.task, required this.reportees});
-
-  @override
-  State<_AssignTaskDialog> createState() => _AssignTaskDialogState();
-}
-
-class _AssignTaskDialogState extends State<_AssignTaskDialog> {
-  String? _selectedOwner;
-  final Set<int> _selectedEmployees = {};
-
-  @override
-  Widget build(BuildContext context) {
-    return Dialog(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      child: Container(
-        constraints: BoxConstraints(
-          maxWidth: MediaQuery.of(context).size.width * 0.9,
-          maxHeight: MediaQuery.of(context).size.height * 0.8,
-        ),
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Assign Task',
-              style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.w600,
-                color: Color(0xFF111827),
-              ),
-            ),
-            const SizedBox(height: 24),
-            // Task Owner
-            const Text(
-              'Task Owner *',
-              style: TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w500,
-                color: Color(0xFF111827),
-              ),
-            ),
-            const SizedBox(height: 8),
-            DropdownButtonFormField<String>(
-              initialValue: _selectedOwner,
-              decoration: const InputDecoration(
-                border: OutlineInputBorder(),
-                hintText: 'Select task owner',
-              ),
-              items: widget.reportees.map((reportee) {
-                return DropdownMenuItem(
-                  value: reportee.id.toString(),
-                  child: Text(reportee.fullName),
-                );
-              }).toList(),
-              onChanged: (value) {
-                setState(() {
-                  _selectedOwner = value;
-                });
-              },
-            ),
-            const SizedBox(height: 24),
-            // Assignees
-            const Text(
-              'Assign to Employees *',
-              style: TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w500,
-                color: Color(0xFF111827),
-              ),
-            ),
-            const SizedBox(height: 8),
-            Container(
-              constraints: const BoxConstraints(maxHeight: 200),
-              decoration: BoxDecoration(
-                border: Border.all(color: const Color(0xFFE5E7EB)),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: ListView.builder(
-                shrinkWrap: true,
-                itemCount: widget.reportees.length,
-                itemBuilder: (context, index) {
-                  final reportee = widget.reportees[index];
-                  final isSelected = _selectedEmployees.contains(reportee.id);
-                  return CheckboxListTile(
-                    title: Text(reportee.fullName),
-                    subtitle: reportee.designationName != null
-                        ? Text(reportee.designationName!)
-                        : null,
-                    value: isSelected,
-                    onChanged: (value) {
-                      setState(() {
-                        if (value == true) {
-                          _selectedEmployees.add(reportee.id);
-                        } else {
-                          _selectedEmployees.remove(reportee.id);
-                        }
-                      });
-                    },
-                  );
-                },
-              ),
-            ),
-            const SizedBox(height: 24),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.end,
-              children: [
-                TextButton(
-                  onPressed: () => Navigator.pop(context),
-                  child: const Text('Cancel'),
-                ),
-                const SizedBox(width: 8),
-                ElevatedButton(
-                  onPressed:
-                      _selectedOwner != null && _selectedEmployees.isNotEmpty
-                      ? () {
-                          Navigator.pop(context, {
-                            'owner': _selectedOwner,
-                            'employees': _selectedEmployees.toList(),
-                          });
-                        }
-                      : null,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF4F46E5),
-                    foregroundColor: Colors.white,
-                  ),
-                  child: const Text('Assign'),
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _CreateTaskDialog extends StatefulWidget {
-  final List<Reportee> reportees;
-
-  const _CreateTaskDialog({required this.reportees});
-
-  @override
-  State<_CreateTaskDialog> createState() => _CreateTaskDialogState();
-}
-
-class _CreateTaskDialogState extends State<_CreateTaskDialog> {
-  final _formKey = GlobalKey<FormState>();
-  final _titleController = TextEditingController();
-  final _descriptionController = TextEditingController();
-  DateTime? _selectedDeadline;
-  String _priority = 'medium';
-  String _status = 'todo';
-  bool _hasSubtasks = false;
-  final List<Map<String, dynamic>> _subtasks = [];
-  String? _selectedOwner;
-  final Set<int> _selectedEmployees = {};
-
-  @override
-  void dispose() {
-    _titleController.dispose();
-    _descriptionController.dispose();
-    super.dispose();
+    setState(() => _isSubmitting = false);
   }
 
   void _addSubtask() {
@@ -1092,644 +141,516 @@ class _CreateTaskDialogState extends State<_CreateTaskDialog> {
       _subtasks.add({
         'title': '',
         'description': '',
-        'deadline': '',
+        'deadline': _selectedDeadline != null ? DateFormat('yyyy-MM-dd').format(_selectedDeadline!) : '',
         'priority': 'medium',
-        'status': 'todo',
+        'assignedEmployees': [],
+        'taskOwner': null,
       });
     });
-  }
-
-  void _removeSubtask(int index) {
-    setState(() {
-      _subtasks.removeAt(index);
-    });
-  }
-
-  Future<void> _selectDeadline() async {
-    final picked = await showDatePicker(
-      context: context,
-      initialDate: DateTime.now(),
-      firstDate: DateTime.now(),
-      lastDate: DateTime.now().add(const Duration(days: 365)),
-    );
-    if (picked != null) {
-      setState(() {
-        _selectedDeadline = picked;
-      });
-    }
-  }
-
-  void _submit() {
-    if (_formKey.currentState!.validate()) {
-      if (_selectedDeadline == null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Please select a deadline')),
-        );
-        return;
-      }
-
-      final result = <String, dynamic>{
-        'title': _titleController.text.trim(),
-        'description': _descriptionController.text.trim(),
-        'deadline': _selectedDeadline!.toIso8601String().split('T')[0],
-        'priority': _priority,
-        'status': _status,
-      };
-
-      if (_hasSubtasks && _subtasks.isNotEmpty) {
-        final validSubtasks = _subtasks
-            .where((subtask) {
-              return subtask['title'].toString().trim().isNotEmpty;
-            })
-            .map((subtask) {
-              return {
-                'title': subtask['title'].toString().trim(),
-                'description': subtask['description'].toString().trim(),
-                'deadline': subtask['deadline'].toString().isNotEmpty
-                    ? subtask['deadline']
-                    : null,
-                'priority': subtask['priority'] ?? 'medium',
-                'status': subtask['status'] ?? 'todo',
-              };
-            })
-            .toList();
-
-        if (validSubtasks.isNotEmpty) {
-          result['subtasks'] = validSubtasks;
-        }
-      }
-
-      if (_selectedOwner != null && _selectedEmployees.isNotEmpty) {
-        result['taskOwner'] = _selectedOwner;
-        result['assignedEmployees'] = _selectedEmployees.toList();
-      }
-
-      Navigator.pop(context, result);
-    }
   }
 
   @override
   Widget build(BuildContext context) {
-    return Dialog(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      child: Container(
-        constraints: BoxConstraints(
-          maxWidth: MediaQuery.of(context).size.width * 0.9,
-          maxHeight: MediaQuery.of(context).size.height * 0.9,
-        ),
-        padding: const EdgeInsets.all(24),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              const Text(
-                'Create Task',
-                style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.w600,
-                  color: Color(0xFF111827),
-                ),
-              ),
-              const SizedBox(height: 24),
-              Expanded(
-                child: SingleChildScrollView(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      // Title
-                      TextFormField(
-                        controller: _titleController,
-                        decoration: const InputDecoration(
-                          labelText: 'Title *',
-                          border: OutlineInputBorder(),
-                        ),
-                        validator: (value) {
-                          if (value == null || value.trim().isEmpty) {
-                            return 'Please enter a title';
-                          }
-                          return null;
-                        },
-                      ),
-                      const SizedBox(height: 16),
-                      // Description
-                      TextFormField(
-                        controller: _descriptionController,
-                        decoration: const InputDecoration(
-                          labelText: 'Description',
-                          border: OutlineInputBorder(),
-                        ),
-                        maxLines: 3,
-                      ),
-                      const SizedBox(height: 16),
-                      // Deadline
-                      InkWell(
-                        onTap: _selectDeadline,
-                        child: InputDecorator(
-                          decoration: const InputDecoration(
-                            labelText: 'Deadline *',
-                            border: OutlineInputBorder(),
-                          ),
-                          child: Text(
-                            _selectedDeadline != null
-                                ? DateFormat(
-                                    'yyyy-MM-dd',
-                                  ).format(_selectedDeadline!)
-                                : 'Select deadline',
-                            style: TextStyle(
-                              color: _selectedDeadline != null
-                                  ? const Color(0xFF111827)
-                                  : const Color(0xFF9CA3AF),
-                            ),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                      // Priority
-                      DropdownButtonFormField<String>(
-                        initialValue: _priority,
-                        decoration: const InputDecoration(
-                          labelText: 'Priority',
-                          border: OutlineInputBorder(),
-                        ),
-                        items: ['low', 'medium', 'high'].map((priority) {
-                          return DropdownMenuItem(
-                            value: priority,
-                            child: Text(priority.toUpperCase()),
-                          );
-                        }).toList(),
-                        onChanged: (value) {
-                          setState(() {
-                            _priority = value!;
-                          });
-                        },
-                      ),
-                      const SizedBox(height: 16),
-                      // Status
-                      DropdownButtonFormField<String>(
-                        initialValue: _status,
-                        decoration: const InputDecoration(
-                          labelText: 'Status',
-                          border: OutlineInputBorder(),
-                        ),
-                        items: ['todo', 'in_progress', 'completed'].map((
-                          status,
-                        ) {
-                          return DropdownMenuItem(
-                            value: status,
-                            child: Text(
-                              status.replaceAll('_', ' ').toUpperCase(),
-                            ),
-                          );
-                        }).toList(),
-                        onChanged: (value) {
-                          setState(() {
-                            _status = value!;
-                          });
-                        },
-                      ),
-                      const SizedBox(height: 24),
-                      // Subtasks toggle
-                      Row(
-                        children: [
-                          Checkbox(
-                            value: _hasSubtasks,
-                            onChanged: (value) {
-                              setState(() {
-                                _hasSubtasks = value ?? false;
-                                if (_hasSubtasks && _subtasks.isEmpty) {
-                                  _addSubtask();
-                                }
-                              });
-                            },
-                          ),
-                          const Text('Add Subtasks'),
-                        ],
-                      ),
-                      if (_hasSubtasks) ...[
-                        const SizedBox(height: 16),
-                        ...List.generate(_subtasks.length, (index) {
-                          return _buildSubtaskForm(index);
-                        }),
-                        TextButton.icon(
-                          onPressed: _addSubtask,
-                          icon: const Icon(Icons.add),
-                          label: const Text('Add Subtask'),
-                        ),
-                      ],
-                      const SizedBox(height: 24),
-                      // Assign employees (optional)
-                      if (widget.reportees.isNotEmpty) ...[
-                        const Text(
-                          'Assign to Employees (Optional)',
-                          style: TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w500,
-                            color: Color(0xFF111827),
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        DropdownButtonFormField<String>(
-                          initialValue: _selectedOwner,
-                          decoration: const InputDecoration(
-                            border: OutlineInputBorder(),
-                            hintText: 'Select task owner',
-                          ),
-                          items: widget.reportees.map((reportee) {
-                            return DropdownMenuItem(
-                              value: reportee.id.toString(),
-                              child: Text(reportee.fullName),
-                            );
-                          }).toList(),
-                          onChanged: (value) {
-                            setState(() {
-                              _selectedOwner = value;
-                            });
-                          },
-                        ),
-                        const SizedBox(height: 8),
-                        Container(
-                          constraints: const BoxConstraints(maxHeight: 150),
-                          decoration: BoxDecoration(
-                            border: Border.all(color: const Color(0xFFE5E7EB)),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: ListView.builder(
-                            shrinkWrap: true,
-                            itemCount: widget.reportees.length,
-                            itemBuilder: (context, index) {
-                              final reportee = widget.reportees[index];
-                              final isSelected = _selectedEmployees.contains(
-                                reportee.id,
-                              );
-                              return CheckboxListTile(
-                                title: Text(reportee.fullName),
-                                value: isSelected,
-                                onChanged: (value) {
-                                  setState(() {
-                                    if (value == true) {
-                                      _selectedEmployees.add(reportee.id);
-                                    } else {
-                                      _selectedEmployees.remove(reportee.id);
-                                    }
-                                  });
-                                },
-                              );
-                            },
-                          ),
-                        ),
-                      ],
-                    ],
-                  ),
-                ),
-              ),
-              const SizedBox(height: 24),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  TextButton(
-                    onPressed: () => Navigator.pop(context),
-                    child: const Text('Cancel'),
-                  ),
-                  const SizedBox(width: 8),
-                  ElevatedButton(
-                    onPressed: _submit,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF4F46E5),
-                      foregroundColor: Colors.white,
-                    ),
-                    child: const Text('Create'),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildSubtaskForm(int index) {
-    final subtask = _subtasks[index];
-    return Container(
-      margin: const EdgeInsets.only(bottom: 16),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        border: Border.all(color: const Color(0xFFE5E7EB)),
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
+    return Scaffold(
+      backgroundColor: Colors.transparent,
+      body: Column(
         children: [
-          Row(
-            children: [
-              Expanded(
-                child: TextFormField(
-                  initialValue: subtask['title'],
-                  decoration: const InputDecoration(
-                    labelText: 'Subtask Title',
-                    border: OutlineInputBorder(),
-                    isDense: true,
-                  ),
-                  onChanged: (value) {
-                    subtask['title'] = value;
-                  },
-                ),
-              ),
-              IconButton(
-                icon: const Icon(Icons.delete_outline, color: Colors.red),
-                onPressed: () => _removeSubtask(index),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          TextFormField(
-            initialValue: subtask['description'],
-            decoration: const InputDecoration(
-              labelText: 'Description',
-              border: OutlineInputBorder(),
-              isDense: true,
-            ),
-            maxLines: 2,
-            onChanged: (value) {
-              subtask['description'] = value;
-            },
-          ),
-          const SizedBox(height: 8),
-          Row(
-            children: [
-              Expanded(
-                child: DropdownButtonFormField<String>(
-                  initialValue: subtask['priority'] ?? 'medium',
-                  decoration: const InputDecoration(
-                    labelText: 'Priority',
-                    border: OutlineInputBorder(),
-                    isDense: true,
-                  ),
-                  items: ['low', 'medium', 'high'].map((priority) {
-                    return DropdownMenuItem(
-                      value: priority,
-                      child: Text(priority.toUpperCase()),
-                    );
-                  }).toList(),
-                  onChanged: (value) {
-                    setState(() {
-                      subtask['priority'] = value;
-                    });
-                  },
-                ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: DropdownButtonFormField<String>(
-                  initialValue: subtask['status'] ?? 'todo',
-                  decoration: const InputDecoration(
-                    labelText: 'Status',
-                    border: OutlineInputBorder(),
-                    isDense: true,
-                  ),
-                  items: ['todo', 'in_progress', 'completed'].map((status) {
-                    return DropdownMenuItem(
-                      value: status,
-                      child: Text(status.replaceAll('_', ' ').toUpperCase()),
-                    );
-                  }).toList(),
-                  onChanged: (value) {
-                    setState(() {
-                      subtask['status'] = value;
-                    });
-                  },
-                ),
-              ),
-            ],
+          _buildHeader(),
+          Expanded(
+            child: _showCreateForm ? _buildCreateForm() : _buildTaskList(),
           ),
         ],
       ),
     );
   }
-}
 
-class _EditTaskDialog extends StatefulWidget {
-  final Task task;
-
-  const _EditTaskDialog({required this.task});
-
-  @override
-  State<_EditTaskDialog> createState() => _EditTaskDialogState();
-}
-
-class _EditTaskDialogState extends State<_EditTaskDialog> {
-  final _formKey = GlobalKey<FormState>();
-  late final TextEditingController _titleController;
-  late final TextEditingController _descriptionController;
-  DateTime? _selectedDeadline;
-  late String _priority;
-  late String _status;
-
-  @override
-  void initState() {
-    super.initState();
-    _titleController = TextEditingController(text: widget.task.title);
-    _descriptionController = TextEditingController(
-      text: widget.task.description,
-    );
-    _priority = widget.task.priority;
-    _status = widget.task.status;
-    if (widget.task.deadline.isNotEmpty) {
-      try {
-        _selectedDeadline = DateTime.parse(widget.task.deadline);
-      } catch (e) {
-        // Invalid date format
-      }
-    }
-  }
-
-  @override
-  void dispose() {
-    _titleController.dispose();
-    _descriptionController.dispose();
-    super.dispose();
-  }
-
-  Future<void> _selectDeadline() async {
-    final picked = await showDatePicker(
-      context: context,
-      initialDate: _selectedDeadline ?? DateTime.now(),
-      firstDate: DateTime.now(),
-      lastDate: DateTime.now().add(const Duration(days: 365)),
-    );
-    if (picked != null) {
-      setState(() {
-        _selectedDeadline = picked;
-      });
-    }
-  }
-
-  void _submit() {
-    if (_formKey.currentState!.validate()) {
-      final result = <String, dynamic>{
-        'title': _titleController.text.trim(),
-        'description': _descriptionController.text.trim(),
-        'priority': _priority,
-        'status': _status,
-      };
-
-      if (_selectedDeadline != null) {
-        result['deadline'] = _selectedDeadline!.toIso8601String().split('T')[0];
-      }
-
-      Navigator.pop(context, result);
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Dialog(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      child: Container(
-        constraints: BoxConstraints(
-          maxWidth: MediaQuery.of(context).size.width * 0.9,
-          maxHeight: MediaQuery.of(context).size.height * 0.8,
+  Widget _buildHeader() {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(20, 60, 20, 24),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            const Color(0xFF220FB6),
+            const Color(0xFF4F6BE5),
+            const Color(0xFF0F52AF),
+          ],
         ),
-        padding: const EdgeInsets.all(24),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
+        borderRadius: const BorderRadius.only(
+          bottomLeft: Radius.circular(32),
+          bottomRight: Radius.circular(32),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF220FB6).withOpacity(0.3),
+            blurRadius: 20,
+            offset: const Offset(0, 10),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text(
-                'Edit Task',
-                style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.w600,
-                  color: Color(0xFF111827),
-                ),
-              ),
-              const SizedBox(height: 24),
-              Expanded(
-                child: SingleChildScrollView(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      // Title
-                      TextFormField(
-                        controller: _titleController,
-                        decoration: const InputDecoration(
-                          labelText: 'Title *',
-                          border: OutlineInputBorder(),
-                        ),
-                        validator: (value) {
-                          if (value == null || value.trim().isEmpty) {
-                            return 'Please enter a title';
-                          }
-                          return null;
-                        },
-                      ),
-                      const SizedBox(height: 16),
-                      // Description
-                      TextFormField(
-                        controller: _descriptionController,
-                        decoration: const InputDecoration(
-                          labelText: 'Description',
-                          border: OutlineInputBorder(),
-                        ),
-                        maxLines: 3,
-                      ),
-                      const SizedBox(height: 16),
-                      // Deadline
-                      InkWell(
-                        onTap: _selectDeadline,
-                        child: InputDecorator(
-                          decoration: const InputDecoration(
-                            labelText: 'Deadline',
-                            border: OutlineInputBorder(),
-                          ),
-                          child: Text(
-                            _selectedDeadline != null
-                                ? DateFormat(
-                                    'yyyy-MM-dd',
-                                  ).format(_selectedDeadline!)
-                                : 'Select deadline',
-                            style: TextStyle(
-                              color: _selectedDeadline != null
-                                  ? const Color(0xFF111827)
-                                  : const Color(0xFF9CA3AF),
-                            ),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                      // Priority
-                      DropdownButtonFormField<String>(
-                        initialValue: _priority,
-                        decoration: const InputDecoration(
-                          labelText: 'Priority',
-                          border: OutlineInputBorder(),
-                        ),
-                        items: ['low', 'medium', 'high'].map((priority) {
-                          return DropdownMenuItem(
-                            value: priority,
-                            child: Text(priority.toUpperCase()),
-                          );
-                        }).toList(),
-                        onChanged: (value) {
-                          setState(() {
-                            _priority = value!;
-                          });
-                        },
-                      ),
-                      const SizedBox(height: 16),
-                      // Status
-                      DropdownButtonFormField<String>(
-                        initialValue: _status,
-                        decoration: const InputDecoration(
-                          labelText: 'Status',
-                          border: OutlineInputBorder(),
-                        ),
-                        items: ['todo', 'in_progress', 'completed'].map((
-                          status,
-                        ) {
-                          return DropdownMenuItem(
-                            value: status,
-                            child: Text(
-                              status.replaceAll('_', ' ').toUpperCase(),
-                            ),
-                          );
-                        }).toList(),
-                        onChanged: (value) {
-                          setState(() {
-                            _status = value!;
-                          });
-                        },
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              const SizedBox(height: 24),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.end,
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  TextButton(
-                    onPressed: () => Navigator.pop(context),
-                    child: const Text('Cancel'),
-                  ),
-                  const SizedBox(width: 8),
-                  ElevatedButton(
-                    onPressed: _submit,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF4F46E5),
-                      foregroundColor: Colors.white,
+                  const Text(
+                    'Assign Task',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 28,
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: -0.5,
                     ),
-                    child: const Text('Update'),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Manage team execution',
+                    style: TextStyle(
+                      color: Colors.white.withOpacity(0.8),
+                      fontSize: 14,
+                    ),
                   ),
                 ],
               ),
+              ElevatedButton(
+                onPressed: _toggleCreateForm,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: _showCreateForm ? Colors.redAccent.withOpacity(0.2) : Colors.white,
+                  foregroundColor: _showCreateForm ? Colors.white : const Color(0xFF220FB6),
+                  elevation: 0,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                ),
+                child: Text(
+                  _showCreateForm ? 'Cancel' : '+ New Task',
+                  style: const TextStyle(fontWeight: FontWeight.bold),
+                ),
+              ),
             ],
           ),
+          if (!_showCreateForm) ...[
+            const SizedBox(height: 24),
+            _buildSearchBar(),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSearchBar() {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.15),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.white.withOpacity(0.2)),
+      ),
+      child: TextField(
+        onChanged: (v) => setState(() => _searchQuery = v),
+        style: const TextStyle(color: Colors.white),
+        decoration: InputDecoration(
+          hintText: 'Search tasks...',
+          hintStyle: TextStyle(color: Colors.white.withOpacity(0.6)),
+          prefixIcon: const Icon(Icons.search, color: Colors.white70),
+          border: InputBorder.none,
+          contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 15),
         ),
+      ),
+    );
+  }
+
+  Widget _buildTaskList() {
+    final filteredTasks = _tasks.where((t) => t.title.toLowerCase().contains(_searchQuery.toLowerCase())).toList();
+
+    if (_isLoadingTasks) {
+      return const Center(child: CircularProgressIndicator(color: Color(0xFF220FB6)));
+    }
+
+    if (filteredTasks.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.assignment_outlined, size: 64, color: Colors.grey.withOpacity(0.5)),
+            const SizedBox(height: 16),
+            Text(
+              _searchQuery.isEmpty ? 'No tasks assigned yet' : 'No tasks match your search',
+              style: TextStyle(color: Colors.grey.shade600, fontSize: 16),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return ListView.separated(
+      padding: const EdgeInsets.all(20),
+      itemCount: filteredTasks.length,
+      separatorBuilder: (c, i) => const SizedBox(height: 16),
+      itemBuilder: (context, index) {
+        final task = filteredTasks[index];
+        return _buildTaskCard(task);
+      },
+    );
+  }
+
+  Widget _buildTaskCard(Task task) {
+    return GlassCard(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Expanded(
+                child: Text(
+                  task.title,
+                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+                ),
+              ),
+              _buildPriorityBadge(task.priority),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(
+            task.description,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(color: Colors.grey.shade600, fontSize: 14),
+          ),
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              _buildInfoChip(Icons.calendar_today_outlined, task.deadline, Colors.blue),
+              const SizedBox(width: 12),
+              _buildInfoChip(Icons.people_outline, '${task.assignments.length} Assignees', Colors.orange),
+            ],
+          ),
+          const SizedBox(height: 16),
+          _buildProgressBar(task.progress),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPriorityBadge(String priority) {
+    Color color;
+    switch (priority.toLowerCase()) {
+      case 'high': color = Colors.red; break;
+      case 'medium': color = Colors.orange; break;
+      default: color = Colors.green;
+    }
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: color.withOpacity(0.3)),
+      ),
+      child: Text(
+        priority.toUpperCase(),
+        style: TextStyle(color: color, fontSize: 10, fontWeight: FontWeight.bold),
+      ),
+    );
+  }
+
+  Widget _buildInfoChip(IconData icon, String label, Color color) {
+    return Row(
+      children: [
+        Icon(icon, size: 14, color: color),
+        const SizedBox(width: 4),
+        Text(label, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500)),
+      ],
+    );
+  }
+
+  Widget _buildProgressBar(int progress) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            const Text('Progress', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500)),
+            Text('$progress%', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+          ],
+        ),
+        const SizedBox(height: 6),
+        ClipRRect(
+          borderRadius: BorderRadius.circular(4),
+          child: LinearProgressIndicator(
+            value: progress / 100,
+            backgroundColor: Colors.grey.withOpacity(0.1),
+            valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFF220FB6)),
+            minHeight: 6,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildCreateForm() {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text('TASK DETAILS', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, letterSpacing: 1.2, color: Colors.grey)),
+          const SizedBox(height: 16),
+          _buildTextField(_titleController, 'Task Title', Icons.title),
+          const SizedBox(height: 16),
+          _buildTextField(_descController, 'Description', Icons.description, maxLines: 3),
+          const SizedBox(height: 24),
+          Row(
+            children: [
+              Expanded(child: _buildDatePicker()),
+              const SizedBox(width: 16),
+              Expanded(child: _buildPriorityDropdown()),
+            ],
+          ),
+          const SizedBox(height: 32),
+          const Text('TEAM ASSIGNMENT', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, letterSpacing: 1.2, color: Colors.grey)),
+          const SizedBox(height: 16),
+          _buildEmployeeMultiSelect(),
+          const SizedBox(height: 24),
+          const Text('TASK OWNER', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, letterSpacing: 1.2, color: Colors.grey)),
+          const SizedBox(height: 8),
+          _buildOwnerSelector(),
+          const SizedBox(height: 32),
+          _buildSubtaskSection(),
+          const SizedBox(height: 40),
+          _buildSubmitButton(),
+          const SizedBox(height: 40),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTextField(TextEditingController controller, String hint, IconData icon, {int maxLines = 1}) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10)],
+      ),
+      child: TextField(
+        controller: controller,
+        maxLines: maxLines,
+        decoration: InputDecoration(
+          hintText: hint,
+          prefixIcon: Icon(icon, color: const Color(0xFF220FB6)),
+          border: InputBorder.none,
+          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDatePicker() {
+    return InkWell(
+      onTap: () async {
+        final date = await showDatePicker(
+          context: context,
+          initialDate: DateTime.now().add(const Duration(days: 1)),
+          firstDate: DateTime.now(),
+          lastDate: DateTime.now().add(const Duration(days: 365)),
+        );
+        if (date != null) setState(() => _selectedDeadline = date);
+      },
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10)],
+        ),
+        child: Row(
+          children: [
+            const Icon(Icons.calendar_today, size: 20, color: Color(0xFF220FB6)),
+            const SizedBox(width: 8),
+            Text(
+              _selectedDeadline == null ? 'Deadline' : DateFormat('MMM dd, yyyy').format(_selectedDeadline!),
+              style: TextStyle(color: _selectedDeadline == null ? Colors.grey : Colors.black),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPriorityDropdown() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10)],
+      ),
+      child: DropdownButtonHideUnderline(
+        child: DropdownButton<String>(
+          value: _priority,
+          isExpanded: true,
+          onChanged: (v) => setState(() => _priority = v!),
+          items: ['low', 'medium', 'high'].map((p) => DropdownMenuItem(
+            value: p,
+            child: Text(p.toUpperCase(), style: const TextStyle(fontSize: 14)),
+          )).toList(),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildEmployeeMultiSelect() {
+    return Container(
+      constraints: const BoxConstraints(maxHeight: 250),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.grey.shade200),
+      ),
+      child: ListView.builder(
+        shrinkWrap: true,
+        physics: const NeverScrollableScrollPhysics(),
+        itemCount: _reportees.length,
+        itemBuilder: (context, index) {
+          final emp = _reportees[index];
+          final isSelected = _selectedEmployeeIds.contains(emp.id);
+          return CheckboxListTile(
+            title: Text(emp.fullName, style: const TextStyle(fontSize: 14)),
+            subtitle: Text(emp.designationName ?? '', style: const TextStyle(fontSize: 12)),
+            value: isSelected,
+            activeColor: const Color(0xFF220FB6),
+            onChanged: (val) {
+              setState(() {
+                if (val!) {
+                  _selectedEmployeeIds.add(emp.id);
+                } else {
+                  _selectedEmployeeIds.remove(emp.id);
+                  if (_ownerId == emp.id) _ownerId = null;
+                }
+              });
+            },
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildOwnerSelector() {
+    final selectedReportees = _reportees.where((r) => _selectedEmployeeIds.contains(r.id)).toList();
+    
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12),
+      decoration: BoxDecoration(
+        color: _selectedEmployeeIds.isEmpty ? Colors.grey.shade100 : Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.grey.shade200),
+      ),
+      child: DropdownButtonHideUnderline(
+        child: DropdownButton<int>(
+          value: _ownerId,
+          hint: const Text('Select primary owner'),
+          isExpanded: true,
+          disabledHint: const Text('Assign employees first'),
+          onChanged: _selectedEmployeeIds.isEmpty ? null : (v) => setState(() => _ownerId = v),
+          items: selectedReportees.map((emp) => DropdownMenuItem(
+            value: emp.id,
+            child: Text(emp.fullName, style: const TextStyle(fontSize: 14)),
+          )).toList(),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSubtaskSection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Row(
+              children: [
+                Checkbox(
+                  value: _hasSubtasks,
+                  activeColor: const Color(0xFF220FB6),
+                  onChanged: (v) => setState(() => _hasSubtasks = v!),
+                ),
+                const Text('Has Subtasks?', style: TextStyle(fontWeight: FontWeight.bold)),
+              ],
+            ),
+            if (_hasSubtasks)
+              TextButton.icon(
+                onPressed: _addSubtask,
+                icon: const Icon(Icons.add, size: 18),
+                label: const Text('Add Subtask'),
+              ),
+          ],
+        ),
+        if (_hasSubtasks) ...[
+          const SizedBox(height: 12),
+          ...List.generate(_subtasks.length, (index) => _buildSubtaskItem(index)),
+        ],
+      ],
+    );
+  }
+
+  Widget _buildSubtaskItem(int index) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.grey.shade50,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.grey.shade200),
+      ),
+      child: Column(
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text('Subtask ${index + 1}', style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF220FB6))),
+              IconButton(
+                icon: const Icon(Icons.delete_outline, color: Colors.red),
+                onPressed: () => setState(() => _subtasks.removeAt(index)),
+              ),
+            ],
+          ),
+          TextField(
+            onChanged: (v) => _subtasks[index]['title'] = v,
+            decoration: const InputDecoration(hintText: 'Subtask title', isDense: true),
+          ),
+          const SizedBox(height: 12),
+          TextField(
+            onChanged: (v) => _subtasks[index]['description'] = v,
+            maxLines: 2,
+            decoration: const InputDecoration(hintText: 'Description', isDense: true),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSubmitButton() {
+    return SizedBox(
+      width: double.infinity,
+      height: 56,
+      child: ElevatedButton(
+        onPressed: _isSubmitting ? null : _handleSubmit,
+        style: ElevatedButton.styleFrom(
+          backgroundColor: const Color(0xFF220FB6),
+          foregroundColor: Colors.white,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          elevation: 8,
+          shadowColor: const Color(0xFF220FB6).withOpacity(0.5),
+        ),
+        child: _isSubmitting
+          ? const CircularProgressIndicator(color: Colors.white)
+          : const Text('CREATE & ASSIGN TASK', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, letterSpacing: 0.5)),
       ),
     );
   }

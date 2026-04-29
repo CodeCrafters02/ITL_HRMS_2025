@@ -8,7 +8,7 @@ class ApiConfig {
   static const String baseUrl = String.fromEnvironment(
     'API_BASE_URL',
     defaultValue: 'https://apihrms.innovyxtechlabs.com',
-    // defaultValue: 'http://192.168.1.3:8000',
+    // defaultValue: 'http://10.20.72.169:8000',
   );
 
   /// Login footer "Contact IT Support" mailto. Override at build:
@@ -136,8 +136,11 @@ class ApiConfig {
   static String get myTasksUrl => '$baseUrl$myTasksEndpoint';
   static String taskAssignmentStatusUrl(int assignmentId) =>
       '$baseUrl$taskAssignmentStatusEndpoint$assignmentId/status/';
-  static String attendanceHistoryUrl(int month, int year) =>
-      '$baseUrl$attendanceHistoryEndpoint?month=$month&year=$year';
+  static String attendanceHistoryUrl(int month, int year, {int? pageSize}) {
+    final url = '$baseUrl$attendanceHistoryEndpoint?month=$month&year=$year';
+    return pageSize != null ? '$url&page_size=$pageSize' : url;
+  }
+
   static String get leavesListUrl => '$baseUrl$leavesListEndpoint';
   static String get employeeLeaveCreateUrl =>
       '$baseUrl$employeeLeaveCreateEndpoint';
