@@ -131,7 +131,10 @@ const Header = () => {
     const notificationSeenKey = `header_notification_seen_count_${userId}`;
     const displayName = profileName || `${firstName} ${lastName}`.trim() || storedUsername || 'User';
     const displayEmail = profileEmail || storedEmail || '-';
-    const initials = `${firstName[0] || ''}${lastName[0] || ''}`.toUpperCase() || (displayName[0] || 'U').toUpperCase();
+    const nameParts = (displayName || '').trim().split(/\s+/).filter(Boolean);
+    const firstInitial = nameParts[0]?.[0] || '';
+    const lastInitial = nameParts.length > 1 ? nameParts[nameParts.length - 1]?.[0] || '' : '';
+    const avatarInitials = `${firstInitial}${lastInitial}`.toUpperCase() || 'U';
     const notificationBadgeCount = Math.max(0, notificationUnreadCount - notificationSeenCount);
 
     useEffect(() => {
@@ -140,8 +143,8 @@ const Header = () => {
 
         const loadProfile = async () => {
             try {
-                if (userRole !== 'employee') return;
-                const res = await fetch(`${API_BASE_URL}/employee/employee-profile/`, {
+                const profileEndpoint = userRole === 'employee' ? '/employee/employee-profile/' : '/app/user-profile/';
+                const res = await fetch(`${API_BASE_URL}${profileEndpoint}`, {
                     headers: { Authorization: `Bearer ${token}` },
                 });
                 if (!res.ok) return;
@@ -152,6 +155,8 @@ const Header = () => {
                 if (data?.photo) {
                     const fullUrl = /^https?:\/\//i.test(data.photo) ? data.photo : `${API_BASE_URL}${data.photo.startsWith('/') ? '' : '/'}${data.photo}`;
                     setAvatarUrl(fullUrl);
+                } else {
+                    setAvatarUrl(null);
                 }
             } catch {
                 setAvatarUrl(null);
@@ -434,7 +439,7 @@ const Header = () => {
                                         <img className="w-9 h-9 rounded-full object-cover saturate-50 group-hover:saturate-100" src={avatarUrl} alt="userProfile" />
                                     ) : (
                                         <div className="w-9 h-9 rounded-full bg-primary text-white flex items-center justify-center text-xs font-bold">
-                                            {initials}
+                                            {avatarInitials}
                                         </div>
                                     )
                                 }
@@ -446,7 +451,7 @@ const Header = () => {
                                                 <img className="rounded-md w-10 h-10 object-cover" src={avatarUrl} alt="userProfile" />
                                             ) : (
                                                 <div className="rounded-md w-10 h-10 bg-primary text-white flex items-center justify-center text-sm font-bold">
-                                                    {initials}
+                                                    {avatarInitials}
                                                 </div>
                                             )}
                                             <div className="ltr:pl-4 rtl:pr-4 truncate">
