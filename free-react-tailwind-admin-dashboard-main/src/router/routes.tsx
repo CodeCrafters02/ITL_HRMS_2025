@@ -187,7 +187,7 @@ const routes = [
         layout: 'blank',
     },
     {
-        path: '/terms',
+        path: '/privacy-policy',
         element: <Terms />,
         layout: 'blank',
     },

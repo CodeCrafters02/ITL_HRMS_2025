@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { Link, NavLink, useLocation } from 'react-router-dom';
+import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { IRootState } from '../../store';
 import { toggleRTL, toggleTheme, toggleSidebar } from '../../store/themeConfigSlice';
 import { useTranslation } from 'react-i18next';
@@ -38,6 +38,7 @@ import { notificationService } from '../../services/notificationService';
 const Header = () => {
     const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000';
     const location = useLocation();
+    const navigate = useNavigate();
     useEffect(() => {
         const selector = document.querySelector('ul.horizontal-menu a[href="' + window.location.pathname + '"]');
         if (selector) {
@@ -103,6 +104,7 @@ const Header = () => {
     };
 
     const [search, setSearch] = useState(false);
+    const [menuSearchQuery, setMenuSearchQuery] = useState('');
 
     const setLocale = (flag: string) => {
         setFlag(flag);
@@ -126,13 +128,112 @@ const Header = () => {
     const [profileEmail, setProfileEmail] = useState<string>('');
     const [notificationUnreadCount, setNotificationUnreadCount] = useState(0);
     const [notificationSeenCount, setNotificationSeenCount] = useState(0);
+    const [leaveDecisionKeys, setLeaveDecisionKeys] = useState<string[]>([]);
+    const [leaveSeenDecisionKeys, setLeaveSeenDecisionKeys] = useState<string[]>([]);
     const calendarRoute = userRole === 'employee' ? '/employee/calendar' : userRole === 'admin' ? '/admin/calendar' : '/apps/calendar';
-    const notificationRoute = userRole === 'employee' ? '/employee/notifications' : userRole === 'admin' ? '/admin/notifications' : '/apps/mailbox';
+    const notificationRoute = userRole === 'employee' ? '/employee/notifications' : userRole === 'admin' ? '/admin/notifications' : '/master/dashboard';
+    const leaveRoute = userRole === 'employee' ? '/employee/leave-application' : userRole === 'admin' ? '/admin/leave-approval' : '/master/dashboard';
     const notificationSeenKey = `header_notification_seen_count_${userId}`;
+    const leaveSeenKey = `header_leave_seen_decisions_${userId}`;
     const displayName = profileName || `${firstName} ${lastName}`.trim() || storedUsername || 'User';
     const displayEmail = profileEmail || storedEmail || '-';
-    const initials = `${firstName[0] || ''}${lastName[0] || ''}`.toUpperCase() || (displayName[0] || 'U').toUpperCase();
+    const nameParts = (displayName || '').trim().split(/\s+/).filter(Boolean);
+    const firstInitial = nameParts[0]?.[0] || '';
+    const lastInitial = nameParts.length > 1 ? nameParts[nameParts.length - 1]?.[0] || '' : '';
+    const avatarInitials = `${firstInitial}${lastInitial}`.toUpperCase() || 'U';
     const notificationBadgeCount = Math.max(0, notificationUnreadCount - notificationSeenCount);
+    const leaveBadgeCount = leaveDecisionKeys.filter((key) => !leaveSeenDecisionKeys.includes(key)).length;
+    const isReportingManager = localStorage.getItem('is_reporting_manager') === 'true';
+
+    const sidebarSearchItems: Array<{ label: string; path: string }> = useMemo(() => {
+        if (userRole === 'master') {
+            return [
+                { label: 'Dashboard', path: '/master/dashboard' },
+                { label: 'Company', path: '/master/company' },
+                { label: 'User Management', path: '/master/user-management' },
+            ];
+        }
+        if (userRole === 'admin') {
+            return [
+                { label: 'Dashboard', path: '/admin/dashboard' },
+                { label: 'Reportees', path: '/admin/reportees' },
+                { label: 'Assign Task', path: '/admin/assign-task' },
+                { label: 'Department', path: '/admin/branch-mgt/department' },
+                { label: 'Level', path: '/admin/branch-mgt/level' },
+                { label: 'Designation', path: '/admin/branch-mgt/designation' },
+                { label: 'Break Config', path: '/admin/configuration/break-config' },
+                { label: 'Shift', path: '/admin/configuration/shift' },
+                { label: 'Dept Working Days', path: '/admin/configuration/department-wise-working-days' },
+                { label: 'Leave Count', path: '/admin/configuration/leave-count' },
+                { label: 'Company Policies', path: '/admin/configuration/company-policies' },
+                { label: 'Office Structure', path: '/admin/configuration/office-structure' },
+                { label: 'Loan Configuration', path: '/admin/loan-configuration' },
+                { label: 'Loan Approvals', path: '/admin/loan-approvals' },
+                { label: 'Seat Approvals', path: '/admin/seat-approvals' },
+                { label: 'Seat Bookings Overview', path: '/admin/seat-bookings-overview' },
+                { label: 'Employee Register', path: '/admin/employee-register' },
+                { label: 'Assign Shifts', path: '/admin/assign-shifts' },
+                { label: 'Recruitment', path: '/admin/recruitment' },
+                { label: 'Relieved Employees', path: '/admin/relieved-employees' },
+                { label: 'Letter Templates', path: '/admin/letter-templates' },
+                { label: 'Conference Structure', path: '/admin/conference-room/structure' },
+                { label: 'Conference Approval', path: '/admin/conference-room/approval' },
+                { label: 'Conference Overview', path: '/admin/conference-room/overview' },
+                { label: 'Leave Approval', path: '/admin/leave-approval' },
+                { label: 'Leave History', path: '/admin/leave-history' },
+                { label: 'Attendance Logs', path: '/admin/attendance-logs' },
+                { label: 'Attendance Details', path: '/admin/attendance-details' },
+                { label: 'Salary Structure', path: '/admin/salary-structure' },
+                { label: 'Salary per Designation', path: '/admin/designation-salary' },
+                { label: 'Payroll Reports', path: '/admin/payroll-batches' },
+                { label: 'Disbursement Statement', path: '/admin/salary-disbursement' },
+                { label: 'Payslip Rollout', path: '/admin/payslip-rollout' },
+                { label: 'Income Config', path: '/admin/income-tax' },
+                { label: 'Assets & Inventory', path: '/admin/assets-inventory' },
+                { label: 'Work From Home', path: '/admin/wfh-management' },
+                { label: 'Calendar', path: '/admin/calendar' },
+                { label: 'Chat', path: '/admin/chat' },
+                { label: 'Notifications', path: '/admin/notifications' },
+                { label: 'Learning Corner', path: '/admin/learning-corner' },
+                { label: 'Employee References', path: '/admin/employee-references' },
+                { label: 'Reimbursement Categories', path: '/admin/reimbursement/categories' },
+                { label: 'Reimbursement Approvals', path: '/admin/reimbursement/approvals' },
+                { label: 'Reimbursement History', path: '/admin/reimbursement/history' },
+            ];
+        }
+        return [
+            { label: 'Dashboard', path: '/employee/dashboard' },
+            { label: 'My Tasks', path: '/employee/my-tasks' },
+            { label: 'Leave Application', path: '/employee/leave-application' },
+            { label: 'Attendance History', path: '/employee/attendance-history' },
+            { label: 'My Payslips', path: '/employee/my-payslips' },
+            { label: 'Learning Corner', path: '/employee/learning-corner' },
+            { label: 'Reportees', path: '/employee/reportees' },
+            { label: 'Seat Booking', path: '/employee/seat-booking' },
+            { label: 'Conf. Room Booking', path: '/employee/conference-room-booking' },
+            { label: 'Asset Requests', path: '/employee/asset-requests' },
+            { label: 'Loan Application', path: '/employee/loan-application' },
+            { label: 'Work From Home', path: '/employee/wfh-request' },
+            { label: 'Request Reimbursement', path: '/employee/reimbursement/request' },
+            { label: 'My Reimbursements', path: '/employee/reimbursement/status' },
+            { label: 'Reimbursement Approvals', path: '/employee/reimbursement/approvals' },
+            { label: 'References', path: '/employee/references' },
+            { label: 'Company Policies', path: '/employee/company-policy' },
+            ...(isReportingManager
+                ? [
+                      { label: 'Loan Approvals', path: '/employee/loan-approvals' },
+                      { label: 'Leave Request', path: '/employee/leave-approval' },
+                      { label: 'Assign Task', path: '/employee/assign-task' },
+                  ]
+                : []),
+        ];
+    }, [userRole, isReportingManager]);
+
+    const filteredSidebarItems = useMemo(() => {
+        const query = menuSearchQuery.trim().toLowerCase();
+        if (!query) return [];
+        return sidebarSearchItems.filter((item) => item.label.toLowerCase().includes(query)).slice(0, 8);
+    }, [menuSearchQuery, sidebarSearchItems]);
 
     useEffect(() => {
         const token = localStorage.getItem('access_token');
@@ -140,7 +241,7 @@ const Header = () => {
 
         const loadProfile = async () => {
             try {
-                if (userRole !== 'employee') return;
+                if (!['employee', 'admin', 'master'].includes(userRole)) return;
                 const res = await fetch(`${API_BASE_URL}/employee/employee-profile/`, {
                     headers: { Authorization: `Bearer ${token}` },
                 });
@@ -152,6 +253,8 @@ const Header = () => {
                 if (data?.photo) {
                     const fullUrl = /^https?:\/\//i.test(data.photo) ? data.photo : `${API_BASE_URL}${data.photo.startsWith('/') ? '' : '/'}${data.photo}`;
                     setAvatarUrl(fullUrl);
+                } else {
+                    setAvatarUrl(null);
                 }
             } catch {
                 setAvatarUrl(null);
@@ -164,6 +267,16 @@ const Header = () => {
         const savedSeenCount = Number(localStorage.getItem(notificationSeenKey) || 0);
         setNotificationSeenCount(Number.isFinite(savedSeenCount) ? savedSeenCount : 0);
     }, [notificationSeenKey]);
+
+    useEffect(() => {
+        try {
+            const raw = localStorage.getItem(leaveSeenKey);
+            const parsed = raw ? JSON.parse(raw) : [];
+            setLeaveSeenDecisionKeys(Array.isArray(parsed) ? parsed : []);
+        } catch {
+            setLeaveSeenDecisionKeys([]);
+        }
+    }, [leaveSeenKey]);
 
     useEffect(() => {
         const token = localStorage.getItem('access_token');
@@ -196,11 +309,54 @@ const Header = () => {
     }, [API_BASE_URL, userRole]);
 
     useEffect(() => {
+        const token = localStorage.getItem('access_token');
+        if (!token || userRole !== 'employee') {
+            setLeaveDecisionKeys([]);
+            return;
+        }
+
+        let isMounted = true;
+        const loadLeaveUpdatesCount = async () => {
+            try {
+                const res = await fetch(`${API_BASE_URL}/employee/employee-leave-create/?page=1&page_size=200`, {
+                    headers: { Authorization: `Bearer ${token}` },
+                });
+                if (!res.ok) return;
+                const data = await res.json();
+                const leavesList = Array.isArray(data) ? data : Array.isArray(data?.results) ? data.results : [];
+                const decisionKeys = leavesList
+                    .filter((leave: any) => {
+                    const status = String(leave?.status || '').toLowerCase();
+                    return status === 'approved' || status === 'rejected';
+                    })
+                    .map((leave: any) => `${leave?.id}:${String(leave?.status || '').toLowerCase()}`);
+                if (isMounted) setLeaveDecisionKeys(decisionKeys);
+            } catch {
+                if (isMounted) setLeaveDecisionKeys([]);
+            }
+        };
+
+        loadLeaveUpdatesCount();
+        const intervalId = window.setInterval(loadLeaveUpdatesCount, 30000);
+        return () => {
+            isMounted = false;
+            window.clearInterval(intervalId);
+        };
+    }, [API_BASE_URL, userRole]);
+
+    useEffect(() => {
         if (location.pathname === notificationRoute && userRole === 'employee') {
             setNotificationSeenCount(notificationUnreadCount);
             localStorage.setItem(notificationSeenKey, String(notificationUnreadCount));
         }
     }, [location.pathname, notificationRoute, notificationSeenKey, notificationUnreadCount, userRole]);
+
+    useEffect(() => {
+        if (location.pathname === leaveRoute && userRole === 'employee') {
+            setLeaveSeenDecisionKeys(leaveDecisionKeys);
+            localStorage.setItem(leaveSeenKey, JSON.stringify(leaveDecisionKeys));
+        }
+    }, [leaveDecisionKeys, leaveRoute, leaveSeenKey, location.pathname, userRole]);
 
     return (
         <header className={`z-40 ${themeConfig.semidark && themeConfig.menu === 'horizontal' ? 'dark' : ''}`}>
@@ -230,28 +386,55 @@ const Header = () => {
                                 </Link>
                             </li>
                             <li>
-                                <Link to="/apps/todolist" className="block p-2 rounded-full bg-white-light/40 dark:bg-dark/40 hover:text-primary hover:bg-white-light/90 dark:hover:bg-dark/60">
+                                <Link
+                                    to={leaveRoute}
+                                    className="relative block p-2 rounded-full bg-white-light/40 dark:bg-dark/40 hover:text-primary hover:bg-white-light/90 dark:hover:bg-dark/60"
+                                    onClick={() => {
+                                        if (userRole === 'employee') {
+                                            setLeaveSeenDecisionKeys(leaveDecisionKeys);
+                                            localStorage.setItem(leaveSeenKey, JSON.stringify(leaveDecisionKeys));
+                                        }
+                                    }}
+                                >
                                     <IconEdit />
+                                    {userRole === 'employee' && leaveBadgeCount > 0 && (
+                                        <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center">
+                                            <span className="absolute inline-flex h-full w-full rounded-full bg-success opacity-70 animate-ping"></span>
+                                            <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-success border border-white dark:border-black animate-bounce"></span>
+                                        </span>
+                                    )}
                                 </Link>
                             </li>
-                            <li>
-                                <Link to="/apps/chat" className="block p-2 rounded-full bg-white-light/40 dark:bg-dark/40 hover:text-primary hover:bg-white-light/90 dark:hover:bg-dark/60">
-                                    <IconChatNotification />
-                                </Link>
-                            </li>
+                            {userRole !== 'employee' && (
+                                <li>
+                                    <Link to="/apps/chat" className="block p-2 rounded-full bg-white-light/40 dark:bg-dark/40 hover:text-primary hover:bg-white-light/90 dark:hover:bg-dark/60">
+                                        <IconChatNotification />
+                                    </Link>
+                                </li>
+                            )}
                         </ul>
                     </div>
                     <div className="sm:flex-1 ltr:sm:ml-0 ltr:ml-auto sm:rtl:mr-0 rtl:mr-auto flex items-center space-x-1.5 lg:space-x-2 rtl:space-x-reverse dark:text-[#d0d2d6]">
                         <div className="sm:ltr:mr-auto sm:rtl:ml-auto">
                             <form
                                 className={`${search && '!block'} sm:relative absolute inset-x-0 sm:top-0 top-1/2 sm:translate-y-0 -translate-y-1/2 sm:mx-0 mx-4 z-10 sm:block hidden`}
-                                onSubmit={() => setSearch(false)}
+                                onSubmit={(e) => {
+                                    e.preventDefault();
+                                    const firstMatch = filteredSidebarItems[0];
+                                    if (firstMatch) {
+                                        navigate(firstMatch.path);
+                                        setMenuSearchQuery('');
+                                        setSearch(false);
+                                    }
+                                }}
                             >
                                 <div className="relative">
                                     <input
                                         type="text"
                                         className="form-input ltr:pl-9 rtl:pr-9 ltr:sm:pr-4 rtl:sm:pl-4 ltr:pr-9 rtl:pl-9 peer sm:bg-transparent bg-gray-100 placeholder:tracking-widest"
-                                        placeholder="Search..."
+                                        placeholder="Search sidebar menus..."
+                                        value={menuSearchQuery}
+                                        onChange={(e) => setMenuSearchQuery(e.target.value)}
                                     />
                                     <button type="button" className="absolute w-9 h-9 inset-0 ltr:right-auto rtl:left-auto appearance-none peer-focus:text-primary">
                                         <IconSearch className="mx-auto" />
@@ -259,6 +442,31 @@ const Header = () => {
                                     <button type="button" className="hover:opacity-80 sm:hidden block absolute top-1/2 -translate-y-1/2 ltr:right-2 rtl:left-2" onClick={() => setSearch(false)}>
                                         <IconXCircle />
                                     </button>
+                                    {menuSearchQuery.trim() && (
+                                        <div className="absolute left-0 right-0 mt-2 bg-white dark:bg-[#1b2e4b] rounded-lg shadow-lg border border-[#ebedf2] dark:border-[#253b5c] overflow-hidden z-20">
+                                            {filteredSidebarItems.length > 0 ? (
+                                                <ul className="py-1">
+                                                    {filteredSidebarItems.map((item) => (
+                                                        <li key={item.path}>
+                                                            <button
+                                                                type="button"
+                                                                className="w-full text-left px-3 py-2 text-sm hover:bg-gray-100 dark:hover:bg-[#253b5c] dark:text-white-dark"
+                                                                onClick={() => {
+                                                                    navigate(item.path);
+                                                                    setMenuSearchQuery('');
+                                                                    setSearch(false);
+                                                                }}
+                                                            >
+                                                                {item.label}
+                                                            </button>
+                                                        </li>
+                                                    ))}
+                                                </ul>
+                                            ) : (
+                                                <p className="px-3 py-2 text-sm text-white-dark">No menu found</p>
+                                            )}
+                                        </div>
+                                    )}
                                 </div>
                             </form>
                             <button
@@ -312,98 +520,6 @@ const Header = () => {
                                 </button>
                             )}
                         </div>
-                        <div className="dropdown shrink-0">
-                            <Dropdown
-                                offset={[0, 8]}
-                                placement={`${isRtl ? 'bottom-start' : 'bottom-end'}`}
-                                btnClassName="block p-2 rounded-full bg-white-light/40 dark:bg-dark/40 hover:text-primary hover:bg-white-light/90 dark:hover:bg-dark/60"
-                                button={<img className="w-5 h-5 object-cover rounded-full" src={`/assets/images/flags/${flag.toUpperCase()}.svg`} alt="flag" />}
-                            >
-                                <ul className="!px-2 text-dark dark:text-white-dark grid grid-cols-2 gap-2 font-semibold dark:text-white-light/90 w-[280px]">
-                                    {themeConfig.languageList.map((item: any) => {
-                                        return (
-                                            <li key={item.code}>
-                                                <button
-                                                    type="button"
-                                                    className={`flex w-full hover:text-primary rounded-lg ${i18next.language === item.code ? 'bg-primary/10 text-primary' : ''}`}
-                                                    onClick={() => {
-                                                        i18next.changeLanguage(item.code);
-                                                        // setFlag(item.code);
-                                                        setLocale(item.code);
-                                                    }}
-                                                >
-                                                    <img src={`/assets/images/flags/${item.code.toUpperCase()}.svg`} alt="flag" className="w-5 h-5 object-cover rounded-full" />
-                                                    <span className="ltr:ml-3 rtl:mr-3">{item.name}</span>
-                                                </button>
-                                            </li>
-                                        );
-                                    })}
-                                </ul>
-                            </Dropdown>
-                        </div>
-                        <div className="dropdown shrink-0">
-                            <Dropdown
-                                offset={[0, 8]}
-                                placement={`${isRtl ? 'bottom-start' : 'bottom-end'}`}
-                                btnClassName="block p-2 rounded-full bg-white-light/40 dark:bg-dark/40 hover:text-primary hover:bg-white-light/90 dark:hover:bg-dark/60"
-                                button={<IconMailDot />}
-                            >
-                                <ul className="!py-0 text-dark dark:text-white-dark w-[300px] sm:w-[375px] text-xs">
-                                    <li className="mb-5" onClick={(e) => e.stopPropagation()}>
-                                        <div className="hover:!bg-transparent overflow-hidden relative rounded-t-md p-5 text-white w-full !h-[68px]">
-                                            <div
-                                                className="absolute h-full w-full bg-no-repeat bg-center bg-cover inset-0 bg-"
-                                                style={{
-                                                    backgroundImage: `url('/assets/images/menu-heade.jpg')`,
-                                                    backgroundRepeat: 'no-repeat',
-                                                    width: '100%',
-                                                    height: '100%',
-                                                }}
-                                            ></div>
-                                            <h4 className="font-semibold relative z-10 text-lg">Messages</h4>
-                                        </div>
-                                    </li>
-                                    {messages.length > 0 ? (
-                                        <>
-                                            <li onClick={(e) => e.stopPropagation()}>
-                                                {messages.map((message) => {
-                                                    return (
-                                                        <div key={message.id} className="flex items-center py-3 px-5">
-                                                            <div dangerouslySetInnerHTML={createMarkup(message.image)}></div>
-                                                            <span className="px-3 dark:text-gray-500">
-                                                                <div className="font-semibold text-sm dark:text-white-light/90">{message.title}</div>
-                                                                <div>{message.message}</div>
-                                                            </span>
-                                                            <span className="font-semibold bg-white-dark/20 rounded text-dark/60 px-1 ltr:ml-auto rtl:mr-auto whitespace-pre dark:text-white-dark ltr:mr-2 rtl:ml-2">
-                                                                {message.time}
-                                                            </span>
-                                                            <button type="button" className="text-neutral-300 hover:text-danger" onClick={() => removeMessage(message.id)}>
-                                                                <IconXCircle />
-                                                            </button>
-                                                        </div>
-                                                    );
-                                                })}
-                                            </li>
-                                            <li className="border-t border-white-light text-center dark:border-white/10 mt-5">
-                                                <button type="button" className="text-primary font-semibold group dark:text-gray-400 justify-center !py-4 !h-[48px]">
-                                                    <span className="group-hover:underline ltr:mr-1 rtl:ml-1">VIEW ALL ACTIVITIES</span>
-                                                    <IconArrowLeft className="group-hover:translate-x-1 transition duration-300 ltr:ml-1 rtl:mr-1" />
-                                                </button>
-                                            </li>
-                                        </>
-                                    ) : (
-                                        <li className="mb-5" onClick={(e) => e.stopPropagation()}>
-                                            <button type="button" className="!grid place-content-center hover:!bg-transparent text-lg min-h-[200px]">
-                                                <div className="mx-auto ring-4 ring-primary/30 rounded-full mb-4 text-primary">
-                                                    <IconInfoCircle fill={true} className="w-10 h-10" />
-                                                </div>
-                                                No data available.
-                                            </button>
-                                        </li>
-                                    )}
-                                </ul>
-                            </Dropdown>
-                        </div>
                         <div className="shrink-0">
                             <Link 
                                 to={notificationRoute} 
@@ -434,7 +550,7 @@ const Header = () => {
                                         <img className="w-9 h-9 rounded-full object-cover saturate-50 group-hover:saturate-100" src={avatarUrl} alt="userProfile" />
                                     ) : (
                                         <div className="w-9 h-9 rounded-full bg-primary text-white flex items-center justify-center text-xs font-bold">
-                                            {initials}
+                                            {avatarInitials}
                                         </div>
                                     )
                                 }
@@ -446,7 +562,7 @@ const Header = () => {
                                                 <img className="rounded-md w-10 h-10 object-cover" src={avatarUrl} alt="userProfile" />
                                             ) : (
                                                 <div className="rounded-md w-10 h-10 bg-primary text-white flex items-center justify-center text-sm font-bold">
-                                                    {initials}
+                                                    {avatarInitials}
                                                 </div>
                                             )}
                                             <div className="ltr:pl-4 rtl:pr-4 truncate">
@@ -463,18 +579,14 @@ const Header = () => {
                                             Profile
                                         </Link>
                                     </li>
-                                    <li>
-                                        <Link to="/apps/mailbox" className="dark:hover:text-white">
-                                            <IconMail className="w-4.5 h-4.5 ltr:mr-2 rtl:ml-2 shrink-0" />
-                                            Inbox
-                                        </Link>
-                                    </li>
-                                    <li>
-                                        <Link to="/auth/boxed-lockscreen" className="dark:hover:text-white">
-                                            <IconLockDots className="w-4.5 h-4.5 ltr:mr-2 rtl:ml-2 shrink-0" />
-                                            Lock Screen
-                                        </Link>
-                                    </li>
+                                    {userRole !== 'master' && (
+                                        <li>
+                                            <Link to="/apps/mailbox" className="dark:hover:text-white">
+                                                <IconMail className="w-4.5 h-4.5 ltr:mr-2 rtl:ml-2 shrink-0" />
+                                                Inbox
+                                            </Link>
+                                        </li>
+                                    )}
                                     <li className="border-t border-white-light dark:border-white-light/10">
                                         <Link to="/auth/boxed-signin" className="text-danger !py-3 flex items-center" onClick={() => {
                                             ['access_token', 'refresh_token', 'user_role', 'user_id', 'username', 'is_reporting_manager', 'user_email', 'first_name', 'last_name', 'remember_me'].forEach(k => localStorage.removeItem(k));
@@ -531,9 +643,11 @@ const Header = () => {
                             <li>
                                 <NavLink to="/apps/chat">{t('chat')}</NavLink>
                             </li>
-                            <li>
-                                <NavLink to="/apps/mailbox">{t('mailbox')}</NavLink>
-                            </li>
+                            {userRole !== 'master' && (
+                                <li>
+                                    <NavLink to="/apps/mailbox">{t('mailbox')}</NavLink>
+                                </li>
+                            )}
                             <li>
                                 <NavLink to="/apps/todolist">{t('todo_list')}</NavLink>
                             </li>
@@ -955,26 +1069,28 @@ const Header = () => {
                                     </li>
                                 </ul>
                             </li>
-                            <li className="relative">
-                                <button type="button">
-                                    {t('lockscreen')}
-                                    <div className="ltr:ml-auto rtl:mr-auto rtl:rotate-90 -rotate-90">
-                                        <IconCaretDown />
-                                    </div>
-                                </button>
-                                <ul className="rounded absolute top-0 ltr:left-[95%] rtl:right-[95%] min-w-[180px] bg-white z-[10] text-dark dark:text-white-dark dark:bg-[#1b2e4b] shadow p-0 py-2 hidden">
-                                    <li>
-                                        <NavLink to="/auth/cover-lockscreen" target="_blank">
-                                            {t('unlock_cover')}
-                                        </NavLink>
-                                    </li>
-                                    <li>
-                                        <NavLink to="/auth/boxed-lockscreen" target="_blank">
-                                            {t('unlock_boxed')}
-                                        </NavLink>
-                                    </li>
-                                </ul>
-                            </li>
+                            {userRole !== 'master' && (
+                                <li className="relative">
+                                    <button type="button">
+                                        {t('lockscreen')}
+                                        <div className="ltr:ml-auto rtl:mr-auto rtl:rotate-90 -rotate-90">
+                                            <IconCaretDown />
+                                        </div>
+                                    </button>
+                                    <ul className="rounded absolute top-0 ltr:left-[95%] rtl:right-[95%] min-w-[180px] bg-white z-[10] text-dark dark:text-white-dark dark:bg-[#1b2e4b] shadow p-0 py-2 hidden">
+                                        <li>
+                                            <NavLink to="/auth/cover-lockscreen" target="_blank">
+                                                {t('unlock_cover')}
+                                            </NavLink>
+                                        </li>
+                                        <li>
+                                            <NavLink to="/auth/boxed-lockscreen" target="_blank">
+                                                {t('unlock_boxed')}
+                                            </NavLink>
+                                        </li>
+                                    </ul>
+                                </li>
+                            )}
                         </ul>
                     </li>
                     <li className="menu nav-item relative">

@@ -8,8 +8,6 @@ import IconMail from '../../components/Icon/IconMail';
 import IconLockDots from '../../components/Icon/IconLockDots';
 import IconGoogle from '../../components/Icon/IconGoogle';
 import { GoogleLogin } from '@react-oauth/google';
-import { Dialog, Transition } from '@headlessui/react';
-import { Fragment } from 'react';
 
 const LoginBoxed = () => {
     const dispatch = useDispatch();
@@ -24,7 +22,6 @@ const LoginBoxed = () => {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
     const [acceptedTerms, setAcceptedTerms] = useState(false);
-    const [isTermsModalOpen, setIsTermsModalOpen] = useState(false);
 
     useEffect(() => {
         const token = localStorage.getItem('access_token');
@@ -216,7 +213,7 @@ const LoginBoxed = () => {
                                             onChange={(e) => setAcceptedTerms(e.target.checked)}
                                             required
                                         />
-                                        <span className="text-white-dark">I agree to the <button type="button" onClick={() => setIsTermsModalOpen(true)} className="text-primary hover:underline ml-1">Terms and Conditions</button></span>
+                                        <span className="text-white-dark">I agree to the <Link to="/privacy-policy" className="text-primary hover:underline ml-1">Terms and Conditions</Link></span>
                                     </label>
                                 </div>
                                 <button 
@@ -243,141 +240,6 @@ const LoginBoxed = () => {
                     </div>
                 </div>
             </div>
-
-            {/* Terms and Conditions Modal */}
-            <Transition appear show={isTermsModalOpen} as={Fragment}>
-                <Dialog as="div" className="relative z-[51]" onClose={() => setIsTermsModalOpen(false)}>
-                    <Transition.Child
-                        as={Fragment}
-                        enter="ease-out duration-300"
-                        enterFrom="opacity-0"
-                        enterTo="opacity-100"
-                        leave="ease-in duration-200"
-                        leaveFrom="opacity-100"
-                        leaveTo="opacity-0"
-                    >
-                        <div className="fixed inset-0 bg-[black]/60" />
-                    </Transition.Child>
-
-                    <div className="fixed inset-0 overflow-y-auto">
-                        <div className="flex min-h-full items-center justify-center px-4 py-8">
-                            <Transition.Child
-                                as={Fragment}
-                                enter="ease-out duration-300"
-                                enterFrom="opacity-0 scale-95"
-                                enterTo="opacity-100 scale-100"
-                                leave="ease-in duration-200"
-                                leaveFrom="opacity-100 scale-100"
-                                leaveTo="opacity-0 scale-95"
-                            >
-                                <Dialog.Panel className="panel border-0 p-0 rounded-2xl overflow-hidden w-full max-w-2xl text-black dark:text-white-dark bg-white dark:bg-[#0e1726]">
-                                    <button
-                                        type="button"
-                                        onClick={() => setIsTermsModalOpen(false)}
-                                        className="absolute top-4 ltr:right-4 rtl:left-4 text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 outline-none"
-                                    >
-                                        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
-                                        </svg>
-                                    </button>
-                                    <div className="text-lg font-black bg-[#fbfbfb] dark:bg-[#121c2c] ltr:pl-5 rtl:pr-5 py-5 ltr:pr-[50px] rtl:pl-[50px] uppercase tracking-tight text-primary">
-                                        Privacy Policy for People Suite
-                                    </div>
-                                    <div className="p-8 max-h-[70vh] overflow-y-auto leading-relaxed text-sm">
-                                        <div className="space-y-6">
-                                            <div>
-                                                <p className="font-bold text-gray-400 mb-2">Last Updated: April 2026</p>
-                                                <p>
-                                                    INNOVYX TECH LABS LLP ("we," "us," or "our") is committed to protecting the privacy of our users. This Privacy Policy explains how we collect, use, and safeguard the personal information of employees within organizations using the People Suite HRMS platform (available via Web and Mobile Application).
-                                                </p>
-                                            </div>
-
-                                            <section>
-                                                <h3 className="font-black text-base text-gray-800 dark:text-white uppercase mb-2">1. Information We Collect</h3>
-                                                <p className="mb-2">To provide a functional HRMS experience, we collect the following types of information:</p>
-                                                <ul className="list-disc ltr:pl-5 rtl:pr-5 space-y-2">
-                                                    <li><span className="font-bold">Personal Identifiable Information (PII):</span> Name, Employee ID, email address, phone number, and emergency contact details.</li>
-                                                    <li><span className="font-bold">Professional Data:</span> Job title, department, salary/payroll details, and tax information.</li>
-                                                    <li><span className="font-bold">Attendance & Location Data:</span> When you use the mobile app to clock in/out, we may collect your precise GPS location to verify your presence at designated work sites (Geofencing).</li>
-                                                    <li><span className="font-bold">Device Information:</span> IP address, device model, operating system, and unique device identifiers to ensure secure login and troubleshoot app performance.</li>
-                                                </ul>
-                                            </section>
-
-                                            <section>
-                                                <h3 className="font-black text-base text-gray-800 dark:text-white uppercase mb-2">2. How We Use Your Information</h3>
-                                                <p className="mb-2">We use the collected data strictly for the following HR functions:</p>
-                                                <ul className="list-disc ltr:pl-5 rtl:pr-5 space-y-2">
-                                                    <li>Facilitating payroll processing and tax compliance.</li>
-                                                    <li>Verifying attendance and leave management.</li>
-                                                    <li>Enabling internal communication within your organization.</li>
-                                                    <li>Ensuring the security of the portal by preventing unauthorized logins.</li>
-                                                </ul>
-                                            </section>
-
-                                            <section>
-                                                <h3 className="font-black text-base text-gray-800 dark:text-white uppercase mb-2">3. Data Access & Restriction</h3>
-                                                <ul className="list-disc ltr:pl-5 rtl:pr-5 space-y-2">
-                                                    <li><span className="font-bold">Internal Access Only:</span> People Suite is a closed-loop system. Access is strictly limited to active employees of your organization.</li>
-                                                    <li>We do not sell or rent your personal data to third-party marketers.</li>
-                                                    <li>Your data is accessible to your organization’s HR administrators and authorized management personnel as per your company’s internal hierarchy.</li>
-                                                </ul>
-                                            </section>
-
-                                            <section>
-                                                <h3 className="font-black text-base text-gray-800 dark:text-white uppercase mb-2">4. Background Location & Camera Permissions</h3>
-                                                <p className="mb-2">For the mobile application to function correctly, we may request:</p>
-                                                <ul className="list-disc ltr:pl-5 rtl:pr-5 space-y-2">
-                                                    <li><span className="font-bold">Location:</span> Used only for attendance verification. Background location may be used if required by your employer's attendance policy during work hours.</li>
-                                                    <li><span className="font-bold">Camera:</span> Used for profile picture uploads or "Selfie-Attendance" features if enabled.</li>
-                                                </ul>
-                                            </section>
-
-                                            <section>
-                                                <h3 className="font-black text-base text-gray-800 dark:text-white uppercase mb-2">5. Data Security</h3>
-                                                <p className="mb-2">We implement industry-standard security measures, including:</p>
-                                                <ul className="list-disc ltr:pl-5 rtl:pr-5 space-y-2">
-                                                    <li><span className="font-bold">Encryption:</span> Data is encrypted at rest and during transit (SSL/TLS).</li>
-                                                    <li><span className="font-bold">Access Control:</span> Role-based access ensures you only see data relevant to your position.</li>
-                                                    <li><span className="font-bold">Server Security:</span> Data is hosted on secure servers with regular backups and firewalls.</li>
-                                                </ul>
-                                            </section>
-
-                                            <section>
-                                                <h3 className="font-black text-base text-gray-800 dark:text-white uppercase mb-2">6. Data Retention</h3>
-                                                <p>
-                                                    Your personal data is retained as long as you are an active employee of the organization. Upon your departure, data retention is governed by your Employer’s HR policy and applicable labor laws of India.
-                                                </p>
-                                            </section>
-
-                                            <section className="bg-gray-50 dark:bg-black/20 p-5 rounded-xl border border-gray-100 dark:border-gray-800">
-                                                <h3 className="font-black text-base text-gray-800 dark:text-white uppercase mb-3">7. Contact Us</h3>
-                                                <div className="space-y-1 text-xs font-bold text-gray-500">
-                                                    <p className="text-gray-800 dark:text-white uppercase">INNOVYX TECH LABS LLP</p>
-                                                    <p>Address: 35 K, 42/5, Vittasandra Main Rd, Vittasandra, Bengaluru, Karnataka 560100</p>
-                                                    <p>Email: <a href="mailto:info@innovyxtechlabs.com" className="text-primary hover:underline">info@innovyxtechlabs.com</a></p>
-                                                    <p>Phone: +91 9113263741</p>
-                                                </div>
-                                            </section>
-                                        </div>
-                                    </div>
-                                    <div className="flex justify-end items-center p-5 bg-[#fbfbfb] dark:bg-[#121c2c]">
-                                        <button 
-                                            type="button" 
-                                            className="btn btn-primary font-black uppercase tracking-widest text-xs px-8" 
-                                            onClick={() => {
-                                                setAcceptedTerms(true);
-                                                setIsTermsModalOpen(false);
-                                            }}
-                                        >
-                                            I Accept
-                                        </button>
-                                    </div>
-                                </Dialog.Panel>
-                            </Transition.Child>
-                        </div>
-                    </div>
-                </Dialog>
-            </Transition>
         </div>
     );
 };
