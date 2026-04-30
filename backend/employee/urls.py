@@ -18,6 +18,7 @@ urlpatterns = [
     path('time-log/meta/', TimeLogMetaAPIView.as_view(), name='time-log-meta'),
     path('time-log/', TimeLogListCreateAPIView.as_view(), name='time-log'),
     path('employee-notifications/', NotificationListAPIView.as_view(), name='employee-notifications'),
+    path('geofence-config/', EmployeeGeofenceConfigAPIView.as_view(), name='geofence-config'),
 
     path('attendance-history/', AttendanceHistoryAPIView.as_view(), name='attendance_history'),
     path('employee-calendar/', EmployeeCalendarAPIView.as_view(), name='employee_calendar'),
