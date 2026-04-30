@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useDispatch } from 'react-redux';
 import { setPageTitle } from '../../store/themeConfigSlice';
-import { fetchPayslips, Payslip } from '../Payroll/payslipApi';
+import { fetchPayslips, Payslip, downloadPayslip } from '../Payroll/payslipApi';
 import IconFile from '../../components/Icon/IconFile';
 import IconDownload from '../../components/Icon/IconDownload';
 import IconEye from '../../components/Icon/IconEye';
@@ -77,7 +77,7 @@ const MyPayslips = () => {
                                 </div>
                                 <div className="grid grid-cols-2 gap-2 mt-auto">
                                     <a 
-                                        href={payslip.file ? `${import.meta.env.VITE_API_BASE_URL}${payslip.file}` : '#'} 
+                                        href={payslip.file ? (payslip.file.startsWith('http') ? payslip.file : `${import.meta.env.VITE_API_BASE_URL}${payslip.file}`) : '#'} 
                                         target="_blank" 
                                         rel="noreferrer"
                                         className="btn btn-outline-primary btn-sm flex items-center justify-center gap-2 py-2"
@@ -85,14 +85,16 @@ const MyPayslips = () => {
                                         <IconEye className="w-4 h-4" />
                                         View
                                     </a>
-                                    <a 
-                                        href={payslip.file ? `${import.meta.env.VITE_API_BASE_URL}${payslip.file}` : '#'} 
-                                        download
+                                    <button 
+                                        onClick={() => {
+                                            const url = payslip.file ? (payslip.file.startsWith('http') ? payslip.file : `${import.meta.env.VITE_API_BASE_URL}${payslip.file}`) : null;
+                                            if (url) downloadPayslip(url);
+                                        }}
                                         className="btn btn-primary btn-sm flex items-center justify-center gap-2 py-2 shadow-md"
                                     >
                                         <IconDownload className="w-4 h-4" />
                                         Download
-                                    </a>
+                                    </button>
                                 </div>
                             </div>
                         </div>

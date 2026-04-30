@@ -287,11 +287,14 @@ def generate_payslip_pdf(employee, payroll, batch=None, company=None, logo_path=
                 if self.loan_disbursement > 0:
                     self.dynamic_earnings.append({'name': 'Loan Credit', 'amount': self.loan_disbursement.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)})
                 
-                # 1. Dynamic GrossSalaryComponent entries — include ALL active components
+                # 1. Dynamic GrossSalaryComponent entries — respect saved gChk from PayrollReport
                 all_gross = GrossSalaryComponent.objects.filter(company=fs.company, is_active=True)
+                g_chk = fs.config.get('gChk', {})
                 all_gross_names = set()
                 for gc in all_gross:
                     all_gross_names.add(gc.name.lower())
+                    # Respect saved config: skip if explicitly unchecked, default True for new components
+                    if not g_chk.get(f'g-{gc.id}', True): continue
                     amount = (fs.earned_basic * gc.value) / Decimal(100) if gc.calc_type == 'percentage' else gc.value
                     self.dynamic_earnings.append({'name': gc.name, 'amount': amount.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)})
                 

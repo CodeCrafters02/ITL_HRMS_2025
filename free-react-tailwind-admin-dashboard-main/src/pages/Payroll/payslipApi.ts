@@ -123,11 +123,21 @@ export const bulkPublishPayslips = async (ids: number[]) => {
     return response.data;
 };
 
-export const downloadPayslip = (fileUrl: string) => {
-    const link = document.createElement('a');
-    link.href = fileUrl;
-    link.setAttribute('download', fileUrl.split('/').pop() || 'payslip.pdf');
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
+export const downloadPayslip = async (fileUrl: string) => {
+    try {
+        const response = await fetch(fileUrl);
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.setAttribute('download', fileUrl.split('/').pop() || 'payslip.pdf');
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        window.URL.revokeObjectURL(url);
+    } catch (error) {
+        console.error('Download failed:', error);
+        // Fallback to direct link if fetch fails (e.g. CORS)
+        window.open(fileUrl, '_blank');
+    }
 };

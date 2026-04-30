@@ -112,6 +112,59 @@ const PayslipRollout = () => {
             setActionLoading(null);
         }
     };
+    const handleGenerateAll = async () => {
+        const formatDate = (date: Date) => {
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+        };
+        const start = dateRange && dateRange[0] ? formatDate(dateRange[0]) : undefined;
+        const end = dateRange && dateRange[1] ? formatDate(dateRange[1]) : undefined;
+
+        // Get all employees that can have payslips generated
+        const eligible = dashboardData.filter(d => d.payroll_id);
+
+        if (eligible.length === 0) {
+            Swal.fire('Info', 'No employees found with payroll data for this period.', 'info');
+            return;
+        }
+
+        const confirm = await Swal.fire({
+            title: 'Generate All Payslips',
+            html: `This will generate/regenerate payslips for <b>${eligible.length}</b> employees.<br/>This may take a moment.`,
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonText: 'Yes, Generate All',
+            confirmButtonColor: '#2563eb',
+        });
+
+        if (!confirm.isConfirmed) return;
+
+        setActionLoading('generate-all');
+        let success = 0;
+        let failed = 0;
+
+        for (const item of eligible) {
+            try {
+                const regenerate = !!item.payslip_id;
+                await generatePayslip(item.payroll_id!, item.is_report, regenerate, start, end);
+                success++;
+            } catch (e) {
+                console.error(`Failed for ${item.employee_name}`, e);
+                failed++;
+            }
+        }
+
+        setActionLoading(null);
+        loadDashboard();
+
+        Swal.fire({
+            title: 'Batch Complete',
+            html: `<b>${success}</b> payslips generated successfully.${failed > 0 ? `<br/><span style="color:red">${failed} failed.</span>` : ''}`,
+            icon: failed > 0 ? 'warning' : 'success',
+        });
+    };
 
     const handleView = (payslipId: number, fileUrl: string) => {
         window.open(`${import.meta.env.VITE_API_BASE_URL}${fileUrl}`, '_blank');
@@ -123,11 +176,6 @@ const PayslipRollout = () => {
     };
 
     const handleSend = async (payslipId: number) => {
-        if (!viewedIds.has(payslipId)) {
-            Swal.fire('Notice', 'Please view the payslip before sending to verify details.', 'info');
-            return;
-        }
-
         setActionLoading(`send-${payslipId}`);
         try {
             await publishPayslip(payslipId);
@@ -142,7 +190,7 @@ const PayslipRollout = () => {
 
     const handleBulkSend = async () => {
         const draftIds = dashboardData
-            .filter(d => d.payslip_status === 'Draft' && viewedIds.has(d.id!))
+            .filter(d => d.payslip_status === 'Draft')
             .map(d => d.id!);
 
         if (draftIds.length === 0) {
@@ -152,7 +200,7 @@ const PayslipRollout = () => {
 
         const result = await Swal.fire({
             title: 'Bulk Publish',
-            text: `Are you sure you want to send ${draftIds.length} verified payslips?`,
+            text: `Are you sure you want to send ${draftIds.length} payslips?`,
             icon: 'question',
             showCancelButton: true,
             confirmButtonText: 'Yes, Send All'
@@ -210,6 +258,14 @@ const PayslipRollout = () => {
                             />
                         </div>
                         <div className="h-10 w-[1px] bg-white/10 hidden md:block"></div>
+                        <button 
+                            onClick={handleGenerateAll}
+                            disabled={!!actionLoading || loading}
+                            className="btn bg-emerald-600 hover:bg-emerald-500 text-white font-black px-8 py-3 rounded-xl shadow-xl shadow-emerald-900/20 transition-all active:scale-95 flex items-center gap-3"
+                        >
+                            {actionLoading === 'generate-all' ? <span className="animate-spin border-2 border-white border-l-transparent rounded-full w-5 h-5"></span> : <IconFile className="w-5 h-5" />}
+                            Generate All
+                        </button>
                         <button 
                             onClick={handleBulkSend}
                             className="btn bg-blue-600 hover:bg-blue-500 text-white font-black px-8 py-3 rounded-xl shadow-xl shadow-blue-900/20 transition-all active:scale-95 flex items-center gap-3"
@@ -409,12 +465,8 @@ const PayslipRollout = () => {
                                                     {item.payslip_status === 'Draft' && (
                                                         <button 
                                                             onClick={() => handleSend(item.id!)}
-                                                            disabled={!!actionLoading || !viewedIds.has(item.id!)}
-                                                            className={`btn btn-sm py-2 px-4 rounded-lg font-black uppercase text-[10px] tracking-widest transition-all ${
-                                                                viewedIds.has(item.id!) 
-                                                                    ? 'bg-blue-600 text-white hover:bg-blue-700 shadow-md' 
-                                                                    : 'bg-gray-200 text-gray-400 cursor-not-allowed'
-                                                            }`}
+                                                            disabled={!!actionLoading}
+                                                            className={`btn btn-sm py-2 px-4 rounded-lg font-black uppercase text-[10px] tracking-widest transition-all bg-blue-600 text-white hover:bg-blue-700 shadow-md`}
                                                         >
                                                             {actionLoading === `send-${item.id}` ? <span className="animate-spin border-2 border-white border-l-transparent rounded-full w-3 h-3"></span> : <IconSend className="w-3 h-3" />}
                                                             Send

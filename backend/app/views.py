@@ -2237,11 +2237,25 @@ class PayslipViewSet(viewsets.ReadOnlyModelViewSet):
                 record = FinalizedSalary.objects.get(id=payroll_id)
                 employee = record.employee
                 
-                # Update dates if provided in request
+                # If dates are provided, find the correct record for those dates
+                # instead of blindly updating (which can violate unique_together)
                 if start_date_req and end_date_req:
-                    record.from_date = datetime.strptime(start_date_req, '%Y-%m-%d').date()
-                    record.to_date = datetime.strptime(end_date_req, '%Y-%m-%d').date()
-                    record.save()
+                    req_from = datetime.strptime(start_date_req, '%Y-%m-%d').date()
+                    req_to = datetime.strptime(end_date_req, '%Y-%m-%d').date()
+                    
+                    # Check if a different record already exists for these dates
+                    existing = FinalizedSalary.objects.filter(
+                        employee=employee, from_date=req_from, to_date=req_to
+                    ).exclude(id=record.id).first()
+                    
+                    if existing:
+                        # Use the existing record for those dates instead
+                        record = existing
+                    elif record.from_date != req_from or record.to_date != req_to:
+                        # Only update dates if they actually changed and no conflict
+                        record.from_date = req_from
+                        record.to_date = req_to
+                        record.save()
                 
                 month = record.from_date.month
                 year = record.from_date.year
@@ -2259,24 +2273,24 @@ class PayslipViewSet(viewsets.ReadOnlyModelViewSet):
                 pass
             
             if not payslip:
-                # Fallback: find by employee + month + year
-                payslip = Payslip.objects.filter(
-                    employee=employee, month=month, year=year, company=request.user.company
-                ).first()
-                
-                # If found, link it to the current record for future lookups
-                if payslip and is_report and not payslip.finalized_salary_id:
-                    payslip.finalized_salary = record
-                    payslip.save(update_fields=['finalized_salary'])
-                elif payslip and not is_report and not payslip.payroll_id:
-                    payslip.payroll = record
-                    payslip.save(update_fields=['payroll'])
+                if not is_report:
+                    # Fallback: find by employee + month + year for full month payrolls ONLY
+                    # We don't do this for is_report because multiple date ranges can exist in the same month
+                    payslip = Payslip.objects.filter(
+                        employee=employee, month=month, year=year, company=request.user.company
+                    ).first()
+                    
+                    # If found, link it to the current record for future lookups
+                    if payslip and not payslip.payroll_id:
+                        payslip.payroll = record
+                        payslip.save(update_fields=['payroll'])
             
-            if payslip and not regenerate:
+            if payslip and not regenerate and not is_report:
                 return Response({'detail': 'Payslip already generated', 'file': payslip.file.url}, status=200)
 
-            # Refresh record if regenerating to ensure latest attendance is used
-            if regenerate and is_report:
+            # Always recalculate from live attendance for FinalizedSalary reports
+            # This ensures the payslip matches the PayrollReport calculations
+            if is_report:
                 m = compute_attendance_metrics(employee, record.from_date, record.to_date)
                 # Recompute days_paid
                 d_paid = Decimal(str(m['present_days'])) + (Decimal(str(m['half_days'])) * Decimal('0.5')) + Decimal(str(m['paid_leaves']))
@@ -2318,20 +2332,16 @@ class PayslipViewSet(viewsets.ReadOnlyModelViewSet):
                 # Recalculate total_gross and net_salary for consistency
                 total_gross = record.earned_basic + record.ot_pay + record.loan_disbursement
                 
-                # Add dynamic components — on regeneration, force-enable ALL active components
-                # This prevents stale gChk config from excluding newly-checked items
+                # Add dynamic components — respect saved gChk config from PayrollReport
                 from app.models import GrossSalaryComponent, SalaryDeductionComponent
                 all_gross = GrossSalaryComponent.objects.filter(company=employee.company, is_active=True)
                 g_chk = conf.get('gChk', {})
-                # Force all active components to True on regeneration
-                for gc in all_gross:
-                    g_chk[f'g-{gc.id}'] = True
-                conf['gChk'] = g_chk
-                record.config = conf
                 
                 all_gross_names = set()
                 for gc in all_gross:
                     all_gross_names.add(gc.name.lower())
+                    # Respect saved config: skip if explicitly unchecked, default True for new components
+                    if not g_chk.get(f'g-{gc.id}', True): continue
                     amount = (record.earned_basic * gc.value) / Decimal(100) if gc.calc_type == 'percentage' else gc.value
                     total_gross += amount
                 
@@ -2727,6 +2737,42 @@ class PayslipViewSet(viewsets.ReadOnlyModelViewSet):
             
             # ---- Determine payslip record ----
             # Prefer FinalizedSalary, then Payroll
+            # If neither exists, auto-create a FinalizedSalary so Generate works for any dates
+            if not fs and not p:
+                fs, _created = FinalizedSalary.objects.update_or_create(
+                    employee=emp,
+                    company=company,
+                    from_date=s_dt,
+                    to_date=e_dt,
+                    defaults={
+                        'basic_salary': basic,
+                        'earned_basic': earned_basic,
+                        'ot_pay': ot_pay,
+                        'ot_hours': Decimal(str(overtime_hours)),
+                        'total_gross': total_gross.quantize(Decimal('0.01')),
+                        'total_deductions': total_deductions.quantize(Decimal('0.01')),
+                        'loan_emi': emp_loan_emi,
+                        'loan_disbursement': Decimal(0),
+                        'asset_deduction': emp_asset_ded,
+                        'net_salary': net_pay.quantize(Decimal('0.01')),
+                        'days_paid': payable_days,
+                        'config': {
+                            'gChk': g_chk,
+                            'dChk': d_chk,
+                            'otEnabled': False,
+                            'present_days': present_days,
+                            'half_days': half_days,
+                            'paid_leaves': paid_leaves,
+                            'unpaid_leaves': unpaid_leaves,
+                            'expected_working_days': expected_working_days,
+                            'absent_days': absent_days,
+                            'overtime_hours': overtime_hours,
+                            'checked_in_days': checked_in_days,
+                        }
+                    }
+                )
+                final_map[emp.id] = fs
+            
             main_record = fs if fs else p
             is_report = bool(fs)
             
@@ -2767,7 +2813,7 @@ class PayslipViewSet(viewsets.ReadOnlyModelViewSet):
                     'reimbursement': float(reimb),
                 },
                 'payslip_id': payslip.payslip_id if payslip else None,
-                'payslip_status': payslip.status if payslip else ('Not Generated' if main_record else 'Not Generated'),
+                'payslip_status': payslip.status if payslip else 'Not Generated',
                 'file': payslip.file.url if payslip and payslip.file else None,
                 'id': payslip.id if payslip else None,
             })
@@ -2799,7 +2845,17 @@ class FinalizedSalaryViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
-        return self.queryset.filter(company=self.request.user.company)
+        qs = self.queryset.filter(company=self.request.user.company)
+        employee = self.request.query_params.get('employee')
+        from_date = self.request.query_params.get('from_date')
+        to_date = self.request.query_params.get('to_date')
+        if employee:
+            qs = qs.filter(employee_id=employee)
+        if from_date:
+            qs = qs.filter(from_date=from_date)
+        if to_date:
+            qs = qs.filter(to_date=to_date)
+        return qs
 
     def perform_create(self, serializer):
         serializer.save(company=self.request.user.company)
