@@ -166,6 +166,40 @@ class TimeLogListCreateAPIView(APIView):
         return Response(TimeEntrySerializer(entry).data, status=201)
 
 
+class EmployeeGeofenceConfigAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        from app.models import OfficeLocation
+        user = request.user
+        if not user.company:
+            return Response({"detail": "No company linked."}, status=404)
+        
+        emp = getattr(user, 'employee_profile', None)
+        is_wfh = (emp.work_location == 'home') if emp else False
+
+        configs = OfficeLocation.objects.filter(company=user.company, is_active=True, enable_geofencing=True)
+        data = []
+        for config in configs:
+            if config.latitude and config.longitude:
+                data.append({
+                    "id": config.id,
+                    "name": config.name,
+                    "latitude": float(config.latitude),
+                    "longitude": float(config.longitude),
+                    "radius": config.radius
+                })
+        
+        # Geofencing is required only if NOT WFH and there are active configs
+        geofence_required = not is_wfh and len(data) > 0
+
+        return Response({
+            "office_locations": data,
+            "is_wfh": is_wfh,
+            "geofence_required": geofence_required
+        })
+
+
 class CheckInAPIView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -178,6 +212,14 @@ class CheckInAPIView(APIView):
             employee = Employee.objects.get(email=user.email)
         except Employee.DoesNotExist:
             return Response({"detail": "Employee record not found."}, status=404)
+
+        # GPS Security Check (Backend validation)
+        lat = request.data.get('lat')
+        lon = request.data.get('lon')
+        from app.utils import validate_geofence
+        is_allowed, error_msg = validate_geofence(user, lat, lon, None)
+        if not is_allowed:
+            return Response({"detail": error_msg}, status=403)
 
         tz = pytz.timezone('Asia/Kolkata')
         today = timezone.localdate()
@@ -260,6 +302,14 @@ class CheckOutAPIView(APIView):
             employee = Employee.objects.get(email=user.email)
         except Employee.DoesNotExist:
             return Response({"detail": "Employee not found."}, status=404)
+
+        # GPS Security Check (Backend validation)
+        lat = request.data.get('lat')
+        lon = request.data.get('lon')
+        from app.utils import validate_geofence
+        is_allowed, error_msg = validate_geofence(user, lat, lon, None)
+        if not is_allowed:
+            return Response({"detail": error_msg}, status=403)
 
         today = timezone.localdate()
         now_dt = timezone.localtime(timezone.now(), pytz.timezone('Asia/Kolkata'))

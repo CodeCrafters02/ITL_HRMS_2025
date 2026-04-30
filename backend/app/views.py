@@ -215,8 +215,6 @@ class LoginAPIView(APIView):
     def post(self, request):
         username = request.data.get("username")
         password = request.data.get("password")
-        lat = request.data.get("lat")
-        lon = request.data.get("lon")
 
         user = None
         try:
@@ -233,11 +231,6 @@ class LoginAPIView(APIView):
         if user is not None:
             if not user.is_active:
                 return Response({"detail": "User account is disabled."}, status=status.HTTP_403_FORBIDDEN)
-
-            # Geofencing check
-            is_allowed, error_msg = validate_geofence(user, lat, lon, get_client_ip(request))
-            if not is_allowed:
-                return Response({"detail": error_msg}, status=status.HTTP_403_FORBIDDEN)
 
             # ✅ Issue JWT tokens
             refresh = RefreshToken.for_user(user)
@@ -5561,12 +5554,6 @@ class GoogleLoginAPIView(APIView):
                 user.set_unusable_password()
                 user.save()
 
-            # Geofencing check
-            lat = request.data.get("lat")
-            lon = request.data.get("lon")
-            is_allowed, error_msg = validate_geofence(user, lat, lon, get_client_ip(request))
-            if not is_allowed:
-                return Response({"detail": error_msg}, status=status.HTTP_403_FORBIDDEN)
 
             # If this is an employee login, ensure profile is synced and ID generated
             if user.role == "employee":

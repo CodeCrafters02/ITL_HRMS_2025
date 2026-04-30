@@ -299,11 +299,8 @@ def validate_geofence(user, lat, lon, request_ip):
         return True, ""
 
     # Gather all active restrictions for the company
-    all_allowed_ips = set()
     all_office_coords = []
-    
     global_gps_required = False
-    global_ip_required = False
 
     for config in office_configs:
         if config.enable_geofencing and config.latitude and config.longitude:
@@ -314,13 +311,8 @@ def validate_geofence(user, lat, lon, request_ip):
                 'radius': config.radius,
                 'name': config.name
             })
-        
-        if config.enable_ip_restriction and config.allowed_ips:
-            global_ip_required = True
-            ips = [ip.strip() for ip in config.allowed_ips.split(',') if ip.strip()]
-            all_allowed_ips.update(ips)
 
-    # 1. Check Global GPS Requirement
+    # Check Global GPS Requirement
     is_in_any_radius = False
     if global_gps_required:
         if lat and lon:
@@ -333,16 +325,6 @@ def validate_geofence(user, lat, lon, request_ip):
             print(f"DEBUG: Geofence REJECTED for {user.username} - Not in any authorized office radius")
             return False, "Access denied: You are not within the GPS radius of any authorized office."
 
-    # 2. Check Global IP Requirement
-    is_on_any_allowed_ip = False
-    if global_ip_required:
-        if request_ip and request_ip in all_allowed_ips:
-            is_on_any_allowed_ip = True
-        
-        if not is_on_any_allowed_ip:
-            print(f"DEBUG: Geofence REJECTED for {user.username} - Unauthorized IP address: {request_ip}")
-            return False, "Access denied: You are not connected to an authorized office network (WiFi)."
-
     # If we reached here, the user passed all enabled global restrictions
-    print(f"DEBUG: Geofence ALLOWED for {user.username} - Passed global company policy")
+    print(f"DEBUG: Geofence ALLOWED for {user.username} - Passed GPS company policy")
     return True, ""

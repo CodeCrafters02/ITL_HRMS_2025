@@ -92,18 +92,38 @@ const EmployeeDashboard = () => {
 
     // Chart State
     const [chartRange, setChartRange] = useState('week');
-    const [chartData, setChartData] = useState<{ 
-        series: number[]; 
-        labels: string[]; 
-        holidays: boolean[]; 
-        period_label?: string; 
-        range?: string; 
-        offset?: number 
+    const [chartData, setChartData] = useState<{
+        series: number[];
+        labels: string[];
+        holidays: boolean[];
+        period_label?: string;
+        range?: string;
+        offset?: number
     } | null>(null);
     const [chartLoading, setChartLoading] = useState(false);
 
     const isDark = useSelector((state: IRootState) => state.themeConfig.theme === 'dark' || state.themeConfig.isDarkMode);
     const [navOffset, setNavOffset] = useState(0);
+
+    const [officeLocations, setOfficeLocations] = useState<any[]>([]);
+    const [userCoords, setUserCoords] = useState<{ lat: number; lon: number } | null>(null);
+    const [isInOffice, setIsInOffice] = useState<boolean>(true); // Default to true until checked
+    const [isWFH, setIsWFH] = useState<boolean>(false);
+    const [geofenceRequired, setGeofenceRequired] = useState<boolean>(false);
+    const [geoError, setGeoError] = useState<string | null>(null);
+
+    const haversineDistance = (lat1: number, lon1: number, lat2: number, lon2: number) => {
+        const R = 6371e3; // Earth radius in meters
+        const φ1 = (lat1 * Math.PI) / 180;
+        const φ2 = (lat2 * Math.PI) / 180;
+        const Δφ = ((lat2 - lat1) * Math.PI) / 180;
+        const Δλ = ((lon2 - lon1) * Math.PI) / 180;
+
+        const a = Math.sin(Δφ / 2) * Math.sin(Δφ / 2) + Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
+        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+
+        return R * c; // in meters
+    };
 
     const [liveTime, setLiveTime] = useState('0h 0m');
     const [liveRawSeconds, setLiveRawSeconds] = useState('--:--:--');
@@ -158,6 +178,20 @@ const EmployeeDashboard = () => {
     const fetchAllData = async (background = false) => {
         if (!background) setLoading(true);
         try {
+            // Fetch Geofence Config
+            const geoConfigRes = await fetch(`${API_BASE_URL}/employee/geofence-config/`, { headers: authHeaders });
+            if (geoConfigRes.ok) {
+                const geoJson = await geoConfigRes.json();
+                setOfficeLocations(geoJson.office_locations || []);
+                setIsWFH(geoJson.is_wfh || false);
+                setGeofenceRequired(geoJson.geofence_required);
+                
+                // If geofencing is NOT required (WFH or no office configs), consider them "in office"
+                if (!geoJson.geofence_required) {
+                    setIsInOffice(true);
+                }
+            }
+
             // Fetch Dashboard Data
             const dashRes = await fetch(`${API_BASE_URL}/employee/dashboard/`, { headers: authHeaders });
             if (dashRes.ok) {
@@ -190,6 +224,46 @@ const EmployeeDashboard = () => {
             if (!background) setLoading(false);
         }
     };
+
+    // Watch Geolocation
+    useEffect(() => {
+        if (!geofenceRequired || officeLocations.length === 0) {
+            setIsInOffice(true);
+            return;
+        }
+
+        let watchId: number;
+        if (navigator.geolocation) {
+            watchId = navigator.geolocation.watchPosition(
+                (position) => {
+                    const { latitude, longitude } = position.coords;
+                    setUserCoords({ lat: latitude, lon: longitude });
+                    setGeoError(null);
+
+                    // Check if within any office radius
+                    const isInside = officeLocations.some((office) => {
+                        const dist = haversineDistance(latitude, longitude, office.latitude, office.longitude);
+                        return dist <= office.radius;
+                    });
+                    setIsInOffice(isInside);
+                },
+                (error) => {
+                    console.error('Geolocation error:', error);
+                    setGeoError(error.message);
+                    // If geofencing is required but we can't get location, default to false
+                    setIsInOffice(false);
+                },
+                { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+            );
+        } else {
+            setGeoError('Geolocation is not supported by this browser.');
+            setIsInOffice(false);
+        }
+
+        return () => {
+            if (watchId) navigator.geolocation.clearWatch(watchId);
+        };
+    }, [officeLocations]);
 
     const getDaysUntil = (dateStr: string) => {
         const now = new Date();
@@ -241,10 +315,10 @@ const EmployeeDashboard = () => {
 
                 const now = new Date();
                 const diffInMs = now.getTime() - checkInDate.getTime();
-                
+
                 if (diffInMs > 0) {
                     const totalSecs = Math.floor(diffInMs / 1000);
-                    
+
                     // Live Total Checked-in duration (Raw)
                     const hh = Math.floor(totalSecs / 3600);
                     const mm = Math.floor((totalSecs % 3600) / 60);
@@ -307,7 +381,7 @@ const EmployeeDashboard = () => {
 
     useEffect(() => {
         fetchChartData(chartRange, false, navOffset);
-        
+
         // Refresh chart every minute if active/current period
         const interval = setInterval(() => {
             if (data?.checkin_time && !data.checkout_time && navOffset === 0) {
@@ -333,6 +407,10 @@ const EmployeeDashboard = () => {
             const res = await fetch(`${API_BASE_URL}/employee/checkin/`, {
                 method: 'POST',
                 headers: authHeaders,
+                body: JSON.stringify({
+                    lat: userCoords?.lat,
+                    lon: userCoords?.lon
+                })
             });
             const result = await res.json();
             if (res.ok) {
@@ -351,6 +429,10 @@ const EmployeeDashboard = () => {
             const res = await fetch(`${API_BASE_URL}/employee/checkout/`, {
                 method: 'POST',
                 headers: authHeaders,
+                body: JSON.stringify({
+                    lat: userCoords?.lat,
+                    lon: userCoords?.lon
+                })
             });
             const result = await res.json();
             if (res.ok) {
@@ -369,7 +451,12 @@ const EmployeeDashboard = () => {
             const res = await fetch(`${API_BASE_URL}/employee/employee-breaks/`, {
                 method: 'POST',
                 headers: authHeaders,
-                body: JSON.stringify({ break_config_id: configId, action: 'start' }),
+                body: JSON.stringify({ 
+                    break_config_id: configId, 
+                    action: 'start',
+                    lat: userCoords?.lat,
+                    lon: userCoords?.lon
+                }),
             });
             const result = await res.json();
             if (res.ok) {
@@ -388,7 +475,11 @@ const EmployeeDashboard = () => {
             const res = await fetch(`${API_BASE_URL}/employee/employee-breaks/`, {
                 method: 'POST',
                 headers: authHeaders,
-                body: JSON.stringify({ action: 'end' }),
+                body: JSON.stringify({ 
+                    action: 'end',
+                    lat: userCoords?.lat,
+                    lon: userCoords?.lon
+                }),
             });
             const result = await res.json();
             if (res.ok) {
@@ -522,8 +613,23 @@ const EmployeeDashboard = () => {
         return Math.max(0, activeBreakDurationMinutes * 60 - elapsedSeconds);
     })();
 
+    const isGeofenceRequired = officeLocations.length > 0;
+    const canPerformAction = !isGeofenceRequired || isInOffice;
+
     return (
         <div className="space-y-6 animate__animated animate__fadeIn">
+            {isGeofenceRequired && !isInOffice && (
+                <div className="panel bg-danger/10 border-danger/20 text-danger p-3 rounded-xl flex items-center gap-3">
+                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                    </svg>
+                    <div className="text-sm flex-1">
+                        <p className="font-bold">Outside Office Range</p>
+                        <p className="opacity-80">Attendance actions are disabled because you are not within an authorized office radius.</p>
+                        {geoError && <p className="text-[10px] mt-1 font-mono">Debug: {geoError}</p>}
+                    </div>
+                </div>
+            )}
             <div className="panel relative overflow-hidden border-0 bg-gradient-to-r from-[#220fb6] via-[#4f6be5] to-[#0f52af] text-white p-1 md:p-2">
                 <div className="absolute inset-0 bg-[radial-gradient(circle_at_18%_22%,rgba(255,255,255,0.18),transparent_34%),radial-gradient(circle_at_84%_20%,rgba(128,224,255,0.22),transparent_36%)] pointer-events-none"></div>
                 <div className="absolute -top-12 -right-12 w-56 h-56 rounded-full bg-cyan-200/25 blur-3xl"></div>
@@ -557,13 +663,31 @@ const EmployeeDashboard = () => {
 
                         <div className="flex flex-wrap items-center gap-2">
                             <span className="text-[11px] px-2.5 py-1 rounded-full bg-[#58b8df]/20 text-cyan-100 border border-cyan-200/40 font-semibold">Realtime</span>
+                            {isGeofenceRequired && (
+                                <span className={`text-[11px] px-2.5 py-1 rounded-full border font-bold flex items-center gap-1 ${isInOffice ? 'bg-success/20 text-success-light border-success/30' : 'bg-danger/20 text-danger-light border-danger/30'}`}>
+                                    <span className={`w-1.5 h-1.5 rounded-full ${isInOffice ? 'bg-success animate-pulse' : 'bg-danger'}`}></span>
+                                    {isInOffice ? 'At Office' : 'Outside Office'}
+                                </span>
+                            )}
                             {!checkin_time && (
-                                <button type="button" className="btn btn-primary shadow-md rounded-xl" onClick={handleCheckIn}>
+                                <button 
+                                    type="button" 
+                                    className="btn btn-primary shadow-md rounded-xl disabled:opacity-50 disabled:cursor-not-allowed" 
+                                    onClick={handleCheckIn}
+                                    disabled={!canPerformAction}
+                                    title={!canPerformAction ? 'You must be at the office to check in' : ''}
+                                >
                                     Check In
                                 </button>
                             )}
                             {checkin_time && !checkout_time && (
-                                <button type="button" className="btn btn-danger shadow-md rounded-xl" onClick={handleCheckOut}>
+                                <button 
+                                    type="button" 
+                                    className="btn btn-danger shadow-md rounded-xl disabled:opacity-50 disabled:cursor-not-allowed" 
+                                    onClick={handleCheckOut}
+                                    disabled={!canPerformAction}
+                                    title={!canPerformAction ? 'You must be at the office to check out' : ''}
+                                >
                                     Check Out
                                 </button>
                             )}
@@ -609,8 +733,9 @@ const EmployeeDashboard = () => {
                                             <button
                                                 key={bc.id}
                                                 type="button"
-                                                className="px-3 py-1.5 text-xs font-semibold rounded-lg border border-cyan-200/45 bg-cyan-200/10 text-cyan-100 hover:bg-cyan-200/20 transition-colors capitalize"
+                                                className="px-3 py-1.5 text-xs font-semibold rounded-lg border border-cyan-200/45 bg-cyan-200/10 text-cyan-100 hover:bg-cyan-200/20 transition-colors capitalize disabled:opacity-50 disabled:cursor-not-allowed"
                                                 onClick={() => handleStartBreak(bc.id)}
+                                                disabled={!canPerformAction}
                                             >
                                                 Start {formattedChoice}
                                             </button>
@@ -628,14 +753,14 @@ const EmployeeDashboard = () => {
                                                     placement="bottom-start"
                                                     usePortal={true}
                                                     strategy="fixed"
-                                                    btnClassName="px-3 py-1.5 text-xs font-semibold rounded-lg border border-cyan-200/45 bg-cyan-200/10 text-cyan-100 hover:bg-cyan-200/20 transition-colors capitalize flex items-center gap-1"
+                                                    btnClassName="px-3 py-1.5 text-xs font-semibold rounded-lg border border-cyan-200/45 bg-cyan-200/10 text-cyan-100 hover:bg-cyan-200/20 transition-colors capitalize flex items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed"
                                                     button={
-                                                        <>
+                                                        <button type="button" disabled={!canPerformAction} className="flex items-center gap-1">
                                                             Start {formattedChoice}
                                                             <svg className="w-4 h-4 ml-1" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                                                                 <polyline points="6 9 12 15 18 9"></polyline>
                                                             </svg>
-                                                        </>
+                                                        </button>
                                                     }
                                                 >
                                                     <ul className="text-black dark:text-white-dark bg-white dark:bg-[#1b2e4b] shadow-[0_0_10px_rgba(0,0,0,0.1)] dark:shadow-[0_0_10px_rgba(0,0,0,0.4)] rounded-md border border-white-light dark:border-[#253b5c] py-1 min-w-[150px]">
@@ -658,15 +783,20 @@ const EmployeeDashboard = () => {
                                 })
                             ) : (
                                 <div className="flex flex-wrap items-center gap-2">
-                                    <button type="button" className="btn btn-warning rounded-xl animate-pulse" onClick={handleEndBreak}>
+                                    <button 
+                                        type="button" 
+                                        className="btn btn-warning rounded-xl animate-pulse disabled:opacity-50 disabled:cursor-not-allowed" 
+                                        onClick={handleEndBreak}
+                                        disabled={!canPerformAction}
+                                    >
                                         End Active Break ({active_break.type?.replace(/_/g, ' ') || 'Break'})
                                     </button>
                                     <span className="text-xs font-bold text-amber-100 px-2.5 py-1 rounded-md bg-amber-500/20 border border-amber-300/40">
                                         {breakRemainingSeconds === null
                                             ? 'Running...'
                                             : breakRemainingSeconds > 0
-                                              ? `Remaining ${formatCountdown(breakRemainingSeconds)}`
-                                              : 'Break time over'}
+                                                ? `Remaining ${formatCountdown(breakRemainingSeconds)}`
+                                                : 'Break time over'}
                                     </span>
                                 </div>
                             )}
@@ -739,9 +869,8 @@ const EmployeeDashboard = () => {
                                 <button
                                     key={r}
                                     type="button"
-                                    className={`px-4 py-1.5 text-xs font-bold rounded-lg transition-all ${
-                                        chartRange === r ? 'bg-primary text-white shadow' : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
-                                    }`}
+                                    className={`px-4 py-1.5 text-xs font-bold rounded-lg transition-all ${chartRange === r ? 'bg-primary text-white shadow' : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
+                                        }`}
                                     onClick={() => {
                                         setChartRange(r);
                                         setNavOffset(0);
@@ -801,24 +930,24 @@ const EmployeeDashboard = () => {
                                         .map((isHol, idx) =>
                                             isHol
                                                 ? {
-                                                      x: chartData?.labels[idx],
-                                                      strokeDashArray: 0,
-                                                      borderColor: 'transparent',
-                                                      label: {
-                                                          borderColor: 'transparent',
-                                                          style: {
-                                                              color: '#f59e0b',
-                                                              background: isDark ? '#f59e0b22' : '#f59e0b1f',
-                                                              fontSize: '9px',
-                                                              fontWeight: 800,
-                                                              padding: { left: 4, right: 4, top: 2, bottom: 2 },
-                                                          },
-                                                          text: chartRange === 'year' ? '' : 'OFF',
-                                                          orientation: 'horizontal',
-                                                          position: 'top',
-                                                          offsetY: 10,
-                                                      },
-                                                  }
+                                                    x: chartData?.labels[idx],
+                                                    strokeDashArray: 0,
+                                                    borderColor: 'transparent',
+                                                    label: {
+                                                        borderColor: 'transparent',
+                                                        style: {
+                                                            color: '#f59e0b',
+                                                            background: isDark ? '#f59e0b22' : '#f59e0b1f',
+                                                            fontSize: '9px',
+                                                            fontWeight: 800,
+                                                            padding: { left: 4, right: 4, top: 2, bottom: 2 },
+                                                        },
+                                                        text: chartRange === 'year' ? '' : 'OFF',
+                                                        orientation: 'horizontal',
+                                                        position: 'top',
+                                                        offsetY: 10,
+                                                    },
+                                                }
                                                 : null
                                         )
                                         .filter(Boolean) as any[],
