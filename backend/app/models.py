@@ -822,6 +822,7 @@ class Payslip(models.Model):
     employee = models.ForeignKey(Employee, on_delete=models.CASCADE, related_name='payslips')
     company = models.ForeignKey(Company, on_delete=models.CASCADE, related_name='payslips')
     payroll = models.OneToOneField(Payroll, on_delete=models.CASCADE, related_name='payslip_record', null=True, blank=True)
+    finalized_salary = models.OneToOneField('FinalizedSalary', on_delete=models.CASCADE, related_name='payslip_record', null=True, blank=True)
     payslip_id = models.CharField(max_length=100, unique=True)
     month = models.IntegerField()
     year = models.IntegerField()

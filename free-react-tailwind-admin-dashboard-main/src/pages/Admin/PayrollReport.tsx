@@ -298,7 +298,18 @@ const PayrollReport = () => {
                 asset_deduction: Math.round((att?.total_asset_deduction || 0) * 100) / 100,
                 net_salary: Math.round(net * 100) / 100,
                 days_paid: att ? (att.present_days + ((att.half_days || 0) * 0.5) + att.paid_leaves) : 0,
-                config: { gChk, dChk, otEnabled }
+                config: {
+                    gChk, dChk, otEnabled,
+                    // Store attendance breakdown so payslip PDF can use exact same values
+                    present_days: att?.present_days || 0,
+                    half_days: att?.half_days || 0,
+                    paid_leaves: att?.paid_leaves || 0,
+                    unpaid_leaves: att?.unpaid_leaves || 0,
+                    expected_working_days: att?.expected_working_days || 0,
+                    absent_days: att?.absent_days || 0,
+                    overtime_hours: att?.overtime_hours || 0,
+                    checked_in_days: att?.checked_in_days || 0,
+                }
             };
 
             // First check if a record exists for this employee/period to decide between POST or PUT

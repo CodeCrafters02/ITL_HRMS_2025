@@ -188,6 +188,7 @@
       <div class="company-name">{{ company.name|default:'Company Name' }}</div>
       <div class="payslip-title">Payslip</div>
       <div class="period">{{ batch.month }} {{ batch.year }}</div>
+      {% if pay_period %}<div class="period" style="margin-top: 2px;">{{ pay_period }}</div>{% endif %}
     </div>
 
     <div class="info-grid">
