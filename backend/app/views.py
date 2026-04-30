@@ -17,12 +17,11 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from datetime import date
 import io
 from django.utils import timezone
-from .utils import generate_letter_pdf, fill_placeholders
+from .utils import generate_letter_pdf, fill_placeholders, validate_geofence, compute_attendance_metrics, generate_payslip_pdf, compute_loan_emi, compute_asset_deductions, compute_loan_disbursement, compute_salary_structure_allowances
 from decimal import Decimal, ROUND_HALF_UP
 from django.core.mail import EmailMessage
 from django.core.files.base import ContentFile
 import uuid
-from .utils import generate_payslip_pdf
 from rest_framework.views import APIView
 from rest_framework.response import Response
 import re
@@ -45,6 +44,18 @@ class CustomPagination(PageNumberPagination):
     page_size = 10
     page_size_query_param = 'page_size'
     max_page_size = 100
+class MyIPAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
+        if x_forwarded_for:
+            ip = x_forwarded_for.split(',')[0]
+        else:
+            ip = request.META.get('REMOTE_ADDR')
+        return Response({'ip': ip})
+
+
 class CustomPasswordChangeAPIView(generics.UpdateAPIView):
     serializer_class = CustomPasswordChangeSerializer
     permission_classes = [IsAuthenticated]
@@ -189,6 +200,14 @@ class MasterDashboardView(APIView):
             "total_masters": UserRegister.objects.filter(role='master').count(),
             "total_employees": UserRegister.objects.filter(role='employee').count()
         })
+
+def get_client_ip(request):
+    x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
+    if x_forwarded_for:
+        ip = x_forwarded_for.split(',')[0]
+    else:
+        ip = request.META.get('REMOTE_ADDR')
+    return ip
 
 class LoginAPIView(APIView):
 
@@ -2210,11 +2229,34 @@ class PayslipViewSet(viewsets.ReadOnlyModelViewSet):
         payroll_id = request.data.get('payroll_id')
         is_report = request.data.get('is_report', False)
         regenerate = request.data.get('regenerate', False)
+        start_date_req = request.data.get('start_date')
+        end_date_req = request.data.get('end_date')
         
         try:
             if is_report:
                 record = FinalizedSalary.objects.get(id=payroll_id)
                 employee = record.employee
+                
+                # If dates are provided, find the correct record for those dates
+                # instead of blindly updating (which can violate unique_together)
+                if start_date_req and end_date_req:
+                    req_from = datetime.strptime(start_date_req, '%Y-%m-%d').date()
+                    req_to = datetime.strptime(end_date_req, '%Y-%m-%d').date()
+                    
+                    # Check if a different record already exists for these dates
+                    existing = FinalizedSalary.objects.filter(
+                        employee=employee, from_date=req_from, to_date=req_to
+                    ).exclude(id=record.id).first()
+                    
+                    if existing:
+                        # Use the existing record for those dates instead
+                        record = existing
+                    elif record.from_date != req_from or record.to_date != req_to:
+                        # Only update dates if they actually changed and no conflict
+                        record.from_date = req_from
+                        record.to_date = req_to
+                        record.save()
+                
                 month = record.from_date.month
                 year = record.from_date.year
             else:
@@ -2223,10 +2265,124 @@ class PayslipViewSet(viewsets.ReadOnlyModelViewSet):
                 month = record.batch.month
                 year = record.batch.year
                 
-            # Check if payslip already exists
-            payslip = getattr(record, 'payslip_record', None)
-            if payslip and not regenerate:
+            # Find existing payslip: try reverse FK first, then fallback to employee+month+year lookup
+            payslip = None
+            try:
+                payslip = record.payslip_record
+            except Exception:
+                pass
+            
+            if not payslip:
+                if not is_report:
+                    # Fallback: find by employee + month + year for full month payrolls ONLY
+                    # We don't do this for is_report because multiple date ranges can exist in the same month
+                    payslip = Payslip.objects.filter(
+                        employee=employee, month=month, year=year, company=request.user.company
+                    ).first()
+                    
+                    # If found, link it to the current record for future lookups
+                    if payslip and not payslip.payroll_id:
+                        payslip.payroll = record
+                        payslip.save(update_fields=['payroll'])
+            
+            if payslip and not regenerate and not is_report:
                 return Response({'detail': 'Payslip already generated', 'file': payslip.file.url}, status=200)
+
+            # Always recalculate from live attendance for FinalizedSalary reports
+            # This ensures the payslip matches the PayrollReport calculations
+            if is_report:
+                m = compute_attendance_metrics(employee, record.from_date, record.to_date)
+                # Recompute days_paid
+                d_paid = Decimal(str(m['present_days'])) + (Decimal(str(m['half_days'])) * Decimal('0.5')) + Decimal(str(m['paid_leaves']))
+                record.days_paid = d_paid
+                
+                # Update config with fresh metrics
+                conf = record.config or {}
+                conf.update({
+                    'present_days': m['present_days'],
+                    'half_days': m['half_days'],
+                    'paid_leaves': m['paid_leaves'],
+                    'unpaid_leaves': m['unpaid_leaves'],
+                    'expected_working_days': m['expected_working_days'],
+                    'absent_days': m['absent_days'],
+                    'overtime_hours': m['overtime_hours'],
+                    'checked_in_days': m['checked_in_days'],
+                })
+                record.config = conf
+                
+                # Recompute earned basic based on new days_paid
+                fixed_basic = employee.basic_salary or Decimal(0)
+                if m['expected_working_days'] > 0:
+                    record.earned_basic = ((fixed_basic / Decimal(m['expected_working_days'])) * d_paid).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+                
+                # Refresh Loans and Assets
+                record.loan_emi = compute_loan_emi(employee, record.from_date, record.to_date)
+                record.loan_disbursement = compute_loan_disbursement(employee, record.from_date, record.to_date)
+                record.asset_deduction = compute_asset_deductions(employee, record.from_date, record.to_date)
+                
+                # Recalculate OT pay from fresh attendance data
+                ot_hours = Decimal(str(m['overtime_hours']))
+                record.ot_hours = ot_hours
+                if conf.get('otEnabled') and m['expected_working_days'] > 0:
+                    hourly_rate = (fixed_basic / Decimal(str(m['expected_working_days']))) / Decimal(8)
+                    record.ot_pay = (hourly_rate * ot_hours).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+                else:
+                    record.ot_pay = Decimal(0)
+                
+                # Recalculate total_gross and net_salary for consistency
+                total_gross = record.earned_basic + record.ot_pay + record.loan_disbursement
+                
+                # Add dynamic components — respect saved gChk config from PayrollReport
+                from app.models import GrossSalaryComponent, SalaryDeductionComponent
+                all_gross = GrossSalaryComponent.objects.filter(company=employee.company, is_active=True)
+                g_chk = conf.get('gChk', {})
+                
+                all_gross_names = set()
+                for gc in all_gross:
+                    all_gross_names.add(gc.name.lower())
+                    # Respect saved config: skip if explicitly unchecked, default True for new components
+                    if not g_chk.get(f'g-{gc.id}', True): continue
+                    amount = (record.earned_basic * gc.value) / Decimal(100) if gc.calc_type == 'percentage' else gc.value
+                    total_gross += amount
+                
+                # Add Salary Structure allowances (only items NOT covered by any GrossSalaryComponent)
+                struct_allowances = compute_salary_structure_allowances(employee, record.earned_basic, total_gross)
+                for sa in struct_allowances:
+                    if sa['name'].lower() not in all_gross_names:
+                        total_gross += sa['amount']
+                
+                # Calculate reimbursement from database
+                from app.models import ReimbursementRequest
+                reimbursements = ReimbursementRequest.objects.filter(
+                    employee=employee,
+                    status='approved',
+                    created_at__date__range=[record.from_date, record.to_date]
+                )
+                total_reimb = sum(r.amount for r in reimbursements)
+                
+                record.total_gross = (total_gross + Decimal(str(total_reimb))).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+                
+                # Total deductions
+                total_ded = record.loan_emi or Decimal(0)
+                total_ded += record.asset_deduction or Decimal(0)
+                all_ded = SalaryDeductionComponent.objects.filter(company=employee.company, is_active=True)
+                d_chk = conf.get('dChk', {})
+                for dc in all_ded:
+                    if not d_chk.get(f'd-{dc.id}', True): continue
+                    
+                    fixed_gross = employee.gross_salary or Decimal(0)
+                    t_base = fixed_basic if dc.threshold_on == 'basic' else fixed_gross
+                    if dc.has_threshold and t_base < dc.threshold_amount: continue
+                    
+                    d_base = record.earned_basic if dc.deduct_from == 'basic' else record.total_gross
+                    amount = (d_base * dc.value) / Decimal(100) if dc.calc_type == 'percentage' else dc.value
+                    total_ded += amount
+                
+                record.total_deductions = total_ded.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+                
+                record.net_salary = (record.total_gross - record.total_deductions).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+                
+                record.save()
             
             # Generate unique payslip ID or reuse existing
             unique_id = payslip.payslip_id if payslip else f"PAY-{uuid.uuid4().hex[:8].upper()}"
@@ -2255,8 +2411,16 @@ class PayslipViewSet(viewsets.ReadOnlyModelViewSet):
                     status='Draft'
                 )
             
-            # Save file (this will overwrite if the filename is the same or create a new version)
-            payslip.file.save(f"payslip_{unique_id}.pdf", ContentFile(pdf_file.read()))
+            # Delete old file first, then save new one (prevents browser caching old URL)
+            if payslip.file:
+                try:
+                    payslip.file.delete(save=False)
+                except Exception:
+                    pass
+            
+            # Append timestamp to filename to bust browser cache
+            ts = int(timezone.now().timestamp())
+            payslip.file.save(f"payslip_{unique_id}_{ts}.pdf", ContentFile(pdf_file.read()))
             payslip.save()
             
             return Response({
@@ -2276,73 +2440,382 @@ class PayslipViewSet(viewsets.ReadOnlyModelViewSet):
         end_date = request.query_params.get('end_date')
         
         company = request.user.company
-        payrolls = Payroll.objects.filter(company=company)
         
-        if start_date and end_date:
-            try:
-                from datetime import datetime
+        # Parse dates
+        try:
+            if start_date and end_date:
                 s_dt = datetime.strptime(start_date, '%Y-%m-%d').date()
                 e_dt = datetime.strptime(end_date, '%Y-%m-%d').date()
-                
-                # Filter payrolls where the batch period overlaps with the selected range
-                payrolls = payrolls.filter(
-                    Q(batch__year__gt=s_dt.year) | Q(batch__year=s_dt.year, batch__month__gte=s_dt.month)
-                ).filter(
-                    Q(batch__year__lt=e_dt.year) | Q(batch__year=e_dt.year, batch__month__lte=e_dt.month)
-                )
-            except Exception as e:
-                print(f"Error parsing dates: {e}")
-                payrolls = payrolls.filter(payroll_date__range=[start_date, end_date])
-        else:
-            month = request.query_params.get('month')
-            year = request.query_params.get('year')
-            if month and year:
-                payrolls = payrolls.filter(batch__month=month, batch__year=year)
             else:
-                today = timezone.now().date()
-                payrolls = payrolls.filter(batch__month=today.month, batch__year=today.year)
+                month = request.query_params.get('month')
+                year = request.query_params.get('year')
+                if month and year:
+                    m, y = int(month), int(year)
+                else:
+                    today = timezone.now().date()
+                    m, y = today.month, today.year
+                s_dt = date(y, m, 1)
+                e_dt = date(y, m, calendar.monthrange(y, m)[1])
+        except Exception:
+            today = timezone.now().date()
+            s_dt = today.replace(day=1)
+            e_dt = today
+
+        employees = Employee.objects.filter(
+            company=company, is_active=True, user__role='employee'
+        ).select_related('department', 'shift_assigned')
         
-        data = []
-        employees = Employee.objects.filter(company=company, is_active=True, user__role='employee')
-        
-        from app.models import FinalizedSalary
-        finalized_salaries = FinalizedSalary.objects.filter(company=company)
-        if start_date and end_date:
-            finalized_salaries = finalized_salaries.filter(from_date__gte=start_date, to_date__lte=end_date)
-        
+        # Fetch all FinalizedSalary records for this period
+        finalized_salaries = FinalizedSalary.objects.filter(
+            company=company, from_date__gte=s_dt, to_date__lte=e_dt
+        )
         final_map = {fs.employee_id: fs for fs in finalized_salaries}
+        
+        # Fetch payroll batch records
+        payrolls = Payroll.objects.filter(company=company).filter(
+            Q(batch__year__gt=s_dt.year) | Q(batch__year=s_dt.year, batch__month__gte=s_dt.month)
+        ).filter(
+            Q(batch__year__lt=e_dt.year) | Q(batch__year=e_dt.year, batch__month__lte=e_dt.month)
+        )
         payroll_map = {p.employee_id: p for p in payrolls}
         
-        data = []
-        employees = Employee.objects.filter(company=company, is_active=True, user__role='employee')
+        # Fetch payslips linked to finalized salaries or payrolls
+        payslip_by_fs = {}
+        payslip_by_payroll = {}
+        all_payslips = Payslip.objects.filter(company=company)
+        for ps in all_payslips:
+            if ps.finalized_salary_id:
+                payslip_by_fs[ps.finalized_salary_id] = ps
+            if ps.payroll_id:
+                payslip_by_payroll[ps.payroll_id] = ps
         
+        # Preload company-wide data
+        holidays = set(CalendarEvent.objects.filter(
+            company=company, is_holiday=True, date__gte=s_dt, date__lte=e_dt
+        ).values_list('date', flat=True))
+        
+        # Preload all attendance records for the range
+        all_attendance = Attendance.objects.filter(
+            company=company, date__gte=s_dt, date__lte=e_dt
+        ).select_related('employee', 'leave', 'leave__leave_type')
+        att_by_emp = {}
+        for att in all_attendance:
+            att_by_emp.setdefault(att.employee_id, {})[att.date] = att
+        
+        # Preload all approved leaves for the range
+        all_leaves = EmpLeave.objects.filter(
+            company=company, status='Approved',
+            from_date__lte=e_dt, to_date__gte=s_dt
+        ).select_related('leave_type', 'employee')
+        leaves_by_emp = {}
+        for lv in all_leaves:
+            leaves_by_emp.setdefault(lv.employee_id, []).append(lv)
+        
+        # Preload dept working days config
+        dept_configs = {}
+        for cfg in DepartmentWiseWorkingDays.objects.filter(company=company):
+            dept_configs[cfg.department_id] = cfg
+        
+        # Preload dynamic salary components
+        gross_comps = list(GrossSalaryComponent.objects.filter(company=company, is_active=True))
+        deduction_comps = list(SalaryDeductionComponent.objects.filter(company=company, is_active=True))
+        
+        # Preload reimbursements
+        from app.models import ReimbursementRequest
+        reimb_by_emp = {}
+        for r in ReimbursementRequest.objects.filter(
+            company=company, status='approved',
+            created_at__date__gte=s_dt, created_at__date__lte=e_dt
+        ):
+            reimb_by_emp.setdefault(r.employee_id, Decimal(0))
+            reimb_by_emp[r.employee_id] += r.amount
+        
+        # Preload asset deductions
+        from app.models import AssetRequest
+        asset_ded_by_emp = {}
+        for ar in AssetRequest.objects.filter(
+            company=company, approval_status='approved',
+            updated_at__date__range=[s_dt, e_dt]
+        ).select_related('related_fixed_asset', 'related_supply_item'):
+            emp_id = ar.requested_by_id
+            if ar.related_supply_item:
+                amt = (ar.related_supply_item.unit_price or Decimal(0)) * (ar.requested_quantity or 1)
+            else:
+                amt = ar.employee_payment_amount or Decimal(0)
+            asset_ded_by_emp.setdefault(emp_id, Decimal(0))
+            asset_ded_by_emp[emp_id] += amt
+        
+        # Preload loan data
+        loan_emi_by_emp = {}
+        loans = LoanApplication.objects.filter(
+            employee__company=company, status__in=['APPROVED', 'CLEARED']
+        )
+        for l in loans:
+            emp_profile = getattr(l.employee, 'employee_profile', None)
+            if not emp_profile:
+                continue
+            emp_id = emp_profile.id
+            start_dt = l.created_at.date()
+            r_day = start_dt.day
+            m_total = start_dt.month + l.repayment_months
+            e_year = start_dt.year + (m_total - 1) // 12
+            e_month = (m_total - 1) % 12 + 1
+            _, e_last = calendar.monthrange(e_year, e_month)
+            end_dt_loan = date(e_year, e_month, e_last)
+            if s_dt > end_dt_loan:
+                continue
+            curr = s_dt
+            while curr <= e_dt:
+                _, lday = calendar.monthrange(curr.year, curr.month)
+                is_m = (curr.day == r_day)
+                if not is_m and r_day > lday and curr.day == lday:
+                    is_m = True
+                if is_m and curr <= end_dt_loan:
+                    loan_emi_by_emp.setdefault(emp_id, Decimal(0))
+                    loan_emi_by_emp[emp_id] += Decimal(str(l.emi_amount))
+                curr += timedelta(days=1)
+
+        data = []
         for emp in employees:
-            p = payroll_map.get(emp.id)
             fs = final_map.get(emp.id)
+            p = payroll_map.get(emp.id)
             
-            # Use finalized salary if available, otherwise payroll
+            # ---- Compute attendance (same logic as PayrollAttendanceSummaryView) ----
+            cfg = dept_configs.get(emp.department_id)
+            weekend_days = [d.lower() for d in cfg.weekend_days] if cfg and cfg.weekend_days else ["saturday", "sunday"]
+            
+            shift = emp.shift_assigned
+            s_full = shift.full_day_hours() if shift else 8.0
+            s_half = shift.half_day_hours() if shift else 4.0
+            
+            emp_att_map = att_by_emp.get(emp.id, {})
+            emp_leaves = leaves_by_emp.get(emp.id, [])
+            
+            # Pre-calculate leave dates
+            leave_dates_paid = set()
+            leave_dates_unpaid = set()
+            for lv in emp_leaves:
+                l_start = max(lv.from_date, s_dt)
+                l_end = min(lv.to_date, e_dt)
+                d = l_start
+                while d <= l_end:
+                    if lv.leave_type and lv.leave_type.is_paid:
+                        leave_dates_paid.add(d)
+                    else:
+                        leave_dates_unpaid.add(d)
+                    d += timedelta(days=1)
+            
+            present_days = 0
+            half_days = 0
+            absent_days = 0
+            expected_working_days = 0
+            total_overtime_seconds = 0
+            checked_in_days = 0
+            
+            curr_date = s_dt
+            while curr_date <= e_dt:
+                day_name = curr_date.strftime('%A').lower()
+                is_holiday = curr_date in holidays
+                is_weekend = day_name in weekend_days
+                is_work_day = not is_holiday and not is_weekend
+                
+                if is_work_day:
+                    expected_working_days += 1
+                
+                att_rec = emp_att_map.get(curr_date)
+                if att_rec:
+                    if is_holiday or is_weekend:
+                        if att_rec.total_work_duration:
+                            total_overtime_seconds += att_rec.total_work_duration.total_seconds()
+                        elif att_rec.check_in and att_rec.check_out:
+                            total_overtime_seconds += (att_rec.check_out - att_rec.check_in).total_seconds()
+                    else:
+                        if att_rec.leave:
+                            pass  # handled by leave_dates
+                        elif att_rec.check_in and not att_rec.check_out:
+                            checked_in_days += 1
+                        else:
+                            w_hours = 0.0
+                            if att_rec.total_work_duration:
+                                w_hours = att_rec.total_work_duration.total_seconds() / 3600
+                            elif att_rec.check_in and att_rec.check_out:
+                                w_hours = (att_rec.check_out - att_rec.check_in).total_seconds() / 3600
+                            
+                            if w_hours >= s_full:
+                                present_days += 1
+                            elif w_hours >= s_half:
+                                half_days += 1
+                            else:
+                                absent_days += 1
+                        
+                        if att_rec.overtime_duration:
+                            total_overtime_seconds += att_rec.overtime_duration.total_seconds()
+                elif curr_date in leave_dates_paid or curr_date in leave_dates_unpaid:
+                    pass
+                elif is_work_day:
+                    absent_days += 1
+                
+                curr_date += timedelta(days=1)
+            
+            paid_leaves = len(leave_dates_paid)
+            unpaid_leaves = len(leave_dates_unpaid)
+            overtime_hours = round(total_overtime_seconds / 3600, 2)
+            
+            # ---- Compute salary (same logic as PayrollReport frontend) ----
+            basic = Decimal(str(emp.basic_salary or 0))
+            gross_fixed = Decimal(str(emp.gross_salary or 0))
+            
+            if expected_working_days > 0:
+                payable_days = Decimal(str(present_days)) + (Decimal(str(half_days)) * Decimal('0.5')) + Decimal(str(paid_leaves))
+                earned_basic = (basic / Decimal(str(expected_working_days))) * payable_days
+            else:
+                payable_days = Decimal(0)
+                earned_basic = basic
+            
+            earned_basic = earned_basic.quantize(Decimal('0.01'))
+            
+            # OT pay
+            ot_pay = Decimal(0)
+            if fs and fs.config and fs.config.get('otEnabled') and expected_working_days > 0:
+                hourly_rate = (basic / Decimal(str(expected_working_days))) / Decimal(8)
+                ot_pay = (hourly_rate * Decimal(str(overtime_hours))).quantize(Decimal('0.01'))
+            
+            # Gross components
+            total_gross = earned_basic + ot_pay
+            if fs and fs.config:
+                g_chk = fs.config.get('gChk', {})
+            else:
+                g_chk = {f'g-{gc.id}': True for gc in gross_comps}
+            
+            for gc in gross_comps:
+                if not g_chk.get(f'g-{gc.id}', True):
+                    continue
+                if gc.calc_type == 'percentage':
+                    amt = (earned_basic * gc.value) / Decimal(100)
+                else:
+                    amt = gc.value
+                total_gross += amt.quantize(Decimal('0.01'))
+            
+            # Add reimbursement
+            reimb = reimb_by_emp.get(emp.id, Decimal(0))
+            total_gross += reimb
+            
+            # Deduction components
+            total_deductions = Decimal(0)
+            if fs and fs.config:
+                d_chk = fs.config.get('dChk', {})
+            else:
+                d_chk = {}
+                for dc in deduction_comps:
+                    if dc.has_threshold:
+                        t_base = basic if dc.threshold_on == 'basic' else gross_fixed
+                        d_chk[f'd-{dc.id}'] = float(t_base) >= float(dc.threshold_amount)
+                    else:
+                        d_chk[f'd-{dc.id}'] = True
+            
+            for dc in deduction_comps:
+                if not d_chk.get(f'd-{dc.id}', True):
+                    continue
+                d_base = earned_basic if dc.deduct_from == 'basic' else total_gross
+                if dc.calc_type == 'percentage':
+                    amt = (d_base * dc.value) / Decimal(100)
+                else:
+                    amt = dc.value
+                total_deductions += amt.quantize(Decimal('0.01'))
+            
+            # Add loan EMI
+            emp_loan_emi = loan_emi_by_emp.get(emp.id, Decimal(0))
+            total_deductions += emp_loan_emi
+            
+            # Add asset deduction
+            emp_asset_ded = asset_ded_by_emp.get(emp.id, Decimal(0))
+            total_deductions += emp_asset_ded
+            
+            net_pay = total_gross - total_deductions
+            if net_pay < 0:
+                net_pay = Decimal(0)
+            
+            # ---- Determine payslip record ----
+            # Prefer FinalizedSalary, then Payroll
+            # If neither exists, auto-create a FinalizedSalary so Generate works for any dates
+            if not fs and not p:
+                fs, _created = FinalizedSalary.objects.update_or_create(
+                    employee=emp,
+                    company=company,
+                    from_date=s_dt,
+                    to_date=e_dt,
+                    defaults={
+                        'basic_salary': basic,
+                        'earned_basic': earned_basic,
+                        'ot_pay': ot_pay,
+                        'ot_hours': Decimal(str(overtime_hours)),
+                        'total_gross': total_gross.quantize(Decimal('0.01')),
+                        'total_deductions': total_deductions.quantize(Decimal('0.01')),
+                        'loan_emi': emp_loan_emi,
+                        'loan_disbursement': Decimal(0),
+                        'asset_deduction': emp_asset_ded,
+                        'net_salary': net_pay.quantize(Decimal('0.01')),
+                        'days_paid': payable_days,
+                        'config': {
+                            'gChk': g_chk,
+                            'dChk': d_chk,
+                            'otEnabled': False,
+                            'present_days': present_days,
+                            'half_days': half_days,
+                            'paid_leaves': paid_leaves,
+                            'unpaid_leaves': unpaid_leaves,
+                            'expected_working_days': expected_working_days,
+                            'absent_days': absent_days,
+                            'overtime_hours': overtime_hours,
+                            'checked_in_days': checked_in_days,
+                        }
+                    }
+                )
+                final_map[emp.id] = fs
+            
             main_record = fs if fs else p
-            payslip = getattr(main_record, 'payslip_record', None) if main_record else None
+            is_report = bool(fs)
+            
+            if fs:
+                payslip = payslip_by_fs.get(fs.id)
+            elif p:
+                payslip = payslip_by_payroll.get(p.id)
+            else:
+                payslip = None
+            
+            # For payroll_id: use fs.id if report, else p.id
+            payroll_id = fs.id if fs else (p.id if p else None)
             
             data.append({
                 'employee_id_str': emp.employee_id,
                 'employee_name': emp.full_name,
-                'payroll_id': p.id if p else (fs.id if fs else None),
+                'payroll_id': payroll_id,
                 'batch_id': p.batch.id if p else None,
-                'is_report': True if fs and not p else False,
-                'net_pay': fs.net_salary if fs else (p.net_pay if p else emp.gross_salary),
+                'is_report': is_report,
+                'net_pay': float(net_pay.quantize(Decimal('0.01'))),
                 'details': {
-                    'gross': fs.total_gross if fs else (p.gross_salary if p else emp.gross_salary),
-                    'deductions': fs.total_deductions if fs else (p.total_deductions if p else 0),
-                    'ot_pay': fs.ot_pay if fs else (p.ot_pay if p and hasattr(p, 'ot_pay') else 0),
-                    'loan_emi': fs.loan_emi if fs else 0,
-                    'asset_deduction': fs.asset_deduction if fs else 0,
-                    'days_paid': fs.days_paid if fs else (p.days_paid if p else 0),
-                } if main_record else None,
+                    'gross': float(total_gross.quantize(Decimal('0.01'))),
+                    'deductions': float(total_deductions.quantize(Decimal('0.01'))),
+                    'ot_pay': float(ot_pay),
+                    'loan_emi': float(emp_loan_emi),
+                    'asset_deduction': float(emp_asset_ded),
+                    'days_paid': float(payable_days),
+                    'present_days': present_days,
+                    'half_days': half_days,
+                    'paid_leaves': paid_leaves,
+                    'unpaid_leaves': unpaid_leaves,
+                    'expected_working_days': expected_working_days,
+                    'absent_days': absent_days,
+                    'overtime_hours': overtime_hours,
+                    'checked_in_days': checked_in_days,
+                    'earned_basic': float(earned_basic),
+                    'basic_salary': float(basic),
+                    'reimbursement': float(reimb),
+                },
                 'payslip_id': payslip.payslip_id if payslip else None,
-                'payslip_status': payslip.status if payslip else ('Not Generated' if main_record else 'Payroll Pending'),
+                'payslip_status': payslip.status if payslip else 'Not Generated',
                 'file': payslip.file.url if payslip and payslip.file else None,
-                'id': payslip.id if payslip else None
+                'id': payslip.id if payslip else None,
             })
         return Response(data)
 
@@ -2372,7 +2845,17 @@ class FinalizedSalaryViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
-        return self.queryset.filter(company=self.request.user.company)
+        qs = self.queryset.filter(company=self.request.user.company)
+        employee = self.request.query_params.get('employee')
+        from_date = self.request.query_params.get('from_date')
+        to_date = self.request.query_params.get('to_date')
+        if employee:
+            qs = qs.filter(employee_id=employee)
+        if from_date:
+            qs = qs.filter(from_date=from_date)
+        if to_date:
+            qs = qs.filter(to_date=to_date)
+        return qs
 
     def perform_create(self, serializer):
         serializer.save(company=self.request.user.company)
@@ -4159,155 +4642,28 @@ class PayrollAttendanceSummaryView(APIView):
             return Response({'error': 'employee_id, from_date, to_date are required'}, status=400)
 
         try:
-            from datetime import datetime as dt, timedelta
+            from datetime import datetime as dt
             from_dt = dt.strptime(from_date, '%Y-%m-%d').date()
             to_dt = dt.strptime(to_date, '%Y-%m-%d').date()
         except ValueError:
             return Response({'error': 'Invalid date format. Use YYYY-MM-DD.'}, status=400)
 
-        # Get employee for department/company info
         try:
             employee = Employee.objects.get(id=emp_id)
         except Employee.DoesNotExist:
             return Response({'error': 'Employee not found'}, status=404)
 
-        # Fetch holidays for the company in this range
-        holidays = CalendarEvent.objects.filter(
-            company=employee.company,
-            is_holiday=True,
-            date__gte=from_dt,
-            date__lte=to_dt
-        ).values_list('date', flat=True)
-        holiday_dates = set(holidays)
+        # 1. Attendance Metrics (Source of Truth)
+        m = compute_attendance_metrics(employee, from_dt, to_dt)
 
-        # Fetch working days config for the department
-        working_days_cfg = DepartmentWiseWorkingDays.objects.filter(
-            department=employee.department,
-            company=employee.company
-        ).first()
-
-        weekend_days = []
-        if working_days_cfg and working_days_cfg.weekend_days:
-            # weekend_days is a list like ["Saturday", "Sunday"]
-            weekend_days = [d.lower() for d in working_days_cfg.weekend_days]
-        else:
-            # Default to Saturday/Sunday if not configured
-            weekend_days = ["saturday", "sunday"]
-
-        # Calculate stats by iterating through each date
-        present_days = 0
-        half_days = 0
-        full_day_leaves = 0
-        absent_days = 0
-        expected_working_days = 0
-        total_overtime_seconds = 0
-        
-        # Get all approved leaves for the range
-        all_leaves = EmpLeave.objects.filter(
-            employee_id=emp_id,
-            from_date__lte=to_dt,
-            to_date__gte=from_dt,
-            status='Approved'
+        # 2. Leave Details
+        leaves = EmpLeave.objects.filter(
+            employee=employee, status='Approved',
+            from_date__lte=to_dt, to_date__gte=from_dt
         ).select_related('leave_type')
-
-        # Get all attendance records
-        attendances = Attendance.objects.filter(
-            employee_id=emp_id,
-            date__gte=from_dt,
-            date__lte=to_dt
-        ).select_related('leave', 'leave__leave_type')
         
-        attendance_map = {att.date: att for att in attendances}
-        
-        # Pre-calculate leave dates
-        leave_dates_paid = set()
-        leave_dates_unpaid = set()
-        for lv in all_leaves:
-            l_start = max(lv.from_date, from_dt)
-            l_end = min(lv.to_date, to_dt)
-            d = l_start
-            while d <= l_end:
-                if lv.leave_type and lv.leave_type.is_paid:
-                    leave_dates_paid.add(d)
-                else:
-                    leave_dates_unpaid.add(d)
-                d += timedelta(days=1)
-
-        # Get shift info for status calculation
-        shift = employee.shift_assigned
-        # Logic helper to match AttendanceLogView status calculation
-        def get_att_status(att):
-            if att.leave:
-                return 'leave'
-            
-            # If they are currently checked in but haven't checked out, status is "Checked In"
-            if att.check_in and not att.check_out:
-                return 'checked_in'
-            
-            # Calculate worked hours (prioritize model's calculated duration)
-            w_hours = 0.0
-            if att.total_work_duration:
-                w_hours = att.total_work_duration.total_seconds() / 3600
-            elif att.check_in and att.check_out:
-                w_hours = (att.check_out - att.check_in).total_seconds() / 3600
-            
-            s_full = shift.full_day_hours() if shift else 8.0
-            s_half = shift.half_day_hours() if shift else 4.0
-            
-            if w_hours >= s_full:
-                return 'present'
-            elif w_hours >= s_half:
-                return 'half_day'
-            else:
-                return 'absent'
-
-        curr_date = from_dt
-        checked_in_days = 0
-        while curr_date <= to_dt:
-            day_name = curr_date.strftime('%A').lower()
-            is_holiday = curr_date in holiday_dates
-            is_weekend = day_name in weekend_days
-            is_work_day = not is_holiday and not is_weekend
-            
-            if is_work_day:
-                expected_working_days += 1
-
-            att_rec = attendance_map.get(curr_date)
-            if att_rec:
-                if is_holiday or is_weekend:
-                    # Entire work duration on holiday/weekend is OT
-                    if att_rec.total_work_duration:
-                        total_overtime_seconds += att_rec.total_work_duration.total_seconds()
-                    elif att_rec.check_in and att_rec.check_out:
-                        total_overtime_seconds += (att_rec.check_out - att_rec.check_in).total_seconds()
-                else:
-                    status = get_att_status(att_rec)
-                    if status == 'present':
-                        present_days += 1
-                    elif status == 'half_day':
-                        half_days += 1
-                    elif status == 'full_day_leave':
-                        full_day_leaves += 1
-                    elif status == 'checked_in':
-                        checked_in_days += 1
-                    elif not att_rec.leave:
-                        absent_days += 1
-                    
-                    # Also add any manual OT duration for work days
-                    if att_rec.overtime_duration:
-                        total_overtime_seconds += att_rec.overtime_duration.total_seconds()
-            elif curr_date in leave_dates_paid or curr_date in leave_dates_unpaid:
-                pass
-            elif is_work_day:
-                absent_days += 1
-            
-            curr_date += timedelta(days=1)
-
-        overtime_hours = round(total_overtime_seconds / 3600, 2)
-
-        # Leave details for UI table
         leave_details = []
-        for lv in all_leaves:
+        for lv in leaves:
             l_start = max(lv.from_date, from_dt)
             l_end = min(lv.to_date, to_dt)
             num_days = (l_end - l_start).days + 1
@@ -4320,12 +4676,10 @@ class PayrollAttendanceSummaryView(APIView):
                 'status': lv.status,
             })
 
-        # Fetch approved reimbursements in the range
+        # 3. Reimbursements
         reimbursements = ReimbursementRequest.objects.filter(
-            employee_id=emp_id,
-            status='approved',
-            created_at__date__gte=from_dt,
-            created_at__date__lte=to_dt
+            employee=employee, status='approved',
+            created_at__date__gte=from_dt, created_at__date__lte=to_dt
         ).select_related('category')
         
         total_reimbursement = sum(r.amount for r in reimbursements)
@@ -4336,10 +4690,9 @@ class PayrollAttendanceSummaryView(APIView):
             'description': r.description
         } for r in reimbursements]
 
-        # Fetch approved asset requests in the range
-        # We fetch ALL requests that were approved in this range
+        # 4. Asset Deductions
         asset_reqs = AssetRequest.objects.filter(
-            requested_by_id=int(emp_id),
+            requested_by=employee,
             approval_status='approved',
             updated_at__date__range=[from_dt, to_dt]
         ).select_related('related_fixed_asset', 'related_supply_item').distinct()
@@ -4351,7 +4704,6 @@ class PayrollAttendanceSummaryView(APIView):
         for r in asset_reqs:
             amt = r.employee_payment_amount or Decimal('0')
             if r.related_fixed_asset:
-                # Core assets are always individual
                 asset_name = f"{r.related_fixed_asset.asset_tag} ({r.related_fixed_asset.model_brand or 'No Brand'})"
                 asset_deduction_details.append({
                     'id': str(r.id),
@@ -4362,7 +4714,6 @@ class PayrollAttendanceSummaryView(APIView):
                 })
                 total_asset_deduction += amt
             elif r.related_supply_item:
-                # Group supply items by batch and calculate based on (Price * Qty)
                 b_id = r.batch_id if r.batch_id else f"REQ-{r.id}"
                 if b_id not in supply_batches:
                     supply_batches[b_id] = {
@@ -4370,11 +4721,8 @@ class PayrollAttendanceSummaryView(APIView):
                         'date': r.updated_at.date().isoformat(),
                         'action_type': r.admin_action_type or 'Supply Order'
                     }
-                
-                # Calculate subtotal for this item
                 item_price = r.related_supply_item.unit_price or Decimal('0.00')
                 subtotal = item_price * (r.requested_quantity or 1)
-                
                 supply_batches[b_id]['amount'] += subtotal
                 total_asset_deduction += subtotal
             else:
@@ -4387,7 +4735,6 @@ class PayrollAttendanceSummaryView(APIView):
                 })
                 total_asset_deduction += amt
 
-        # Add the combined supply batches to the final list
         for b_id, data in supply_batches.items():
             display_name = f"Supply Asset Order ({b_id})" if b_id.startswith('BATCH') else "Supply Asset Order"
             asset_deduction_details.append({
@@ -4400,16 +4747,15 @@ class PayrollAttendanceSummaryView(APIView):
 
         return Response({
             'total_days': (to_dt - from_dt).days + 1,
-            'expected_working_days': expected_working_days,
-            'present_days': present_days,
-            'half_days': half_days,
-            'full_day_leaves': full_day_leaves,
-            'checked_in_days': checked_in_days,
-            'absent_days': absent_days,
-            'overtime_hours': overtime_hours,
-            'paid_leaves': len(leave_dates_paid),
-            'unpaid_leaves': len(leave_dates_unpaid),
-            'total_leaves': len(leave_dates_paid) + len(leave_dates_unpaid),
+            'expected_working_days': m['expected_working_days'],
+            'present_days': m['present_days'],
+            'half_days': m['half_days'],
+            'checked_in_days': m['checked_in_days'],
+            'absent_days': m['absent_days'],
+            'overtime_hours': m['overtime_hours'],
+            'paid_leaves': m['paid_leaves'],
+            'unpaid_leaves': m['unpaid_leaves'],
+            'total_leaves': m['paid_leaves'] + m['unpaid_leaves'],
             'leave_details': leave_details,
             'total_reimbursement': float(total_reimbursement),
             'reimbursement_details': reimbursement_details,
@@ -5534,6 +5880,7 @@ class GoogleLoginAPIView(APIView):
                 user.set_unusable_password()
                 user.save()
 
+
             # If this is an employee login, ensure profile is synced and ID generated
             if user.role == "employee":
                 emp = Employee.objects.filter(email__iexact=email).first()
@@ -5904,3 +6251,5 @@ class WorkLocationLogViewSet(viewsets.ReadOnlyModelViewSet):
 
     def get_queryset(self):
         return WorkLocationLog.objects.all().order_by('-date')
+
+

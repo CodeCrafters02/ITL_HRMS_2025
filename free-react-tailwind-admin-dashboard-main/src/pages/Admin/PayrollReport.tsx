@@ -298,38 +298,46 @@ const PayrollReport = () => {
                 asset_deduction: Math.round((att?.total_asset_deduction || 0) * 100) / 100,
                 net_salary: Math.round(net * 100) / 100,
                 days_paid: att ? (att.present_days + ((att.half_days || 0) * 0.5) + att.paid_leaves) : 0,
-                config: { gChk, dChk, otEnabled }
+                config: {
+                    gChk, dChk, otEnabled,
+                    // Store attendance breakdown so payslip PDF can use exact same values
+                    present_days: att?.present_days || 0,
+                    half_days: att?.half_days || 0,
+                    paid_leaves: att?.paid_leaves || 0,
+                    unpaid_leaves: att?.unpaid_leaves || 0,
+                    expected_working_days: att?.expected_working_days || 0,
+                    absent_days: att?.absent_days || 0,
+                    overtime_hours: att?.overtime_hours || 0,
+                    checked_in_days: att?.checked_in_days || 0,
+                }
             };
 
-            // First check if a record exists for this employee/period to decide between POST or PUT
-            // For simplicity in this demo, we'll try a specialized "upsert" logic or just POST and handle uniqueness in backend
-            // But since we have unique_together, we should ideally find the ID first.
-            // Simplified: we'll use a POST and if it fails with 400 (duplicate), we could try to find and PUT.
-            // Better: use a dedicated endpoint or just handle it here.
+            // Check if a record already exists for this employee + date range
+            const searchR = await fetch(`${API}/app/finalized-salary/?employee=${sel.id}&from_date=${fromDate}&to_date=${toDate}`, { headers: hdr() });
+            const searchData = await searchR.json();
+            const existingId = searchData.results?.[0]?.id || (Array.isArray(searchData) ? searchData[0]?.id : null);
 
-            const r = await fetch(`${API}/app/finalized-salary/`, {
-                method: 'POST',
-                headers: hdr(),
-                body: JSON.stringify(payload)
-            });
+            let saveR;
+            if (existingId) {
+                // Update existing record
+                saveR = await fetch(`${API}/app/finalized-salary/${existingId}/`, {
+                    method: 'PATCH',
+                    headers: hdr(),
+                    body: JSON.stringify(payload)
+                });
+            } else {
+                // Create new record
+                saveR = await fetch(`${API}/app/finalized-salary/`, {
+                    method: 'POST',
+                    headers: hdr(),
+                    body: JSON.stringify(payload)
+                });
+            }
 
-            if (!r.ok) {
-                const errData = await r.json();
-                if (r.status === 400 && JSON.stringify(errData).includes('unique')) {
-                    // Try to find the existing one to update
-                    const searchR = await fetch(`${API}/app/finalized-salary/?employee=${sel.id}&from_date=${fromDate}&to_date=${toDate}`, { headers: hdr() });
-                    const existing = await searchR.json();
-                    const existingId = existing.results?.[0]?.id || existing[0]?.id;
-                    if (existingId) {
-                        await fetch(`${API}/app/finalized-salary/${existingId}/`, {
-                            method: 'PUT',
-                            headers: hdr(),
-                            body: JSON.stringify(payload)
-                        });
-                    }
-                } else {
-                    throw new Error('Failed to save');
-                }
+            if (!saveR.ok) {
+                const errData = await saveR.json();
+                console.error('Save failed:', errData);
+                throw new Error('Failed to save');
             }
 
             // Also keep local storage for UI state persistence

@@ -46,14 +46,25 @@ export interface RolloutDashboardItem {
     batch_id: number | null;
     is_report?: boolean;
     net_pay: number;
-    details?: {
+    details: {
         gross: number;
         deductions: number;
         ot_pay: number;
         loan_emi: number;
         asset_deduction: number;
         days_paid: number;
-    } | null;
+        present_days: number;
+        half_days: number;
+        paid_leaves: number;
+        unpaid_leaves: number;
+        expected_working_days: number;
+        absent_days: number;
+        overtime_hours: number;
+        checked_in_days: number;
+        earned_basic: number;
+        basic_salary: number;
+        reimbursement: number;
+    };
     payslip_id: string | null;
     payslip_status: string;
     file: string | null;
@@ -70,11 +81,13 @@ export const fetchPayrollBatches = async (params?: any): Promise<PaginatedRespon
     return response.data;
 };
 
-export const generatePayslip = async (payrollId: number, isReport: boolean = false, regenerate: boolean = false) => {
+export const generatePayslip = async (payrollId: number, isReport: boolean = false, regenerate: boolean = false, startDate?: string, endDate?: string) => {
     const response = await axios.post(`${API_URL}payslips/generate/`, {
         payroll_id: payrollId,
         is_report: isReport,
-        regenerate: regenerate
+        regenerate: regenerate,
+        start_date: startDate,
+        end_date: endDate
     }, { headers: getHeaders() });
     return response.data;
 };
@@ -110,11 +123,21 @@ export const bulkPublishPayslips = async (ids: number[]) => {
     return response.data;
 };
 
-export const downloadPayslip = (fileUrl: string) => {
-    const link = document.createElement('a');
-    link.href = fileUrl;
-    link.setAttribute('download', fileUrl.split('/').pop() || 'payslip.pdf');
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
+export const downloadPayslip = async (fileUrl: string) => {
+    try {
+        const response = await fetch(fileUrl);
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.setAttribute('download', fileUrl.split('/').pop() || 'payslip.pdf');
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        window.URL.revokeObjectURL(url);
+    } catch (error) {
+        console.error('Download failed:', error);
+        // Fallback to direct link if fetch fails (e.g. CORS)
+        window.open(fileUrl, '_blank');
+    }
 };

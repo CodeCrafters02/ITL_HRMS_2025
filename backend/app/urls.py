@@ -66,6 +66,7 @@ urlpatterns = [
     path('change-password/', CustomPasswordChangeAPIView.as_view(), name='custom-password-change'),
     path('login/', LoginAPIView.as_view(), name='login'),
     path('google-login/', GoogleLoginAPIView.as_view(), name='google-login'),
+    path('my-ip/', MyIPAPIView.as_view(), name='my-ip'),
     path('change-password/', PasswordChangeView.as_view(), name='change-password'),
     path('users/', UserLogListView.as_view(), name='user_log_api'),
     path('master-dashboard/', MasterDashboardView.as_view(), name='master_dashboard'),

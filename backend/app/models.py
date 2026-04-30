@@ -283,7 +283,7 @@ class Employee(models.Model):
 
     def __str__(self):
         return self.full_name
-    
+
 class RelievedEmployee(models.Model):
     employee = models.OneToOneField(Employee, on_delete=models.SET_NULL, null=True, blank=True, related_name='relieved_info')
     relieving_date = models.DateField()
@@ -821,7 +821,8 @@ class Payroll(models.Model):
 class Payslip(models.Model):
     employee = models.ForeignKey(Employee, on_delete=models.CASCADE, related_name='payslips')
     company = models.ForeignKey(Company, on_delete=models.CASCADE, related_name='payslips')
-    payroll = models.OneToOneField(Payroll, on_delete=models.CASCADE, related_name='payslip_record')
+    payroll = models.OneToOneField(Payroll, on_delete=models.CASCADE, related_name='payslip_record', null=True, blank=True)
+    finalized_salary = models.OneToOneField('FinalizedSalary', on_delete=models.CASCADE, related_name='payslip_record', null=True, blank=True)
     payslip_id = models.CharField(max_length=100, unique=True)
     month = models.IntegerField()
     year = models.IntegerField()
@@ -992,6 +993,20 @@ class OfficeLocation(models.Model):
     company = models.ForeignKey(Company, on_delete=models.CASCADE, related_name='office_locations')
     name = models.CharField(max_length=100)
     address = models.TextField(null=True, blank=True)
+    
+    # Geofencing fields
+    latitude = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
+    longitude = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
+    radius = models.PositiveIntegerField(default=100, help_text="Radius in meters")
+    
+    # WiFi / IP fields
+    allowed_ips = models.TextField(blank=True, help_text="Comma-separated public IP addresses")
+    
+    # Toggles
+    enable_geofencing = models.BooleanField(default=True)
+    enable_ip_restriction = models.BooleanField(default=False)
+    
+    is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

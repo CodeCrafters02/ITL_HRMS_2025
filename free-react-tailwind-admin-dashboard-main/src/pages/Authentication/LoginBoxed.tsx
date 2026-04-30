@@ -37,6 +37,7 @@ const LoginBoxed = () => {
         }
     }, [navigate]);
 
+
     const submitForm = async (e: React.FormEvent) => {
         e.preventDefault();
         setLoading(true);
@@ -49,7 +50,10 @@ const LoginBoxed = () => {
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify({ username, password }),
+                body: JSON.stringify({ 
+                    username, 
+                    password
+                }),
             });
 
             if (response.ok) {
@@ -98,7 +102,9 @@ const LoginBoxed = () => {
             const response = await fetch(`${API_BASE_URL}/app/google-login/`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ credential: credentialResponse.credential }),
+                body: JSON.stringify({ 
+                    credential: credentialResponse.credential
+                }),
             });
 
             if (response.ok) {

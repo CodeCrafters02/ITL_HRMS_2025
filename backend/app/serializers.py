@@ -508,6 +508,7 @@ class CompanySerializer(serializers.ModelSerializer):
                 return obj.logo.url
             return None
 
+
 class DepartmentSerializer(serializers.ModelSerializer):
     class Meta:
         model = Department
@@ -1921,8 +1922,7 @@ class OfficeSectionSerializer(serializers.ModelSerializer):
 class OfficeLocationSerializer(serializers.ModelSerializer):
     class Meta:
         model = OfficeLocation
-        fields = ['id', 'name', 'address', 'company']
-        read_only_fields = ['company']
+        fields = '__all__'
 
     def create(self, validated_data):
         request = self.context.get('request')
