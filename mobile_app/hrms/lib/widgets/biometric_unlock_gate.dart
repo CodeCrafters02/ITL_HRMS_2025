@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 
 import '../services/biometric_service.dart';
 import '../theme/app_stitch_theme.dart';
+import 'glass_card.dart';
+import 'stitch_background.dart';
 
 class BiometricUnlockGate extends StatefulWidget {
   const BiometricUnlockGate({
@@ -77,64 +79,113 @@ class _BiometricUnlockGateState extends State<BiometricUnlockGate> {
     }
 
     return Scaffold(
-      backgroundColor: Colors.white,
-      body: SafeArea(
-        child: Center(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(24),
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 360),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Icon(
-                    Icons.lock,
-                    size: 64,
-                    color: AppStitchTheme.primary,
-                  ),
-                  const SizedBox(height: 20),
-                  Text(
-                    'Secure Access',
-                    textAlign: TextAlign.center,
-                    style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                          color: AppStitchTheme.onSurface,
-                          fontWeight: FontWeight.w800,
+      body: StitchBackground(
+        child: SafeArea(
+          child: Center(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(24),
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 360),
+                child: GlassCard(
+                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 40),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(20),
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: AppStitchTheme.primary.withValues(alpha: 0.1),
+                          border: Border.all(color: AppStitchTheme.primary.withValues(alpha: 0.1)),
                         ),
-                  ),
-                  const SizedBox(height: 12),
-                  Text(
-                    _message,
-                    textAlign: TextAlign.center,
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: AppStitchTheme.onSurfaceVariant,
+                        child: const Icon(
+                          Icons.fingerprint_rounded,
+                          size: 64,
+                          color: AppStitchTheme.primary,
                         ),
-                  ),
-                  const SizedBox(height: 24),
-                  SizedBox(
-                    width: double.infinity,
-                    child: FilledButton.icon(
-                      onPressed: _isUnlocking ? null : _attemptUnlock,
-                      icon: _isUnlocking
-                          ? const SizedBox(
-                              height: 18,
-                              width: 18,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                color: Colors.white,
-                              ),
-                            )
-                          : const Icon(Icons.fingerprint),
-                      label: Text(
-                        'Unlock with $_label',
                       ),
-                    ),
+                      const SizedBox(height: 28),
+                      Text(
+                        'Secure Access',
+                        textAlign: TextAlign.center,
+                        style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                              color: AppStitchTheme.lightOnSurface,
+                              fontWeight: FontWeight.w900,
+                              letterSpacing: -0.5,
+                            ),
+                      ),
+                      const SizedBox(height: 12),
+                      Text(
+                        _message,
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(
+                          color: AppStitchTheme.lightOnSurfaceMuted,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          height: 1.5,
+                        ),
+                      ),
+                      const SizedBox(height: 32),
+                      Container(
+                        width: double.infinity,
+                        height: 56,
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(20),
+                          gradient: LinearGradient(
+                            colors: [
+                              AppStitchTheme.primary,
+                              AppStitchTheme.primary.withValues(alpha: 0.8),
+                            ],
+                          ),
+                          boxShadow: [
+                            BoxShadow(
+                              color: AppStitchTheme.primary.withValues(alpha: 0.25),
+                              blurRadius: 12,
+                              offset: const Offset(0, 6),
+                            ),
+                          ],
+                        ),
+                        child: ElevatedButton.icon(
+                          onPressed: _isUnlocking ? null : _attemptUnlock,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.transparent,
+                            shadowColor: Colors.transparent,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                          ),
+                          icon: _isUnlocking
+                              ? const SizedBox(
+                                  height: 18,
+                                  width: 18,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 3,
+                                    color: Colors.white,
+                                  ),
+                                )
+                              : const Icon(Icons.lock_open_rounded, color: Colors.white),
+                          label: Text(
+                            'Unlock with $_label',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.w800,
+                              fontSize: 15,
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      TextButton(
+                        onPressed: widget.onUseGoogleSignIn,
+                        style: TextButton.styleFrom(
+                          foregroundColor: AppStitchTheme.lightOnSurfaceMuted,
+                        ),
+                        child: const Text(
+                          'Use Google Sign-In instead',
+                          style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
+                        ),
+                      ),
+                    ],
                   ),
-                  const SizedBox(height: 12),
-                  TextButton(
-                    onPressed: widget.onUseGoogleSignIn,
-                    child: const Text('Use Google Sign-In instead'),
-                  ),
-                ],
+                ),
               ),
             ),
           ),
@@ -142,4 +193,4 @@ class _BiometricUnlockGateState extends State<BiometricUnlockGate> {
       ),
     );
   }
-}
+}

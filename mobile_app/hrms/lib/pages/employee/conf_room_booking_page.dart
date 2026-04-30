@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
+import 'dart:async';
 import '../../theme/app_stitch_theme.dart';
 import '../../services/employee_service.dart';
 import '../../models/conference_room_model.dart';
@@ -9,6 +11,10 @@ import '../../widgets/stitch_background.dart';
 import '../../widgets/glass_card.dart';
 import 'dart:math' as math;
 
+enum LoadingState { idle, loading, error }
+
+enum RoomSize { small, medium, large, boardroom }
+
 class ConfRoomBookingPage extends StatefulWidget {
   const ConfRoomBookingPage({super.key});
 
@@ -17,6 +23,22 @@ class ConfRoomBookingPage extends StatefulWidget {
 }
 
 class _ConfRoomBookingPageState extends State<ConfRoomBookingPage> {
+  // Unified loading state
+  LoadingState _loadingState = LoadingState.loading;
+  String? _errorMessage;
+  DateTime _lastUpdated = DateTime.now();
+
+  // Data cache
+  final Map<int, List<OfficeFloor>> _floorsCache = {};
+  List<OfficeLocation>? _locationsCache;
+  DateTime? _locationsCacheTime;
+  static const Duration _cacheExpiry = Duration(minutes: 5);
+
+  // Debounce timers
+  Timer? _floorDebounceTimer;
+  Timer? _locationDebounceTimer;
+
+  // Legacy loading flags (for granular control during transition)
   bool _loadingLocations = true;
   bool _loadingFloors = false;
   bool _loadingRooms = false;
@@ -33,8 +55,15 @@ class _ConfRoomBookingPageState extends State<ConfRoomBookingPage> {
   ConferenceConfig? _config;
 
   DateTime _selectedDate = DateTime.now();
+  String? _selectedRoomId;
+
+  // Search and filter
+  String _searchQuery = '';
+  RoomSize? _selectedSizeFilter;
+  bool _showAvailableOnly = false;
 
   final TransformationController _mapTransform = TransformationController();
+  final TextEditingController _searchController = TextEditingController();
 
   @override
   void initState() {
@@ -45,8 +74,18 @@ class _ConfRoomBookingPageState extends State<ConfRoomBookingPage> {
 
   @override
   void dispose() {
+    _floorDebounceTimer?.cancel();
+    _locationDebounceTimer?.cancel();
     _mapTransform.dispose();
+    _searchController.dispose();
     super.dispose();
+  }
+
+  // Safe setState that checks mounted status
+  void _safeSetState(VoidCallback fn) {
+    if (mounted) {
+      setState(fn);
+    }
   }
 
   Future<void> _fetchConfig() async {
@@ -57,80 +96,160 @@ class _ConfRoomBookingPageState extends State<ConfRoomBookingPage> {
   }
 
   Future<void> _fetchLocations() async {
-    setState(() => _loadingLocations = true);
-    try {
-      final locs = await SeatBookingService.fetchLocations();
-      if (mounted) {
-        setState(() {
+    // Check cache first
+    if (_locationsCache != null && _locationsCacheTime != null) {
+      if (DateTime.now().difference(_locationsCacheTime!) < _cacheExpiry) {
+        _safeSetState(() {
           _loadingLocations = false;
-          _locations = locs;
-          if (_locations.isNotEmpty) {
+          _loadingState = LoadingState.idle;
+          _locations = _locationsCache!;
+          if (_locations.isNotEmpty && _selectedLocation == null) {
             _selectedLocation = _locations.first;
             _fetchFloors(_selectedLocation!.id);
           }
         });
+        return;
       }
-    } catch (_) {
-      if (mounted) setState(() => _loadingLocations = false);
+    }
+
+    _safeSetState(() {
+      _loadingLocations = true;
+      _loadingState = LoadingState.loading;
+    });
+
+    try {
+      final locs = await SeatBookingService.fetchLocations();
+      _locationsCache = locs;
+      _locationsCacheTime = DateTime.now();
+
+      _safeSetState(() {
+        _loadingLocations = false;
+        _loadingState = LoadingState.idle;
+        _lastUpdated = DateTime.now();
+        _locations = locs;
+        if (_locations.isNotEmpty) {
+          _selectedLocation = _locations.first;
+          _fetchFloors(_selectedLocation!.id);
+        }
+      });
+    } catch (e) {
+      _safeSetState(() {
+        _loadingLocations = false;
+        _loadingState = LoadingState.error;
+        _errorMessage = 'Failed to load locations. Please try again.';
+      });
+      _showErrorSnackBar('Failed to load locations');
+    }
+  }
+
+  void _showErrorSnackBar(String message) {
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(message),
+          backgroundColor: Colors.red[700],
+          behavior: SnackBarBehavior.floating,
+          action: SnackBarAction(
+            label: 'Retry',
+            textColor: Colors.white,
+            onPressed: () {
+              _fetchLocations();
+            },
+          ),
+        ),
+      );
     }
   }
 
   Future<void> _fetchFloors(int locationId) async {
-    setState(() => _loadingFloors = true);
+    // Cancel any pending debounce timer
+    _floorDebounceTimer?.cancel();
+
+    // Check cache first
+    if (_floorsCache.containsKey(locationId)) {
+      final cached = _floorsCache[locationId]!;
+      _safeSetState(() {
+        _loadingFloors = false;
+        _floors = cached;
+        if (_floors.isNotEmpty) {
+          _selectedFloor = _floors.first;
+          _fetchRoomData();
+        } else {
+          _selectedFloor = null;
+          _rooms = [];
+          _bookings = [];
+        }
+      });
+      return;
+    }
+
+    _safeSetState(() => _loadingFloors = true);
+
     try {
       final flrs = await SeatBookingService.fetchFloors(locationId: locationId);
-      if (mounted) {
-        setState(() {
-          _loadingFloors = false;
-          _floors = flrs;
-          if (_floors.isNotEmpty) {
-            _selectedFloor = _floors.first;
-            _fetchRoomData();
-          } else {
-            _selectedFloor = null;
-            _rooms = [];
-            _bookings = [];
-          }
-        });
-      }
-    } catch (_) {
-      if (mounted) setState(() => _loadingFloors = false);
+      _floorsCache[locationId] = flrs;
+
+      _safeSetState(() {
+        _loadingFloors = false;
+        _floors = flrs;
+        if (_floors.isNotEmpty) {
+          _selectedFloor = _floors.first;
+          _fetchRoomData();
+        } else {
+          _selectedFloor = null;
+          _rooms = [];
+          _bookings = [];
+        }
+      });
+    } catch (e) {
+      _safeSetState(() => _loadingFloors = false);
+      _showErrorSnackBar('Failed to load floors');
     }
   }
 
   Future<void> _fetchRoomData() async {
     if (_selectedFloor == null) return;
-    setState(() => _loadingRooms = true);
-    
-    final resRooms = await EmployeeService.getConferenceRooms(floorId: _selectedFloor!.id);
-    if (mounted) {
-      setState(() {
+    _safeSetState(() => _loadingRooms = true);
+
+    try {
+      final resRooms = await EmployeeService.getConferenceRooms(floorId: _selectedFloor!.id);
+      _safeSetState(() {
         if (resRooms.success && resRooms.data != null) {
           _rooms = resRooms.data!;
+        } else {
+          _rooms = [];
         }
         _loadingRooms = false;
       });
       await _fetchBookings();
+    } catch (e) {
+      _safeSetState(() => _loadingRooms = false);
+      _showErrorSnackBar('Failed to load rooms');
     }
   }
 
   Future<void> _fetchBookings() async {
     if (_selectedFloor == null) return;
-    setState(() => _loadingBookings = true);
-    final fmtDate = DateFormat('yyyy-MM-dd').format(_selectedDate);
-    final res = await EmployeeService.getConferenceRoomBookings(
-      floorId: _selectedFloor!.id,
-      date: fmtDate,
-    );
-    if (mounted) {
-      setState(() {
+    _safeSetState(() => _loadingBookings = true);
+
+    try {
+      final fmtDate = DateFormat('yyyy-MM-dd').format(_selectedDate);
+      final res = await EmployeeService.getConferenceRoomBookings(
+        floorId: _selectedFloor!.id,
+        date: fmtDate,
+      );
+      _safeSetState(() {
         _loadingBookings = false;
+        _lastUpdated = DateTime.now();
         if (res.success && res.data != null) {
           _bookings = res.data!;
         } else {
           _bookings = [];
         }
       });
+    } catch (e) {
+      _safeSetState(() => _loadingBookings = false);
+      _showErrorSnackBar('Failed to load bookings');
     }
   }
 
@@ -140,6 +259,106 @@ class _ConfRoomBookingPageState extends State<ConfRoomBookingPage> {
     } catch (_) {
       return null;
     }
+  }
+
+  RoomSize _getRoomSize(int? capacity) {
+    if (capacity == null) return RoomSize.small;
+    if (capacity <= 4) return RoomSize.small;
+    if (capacity <= 8) return RoomSize.medium;
+    if (capacity <= 16) return RoomSize.large;
+    return RoomSize.boardroom;
+  }
+
+  String _getRoomSizeLabel(RoomSize size) {
+    switch (size) {
+      case RoomSize.small:
+        return 'Small';
+      case RoomSize.medium:
+        return 'Medium';
+      case RoomSize.large:
+        return 'Large';
+      case RoomSize.boardroom:
+        return 'Boardroom';
+    }
+  }
+
+  Color _getRoomSizeColor(RoomSize size) {
+    switch (size) {
+      case RoomSize.small:
+        return AppStitchTheme.kpiCalendar;
+      case RoomSize.medium:
+        return AppStitchTheme.kpiTasks;
+      case RoomSize.large:
+        return AppStitchTheme.kpiLeaves;
+      case RoomSize.boardroom:
+        return AppStitchTheme.kpiHolidays;
+    }
+  }
+
+  // Debounced location change handler
+  void _onLocationChanged(int? locationId) {
+    _locationDebounceTimer?.cancel();
+    _locationDebounceTimer = Timer(const Duration(milliseconds: 300), () {
+      if (locationId != null) {
+        final loc = _locations.firstWhere((x) => x.id == locationId);
+        _safeSetState(() => _selectedLocation = loc);
+        _fetchFloors(loc.id);
+      }
+    });
+  }
+
+  // Debounced floor change handler
+  void _onFloorChanged(int? floorId) {
+    _floorDebounceTimer?.cancel();
+    _floorDebounceTimer = Timer(const Duration(milliseconds: 300), () {
+      if (floorId != null) {
+        final floor = _floors.firstWhere((x) => x.id == floorId);
+        _safeSetState(() => _selectedFloor = floor);
+        _fetchRoomData();
+      }
+    });
+  }
+
+  // Filter rooms based on search query and filters
+  List<LayoutElement> _getFilteredRooms(List<LayoutElement> elements) {
+    return elements.where((el) {
+      if (el.type != 'room') return true; // Keep non-room elements
+
+      final confRoom = _getRoomByLayoutId(el.id);
+      if (confRoom == null) return !_showAvailableOnly; // Show unlinked rooms only if not filtering
+
+      // Search filter
+      if (_searchQuery.isNotEmpty) {
+        if (!confRoom.name.toLowerCase().contains(_searchQuery.toLowerCase())) {
+          return false;
+        }
+      }
+
+      // Size filter
+      if (_selectedSizeFilter != null) {
+        final roomSize = _getRoomSize(confRoom.capacity);
+        if (roomSize != _selectedSizeFilter) return false;
+      }
+
+      // Availability filter
+      if (_showAvailableOnly) {
+        final todayBookings = _bookings.where(
+          (b) => b.roomDetails.layoutElementId == el.id && b.status != 'rejected',
+        );
+        if (todayBookings.isNotEmpty) return false;
+      }
+
+      return true;
+    }).toList();
+  }
+
+  int _getAvailableRoomCount() {
+    return _rooms.where((room) {
+      final todayBookings = _bookings.where(
+        (b) => b.roomDetails.layoutElementId == room.layoutElementId && b.status != 'rejected',
+      );
+      return todayBookings.isEmpty;
+    }).length;
   }
 
   Color _getRoomColor(LayoutElement el) {
@@ -161,72 +380,90 @@ class _ConfRoomBookingPageState extends State<ConfRoomBookingPage> {
     if (el.type == 'room') {
       final confRoom = _getRoomByLayoutId(el.id);
       final isRealRoom = confRoom != null;
-      final color = isRealRoom ? _getRoomColor(el) : const Color(0xFF94A3B8); // Grey fallback
+      final isSelected = _selectedRoomId == el.id;
+
+      // Determine room color and status
+      final Color roomColor;
+      final bool isAvailable;
+      if (isRealRoom) {
+        final todayBookings = _bookings.where(
+          (b) => b.roomDetails.layoutElementId == el.id && b.status != 'rejected',
+        );
+        isAvailable = todayBookings.isEmpty;
+        roomColor = isAvailable ? const Color(0xFF10B981) : const Color(0xFFFB923C);
+      } else {
+        roomColor = const Color(0xFF94A3B8);
+        isAvailable = false;
+      }
+
+      // Get room size for styling
+      final roomSize = isRealRoom ? _getRoomSize(confRoom.capacity) : RoomSize.small;
+      final sizeColor = _getRoomSizeColor(roomSize);
 
       return Positioned(
         left: el.x,
         top: el.y,
         width: el.width,
         height: el.height,
-        child: GestureDetector(
-          behavior: HitTestBehavior.opaque,
-          onTap: isRealRoom 
-            ? () => _onRoomTap(el) 
-            : () => ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text('Room "${el.name}" (ID: ${el.id}) is not linked to an active conference room.')),
-              ),
-          child: Container(
-            decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.92),
-              border: Border.all(
-                color: color.withValues(alpha: 0.3),
-                width: 1,
-              ),
+        child: AnimatedScale(
+          scale: isSelected ? 1.05 : 1.0,
+          duration: const Duration(milliseconds: 150),
+          child: Material(
+            color: Colors.transparent,
+            child: InkWell(
+              onTap: isRealRoom
+                ? () {
+                    HapticFeedback.lightImpact();
+                    _safeSetState(() => _selectedRoomId = el.id);
+                    Future.delayed(const Duration(milliseconds: 150), () {
+                      _onRoomTap(el);
+                      _safeSetState(() => _selectedRoomId = null);
+                    });
+                  }
+                : () {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('Room "${el.name}" is not linked to an active conference room.')),
+                    );
+                  },
               borderRadius: BorderRadius.circular(10),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.08),
-                  blurRadius: 10,
-                  offset: const Offset(0, 4),
+              child: Container(
+                decoration: BoxDecoration(
+                  color: roomColor,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(
+                    color: isSelected ? AppStitchTheme.primary : Colors.white.withValues(alpha: 0.2),
+                    width: isSelected ? 2 : 1,
+                  ),
                 ),
-              ],
-            ),
-            child: isRealRoom
-                ? Column(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                child: Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Padding(
-                        padding: const EdgeInsets.only(top: 8, left: 4, right: 4),
-                        child: Text(
-                          confRoom.name,
-                          textAlign: TextAlign.center,
-                          style: const TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w900,
-                            color: Colors.white,
-                            letterSpacing: -0.2,
-                          ),
+                      Text(
+                        el.name,
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w900,
+                          color: Colors.white,
                         ),
                       ),
-                      Padding(
-                        padding: const EdgeInsets.only(bottom: 8),
-                        child: Text(
-                          '${confRoom.capacity ?? "0"} PPL',
+                      if (isRealRoom && confRoom.capacity != null) ...[
+                        const SizedBox(height: 4),
+                        Text(
+                          '${confRoom.capacity} PPL',
                           style: TextStyle(
                             fontSize: 9,
                             fontWeight: FontWeight.w700,
                             color: Colors.white.withValues(alpha: 0.8),
                           ),
                         ),
-                      ),
+                      ],
                     ],
-                  )
-                : Center(
-                    child: Text(
-                      el.name,
-                      style: const TextStyle(fontSize: 8, color: Colors.white70),
-                    ),
                   ),
+                ),
+              ),
+            ),
           ),
         ),
       );
@@ -281,6 +518,7 @@ class _ConfRoomBookingPageState extends State<ConfRoomBookingPage> {
       child: Center(
         child: Transform.rotate(
           angle: el.rotation * math.pi / 180,
+          alignment: Alignment.topLeft,
           child: Text(
             el.name,
             style: const TextStyle(
@@ -302,6 +540,7 @@ class _ConfRoomBookingPageState extends State<ConfRoomBookingPage> {
       height: el.height,
       child: Transform.rotate(
         angle: el.rotation * math.pi / 180,
+        alignment: Alignment.topLeft,
         child: Opacity(
           opacity: 0.2, // Even more subtle background seats
           child: Container(
@@ -324,6 +563,7 @@ class _ConfRoomBookingPageState extends State<ConfRoomBookingPage> {
       height: el.height,
       child: Transform.rotate(
         angle: el.rotation * math.pi / 180,
+        alignment: Alignment.topLeft,
         child: CustomPaint(
           painter: _DoorPainter(),
         ),
@@ -485,15 +725,297 @@ class _ConfRoomBookingPageState extends State<ConfRoomBookingPage> {
     );
   }
 
+  Widget _buildEmptyState(String message, IconData icon) {
+    return Center(
+      child: GlassCard(
+        padding: const EdgeInsets.all(40),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              icon,
+              size: 64,
+              color: AppStitchTheme.lightOnSurfaceMuted,
+            ),
+            const SizedBox(height: 16),
+            Text(
+              message,
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+                color: AppStitchTheme.lightOnSurfaceVariant,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSearchFilterBar() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: Column(
+        children: [
+          // Search Field
+          TextField(
+            controller: _searchController,
+            onChanged: (value) {
+              _safeSetState(() => _searchQuery = value);
+            },
+            decoration: InputDecoration(
+              hintText: 'Search rooms...',
+              prefixIcon: const Icon(Icons.search, size: 20),
+              suffixIcon: _searchQuery.isNotEmpty
+                ? IconButton(
+                    icon: const Icon(Icons.clear, size: 18),
+                    onPressed: () {
+                      _searchController.clear();
+                      _safeSetState(() => _searchQuery = '');
+                    },
+                  )
+                : null,
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+              contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            ),
+          ),
+          const SizedBox(height: 8),
+          // Filter Chips Row
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              children: [
+                // Availability Toggle
+                FilterChip(
+                  label: const Text('Available Only'),
+                  selected: _showAvailableOnly,
+                  onSelected: (selected) {
+                    _safeSetState(() => _showAvailableOnly = selected);
+                  },
+                  checkmarkColor: Colors.white,
+                  selectedColor: AppStitchTheme.primary,
+                  labelStyle: TextStyle(
+                    color: _showAvailableOnly ? Colors.white : AppStitchTheme.lightOnSurface,
+                    fontSize: 12,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                // Size Filters
+                ...RoomSize.values.map((size) {
+                  final isSelected = _selectedSizeFilter == size;
+                  final color = _getRoomSizeColor(size);
+                  return Padding(
+                    padding: const EdgeInsets.only(right: 8),
+                    child: ChoiceChip(
+                      label: Text(_getRoomSizeLabel(size)),
+                      selected: isSelected,
+                      onSelected: (selected) {
+                        _safeSetState(() => _selectedSizeFilter = selected ? size : null);
+                      },
+                      selectedColor: color.withValues(alpha: 0.2),
+                      backgroundColor: Colors.white.withValues(alpha: 0.5),
+                      side: BorderSide(
+                        color: isSelected ? color : AppStitchTheme.lightOutline.withValues(alpha: 0.5),
+                      ),
+                      labelStyle: TextStyle(
+                        color: isSelected ? color : AppStitchTheme.lightOnSurfaceVariant,
+                        fontSize: 12,
+                        fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+                      ),
+                    ),
+                  );
+                }),
+                // Clear Filters
+                if (_searchQuery.isNotEmpty || _selectedSizeFilter != null || _showAvailableOnly)
+                  TextButton.icon(
+                    onPressed: () {
+                      _searchController.clear();
+                      _safeSetState(() {
+                        _searchQuery = '';
+                        _selectedSizeFilter = null;
+                        _showAvailableOnly = false;
+                      });
+                    },
+                    icon: const Icon(Icons.clear_all, size: 16),
+                    label: const Text('Clear', style: TextStyle(fontSize: 12)),
+                  ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildLegendPanel() {
+    final availableCount = _getAvailableRoomCount();
+    final totalCount = _rooms.length;
+
+    return Positioned(
+      left: 12,
+      bottom: 12,
+      child: GlassCard(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        borderRadius: 12,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Quick Stats
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.meeting_room, size: 14, color: AppStitchTheme.primary),
+                const SizedBox(width: 6),
+                Text(
+                  '$availableCount of $totalCount available',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: AppStitchTheme.lightOnSurface,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 6),
+            const Divider(height: 1),
+            const SizedBox(height: 6),
+            // Legend Items
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                _buildLegendItem('Available', const Color(0xFF10B981)),
+                const SizedBox(width: 12),
+                _buildLegendItem('Booked', const Color(0xFFFB923C)),
+                const SizedBox(width: 12),
+                _buildLegendItem('Unlinked', const Color(0xFF94A3B8)),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildLegendItem(String label, Color color) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          width: 10,
+          height: 10,
+          decoration: BoxDecoration(
+            color: color,
+            shape: BoxShape.circle,
+          ),
+        ),
+        const SizedBox(width: 4),
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 10,
+            color: AppStitchTheme.lightOnSurfaceVariant,
+          ),
+        ),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    if (_loadingLocations) {
-      return const StitchBackground(child: Scaffold(backgroundColor: Colors.transparent, body: Center(child: CircularProgressIndicator())));
+    // Show loading state with shimmer effect
+    if (_loadingState == LoadingState.loading && _locations.isEmpty) {
+      return StitchBackground(
+        child: Scaffold(
+          backgroundColor: Colors.transparent,
+          body: Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const CircularProgressIndicator(color: AppStitchTheme.primary),
+                const SizedBox(height: 16),
+                Text(
+                  'Loading conference rooms...',
+                  style: TextStyle(
+                    color: AppStitchTheme.lightOnSurfaceMuted,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
+    // Show error state
+    if (_loadingState == LoadingState.error && _locations.isEmpty) {
+      return StitchBackground(
+        child: Scaffold(
+          backgroundColor: Colors.transparent,
+          body: Center(
+            child: GlassCard(
+              padding: const EdgeInsets.all(32),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    Icons.error_outline,
+                    size: 64,
+                    color: AppStitchTheme.lightOnSurfaceMuted,
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    'Unable to load data',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w700,
+                      color: AppStitchTheme.lightOnSurface,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    _errorMessage ?? 'Something went wrong',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color: AppStitchTheme.lightOnSurfaceVariant,
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  ElevatedButton.icon(
+                    onPressed: _fetchLocations,
+                    icon: const Icon(Icons.refresh),
+                    label: const Text('Try Again'),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
     }
 
     final canvasW = 1200.0;
     final canvasH = 1200.0;
     final elList = _selectedFloor?.elements ?? [];
+    final filteredElements = _getFilteredRooms(elList);
+
+    // Show empty state if no floor selected
+    if (_selectedFloor == null) {
+      return StitchBackground(
+        child: Scaffold(
+          backgroundColor: Colors.transparent,
+          appBar: AppBar(
+            backgroundColor: Colors.transparent,
+            elevation: 0,
+            title: const Text('Book Conference Room', style: TextStyle(color: AppStitchTheme.lightOnSurface, fontWeight: FontWeight.w800)),
+            iconTheme: const IconThemeData(color: AppStitchTheme.lightOnSurface),
+          ),
+          body: _buildEmptyState('Select a location and floor to view conference rooms', Icons.meeting_room),
+        ),
+      );
+    }
 
     return StitchBackground(
       child: Scaffold(
@@ -506,6 +1028,7 @@ class _ConfRoomBookingPageState extends State<ConfRoomBookingPage> {
         ),
         body: Column(
           children: [
+            // Dropdowns Row
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
               child: Row(
@@ -513,40 +1036,52 @@ class _ConfRoomBookingPageState extends State<ConfRoomBookingPage> {
                   Expanded(
                     child: DropdownButtonFormField<int>(
                       value: _selectedLocation?.id,
+                      isExpanded: true,
                       decoration: InputDecoration(
                         labelText: 'Location',
                         border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                       ),
-                      items: _locations.map((l) => DropdownMenuItem(value: l.id, child: Text(l.name))).toList(),
-                      onChanged: (val) {
-                        final loc = _locations.firstWhere((x) => x.id == val);
-                        setState(() => _selectedLocation = loc);
-                        _fetchFloors(loc.id);
-                      },
+                      items: _locations.map((l) => DropdownMenuItem(value: l.id, child: Text(l.name, overflow: TextOverflow.ellipsis))).toList(),
+                      onChanged: _onLocationChanged,
                     ),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
-                    child: _loadingFloors 
-                      ? const Center(child: CircularProgressIndicator())
+                    child: _loadingFloors
+                      ? Container(
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          decoration: BoxDecoration(
+                            border: Border.all(color: AppStitchTheme.lightOutline),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: const Center(
+                            child: SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            ),
+                          ),
+                        )
                       : DropdownButtonFormField<int>(
                           value: _selectedFloor?.id,
+                          isExpanded: true,
                           decoration: InputDecoration(
                             labelText: 'Floor',
                             border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                           ),
-                          items: _floors.map((f) => DropdownMenuItem(value: f.id, child: Text(f.name))).toList(),
-                          onChanged: (val) {
-                            final floor = _floors.firstWhere((x) => x.id == val);
-                            setState(() => _selectedFloor = floor);
-                            _fetchRoomData();
-                          },
+                          items: _floors.map((f) => DropdownMenuItem(value: f.id, child: Text(f.name, overflow: TextOverflow.ellipsis))).toList(),
+                          onChanged: _onFloorChanged,
                         ),
                   ),
                 ],
               ),
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 8),
+            // Search and Filter Bar
+            _buildSearchFilterBar(),
+            const SizedBox(height: 8),
             Expanded(
               child: ClipRRect(
                 borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
@@ -569,7 +1104,8 @@ class _ConfRoomBookingPageState extends State<ConfRoomBookingPage> {
                               const Positioned.fill(child: _MapDotGrid()),
                               ...elList.where((e) => e.type == 'seat').map(_seatWidget),
                               ...elList.where((e) => e.type == 'door').map(_doorWidget),
-                              ...elList.where((e) => e.type == 'zone' || e.type == 'room').map(_zoneWidget),
+                              ...filteredElements.where((e) => e.type == 'zone').map(_zoneWidget),
+                              ...filteredElements.where((e) => e.type == 'room').map(_zoneWidget),
                               ...elList.where((e) => e.type == 'label').map(_labelWidget),
                             ],
                           ),
@@ -610,6 +1146,27 @@ class _ConfRoomBookingPageState extends State<ConfRoomBookingPage> {
                       ),
                       if (_loadingRooms || _loadingBookings)
                         const Positioned(top: 0, left: 0, right: 0, child: LinearProgressIndicator()),
+                      // Legend Panel
+                      _buildLegendPanel(),
+                      // Refresh indicator
+                      Positioned(
+                        right: 12,
+                        bottom: 12,
+                        child: GlassCard(
+                          padding: const EdgeInsets.all(8),
+                          borderRadius: 20,
+                          child: InkWell(
+                            onTap: () {
+                              _fetchRoomData();
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(content: Text('Refreshing...'), duration: Duration(seconds: 1)),
+                              );
+                            },
+                            borderRadius: BorderRadius.circular(20),
+                            child: const Icon(Icons.refresh, size: 20, color: AppStitchTheme.primary),
+                          ),
+                        ),
+                      ),
                     ],
                   ),
                 ),
@@ -676,7 +1233,7 @@ class _DashedBorderPainter extends CustomPainter {
 
     final path = Path();
     path.addRRect(RRect.fromRectAndRadius(
-        Rect.fromLTWH(0, 0, size.width, size.height), const Radius.circular(4)));
+        Rect.fromLTWH(0, 0, size.width, size.height), Radius.zero));
 
     final metrics = path.computeMetrics();
     for (final metric in metrics) {

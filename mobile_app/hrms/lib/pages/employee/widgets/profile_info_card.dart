@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../models/profile_model.dart';
+import '../../../theme/app_stitch_theme.dart';
+import '../../../widgets/glass_card.dart';
 
 class ProfileInfoCard extends StatelessWidget {
   final EmployeeProfile profile;
@@ -9,32 +11,45 @@ class ProfileInfoCard extends StatelessWidget {
     required this.profile,
   });
 
-  Widget _buildInfoRow(String label, String value) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 20),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+  Widget _buildDetailItem(BuildContext context, String label, String value, IconData icon) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16),
+      child: Row(
         children: [
-          Text(
-            label,
-            style: const TextStyle(
-              fontSize: 12,
-              color: Color(0xFF6B7280),
-              fontWeight: FontWeight.w500,
-              height: 1.2,
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: AppStitchTheme.primary.withValues(alpha: 0.08),
+              borderRadius: BorderRadius.circular(10),
             ),
+            child: Icon(icon, size: 18, color: AppStitchTheme.primary),
           ),
-          const SizedBox(height: 6),
-          Text(
-            value.isEmpty ? '-' : value,
-            style: const TextStyle(
-              fontSize: 14,
-              color: Color(0xFF111827),
-              fontWeight: FontWeight.w500,
-              height: 1.4,
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  label.toUpperCase(),
+                  style: TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.w800,
+                    color: AppStitchTheme.lightOnSurfaceMuted,
+                    letterSpacing: 0.5,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  value.isEmpty || value == '-' ? 'Not Specified' : value,
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        fontWeight: FontWeight.w700,
+                        color: AppStitchTheme.lightOnSurface,
+                      ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
             ),
-            maxLines: 3,
-            overflow: TextOverflow.ellipsis,
           ),
         ],
       ),
@@ -43,85 +58,33 @@ class ProfileInfoCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+    return GlassCard(
       padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.grey.shade200),
-      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'Personal Information',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: Color(0xFF111827),
-            ),
-          ),
-          const SizedBox(height: 20),
           Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _buildInfoRow(
-                      'Employee ID',
-                      profile.employeeId ?? '-',
+              Icon(Icons.person_outline_rounded, size: 20, color: AppStitchTheme.primary),
+              const SizedBox(width: 8),
+              Text(
+                'Personal Information',
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w900,
+                      color: AppStitchTheme.lightOnSurface,
                     ),
-                    _buildInfoRow(
-                      'First Name',
-                      profile.firstName ?? '-',
-                    ),
-                    _buildInfoRow(
-                      'Middle Name',
-                      profile.middleName ?? '-',
-                    ),
-                    _buildInfoRow(
-                      'Last Name',
-                      profile.lastName ?? '-',
-                    ),
-                    _buildInfoRow(
-                      'Gender',
-                      profile.gender ?? '-',
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 20),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _buildInfoRow(
-                      'Email',
-                      profile.email ?? '-',
-                    ),
-                    _buildInfoRow(
-                      'Date of Birth',
-                      profile.dateOfBirth ?? '-',
-                    ),
-                    _buildInfoRow(
-                      'Phone',
-                      profile.mobile ?? '-',
-                    ),
-                    _buildInfoRow(
-                      'Department',
-                      profile.displayDepartment,
-                    ),
-                    _buildInfoRow(
-                      'Designation',
-                      profile.displayDesignation,
-                    ),
-                  ],
-                ),
               ),
             ],
           ),
+          const SizedBox(height: 24),
+          _buildDetailItem(context, 'Employee ID', profile.employeeId ?? '-', Icons.badge_outlined),
+          _buildDetailItem(context, 'Full Name', profile.fullName, Icons.badge_outlined),
+          _buildDetailItem(context, 'Email Address', profile.email ?? '-', Icons.email_outlined),
+          _buildDetailItem(context, 'Phone Number', profile.mobile ?? '-', Icons.phone_android_rounded),
+          _buildDetailItem(context, 'Gender', profile.gender ?? '-', Icons.person_search_rounded),
+          _buildDetailItem(context, 'Date of Birth', profile.dateOfBirth ?? '-', Icons.cake_outlined),
+          _buildDetailItem(context, 'Department', profile.displayDepartment, Icons.business_outlined),
+          _buildDetailItem(context, 'Designation', profile.displayDesignation, Icons.work_outline_rounded),
         ],
       ),
     );

@@ -345,7 +345,7 @@ class _LeaveApplicationPageState extends State<LeaveApplicationPage> {
             crossAxisCount: 2,
             crossAxisSpacing: 12,
             mainAxisSpacing: 12,
-            childAspectRatio: 1.15,
+            childAspectRatio: 1.0,
           ),
           itemCount: _leaveTypes.length,
           itemBuilder: (context, index) {
@@ -368,7 +368,10 @@ class _LeaveApplicationPageState extends State<LeaveApplicationPage> {
             style: Theme.of(context).textTheme.titleSmall?.copyWith(
                   fontWeight: FontWeight.w900,
                   color: AppStitchTheme.lightOnSurface,
+                  fontSize: 13,
                 ),
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
           ),
           const SizedBox(height: 6),
           _buildLeaveInfoRow('Total', leaveType.count.toString()),
@@ -402,7 +405,7 @@ class _LeaveApplicationPageState extends State<LeaveApplicationPage> {
 
   Widget _buildLeaveInfoRow(String label, String value) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 3),
+      padding: const EdgeInsets.only(bottom: 1.5),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [

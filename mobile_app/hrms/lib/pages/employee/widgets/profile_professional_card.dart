@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../models/profile_model.dart';
+import '../../../theme/app_stitch_theme.dart';
+import '../../../widgets/glass_card.dart';
 
 class ProfileProfessionalCard extends StatelessWidget {
   final EmployeeProfile profile;
@@ -9,32 +11,45 @@ class ProfileProfessionalCard extends StatelessWidget {
     required this.profile,
   });
 
-  Widget _buildInfoRow(String label, String value) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 20),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+  Widget _buildDetailItem(BuildContext context, String label, String value, IconData icon) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16),
+      child: Row(
         children: [
-          Text(
-            label,
-            style: const TextStyle(
-              fontSize: 12,
-              color: Color(0xFF6B7280),
-              fontWeight: FontWeight.w500,
-              height: 1.2,
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: AppStitchTheme.primary.withValues(alpha: 0.08),
+              borderRadius: BorderRadius.circular(10),
             ),
+            child: Icon(icon, size: 18, color: AppStitchTheme.primary),
           ),
-          const SizedBox(height: 6),
-          Text(
-            value.isEmpty ? '-' : value,
-            style: const TextStyle(
-              fontSize: 14,
-              color: Color(0xFF111827),
-              fontWeight: FontWeight.w500,
-              height: 1.4,
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  label.toUpperCase(),
+                  style: TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.w800,
+                    color: AppStitchTheme.lightOnSurfaceMuted,
+                    letterSpacing: 0.5,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  value.isEmpty || value == '-' ? 'Not Available' : value,
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        fontWeight: FontWeight.w700,
+                        color: AppStitchTheme.lightOnSurface,
+                      ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
             ),
-            maxLines: 3,
-            overflow: TextOverflow.ellipsis,
           ),
         ],
       ),
@@ -43,93 +58,37 @@ class ProfileProfessionalCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+    return GlassCard(
       padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.grey.shade200),
-      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'Professional Details',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: Color(0xFF111827),
-            ),
-          ),
-          const SizedBox(height: 20),
           Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _buildInfoRow(
-                      'Date of Joining',
-                      profile.dateOfJoining ?? '-',
+              Icon(Icons.business_center_outlined, size: 20, color: AppStitchTheme.primary),
+              const SizedBox(width: 8),
+              Text(
+                'Professional Details',
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w900,
+                      color: AppStitchTheme.lightOnSurface,
                     ),
-                    _buildInfoRow(
-                      'CTC',
-                      profile.ctc ?? '-',
-                    ),
-                    _buildInfoRow(
-                      'Gross Salary',
-                      profile.grossSalary ?? '-',
-                    ),
-                    _buildInfoRow(
-                      'EPF Status',
-                      profile.epfStatus ?? '-',
-                    ),
-                    _buildInfoRow(
-                      'UAN',
-                      profile.uan ?? '-',
-                    ),
-                    _buildInfoRow(
-                      'Source of Employment',
-                      profile.sourceOfEmployment ?? '-',
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 20),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _buildInfoRow(
-                      'Payment Method',
-                      profile.paymentMethod ?? '-',
-                    ),
-                    _buildInfoRow(
-                      'Account No',
-                      profile.accountNo ?? '-',
-                    ),
-                    _buildInfoRow(
-                      'IFSC Code',
-                      profile.ifscCode ?? '-',
-                    ),
-                    _buildInfoRow(
-                      'Bank Name',
-                      profile.bankName ?? '-',
-                    ),
-                    _buildInfoRow(
-                      'ESIC Status',
-                      profile.esicStatus ?? '-',
-                    ),
-                    _buildInfoRow(
-                      'ESIC No',
-                      profile.esicNo ?? '-',
-                    ),
-                  ],
-                ),
               ),
             ],
           ),
+          const SizedBox(height: 24),
+          _buildDetailItem(context, 'Date of Joining', profile.dateOfJoining ?? '-', Icons.calendar_month_outlined),
+          _buildDetailItem(context, 'CTC', profile.ctc ?? '-', Icons.payments_outlined),
+          _buildDetailItem(context, 'Gross Salary', profile.grossSalary ?? '-', Icons.account_balance_wallet_outlined),
+          _buildDetailItem(context, 'EPF Status', profile.epfStatus ?? '-', Icons.verified_user_outlined),
+          _buildDetailItem(context, 'UAN', profile.uan ?? '-', Icons.pin_outlined),
+          _buildDetailItem(context, 'Source of Employment', profile.sourceOfEmployment ?? '-', Icons.hub_outlined),
+          _buildDetailItem(context, 'Payment Method', profile.paymentMethod ?? '-', Icons.credit_score_outlined),
+          _buildDetailItem(context, 'Account Number', profile.accountNo ?? '-', Icons.account_balance_outlined),
+          _buildDetailItem(context, 'IFSC Code', profile.ifscCode ?? '-', Icons.code_rounded),
+          _buildDetailItem(context, 'Bank Name', profile.bankName ?? '-', Icons.account_balance_rounded),
+          _buildDetailItem(context, 'ESIC Status', profile.esicStatus ?? '-', Icons.health_and_safety_outlined),
+          _buildDetailItem(context, 'ESIC Number', profile.esicNo ?? '-', Icons.numbers_rounded),
         ],
       ),
     );

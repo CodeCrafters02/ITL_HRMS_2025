@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../models/profile_model.dart';
+import '../../../theme/app_stitch_theme.dart';
+import '../../../widgets/glass_card.dart';
 
 class ProfileHierarchyCard extends StatelessWidget {
   final EmployeeHierarchy hierarchy;
@@ -10,6 +12,7 @@ class ProfileHierarchyCard extends StatelessWidget {
   });
 
   Widget _buildHierarchyItem({
+    required BuildContext context,
     required String label,
     required String name,
     required String level,
@@ -18,120 +21,100 @@ class ProfileHierarchyCard extends StatelessWidget {
     required bool isLast,
     List<HierarchyEmployee>? reportees,
   }) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        // Timeline indicator
-        Column(
-          children: [
-            Container(
-              width: 16,
-              height: 16,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: color,
-                border: Border.all(color: Colors.white, width: 4),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.1),
-                    blurRadius: 4,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
-              ),
-            ),
-            if (!isLast)
-              Container(
-                width: 2,
-                height: 60,
-                color: Colors.grey.shade300,
-                margin: const EdgeInsets.symmetric(vertical: 4),
-              ),
-          ],
-        ),
-        const SizedBox(width: 12),
-        // Content
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+    return IntrinsicHeight(
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Timeline indicator
+          Column(
             children: [
-              Text(
-                label,
-                style: const TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.bold,
-                  color: Color(0xFF6B7280),
-                ),
-              ),
-              const SizedBox(height: 4),
-              RichText(
-                text: TextSpan(
-                  style: const TextStyle(
-                    fontSize: 14,
-                    color: Color(0xFF111827),
-                    fontWeight: FontWeight.w500,
-                  ),
-                  children: [
-                    TextSpan(text: name),
-                    TextSpan(
-                      text: ' ($level)',
-                      style: const TextStyle(
-                        color: Color(0xFF6B7280),
-                        fontWeight: FontWeight.normal,
-                      ),
+              Container(
+                width: 14,
+                height: 14,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: color,
+                  border: Border.all(color: Colors.white.withValues(alpha: 0.4), width: 2),
+                  boxShadow: [
+                    BoxShadow(
+                      color: color.withValues(alpha: 0.3),
+                      blurRadius: 6,
                     ),
                   ],
                 ),
               ),
-              const SizedBox(height: 2),
-              Text(
-                designation,
-                style: const TextStyle(
-                  fontSize: 12,
-                  color: Color(0xFF6B7280),
-                ),
-              ),
-              // Reportees
-              if (reportees != null && reportees.isNotEmpty) ...[
-                const SizedBox(height: 8),
-                const Text(
-                  'Reportees:',
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFF6B7280),
+              if (!isLast)
+                Expanded(
+                  child: Container(
+                    width: 1.5,
+                    color: AppStitchTheme.lightOutline.withValues(alpha: 0.3),
+                    margin: const EdgeInsets.symmetric(vertical: 4),
                   ),
                 ),
-                const SizedBox(height: 4),
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  children: reportees.map((rep) {
-                    return Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 4,
-                      ),
-                      decoration: BoxDecoration(
-                        color: Colors.grey.shade100,
-                        borderRadius: BorderRadius.circular(6),
-                        border: Border.all(color: Colors.grey.shade300),
-                      ),
-                      child: Text(
-                        '${rep.name} (${rep.designation})',
-                        style: const TextStyle(
-                          fontSize: 11,
-                          color: Color(0xFF111827),
-                        ),
-                      ),
-                    );
-                  }).toList(),
-                ),
-              ],
             ],
           ),
-        ),
-      ],
+          const SizedBox(width: 16),
+          // Content
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  label.toUpperCase(),
+                  style: TextStyle(
+                    fontSize: 9,
+                    fontWeight: FontWeight.w800,
+                    color: AppStitchTheme.lightOnSurfaceMuted,
+                    letterSpacing: 0.5,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  name,
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        fontWeight: FontWeight.w800,
+                        color: AppStitchTheme.lightOnSurface,
+                      ),
+                ),
+                Text(
+                  '$designation • $level',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        fontWeight: FontWeight.w600,
+                        color: AppStitchTheme.lightOnSurfaceMuted,
+                      ),
+                ),
+                // Reportees
+                if (reportees != null && reportees.isNotEmpty) ...[
+                  const SizedBox(height: 12),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: reportees.map((rep) {
+                      return Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: AppStitchTheme.primary.withValues(alpha: 0.05),
+                          borderRadius: BorderRadius.circular(6),
+                          border: Border.all(color: AppStitchTheme.primary.withValues(alpha: 0.1)),
+                        ),
+                        child: Text(
+                          rep.name,
+                          style: TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.w700,
+                            color: AppStitchTheme.primary.withValues(alpha: 0.8),
+                          ),
+                        ),
+                      );
+                    }).toList(),
+                  ),
+                ],
+                const SizedBox(height: 24),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -139,16 +122,18 @@ class ProfileHierarchyCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final timelineItems = <Map<String, dynamic>>[];
 
-    // Employee (You)
-    timelineItems.add({
-      'label': 'You',
-      'name': hierarchy.employee.name,
-      'level': hierarchy.employee.level,
-      'designation': hierarchy.employee.designation,
-      'color': Colors.blue,
-      'isLast': false,
-      'reportees': null,
-    });
+    // Higher Authority (Top)
+    if (hierarchy.higherAuthority != null) {
+      timelineItems.add({
+        'label': 'Higher Authority',
+        'name': hierarchy.higherAuthority!.employeeName ?? hierarchy.higherAuthority!.level,
+        'level': hierarchy.higherAuthority!.level,
+        'designation': hierarchy.higherAuthority!.designation,
+        'color': const Color(0xFFF59E0B), // Orange
+        'isLast': false,
+        'reportees': null,
+      });
+    }
 
     // Reporting Manager
     if (hierarchy.reportingManager != null) {
@@ -157,53 +142,46 @@ class ProfileHierarchyCard extends StatelessWidget {
         'name': hierarchy.reportingManager!.name,
         'level': hierarchy.reportingManager!.level,
         'designation': hierarchy.reportingManager!.designation,
-        'color': Colors.green,
+        'color': const Color(0xFF10B981), // Green
         'isLast': false,
         'reportees': hierarchy.reportingManager!.reportees,
       });
     }
 
-    // Higher Authority
-    if (hierarchy.higherAuthority != null) {
-      timelineItems.add({
-        'label': 'Higher Authority',
-        'name': hierarchy.higherAuthority!.employeeName ??
-            hierarchy.higherAuthority!.level,
-        'level': hierarchy.higherAuthority!.level,
-        'designation': hierarchy.higherAuthority!.designation,
-        'color': Colors.orange,
-        'isLast': true,
-        'reportees': null,
-      });
-    } else {
-      // Mark last item as last
-      if (timelineItems.isNotEmpty) {
-        timelineItems.last['isLast'] = true;
-      }
-    }
+    // Employee (You)
+    timelineItems.add({
+      'label': 'You',
+      'name': hierarchy.employee.name,
+      'level': hierarchy.employee.level,
+      'designation': hierarchy.employee.designation,
+      'color': AppStitchTheme.primary,
+      'isLast': true,
+      'reportees': null,
+    });
 
-    return Container(
+    return GlassCard(
       padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.grey.shade200),
-      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'Hierarchy',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: Color(0xFF111827),
-            ),
+          Row(
+            children: [
+              Icon(Icons.account_tree_outlined, size: 20, color: AppStitchTheme.primary),
+              const SizedBox(width: 8),
+              Text(
+                'Reporting Hierarchy',
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w900,
+                      color: AppStitchTheme.lightOnSurface,
+                    ),
+              ),
+            ],
           ),
-          const SizedBox(height: 20),
+          const SizedBox(height: 24),
           // Timeline
           ...timelineItems.map((item) {
             return _buildHierarchyItem(
+              context: context,
               label: item['label'] as String,
               name: item['name'] as String,
               level: item['level'] as String,
@@ -216,15 +194,14 @@ class ProfileHierarchyCard extends StatelessWidget {
 
           // Own Reportees
           if (hierarchy.reportees != null && hierarchy.reportees!.isNotEmpty) ...[
-            const SizedBox(height: 24),
-            const Divider(),
-            const SizedBox(height: 16),
-            const Text(
-              'Your Reportees:',
+            const SizedBox(height: 8),
+            Text(
+              'YOUR REPORTEES',
               style: TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.bold,
-                color: Color(0xFF111827),
+                fontSize: 10,
+                fontWeight: FontWeight.w800,
+                color: AppStitchTheme.lightOnSurfaceMuted,
+                letterSpacing: 0.5,
               ),
             ),
             const SizedBox(height: 12),
@@ -233,21 +210,32 @@ class ProfileHierarchyCard extends StatelessWidget {
               runSpacing: 8,
               children: hierarchy.reportees!.map((rep) {
                 return Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 6,
-                  ),
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                   decoration: BoxDecoration(
-                    color: Colors.grey.shade100,
-                    borderRadius: BorderRadius.circular(6),
-                    border: Border.all(color: Colors.grey.shade300),
+                    color: AppStitchTheme.primary.withValues(alpha: 0.08),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: AppStitchTheme.primary.withValues(alpha: 0.15)),
                   ),
-                  child: Text(
-                    '${rep.name} (${rep.designation})',
-                    style: const TextStyle(
-                      fontSize: 12,
-                      color: Color(0xFF111827),
-                    ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        rep.name,
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w800,
+                          color: AppStitchTheme.primary,
+                        ),
+                      ),
+                      Text(
+                        rep.designation,
+                        style: TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.w600,
+                          color: AppStitchTheme.primary.withValues(alpha: 0.6),
+                        ),
+                      ),
+                    ],
                   ),
                 );
               }).toList(),

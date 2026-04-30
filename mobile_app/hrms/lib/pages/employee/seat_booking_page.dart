@@ -205,8 +205,8 @@ class _SeatBookingPageState extends State<SeatBookingPage> {
   Color _seatColor(LayoutElement el) {
     final booking = _bookingForSeat(el);
     if (booking == null) return const Color(0xFF10B981); // Available (Emerald 500)
-    if (booking.bookingType == 'permanent') return const Color(0xFFD946EF); // Permanent (Fuchsia 500)
-    return const Color(0xFFF59E0B); // Booked (Amber 500)
+    if (booking.bookingType == 'permanent') return const Color(0xFFF472B6); // Permanent (Pink 400 - SOP)
+    return const Color(0xFFFB923C); // Booked (Orange 400 - SOP)
   }
 
   String _initialsFromName(String name) {
@@ -1019,8 +1019,8 @@ class _SeatBookingPageState extends State<SeatBookingPage> {
                       mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                       children: [
                         _legendDot(const Color(0xFF10B981), 'Available'),
-                        _legendDot(const Color(0xFFF59E0B), 'Booked'),
-                        _legendDot(const Color(0xFFD946EF), 'Permanent'),
+                        _legendDot(const Color(0xFFFB923C), 'Booked'),
+                        _legendDot(const Color(0xFFF472B6), 'Permanent'),
                       ],
                     ),
                   ),
@@ -1450,33 +1450,38 @@ class _SeatBookingPageState extends State<SeatBookingPage> {
       top: el.y,
       child: Transform.rotate(
         angle: el.rotation * math.pi / 180,
-        child: Container(
-          width: el.width,
-          height: el.height,
-          decoration: BoxDecoration(
-            color: c.withValues(alpha: el.type == 'room' ? 0.14 : 0.10),
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(
-              color: c.withValues(alpha: el.type == 'room' ? 0.6 : 0.4),
-              width: el.type == 'room' ? 2 : 1,
-            ),
-          ),
-          child: Align(
-            alignment: Alignment.topLeft,
-            child: Padding(
-              padding: const EdgeInsets.all(8),
-              child: Text(
-                el.name,
-                style: TextStyle(
-                  color: c,
-                  fontSize: el.type == 'room' ? 13 : 11,
-                  fontWeight: FontWeight.w900,
-                  letterSpacing: 0.5,
+        alignment: Alignment.topLeft,
+        child: el.type == 'zone' 
+          ? CustomPaint(
+              painter: _DashedBorderPainter(
+                color: c.withValues(alpha: 0.6),
+                strokeWidth: 1.2,
+                dashWidth: 6,
+                dashSpace: 4,
+              ),
+              child: Container(
+                width: el.width,
+                height: el.height,
+                decoration: BoxDecoration(
+                  color: c.withValues(alpha: 0.06),
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: _zoneLabel(el, c),
+              ),
+            )
+          : Container(
+              width: el.width,
+              height: el.height,
+              decoration: BoxDecoration(
+                color: c.withValues(alpha: 0.14),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(
+                  color: c.withValues(alpha: 0.6),
+                  width: 2,
                 ),
               ),
+              child: _zoneLabel(el, c),
             ),
-          ),
-        ),
       ),
     );
   }
@@ -1488,6 +1493,7 @@ class _SeatBookingPageState extends State<SeatBookingPage> {
       top: el.y,
       child: Transform.rotate(
         angle: el.rotation * math.pi / 180,
+        alignment: Alignment.topLeft,
         child: SizedBox(
           width: el.width,
           child: Text(
@@ -1517,6 +1523,7 @@ class _SeatBookingPageState extends State<SeatBookingPage> {
       top: el.y,
       child: Transform.rotate(
         angle: el.rotation * math.pi / 180,
+        alignment: Alignment.topLeft,
         child: Material(
           color: Colors.transparent,
           child: InkWell(
@@ -1539,25 +1546,11 @@ class _SeatBookingPageState extends State<SeatBookingPage> {
                   height: el.height,
                   decoration: BoxDecoration(
                     color: color,
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(6),
                     border: Border.all(
                       color: isSelected ? AppStitchTheme.primary : Colors.white.withValues(alpha: 0.9),
-                      width: isSelected ? 2.5 : 1,
+                      width: isSelected ? 2.5 : 0.8,
                     ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: color.withValues(alpha: 0.25),
-                        blurRadius: 8,
-                        offset: const Offset(0, 3),
-                      ),
-                      if (isSelected)
-                        BoxShadow(
-                          color: AppStitchTheme.primary.withValues(alpha: 0.45),
-                          blurRadius: 18,
-                          spreadRadius: 1,
-                          offset: const Offset(0, 4),
-                        ),
-                    ],
                   ),
                   child: Stack(
                     children: [
@@ -1614,8 +1607,67 @@ class _SeatBookingPageState extends State<SeatBookingPage> {
     return Color(0xFF000000 | value);
   }
 
+  Widget _zoneLabel(LayoutElement el, Color c) {
+    return Align(
+      alignment: Alignment.topLeft,
+      child: Padding(
+        padding: const EdgeInsets.all(8),
+        child: Text(
+          el.name,
+          style: TextStyle(
+            color: c,
+            fontSize: el.type == 'room' ? 13 : 11,
+            fontWeight: FontWeight.w900,
+            letterSpacing: 0.5,
+          ),
+        ),
+      ),
+    );
+  }
+
   // Subtle dotted grid behind the map to add depth cues.
   // (Paint-only; does not affect backend behavior or hit-testing.)
+}
+
+class _DashedBorderPainter extends CustomPainter {
+  final Color color;
+  final double strokeWidth;
+  final double dashWidth;
+  final double dashSpace;
+
+  _DashedBorderPainter({
+    required this.color,
+    this.strokeWidth = 1,
+    this.dashWidth = 5,
+    this.dashSpace = 3,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = color
+      ..strokeWidth = strokeWidth
+      ..style = PaintingStyle.stroke;
+
+    final path = Path();
+    path.addRRect(RRect.fromRectAndRadius(
+        Rect.fromLTWH(0, 0, size.width, size.height), Radius.zero));
+
+    final metrics = path.computeMetrics();
+    for (final metric in metrics) {
+      double distance = 0.0;
+      while (distance < metric.length) {
+        canvas.drawPath(
+          metric.extractPath(distance, distance + dashWidth),
+          paint,
+        );
+        distance += dashWidth + dashSpace;
+      }
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
 
 class _MapDotGrid extends StatelessWidget {

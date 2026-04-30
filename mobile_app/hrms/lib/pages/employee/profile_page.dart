@@ -92,221 +92,146 @@ class _ProfilePageState extends State<ProfilePage>
 
   @override
   Widget build(BuildContext context) {
+    if (_isLoading) {
+      return Scaffold(
+        backgroundColor: Colors.transparent,
+        body: StitchBackground(
+          child: const Center(child: CircularProgressIndicator()),
+        ),
+      );
+    }
+
+    if (_error != null) {
+      return Scaffold(
+        backgroundColor: Colors.transparent,
+        body: StitchBackground(
+          child: Center(
+            child: GlassCard(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.error_outline_rounded, size: 48, color: Colors.red.shade400),
+                  const SizedBox(height: 16),
+                  Text(
+                    _error!,
+                    textAlign: TextAlign.center,
+                    style: TextStyle(color: AppStitchTheme.lightOnSurfaceMuted),
+                  ),
+                  const SizedBox(height: 24),
+                  ElevatedButton(
+                    onPressed: _loadProfileData,
+                    child: const Text('Retry'),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+
     return Scaffold(
       backgroundColor: Colors.transparent,
       body: StitchBackground(
         child: SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
-            child: Column(
-              children: [
-                GlassCard(
-                  padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
-                  child: Row(
-                    children: [
-                      IconButton(
-                        onPressed: () => Navigator.pop(context),
-                        icon: const Icon(Icons.arrow_back_ios_new_rounded),
+          child: NestedScrollView(
+            headerSliverBuilder: (context, innerBoxIsScrolled) {
+              return [
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+                    child: GlassCard(
+                      padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
+                      child: Row(
+                        children: [
+                          IconButton(
+                            onPressed: () => Navigator.pop(context),
+                            icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 20),
+                          ),
+                          const SizedBox(width: 4),
+                          Expanded(
+                            child: Text(
+                              'My Profile',
+                              style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                                    fontWeight: FontWeight.w900,
+                                    color: AppStitchTheme.lightOnSurface,
+                                  ),
+                            ),
+                          ),
+                          IconButton(
+                            onPressed: () => Navigator.pushNamed(context, '/change-password'),
+                            icon: const Icon(Icons.lock_reset_rounded, size: 22),
+                            tooltip: 'Security',
+                          ),
+                        ],
                       ),
-                      const SizedBox(width: 6),
-                      Expanded(
-                        child: Text(
-                          'Profile',
-                          style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                                fontWeight: FontWeight.w900,
-                                color: AppStitchTheme.lightOnSurface,
-                              ),
-                        ),
-                      ),
-                      IconButton(
-                        tooltip: 'Change Password',
-                        onPressed: () =>
-                            Navigator.pushNamed(context, '/change-password'),
-                        icon: const Icon(Icons.lock_outline_rounded),
-                      ),
-                    ],
+                    ),
                   ),
                 ),
-                const SizedBox(height: 12),
-                Expanded(
-                  child: _isLoading
-                      ? const Center(child: CircularProgressIndicator())
-                      : _error != null
-                          ? Center(
-                              child: GlassCard(
-                                padding: const EdgeInsets.all(18),
-                                child: Column(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Container(
-                                      width: 56,
-                                      height: 56,
-                                      decoration: BoxDecoration(
-                                        shape: BoxShape.circle,
-                                        color: const Color(0xFFEF4444)
-                                            .withValues(alpha: 0.10),
-                                        border: Border.all(
-                                          color: const Color(0xFFEF4444)
-                                              .withValues(alpha: 0.20),
-                                        ),
-                                      ),
-                                      child: const Icon(
-                                        Icons.error_outline_rounded,
-                                        color: Color(0xFFEF4444),
-                                      ),
-                                    ),
-                                    const SizedBox(height: 10),
-                                    Text(
-                                      _error!,
-                                      style: Theme.of(context)
-                                          .textTheme
-                                          .bodyMedium
-                                          ?.copyWith(
-                                            color: AppStitchTheme
-                                                .lightOnSurfaceMuted,
-                                            fontWeight: FontWeight.w600,
-                                          ),
-                                      textAlign: TextAlign.center,
-                                    ),
-                                    const SizedBox(height: 12),
-                                    SizedBox(
-                                      width: double.infinity,
-                                      child: ElevatedButton(
-                                        onPressed: _loadProfileData,
-                                        child: const Text('Retry'),
-                                      ),
-                                    )
-                                  ],
-                                ),
-                              ),
-                            )
-                          : _profile == null
-                              ? Center(
-                                  child: GlassCard(
-                                    padding: const EdgeInsets.all(18),
-                                    child: Text(
-                                      'No profile data available',
-                                      style: Theme.of(context)
-                                          .textTheme
-                                          .bodyMedium
-                                          ?.copyWith(
-                                            color: AppStitchTheme
-                                                .lightOnSurfaceMuted,
-                                            fontWeight: FontWeight.w600,
-                                          ),
-                                    ),
-                                  ),
-                                )
-                              : RefreshIndicator(
-                                  onRefresh: _loadProfileData,
-                                  color: AppStitchTheme.primary,
-                                  child: ListView(
-                                    physics:
-                                        const AlwaysScrollableScrollPhysics(),
-                                    children: [
-                                      ProfileMetaCard(
-                                        profile: _profile!,
-                                        onPhotoUpdated: _onPhotoUpdated,
-                                      ),
-                                      const SizedBox(height: 12),
-                                      GlassCard(
-                                        padding: const EdgeInsets.all(6),
-                                        child: TabBar(
-                                          controller: _tabController,
-                                          labelColor: Colors.white,
-                                          unselectedLabelColor: AppStitchTheme
-                                              .lightOnSurfaceMuted,
-                                          indicator: BoxDecoration(
-                                            color: AppStitchTheme.primary,
-                                            borderRadius:
-                                                BorderRadius.circular(14),
-                                          ),
-                                          indicatorSize:
-                                              TabBarIndicatorSize.tab,
-                                          dividerColor: Colors.transparent,
-                                          tabs: const [
-                                            Tab(text: 'Personal'),
-                                            Tab(text: 'Work'),
-                                            Tab(text: 'Hierarchy'),
-                                          ],
-                                        ),
-                                      ),
-                                      const SizedBox(height: 12),
-                                      SizedBox(
-                                        height:
-                                            MediaQuery.of(context).size.height *
-                                                0.75,
-                                        child: TabBarView(
-                                          controller: _tabController,
-                                          children: [
-                                            Padding(
-                                              padding:
-                                                  const EdgeInsets.symmetric(
-                                                      horizontal: 2),
-                                              child: ListView(
-                                                padding: EdgeInsets.zero,
-                                                children: [
-                                                  ProfileInfoCard(
-                                                      profile: _profile!),
-                                                  const SizedBox(height: 12),
-                                                  ProfileAddressCard(
-                                                      profile: _profile!),
-                                                ],
-                                              ),
-                                            ),
-                                            Padding(
-                                              padding:
-                                                  const EdgeInsets.symmetric(
-                                                      horizontal: 2),
-                                              child: ListView(
-                                                padding: EdgeInsets.zero,
-                                                children: [
-                                                  ProfileProfessionalCard(
-                                                      profile: _profile!),
-                                                ],
-                                              ),
-                                            ),
-                                            Padding(
-                                              padding:
-                                                  const EdgeInsets.symmetric(
-                                                      horizontal: 2),
-                                              child: ListView(
-                                                padding: EdgeInsets.zero,
-                                                children: [
-                                                  _hierarchy != null
-                                                      ? ProfileHierarchyCard(
-                                                          hierarchy:
-                                                              _hierarchy!,
-                                                        )
-                                                      : GlassCard(
-                                                          padding:
-                                                              const EdgeInsets
-                                                                  .all(16),
-                                                          child: Text(
-                                                            'No hierarchy data available',
-                                                            style: Theme.of(
-                                                                    context)
-                                                                .textTheme
-                                                                .bodyMedium
-                                                                ?.copyWith(
-                                                                  color: AppStitchTheme
-                                                                      .lightOnSurfaceMuted,
-                                                                  fontWeight:
-                                                                      FontWeight
-                                                                          .w600,
-                                                                ),
-                                                          ),
-                                                        ),
-                                                ],
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: ProfileMetaCard(
+                      profile: _profile!,
+                      onPhotoUpdated: _onPhotoUpdated,
+                    ),
+                  ),
                 ),
+                SliverPersistentHeader(
+                  pinned: true,
+                  delegate: _SliverAppBarDelegate(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      child: GlassCard(
+                        padding: const EdgeInsets.all(4),
+                        child: TabBar(
+                          controller: _tabController,
+                          labelColor: Colors.white,
+                          unselectedLabelColor: AppStitchTheme.lightOnSurfaceMuted,
+                          indicator: BoxDecoration(
+                            color: AppStitchTheme.primary,
+                            borderRadius: BorderRadius.circular(12),
+                            boxShadow: [
+                              BoxShadow(
+                                color: AppStitchTheme.primary.withValues(alpha: 0.2),
+                                blurRadius: 8,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
+                          ),
+                          indicatorSize: TabBarIndicatorSize.tab,
+                          dividerColor: Colors.transparent,
+                          labelStyle: const TextStyle(fontWeight: FontWeight.w800, fontSize: 13),
+                          unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
+                          tabs: const [
+                            Tab(text: 'Personal'),
+                            Tab(text: 'Work'),
+                            Tab(text: 'Hierarchy'),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ];
+            },
+            body: TabBarView(
+              controller: _tabController,
+              children: [
+                _buildTabContent([
+                  ProfileInfoCard(profile: _profile!),
+                  const SizedBox(height: 12),
+                  ProfileAddressCard(profile: _profile!),
+                ]),
+                _buildTabContent([
+                  ProfileProfessionalCard(profile: _profile!),
+                ]),
+                _buildTabContent([
+                  _hierarchy != null
+                      ? ProfileHierarchyCard(hierarchy: _hierarchy!)
+                      : const Center(child: Text('No hierarchy data')),
+                ]),
               ],
             ),
           ),
@@ -314,5 +239,38 @@ class _ProfilePageState extends State<ProfilePage>
       ),
     );
   }
+
+  Widget _buildTabContent(List<Widget> children) {
+    return RefreshIndicator(
+      onRefresh: _loadProfileData,
+      color: AppStitchTheme.primary,
+      child: ListView(
+        padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+        children: children,
+      ),
+    );
+  }
+}
+
+class _SliverAppBarDelegate extends SliverPersistentHeaderDelegate {
+  final Widget child;
+
+  _SliverAppBarDelegate({required this.child});
+
+  @override
+  double get minExtent => 72.0;
+  @override
+  double get maxExtent => 72.0;
+
+  @override
+  Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) {
+    return Container(
+      color: Colors.transparent,
+      child: child,
+    );
+  }
+
+  @override
+  bool shouldRebuild(_SliverAppBarDelegate oldDelegate) => false;
 }
 

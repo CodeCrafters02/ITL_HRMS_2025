@@ -6,6 +6,7 @@ import '../../models/reportee_model.dart';
 import '../../services/employee_service.dart';
 import '../../theme/app_stitch_theme.dart';
 import '../../widgets/glass_card.dart';
+import '../../widgets/stitch_background.dart';
 
 class AssignTaskPage extends StatefulWidget {
   const AssignTaskPage({super.key});
@@ -14,13 +15,46 @@ class AssignTaskPage extends StatefulWidget {
   State<AssignTaskPage> createState() => _AssignTaskPageState();
 }
 
-class _AssignTaskPageState extends State<AssignTaskPage> {
+class _AssignTaskPageState extends State<AssignTaskPage> with SingleTickerProviderStateMixin {
   bool _isLoadingTasks = true;
   bool _isSubmitting = false;
   bool _showCreateForm = false;
   List<Task> _tasks = [];
   List<Reportee> _reportees = [];
   String _searchQuery = '';
+  int? _expandedTaskId;
+  late AnimationController _animationController;
+  final List<String> _dateCategories = ['OVERDUE', 'TODAY', 'TOMORROW', 'THIS WEEK', 'UPCOMING', 'LATER'];
+
+  String _getDateCategory(String deadlineStr) {
+    if (deadlineStr.isEmpty) return 'LATER';
+    try {
+      final deadline = DateTime.parse(deadlineStr);
+      final now = DateTime.now();
+      final today = DateTime(now.year, now.month, now.day);
+      final tomorrow = today.add(const Duration(days: 1));
+      final nextWeek = today.add(const Duration(days: 7));
+      final taskDate = DateTime(deadline.year, deadline.month, deadline.day);
+
+      if (taskDate.isBefore(today)) return 'OVERDUE';
+      if (taskDate.isAtSameMomentAs(today)) return 'TODAY';
+      if (taskDate.isAtSameMomentAs(tomorrow)) return 'TOMORROW';
+      if (taskDate.isBefore(nextWeek)) return 'THIS WEEK';
+      return 'UPCOMING';
+    } catch (_) {
+      return 'LATER';
+    }
+  }
+
+  Color _getCategoryColor(String category) {
+    switch (category) {
+      case 'OVERDUE': return Colors.redAccent;
+      case 'TODAY': return AppStitchTheme.primary;
+      case 'TOMORROW': return Colors.orangeAccent;
+      case 'THIS WEEK': return Colors.tealAccent;
+      default: return AppStitchTheme.lightOnSurfaceMuted;
+    }
+  }
 
   // Form Controllers
   final _titleController = TextEditingController();
@@ -35,7 +69,31 @@ class _AssignTaskPageState extends State<AssignTaskPage> {
   @override
   void initState() {
     super.initState();
+    _animationController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 300),
+    );
     _loadInitialData();
+  }
+
+  @override
+  void dispose() {
+    _animationController.dispose();
+    _titleController.dispose();
+    _descController.dispose();
+    super.dispose();
+  }
+
+  void _toggleExpand(int taskId) {
+    setState(() {
+      if (_expandedTaskId == taskId) {
+        _expandedTaskId = null;
+        _animationController.reverse();
+      } else {
+        _expandedTaskId = taskId;
+        _animationController.forward();
+      }
+    });
   }
 
   Future<void> _loadInitialData() async {
@@ -98,35 +156,45 @@ class _AssignTaskPageState extends State<AssignTaskPage> {
 
     setState(() => _isSubmitting = true);
 
+    // Validate subtasks if any
+    if (_hasSubtasks) {
+      for (var i = 0; i < _subtasks.length; i++) {
+        if (_subtasks[i]['title'].toString().isEmpty) {
+          setState(() => _isSubmitting = false);
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Please enter a title for subtask ${i + 1}')),
+          );
+          return;
+        }
+        // If subtask has no assignees, default to parent's assignees
+        if ((_subtasks[i]['assignedEmployees'] as List).isEmpty) {
+          _subtasks[i]['assignedEmployees'] = _selectedEmployeeIds;
+        }
+        // If subtask has no owner, default to parent's owner
+        if (_subtasks[i]['taskOwner'] == null) {
+          _subtasks[i]['taskOwner'] = _ownerId;
+        }
+      }
+    }
+
     final response = await EmployeeService.createTask(
       title: _titleController.text,
       description: _descController.text,
       deadline: DateFormat('yyyy-MM-dd').format(_selectedDeadline!),
       priority: _priority,
       status: 'todo',
+      assignedEmployees: _selectedEmployeeIds,
+      taskOwner: _ownerId!,
       subtasks: _hasSubtasks ? _subtasks : null,
     );
 
     if (response.success && response.data != null) {
-      // Now assign the task
-      final assignResponse = await EmployeeService.assignTask(
-        taskId: response.data!.id,
-        owner: _ownerId.toString(),
-        employees: _selectedEmployeeIds,
+      HapticFeedback.heavyImpact();
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Task assigned successfully!')),
       );
-
-      if (assignResponse.success) {
-        HapticFeedback.heavyImpact();
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Task assigned successfully!')),
-        );
-        _toggleCreateForm();
-        _loadTasks();
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(assignResponse.message ?? 'Assignment failed')),
-        );
-      }
+      _toggleCreateForm();
+      _loadTasks();
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(response.message ?? 'Failed to create task')),
@@ -153,111 +221,61 @@ class _AssignTaskPageState extends State<AssignTaskPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.transparent,
-      body: Column(
-        children: [
-          _buildHeader(),
-          Expanded(
-            child: _showCreateForm ? _buildCreateForm() : _buildTaskList(),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildHeader() {
-    return Container(
-      padding: const EdgeInsets.fromLTRB(20, 60, 20, 24),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            const Color(0xFF220FB6),
-            const Color(0xFF4F6BE5),
-            const Color(0xFF0F52AF),
-          ],
-        ),
-        borderRadius: const BorderRadius.only(
-          bottomLeft: Radius.circular(32),
-          bottomRight: Radius.circular(32),
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: const Color(0xFF220FB6).withOpacity(0.3),
-            blurRadius: 20,
-            offset: const Offset(0, 10),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'Assign Task',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 28,
-                      fontWeight: FontWeight.bold,
-                      letterSpacing: -0.5,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    'Manage team execution',
-                    style: TextStyle(
-                      color: Colors.white.withOpacity(0.8),
-                      fontSize: 14,
-                    ),
-                  ),
+      body: StitchBackground(
+        child: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+            child: Column(
+              children: [
+                _FrostHeader(
+                  title: 'Assign Task',
+                  subtitle: _showCreateForm ? 'New team assignment' : 'Manage your team',
+                  trailing: _showCreateForm
+                      ? IconButton(
+                          onPressed: _toggleCreateForm,
+                          icon: const Icon(Icons.close_rounded, color: AppStitchTheme.lightOnSurface),
+                          style: IconButton.styleFrom(
+                            backgroundColor: AppStitchTheme.lightOutline.withValues(alpha: 0.1),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          ),
+                        )
+                      : _CountPill(count: _tasks.length),
+                ),
+                if (!_showCreateForm) ...[
+                  const SizedBox(height: 12),
+                  _buildSearchBar(),
                 ],
-              ),
-              ElevatedButton(
-                onPressed: _toggleCreateForm,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: _showCreateForm ? Colors.redAccent.withOpacity(0.2) : Colors.white,
-                  foregroundColor: _showCreateForm ? Colors.white : const Color(0xFF220FB6),
-                  elevation: 0,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                const SizedBox(height: 12),
+                Expanded(
+                  child: _showCreateForm ? _buildCreateForm() : _buildTaskList(),
                 ),
-                child: Text(
-                  _showCreateForm ? 'Cancel' : '+ New Task',
-                  style: const TextStyle(fontWeight: FontWeight.bold),
-                ),
-              ),
-            ],
+              ],
+            ),
           ),
-          if (!_showCreateForm) ...[
-            const SizedBox(height: 24),
-            _buildSearchBar(),
-          ],
-        ],
+        ),
       ),
+      floatingActionButton: _showCreateForm
+          ? null
+          : FloatingActionButton.extended(
+              onPressed: _toggleCreateForm,
+              backgroundColor: AppStitchTheme.primary,
+              icon: const Icon(Icons.add_task_rounded, color: Colors.white),
+              label: const Text('New Task', style: TextStyle(fontWeight: FontWeight.w800, color: Colors.white)),
+            ),
     );
   }
 
   Widget _buildSearchBar() {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.15),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white.withOpacity(0.2)),
-      ),
+    return GlassCard(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       child: TextField(
         onChanged: (v) => setState(() => _searchQuery = v),
-        style: const TextStyle(color: Colors.white),
+        style: const TextStyle(fontWeight: FontWeight.w600),
         decoration: InputDecoration(
-          hintText: 'Search tasks...',
-          hintStyle: TextStyle(color: Colors.white.withOpacity(0.6)),
-          prefixIcon: const Icon(Icons.search, color: Colors.white70),
+          hintText: 'Search team tasks...',
+          hintStyle: TextStyle(color: AppStitchTheme.lightOnSurfaceMuted.withValues(alpha: 0.6)),
+          prefixIcon: const Icon(Icons.search, color: AppStitchTheme.primary),
           border: InputBorder.none,
-          contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 15),
         ),
       ),
     );
@@ -267,190 +285,476 @@ class _AssignTaskPageState extends State<AssignTaskPage> {
     final filteredTasks = _tasks.where((t) => t.title.toLowerCase().contains(_searchQuery.toLowerCase())).toList();
 
     if (_isLoadingTasks) {
-      return const Center(child: CircularProgressIndicator(color: Color(0xFF220FB6)));
+      return const Center(child: CircularProgressIndicator(color: AppStitchTheme.primary));
     }
 
     if (filteredTasks.isEmpty) {
       return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.assignment_outlined, size: 64, color: Colors.grey.withOpacity(0.5)),
-            const SizedBox(height: 16),
-            Text(
-              _searchQuery.isEmpty ? 'No tasks assigned yet' : 'No tasks match your search',
-              style: TextStyle(color: Colors.grey.shade600, fontSize: 16),
-            ),
-          ],
+        child: GlassCard(
+          padding: const EdgeInsets.all(18),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 64,
+                height: 64,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: AppStitchTheme.primary.withValues(alpha: 0.10),
+                  border: Border.all(
+                    color: AppStitchTheme.primary.withValues(alpha: 0.22),
+                  ),
+                ),
+                child: const Icon(
+                  Icons.assignment_outlined,
+                  color: AppStitchTheme.primary,
+                  size: 28,
+                ),
+              ),
+              const SizedBox(height: 12),
+              Text(
+                _searchQuery.isEmpty ? 'No tasks assigned yet' : 'No tasks match your search',
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w900,
+                      color: AppStitchTheme.lightOnSurface,
+                    ),
+                textAlign: TextAlign.center,
+              ),
+            ],
+          ),
         ),
       );
     }
 
-    return ListView.separated(
-      padding: const EdgeInsets.all(20),
-      itemCount: filteredTasks.length,
-      separatorBuilder: (c, i) => const SizedBox(height: 16),
-      itemBuilder: (context, index) {
-        final task = filteredTasks[index];
-        return _buildTaskCard(task);
-      },
+    return CustomScrollView(
+      physics: const AlwaysScrollableScrollPhysics(),
+      slivers: [
+        const SliverToBoxAdapter(child: SizedBox(height: 8)),
+        ..._dateCategories.map((category) {
+          final groupTasks = filteredTasks.where((t) => _getDateCategory(t.deadline) == category).toList();
+          if (groupTasks.isEmpty) return const SliverToBoxAdapter(child: SizedBox.shrink());
+
+          return SliverMainAxisGroup(
+            slivers: [
+              SliverToBoxAdapter(
+                child: _buildDateGroupHeader(category, groupTasks.length),
+              ),
+              SliverPadding(
+                padding: const EdgeInsets.only(bottom: 16),
+                sliver: SliverList(
+                  delegate: SliverChildBuilderDelegate(
+                    (context, index) {
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 12),
+                        child: _buildTaskCard(groupTasks[index], index),
+                      );
+                    },
+                    childCount: groupTasks.length,
+                  ),
+                ),
+              ),
+            ],
+          );
+        }),
+      ],
     );
   }
 
-  Widget _buildTaskCard(Task task) {
-    return GlassCard(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+  Widget _buildDateGroupHeader(String title, int count) {
+    final color = _getCategoryColor(title);
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 14, left: 4),
+      child: Row(
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Expanded(
-                child: Text(
-                  task.title,
-                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
-                ),
-              ),
-              _buildPriorityBadge(task.priority),
-            ],
+          Container(
+            width: 8,
+            height: 8,
+            decoration: BoxDecoration(
+              color: color,
+              shape: BoxShape.circle,
+              boxShadow: [
+                BoxShadow(color: color.withValues(alpha: 0.4), blurRadius: 6, spreadRadius: 1),
+              ],
+            ),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(width: 12),
           Text(
-            task.description,
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-            style: TextStyle(color: Colors.grey.shade600, fontSize: 14),
+            title,
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w900,
+              letterSpacing: 1.2,
+              color: AppStitchTheme.lightOnSurface.withValues(alpha: 0.8),
+            ),
           ),
-          const SizedBox(height: 16),
-          Row(
-            children: [
-              _buildInfoChip(Icons.calendar_today_outlined, task.deadline, Colors.blue),
-              const SizedBox(width: 12),
-              _buildInfoChip(Icons.people_outline, '${task.assignments.length} Assignees', Colors.orange),
-            ],
+          const SizedBox(width: 10),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+            decoration: BoxDecoration(
+              color: AppStitchTheme.lightOutline.withValues(alpha: 0.08),
+              borderRadius: BorderRadius.circular(6),
+            ),
+            child: Text(
+              '$count',
+              style: TextStyle(
+                fontSize: 10,
+                fontWeight: FontWeight.w900,
+                color: AppStitchTheme.lightOnSurfaceMuted.withValues(alpha: 0.7),
+              ),
+            ),
           ),
-          const SizedBox(height: 16),
-          _buildProgressBar(task.progress),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Divider(
+              color: AppStitchTheme.lightOutline.withValues(alpha: 0.08),
+              thickness: 1,
+            ),
+          ),
         ],
       ),
     );
   }
 
-  Widget _buildPriorityBadge(String priority) {
-    Color color;
-    switch (priority.toLowerCase()) {
-      case 'high': color = Colors.red; break;
-      case 'medium': color = Colors.orange; break;
-      default: color = Colors.green;
-    }
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: color.withOpacity(0.3)),
+  Widget _buildTaskCard(Task task, int index) {
+    final isExpanded = _expandedTaskId == task.id;
+
+    return TweenAnimationBuilder<double>(
+      tween: Tween(begin: 0.0, end: 1.0),
+      duration: Duration(milliseconds: 300 + (index * 50)),
+      curve: Curves.easeOut,
+      builder: (context, value, child) {
+        return Transform.translate(
+          offset: Offset(0, 20 * (1 - value)),
+          child: Opacity(opacity: value, child: child),
+        );
+      },
+      child: GlassCard(
+        padding: EdgeInsets.zero,
+        child: InkWell(
+          onTap: () {
+            _toggleExpand(task.id);
+            HapticFeedback.selectionClick();
+          },
+          borderRadius: BorderRadius.circular(28),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 20),
+            child: AnimatedSize(
+              duration: const Duration(milliseconds: 300),
+              curve: Curves.easeInOut,
+              alignment: Alignment.topCenter,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          task.title,
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: -0.3,
+                            color: AppStitchTheme.lightOnSurface,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: _getPriorityColor(task.priority).withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(
+                            color: _getPriorityColor(task.priority).withValues(alpha: 0.15),
+                            width: 1,
+                          ),
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(
+                              _getPriorityIcon(task.priority),
+                              size: 10,
+                              color: _getPriorityColor(task.priority),
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              task.priority.toUpperCase(),
+                              style: TextStyle(
+                                fontSize: 9,
+                                fontWeight: FontWeight.w900,
+                                color: _getPriorityColor(task.priority),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Icon(
+                        isExpanded ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
+                        size: 22,
+                        color: AppStitchTheme.lightOnSurfaceMuted.withValues(alpha: 0.6),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 18),
+                  Stack(
+                    children: [
+                      Container(
+                        height: 6,
+                        width: double.infinity,
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.3),
+                          borderRadius: BorderRadius.circular(3),
+                        ),
+                      ),
+                      AnimatedContainer(
+                        duration: const Duration(milliseconds: 500),
+                        curve: Curves.easeOut,
+                        height: 6,
+                        width: (MediaQuery.of(context).size.width - 68) * (task.progress / 100),
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: [
+                              _getStatusColor(task.status).withValues(alpha: 0.8),
+                              _getStatusColor(task.status),
+                            ],
+                          ),
+                          borderRadius: BorderRadius.circular(3),
+                        ),
+                      ),
+                    ],
+                  ),
+                  if (isExpanded) ...[
+                    const SizedBox(height: 16),
+                    if (task.description.isNotEmpty)
+                      Text(
+                        task.description,
+                        style: const TextStyle(
+                          fontSize: 13,
+                          color: AppStitchTheme.lightOnSurfaceVariant,
+                          height: 1.5,
+                        ),
+                      ),
+                    const SizedBox(height: 16),
+                    Row(
+                      children: [
+                        _buildInfoChip(
+                          Icons.calendar_today_rounded,
+                          task.deadline,
+                          AppStitchTheme.primary,
+                        ),
+                        const SizedBox(width: 12),
+                        _buildInfoChip(
+                          Icons.people_outline,
+                          '${task.assignments.length} Assignees',
+                          Colors.orange,
+                        ),
+                      ],
+                    ),
+                    if (task.assignments.isNotEmpty) ...[
+                      const SizedBox(height: 20),
+                      Text(
+                        'TEAM',
+                        style: TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: 1.2,
+                          color: AppStitchTheme.lightOnSurfaceMuted.withValues(alpha: 0.8),
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: task.assignments.map((a) => _buildAvatarChip(a.employeeName, a.avatarUrl)).toList(),
+                      ),
+                    ],
+                  ],
+                ],
+              ),
+            ),
+          ),
+        ),
       ),
-      child: Text(
-        priority.toUpperCase(),
-        style: TextStyle(color: color, fontSize: 10, fontWeight: FontWeight.bold),
+    );
+  }
+
+  Color _getPriorityColor(String priority) {
+    switch (priority.toLowerCase()) {
+      case 'high': return const Color(0xFFEF4444);
+      case 'medium': return const Color(0xFFF59E0B);
+      case 'low': return const Color(0xFF10B981);
+      default: return const Color(0xFF6B7280);
+    }
+  }
+
+  IconData _getPriorityIcon(String priority) {
+    switch (priority.toLowerCase()) {
+      case 'high': return Icons.priority_high;
+      case 'medium': return Icons.remove;
+      case 'low': return Icons.arrow_downward;
+      default: return Icons.circle;
+    }
+  }
+
+  Color _getStatusColor(String status) {
+    switch (status.toLowerCase()) {
+      case 'done': return const Color(0xFF10B981);
+      case 'inprogress': return const Color(0xFF3B82F6);
+      case 'inreview': return const Color(0xFF8B5CF6);
+      default: return const Color(0xFF6B7280);
+    }
+  }
+
+  Widget _buildAvatarChip(String name, [String? avatarUrl]) {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(4, 4, 10, 4),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.5),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: AppStitchTheme.lightOutline.withValues(alpha: 0.3)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          CircleAvatar(
+            radius: 10,
+            backgroundImage: avatarUrl != null ? NetworkImage(avatarUrl) : null,
+            backgroundColor: AppStitchTheme.primary.withValues(alpha: 0.1),
+            child: avatarUrl == null
+                ? Text(name.isNotEmpty ? name[0].toUpperCase() : '?', style: const TextStyle(fontSize: 8, fontWeight: FontWeight.bold))
+                : null,
+          ),
+          const SizedBox(width: 8),
+          Text(name, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: AppStitchTheme.lightOnSurface)),
+        ],
       ),
     );
   }
 
   Widget _buildInfoChip(IconData icon, String label, Color color) {
-    return Row(
-      children: [
-        Icon(icon, size: 14, color: color),
-        const SizedBox(width: 4),
-        Text(label, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500)),
-      ],
-    );
-  }
-
-  Widget _buildProgressBar(int progress) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            const Text('Progress', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500)),
-            Text('$progress%', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
-          ],
-        ),
-        const SizedBox(height: 6),
-        ClipRRect(
-          borderRadius: BorderRadius.circular(4),
-          child: LinearProgressIndicator(
-            value: progress / 100,
-            backgroundColor: Colors.grey.withOpacity(0.1),
-            valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFF220FB6)),
-            minHeight: 6,
-          ),
-        ),
-      ],
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.6),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: AppStitchTheme.lightOutline.withValues(alpha: 0.4)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 12, color: color),
+          const SizedBox(width: 6),
+          Text(label, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: AppStitchTheme.lightOnSurface)),
+        ],
+      ),
     );
   }
 
   Widget _buildCreateForm() {
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(20),
+      physics: const BouncingScrollPhysics(),
+      padding: const EdgeInsets.only(bottom: 120),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('TASK DETAILS', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, letterSpacing: 1.2, color: Colors.grey)),
           const SizedBox(height: 16),
-          _buildTextField(_titleController, 'Task Title', Icons.title),
-          const SizedBox(height: 16),
-          _buildTextField(_descController, 'Description', Icons.description, maxLines: 3),
-          const SizedBox(height: 24),
-          Row(
-            children: [
-              Expanded(child: _buildDatePicker()),
-              const SizedBox(width: 16),
-              Expanded(child: _buildPriorityDropdown()),
-            ],
+          _buildSectionHeader('DETAILS', Icons.assignment_outlined),
+          const SizedBox(height: 12),
+          GlassCard(
+            padding: EdgeInsets.zero,
+            child: Column(
+              children: [
+                _buildTextField(_titleController, 'Task Title', Icons.title_rounded),
+                Divider(height: 1, color: AppStitchTheme.lightOutline.withValues(alpha: 0.1)),
+                _buildTextField(_descController, 'Description (optional)', Icons.notes_rounded, maxLines: 3),
+                Divider(height: 1, color: AppStitchTheme.lightOutline.withValues(alpha: 0.1)),
+                Row(
+                  children: [
+                    Expanded(child: _buildDatePickerInline()),
+                    Container(width: 1, height: 40, color: AppStitchTheme.lightOutline.withValues(alpha: 0.1)),
+                    Expanded(child: _buildPriorityDropdownInline()),
+                  ],
+                ),
+              ],
+            ),
           ),
           const SizedBox(height: 32),
-          const Text('TEAM ASSIGNMENT', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, letterSpacing: 1.2, color: Colors.grey)),
-          const SizedBox(height: 16),
-          _buildEmployeeMultiSelect(),
+          _buildSectionHeader('ASSIGNMENT', Icons.people_outline_rounded),
+          const SizedBox(height: 12),
+          GlassCard(
+            padding: EdgeInsets.zero,
+            child: Column(
+              children: [
+                _buildEmployeeMultiSelectInline(),
+                if (_selectedEmployeeIds.isNotEmpty) ...[
+                  Divider(height: 1, color: AppStitchTheme.lightOutline.withValues(alpha: 0.1)),
+                  _buildOwnerSelectorInline(),
+                ],
+              ],
+            ),
+          ),
           const SizedBox(height: 24),
-          const Text('TASK OWNER', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, letterSpacing: 1.2, color: Colors.grey)),
-          const SizedBox(height: 8),
-          _buildOwnerSelector(),
-          const SizedBox(height: 32),
-          _buildSubtaskSection(),
+          _buildSubtaskSectionInline(),
           const SizedBox(height: 40),
           _buildSubmitButton(),
-          const SizedBox(height: 40),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSectionHeader(String title, IconData icon) {
+    return Row(
+      children: [
+        Icon(icon, size: 14, color: AppStitchTheme.primary),
+        const SizedBox(width: 8),
+        Text(
+          title,
+          style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                letterSpacing: 1.5,
+                fontWeight: FontWeight.w900,
+                color: AppStitchTheme.lightOnSurfaceMuted,
+              ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildTaskDetailsCard() {
+    return GlassCard(
+      padding: EdgeInsets.zero,
+      child: Column(
+        children: [
+          _buildTextField(_titleController, 'What needs to be done?', Icons.title_rounded),
+          Divider(height: 1, color: AppStitchTheme.lightOutline.withValues(alpha: 0.1)),
+          _buildTextField(_descController, 'Add more details (optional)...', Icons.description_rounded, maxLines: 3),
         ],
       ),
     );
   }
 
   Widget _buildTextField(TextEditingController controller, String hint, IconData icon, {int maxLines = 1}) {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10)],
-      ),
-      child: TextField(
-        controller: controller,
-        maxLines: maxLines,
-        decoration: InputDecoration(
-          hintText: hint,
-          prefixIcon: Icon(icon, color: const Color(0xFF220FB6)),
-          border: InputBorder.none,
-          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+    return TextField(
+      controller: controller,
+      maxLines: maxLines,
+      style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+      decoration: InputDecoration(
+        hintText: hint,
+        hintStyle: TextStyle(color: AppStitchTheme.lightOnSurfaceMuted.withValues(alpha: 0.4)),
+        prefixIcon: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: Icon(icon, color: AppStitchTheme.primary.withValues(alpha: 0.7), size: 20),
         ),
+        border: InputBorder.none,
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
       ),
     );
   }
 
-  Widget _buildDatePicker() {
+  Widget _buildDatePickerInline() {
     return InkWell(
       onTap: () async {
         final date = await showDatePicker(
@@ -461,20 +765,19 @@ class _AssignTaskPageState extends State<AssignTaskPage> {
         );
         if (date != null) setState(() => _selectedDeadline = date);
       },
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(12),
-          boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10)],
-        ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
         child: Row(
           children: [
-            const Icon(Icons.calendar_today, size: 20, color: Color(0xFF220FB6)),
-            const SizedBox(width: 8),
+            Icon(Icons.calendar_today_rounded, size: 16, color: AppStitchTheme.primary.withValues(alpha: 0.7)),
+            const SizedBox(width: 10),
             Text(
-              _selectedDeadline == null ? 'Deadline' : DateFormat('MMM dd, yyyy').format(_selectedDeadline!),
-              style: TextStyle(color: _selectedDeadline == null ? Colors.grey : Colors.black),
+              _selectedDeadline == null ? 'Deadline' : DateFormat('MMM dd').format(_selectedDeadline!),
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w700,
+                color: _selectedDeadline == null ? AppStitchTheme.lightOnSurfaceMuted : AppStitchTheme.lightOnSurface,
+              ),
             ),
           ],
         ),
@@ -482,114 +785,161 @@ class _AssignTaskPageState extends State<AssignTaskPage> {
     );
   }
 
-  Widget _buildPriorityDropdown() {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10)],
-      ),
+  Widget _buildPriorityDropdownInline() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
       child: DropdownButtonHideUnderline(
         child: DropdownButton<String>(
           value: _priority,
           isExpanded: true,
+          icon: Icon(Icons.arrow_drop_down_rounded, color: AppStitchTheme.primary.withValues(alpha: 0.7)),
           onChanged: (v) => setState(() => _priority = v!),
           items: ['low', 'medium', 'high'].map((p) => DropdownMenuItem(
             value: p,
-            child: Text(p.toUpperCase(), style: const TextStyle(fontSize: 14)),
+            child: Text(
+              p.toUpperCase(),
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w900,
+                color: _getPriorityColor(p),
+              ),
+            ),
           )).toList(),
         ),
       ),
     );
   }
 
-  Widget _buildEmployeeMultiSelect() {
-    return Container(
-      constraints: const BoxConstraints(maxHeight: 250),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.grey.shade200),
-      ),
-      child: ListView.builder(
-        shrinkWrap: true,
-        physics: const NeverScrollableScrollPhysics(),
-        itemCount: _reportees.length,
-        itemBuilder: (context, index) {
-          final emp = _reportees[index];
-          final isSelected = _selectedEmployeeIds.contains(emp.id);
-          return CheckboxListTile(
-            title: Text(emp.fullName, style: const TextStyle(fontSize: 14)),
-            subtitle: Text(emp.designationName ?? '', style: const TextStyle(fontSize: 12)),
-            value: isSelected,
-            activeColor: const Color(0xFF220FB6),
-            onChanged: (val) {
-              setState(() {
-                if (val!) {
-                  _selectedEmployeeIds.add(emp.id);
-                } else {
-                  _selectedEmployeeIds.remove(emp.id);
-                  if (_ownerId == emp.id) _ownerId = null;
-                }
-              });
+  Widget _buildEmployeeMultiSelectInline() {
+    return Column(
+      children: [
+        Container(
+          constraints: const BoxConstraints(maxHeight: 220),
+          child: ListView.separated(
+            shrinkWrap: true,
+            physics: const ClampingScrollPhysics(),
+            itemCount: _reportees.length,
+            separatorBuilder: (c, i) => Divider(height: 1, color: AppStitchTheme.lightOutline.withValues(alpha: 0.05)),
+            itemBuilder: (context, index) {
+              final emp = _reportees[index];
+              final isSelected = _selectedEmployeeIds.contains(emp.id);
+              return InkWell(
+                onTap: () {
+                  setState(() {
+                    if (isSelected) {
+                      _selectedEmployeeIds.remove(emp.id);
+                      if (_ownerId == emp.id) _ownerId = null;
+                    } else {
+                      _selectedEmployeeIds.add(emp.id);
+                    }
+                  });
+                  HapticFeedback.lightImpact();
+                },
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  child: Row(
+                    children: [
+                      CircleAvatar(
+                        radius: 16,
+                        backgroundColor: AppStitchTheme.primary.withValues(alpha: 0.05),
+                        child: Text(emp.fullName[0].toUpperCase(), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 11)),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(emp.fullName, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700)),
+                            Text(emp.designationName ?? '', style: const TextStyle(fontSize: 10, color: AppStitchTheme.lightOnSurfaceMuted)),
+                          ],
+                        ),
+                      ),
+                      Icon(
+                        isSelected ? Icons.check_circle_rounded : Icons.circle_outlined,
+                        size: 20,
+                        color: isSelected ? AppStitchTheme.primary : AppStitchTheme.lightOutline.withValues(alpha: 0.3),
+                      ),
+                    ],
+                  ),
+                ),
+              );
             },
-          );
-        },
-      ),
+          ),
+        ),
+      ],
     );
   }
 
-  Widget _buildOwnerSelector() {
+  Widget _buildOwnerSelectorInline() {
     final selectedReportees = _reportees.where((r) => _selectedEmployeeIds.contains(r.id)).toList();
-    
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12),
-      decoration: BoxDecoration(
-        color: _selectedEmployeeIds.isEmpty ? Colors.grey.shade100 : Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.grey.shade200),
-      ),
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       child: DropdownButtonHideUnderline(
         child: DropdownButton<int>(
           value: _ownerId,
-          hint: const Text('Select primary owner'),
+          hint: Row(
+            children: [
+              Icon(Icons.person_outline_rounded, size: 16, color: AppStitchTheme.lightOnSurfaceMuted.withValues(alpha: 0.4)),
+              const SizedBox(width: 10),
+              const Text('Primary Owner', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
+            ],
+          ),
           isExpanded: true,
-          disabledHint: const Text('Assign employees first'),
+          disabledHint: const Text('Assign team members first', style: TextStyle(fontSize: 12)),
+          icon: Icon(Icons.keyboard_arrow_down_rounded, color: AppStitchTheme.primary.withValues(alpha: 0.7)),
           onChanged: _selectedEmployeeIds.isEmpty ? null : (v) => setState(() => _ownerId = v),
           items: selectedReportees.map((emp) => DropdownMenuItem(
             value: emp.id,
-            child: Text(emp.fullName, style: const TextStyle(fontSize: 14)),
+            child: Row(
+              children: [
+                const Icon(Icons.person_pin_rounded, size: 16, color: AppStitchTheme.primary),
+                const SizedBox(width: 12),
+                Text(emp.fullName, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w800)),
+              ],
+            ),
           )).toList(),
         ),
       ),
     );
   }
 
-  Widget _buildSubtaskSection() {
+  Widget _buildSubtaskSectionInline() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Row(
-              children: [
-                Checkbox(
-                  value: _hasSubtasks,
-                  activeColor: const Color(0xFF220FB6),
-                  onChanged: (v) => setState(() => _hasSubtasks = v!),
-                ),
-                const Text('Has Subtasks?', style: TextStyle(fontWeight: FontWeight.bold)),
-              ],
-            ),
-            if (_hasSubtasks)
-              TextButton.icon(
-                onPressed: _addSubtask,
-                icon: const Icon(Icons.add, size: 18),
-                label: const Text('Add Subtask'),
+        InkWell(
+          onTap: () => setState(() => _hasSubtasks = !_hasSubtasks),
+          borderRadius: BorderRadius.circular(16),
+          child: Row(
+            children: [
+              Icon(
+                _hasSubtasks ? Icons.check_box_rounded : Icons.check_box_outline_blank_rounded,
+                size: 20,
+                color: _hasSubtasks ? AppStitchTheme.primary : AppStitchTheme.lightOnSurfaceMuted.withValues(alpha: 0.6),
               ),
-          ],
+              const SizedBox(width: 12),
+              Text(
+                'Break into subtasks',
+                style: TextStyle(
+                  fontWeight: FontWeight.w700,
+                  fontSize: 13,
+                  color: _hasSubtasks ? AppStitchTheme.lightOnSurface : AppStitchTheme.lightOnSurfaceMuted,
+                ),
+              ),
+              const Spacer(),
+              if (_hasSubtasks)
+                TextButton.icon(
+                  onPressed: _addSubtask,
+                  icon: const Icon(Icons.add_circle_outline_rounded, size: 14),
+                  label: const Text('Add', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 11)),
+                  style: TextButton.styleFrom(
+                    foregroundColor: AppStitchTheme.primary,
+                    visualDensity: VisualDensity.compact,
+                  ),
+                ),
+            ],
+          ),
         ),
         if (_hasSubtasks) ...[
           const SizedBox(height: 12),
@@ -600,57 +950,173 @@ class _AssignTaskPageState extends State<AssignTaskPage> {
   }
 
   Widget _buildSubtaskItem(int index) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 16),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.grey.shade50,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.grey.shade200),
-      ),
-      child: Column(
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text('Subtask ${index + 1}', style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF220FB6))),
-              IconButton(
-                icon: const Icon(Icons.delete_outline, color: Colors.red),
-                onPressed: () => setState(() => _subtasks.removeAt(index)),
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: GlassCard(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          children: [
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: AppStitchTheme.primary.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: Text(
+                    'SUBTASK ${index + 1}',
+                    style: const TextStyle(fontWeight: FontWeight.w900, color: AppStitchTheme.primary, fontSize: 10, letterSpacing: 0.5),
+                  ),
+                ),
+                const Spacer(),
+                IconButton(
+                  icon: const Icon(Icons.delete_outline_rounded, color: Colors.redAccent, size: 18),
+                  onPressed: () => setState(() => _subtasks.removeAt(index)),
+                  visualDensity: VisualDensity.compact,
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              onChanged: (v) => _subtasks[index]['title'] = v,
+              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
+              decoration: InputDecoration(
+                hintText: 'What is this subtask?',
+                hintStyle: TextStyle(color: AppStitchTheme.lightOnSurfaceMuted.withValues(alpha: 0.4), fontSize: 13),
+                isDense: true,
+                border: UnderlineInputBorder(borderSide: BorderSide(color: AppStitchTheme.lightOutline.withValues(alpha: 0.1))),
               ),
-            ],
-          ),
-          TextField(
-            onChanged: (v) => _subtasks[index]['title'] = v,
-            decoration: const InputDecoration(hintText: 'Subtask title', isDense: true),
-          ),
-          const SizedBox(height: 12),
-          TextField(
-            onChanged: (v) => _subtasks[index]['description'] = v,
-            maxLines: 2,
-            decoration: const InputDecoration(hintText: 'Description', isDense: true),
-          ),
-        ],
+            ),
+          ],
+        ),
       ),
     );
   }
 
   Widget _buildSubmitButton() {
-    return SizedBox(
+    return Container(
       width: double.infinity,
-      height: 56,
+      height: 58,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(20),
+        gradient: LinearGradient(
+          colors: [
+            AppStitchTheme.primary,
+            AppStitchTheme.primary.withValues(alpha: 0.8),
+          ],
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: AppStitchTheme.primary.withValues(alpha: 0.3),
+            blurRadius: 15,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
       child: ElevatedButton(
         onPressed: _isSubmitting ? null : _handleSubmit,
         style: ElevatedButton.styleFrom(
-          backgroundColor: const Color(0xFF220FB6),
-          foregroundColor: Colors.white,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          elevation: 8,
-          shadowColor: const Color(0xFF220FB6).withOpacity(0.5),
+          backgroundColor: Colors.transparent,
+          shadowColor: Colors.transparent,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         ),
         child: _isSubmitting
-          ? const CircularProgressIndicator(color: Colors.white)
-          : const Text('CREATE & ASSIGN TASK', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, letterSpacing: 0.5)),
+            ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 3))
+            : const Text('CREATE & ASSIGN TASK', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w900, letterSpacing: 1, color: Colors.white)),
+      ),
+    );
+  }
+}
+
+class _FrostHeader extends StatelessWidget {
+  const _FrostHeader({
+    required this.title,
+    required this.subtitle,
+    required this.trailing,
+  });
+
+  final String title;
+  final String subtitle;
+  final Widget trailing;
+
+  @override
+  Widget build(BuildContext context) {
+    return GlassCard(
+      padding: const EdgeInsets.fromLTRB(20, 16, 12, 16),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: -0.8,
+                        color: AppStitchTheme.lightOnSurface,
+                      ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  subtitle,
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: AppStitchTheme.lightOnSurfaceMuted,
+                        fontWeight: FontWeight.w700,
+                      ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 12),
+          trailing,
+        ],
+      ),
+    );
+  }
+}
+
+class _CountPill extends StatelessWidget {
+  const _CountPill({required this.count});
+
+  final int count;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(16),
+        color: AppStitchTheme.primary.withValues(alpha: 0.1),
+        border: Border.all(
+          color: AppStitchTheme.primary.withValues(alpha: 0.2),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: AppStitchTheme.primary.withValues(alpha: 0.05),
+            blurRadius: 10,
+            spreadRadius: -2,
+          ),
+        ],
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(
+            Icons.auto_awesome_motion_rounded,
+            size: 16,
+            color: AppStitchTheme.primary,
+          ),
+          const SizedBox(width: 8),
+          Text(
+            '$count',
+            style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                  fontWeight: FontWeight.w900,
+                  color: AppStitchTheme.primary,
+                ),
+          ),
+        ],
       ),
     );
   }

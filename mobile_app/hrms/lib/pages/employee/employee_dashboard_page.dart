@@ -114,15 +114,16 @@ class _EmployeeDashboardPageState extends State<EmployeeDashboardPage> {
         EmployeeService.getMyTasks(),
         EmployeeService.getAppliedLeaves(),
         EmployeeService.getCalendarData(year: now.year, month: now.month, day: now.day),
+        EmployeeService.getCalendarEvents(), // Fetch holidays from correct endpoint
       ]);
 
       final a = results[0] as ApiResponse<List<Announcement>>;
       final t = results[1] as ApiResponse<List<Task>>;
       final l = results[2] as ApiResponse<List<AppliedLeave>>;
       final c = results[3] as ApiResponse<CalendarData>;
+      final holidaysResponse = results[4] as ApiResponse<List<CalendarEvent>>;
 
       final upcomingEvents = <CalendarEvent>[];
-      final upcomingHolidays = <CalendarEvent>[];
       if (c.success && c.data != null) {
         for (final week in c.data!.weeks) {
           for (final day in week) {
@@ -131,12 +132,15 @@ class _EmployeeDashboardPageState extends State<EmployeeDashboardPage> {
             if (dt.isBefore(DateTime(now.year, now.month, now.day))) continue;
 
             upcomingEvents.addAll(day.allEvents);
-            upcomingHolidays.addAll(day.adminEvents);
           }
         }
         upcomingEvents.sort((x, y) => x.date.compareTo(y.date));
-        upcomingHolidays.sort((x, y) => x.date.compareTo(y.date));
       }
+
+      // Get holidays count from the proper endpoint
+      final holidaysCount = holidaysResponse.success && holidaysResponse.data != null
+          ? holidaysResponse.data!.length
+          : 0;
 
       if (mounted) {
         setState(() {
@@ -144,7 +148,7 @@ class _EmployeeDashboardPageState extends State<EmployeeDashboardPage> {
           _myTasksCount = t.data?.length ?? 0;
           _leavesCount = l.data?.length ?? 0;
           _calendarCount = upcomingEvents.length;
-          _holidaysCount = upcomingHolidays.length;
+          _holidaysCount = holidaysCount;
           _events = upcomingEvents.take(3).toList();
           _isLoadingOverview = false;
         });
@@ -473,7 +477,7 @@ class _EmployeeDashboardPageState extends State<EmployeeDashboardPage> {
                     myTasksCount: _myTasksCount,
                     calendarCount: _calendarCount,
                     onTapLeaves: () => Navigator.pushNamed(context, '/employee/leave-application'),
-                    onTapHolidays: () => Navigator.pushNamed(context, '/employee/personal-calendar'),
+                    onTapHolidays: () => Navigator.pushNamed(context, '/employee/holidays'),
                     onTapTasks: () => Navigator.pushNamed(context, '/employee/my-tasks'),
                     onTapCalendar: () => Navigator.pushNamed(context, '/employee/personal-calendar'),
                   ),
@@ -693,7 +697,6 @@ class _KpiGrid extends StatelessWidget {
               _KpiPill(
                 icon: Icons.beach_access_outlined,
                 title: 'Leaves',
-                value: isLoading ? '—' : '$leavesCount',
                 accent: AppStitchTheme.kpiLeaves,
                 onTap: onTapLeaves,
               ),
@@ -701,7 +704,6 @@ class _KpiGrid extends StatelessWidget {
               _KpiPill(
                 icon: Icons.task_alt_rounded,
                 title: 'My tasks',
-                value: isLoading ? '—' : '$myTasksCount',
                 accent: AppStitchTheme.kpiTasks,
                 onTap: onTapTasks,
               ),
@@ -715,7 +717,6 @@ class _KpiGrid extends StatelessWidget {
               _KpiPill(
                 icon: Icons.celebration_outlined,
                 title: 'Holidays',
-                value: isLoading ? '—' : '$holidaysCount',
                 accent: AppStitchTheme.kpiHolidays,
                 onTap: onTapHolidays,
               ),
@@ -723,7 +724,6 @@ class _KpiGrid extends StatelessWidget {
               _KpiPill(
                 icon: Icons.event_available_outlined,
                 title: 'Calendar',
-                value: isLoading ? '—' : '$calendarCount',
                 accent: AppStitchTheme.kpiCalendar,
                 onTap: onTapCalendar,
               ),
@@ -739,14 +739,14 @@ class _KpiPill extends StatelessWidget {
   const _KpiPill({
     required this.icon,
     required this.title,
-    required this.value,
+    this.value,
     required this.accent,
     required this.onTap,
   });
 
   final IconData icon;
   final String title;
-  final String value;
+  final String? value;
   final Color accent;
   final VoidCallback onTap;
 
@@ -782,14 +782,15 @@ class _KpiPill extends StatelessWidget {
                     ),
               ),
             ),
-            Text(
-              value,
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    color: accent,
-                    fontWeight: FontWeight.w900,
-                    fontFeatures: const [FontFeature.tabularFigures()],
-                  ),
-            ),
+            if (value != null)
+              Text(
+                value!,
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      color: accent,
+                      fontWeight: FontWeight.w900,
+                      fontFeatures: const [FontFeature.tabularFigures()],
+                    ),
+              ),
           ],
         ),
       ),

@@ -1119,6 +1119,50 @@ class EmployeeService {
     }
   }
 
+  // Get all calendar events (holidays and company events)
+  static Future<ApiResponse<List<CalendarEvent>>> getCalendarEvents() async {
+    try {
+      final token = await StorageService.getAccessToken();
+      if (token == null) {
+        return ApiResponse(success: false, message: 'No access token found');
+      }
+
+      final response = await http.get(
+        Uri.parse(ApiConfig.calendarEventsUrl),
+        headers: ApiConfig.getAuthHeaders(token),
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        final eventsList = data is List ? data : (data['results'] as List? ?? []);
+        // Filter to only holidays
+        final holidays = eventsList
+            .where((e) => e['is_holiday'] == true)
+            .map((e) => CalendarEvent.fromJson(e, 'admin'))
+            .toList();
+        return ApiResponse(success: true, data: holidays);
+      } else {
+        final error = jsonDecode(response.body);
+        return ApiResponse(
+          success: false,
+          message: error['detail'] ?? 'Failed to fetch calendar events',
+        );
+      }
+    } catch (e) {
+      String errorMsg = 'Network error occurred';
+      if (e.toString().contains('FormatException')) {
+        errorMsg = 'Invalid response from server. Please try again.';
+      } else if (e.toString().contains('SocketException') ||
+          e.toString().contains('TimeoutException')) {
+        errorMsg = 'Connection error. Please check your internet connection.';
+      } else {
+        errorMsg = 'Error: ${e.toString()}';
+      }
+
+      return ApiResponse(success: false, message: errorMsg);
+    }
+  }
+
   // Create personal calendar event
   static Future<ApiResponse<Map<String, dynamic>>> createCalendarEvent({
     required String name,
@@ -1475,6 +1519,8 @@ class EmployeeService {
     required String deadline,
     required String priority,
     required String status,
+    required List<int> assignedEmployees,
+    required int taskOwner,
     List<Map<String, dynamic>>? subtasks,
   }) async {
     try {
@@ -1489,6 +1535,8 @@ class EmployeeService {
         'deadline': deadline,
         'priority': priority,
         'status': status,
+        'assignedEmployees': assignedEmployees,
+        'taskOwner': taskOwner,
         if (subtasks != null && subtasks.isNotEmpty) 'subtasks': subtasks,
       };
 

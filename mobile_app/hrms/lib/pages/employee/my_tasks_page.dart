@@ -30,6 +30,38 @@ class _MyTasksPageState extends State<MyTasksPage>
     {'value': 'done', 'label': 'Done'},
   ];
 
+  final List<String> _dateCategories = ['OVERDUE', 'TODAY', 'TOMORROW', 'THIS WEEK', 'UPCOMING', 'LATER'];
+
+  String _getDateCategory(String deadlineStr) {
+    if (deadlineStr.isEmpty) return 'LATER';
+    try {
+      final deadline = DateTime.parse(deadlineStr);
+      final now = DateTime.now();
+      final today = DateTime(now.year, now.month, now.day);
+      final tomorrow = today.add(const Duration(days: 1));
+      final nextWeek = today.add(const Duration(days: 7));
+      final taskDate = DateTime(deadline.year, deadline.month, deadline.day);
+
+      if (taskDate.isBefore(today)) return 'OVERDUE';
+      if (taskDate.isAtSameMomentAs(today)) return 'TODAY';
+      if (taskDate.isAtSameMomentAs(tomorrow)) return 'TOMORROW';
+      if (taskDate.isBefore(nextWeek)) return 'THIS WEEK';
+      return 'UPCOMING';
+    } catch (_) {
+      return 'LATER';
+    }
+  }
+
+  Color _getCategoryColor(String category) {
+    switch (category) {
+      case 'OVERDUE': return Colors.redAccent;
+      case 'TODAY': return AppStitchTheme.primary;
+      case 'TOMORROW': return Colors.orangeAccent;
+      case 'THIS WEEK': return Colors.tealAccent;
+      default: return AppStitchTheme.lightOnSurfaceMuted;
+    }
+  }
+
   @override
   void initState() {
     super.initState();
@@ -319,22 +351,37 @@ class _MyTasksPageState extends State<MyTasksPage>
                               : RefreshIndicator(
                                   onRefresh: _fetchTasks,
                                   color: AppStitchTheme.primary,
-                                  child: ListView.separated(
-                                    padding: const EdgeInsets.only(
-                                      top: 0,
-                                      left: 0,
-                                      right: 0,
-                                      bottom: 24,
-                                    ),
-                                    itemCount: _tasks.length,
-                                    separatorBuilder: (context, index) =>
-                                        const SizedBox(height: 12),
-                                    itemBuilder: (context, index) {
-                                      return _buildTaskCard(
-                                        _tasks[index],
-                                        index,
-                                      );
-                                    },
+                                  child: CustomScrollView(
+                                    physics: const AlwaysScrollableScrollPhysics(),
+                                    slivers: [
+                                      const SliverToBoxAdapter(child: SizedBox(height: 8)),
+                                      ..._dateCategories.map((category) {
+                                        final groupTasks = _tasks.where((t) => _getDateCategory(t.deadline) == category).toList();
+                                        if (groupTasks.isEmpty) return const SliverToBoxAdapter(child: SizedBox.shrink());
+                                        
+                                        return SliverMainAxisGroup(
+                                          slivers: [
+                                            SliverToBoxAdapter(
+                                              child: _buildDateGroupHeader(category, groupTasks.length),
+                                            ),
+                                            SliverPadding(
+                                              padding: const EdgeInsets.only(bottom: 16),
+                                              sliver: SliverList(
+                                                delegate: SliverChildBuilderDelegate(
+                                                  (context, index) {
+                                                    return Padding(
+                                                      padding: const EdgeInsets.only(bottom: 12),
+                                                      child: _buildTaskCard(groupTasks[index], index),
+                                                    );
+                                                  },
+                                                  childCount: groupTasks.length,
+                                                ),
+                                              ),
+                                            ),
+                                          ],
+                                        );
+                                      }),
+                                    ],
                                   ),
                                 ),
                 ),
@@ -342,6 +389,61 @@ class _MyTasksPageState extends State<MyTasksPage>
             ),
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildDateGroupHeader(String title, int count) {
+    final color = _getCategoryColor(title);
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 14, left: 4),
+      child: Row(
+        children: [
+          Container(
+            width: 8,
+            height: 8,
+            decoration: BoxDecoration(
+              color: color,
+              shape: BoxShape.circle,
+              boxShadow: [
+                BoxShadow(color: color.withValues(alpha: 0.4), blurRadius: 6, spreadRadius: 1),
+              ],
+            ),
+          ),
+          const SizedBox(width: 12),
+          Text(
+            title,
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w900,
+              letterSpacing: 1.2,
+              color: AppStitchTheme.lightOnSurface.withValues(alpha: 0.8),
+            ),
+          ),
+          const SizedBox(width: 10),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+            decoration: BoxDecoration(
+              color: AppStitchTheme.lightOutline.withValues(alpha: 0.08),
+              borderRadius: BorderRadius.circular(6),
+            ),
+            child: Text(
+              '$count',
+              style: TextStyle(
+                fontSize: 10,
+                fontWeight: FontWeight.w900,
+                color: AppStitchTheme.lightOnSurfaceMuted.withValues(alpha: 0.7),
+              ),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Divider(
+              color: AppStitchTheme.lightOutline.withValues(alpha: 0.08),
+              thickness: 1,
+            ),
+          ),
+        ],
       ),
     );
   }
