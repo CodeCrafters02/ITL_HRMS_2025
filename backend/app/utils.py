@@ -6,7 +6,59 @@ from weasyprint import HTML
 from django.utils import timezone
 from django.template.loader import render_to_string
 import os
+import calendar
 from decimal import Decimal, ROUND_HALF_UP
+
+
+def number_to_words(n):
+    """Convert a number to Indian English words (e.g. 30000 -> 'Thirty Thousand Rupees Only')."""
+    if n is None:
+        return ''
+    n = float(n)
+    if n == 0:
+        return 'Zero Rupees Only'
+
+    ones = ['', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine',
+            'Ten', 'Eleven', 'Twelve', 'Thirteen', 'Fourteen', 'Fifteen', 'Sixteen',
+            'Seventeen', 'Eighteen', 'Nineteen']
+    tens = ['', '', 'Twenty', 'Thirty', 'Forty', 'Fifty', 'Sixty', 'Seventy', 'Eighty', 'Ninety']
+
+    def two_digits(num):
+        if num < 20:
+            return ones[num]
+        return tens[num // 10] + ((' ' + ones[num % 10]) if num % 10 else '')
+
+    def three_digits(num):
+        if num >= 100:
+            return ones[num // 100] + ' Hundred' + ((' and ' + two_digits(num % 100)) if num % 100 else '')
+        return two_digits(num)
+
+    rupees = int(n)
+    paise = round((n - rupees) * 100)
+
+    if rupees == 0:
+        result = ''
+    else:
+        # Indian numbering: Crore, Lakh, Thousand, Hundred
+        parts = []
+        if rupees >= 10000000:
+            parts.append(two_digits(rupees // 10000000) + ' Crore')
+            rupees %= 10000000
+        if rupees >= 100000:
+            parts.append(two_digits(rupees // 100000) + ' Lakh')
+            rupees %= 100000
+        if rupees >= 1000:
+            parts.append(two_digits(rupees // 1000) + ' Thousand')
+            rupees %= 1000
+        if rupees > 0:
+            parts.append(three_digits(rupees))
+        result = ' '.join(parts) + ' Rupees'
+
+    if paise > 0:
+        result += (' and ' if result else '') + two_digits(paise) + ' Paise'
+
+    return (result + ' Only').strip()
+
 
 def compute_attendance_metrics(employee, start_date, end_date):
     """
@@ -365,7 +417,22 @@ def generate_payslip_pdf(employee, payroll, batch=None, company=None, logo_path=
     # Generate QR Code for authentication
     qr_base64 = None
     if payslip_id:
-        qr_data = f"ID: {payslip_id} | Emp: {employee.full_name} | Period: {batch.month if batch else ''}/{batch.year if batch else ''} | Net: {payroll.net_pay}"
+        qr_lines = [
+            f"Payslip ID: {payslip_id}",
+            f"Company: {company.name if company else ''}",
+            f"Employee: {employee.full_name}",
+            f"Employee ID: {employee.employee_id}",
+            f"Designation: {employee.designation.designation_name if employee.designation else ''}",
+            f"Department: {employee.department.department_name if employee.department else ''}",
+            f"Period: {batch.month if batch else ''} {batch.year if batch else ''}",
+            f"Gross Salary: {payroll.gross_salary}",
+            f"Total Deductions: {payroll.total_deductions}",
+            f"Net Pay: {payroll.net_pay}",
+            f"Days Paid: {payroll.days_paid}",
+            f"Pay Date: {payroll.payroll_date}",
+            f"Generated: {timezone.now().strftime('%Y-%m-%d %H:%M')}",
+        ]
+        qr_data = "\n".join(qr_lines)
         qr = qrcode.QRCode(version=1, box_size=3, border=2)
         qr.add_data(qr_data)
         qr.make(fit=True)
@@ -386,6 +453,9 @@ def generate_payslip_pdf(employee, payroll, batch=None, company=None, logo_path=
         last_day = monthrange(y, m)[1]
         pay_period = f"01 {calendar.month_name[m][:3]} {y} - {last_day:02d} {calendar.month_name[m][:3]} {y}"
 
+    # Convert net pay to words for the payslip
+    net_pay_words = number_to_words(payroll.net_pay) if payroll else ''
+
     context = {
         "employee": employee,
         "payroll": payroll,
@@ -399,6 +469,7 @@ def generate_payslip_pdf(employee, payroll, batch=None, company=None, logo_path=
         "payslip_id": payslip_id,
         "pay_period": pay_period,
         "qr_code": f"data:image/png;base64,{qr_base64}" if qr_base64 else None,
+        "net_pay_words": net_pay_words,
     }
     html_string = render_to_string('payslip_template.html', context)
     pdf_file = BytesIO()

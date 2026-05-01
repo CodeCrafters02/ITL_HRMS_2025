@@ -3,282 +3,689 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Payslip</title>
+  <title>Payslip – {{ payslip_id|default:'Payslip' }}</title>
   <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+
     :root {
-      --primary: #111827;
-      --secondary: #3498db;
-      --accent: #27ae60;
-      --light-bg: #f8f9fa;
-      --border: #e2e8f0;
-      --text: #2d3748;
-      --text-light: #718096;
+      --primary: #1e3a5f;
+      --accent: #4f7cff;
+      --accent-light: #e8eeff;
+      --border: #d5dce8;
+      --border-light: #e9eef6;
+      --text-dark: #1a1a2e;
+      --text: #333d52;
+      --text-muted: #6b7a94;
+      --bg-light: #f5f7fb;
+      --bg-section: #fafbfd;
+      --success: #10b981;
+      --white: #ffffff;
     }
 
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
 
     body {
-      font-family: 'Segoe UI', Arial, sans-serif;
-      background: #fff;
+      font-family: 'Inter', 'Segoe UI', Arial, sans-serif;
+      background: var(--white);
       color: var(--text);
+      font-size: 13px;
+      line-height: 1.5;
     }
 
-    .payslip-container {
+    .payslip-page {
       max-width: 800px;
-      margin: 15px auto;
-      background: #fff;
-      border: 1px solid var(--border);
-      border-radius: 6px;
-      padding: 20px;
+      margin: 0 auto;
+      background: var(--white);
+      border: 1.5px solid var(--border);
+      position: relative;
     }
 
+    /* ─── HEADER ─── */
     .header {
-      text-align: center;
-      padding-bottom: 10px;
-      margin-bottom: 15px;
-      border-bottom: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      padding: 24px 30px 18px 30px;
+      border-bottom: 2.5px solid var(--accent);
+    }
+
+    .header-left {
+      display: flex;
+      align-items: flex-start;
+      gap: 14px;
+    }
+
+    .header-left img {
+      height: 44px;
+      width: auto;
+      border-radius: 4px;
     }
 
     .company-name {
-      font-size: 22px;
-      font-weight: 600;
+      font-size: 17px;
+      font-weight: 700;
       color: var(--primary);
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+    }
+
+    .company-address {
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-top: 3px;
+      max-width: 320px;
+      text-transform: uppercase;
+      letter-spacing: 0.2px;
+    }
+
+    .header-right {
+      text-align: right;
     }
 
     .payslip-title {
-      font-size: 18px;
-      font-weight: 500;
-      color: var(--text);
+      font-size: 26px;
+      font-weight: 800;
+      color: var(--accent);
+      letter-spacing: 1px;
+      text-transform: uppercase;
     }
 
-    .period {
-      font-size: 14px;
-      color: var(--text-light);
+    .payslip-period {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+      margin-top: 2px;
+    }
+
+    /* ─── QR CODE (inline in header) ─── */
+    .qr-inline {
+      text-align: center;
+      margin-top: 6px;
+    }
+
+    .qr-inline img {
+      width: 55px;
+      height: 55px;
+    }
+
+    .qr-inline span {
+      display: block;
+      font-size: 7px;
+      color: var(--text-muted);
+      margin-top: 1px;
+    }
+
+    /* ─── EMPLOYEE INFO ─── */
+    .info-section {
+      margin: 18px 30px;
+      border: 1.5px solid var(--border);
+      border-radius: 6px;
+      overflow: hidden;
     }
 
     .info-grid {
       display: grid;
-      grid-template-columns: repeat(2, 1fr);
-      gap: 8px 15px;
-      margin-bottom: 15px;
+      grid-template-columns: 1fr 1fr;
     }
 
-    .info-item {
-      font-size: 14px;
-      padding: 4px 0;
-      border-bottom: 1px solid #f3f4f6;
+    .info-col {
+      padding: 0;
+    }
+
+    .info-row {
+      display: flex;
+      align-items: baseline;
+      padding: 7px 16px;
+      border-bottom: 1px solid var(--border-light);
+      min-height: 32px;
+    }
+
+    .info-row:last-child {
+      border-bottom: none;
+    }
+
+    .info-col:first-child {
+      border-right: 1.5px solid var(--border);
     }
 
     .info-label {
-      font-weight: 500;
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+      min-width: 120px;
+      flex-shrink: 0;
+    }
+
+    .info-value {
+      font-size: 12.5px;
+      font-weight: 600;
+      color: var(--text-dark);
+      text-align: right;
+      flex: 1;
+    }
+
+    /* ─── ATTENDANCE SUMMARY ─── */
+    .attendance-bar {
+      margin: 0 30px 18px 30px;
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      border: 1.5px solid var(--border);
+      border-radius: 6px;
+      overflow: hidden;
+    }
+
+    .att-item {
+      text-align: center;
+      padding: 10px 6px;
+      border-right: 1px solid var(--border-light);
+    }
+
+    .att-item:last-child {
+      border-right: none;
+    }
+
+    .att-label {
+      font-size: 10px;
+      font-weight: 700;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+      margin-bottom: 4px;
+    }
+
+    .att-value {
+      font-size: 20px;
+      font-weight: 800;
+      color: var(--primary);
+    }
+
+    /* ─── EARNINGS & DEDUCTIONS ─── */
+    .ed-section {
+      margin: 0 30px 18px 30px;
+      border: 1.5px solid var(--border);
+      border-radius: 6px;
+      overflow: hidden;
+    }
+
+    .ed-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+    }
+
+    .ed-col {
+      min-height: 100px;
+    }
+
+    .ed-col:first-child {
+      border-right: 1.5px solid var(--border);
+    }
+
+    .ed-header {
+      background: var(--bg-light);
+      padding: 10px 16px;
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--primary);
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+      text-align: center;
+      border-bottom: 1.5px solid var(--border);
+    }
+
+    .ed-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 7px 16px;
+      border-bottom: 1px solid var(--border-light);
+    }
+
+    .ed-row:last-child {
+      border-bottom: none;
+    }
+
+    .ed-name {
+      font-size: 12px;
       color: var(--text);
     }
 
-    .section-title {
-      font-size: 16px;
+    .ed-amount {
+      font-size: 12px;
       font-weight: 600;
-      color: var(--secondary);
-      margin: 10px 0;
-      padding-bottom: 6px;
-      border-bottom: 2px solid var(--border);
+      color: var(--text-dark);
+      font-variant-numeric: tabular-nums;
     }
 
-    .earnings-deductions {
-      display: grid;
-      grid-template-columns: 1fr;
-      gap: 15px;
-    }
-
-    @media (min-width: 768px) {
-      .earnings-deductions {
-        grid-template-columns: 1fr 1fr;
-      }
-    }
-
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      font-size: 14px;
-    }
-
-    th, td {
-      padding: 6px 10px;
-      border-bottom: 1px solid var(--border);
-    }
-
-    th {
-      text-align: left;
-      background: var(--light-bg);
-      font-weight: 600;
-    }
-
-    .amount {
-      text-align: right;
-      font-family: 'Courier New', monospace;
-    }
-
-    .total-row {
+    .ed-total {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 16px;
+      background: var(--bg-light);
+      border-top: 1.5px solid var(--border);
+      font-size: 13px;
       font-weight: 700;
-      background: var(--light-bg);
+      color: var(--primary);
+      text-transform: uppercase;
     }
 
-    .net-pay-section {
-      background: var(--light-bg);
-      padding: 12px;
-      border-radius: 6px;
-      text-align: center;
-      margin: 20px 0;
+    .ed-total .ed-amount {
+      font-size: 14px;
+      font-weight: 800;
+      color: var(--primary);
     }
+
+    /* ─── NET PAY ─── */
+    .net-pay-section {
+      margin: 0 30px 20px 30px;
+      background: linear-gradient(135deg, var(--accent) 0%, #3a5fcd 100%);
+      border-radius: 6px;
+      padding: 16px 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .net-pay-left {}
 
     .net-pay-label {
-      font-size: 14px;
+      font-size: 11px;
       font-weight: 600;
-      color: var(--text-light);
+      color: rgba(255,255,255,0.75);
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
     }
 
     .net-pay-amount {
-      font-size: 22px;
-      font-weight: 700;
-      color: var(--accent);
+      font-size: 24px;
+      font-weight: 800;
+      color: var(--white);
+      letter-spacing: 0.3px;
     }
 
-    .footer {
-      text-align: center;
-      padding: 10px;
+    .net-pay-right {
+      text-align: right;
+    }
+
+    .amount-words-label {
+      font-size: 10px;
+      font-weight: 600;
+      color: rgba(255,255,255,0.65);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .amount-words {
       font-size: 12px;
-      color: var(--text-light);
-      border-top: 1px solid var(--border);
-      margin-top: 10px;
+      font-weight: 600;
+      color: var(--white);
+      font-style: italic;
+      max-width: 260px;
     }
 
-    /* Print optimization */
+    /* ─── NOTICE ─── */
+    .notice-section {
+      margin: 0 30px 16px 30px;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+    }
+
+    .notice-text {
+      font-size: 10px;
+      color: var(--text-muted);
+      max-width: 380px;
+      line-height: 1.6;
+    }
+
+    .notice-text strong {
+      color: #c0392b;
+    }
+
+    .seal-area {
+      text-align: center;
+    }
+
+    .seal-icon {
+      width: 50px;
+      height: 50px;
+      border: 2px solid var(--border);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 4px auto;
+      color: var(--text-muted);
+      font-size: 22px;
+    }
+
+    .seal-label {
+      font-size: 9px;
+      font-weight: 700;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+    }
+
+    /* ─── FOOTER ─── */
+    .footer {
+      background: var(--primary);
+      padding: 12px 30px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 10px;
+      color: rgba(255,255,255,0.7);
+    }
+
+    .footer-links {
+      display: flex;
+      gap: 16px;
+      align-items: center;
+    }
+
+    .footer-link {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      color: rgba(255,255,255,0.8);
+      text-decoration: none;
+      font-size: 10px;
+    }
+
+    .footer-link svg {
+      width: 12px;
+      height: 12px;
+      fill: rgba(255,255,255,0.6);
+    }
+
+    .footer-company {
+      font-weight: 700;
+      color: rgba(255,255,255,0.9);
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+      font-size: 10px;
+    }
+
+    /* ─── PRINT ─── */
     @media print {
-      body {
-        background: #fff;
-      }
-      .payslip-container {
+      body { background: #fff; }
+      .payslip-page {
         margin: 0;
-        box-shadow: none;
         border: none;
         page-break-inside: avoid;
-      }
-      .footer {
-        font-size: 11px;
       }
     }
   </style>
 </head>
 <body>
-  <div class="payslip-container" style="position: relative;">
-    {% if qr_code %}
-    <div style="position: absolute; top: 20px; right: 20px; text-align: center;">
-      <img src="{{ qr_code }}" style="width: 70px; height: 70px;" /><br>
-      <span style="font-size: 8px; color: #718096;">Scan to Verify</span>
-    </div>
-    {% endif %}
+  <div class="payslip-page">
 
+    <!-- ─── HEADER ─── -->
     <div class="header">
-      {% if logo_path %}
-        <img src="{{ logo_path }}" alt="Company Logo" style="height: 60px; margin-bottom: 8px; display: block; margin-left: auto; margin-right: auto;" />
-      {% endif %}
-      <div class="company-name">{{ company.name|default:'Company Name' }}</div>
-      <div class="payslip-title">Payslip</div>
-      <div class="period">{{ batch.month }} {{ batch.year }}</div>
-      {% if pay_period %}<div class="period" style="margin-top: 2px;">{{ pay_period }}</div>{% endif %}
-    </div>
-
-    <div class="info-grid">
-      <div class="info-item"><span class="info-label">Payslip ID:</span> <span style="color: var(--secondary); font-weight: bold;">{{ payslip_id|default:'GEN-00000' }}</span></div>
-      <div class="info-item"><span class="info-label">Employee Name:</span> {{ employee.full_name }}</div>
-      <div class="info-item"><span class="info-label">Employee ID:</span> {{ employee.employee_id }}</div>
-      <div class="info-item"><span class="info-label">Designation:</span> {{ employee.designation.designation_name }}</div>
-      <div class="info-item"><span class="info-label">Department:</span> {{ employee.department.department_name }}</div>
-      <div class="info-item"><span class="info-label">Pay Date:</span> {{ payroll.payroll_date }}</div>
-      <div class="info-item"><span class="info-label">Payment Mode:</span> Bank Transfer</div>
-      <div class="info-item"><span class="info-label">Working Days:</span> {{ payroll.total_working_days }}</div>
-      <div class="info-item"><span class="info-label">Present Days:</span> {{ payroll.present_days|default:'0' }}</div>
-      <div class="info-item"><span class="info-label">Paid Leaves:</span> {{ payroll.paid_leaves|default:'0' }}</div>
-      <div class="info-item"><span class="info-label">Days Paid:</span> {{ payroll.days_paid }}</div>
-      <div class="info-item"><span class="info-label">LOP Days:</span> {{ payroll.loss_of_pay_days }}</div>
-    </div>
-
-    <div class="section-title">Earnings & Deductions</div>
-    <div class="earnings-deductions">
-      <div>
-        <table>
-          <thead>
-            <tr><th>Earnings</th><th class="amount">Amount (₹)</th></tr>
-          </thead>
-          <tbody>
-            <tr><td>Basic Salary</td><td class="amount">{{ payroll.basic_salary }}</td></tr>
-            {% if payroll.hra > 0 %}
-            <tr><td>HRA</td><td class="amount">{{ payroll.hra }}</td></tr>
-            {% endif %}
-            {% if payroll.conveyance > 0 %}
-            <tr><td>Conveyance</td><td class="amount">{{ payroll.conveyance }}</td></tr>
-            {% endif %}
-            {% if payroll.medical > 0 %}
-            <tr><td>Medical</td><td class="amount">{{ payroll.medical }}</td></tr>
-            {% endif %}
-            {% if payroll.special_allowance > 0 %}
-            <tr><td>Special Allowance</td><td class="amount">{{ payroll.special_allowance }}</td></tr>
-            {% endif %}
-            {% if payroll.ot_pay > 0 %}
-            <tr><td>OT Pay ({{ payroll.ot_hours }} hrs)</td><td class="amount">{{ payroll.ot_pay }}</td></tr>
-            {% endif %}
-            {% for item in extra_allowances_list %}
-            <tr><td>{{ item.name }}</td><td class="amount">{{ item.amount }}</td></tr>
-            {% endfor %}
-            {% if extra_allowances %}
-            <tr><td>Other Allowances</td><td class="amount">{{ extra_allowances }}</td></tr>
-            {% endif %}
-            <tr class="total-row"><td>Total Earnings</td><td class="amount">{{ payroll.gross_salary }}</td></tr>
-          </tbody>
-        </table>
+      <div class="header-left">
+        {% if logo_path %}
+          <img src="{{ logo_path }}" alt="Logo" />
+        {% else %}
+          <svg width="38" height="38" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg" style="flex-shrink:0;">
+            <rect x="4" y="12" width="20" height="32" rx="2" fill="#1e3a5f"/>
+            <rect x="24" y="22" width="16" height="22" rx="2" fill="#4f7cff"/>
+            <rect x="8" y="16" width="4" height="4" rx="0.5" fill="#a8c4ff"/>
+            <rect x="14" y="16" width="4" height="4" rx="0.5" fill="#a8c4ff"/>
+            <rect x="8" y="23" width="4" height="4" rx="0.5" fill="#a8c4ff"/>
+            <rect x="14" y="23" width="4" height="4" rx="0.5" fill="#a8c4ff"/>
+            <rect x="8" y="30" width="4" height="4" rx="0.5" fill="#a8c4ff"/>
+            <rect x="14" y="30" width="4" height="4" rx="0.5" fill="#a8c4ff"/>
+            <rect x="28" y="27" width="4" height="4" rx="0.5" fill="#c5d8ff"/>
+            <rect x="34" y="27" width="4" height="4" rx="0.5" fill="#c5d8ff"/>
+            <rect x="28" y="34" width="4" height="4" rx="0.5" fill="#c5d8ff"/>
+            <rect x="34" y="34" width="4" height="4" rx="0.5" fill="#c5d8ff"/>
+            <rect x="11" y="37" width="6" height="7" rx="1" fill="#4f7cff"/>
+            <rect x="4" y="8" width="20" height="4" rx="1" fill="#4f7cff"/>
+          </svg>
+        {% endif %}
+        <div>
+          <div class="company-name">{{ company.name|default:'Company Name' }}</div>
+          <div class="company-address">{{ company.address|default:'' }}{% if company.location %}, {{ company.location }}{% endif %}</div>
+        </div>
       </div>
-      <div>
-        <table>
-          <thead>
-            <tr><th>Deductions</th><th class="amount">Amount (₹)</th></tr>
-          </thead>
-          <tbody>
-            {% for item in extra_deductions_list %}
-            <tr><td>{{ item.name }}</td><td class="amount">{{ item.amount }}</td></tr>
-            {% endfor %}
-            {% if payroll.pf > 0 %}
-            <tr><td>Provident Fund</td><td class="amount">{{ payroll.pf }}</td></tr>
-            {% endif %}
-            {% if payroll.income_tax > 0 %}
-            <tr><td>Income Tax</td><td class="amount">{{ payroll.income_tax }}</td></tr>
-            {% endif %}
-            {% if payroll.loan_emi > 0 %}
-            <tr><td>Loan EMI</td><td class="amount">{{ payroll.loan_emi }}</td></tr>
-            {% endif %}
-            {% if payroll.asset_deduction > 0 %}
-            <tr><td>Asset Deduction</td><td class="amount">{{ payroll.asset_deduction }}</td></tr>
-            {% endif %}
-            {% if extra_deductions %}
-            <tr><td>Other Deductions</td><td class="amount">{{ extra_deductions }}</td></tr>
-            {% endif %}
-            <tr class="total-row"><td>Total Deductions</td><td class="amount">{{ payroll.total_deductions }}</td></tr>
-          </tbody>
-        </table>
+      <div class="header-right">
+        <div class="payslip-title">PAYSLIP</div>
+        <div class="payslip-period">{{ batch.month }} {{ batch.year }}</div>
+        {% if pay_period %}<div class="payslip-period" style="margin-top:1px; font-weight:400;">{{ pay_period }}</div>{% endif %}
+        {% if qr_code %}
+        <div class="qr-inline">
+          <img src="{{ qr_code }}" alt="QR" />
+          <span>Scan to Verify</span>
+        </div>
+        {% endif %}
       </div>
     </div>
 
+    <!-- ─── EMPLOYEE INFO ─── -->
+    <div class="info-section">
+      <div class="info-grid">
+        <div class="info-col">
+          <div class="info-row">
+            <span class="info-label">Employee Name</span>
+            <span class="info-value">{{ employee.full_name }}</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Employee ID</span>
+            <span class="info-value">{{ employee.employee_id }}</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Designation</span>
+            <span class="info-value">{{ employee.designation.designation_name|default:'-' }}</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Department</span>
+            <span class="info-value">{{ employee.department.department_name|default:'-' }}</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Pay Slip ID</span>
+            <span class="info-value" style="color: var(--accent);">{{ payslip_id|default:'GEN-00000' }}</span>
+          </div>
+        </div>
+        <div class="info-col">
+          <div class="info-row">
+            <span class="info-label">Pay Date</span>
+            <span class="info-value">{{ payroll.payroll_date }}</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Working Days</span>
+            <span class="info-value">{{ payroll.total_working_days }}</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Month</span>
+            <span class="info-value">{{ batch.month }}</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Location</span>
+            <span class="info-value">{{ company.location|default:'-' }}</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Payment Mode</span>
+            <span class="info-value">{% if employee.payment_method == 'bank' %}Bank Transfer{% elif employee.payment_method == 'cash' %}Cash{% else %}Bank Transfer{% endif %}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ─── ATTENDANCE BAR ─── -->
+    <div class="attendance-bar">
+      <div class="att-item">
+        <div class="att-label">Present Days</div>
+        <div class="att-value">{{ payroll.present_days|default:'0' }}</div>
+      </div>
+      <div class="att-item">
+        <div class="att-label">Paid Leaves</div>
+        <div class="att-value">{{ payroll.paid_leaves|default:'0' }}</div>
+      </div>
+      <div class="att-item">
+        <div class="att-label">LOP Days</div>
+        <div class="att-value">{{ payroll.loss_of_pay_days|default:'0' }}</div>
+      </div>
+      <div class="att-item">
+        <div class="att-label">Days Paid</div>
+        <div class="att-value">{{ payroll.days_paid }}</div>
+      </div>
+    </div>
+
+    <!-- ─── EARNINGS & DEDUCTIONS ─── -->
+    <div class="ed-section">
+      <div class="ed-grid">
+        <!-- EARNINGS -->
+        <div class="ed-col">
+          <div class="ed-header">Earnings</div>
+          <div class="ed-row">
+            <span class="ed-name">Basic Salary</span>
+            <span class="ed-amount">{{ payroll.basic_salary }}</span>
+          </div>
+          {% if payroll.hra > 0 %}
+          <div class="ed-row">
+            <span class="ed-name">HRA</span>
+            <span class="ed-amount">{{ payroll.hra }}</span>
+          </div>
+          {% endif %}
+          {% if payroll.conveyance > 0 %}
+          <div class="ed-row">
+            <span class="ed-name">Conveyance</span>
+            <span class="ed-amount">{{ payroll.conveyance }}</span>
+          </div>
+          {% endif %}
+          {% if payroll.medical > 0 %}
+          <div class="ed-row">
+            <span class="ed-name">Medical</span>
+            <span class="ed-amount">{{ payroll.medical }}</span>
+          </div>
+          {% endif %}
+          {% if payroll.special_allowance > 0 %}
+          <div class="ed-row">
+            <span class="ed-name">Special Allowance</span>
+            <span class="ed-amount">{{ payroll.special_allowance }}</span>
+          </div>
+          {% endif %}
+          {% if payroll.ot_pay > 0 %}
+          <div class="ed-row">
+            <span class="ed-name">OT Pay ({{ payroll.ot_hours }} hrs)</span>
+            <span class="ed-amount">{{ payroll.ot_pay }}</span>
+          </div>
+          {% endif %}
+          {% for item in extra_allowances_list %}
+          <div class="ed-row">
+            <span class="ed-name">{{ item.name }}</span>
+            <span class="ed-amount">{{ item.amount }}</span>
+          </div>
+          {% endfor %}
+          {% if extra_allowances %}
+          <div class="ed-row">
+            <span class="ed-name">Other Allowances</span>
+            <span class="ed-amount">{{ extra_allowances }}</span>
+          </div>
+          {% endif %}
+          <div class="ed-total">
+            <span>Total Earnings</span>
+            <span class="ed-amount">{{ payroll.gross_salary }}</span>
+          </div>
+        </div>
+        <!-- DEDUCTIONS -->
+        <div class="ed-col">
+          <div class="ed-header">Deductions</div>
+          {% for item in extra_deductions_list %}
+          <div class="ed-row">
+            <span class="ed-name">{{ item.name }}</span>
+            <span class="ed-amount">{{ item.amount }}</span>
+          </div>
+          {% endfor %}
+          {% if payroll.pf > 0 %}
+          <div class="ed-row">
+            <span class="ed-name">Provident Fund</span>
+            <span class="ed-amount">{{ payroll.pf }}</span>
+          </div>
+          {% endif %}
+          {% if payroll.income_tax > 0 %}
+          <div class="ed-row">
+            <span class="ed-name">Income Tax</span>
+            <span class="ed-amount">{{ payroll.income_tax }}</span>
+          </div>
+          {% endif %}
+          {% if payroll.loan_emi > 0 %}
+          <div class="ed-row">
+            <span class="ed-name">Loan EMI</span>
+            <span class="ed-amount">{{ payroll.loan_emi }}</span>
+          </div>
+          {% endif %}
+          {% if payroll.asset_deduction > 0 %}
+          <div class="ed-row">
+            <span class="ed-name">Asset Deduction</span>
+            <span class="ed-amount">{{ payroll.asset_deduction }}</span>
+          </div>
+          {% endif %}
+          {% if extra_deductions %}
+          <div class="ed-row">
+            <span class="ed-name">Other Deductions</span>
+            <span class="ed-amount">{{ extra_deductions }}</span>
+          </div>
+          {% endif %}
+          <div class="ed-total">
+            <span>Total Deductions</span>
+            <span class="ed-amount">{{ payroll.total_deductions }}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ─── NET PAY ─── -->
     <div class="net-pay-section">
-      <div class="net-pay-label">Net Pay</div>
-      <div class="net-pay-amount">₹{{ payroll.net_pay }}</div>
+      <div class="net-pay-left">
+        <div class="net-pay-label">Net Payable Amount</div>
+        <div class="net-pay-amount">INR {{ payroll.net_pay }}/-</div>
+      </div>
+      {% if net_pay_words %}
+      <div class="net-pay-right">
+        <div class="amount-words-label">Amount in Words</div>
+        <div class="amount-words">{{ net_pay_words }}</div>
+      </div>
+      {% endif %}
     </div>
 
-    <div class="footer">
-      This is a system-generated payslip and does not require a signature.<br>
-      For any queries, please contact the HR department.
+    <!-- ─── NOTICE & SEAL ─── -->
+    <div class="notice-section">
+      <div class="notice-text">
+        <strong>Notice:</strong> This is a computer-generated document and does not require a
+        physical signature. For any discrepancies, please contact the HR
+        department within 48 hours of payment.
+      </div>
+      <div class="seal-area">
+        <div class="seal-icon">&#10003;</div>
+        <div class="seal-label">Authorized Seal</div>
+      </div>
     </div>
+
+    <!-- ─── FOOTER ─── -->
+    <div class="footer">
+      <div class="footer-links">
+        {% if company.email %}
+        <span class="footer-link">
+          <svg viewBox="0 0 24 24"><path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/></svg>
+          {{ company.email }}
+        </span>
+        {% endif %}
+        {% if company.phone_number %}
+        <span class="footer-link">
+          <svg viewBox="0 0 24 24"><path d="M6.62 10.79a15.053 15.053 0 006.59 6.59l2.2-2.2a1 1 0 011.01-.24c1.12.37 2.33.57 3.58.57a1 1 0 011 1V20a1 1 0 01-1 1A17 17 0 013 4a1 1 0 011-1h3.5a1 1 0 011 1c0 1.25.2 2.46.57 3.58a1 1 0 01-.24 1.01l-2.2 2.2z"/></svg>
+          {{ company.phone_number }}
+        </span>
+        {% endif %}
+      </div>
+      <div class="footer-company">{{ company.name|default:'Company' }}{% if company.location %} &bull; {{ company.location }}{% endif %}</div>
+    </div>
+
   </div>
 </body>
 </html>
