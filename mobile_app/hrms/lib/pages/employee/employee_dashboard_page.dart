@@ -9,6 +9,9 @@ import '../../models/announcement_model.dart';
 import '../../models/break_config_model.dart';
 import '../../theme/app_stitch_theme.dart';
 import '../../services/employee_service.dart';
+import '../../services/geofence_service.dart';
+import '../../services/break_notification_service.dart';
+import '../../services/notification_service.dart';
 import '../../widgets/glass_card.dart';
 import 'widgets/timer_widget.dart';
 
@@ -37,6 +40,11 @@ class _EmployeeDashboardPageState extends State<EmployeeDashboardPage> {
   int _calendarCount = 0;
   List<BreakConfig> _breakConfigs = [];
 
+  LocationStatus? _locationStatus;
+  bool _locationLoading = false;
+
+  Timer? _badgeRefreshTimer;
+
   int _tabIndex = 0; // 0=Events, 1=Announcements
   final PageController _announcementPager = PageController();
 
@@ -44,12 +52,37 @@ class _EmployeeDashboardPageState extends State<EmployeeDashboardPage> {
   void initState() {
     super.initState();
     _fetchDashboardData();
+    _initGeofence();
+    _startBadgeRefresh();
+  }
+
+  void _startBadgeRefresh() {
+    _refreshBadges();
+    _badgeRefreshTimer = Timer.periodic(const Duration(seconds: 60), (_) => _refreshBadges());
+  }
+
+  Future<void> _refreshBadges() async {
+    await NotificationService.refreshBadges();
+    if (mounted) setState(() {});
+  }
+
+  Future<void> _initGeofence() async {
+    setState(() => _locationLoading = true);
+    await GeofenceService.fetchConfig();
+    final status = await GeofenceService.getLocationStatus();
+    if (mounted) {
+      setState(() {
+        _locationStatus = status;
+        _locationLoading = false;
+      });
+    }
   }
 
   @override
   void dispose() {
     _timer?.cancel();
     _breakTimerRef?.cancel();
+    _badgeRefreshTimer?.cancel();
     _announcementPager.dispose();
     super.dispose();
   }
@@ -286,9 +319,41 @@ class _EmployeeDashboardPageState extends State<EmployeeDashboardPage> {
 
     try {
       final isCheckedIn = _dashboardData!.isCheckedIn;
+
+      // For check-in: get fresh location and validate geofence
+      if (!isCheckedIn) {
+        final config = GeofenceService.cachedConfig;
+        if (config != null && config.geofenceRequired && !config.isWfh) {
+          setState(() => _locationLoading = true);
+          final position = await GeofenceService.getCurrentPosition();
+          setState(() => _locationLoading = false);
+          if (position == null) {
+            setState(() => _checkInOutLoading = false);
+            _showNotification(
+              'Unable to get your location. Please enable GPS and try again.',
+              isError: true,
+            );
+            return;
+          }
+          final locStatus = GeofenceService.checkStatus(position, config);
+          if (mounted) setState(() => _locationStatus = locStatus);
+          if (!locStatus.isAtOffice) {
+            setState(() => _checkInOutLoading = false);
+            _showNotification(
+              'You are outside the office boundary. Check-in is not allowed.',
+              isError: true,
+            );
+            return;
+          }
+        }
+      }
+
       final response = isCheckedIn
           ? await EmployeeService.checkOut()
-          : await EmployeeService.checkIn();
+          : await EmployeeService.checkIn(
+              lat: _locationStatus?.lat,
+              lon: _locationStatus?.lon,
+            );
 
       if (mounted) {
         setState(() {
@@ -333,6 +398,14 @@ class _EmployeeDashboardPageState extends State<EmployeeDashboardPage> {
 
         if (response.success) {
           _showNotification('Started ${config.displayName}', isError: false);
+          // Schedule break-end notifications if duration is known
+          final dur = config.durationMinutes;
+          if (dur != null && dur > 0) {
+            BreakNotificationService.scheduleBreakEnd(
+              breakDurationMinutes: dur,
+              breakName: config.displayName,
+            );
+          }
           await _fetchDashboardData();
         } else {
           _showNotification(response.message ?? 'Failed to start break', isError: true);
@@ -367,6 +440,7 @@ class _EmployeeDashboardPageState extends State<EmployeeDashboardPage> {
         });
 
         if (response.success) {
+          BreakNotificationService.cancel();
           _showNotification('Break ended', isError: false);
           await _fetchDashboardData();
         } else {
@@ -444,32 +518,40 @@ class _EmployeeDashboardPageState extends State<EmployeeDashboardPage> {
       builder: (context, constraints) {
         return Stack(
           children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+            SingleChildScrollView(
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 80),
               child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   _GreetingHeader(name: d.employeeName ?? 'Employee'),
-                  const SizedBox(height: 10),
-                    _ReadyForDayStrip(
-                      isCheckedIn: isCheckedIn,
+                  const SizedBox(height: 6),
+                  _LocationStatusBadge(
+                    locationStatus: _locationStatus,
+                    isLoading: _locationLoading,
+                    geofenceRequired: GeofenceService.cachedConfig?.geofenceRequired ?? false,
+                    onRefresh: _initGeofence,
+                  ),
+                  const SizedBox(height: 6),
+                  _ReadyForDayStrip(
+                    isCheckedIn: isCheckedIn,
+                    hasActiveBreak: hasActiveBreak,
+                    seconds: seconds,
+                    isLoading: _checkInOutLoading,
+                    onRefresh: _fetchDashboardData,
+                    onCheckInOut: _handleCheckInOut,
+                  ),
+                  if (isCheckedIn) ...[
+                    const SizedBox(height: 10),
+                    _BreakButtons(
                       hasActiveBreak: hasActiveBreak,
-                      seconds: seconds,
+                      activeBreakName: d.activeBreak?.breakChoice ?? 'Break',
+                      configs: _breakConfigs,
                       isLoading: _checkInOutLoading,
-                      onRefresh: _fetchDashboardData,
-                      onCheckInOut: _handleCheckInOut,
+                      onStart: _handleStartBreak,
+                      onEnd: _handleEndBreak,
                     ),
-                    if (isCheckedIn) ...[
-                      const SizedBox(height: 10),
-                      _BreakButtons(
-                        hasActiveBreak: hasActiveBreak,
-                        activeBreakName: d.activeBreak?.breakChoice ?? 'Break',
-                        configs: _breakConfigs,
-                        isLoading: _checkInOutLoading,
-                        onStart: _handleStartBreak,
-                        onEnd: _handleEndBreak,
-                      ),
-                    ],
-                    const SizedBox(height: 12),
+                  ],
+                  const SizedBox(height: 12),
                   _KpiGrid(
                     isLoading: _isLoadingOverview,
                     leavesCount: _leavesCount,
@@ -482,12 +564,17 @@ class _EmployeeDashboardPageState extends State<EmployeeDashboardPage> {
                     onTapCalendar: () => Navigator.pushNamed(context, '/employee/personal-calendar'),
                   ),
                   const SizedBox(height: 12),
+                  _PendingRequestsSection(
+                    onNavigate: (route) => Navigator.pushNamed(context, route),
+                  ),
+                  const SizedBox(height: 12),
                   _RoundedTabs(
                     index: _tabIndex,
                     onChanged: (i) => setState(() => _tabIndex = i),
                   ),
                   const SizedBox(height: 10),
-                  Expanded(
+                  SizedBox(
+                    height: constraints.maxHeight * 0.4,
                     child: AnimatedSwitcher(
                       duration: const Duration(milliseconds: 200),
                       child: _tabIndex == 0
@@ -505,7 +592,7 @@ class _EmployeeDashboardPageState extends State<EmployeeDashboardPage> {
                               isLoading: _isLoadingOverview,
                               items: _announcements,
                               controller: _announcementPager,
-                            )
+                            ),
                     ),
                   ),
                 ],
@@ -525,6 +612,304 @@ class _EmployeeDashboardPageState extends State<EmployeeDashboardPage> {
           ],
         );
       },
+    );
+  }
+}
+
+class _PendingRequestsSection extends StatelessWidget {
+  const _PendingRequestsSection({required this.onNavigate});
+
+  final void Function(String route) onNavigate;
+
+  @override
+  Widget build(BuildContext context) {
+    final items = _pendingItems();
+    if (items.isEmpty) return const SizedBox.shrink();
+
+    final Widget cardsRow = items.length <= 4
+        // ≤4: stretch evenly across full width, no scroll
+        ? Row(
+            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            children: items
+                .map((item) => Expanded(
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 4),
+                        child: _PendingCard(
+                          icon: item.icon,
+                          label: item.label,
+                          count: item.count,
+                          color: item.color,
+                          onTap: () => onNavigate(item.route),
+                        ),
+                      ),
+                    ))
+                .toList(),
+          )
+        // 5+: horizontal scroll
+        : SizedBox(
+            height: 84,
+            child: ListView.separated(
+              scrollDirection: Axis.horizontal,
+              padding: EdgeInsets.zero,
+              itemCount: items.length,
+              separatorBuilder: (_, __) => const SizedBox(width: 10),
+              itemBuilder: (_, i) => _PendingCard(
+                icon: items[i].icon,
+                label: items[i].label,
+                count: items[i].count,
+                color: items[i].color,
+                fixedWidth: 100,
+                onTap: () => onNavigate(items[i].route),
+              ),
+            ),
+          );
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.only(left: 2, bottom: 8),
+          child: Text(
+            'My Pending Requests',
+            style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: 0.3,
+                ),
+          ),
+        ),
+        cardsRow,
+      ],
+    );
+  }
+
+  List<_PendingItem> _pendingItems() {
+    final all = [
+      _PendingItem(
+        icon: Icons.beach_access_rounded,
+        label: 'Leave',
+        count: NotificationService.leaveApplicationBadge,
+        color: const Color(0xFF7C3AED),
+        route: '/employee/leave-application',
+      ),
+      _PendingItem(
+        icon: Icons.home_work_rounded,
+        label: 'WFH',
+        count: NotificationService.wfhRequestsBadge,
+        color: const Color(0xFF0891B2),
+        route: '/employee/wfh-request',
+      ),
+      _PendingItem(
+        icon: Icons.receipt_long_rounded,
+        label: 'Reimbursement',
+        count: NotificationService.reimbursementsBadge,
+        color: const Color(0xFF059669),
+        route: '/employee/reimbursement',
+      ),
+      _PendingItem(
+        icon: Icons.account_balance_rounded,
+        label: 'Loan',
+        count: NotificationService.loanApplicationsBadge,
+        color: const Color(0xFFD97706),
+        route: '/employee/loan-application',
+      ),
+      _PendingItem(
+        icon: Icons.devices_rounded,
+        label: 'Assets',
+        count: NotificationService.assetRequestsBadge,
+        color: const Color(0xFFDC2626),
+        route: '/employee/asset-requests',
+      ),
+      _PendingItem(
+        icon: Icons.picture_as_pdf_rounded,
+        label: 'Payslips',
+        count: NotificationService.payslipsBadge,
+        color: const Color(0xFF4F46E5),
+        route: '/employee/my-payslips',
+      ),
+    ];
+    return all.where((e) => e.count > 0).toList();
+  }
+}
+
+class _PendingItem {
+  final IconData icon;
+  final String label;
+  final int count;
+  final Color color;
+  final String route;
+  const _PendingItem({
+    required this.icon,
+    required this.label,
+    required this.count,
+    required this.color,
+    required this.route,
+  });
+}
+
+class _PendingCard extends StatelessWidget {
+  const _PendingCard({
+    required this.icon,
+    required this.label,
+    required this.count,
+    required this.color,
+    required this.onTap,
+    this.fixedWidth,
+  });
+
+  final IconData icon;
+  final String label;
+  final int count;
+  final Color color;
+  final VoidCallback onTap;
+  final double? fixedWidth;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: fixedWidth,
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.08),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: color.withValues(alpha: 0.25)),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Icon(icon, size: 18, color: color),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: color,
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Text(
+                    '$count',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 10,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+                color: color,
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _LocationStatusBadge extends StatelessWidget {
+  const _LocationStatusBadge({
+    required this.locationStatus,
+    required this.isLoading,
+    required this.geofenceRequired,
+    required this.onRefresh,
+  });
+
+  final LocationStatus? locationStatus;
+  final bool isLoading;
+  final bool geofenceRequired;
+  final VoidCallback onRefresh;
+
+  @override
+  Widget build(BuildContext context) {
+    if (!geofenceRequired) return const SizedBox.shrink();
+
+    if (isLoading) {
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        decoration: BoxDecoration(
+          color: Colors.white.withValues(alpha: 0.15),
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: const Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            SizedBox(
+              width: 12,
+              height: 12,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            ),
+            SizedBox(width: 8),
+            Text('Detecting location...', style: TextStyle(fontSize: 12)),
+          ],
+        ),
+      );
+    }
+
+    if (locationStatus == null) {
+      return GestureDetector(
+        onTap: onRefresh,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+          decoration: BoxDecoration(
+            color: Colors.orange.withValues(alpha: 0.15),
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: Colors.orange.withValues(alpha: 0.4)),
+          ),
+          child: const Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.location_off_rounded, size: 14, color: Colors.orange),
+              SizedBox(width: 6),
+              Text('Location unavailable — tap to retry',
+                  style: TextStyle(fontSize: 12, color: Colors.orange)),
+            ],
+          ),
+        ),
+      );
+    }
+
+    final atOffice = locationStatus!.isAtOffice;
+    final color = atOffice ? const Color(0xFF059669) : Colors.red;
+    final icon = atOffice ? Icons.location_on_rounded : Icons.location_off_rounded;
+    final label = atOffice
+        ? '📍 At Office${locationStatus!.nearestOfficeName != null ? ' — ${locationStatus!.nearestOfficeName}' : ''}'
+        : '📍 Outside Office${locationStatus!.nearestOfficeName != null ? ' (${(locationStatus!.distanceMeters?.toStringAsFixed(0) ?? '?')}m from ${locationStatus!.nearestOfficeName})' : ''}';
+
+    return GestureDetector(
+      onTap: onRefresh,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.12),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: color.withValues(alpha: 0.35)),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 14, color: color),
+            const SizedBox(width: 6),
+            Flexible(
+              child: Text(
+                label,
+                style: TextStyle(fontSize: 12, color: color, fontWeight: FontWeight.w500),
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

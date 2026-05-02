@@ -583,9 +583,9 @@ class _PersonalCalendarPageState extends State<PersonalCalendarPage> {
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
             child: Column(
               children: [
-                _buildHeader(),
-                const SizedBox(height: 12),
                 _buildTabs(),
+                const SizedBox(height: 12),
+                _buildHeader(),
                 const SizedBox(height: 12),
                 Expanded(child: _buildBody()),
               ],

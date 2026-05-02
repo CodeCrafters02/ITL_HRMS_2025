@@ -1,9 +1,8 @@
 from .service import send_fcm_to_users
-from app.models import UserRegister
 from django.db.models.signals import post_save, pre_save, post_migrate
 from django.dispatch import receiver
 from employee.models import TaskAssignment, Task
-from app.models import Employee, EmpLeave, CalendarEvent, LearningCorner, Notification, ChatMessage, AssetRequest, SeatBooking, ConferenceRoomBooking, LoanApplication
+from app.models import UserRegister, Employee, EmpLeave, CalendarEvent, LearningCorner, Notification, ChatMessage, AssetRequest, SeatBooking, ConferenceRoomBooking, LoanApplication, WFHRequest, ReimbursementRequest, FinalizedSalary
 from notifications.models import UserNotification
 import logging
 
@@ -439,6 +438,185 @@ def loan_application_notify(sender, instance, created, **kwargs):
                 )
         except Exception as e:
             logger.error(f"Failed to notify manager about loan: {e}")
+
+@receiver(pre_save, sender=WFHRequest)
+def wfh_request_status_change(sender, instance, **kwargs):
+    """
+    Notify employee when their WFH request is approved or rejected.
+    Notify manager when a new WFH request is created.
+    """
+    if not instance.pk:
+        # New WFH request — notify manager after save (handled in post_save)
+        return
+    try:
+        prev = WFHRequest.objects.get(pk=instance.pk)
+    except WFHRequest.DoesNotExist:
+        return
+
+    if prev.status != instance.status and instance.status in ['approved', 'rejected']:
+        if instance.employee and instance.employee.user and instance.employee.user.id:
+            default_sender = UserRegister.objects.filter(role='admin').first()
+            status_label = instance.status.capitalize()
+            request_type = instance.get_request_type_display() if hasattr(instance, 'get_request_type_display') else instance.request_type.upper()
+            date_range = f"{instance.from_date} → {instance.to_date}" if instance.from_date and instance.to_date else ""
+            body = f"Your {request_type} request{' for ' + date_range if date_range else ''} has been {status_label}."
+            if instance.status == 'rejected' and instance.rejection_reason:
+                body += f" Reason: {instance.rejection_reason}"
+            data = {"type": "wfh_status", "wfh_id": instance.id, "status": instance.status}
+            try:
+                send_fcm_to_users(
+                    [instance.employee.user.id],
+                    "wfh",
+                    body,
+                    sender=default_sender,
+                    title=f"WFH Request {status_label}",
+                    extra_data=data
+                )
+                UserNotification.objects.create(
+                    recipient=instance.employee,
+                    title=f"WFH Request {status_label}",
+                    message=body,
+                    related_object_id=instance.id,
+                    sender=default_sender
+                )
+            except Exception as e:
+                logger.error(f"Failed to send FCM for WFH status change: {e}")
+
+
+@receiver(post_save, sender=WFHRequest)
+def wfh_request_created_notify_manager(sender, instance, created, **kwargs):
+    """
+    When a new WFH request is created, notify the reporting manager.
+    """
+    if not created:
+        return
+    if instance.reporting_manager and instance.reporting_manager.user:
+        default_sender = UserRegister.objects.filter(role='admin').first()
+        request_type = instance.get_request_type_display() if hasattr(instance, 'get_request_type_display') else instance.request_type.upper()
+        date_range = f"{instance.from_date} → {instance.to_date}" if instance.from_date and instance.to_date else ""
+        body = f"{instance.employee.full_name} requested {request_type}{' for ' + date_range if date_range else ''}."
+        try:
+            send_fcm_to_users(
+                [instance.reporting_manager.user.id],
+                "wfh",
+                body,
+                sender=default_sender,
+                title="New WFH Request",
+                extra_data={"type": "wfh_request", "wfh_id": instance.id}
+            )
+            UserNotification.objects.create(
+                recipient=instance.reporting_manager,
+                title="New WFH Request",
+                message=body,
+                related_object_id=instance.id,
+                sender=default_sender
+            )
+        except Exception as e:
+            logger.error(f"Failed to notify manager about new WFH request: {e}")
+
+
+@receiver(pre_save, sender=ReimbursementRequest)
+def reimbursement_status_change(sender, instance, **kwargs):
+    """
+    Notify employee when their reimbursement is approved or rejected.
+    """
+    if not instance.pk:
+        return
+    try:
+        prev = ReimbursementRequest.objects.get(pk=instance.pk)
+    except ReimbursementRequest.DoesNotExist:
+        return
+
+    if prev.status != instance.status and instance.status in ['approved', 'rejected']:
+        if instance.employee and instance.employee.user and instance.employee.user.id:
+            default_sender = UserRegister.objects.filter(role='admin').first()
+            status_label = instance.status.capitalize()
+            category_name = instance.category.name if instance.category else (instance.custom_category or 'Reimbursement')
+            body = f"Your reimbursement request for {category_name} (₹{instance.amount}) has been {status_label}."
+            if instance.status == 'rejected' and instance.rejection_reason:
+                body += f" Reason: {instance.rejection_reason}"
+            data = {"type": "reimbursement_status", "reimbursement_id": instance.id, "status": instance.status}
+            try:
+                send_fcm_to_users(
+                    [instance.employee.user.id],
+                    "reimbursement",
+                    body,
+                    sender=default_sender,
+                    title=f"Reimbursement {status_label}",
+                    extra_data=data
+                )
+                UserNotification.objects.create(
+                    recipient=instance.employee,
+                    title=f"Reimbursement {status_label}",
+                    message=body,
+                    related_object_id=instance.id,
+                    sender=default_sender
+                )
+            except Exception as e:
+                logger.error(f"Failed to send FCM for reimbursement status change: {e}")
+
+
+@receiver(post_save, sender=ReimbursementRequest)
+def reimbursement_created_notify_manager(sender, instance, created, **kwargs):
+    """
+    When a new reimbursement request is created, notify the reporting manager.
+    """
+    if not created:
+        return
+    if instance.reporting_manager and instance.reporting_manager.user:
+        default_sender = UserRegister.objects.filter(role='admin').first()
+        category_name = instance.category.name if instance.category else (instance.custom_category or 'expense')
+        body = f"{instance.employee.full_name} submitted a reimbursement request for {category_name} (₹{instance.amount})."
+        try:
+            send_fcm_to_users(
+                [instance.reporting_manager.user.id],
+                "reimbursement",
+                body,
+                sender=default_sender,
+                title="New Reimbursement Request",
+                extra_data={"type": "reimbursement_request", "reimbursement_id": instance.id}
+            )
+            UserNotification.objects.create(
+                recipient=instance.reporting_manager,
+                title="New Reimbursement Request",
+                message=body,
+                related_object_id=instance.id,
+                sender=default_sender
+            )
+        except Exception as e:
+            logger.error(f"Failed to notify manager about new reimbursement: {e}")
+
+
+@receiver(post_save, sender=FinalizedSalary)
+def payslip_generated_notify(sender, instance, created, **kwargs):
+    """
+    Notify employee when a new payslip is generated.
+    """
+    if not created:
+        return
+    if instance.employee and instance.employee.user and instance.employee.user.id:
+        default_sender = UserRegister.objects.filter(role='admin').first()
+        from_month = instance.from_date.strftime('%B %Y') if instance.from_date else 'this period'
+        body = f"Your payslip for {from_month} has been generated. Net salary: ₹{instance.net_salary}."
+        try:
+            send_fcm_to_users(
+                [instance.employee.user.id],
+                "payslip",
+                body,
+                sender=default_sender,
+                title="New Payslip Available",
+                extra_data={"type": "payslip_new", "payslip_id": instance.id}
+            )
+            UserNotification.objects.create(
+                recipient=instance.employee,
+                title="New Payslip Available",
+                message=body,
+                related_object_id=instance.id,
+                sender=default_sender
+            )
+        except Exception as e:
+            logger.error(f"Failed to notify employee about new payslip: {e}")
+
 
 @receiver(pre_save, sender=LoanApplication)
 def loan_status_change_notify(sender, instance, **kwargs):

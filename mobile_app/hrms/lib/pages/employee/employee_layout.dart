@@ -122,6 +122,16 @@ class _EmployeeLayoutState extends State<EmployeeLayout> with WidgetsBindingObse
       setState(() {
         _currentIndex = 1; // My Tasks tab
       });
+    } else if (type == 'loan_status' || type == 'loan_request' || type == 'loan_admin_review') {
+      Navigator.pushNamed(context, '/employee/loan-application');
+    } else if (type == 'wfh_status' || type == 'wfh_request') {
+      Navigator.pushNamed(context, '/employee/wfh-request');
+    } else if (type == 'reimbursement_status' || type == 'reimbursement_request') {
+      Navigator.pushNamed(context, '/employee/reimbursement');
+    } else if (type == 'payslip_new') {
+      Navigator.pushNamed(context, '/employee/my-payslips');
+    } else if (type == 'asset_request') {
+      Navigator.pushNamed(context, '/employee/asset-requests');
     } else {
       // Default: Navigate to notifications page
       Navigator.pushNamed(context, '/employee/notifications');
