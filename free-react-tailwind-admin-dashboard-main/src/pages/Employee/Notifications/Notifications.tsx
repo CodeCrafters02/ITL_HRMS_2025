@@ -172,6 +172,22 @@ const Notifications = () => {
             groups.push({ heading, items: [item] });
         }
 
+        const maxGroupTimestamp = (g: { items: EmployeeNotification[] }) => {
+            const times = g.items.map((i) => new Date(i.date).getTime()).filter((t) => !Number.isNaN(t));
+            return times.length ? Math.max(...times) : 0;
+        };
+        const headingSortRank = (heading: string) => {
+            if (heading === 'Today') return 0;
+            if (heading === 'Yesterday') return 1;
+            return 2;
+        };
+        groups.sort((a, b) => {
+            const ra = headingSortRank(a.heading);
+            const rb = headingSortRank(b.heading);
+            if (ra !== rb) return ra - rb;
+            return maxGroupTimestamp(b) - maxGroupTimestamp(a);
+        });
+
         return groups;
     }, [items]);
 

@@ -7,6 +7,31 @@ import IconSearch from '../../../components/Icon/IconSearch';
 import IconX from '../../../components/Icon/IconX';
 import { approveManagerLeave, fetchManagerLeaveRequests, LeaveStatus, ManagerLeaveRequest, rejectManagerLeave } from './api';
 
+function formatLeaveDuration(v?: string | null): string {
+    if (v == null || v === '') return '—';
+    const s = String(v).trim().toLowerCase();
+    if (s === 'half_day' || s === 'half day') return 'Half day';
+    if (s === 'full_day' || s === 'full day') return 'Full day';
+    return String(v).trim();
+}
+
+/** dd/mm/yyyy; prefers calendar parts from YYYY-MM-DD so timezone does not shift the day. */
+function formatLeaveDateDdMmYyyy(value?: string | null): string {
+    if (value == null || value === '') return '-';
+    const s = String(value).trim();
+    const iso = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if (iso) {
+        const [, y, m, d] = iso;
+        return `${d}/${m}/${y}`;
+    }
+    const parsed = new Date(s);
+    if (Number.isNaN(parsed.getTime())) return s;
+    const day = String(parsed.getDate()).padStart(2, '0');
+    const month = String(parsed.getMonth() + 1).padStart(2, '0');
+    const year = parsed.getFullYear();
+    return `${day}/${month}/${year}`;
+}
+
 const LeaveApprovals = () => {
     const dispatch = useDispatch();
     const [items, setItems] = useState<ManagerLeaveRequest[]>([]);
@@ -137,6 +162,7 @@ const LeaveApprovals = () => {
                                 <th>Employee</th>
                                 <th>Leave Type</th>
                                 <th>Period</th>
+                                <th>Duration</th>
                                 <th>Reason</th>
                                 <th>Status</th>
                                 <th className="text-center">Action</th>
@@ -145,11 +171,11 @@ const LeaveApprovals = () => {
                         <tbody>
                             {loading ? (
                                 <tr>
-                                    <td colSpan={6} className="text-center py-12 text-white-dark">Loading leave requests...</td>
+                                    <td colSpan={7} className="text-center py-12 text-white-dark">Loading leave requests...</td>
                                 </tr>
                             ) : filtered.length === 0 ? (
                                 <tr>
-                                    <td colSpan={6} className="text-center py-12 text-white-dark">No leave requests found.</td>
+                                    <td colSpan={7} className="text-center py-12 text-white-dark">No leave requests found.</td>
                                 </tr>
                             ) : (
                                 filtered.map((item) => (
@@ -157,8 +183,9 @@ const LeaveApprovals = () => {
                                         <td className="font-semibold">{item.employee_name}</td>
                                         <td>{item.leave_type_name || '-'}</td>
                                         <td>
-                                            {new Date(item.from_date).toLocaleDateString()} - {new Date(item.to_date).toLocaleDateString()}
+                                            {formatLeaveDateDdMmYyyy(item.from_date)} - {formatLeaveDateDdMmYyyy(item.to_date)}
                                         </td>
+                                        <td className="whitespace-nowrap">{formatLeaveDuration(item.leave_duration)}</td>
                                         <td className="max-w-[260px]">
                                             <p className="line-clamp-2">{item.reason || '-'}</p>
                                             {item.rejection_reason && <p className="text-xs text-danger mt-1">Rejected: {item.rejection_reason}</p>}
