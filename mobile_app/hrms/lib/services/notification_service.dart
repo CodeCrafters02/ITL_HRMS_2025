@@ -15,6 +15,11 @@ class NotificationService {
   static int calendarCount = 0;
   static int leaveApplicationCount = 0;
   static int leaveRequestCount = 0;
+  static int payslipsCount = 0;
+  static int assetRequestsCount = 0;
+  static int loanApplicationsCount = 0;
+  static int wfhRequestsCount = 0;
+  static int reimbursementsCount = 0;
 
   // Badge values (unread counts)
   static int notificationsBadge = 0;
@@ -23,6 +28,11 @@ class NotificationService {
   static int calendarBadge = 0;
   static int leaveApplicationBadge = 0;
   static int leaveRequestBadge = 0;
+  static int payslipsBadge = 0;
+  static int assetRequestsBadge = 0;
+  static int loanApplicationsBadge = 0;
+  static int wfhRequestsBadge = 0;
+  static int reimbursementsBadge = 0;
 
   // Start polling for badge updates
   static void startPolling() {
@@ -40,6 +50,9 @@ class NotificationService {
     _pollingTimer = null;
   }
 
+  // Public method for on-demand refresh (e.g. dashboard page)
+  static Future<void> refreshBadges() => _fetchAllBadges();
+
   // Fetch all badge counts (made public for FCM service)
   static Future<void> _fetchAllBadges() async {
     await Future.wait([
@@ -49,6 +62,11 @@ class NotificationService {
       _fetchCalendarCount(),
       _fetchLeaveApplicationCount(),
       _fetchLeaveRequestCount(),
+      _fetchPayslipsCount(),
+      _fetchAssetRequestsCount(),
+      _fetchLoanApplicationsCount(),
+      _fetchWFHRequestsCount(),
+      _fetchReimbursementsCount(),
     ]);
   }
 
@@ -60,14 +78,19 @@ class NotificationService {
 
       // Use all-notifications endpoint to get total count
       final response = await http.get(
-        Uri.parse('${ApiConfig.baseUrl}/employee/all-notifications/'),
+        Uri.parse(ApiConfig.allNotificationsUrl),
         headers: ApiConfig.getAuthHeaders(token),
       );
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
-        final count = data is List ? data.length : (data['count'] ?? 0);
-        notificationsCount = count as int;
+        int count = 0;
+        if (data is List) {
+          count = data.length;
+        } else if (data is Map) {
+          count = (data['count'] ?? data['results']?.length ?? 0) as int;
+        }
+        notificationsCount = count;
 
         final lastSeen = await _getLastSeen('notifications_last_seen');
         notificationsBadge = notificationsCount > lastSeen
@@ -86,14 +109,19 @@ class NotificationService {
       if (token == null) return;
 
       final response = await http.get(
-        Uri.parse('${ApiConfig.baseUrl}/employee/my-tasks/'),
+        Uri.parse('${ApiConfig.baseUrl}${ApiConfig.tasksEndpoint}'),
         headers: ApiConfig.getAuthHeaders(token),
       );
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
-        final count = data is List ? data.length : (data['count'] ?? 0);
-        myTasksCount = count as int;
+        int count = 0;
+        if (data is List) {
+          count = data.length;
+        } else if (data is Map) {
+          count = (data['count'] ?? data['results']?.length ?? 0) as int;
+        }
+        myTasksCount = count;
 
         final lastSeen = await _getLastSeen('my_tasks_last_seen');
         myTasksBadge = myTasksCount > lastSeen ? myTasksCount - lastSeen : 0;
@@ -110,13 +138,18 @@ class NotificationService {
       if (token == null) return;
 
       final response = await http.get(
-        Uri.parse('${ApiConfig.baseUrl}/employee/emp-learning-corner/'),
+        Uri.parse('${ApiConfig.baseUrl}${ApiConfig.learningCornerEndpoint}'),
         headers: ApiConfig.getAuthHeaders(token),
       );
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
-        final count = data is List ? data.length : 0;
+        int count = 0;
+        if (data is List) {
+          count = data.length;
+        } else if (data is Map) {
+          count = (data['count'] ?? data['results']?.length ?? 0) as int;
+        }
         learningCornerCount = count;
 
         final lastSeen = await _getLastSeen('learning_corner_last_seen');
@@ -136,7 +169,7 @@ class NotificationService {
       if (token == null) return;
 
       final response = await http.get(
-        Uri.parse('${ApiConfig.baseUrl}/employee/employee-calendar/'),
+        Uri.parse(ApiConfig.employeeCalendarBaseUrl),
         headers: ApiConfig.getAuthHeaders(token),
       );
 
@@ -153,26 +186,26 @@ class NotificationService {
     }
   }
 
-  // Fetch leave application count
+  // Fetch leave application count (pending only)
   static Future<void> _fetchLeaveApplicationCount() async {
     try {
       final token = await StorageService.getAccessToken();
       if (token == null) return;
 
-      final response = await http.get(
-        Uri.parse('${ApiConfig.baseUrl}/employee/emp-leaves/'),
-        headers: ApiConfig.getAuthHeaders(token),
-      );
+      final uri = Uri.parse('${ApiConfig.baseUrl}${ApiConfig.empLeavesEndpoint}')
+          .replace(queryParameters: {'status': 'Pending'});
+      final response = await http.get(uri, headers: ApiConfig.getAuthHeaders(token));
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
-        final count = data is List ? data.length : 0;
+        int count = 0;
+        if (data is List) {
+          count = data.length;
+        } else if (data is Map) {
+          count = (data['count'] ?? data['results']?.length ?? 0) as int;
+        }
         leaveApplicationCount = count;
-
-        final lastSeen = await _getLastSeen('leave_application_last_seen');
-        leaveApplicationBadge = leaveApplicationCount > lastSeen
-            ? leaveApplicationCount - lastSeen
-            : 0;
+        leaveApplicationBadge = count;
       }
     } catch (e) {
       // Silently handle errors
@@ -186,7 +219,7 @@ class NotificationService {
       if (token == null) return;
 
       final response = await http.get(
-        Uri.parse('${ApiConfig.baseUrl}/employee/emp-leaves/'),
+        Uri.parse('${ApiConfig.baseUrl}${ApiConfig.leaveRequestsEndpoint}'),
         headers: ApiConfig.getAuthHeaders(token),
       );
 
@@ -199,6 +232,133 @@ class NotificationService {
         leaveRequestBadge = leaveRequestCount > lastSeen
             ? leaveRequestCount - lastSeen
             : 0;
+      }
+    } catch (e) {
+      // Silently handle errors
+    }
+  }
+
+  // Fetch payslips count
+  static Future<void> _fetchPayslipsCount() async {
+    try {
+      final token = await StorageService.getAccessToken();
+      if (token == null) return;
+
+      final response = await http.get(
+        Uri.parse(ApiConfig.payslipsUrl()),
+        headers: ApiConfig.getAuthHeaders(token),
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        int count = 0;
+        if (data is List) {
+          count = data.length;
+        } else if (data is Map) {
+          count = (data['count'] ?? data['results']?.length ?? 0) as int;
+        }
+        payslipsCount = count;
+
+        final lastSeen = await _getLastSeen('payslips_last_seen');
+        payslipsBadge = payslipsCount > lastSeen ? payslipsCount - lastSeen : 0;
+      }
+    } catch (e) {
+      // Silently handle errors
+    }
+  }
+
+  // Fetch asset requests count (pending only)
+  static Future<void> _fetchAssetRequestsCount() async {
+    try {
+      final token = await StorageService.getAccessToken();
+      if (token == null) return;
+
+      final uri = Uri.parse(ApiConfig.assetRequestsUrl)
+          .replace(queryParameters: {'approval_status': 'pending'});
+      final response = await http.get(uri, headers: ApiConfig.getAuthHeaders(token));
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        int count = 0;
+        if (data is List) {
+          count = data.length;
+        } else if (data is Map) {
+          count = (data['count'] ?? data['results']?.length ?? 0) as int;
+        }
+        assetRequestsCount = count;
+        assetRequestsBadge = count;
+      }
+    } catch (e) {
+      // Silently handle errors
+    }
+  }
+
+  // Fetch loan applications count (own pending only)
+  static Future<void> _fetchLoanApplicationsCount() async {
+    try {
+      final token = await StorageService.getAccessToken();
+      if (token == null) return;
+      final uri = Uri.parse('${ApiConfig.baseUrl}${ApiConfig.loanApplicationsEndpoint}')
+          .replace(queryParameters: {'mine': 'true', 'status': 'PENDING'});
+      final response = await http.get(uri, headers: ApiConfig.getAuthHeaders(token));
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        int count = 0;
+        if (data is List) {
+          count = data.length;
+        } else if (data is Map) {
+          count = (data['count'] ?? data['results']?.length ?? 0) as int;
+        }
+        loanApplicationsCount = count;
+        loanApplicationsBadge = count;
+      }
+    } catch (e) {
+      // Silently handle errors
+    }
+  }
+
+  // Fetch WFH requests count (own pending only)
+  static Future<void> _fetchWFHRequestsCount() async {
+    try {
+      final token = await StorageService.getAccessToken();
+      if (token == null) return;
+      final uri = Uri.parse('${ApiConfig.baseUrl}${ApiConfig.wfhRequestsEndpoint}')
+          .replace(queryParameters: {'mine': 'true', 'status': 'pending'});
+      final response = await http.get(uri, headers: ApiConfig.getAuthHeaders(token));
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        int count = 0;
+        if (data is List) {
+          count = data.length;
+        } else if (data is Map) {
+          count = (data['count'] ?? data['results']?.length ?? 0) as int;
+        }
+        wfhRequestsCount = count;
+        wfhRequestsBadge = count;
+      }
+    } catch (e) {
+      // Silently handle errors
+    }
+  }
+
+  // Fetch reimbursements count (own pending only)
+  static Future<void> _fetchReimbursementsCount() async {
+    try {
+      final token = await StorageService.getAccessToken();
+      if (token == null) return;
+      final uri = Uri.parse('${ApiConfig.baseUrl}${ApiConfig.reimbursementRequestsEndpoint}')
+          .replace(queryParameters: {'mine': 'true', 'status': 'pending'});
+      final response = await http.get(uri, headers: ApiConfig.getAuthHeaders(token));
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        int count = 0;
+        if (data is List) {
+          count = data.length;
+        } else if (data is Map) {
+          count = (data['count'] ?? data['results']?.length ?? 0) as int;
+        }
+        reimbursementsCount = count;
+        reimbursementsBadge = count;
       }
     } catch (e) {
       // Silently handle errors
@@ -242,6 +402,26 @@ class NotificationService {
         key = 'leave_request_last_seen';
         count = leaveRequestCount;
         break;
+      case 'payslips':
+        key = 'payslips_last_seen';
+        count = payslipsCount;
+        break;
+      case 'asset_requests':
+        key = 'asset_requests_last_seen';
+        count = assetRequestsCount;
+        break;
+      case 'loan_applications':
+        key = 'loan_applications_last_seen';
+        count = loanApplicationsCount;
+        break;
+      case 'wfh_requests':
+        key = 'wfh_requests_last_seen';
+        count = wfhRequestsCount;
+        break;
+      case 'reimbursements':
+        key = 'reimbursements_last_seen';
+        count = reimbursementsCount;
+        break;
       default:
         return;
     }
@@ -267,6 +447,21 @@ class NotificationService {
         break;
       case 'leave_request':
         leaveRequestBadge = 0;
+        break;
+      case 'payslips':
+        payslipsBadge = 0;
+        break;
+      case 'asset_requests':
+        assetRequestsBadge = 0;
+        break;
+      case 'loan_applications':
+        loanApplicationsBadge = 0;
+        break;
+      case 'wfh_requests':
+        wfhRequestsBadge = 0;
+        break;
+      case 'reimbursements':
+        reimbursementsBadge = 0;
         break;
     }
   }

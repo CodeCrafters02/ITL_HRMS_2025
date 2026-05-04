@@ -25,32 +25,13 @@ class EmployeeDrawer extends StatefulWidget {
 
 class _EmployeeDrawerState extends State<EmployeeDrawer> {
   String? _companyName;
-  bool _isLoadingCompanyInfo = true;
+  bool _isLoadingCompanyInfo = false;
 
   @override
   void initState() {
     super.initState();
-    _fetchCompanyInfo();
-  }
-
-  Future<void> _fetchCompanyInfo() async {
-    try {
-      final response = await EmployeeService.getCompanyInfo();
-      if (mounted) {
-        setState(() {
-          _isLoadingCompanyInfo = false;
-          if (response.success && response.data != null) {
-            _companyName = response.data!['company_name'];
-          }
-        });
-      }
-    } catch (e) {
-      if (mounted) {
-        setState(() {
-          _isLoadingCompanyInfo = false;
-        });
-      }
-    }
+    // Company info endpoint not available - using default
+    _companyName = null;
   }
 
   Widget _buildBadge(int? count) {
@@ -149,6 +130,21 @@ class _EmployeeDrawerState extends State<EmployeeDrawer> {
           break;
         case 'Leave Request':
           badge = NotificationService.leaveRequestBadge;
+          break;
+        case 'My Payslips':
+          badge = NotificationService.payslipsBadge;
+          break;
+        case 'Asset Requests':
+          badge = NotificationService.assetRequestsBadge;
+          break;
+        case 'Loan Application':
+          badge = NotificationService.loanApplicationsBadge;
+          break;
+        case 'WFH Request':
+          badge = NotificationService.wfhRequestsBadge;
+          break;
+        case 'Reimbursement':
+          badge = NotificationService.reimbursementsBadge;
           break;
       }
       return NavItem(

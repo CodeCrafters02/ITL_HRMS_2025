@@ -7,8 +7,8 @@ class ApiConfig {
   /// Keep a sensible dev default for local/LAN testing.
   static const String baseUrl = String.fromEnvironment(
     'API_BASE_URL',
-    defaultValue: 'https://apihrms.innovyxtechlabs.com',
-    // defaultValue: 'http://10.20.72.169:8000',
+    // defaultValue: 'https://apihrms.innovyxtechlabs.com',
+    defaultValue: 'http://10.20.72.169:8000',
   );
 
   /// Login footer "Contact IT Support" mailto. Override at build:
@@ -63,6 +63,7 @@ class ApiConfig {
   static const String empLeavesEndpoint = '/employee/emp-leaves/';
   static const String allNotificationsEndpoint = '/employee/all-notifications/';
   static const String employeeCalendarEndpoint = '/employee/employee-calendar/';
+  static const String calendarEventsEndpoint = '/app/calendar-events/';
   static const String employeeCompanyPoliciesEndpoint =
       '/employee/employee-companypolicies/';
   static const String reporteesEndpoint = '/app/getreportees/';
@@ -80,6 +81,9 @@ class ApiConfig {
   static const String timeLogMetaEndpoint = '/employee/time-log/meta/';
   static const String timeLogEndpoint = '/employee/time-log/';
 
+  // Geofence Endpoint
+  static const String geofenceConfigEndpoint = '/employee/geofence-config/';
+
   // Office / Seat Booking Endpoints
   static const String officeLocationsEndpoint = '/app/office-locations/';
   static const String officeFloorsEndpoint = '/app/office-floors/';
@@ -92,6 +96,26 @@ class ApiConfig {
   static const String conferenceRoomsEndpoint = '/app/conference-rooms/';
   static const String conferenceRoomBookingsEndpoint =
       '/app/conference-room-bookings/';
+
+  // Payroll Endpoints
+  static const String payslipsEndpoint = '/app/payslips/';
+
+  // Asset Endpoints
+  static const String assetRequestsEndpoint = '/app/asset-requests/';
+  static const String myAssetsEndpoint = '/app/my-assets/';
+  static const String supplyItemsEndpoint = '/app/supply-items/';
+
+  // Loan Endpoints
+  static const String loanCategoriesEndpoint = '/app/loan-categories/';
+  static const String loanInterestSlabsEndpoint = '/app/loan-interest-slabs/';
+  static const String loanApplicationsEndpoint = '/app/loan-applications/';
+
+  // WFH Endpoints
+  static const String wfhRequestsEndpoint = '/app/wfh-requests/';
+
+  // Reimbursement Endpoints
+  static const String reimbursementCategoriesEndpoint = '/app/reimbursement-categories/';
+  static const String reimbursementRequestsEndpoint = '/app/reimbursement-requests/';
 
   // Full URLs
   static String get loginUrl => '$baseUrl$loginEndpoint';
@@ -128,6 +152,7 @@ class ApiConfig {
   static String get employeeCheckInUrl => '$baseUrl$employeeCheckInEndpoint';
   static String get employeeCheckOutUrl => '$baseUrl$employeeCheckOutEndpoint';
   static String get employeeBreakUrl => '$baseUrl$employeeBreakEndpoint';
+  static String get geofenceConfigUrl => '$baseUrl$geofenceConfigEndpoint';
   static String get employeeStatusUrl => '$baseUrl$employeeStatusEndpoint';
   static String get employeeIdUrl => '$baseUrl$employeeIdEndpoint';
   static String get reportingManagersUrl =>
@@ -148,6 +173,7 @@ class ApiConfig {
   static String cancelLeaveUrl(int leaveId) =>
       '$baseUrl/employee/emp-leaves/$leaveId/cancel/';
   static String get allNotificationsUrl => '$baseUrl$allNotificationsEndpoint';
+  static String get calendarEventsUrl => '$baseUrl$calendarEventsEndpoint';
   static String employeeCalendarUrl(int year, int month, int day) =>
       '$baseUrl$employeeCalendarEndpoint?year=$year&month=$month&day=$day';
   static String get employeeCalendarBaseUrl =>
@@ -240,6 +266,38 @@ class ApiConfig {
       '$baseUrl$conferenceRoomBookingsEndpoint';
   static String conferenceRoomBookingCancelUrl(int bookingId) =>
       '$baseUrl$conferenceRoomBookingsEndpoint$bookingId/cancel/';
+
+  // Payroll URLs
+  static String payslipsUrl({int? pageSize, int? year}) {
+    final qp = <String, String>{};
+    if (pageSize != null) qp['page_size'] = pageSize.toString();
+    if (year != null) qp['year'] = year.toString();
+    final base = Uri.parse('$baseUrl$payslipsEndpoint');
+    return base.replace(queryParameters: qp.isEmpty ? null : qp).toString();
+  }
+
+  /// Payslip download URL helper
+  static String payslipDownloadUrl(String filePath) {
+    if (filePath.startsWith('http')) return filePath;
+    return '$baseUrl$filePath';
+  }
+
+  // Asset URLs
+  static String get assetRequestsUrl => '$baseUrl$assetRequestsEndpoint';
+  static String get myAssetsUrl => '$baseUrl$myAssetsEndpoint';
+  static String get supplyItemsUrl => '$baseUrl$supplyItemsEndpoint';
+
+  // Loan URLs
+  static String get loanCategoriesUrl => '$baseUrl$loanCategoriesEndpoint';
+  static String get loanInterestSlabsUrl => '$baseUrl$loanInterestSlabsEndpoint';
+  static String get loanApplicationsUrl => '$baseUrl$loanApplicationsEndpoint';
+
+  // WFH URLs
+  static String get wfhRequestsUrl => '$baseUrl$wfhRequestsEndpoint';
+
+  // Reimbursement URLs
+  static String get reimbursementCategoriesUrl => '$baseUrl$reimbursementCategoriesEndpoint';
+  static String get reimbursementRequestsUrl => '$baseUrl$reimbursementRequestsEndpoint';
 
   // API Headers
   static Map<String, String> get headers => {

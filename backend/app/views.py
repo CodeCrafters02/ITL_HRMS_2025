@@ -5994,29 +5994,46 @@ class LoanApplicationViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         user = self.request.user
         qs = LoanApplication.objects.filter(employee__company=user.company).order_by('-created_at')
-        
+
+        mine_only = self.request.query_params.get('mine') == 'true'
+        status_filter = self.request.query_params.get('status')
+
+        if mine_only:
+            qs = qs.filter(employee=user)
+            if status_filter:
+                qs = qs.filter(status=status_filter.upper())
+            return qs
+
         if user.role in ['admin', 'master']:
             # Admins see:
             # 1. All non-PENDING applications (APPROVED, REJECTED, MANAGER_APPROVED)
             # 2. PENDING applications ONLY IF the applicant's reporting manager is NOT an employee
             # (meaning they report to an admin or have no manager assigned)
-            return qs.exclude(
+            qs = qs.exclude(
                 status='PENDING', 
                 employee__employee__reporting_manager__user__role='employee'
             )
+            if status_filter:
+                qs = qs.filter(status=status_filter.upper())
+            return qs
             
         # For managers (even if they are employees), show their reportees' applications + their own
         if user.is_reporting_manager:
             try:
                 employee_profile = user.employee_profile
                 reportee_user_ids = Employee.objects.filter(reporting_manager=employee_profile).values_list('user_id', flat=True)
-                # Combine reportees' applications and user's own applications
-                return qs.filter(employee_id__in=reportee_user_ids) | qs.filter(employee=user)
+                qs = qs.filter(employee_id__in=reportee_user_ids) | qs.filter(employee=user)
             except:
-                return qs.filter(employee=user)
+                qs = qs.filter(employee=user)
+            if status_filter:
+                qs = qs.filter(status=status_filter.upper())
+            return qs
         
         # Regular employees only see their own
-        return qs.filter(employee=user)
+        qs = qs.filter(employee=user)
+        if status_filter:
+            qs = qs.filter(status=status_filter.upper())
+        return qs
 
     @action(detail=False, methods=['post'])
     def check_eligibility(self, request):

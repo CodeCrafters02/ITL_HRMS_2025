@@ -57,6 +57,11 @@ class DrawerNavItems {
         path: '/employee/notifications',
       ),
       NavItem(
+        name: 'My Payslips',
+        icon: Icons.receipt_long,
+        path: '/employee/my-payslips',
+      ),
+      NavItem(
         name: 'Chat',
         icon: Icons.chat_bubble_outline_rounded,
         path: '/employee/chat',
@@ -80,6 +85,26 @@ class DrawerNavItems {
         name: 'Room Booking',
         icon: Icons.meeting_room_rounded,
         path: '/employee/room-booking',
+      ),
+      NavItem(
+        name: 'Asset Requests',
+        icon: Icons.inventory_2_rounded,
+        path: '/employee/asset-requests',
+      ),
+      NavItem(
+        name: 'Loan Application',
+        icon: Icons.account_balance_rounded,
+        path: '/employee/loan-application',
+      ),
+      NavItem(
+        name: 'WFH Request',
+        icon: Icons.home_work_rounded,
+        path: '/employee/wfh-request',
+      ),
+      NavItem(
+        name: 'Reimbursement',
+        icon: Icons.receipt_long_rounded,
+        path: '/employee/reimbursement',
       ),
       NavItem(
         name: 'Company policies',

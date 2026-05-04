@@ -140,17 +140,26 @@ class EmployeeService {
   }
 
   // Check-in
-  static Future<ApiResponse<Map<String, dynamic>>> checkIn() async {
+  static Future<ApiResponse<Map<String, dynamic>>> checkIn({
+    double? lat,
+    double? lon,
+  }) async {
     try {
       final token = await StorageService.getAccessToken();
       if (token == null) {
         return ApiResponse(success: false, message: 'No access token found');
       }
 
+      final headers = await _getAuthHeaders();
+      final body = <String, dynamic>{};
+      if (lat != null) body['lat'] = lat;
+      if (lon != null) body['lon'] = lon;
+
       final response = await _makeAuthenticatedRequest(
         () async => await http.post(
           Uri.parse(ApiConfig.employeeCheckInUrl),
-          headers: await _getAuthHeaders(),
+          headers: headers,
+          body: jsonEncode(body),
         ),
       );
 
@@ -352,7 +361,7 @@ class EmployeeService {
       // Update the status
       final updateResponse = await http.patch(
         Uri.parse(
-          '${ApiConfig.baseUrl}/app/employeestatus/${employeeStatus['id']}/',
+          '${ApiConfig.baseUrl}${ApiConfig.employeeStatusEndpoint}${employeeStatus['id']}/',
         ),
         headers: ApiConfig.getAuthHeaders(token),
         body: jsonEncode({'status': status}),
