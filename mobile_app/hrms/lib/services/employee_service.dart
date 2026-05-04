@@ -2169,6 +2169,79 @@ class EmployeeService {
     }
   }
 
+  // Update employee profile fields (text + optional document files)
+  static Future<ApiResponse<EmployeeProfile>> updateEmployeeProfile(
+    Map<String, String> fields, {
+    File? aadharCard,
+    File? panCard,
+  }) async {
+    try {
+      final token = await StorageService.getAccessToken();
+      if (token == null) {
+        return ApiResponse(success: false, message: 'No access token found');
+      }
+
+      final request = http.MultipartRequest(
+        'PATCH',
+        Uri.parse(ApiConfig.employeeProfileUrl),
+      );
+
+      request.headers.addAll({
+        'Authorization': 'Bearer $token',
+        'Accept': 'application/json',
+      });
+
+      fields.forEach((key, value) {
+        if (value.isNotEmpty) request.fields[key] = value;
+      });
+
+      if (aadharCard != null) {
+        request.files.add(
+          await http.MultipartFile.fromPath('aadhar_card', aadharCard.path),
+        );
+      }
+      if (panCard != null) {
+        request.files.add(
+          await http.MultipartFile.fromPath('pan_card', panCard.path),
+        );
+      }
+
+      final streamedResponse = await request.send();
+      final response = await http.Response.fromStream(streamedResponse);
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        final profile = EmployeeProfile.fromJson(data);
+        return ApiResponse(
+          success: true,
+          message: 'Profile updated successfully',
+          data: profile,
+        );
+      } else {
+        final error = jsonDecode(response.body);
+        return ApiResponse(
+          success: false,
+          message:
+              error['detail'] ??
+              error['message'] ??
+              'Failed to update profile',
+        );
+      }
+    } catch (e) {
+      String errorMsg = 'Network error occurred';
+      if (e.toString().contains('FormatException')) {
+        errorMsg = 'Invalid response from server. Please try again.';
+      } else if (e.toString().contains('SocketException') ||
+          e.toString().contains('TimeoutException')) {
+        errorMsg = 'Connection error. Please check your internet connection.';
+      } else {
+        errorMsg = 'Error: ${e.toString()}';
+      }
+
+      return ApiResponse(success: false, message: errorMsg);
+    }
+  }
+
   // Get employee hierarchy
   static Future<ApiResponse<EmployeeHierarchy>> getEmployeeHierarchy() async {
     try {

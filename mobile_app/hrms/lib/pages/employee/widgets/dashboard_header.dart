@@ -333,7 +333,8 @@ class DashboardHeader extends StatelessWidget {
                                           ),
                                         ),
                                       ),
-                                    )
+                                    ),
+                                  )
                                 : Container(
                                     color: AppStitchTheme.primary,
                                     child: Center(
