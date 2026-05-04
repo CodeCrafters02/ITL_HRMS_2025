@@ -31,26 +31,6 @@ class DrawerNavItems {
         title: 'MAIN',
         items: [
           NavItem(
-            name: 'Dashboard',
-            icon: Icons.dashboard_rounded,
-            path: '/employee/dashboard',
-          ),
-          NavItem(
-            name: 'My Tasks',
-            icon: Icons.task_alt_rounded,
-            path: '/employee/my-tasks',
-          ),
-          NavItem(
-            name: 'Chat',
-            icon: Icons.chat_bubble_outline_rounded,
-            path: '/employee/chat',
-          ),
-          NavItem(
-            name: 'Notifications',
-            icon: Icons.notifications_none_rounded,
-            path: '/employee/notifications',
-          ),
-          NavItem(
             name: 'Calendar',
             icon: Icons.calendar_month_rounded,
             path: '/employee/personal-calendar',
@@ -60,11 +40,6 @@ class DrawerNavItems {
       const NavGroup(
         title: 'TIME & ATTENDANCE',
         items: [
-          NavItem(
-            name: 'Attendance History',
-            icon: Icons.history_rounded,
-            path: '/employee/attendance-history',
-          ),
           NavItem(
             name: 'Leave Application',
             icon: Icons.event_note_rounded,
@@ -80,11 +55,6 @@ class DrawerNavItems {
       const NavGroup(
         title: 'PAYROLL & FINANCE',
         items: [
-          NavItem(
-            name: 'My Payslips',
-            icon: Icons.receipt_long_rounded,
-            path: '/employee/my-payslips',
-          ),
           NavItem(
             name: 'Loan Application',
             icon: Icons.account_balance_rounded,

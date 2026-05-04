@@ -168,30 +168,14 @@ class _EmployeeDrawerState extends State<EmployeeDrawer> {
                               ),
                             ),
                             ...group.items.map((item) {
-                              int? badge;
-                              if (item.name == 'Notifications') {
-                                badge = NotificationService.notificationsBadge;
-                              } else if (item.name == 'Chat') {
-                                badge = ChatScope.of(context).unreadTotal;
-                              }
-
-                              final itemWithBadge = NavItem(
-                                name: item.name,
-                                icon: item.icon,
-                                path: item.path,
-                                badge: badge,
-                                onClick: item.onClick,
-                                isConditional: item.isConditional,
-                              );
-
-                              final isActive = itemWithBadge.path != null &&
-                                  (currentRoute == itemWithBadge.path ||
+                              final isActive = item.path != null &&
+                                  (currentRoute == item.path ||
                                       currentRoute
-                                          .startsWith(itemWithBadge.path!));
+                                          .startsWith(item.path!));
 
                               return Padding(
                                 padding: const EdgeInsets.only(bottom: 4),
-                                child: _buildDrawerItem(itemWithBadge, isActive),
+                                child: _buildDrawerItem(item, isActive),
                               );
                             }),
                             const SizedBox(height: 8),

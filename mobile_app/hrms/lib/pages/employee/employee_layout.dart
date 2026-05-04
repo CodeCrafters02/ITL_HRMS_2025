@@ -12,14 +12,9 @@ import 'employee_dashboard_page.dart';
 import 'my_tasks_page.dart';
 import 'attendance_history_page.dart';
 import 'my_payslips_page.dart';
-import 'reportees_page.dart';
 import 'widgets/employee_drawer.dart';
 import 'widgets/employee_bottom_nav.dart';
-import 'widgets/notification_button.dart';
-import 'widgets/chat_button.dart';
-import '../../widgets/app_header.dart';
 import '../../widgets/stitch_background.dart';
-import '../../widgets/glass_card.dart';
 
 class EmployeeLayout extends StatefulWidget {
   const EmployeeLayout({super.key});
@@ -307,10 +302,56 @@ class _EmployeeLayoutState extends State<EmployeeLayout>
     );
   }
 
+  Future<bool> _onWillPop() async {
+    if (_scaffoldKey.currentState?.isDrawerOpen ?? false) {
+      _scaffoldKey.currentState?.closeDrawer();
+      return false;
+    }
+
+    final bool? shouldExit = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: AppStitchTheme.surface,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Text(
+          'Exit App',
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+        ),
+        content: const Text(
+          'Are you sure you want to exit the application?',
+          style: TextStyle(color: Colors.white70),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text(
+              'Cancel',
+              style: TextStyle(color: Colors.white54, fontWeight: FontWeight.w600),
+            ),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFFEF4444), // Red for exit
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            ),
+            child: const Text('Exit'),
+          ),
+        ],
+      ),
+    );
+
+    return shouldExit ?? false;
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      key: _scaffoldKey,
+    return WillPopScope(
+      onWillPop: _onWillPop,
+      child: Scaffold(
+        key: _scaffoldKey,
       drawerEdgeDragWidth: MediaQuery.of(context).size.width * 0.2,
       drawer: EmployeeDrawer(
         isReportingManager: _isReportingManager,
@@ -322,17 +363,91 @@ class _EmployeeLayoutState extends State<EmployeeLayout>
           child: Column(
             children: [
               Padding(
-                padding: const EdgeInsets.fromLTRB(16, 8, 16, 10),
-                child: AppHeader(
-                  title: _getPageTitle(),
-                  showLogo: true,
-                  showMenuButton: true,
-                  onMenuPressed: () => _scaffoldKey.currentState?.openDrawer(),
-                  actions: [
-                    const NotificationButton(),
-                    const ChatButton(),
-                    _buildProfileAvatar(),
-                  ],
+                padding: const EdgeInsets.fromLTRB(12, 8, 12, 4),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 6,
+                    vertical: 6,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.08),
+                    borderRadius: BorderRadius.circular(28),
+                    border: Border.all(
+                      color: Colors.white.withValues(alpha: 0.12),
+                      width: 1,
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: AppStitchTheme.primary.withValues(alpha: 0.06),
+                        blurRadius: 20,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: Row(
+                    children: [
+                      // Menu button
+                      _GlassIconButton(
+                        icon: Icons.menu_rounded,
+                        onTap: () => _scaffoldKey.currentState?.openDrawer(),
+                      ),
+                      const Spacer(),
+                      // Center branding — logo with subtle glow
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 14,
+                          vertical: 6,
+                        ),
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: [
+                              AppStitchTheme.primary.withValues(alpha: 0.12),
+                              AppStitchTheme.primary.withValues(alpha: 0.04),
+                            ],
+                          ),
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(
+                            color: AppStitchTheme.primary.withValues(
+                              alpha: 0.15,
+                            ),
+                          ),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Image.asset(
+                              'assets/logo/app_logo.png',
+                              height: 22,
+                              errorBuilder: (context, error, stackTrace) =>
+                                  Icon(
+                                    Icons.people_alt_rounded,
+                                    size: 20,
+                                    color: AppStitchTheme.primary.withValues(
+                                      alpha: 0.8,
+                                    ),
+                                  ),
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              'PEOPLE SUITE',
+                              style: Theme.of(context).textTheme.labelMedium
+                                  ?.copyWith(
+                                    fontWeight: FontWeight.w900,
+                                    letterSpacing: 1.5,
+                                    color: AppStitchTheme.lightOnSurface
+                                        .withValues(alpha: 0.85),
+                                  ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const Spacer(),
+                      // Notification + Profile
+                      const _GlassNotificationButton(),
+                      const SizedBox(width: 8),
+                      _buildProfileAvatar(),
+                    ],
+                  ),
                 ),
               ),
               Expanded(child: _getPage(_currentIndex)),
@@ -344,21 +459,129 @@ class _EmployeeLayoutState extends State<EmployeeLayout>
         currentIndex: _currentIndex,
         onTap: _onBottomNavTap,
       ),
+    ),
+  );
+}
+}
+
+/// A frosted-glass circular icon button for the header bar.
+class _GlassIconButton extends StatelessWidget {
+  const _GlassIconButton({required this.icon, required this.onTap});
+  final IconData icon;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: 40,
+        height: 40,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          color: Colors.white.withValues(alpha: 0.1),
+          border: Border.all(color: Colors.white.withValues(alpha: 0.15)),
+        ),
+        child: Icon(icon, color: AppStitchTheme.lightOnSurface, size: 21),
+      ),
     );
   }
+}
 
-  String _getPageTitle() {
-    switch (_currentIndex) {
-      case 0:
-        return 'Dashboard';
-      case 1:
-        return 'My Tasks';
-      case 2:
-        return 'Attendance';
-      case 3:
-        return 'My Payslips';
-      default:
-        return 'HRMS';
+/// Notification button styled to match the glassmorphic header.
+class _GlassNotificationButton extends StatefulWidget {
+  const _GlassNotificationButton();
+
+  @override
+  State<_GlassNotificationButton> createState() =>
+      _GlassNotificationButtonState();
+}
+
+class _GlassNotificationButtonState extends State<_GlassNotificationButton> {
+  int _badgeCount = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _updateBadge();
+    _poll();
+  }
+
+  void _poll() {
+    Future.delayed(const Duration(seconds: 5), () {
+      if (mounted) {
+        _updateBadge();
+        _poll();
+      }
+    });
+  }
+
+  void _updateBadge() {
+    if (mounted) {
+      setState(() {
+        _badgeCount = NotificationService.notificationsBadge;
+      });
     }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: () {
+        Navigator.pushNamed(context, '/employee/notifications');
+        NotificationService.updateLastSeen('notifications');
+        _updateBadge();
+      },
+      child: Container(
+        width: 40,
+        height: 40,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          color: Colors.white.withValues(alpha: 0.1),
+          border: Border.all(color: Colors.white.withValues(alpha: 0.15)),
+        ),
+        child: Stack(
+          alignment: Alignment.center,
+          children: [
+            Icon(
+              Icons.notifications_outlined,
+              color: AppStitchTheme.lightOnSurface,
+              size: 21,
+            ),
+            if (_badgeCount > 0)
+              Positioned(
+                top: 6,
+                right: 6,
+                child: Container(
+                  padding: const EdgeInsets.all(3),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFEF4444),
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: Colors.white.withValues(alpha: 0.9),
+                      width: 1.5,
+                    ),
+                  ),
+                  constraints: const BoxConstraints(
+                    minWidth: 16,
+                    minHeight: 16,
+                  ),
+                  child: Center(
+                    child: Text(
+                      _badgeCount > 99 ? '99+' : _badgeCount.toString(),
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 8,
+                        fontWeight: FontWeight.w900,
+                        height: 1,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
   }
 }

@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import '../../models/dashboard_model.dart';
 import '../../models/calendar_model.dart';
 import '../../models/task_model.dart';
@@ -923,36 +924,68 @@ class _GreetingHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final hour = DateTime.now().hour;
-    final greeting = hour < 12
-        ? 'Good Morning'
-        : hour < 17
-            ? 'Good Afternoon'
-            : 'Good Evening';
-    return Row(
+    final now = DateTime.now();
+    final hour = now.hour;
+
+    String greeting;
+    String emoji;
+    if (hour < 12) {
+      greeting = 'Good Morning';
+      emoji = '🌅';
+    } else if (hour < 17) {
+      greeting = 'Good Afternoon';
+      emoji = '☀️';
+    } else {
+      greeting = 'Good Evening';
+      emoji = '🌙';
+    }
+
+    final formattedDate = DateFormat('EEEE, d MMMM').format(now);
+    final firstName = name.trim().split(' ').first;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+        RichText(
+          text: TextSpan(
             children: [
-              Text(
-                'Hello, ${name.split(' ').first}',
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+              TextSpan(
+                text: '$greeting, ',
+                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                       color: AppStitchTheme.lightOnSurfaceMuted,
-                      fontWeight: FontWeight.w700,
+                      fontWeight: FontWeight.w600,
+                      letterSpacing: -0.5,
                     ),
               ),
-              const SizedBox(height: 2),
-              Text(
-                '$greeting ☀',
+              TextSpan(
+                text: '$firstName $emoji',
                 style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                       color: AppStitchTheme.lightOnSurface,
                       fontWeight: FontWeight.w900,
-                      letterSpacing: -0.3,
+                      letterSpacing: -0.5,
                     ),
               ),
             ],
           ),
+        ),
+        const SizedBox(height: 6),
+        Row(
+          children: [
+            Icon(
+              Icons.calendar_today_rounded,
+              size: 14,
+              color: AppStitchTheme.lightOnSurfaceMuted.withValues(alpha: 0.8),
+            ),
+            const SizedBox(width: 6),
+            Text(
+              formattedDate,
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: AppStitchTheme.lightOnSurfaceMuted,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 0.2,
+                  ),
+            ),
+          ],
         ),
       ],
     );
