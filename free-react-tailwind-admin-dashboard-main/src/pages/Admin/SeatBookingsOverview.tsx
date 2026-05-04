@@ -126,7 +126,7 @@ const AdminSeatBookingsOverview = () => {
     const fetchBookings = async (floorId: number, date: string) => {
         try {
             const token = localStorage.getItem('access_token');
-            const url = `${API_BASE_URL}/app/seat-bookings/?date=${date}&floor=${floorId}&status=approved`;
+            const url = `${API_BASE_URL}/app/seat-bookings/?date=${date}&floor=${floorId}`;
             const res = await fetch(url, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
@@ -252,9 +252,12 @@ const AdminSeatBookingsOverview = () => {
     const getSeatColor = (el: any) => {
         const booking = bookings.find(b => b.seat_details.seat_number === el.name);
         if (booking) {
-            return booking.booking_type === 'permanent' ? '#F472B6' : '#FB923C';
+            if (booking.status === 'pending') {
+                return '#FBBF24'; // Yellow for Pending
+            }
+            return booking.booking_type === 'permanent' ? '#F472B6' : '#FB923C'; // Pink for Permanent, Orange for Temp/Weekly
         }
-        return '#10B981';
+        return '#10B981'; // Green for Available
     };
 
     // Calculate Summary
@@ -633,8 +636,9 @@ const AdminSeatBookingsOverview = () => {
                             <div className="mt-8 text-left w-full space-y-3">
                                 <p className="text-xs uppercase font-bold border-b pb-1 dark:border-[#1b2e4b]">Legend</p>
                                 <div className="flex items-center gap-2 text-sm font-bold"><span className="w-3 h-3 rounded-sm bg-[#10B981]"></span> Available</div>
-                                <div className="flex items-center gap-2 text-sm font-bold"><span className="w-3 h-3 rounded-sm bg-[#FB923C]"></span> Temp Booking</div>
+                                <div className="flex items-center gap-2 text-sm font-bold"><span className="w-3 h-3 rounded-sm bg-[#FB923C]"></span> Daily/Weekly</div>
                                 <div className="flex items-center gap-2 text-sm font-bold"><span className="w-3 h-3 rounded-sm bg-[#F472B6]"></span> Permanent</div>
+                                <div className="flex items-center gap-2 text-sm font-bold"><span className="w-3 h-3 rounded-sm bg-[#FBBF24]"></span> Pending Approval</div>
                             </div>
                         </div>
                     )}

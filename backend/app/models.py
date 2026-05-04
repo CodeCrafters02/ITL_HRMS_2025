@@ -259,6 +259,14 @@ class Employee(models.Model):
     ]
     work_location = models.CharField(max_length=20, choices=WORK_LOCATION_CHOICES, default='office')
 
+    def save(self, *args, **kwargs):
+        # Sync activation status to linked UserRegister
+        if self.user:
+            if self.user.is_active != self.is_active:
+                self.user.is_active = self.is_active
+                self.user.save(update_fields=['is_active'])
+        super().save(*args, **kwargs)
+
     @property
     def is_reporting_manager(self):
         return self.reportees.exists()

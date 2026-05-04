@@ -619,7 +619,7 @@ class EmployeeSerializer(serializers.ModelSerializer):
             'previous_designation_name', 'previous_salary', 'basic_salary', 'ctc', 'gross_salary',
             'epf_status', 'uan', 'asset_details', 'asset_names', 'esic_status', 'esic_no',
             'source_choices', 'shift_assigned', 'password', 'active_loan_emi', 'active_loans_breakdown',
-            'work_location'
+            'work_location', 'is_active'
         ]
 
     def get_department_name(self, obj):
@@ -1976,11 +1976,18 @@ class ConferenceRoomSerializer(serializers.ModelSerializer):
 class ConferenceRoomBookingSerializer(serializers.ModelSerializer):
     employee_details = serializers.SerializerMethodField(read_only=True)
     room_details = serializers.SerializerMethodField(read_only=True)
+    is_mine = serializers.SerializerMethodField(read_only=True)
     
     class Meta:
         model = ConferenceRoomBooking
-        fields = ['id', 'room', 'room_details', 'employee', 'employee_details', 'date', 'start_time', 'end_time', 'status', 'purpose', 'created_at']
+        fields = ['id', 'room', 'room_details', 'employee', 'employee_details', 'date', 'start_time', 'end_time', 'status', 'purpose', 'is_mine', 'created_at']
         read_only_fields = ['employee', 'status', 'created_at']
+
+    def get_is_mine(self, obj):
+        request = self.context.get('request')
+        if request and hasattr(request.user, 'employee'):
+            return obj.employee == request.user.employee
+        return False
 
     def get_employee_details(self, obj):
         return {

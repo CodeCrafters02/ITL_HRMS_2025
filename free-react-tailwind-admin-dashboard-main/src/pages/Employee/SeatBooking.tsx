@@ -287,7 +287,10 @@ const SeatBooking = () => {
     const getSeatColor = (el: any) => {
         const booking = bookings.find(b => b.seat_details.seat_number === el.name);
         if (booking) {
-            return booking.booking_type === 'permanent' ? '#F472B6' : '#FB923C'; // Pink for Permanent, Orange for Temp
+            if (booking.status === 'pending') {
+                return '#FBBF24'; // Yellow for Pending
+            }
+            return booking.booking_type === 'permanent' ? '#F472B6' : '#FB923C'; // Pink for Permanent, Orange for Temp/Weekly
         }
         return '#10B981'; // Green for Available
     };
@@ -684,11 +687,15 @@ const SeatBooking = () => {
                                 </div>
                                 <div className="flex items-center gap-2 text-xs">
                                     <div className="w-3 h-3 rounded bg-[#FB923C]"></div>
-                                    <span>Booked (Temp)</span>
+                                    <span>Booked (Daily/Weekly)</span>
                                 </div>
                                 <div className="flex items-center gap-2 text-xs">
                                     <div className="w-3 h-3 rounded bg-[#F472B6]"></div>
-                                    <span>Permanent</span>
+                                    <span>Permanent Seat</span>
+                                </div>
+                                <div className="flex items-center gap-2 text-xs">
+                                    <div className="w-3 h-3 rounded bg-[#FBBF24]"></div>
+                                    <span>Pending Approval</span>
                                 </div>
                             </div>
                         </div>

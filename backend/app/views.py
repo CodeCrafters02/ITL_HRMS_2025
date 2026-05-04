@@ -228,6 +228,10 @@ class LoginAPIView(APIView):
             user = authenticate(username=user_obj.username, password=password)
 
         if user is not None:
+            # Check Employee profile activation status directly
+            if hasattr(user, 'employee') and not user.employee.is_active:
+                return Response({"detail": "Your employee account is inactive. Please contact HR."}, status=status.HTTP_403_FORBIDDEN)
+
             if not user.is_active:
                 return Response({"detail": "User account is disabled."}, status=status.HTTP_403_FORBIDDEN)
 
@@ -5552,10 +5556,10 @@ class SeatBookingViewSet(viewsets.ModelViewSet):
         start_time_str = self.request.query_params.get('start_time', None)
         end_time_str = self.request.query_params.get('end_time', None)
         
-        # When viewing the map, we usually only care about already approved bookings
-        # Unless we are in history mode, in which case we show everything requested
+        # When viewing the map, we want to see both approved AND pending bookings
+        # to ensure users don't try to book seats that are already requested.
         if (date_str or floor_id) and not is_history:
-            queryset = queryset.filter(status='approved')
+            queryset = queryset.filter(status__in=['approved', 'pending'])
         
         if status:
             queryset = queryset.filter(status=status)
@@ -5588,9 +5592,11 @@ class SeatBookingViewSet(viewsets.ModelViewSet):
         if seat_number:
             queryset = queryset.filter(seat__seat_number=seat_number)
             
-        if not date_str and not floor_id and not status and not is_history and hasattr(self.request.user, 'employee'):
-            # Show all bookings for the current employee (including pending)
-            queryset = queryset.filter(employee=self.request.user.employee)
+        # Final fallback: If no specific search filters are used, 
+        # employees only see their own bookings. Admins/Masters see everything in their scope.
+        if not date_str and not floor_id and not status and not is_history:
+            if self.request.user.role == 'employee' and hasattr(self.request.user, 'employee'):
+                queryset = queryset.filter(employee=self.request.user.employee)
         
         return queryset.select_related('employee', 'seat__section__floor').order_by('-created_at')
 
@@ -5694,8 +5700,9 @@ class ConferenceRoomBookingViewSet(viewsets.ModelViewSet):
         if is_history:
              queryset = queryset.filter(date__lt=timezone.now().date())
         
-        if not status and not date and not is_history and hasattr(user, 'employee'):
-            # Show active and future bookings for the current employee
+        # Fallback: if no filters applied, show only the user's active/future bookings.
+        # Skip this for detail actions (like approve) to prevent 404s for admins.
+        if not status and not date and not is_history and not self.detail and hasattr(user, 'employee'):
             queryset = queryset.filter(employee=user.employee, date__gte=timezone.now().date())
 
         return queryset.select_related('employee', 'room__floor').order_by('-date', '-start_time')
@@ -5883,6 +5890,14 @@ class GoogleLoginAPIView(APIView):
             email = (idinfo.get("email") or "").strip().lower()
             first_name = idinfo.get("given_name", "")
             last_name = idinfo.get("family_name", "")
+
+            # --- Activation check (Early check via Email) ---
+            emp = Employee.objects.filter(email__iexact=email).first()
+            if emp and not emp.is_active:
+                 return Response(
+                    {"detail": "Your employee profile is inactive. Please contact your HR administrator."},
+                    status=status.HTTP_403_FORBIDDEN
+                )
             
             # Determine role for new user:
             # If NO users exist on the platform yet, the first SSO user becomes 'master'.
@@ -5906,6 +5921,13 @@ class GoogleLoginAPIView(APIView):
             if created:
                 user.set_unusable_password()
                 user.save()
+
+            # --- Activation check (Secondary check via User account) ---
+            if not user.is_active:
+                return Response(
+                    {"detail": "Your account is disabled. Please contact your HR administrator."},
+                    status=status.HTTP_403_FORBIDDEN
+                )
 
             # ── Domain / Company validation ──
             # Master and admin users always bypass domain checks
@@ -5936,9 +5958,11 @@ class GoogleLoginAPIView(APIView):
                     # Link to User account if needed
                     if not emp.user_id:
                         emp.user_id = user.id
-                    # Link User to Company if missing
-                    if not getattr(user, "company_id", None) and emp.company_id:
-                        user.company_id = emp.company_id
+                    # Sync activation status from Employee profile
+                    if not emp.is_active:
+                        user.is_active = False
+                        user.save(update_fields=["is_active", "company"])
+                    else:
                         user.save(update_fields=["company"])
                     # Trigger model save (generates employee_id if missing)
                     emp.save()
