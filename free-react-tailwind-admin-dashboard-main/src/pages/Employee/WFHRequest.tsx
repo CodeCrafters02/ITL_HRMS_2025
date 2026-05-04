@@ -17,6 +17,10 @@ import IconSearch from '../../components/Icon/IconSearch';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000';
 
+/** Calendar date in local timezone (do not use toISOString() — it shifts dates in non-UTC zones). */
+const dateToLocalYmd = (d: Date) =>
+    `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+
 const WFHRequest = () => {
     const { t } = useTranslation();
     const [loading, setLoading] = useState(true);
@@ -363,11 +367,46 @@ const WFHRequest = () => {
                                             <div className="grid grid-cols-2 gap-5">
                                                 <div>
                                                     <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1 block">From</label>
-                                                    <Flatpickr value={formData.from_date} options={{ dateFormat: 'Y-m-d' }} className="form-input" onChange={(date: any) => setFormData({ ...formData, from_date: date[0]?.toISOString().split('T')[0] || '' })} />
+                                                    <Flatpickr
+                                                        value={formData.from_date || undefined}
+                                                        options={{ dateFormat: 'Y-m-d' }}
+                                                        className="form-input"
+                                                        onChange={(date: Date[]) => {
+                                                            const picked = date[0];
+                                                            if (!picked) {
+                                                                setFormData((prev) => ({ ...prev, from_date: '' }));
+                                                                return;
+                                                            }
+                                                            const from = dateToLocalYmd(picked);
+                                                            setFormData((prev) => ({
+                                                                ...prev,
+                                                                from_date: from,
+                                                                to_date: prev.to_date && prev.to_date < from ? from : prev.to_date,
+                                                            }));
+                                                        }}
+                                                    />
                                                 </div>
                                                 <div>
                                                     <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1 block">To</label>
-                                                    <Flatpickr value={formData.to_date} options={{ dateFormat: 'Y-m-d' }} className="form-input" onChange={(date: any) => setFormData({ ...formData, to_date: date[0]?.toISOString().split('T')[0] || '' })} />
+                                                    <Flatpickr
+                                                        value={formData.to_date || undefined}
+                                                        options={{ dateFormat: 'Y-m-d' }}
+                                                        className="form-input"
+                                                        onChange={(date: Date[]) => {
+                                                            const picked = date[0];
+                                                            if (!picked) {
+                                                                setFormData((prev) => ({ ...prev, to_date: '' }));
+                                                                return;
+                                                            }
+                                                            let to = dateToLocalYmd(picked);
+                                                            setFormData((prev) => {
+                                                                if (prev.from_date && to < prev.from_date) {
+                                                                    to = prev.from_date;
+                                                                }
+                                                                return { ...prev, to_date: to };
+                                                            });
+                                                        }}
+                                                    />
                                                 </div>
                                             </div>
                                         </div>

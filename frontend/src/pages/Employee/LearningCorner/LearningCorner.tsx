@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useDispatch } from 'react-redux';
 import { setPageTitle } from '../../../store/themeConfigSlice';
@@ -78,6 +78,7 @@ const LearningCorner = () => {
     const [detailSelectedKeys, setDetailSelectedKeys] = useState<string[]>([]);
     const [detailDownloadBusy, setDetailDownloadBusy] = useState(false);
     const [detailPickMode, setDetailPickMode] = useState(false);
+    const detailPickSelectAllRef = useRef<HTMLInputElement>(null);
 
     const openResourceDetail = useCallback((resource: LearningResource) => {
         setSelectedItem(resource);
@@ -92,6 +93,28 @@ const LearningCorner = () => {
             setDetailPickMode(false);
         }
     }, [selectedItem]);
+
+    useEffect(() => {
+        const el = detailPickSelectAllRef.current;
+        if (!detailPickMode || !selectedItem) {
+            if (el) el.indeterminate = false;
+            return;
+        }
+        const m = mediaList(selectedItem);
+        const items =
+            detailFolder === 'images'
+                ? m.filter((x) => x.media_type === 'image')
+                : detailFolder === 'videos'
+                  ? m.filter((x) => x.media_type === 'video')
+                  : m.filter((x) => x.media_type === 'document');
+        const keys = items.map((it) => detailMediaKey(detailFolder, it));
+        if (!el || keys.length === 0) {
+            if (el) el.indeterminate = false;
+            return;
+        }
+        const n = keys.filter((k) => detailSelectedKeys.includes(k)).length;
+        el.indeterminate = n > 0 && n < keys.length;
+    }, [detailPickMode, selectedItem, detailFolder, detailSelectedKeys]);
 
     const downloadLearningMediaItems = useCallback(async (items: LearningMediaItem[], resourceTitle: string) => {
         if (items.length === 0) return;
@@ -470,7 +493,7 @@ const LearningCorner = () => {
                                                 <p className="font-semibold text-dark dark:text-white-light m-0 text-sm">Downloads</p>
                                                 <p className="text-xs text-white-dark mt-1.5 m-0 leading-relaxed">
                                                     {detailPickMode
-                                                        ? 'Tap any item below to add or remove it from your download list.'
+                                                        ? 'Use the checkboxes (and Select all) to choose files, or tap images where shown.'
                                                         : 'Save everything in this folder at once, or switch to picking only the files you need.'}
                                                 </p>
                                             </div>
@@ -503,31 +526,39 @@ const LearningCorner = () => {
                                                             <IconDownload className="h-4 w-4 shrink-0" />
                                                             Download {selectedItems.length} chosen {chosenWord}
                                                         </button>
-                                                        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs pt-0.5">
-                                                            <button
-                                                                type="button"
-                                                                className="text-primary hover:underline font-semibold bg-transparent border-0 p-0 cursor-pointer"
-                                                                onClick={() => setDetailSelectedKeys([...keys])}
-                                                            >
-                                                                Select all
-                                                            </button>
-                                                            <button
-                                                                type="button"
-                                                                className="text-primary hover:underline font-semibold bg-transparent border-0 p-0 cursor-pointer"
-                                                                onClick={() => setDetailSelectedKeys([])}
-                                                            >
-                                                                Clear
-                                                            </button>
-                                                            <button
-                                                                type="button"
-                                                                className="text-white-dark hover:text-danger font-semibold bg-transparent border-0 p-0 cursor-pointer sm:ml-auto"
-                                                                onClick={() => {
-                                                                    setDetailPickMode(false);
-                                                                    setDetailSelectedKeys([]);
-                                                                }}
-                                                            >
-                                                                Cancel choosing
-                                                            </button>
+                                                        <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 text-xs pt-0.5">
+                                                            <label className="flex items-center gap-2 cursor-pointer select-none">
+                                                                <input
+                                                                    ref={detailPickSelectAllRef}
+                                                                    type="checkbox"
+                                                                    className="form-checkbox"
+                                                                    checked={items.length > 0 && selectedItems.length === items.length}
+                                                                    onChange={(e) => {
+                                                                        if (e.target.checked) setDetailSelectedKeys([...keys]);
+                                                                        else setDetailSelectedKeys([]);
+                                                                    }}
+                                                                />
+                                                                <span className="font-medium text-dark dark:text-white-light">Select all</span>
+                                                            </label>
+                                                            <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                                                                <button
+                                                                    type="button"
+                                                                    className="text-primary hover:underline font-semibold bg-transparent border-0 p-0 cursor-pointer"
+                                                                    onClick={() => setDetailSelectedKeys([])}
+                                                                >
+                                                                    Clear
+                                                                </button>
+                                                                <button
+                                                                    type="button"
+                                                                    className="text-white-dark hover:text-danger font-semibold bg-transparent border-0 p-0 cursor-pointer"
+                                                                    onClick={() => {
+                                                                        setDetailPickMode(false);
+                                                                        setDetailSelectedKeys([]);
+                                                                    }}
+                                                                >
+                                                                    Cancel choosing
+                                                                </button>
+                                                            </div>
                                                         </div>
                                                     </>
                                                 )}
@@ -653,8 +684,8 @@ const LearningCorner = () => {
                                                         </div>
                                                     </>
                                                 )}
-                                            </div>
-                                        )}
+                            </div>
+                        )}
                                         {detailFolder === 'videos' && (
                                             <div>
                                                 {vidItems.length === 0 ? (
@@ -697,7 +728,23 @@ const LearningCorner = () => {
                                                                             )}
                                                                             <div className="flex-1 min-w-0 space-y-2">
                                                                                 <video src={it.url} controls className="w-full max-h-[320px] rounded-lg border border-white-light dark:border-[#1b2e4b] bg-black" />
-                                                                                <a href={it.url} target="_blank" rel="noreferrer" className="text-success text-sm hover:underline inline-block">
+                                                                                <a
+                                                                                    href={it.url}
+                                                                                    target="_blank"
+                                                                                    rel="noreferrer"
+                                                                                    className={`text-success text-sm hover:underline inline-block ${detailPickMode ? 'cursor-pointer' : ''}`}
+                                                                                    title={
+                                                                                        detailPickMode
+                                                                                            ? 'Click to toggle selection. Right-click to open in a new tab.'
+                                                                                            : undefined
+                                                                                    }
+                                                                                    onClick={(e) => {
+                                                                                        if (!detailPickMode) return;
+                                                                                        e.preventDefault();
+                                                                                        e.stopPropagation();
+                                                                                        toggleRow();
+                                                                                    }}
+                                                                                >
                                                                                     Open in new tab ({it.filename || 'video'})
                                                                                 </a>
                                                                             </div>
@@ -707,11 +754,11 @@ const LearningCorner = () => {
                                                             })}
                                                         </div>
                                                     </>
-                                                )}
-                                            </div>
+                                )}
+                            </div>
                                         )}
                                         {detailFolder === 'documents' && (
-                                            <div className="panel bg-[#f8f9fa] dark:bg-[#060818]">
+                            <div className="panel bg-[#f8f9fa] dark:bg-[#060818]">
                                                 {docItems.length === 0 ? (
                                                     <p className="text-sm text-white-dark">No documents in this folder.</p>
                                                 ) : (
@@ -724,44 +771,46 @@ const LearningCorner = () => {
                                                                 return (
                                                                     <li
                                                                         key={it.id ?? it.url}
-                                                                        className={`flex items-center gap-3 rounded-md border-2 px-3 py-2 transition ${
-                                                                            detailPickMode
-                                                                                ? checked
-                                                                                    ? 'border-primary bg-primary/5 cursor-pointer'
-                                                                                    : 'border-white-light dark:border-[#1b2e4b] bg-white dark:bg-[#0e1726] cursor-pointer hover:border-primary/50'
+                                                                        className={`flex items-center gap-3 rounded-md border px-3 py-2 transition ${
+                                                                            detailPickMode && checked
+                                                                                ? 'border-primary bg-primary/5'
                                                                                 : 'border-white-light dark:border-[#1b2e4b] bg-white dark:bg-[#0e1726]'
                                                                         }`}
-                                                                        onClick={() => {
-                                                                            if (!detailPickMode) return;
-                                                                            setDetailSelectedKeys((prev) =>
-                                                                                prev.includes(rowKey) ? prev.filter((k) => k !== rowKey) : [...new Set([...prev, rowKey])]
-                                                                            );
-                                                                        }}
-                                                                        role={detailPickMode ? 'button' : undefined}
-                                                                        tabIndex={detailPickMode ? 0 : undefined}
-                                                                        onKeyDown={(e) => {
-                                                                            if (!detailPickMode || (e.key !== 'Enter' && e.key !== ' ')) return;
-                                                                            e.preventDefault();
-                                                                            setDetailSelectedKeys((prev) =>
-                                                                                prev.includes(rowKey) ? prev.filter((k) => k !== rowKey) : [...new Set([...prev, rowKey])]
-                                                                            );
-                                                                        }}
                                                                     >
                                                                         {detailPickMode && (
-                                                                            <span
-                                                                                className={`shrink-0 text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded ${
-                                                                                    checked ? 'bg-primary text-white' : 'bg-white-light dark:bg-dark text-white-dark'
-                                                                                }`}
-                                                                            >
-                                                                                {checked ? 'On' : 'Off'}
-                                                                            </span>
+                                                                            <input
+                                                                                type="checkbox"
+                                                                                className="form-checkbox shrink-0"
+                                                                                checked={checked}
+                                                                                onChange={(e) => {
+                                                                                    setDetailSelectedKeys((prev) =>
+                                                                                        e.target.checked
+                                                                                            ? [...new Set([...prev, rowKey])]
+                                                                                            : prev.filter((k) => k !== rowKey)
+                                                                                    );
+                                                                                }}
+                                                                            />
                                                                         )}
                                                                         <a
                                                                             href={it.url}
                                                                             target="_blank"
                                                                             rel="noreferrer"
-                                                                            className="text-primary hover:underline truncate flex-1 min-w-0"
-                                                                            onClick={(e) => e.stopPropagation()}
+                                                                            className={`text-primary hover:underline truncate flex-1 min-w-0 ${detailPickMode ? 'cursor-pointer' : ''}`}
+                                                                            title={
+                                                                                detailPickMode
+                                                                                    ? 'Click to toggle selection. Right-click the link to open in a new tab.'
+                                                                                    : undefined
+                                                                            }
+                                                                            onClick={(e) => {
+                                                                                if (!detailPickMode) return;
+                                                                                e.preventDefault();
+                                                                                e.stopPropagation();
+                                                                                setDetailSelectedKeys((prev) =>
+                                                                                    prev.includes(rowKey)
+                                                                                        ? prev.filter((k) => k !== rowKey)
+                                                                                        : [...new Set([...prev, rowKey])]
+                                                                                );
+                                                                            }}
                                                                         >
                                                                             {it.filename || 'Open file'}
                                                                         </a>
@@ -770,10 +819,10 @@ const LearningCorner = () => {
                                                             })}
                                                         </ul>
                                                     </>
-                                                )}
-                                            </div>
+                                )}
+                            </div>
                                         )}
-                                    </div>
+                        </div>
 
                                     {m.length === 0 && (
                                         <p className="mt-4 text-sm text-white-dark">No uploaded files for this resource.</p>
@@ -794,8 +843,8 @@ const LearningCorner = () => {
                                                         {link.title || 'Visit link'}
                                                     </a>
                                                 ))}
-                                            </div>
-                                        </div>
+                    </div>
+                </div>
                                     )}
                                 </>
                             );
@@ -872,7 +921,7 @@ const LearningCorner = () => {
                     </div>
                 </div>,
                     document.body
-                )}
+            )}
         </div>
     );
 };

@@ -85,7 +85,7 @@ const Profile = () => {
                 {/* The Node Box */}
                 <div 
                     className={`p-4 rounded-xl border-2 flex flex-col items-center min-w-[160px] max-w-[220px] transition-all duration-300 relative cursor-pointer
-                        ${isYou ? 'border-primary bg-primary/5 ring-4 ring-primary/10 z-30 scale-105 shadow-xl' : 'border-gray-200 dark:border-gray-700 bg-white dark:bg-[#1b2e4b] z-20 shadow-md hover:border-primary/40 hover:scale-105'}
+                        ${isYou ? 'border-primary bg-primary/5 ring-4 ring-primary/10 z-[2] scale-105 shadow-xl' : 'border-gray-200 dark:border-gray-700 bg-white dark:bg-[#1b2e4b] z-[1] shadow-md hover:border-primary/40 hover:scale-105'}
                     `}
                     onClick={() => onNodeClick(node)}
                 >
@@ -124,24 +124,24 @@ const Profile = () => {
                 {node.children && node.children.length > 0 && (
                     <div className="flex flex-col items-center pt-8 relative w-full">
                         {/* Parent Vertical Line (Down) */}
-                        <div className="absolute top-0 h-8 w-0.5 bg-gray-300 dark:bg-gray-600"></div>
+                        <div className="pointer-events-none absolute top-0 z-0 h-8 w-0.5 bg-gray-300 dark:bg-gray-600"></div>
                         
                         <div className="flex gap-8 px-4">
                             {node.children.map((child: any, index: number) => (
                                 <div key={child.id} className="relative pt-8">
                                     {/* Child Vertical Line (Up) */}
-                                    <div className="absolute top-0 left-1/2 -translate-x-1/2 h-8 w-0.5 bg-gray-300 dark:bg-gray-600"></div>
+                                    <div className="pointer-events-none absolute top-0 left-1/2 z-0 h-8 w-0.5 -translate-x-1/2 bg-gray-300 dark:bg-gray-600"></div>
                                     
                                     {/* Horizontal Connector Bar */}
                                     {node.children.length > 1 && (
                                         <>
                                             {/* Left half of the horizontal bar */}
                                             {index > 0 && (
-                                                <div className="absolute top-0 left-0 right-1/2 h-0.5 bg-gray-300 dark:bg-gray-600"></div>
+                                                <div className="pointer-events-none absolute top-0 left-0 right-1/2 z-0 h-0.5 bg-gray-300 dark:bg-gray-600"></div>
                                             )}
                                             {/* Right half of the horizontal bar */}
                                             {index < node.children.length - 1 && (
-                                                <div className="absolute top-0 left-1/2 right-0 h-0.5 bg-gray-300 dark:bg-gray-600"></div>
+                                                <div className="pointer-events-none absolute top-0 left-1/2 right-0 z-0 h-0.5 bg-gray-300 dark:bg-gray-600"></div>
                                             )}
                                         </>
                                     )}
@@ -455,7 +455,7 @@ const Profile = () => {
                 )}
 
                 {activeTab === 'hierarchy' && (
-                    <div className="panel overflow-hidden">
+                    <div className="panel">
                         <div className="flex items-center gap-2 mb-5">
                             <IconUsers className="text-primary w-6 h-6" />
                             <h5 className="font-semibold text-lg dark:text-white-light uppercase tracking-wider">Organizational Hierarchy</h5>
@@ -481,7 +481,7 @@ const Profile = () => {
                 )}
 
                 {activeTab === 'reporting-line' && (
-                    <div className="panel overflow-hidden">
+                    <div className="panel">
                         <div className="flex items-center gap-2 mb-5">
                             <IconUsers className="text-primary w-6 h-6" />
                             <h5 className="font-semibold text-lg dark:text-white-light uppercase tracking-wider">My Reporting Line</h5>
@@ -508,7 +508,7 @@ const Profile = () => {
             </div>
             {/* Employee Info Modal */}
             <Transition appear show={isInfoModalOpen} as={Fragment}>
-                <Dialog as="div" open={isInfoModalOpen} onClose={() => setIsInfoModalOpen(false)} className="relative z-[51]">
+                <Dialog as="div" open={isInfoModalOpen} onClose={() => setIsInfoModalOpen(false)} className="relative z-[80]">
                     <Transition.Child
                         as={Fragment}
                         enter="ease-out duration-300"

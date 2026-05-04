@@ -1,20 +1,20 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import { useDispatch } from 'react-redux';
-import { setPageTitle } from '../../../store/themeConfigSlice';
-import IconSearch from '../../../components/Icon/IconSearch';
-import IconLayoutGrid from '../../../components/Icon/IconLayoutGrid';
-import IconListCheck from '../../../components/Icon/IconListCheck';
-import IconEye from '../../../components/Icon/IconEye';
-import IconMaximize from '../../../components/Icon/IconMaximize';
-import IconArrowLeft from '../../../components/Icon/IconArrowLeft';
-import IconArrowForward from '../../../components/Icon/IconArrowForward';
-import IconFolder from '../../../components/Icon/IconFolder';
-import IconDownload from '../../../components/Icon/IconDownload';
-import { LearningMediaItem, LearningResource, fetchLearningResources } from './api';
-import { authFetch } from '../../../utils/authFetch';
+import { setPageTitle } from '../../store/themeConfigSlice';
+import IconSearch from '../Icon/IconSearch';
+import IconLayoutGrid from '../Icon/IconLayoutGrid';
+import IconListCheck from '../Icon/IconListCheck';
+import IconEye from '../Icon/IconEye';
+import IconMaximize from '../Icon/IconMaximize';
+import IconArrowLeft from '../Icon/IconArrowLeft';
+import IconArrowForward from '../Icon/IconArrowForward';
+import IconFolder from '../Icon/IconFolder';
+import IconDownload from '../Icon/IconDownload';
+import type { LearningMediaItem, LearningResource, PaginatedLearningResources } from '../../pages/Employee/LearningCorner/api';
+import { authFetch } from '../../utils/authFetch';
 
-type ResourceFilter = 'all' | 'image' | 'video' | 'document';
+export type ResourceFilter = 'all' | 'image' | 'video' | 'document';
 type ViewMode = 'card' | 'table';
 
 const buildAssetUrl = (value?: string | null) => {
@@ -64,7 +64,31 @@ const buildDownloadFilename = (title: string, imageUrl: string) => {
 
 const detailMediaKey = (folder: DetailFolder, it: LearningMediaItem) => `${folder}:${it.id ?? it.url}`;
 
-const LearningCorner = () => {
+export type LearningCornerBrowseProps = {
+    pageTitle: string;
+    headerTitle: string;
+    headerSubtitle: string;
+    loadResources: (params: {
+        page: number;
+        page_size: number;
+        search: string;
+        type: ResourceFilter;
+    }) => Promise<PaginatedLearningResources>;
+    toolbarEnd?: ReactNode;
+    renderActions?: (resource: LearningResource) => ReactNode;
+    /** Increment to force a list refresh after mutations (e.g. admin create/edit/delete). */
+    refreshTrigger?: number;
+};
+
+const LearningCornerBrowse = ({
+    pageTitle,
+    headerTitle,
+    headerSubtitle,
+    loadResources,
+    toolbarEnd,
+    renderActions,
+    refreshTrigger = 0,
+}: LearningCornerBrowseProps) => {
     const dispatch = useDispatch();
     const [resources, setResources] = useState<LearningResource[]>([]);
     const [loading, setLoading] = useState(true);
@@ -171,11 +195,11 @@ const LearningCorner = () => {
         }
     }, [imageGallery]);
 
-    const loadResources = useCallback(async () => {
+    const loadResourcePage = useCallback(async () => {
         setLoading(true);
         setError(null);
         try {
-            const data = await fetchLearningResources({
+            const data = await loadResources({
                 page,
                 page_size: pageSize,
                 search: search.trim(),
@@ -190,18 +214,18 @@ const LearningCorner = () => {
         } finally {
             setLoading(false);
         }
-    }, [page, pageSize, search, filter]);
+    }, [page, pageSize, search, filter, loadResources]);
 
     useEffect(() => {
-        dispatch(setPageTitle('Learning Corner'));
-    }, [dispatch]);
+        dispatch(setPageTitle(pageTitle));
+    }, [dispatch, pageTitle]);
 
     useEffect(() => {
         const timer = setTimeout(() => {
-            loadResources();
+            loadResourcePage();
         }, 300);
         return () => clearTimeout(timer);
-    }, [loadResources]);
+    }, [loadResourcePage, refreshTrigger]);
 
     const getPageNumbers = () => {
         const pages: (number | '...')[] = [];
@@ -226,8 +250,8 @@ const LearningCorner = () => {
             <div className="panel bg-gradient-to-r from-[#220fb6] via-[#4f6be5] to-[#0f52af] text-white border-0">
                 <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
                     <div>
-                        <h1 className="text-2xl md:text-3xl font-extrabold">Learning Platform</h1>
-                        <p className="mt-1 text-white/80">Explore curated resources, videos, and documents from your company knowledge base.</p>
+                        <h1 className="text-2xl md:text-3xl font-extrabold">{headerTitle}</h1>
+                        <p className="mt-1 text-white/80">{headerSubtitle}</p>
                     </div>
                     {/* <button type="button" className="btn btn-outline-light w-full md:w-auto" onClick={loadResources}>
                         Refresh
@@ -261,57 +285,60 @@ const LearningCorner = () => {
             </div>
 
             <div className="panel">
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
-                    <div className="md:col-span-2">
-                        <div className="relative">
-                            <input
-                                type="text"
-                                className="form-input pl-10"
-                                placeholder="Search by title or description..."
-                                value={search}
-                                onChange={(e) => {
-                                    setSearch(e.target.value);
-                                    setPage(1);
-                                }}
-                            />
-                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-white-dark">
-                                <IconSearch className="h-4 w-4" />
-                            </span>
+                <div className="flex flex-col xl:flex-row flex-wrap gap-3 xl:items-center xl:justify-between">
+                    <div className="flex flex-col md:flex-row flex-1 flex-wrap gap-3 min-w-0">
+                        <div className="md:flex-1 md:min-w-[200px]">
+                            <div className="relative">
+                                <input
+                                    type="text"
+                                    className="form-input pl-10"
+                                    placeholder="Search by title or description..."
+                                    value={search}
+                                    onChange={(e) => {
+                                        setSearch(e.target.value);
+                                        setPage(1);
+                                    }}
+                                />
+                                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-white-dark">
+                                    <IconSearch className="h-4 w-4" />
+                                </span>
+                            </div>
+                        </div>
+
+                        <select
+                            className="form-select md:w-44"
+                            value={filter}
+                            onChange={(e) => {
+                                setFilter(e.target.value as ResourceFilter);
+                                setPage(1);
+                            }}
+                        >
+                            <option value="all">All Types</option>
+                            <option value="image">Images</option>
+                            <option value="video">Videos</option>
+                            <option value="document">Documents</option>
+                        </select>
+
+                        <div className="flex items-center gap-2 justify-start md:justify-end">
+                            <button
+                                type="button"
+                                className={`btn btn-sm p-2 ${viewMode === 'card' ? 'btn-primary' : 'btn-outline-primary'}`}
+                                onClick={() => setViewMode('card')}
+                                aria-label="Card view"
+                            >
+                                <IconLayoutGrid className="h-5 w-5" />
+                            </button>
+                            <button
+                                type="button"
+                                className={`btn btn-sm p-2 ${viewMode === 'table' ? 'btn-primary' : 'btn-outline-primary'}`}
+                                onClick={() => setViewMode('table')}
+                                aria-label="Table view"
+                            >
+                                <IconListCheck className="h-5 w-5" />
+                            </button>
                         </div>
                     </div>
-
-                    <select
-                        className="form-select"
-                        value={filter}
-                        onChange={(e) => {
-                            setFilter(e.target.value as ResourceFilter);
-                            setPage(1);
-                        }}
-                    >
-                        <option value="all">All Types</option>
-                        <option value="image">Images</option>
-                        <option value="video">Videos</option>
-                        <option value="document">Documents</option>
-                    </select>
-
-                    <div className="flex items-center gap-2 justify-end">
-                        <button
-                            type="button"
-                            className={`btn btn-sm p-2 ${viewMode === 'card' ? 'btn-primary' : 'btn-outline-primary'}`}
-                            onClick={() => setViewMode('card')}
-                            aria-label="Card view"
-                        >
-                            <IconLayoutGrid className="h-5 w-5" />
-                        </button>
-                        <button
-                            type="button"
-                            className={`btn btn-sm p-2 ${viewMode === 'table' ? 'btn-primary' : 'btn-outline-primary'}`}
-                            onClick={() => setViewMode('table')}
-                            aria-label="Table view"
-                        >
-                            <IconListCheck className="h-5 w-5" />
-                        </button>
-                    </div>
+                    {toolbarEnd ? <div className="flex flex-wrap items-center gap-2 shrink-0">{toolbarEnd}</div> : null}
                 </div>
             </div>
 
@@ -388,9 +415,12 @@ const LearningCorner = () => {
                             <div key={resource.id} className="panel border border-white-light dark:border-[#1b2e4b]">
                                 <div className="flex items-start justify-between gap-3">
                                     <h3 className="text-base font-bold">{resource.title}</h3>
-                                    <button type="button" className="btn btn-sm btn-outline-primary p-2" onClick={() => openResourceDetail(resource)}>
-                                        <IconEye className="w-4 h-4" />
-                                    </button>
+                                    <div className="flex items-center gap-1 shrink-0">
+                                        {renderActions?.(resource)}
+                                        <button type="button" className="btn btn-sm btn-outline-primary p-2" onClick={() => openResourceDetail(resource)}>
+                                            <IconEye className="w-4 h-4" />
+                                        </button>
+                                    </div>
                                 </div>
                                 <p className="mt-2 text-sm text-white-dark min-h-[40px]">{resource.description || 'No description provided.'}</p>
                                 <div className="mt-3 flex flex-wrap gap-2">
@@ -419,6 +449,7 @@ const LearningCorner = () => {
                                     <th>Description</th>
                                     <th>Assets</th>
                                     <th className="text-center">Preview</th>
+                                    {renderActions ? <th className="text-center">Manage</th> : null}
                                 </tr>
                             </thead>
                             <tbody>
@@ -447,6 +478,11 @@ const LearningCorner = () => {
                                                     <IconEye className="w-4 h-4" />
                                                 </button>
                                             </td>
+                                            {renderActions ? (
+                                                <td className="text-center">
+                                                    <div className="flex items-center justify-center gap-1 flex-wrap">{renderActions(resource)}</div>
+                                                </td>
+                                            ) : null}
                                         </tr>
                                     );
                                 })}
@@ -682,8 +718,8 @@ const LearningCorner = () => {
                                                         </div>
                                                     </>
                                                 )}
-                            </div>
-                        )}
+                                            </div>
+                                        )}
                                         {detailFolder === 'videos' && (
                                             <div>
                                                 {vidItems.length === 0 ? (
@@ -752,11 +788,11 @@ const LearningCorner = () => {
                                                             })}
                                                         </div>
                                                     </>
-                                )}
-                            </div>
+                                                )}
+                                            </div>
                                         )}
                                         {detailFolder === 'documents' && (
-                            <div className="panel bg-[#f8f9fa] dark:bg-[#060818]">
+                                            <div className="panel bg-[#f8f9fa] dark:bg-[#060818]">
                                                 {docItems.length === 0 ? (
                                                     <p className="text-sm text-white-dark">No documents in this folder.</p>
                                                 ) : (
@@ -817,10 +853,10 @@ const LearningCorner = () => {
                                                             })}
                                                         </ul>
                                                     </>
-                                )}
-                            </div>
+                                                )}
+                                            </div>
                                         )}
-                        </div>
+                                    </div>
 
                                     {m.length === 0 && (
                                         <p className="mt-4 text-sm text-white-dark">No uploaded files for this resource. Use external links below if available.</p>
@@ -922,9 +958,9 @@ const LearningCorner = () => {
                     </div>
                 </div>,
                     document.body
-            )}
+                )}
         </div>
     );
 };
 
-export default LearningCorner;
+export default LearningCornerBrowse;

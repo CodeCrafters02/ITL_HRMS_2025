@@ -9,6 +9,7 @@ import IconPencil from '../../components/Icon/IconPencil';
 import IconTrashLines from '../../components/Icon/IconTrashLines';
 import IconEye from '../../components/Icon/IconEye';
 import IconX from '../../components/Icon/IconX';
+import LearningCornerDetailModal, { sanitizeLearningCornerLinks } from './LearningCornerDetailModal';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000';
 const API_URL = `${API_BASE_URL}/app/learning-corner/`;
@@ -62,7 +63,6 @@ const AdminLearningCorner = () => {
     const [totalCount, setTotalCount] = useState(0);
     const [totalPages, setTotalPages] = useState(1);
     const [modalOpen, setModalOpen] = useState(false);
-    const [previewOpen, setPreviewOpen] = useState(false);
     const [editingItem, setEditingItem] = useState<LearningCornerItem | null>(null);
     const [previewItem, setPreviewItem] = useState<LearningCornerItem | null>(null);
     const [formData, setFormData] = useState({
@@ -152,7 +152,7 @@ const AdminLearningCorner = () => {
         setFormData({
             title: item.title || '',
             description: item.description || '',
-            links: Array.isArray(item.links) ? [...item.links] : [],
+            links: sanitizeLearningCornerLinks(item.links),
         });
         setPendingMediaFiles([]);
         setModalOpen(true);
@@ -170,7 +170,7 @@ const AdminLearningCorner = () => {
             const payload = new FormData();
             payload.append('title', formData.title);
             payload.append('description', formData.description);
-            payload.append('links', JSON.stringify(formData.links));
+            payload.append('links', JSON.stringify(sanitizeLearningCornerLinks(formData.links)));
             pendingMediaFiles.forEach((file) => {
                 payload.append('media_files', file);
             });
@@ -277,7 +277,8 @@ const AdminLearningCorner = () => {
         if (ni) badges.push(ni === 1 ? 'Image' : `${ni} Images`);
         if (nv) badges.push(nv === 1 ? 'Video' : `${nv} Videos`);
         if (nd) badges.push(nd === 1 ? 'Document' : `${nd} Documents`);
-        if (item.links && item.links.length > 0) badges.push(`${item.links.length} Link(s)`);
+        const linkCount = sanitizeLearningCornerLinks(item.links).length;
+        if (linkCount > 0) badges.push(`${linkCount} Link(s)`);
         return badges;
     };
 
@@ -337,9 +338,7 @@ const AdminLearningCorner = () => {
                 <div className="panel text-center py-10 text-gray-500">No learning resources found.</div>
             ) : viewType === 'card' ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-                    {filteredItems.map((item) => {
-                        const mediaList = item.media ?? [];
-                        return (
+                    {filteredItems.map((item) => (
                             <div key={item.id} className="panel overflow-hidden border-0 shadow-md">
                                 <div className="flex items-start justify-between gap-3">
                                     <div>
@@ -347,7 +346,7 @@ const AdminLearningCorner = () => {
                                         <p className="text-sm text-gray-500 mt-1 line-clamp-3">{item.description || 'No description available.'}</p>
                                     </div>
                                     <div className="flex items-center gap-1">
-                                        <button type="button" className="text-info hover:text-info-dark" onClick={() => { setPreviewItem(item); setPreviewOpen(true); }}>
+                                        <button type="button" className="text-info hover:text-info-dark" onClick={() => setPreviewItem(item)}>
                                             <IconEye className="w-5 h-5" />
                                         </button>
                                         <button type="button" className="text-primary hover:text-primary-dark" onClick={() => openEditModal(item)}>
@@ -365,35 +364,8 @@ const AdminLearningCorner = () => {
                                         </span>
                                     ))}
                                 </div>
-                                {mediaList.filter((m) => m.media_type === 'image').length > 0 && (
-                                    <div className="mt-3 grid grid-cols-3 gap-2">
-                                        {mediaList
-                                            .filter((m) => m.media_type === 'image')
-                                            .map((m) => (
-                                                <a key={`${m.id}-${m.url}`} href={m.url} target="_blank" rel="noreferrer" className="block aspect-video rounded border border-[#e0e6ed] overflow-hidden bg-gray-50">
-                                                    <img src={m.url} alt={m.filename || ''} className="w-full h-full object-cover" />
-                                                </a>
-                                            ))}
-                                    </div>
-                                )}
-                                <div className="mt-4 space-y-2 text-sm">
-                                    {mediaList
-                                        .filter((m) => m.media_type !== 'image')
-                                        .map((m) => (
-                                            <a key={`${m.id}-${m.url}`} href={m.url} target="_blank" rel="noreferrer" className="text-primary underline block truncate" title={m.filename}>
-                                                {m.media_type === 'video' ? 'Video: ' : 'Document: '}
-                                                {m.filename || m.url}
-                                            </a>
-                                        ))}
-                                    {item.links && item.links.map((link, idx) => (
-                                        <a key={idx} href={link.url} target="_blank" rel="noreferrer" className="text-primary underline block">
-                                            {link.title || link.url}
-                                        </a>
-                                    ))}
-                                </div>
                             </div>
-                        );
-                    })}
+                    ))}
                 </div>
             ) : (
                 <div className="panel p-0 border-0 overflow-hidden">
@@ -419,7 +391,7 @@ const AdminLearningCorner = () => {
                                         </td>
                                         <td className="text-center">
                                             <div className="flex items-center justify-center gap-2">
-                                                <button type="button" className="text-info" onClick={() => { setPreviewItem(item); setPreviewOpen(true); }}>
+                                                <button type="button" className="text-info" onClick={() => setPreviewItem(item)}>
                                                     <IconEye className="w-5 h-5" />
                                                 </button>
                                                 <button type="button" className="text-primary" onClick={() => openEditModal(item)}>
@@ -650,105 +622,7 @@ const AdminLearningCorner = () => {
                 </Dialog>
             </Transition>
 
-            <Transition appear show={previewOpen} as={Fragment}>
-                <Dialog as="div" open={previewOpen} onClose={() => setPreviewOpen(false)} className="relative z-50">
-                    <Transition.Child as={Fragment} enter="ease-out duration-300" enterFrom="opacity-0" enterTo="opacity-100" leave="ease-in duration-200" leaveFrom="opacity-100" leaveTo="opacity-0">
-                        <div className="fixed inset-0 bg-[black]/60" />
-                    </Transition.Child>
-                    <div className="fixed inset-0 overflow-y-auto">
-                        <div className="flex min-h-full items-center justify-center px-4 py-8">
-                            <Transition.Child as={Fragment} enter="ease-out duration-300" enterFrom="opacity-0 scale-95" enterTo="opacity-100 scale-100" leave="ease-in duration-200" leaveFrom="opacity-100 scale-100" leaveTo="opacity-0 scale-95">
-                                <Dialog.Panel className="panel border-0 p-0 rounded-lg overflow-hidden w-full max-w-4xl text-black dark:text-white-dark shadow-xl">
-                                    <button type="button" onClick={() => setPreviewOpen(false)} className="absolute top-4 ltr:right-4 rtl:left-4 text-gray-400 hover:text-gray-800 dark:hover:text-gray-600 outline-none">
-                                        <IconX />
-                                    </button>
-                                    <div className="text-lg font-medium bg-[#fbfbfb] dark:bg-[#121c2c] py-3 px-5">Preview Resource</div>
-                                    <div className="p-5">
-                                        {previewItem && (
-                                            <div className="space-y-4">
-                                                <div>
-                                                    <h3 className="text-xl font-bold">{previewItem.title}</h3>
-                                                    <p className="text-sm text-gray-500 mt-1">{previewItem.description || 'No description available.'}</p>
-                                                </div>
-                                                {(previewItem.media && previewItem.media.length > 0) ? (
-                                                    <div className="space-y-6">
-                                                        {previewItem.media.filter((m) => m.media_type === 'image').length > 0 && (
-                                                            <div>
-                                                                <div className="font-semibold mb-2">Images</div>
-                                                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                                                    {previewItem.media
-                                                                        .filter((m) => m.media_type === 'image')
-                                                                        .map((m) => (
-                                                                            <img key={m.id ?? m.url} src={m.url} alt={m.filename} className="max-h-64 w-full object-contain rounded-lg border border-[#e0e6ed]" />
-                                                                        ))}
-                                                                </div>
-                                                            </div>
-                                                        )}
-                                                        {previewItem.media.filter((m) => m.media_type === 'video').length > 0 && (
-                                                            <div>
-                                                                <div className="font-semibold mb-2">Videos</div>
-                                                                <div className="space-y-3">
-                                                                    {previewItem.media
-                                                                        .filter((m) => m.media_type === 'video')
-                                                                        .map((m) => (
-                                                                            <div key={m.id ?? m.url}>
-                                                                                <video src={m.url} controls className="w-full max-h-72 rounded-lg border border-[#e0e6ed] bg-black" />
-                                                                                <a className="text-primary underline text-sm mt-1 inline-block" href={m.url} target="_blank" rel="noreferrer">
-                                                                                    Open in new tab
-                                                                                </a>
-                                                                            </div>
-                                                                        ))}
-                                                                </div>
-                                                            </div>
-                                                        )}
-                                                        {previewItem.media.filter((m) => m.media_type === 'document').length > 0 && (
-                                                            <div>
-                                                                <div className="font-semibold mb-2">Documents</div>
-                                                                <ul className="list-disc pl-5 space-y-1 text-sm">
-                                                                    {previewItem.media
-                                                                        .filter((m) => m.media_type === 'document')
-                                                                        .map((m) => (
-                                                                            <li key={m.id ?? m.url}>
-                                                                                <a className="text-primary underline" href={m.url} target="_blank" rel="noreferrer">
-                                                                                    {m.filename || 'Download'}
-                                                                                </a>
-                                                                            </li>
-                                                                        ))}
-                                                                </ul>
-                                                            </div>
-                                                        )}
-                                                    </div>
-                                                ) : (
-                                                    <p className="text-sm text-gray-400">No uploaded files for this resource.</p>
-                                                )}
-                                                
-                                                {previewItem.links && previewItem.links.length > 0 && (
-                                                    <div>
-                                                        <div className="font-semibold mb-2">External Links</div>
-                                                        <div className="flex flex-wrap gap-3">
-                                                            {previewItem.links.map((link, idx) => (
-                                                                <a 
-                                                                    key={idx} 
-                                                                    href={link.url} 
-                                                                    target="_blank" 
-                                                                    rel="noreferrer" 
-                                                                    className="btn btn-sm btn-outline-primary"
-                                                                >
-                                                                    {link.title || 'Link'}
-                                                                </a>
-                                                            ))}
-                                                        </div>
-                                                    </div>
-                                                )}
-                                            </div>
-                                        )}
-                                    </div>
-                                </Dialog.Panel>
-                            </Transition.Child>
-                        </div>
-                    </div>
-                </Dialog>
-            </Transition>
+            <LearningCornerDetailModal resource={previewItem} onClose={() => setPreviewItem(null)} />
         </div>
     );
 };
