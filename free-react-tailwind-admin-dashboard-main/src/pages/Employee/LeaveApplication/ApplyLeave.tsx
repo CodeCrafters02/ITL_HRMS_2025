@@ -3,7 +3,16 @@ import { useDispatch } from 'react-redux';
 import { setPageTitle } from '../../../store/themeConfigSlice';
 import IconCalendar from '../../../components/Icon/IconCalendar';
 import IconSearch from '../../../components/Icon/IconSearch';
-import { LeaveBalance, LeaveRequest, LeaveStatus, cancelLeaveRequest, createLeaveRequest, fetchLeaveBalances, fetchMyLeaveRequests } from './api';
+import {
+    LeaveBalance,
+    LeaveDuration,
+    LeaveRequest,
+    LeaveStatus,
+    cancelLeaveRequest,
+    createLeaveRequest,
+    fetchLeaveBalances,
+    fetchMyLeaveRequests,
+} from './api';
 
 type StatusFilter = 'all' | LeaveStatus;
 
@@ -31,6 +40,14 @@ const dateDiff = (fromDate: string, toDate: string) => {
     if (Number.isNaN(from.getTime()) || Number.isNaN(to.getTime())) return 0;
     const diff = Math.floor((to.getTime() - from.getTime()) / (1000 * 60 * 60 * 24)) + 1;
     return Math.max(0, diff);
+};
+
+const formatLeaveDurationLabel = (d?: string) => (d === 'half_day' ? 'Half day' : 'Full day');
+
+const requestDayUnits = (fromDate: string, toDate: string, leaveDuration?: string) => {
+    const days = dateDiff(fromDate, toDate);
+    if (leaveDuration === 'half_day' && fromDate && toDate && fromDate === toDate) return 0.5;
+    return days;
 };
 
 const canCancelLeaveRequest = (request: LeaveRequest) => {
@@ -69,6 +86,7 @@ const ApplyLeave = () => {
     const [fromDate, setFromDate] = useState('');
     const [toDate, setToDate] = useState('');
     const [reason, setReason] = useState('');
+    const [leaveDuration, setLeaveDuration] = useState<LeaveDuration>('full_day');
 
     const loadData = useCallback(async () => {
         setLoading(true);
@@ -106,6 +124,12 @@ const ApplyLeave = () => {
         return () => clearTimeout(timer);
     }, [loadData]);
 
+    useEffect(() => {
+        if (leaveDuration === 'half_day' && fromDate) {
+            setToDate(fromDate);
+        }
+    }, [leaveDuration, fromDate]);
+
     const totalBalance = useMemo(() => leaveBalances.reduce((sum, leave) => sum + leave.count, 0), [leaveBalances]);
     const totalRemaining = useMemo(() => leaveBalances.reduce((sum, leave) => sum + leave.remaining_count, 0), [leaveBalances]);
     const pendingCount = useMemo(() => leaveRequests.filter((request) => request.status === 'Pending').length, [leaveRequests]);
@@ -131,13 +155,14 @@ const ApplyLeave = () => {
         return pages;
     };
 
-    const requestedDays = dateDiff(fromDate, toDate);
+    const requestedDayUnits = useMemo(() => requestDayUnits(fromDate, toDate, leaveDuration), [fromDate, toDate, leaveDuration]);
 
     const resetForm = () => {
         setLeaveType('');
         setFromDate('');
         setToDate('');
         setReason('');
+        setLeaveDuration('full_day');
         setFormError(null);
     };
 
@@ -157,6 +182,10 @@ const ApplyLeave = () => {
             setFormError('From date cannot be after to date.');
             return;
         }
+        if (leaveDuration === 'half_day' && fromDate !== toDate) {
+            setFormError('Half day leave must use the same from and to date.');
+            return;
+        }
 
         try {
             setSubmitting(true);
@@ -165,6 +194,7 @@ const ApplyLeave = () => {
                 from_date: fromDate,
                 to_date: toDate,
                 reason,
+                leave_duration: leaveDuration,
             });
             resetForm();
             setIsApplyModalOpen(false);
@@ -205,7 +235,15 @@ const ApplyLeave = () => {
                             <p className="mt-1 text-white/80">Apply for leave, monitor approvals, and manage balance usage.</p>
                         </div>
                     </div>
-                    <button type="button" className="btn btn-primary w-full md:w-auto" onClick={() => setIsApplyModalOpen(true)}>
+                    <button
+                        type="button"
+                        className="btn btn-primary w-full md:w-auto"
+                        onClick={() => {
+                            setLeaveDuration('full_day');
+                            setFormError(null);
+                            setIsApplyModalOpen(true);
+                        }}
+                    >
                         Apply Leave
                     </button>
                 </div>
@@ -362,6 +400,7 @@ const ApplyLeave = () => {
                         <thead>
                             <tr>
                             <th>Leave Type</th>
+                            <th>Duration</th>
                             <th>From</th>
                             <th>To</th>
                             <th>Days</th>
@@ -373,13 +412,13 @@ const ApplyLeave = () => {
                         <tbody>
                             {loading ? (
                                 <tr>
-                                    <td colSpan={7} className="text-center py-8 text-white-dark">
+                                    <td colSpan={8} className="text-center py-8 text-white-dark">
                                         Loading leave requests...
                                     </td>
                                 </tr>
                             ) : leaveRequests.length === 0 ? (
                                 <tr>
-                                    <td colSpan={7} className="text-center py-8 text-white-dark">
+                                    <td colSpan={8} className="text-center py-8 text-white-dark">
                                         No leave requests found.
                                     </td>
                                 </tr>
@@ -387,9 +426,10 @@ const ApplyLeave = () => {
                                 leaveRequests.map((request) => (
                                     <tr key={request.id}>
                                         <td className="font-semibold">{request.leave_type_name || '-'}</td>
+                                        <td>{formatLeaveDurationLabel(request.leave_duration)}</td>
                                         <td>{formatDate(request.from_date)}</td>
                                         <td>{formatDate(request.to_date)}</td>
-                                        <td>{dateDiff(request.from_date, request.to_date)}</td>
+                                        <td>{requestDayUnits(request.from_date, request.to_date, request.leave_duration)}</td>
                                         <td>
                                             <span className={`badge ${statusStyleMap[request.status]}`}>
                                                 {request.status}
@@ -452,6 +492,31 @@ const ApplyLeave = () => {
                                     ))}
                                 </select>
                             </div>
+                            <div>
+                                <label className="form-label">Leave duration</label>
+                                <div className="flex flex-wrap gap-4 mt-1">
+                                    <label className="flex items-center gap-2 cursor-pointer">
+                                        <input
+                                            type="radio"
+                                            name="leave_duration"
+                                            className="form-radio"
+                                            checked={leaveDuration === 'full_day'}
+                                            onChange={() => setLeaveDuration('full_day')}
+                                        />
+                                        <span>Full day</span>
+                                    </label>
+                                    <label className="flex items-center gap-2 cursor-pointer">
+                                        <input
+                                            type="radio"
+                                            name="leave_duration"
+                                            className="form-radio"
+                                            checked={leaveDuration === 'half_day'}
+                                            onChange={() => setLeaveDuration('half_day')}
+                                        />
+                                        <span>Half day (same from / to date)</span>
+                                    </label>
+                                </div>
+                            </div>
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                 <div>
                                     <label className="form-label">From Date</label>
@@ -459,7 +524,14 @@ const ApplyLeave = () => {
                                 </div>
                                 <div>
                                     <label className="form-label">To Date</label>
-                                    <input type="date" className="form-input" value={toDate} onChange={(e) => setToDate(e.target.value)} required />
+                                    <input
+                                        type="date"
+                                        className="form-input"
+                                        value={toDate}
+                                        onChange={(e) => setToDate(e.target.value)}
+                                        disabled={leaveDuration === 'half_day'}
+                                        required
+                                    />
                                 </div>
                             </div>
                             <div>
@@ -473,7 +545,7 @@ const ApplyLeave = () => {
                                 />
                             </div>
                             <div className="rounded-md bg-primary-light/20 text-primary px-3 py-2 text-sm">
-                                Requested duration: <span className="font-bold">{requestedDays || 0}</span> day(s)
+                                Requested duration: <span className="font-bold">{requestedDayUnits || 0}</span> day(s)
                             </div>
                             <button type="submit" className="btn btn-primary w-full" disabled={submitting}>
                                 {submitting ? 'Submitting...' : 'Submit Leave Request'}

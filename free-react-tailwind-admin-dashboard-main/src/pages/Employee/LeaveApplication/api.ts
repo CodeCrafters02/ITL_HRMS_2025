@@ -11,6 +11,8 @@ export interface LeaveBalance {
 
 export type LeaveStatus = 'Pending' | 'Approved' | 'Rejected' | 'Cancelled';
 
+export type LeaveDuration = 'half_day' | 'full_day';
+
 export interface LeaveRequest {
     id: number;
     company: number;
@@ -19,6 +21,7 @@ export interface LeaveRequest {
     reporting_manager_name: string;
     leave_type: number;
     leave_type_name: string;
+    leave_duration?: LeaveDuration;
     status: LeaveStatus;
     reason: string;
     rejection_reason: string;
@@ -32,6 +35,7 @@ export interface CreateLeavePayload {
     from_date: string;
     to_date: string;
     reason: string;
+    leave_duration?: LeaveDuration;
 }
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000';

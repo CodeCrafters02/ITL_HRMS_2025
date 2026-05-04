@@ -550,6 +550,7 @@ class Leave(models.Model):
         return f"{self.leave_name} ({'Paid' if self.is_paid else 'Unpaid'})"
 
 class EmpLeave(models.Model):
+    leave_duration = models.CharField(max_length=20, choices=[('half_day', 'Half Day'), ('full_day', 'Full Day')], default='full_day')
     company = models.ForeignKey(Company, on_delete=models.CASCADE)
     employee = models.ForeignKey(Employee, on_delete=models.CASCADE)
     reporting_manager = models.ForeignKey(

@@ -1548,9 +1548,10 @@ class LeaveLogSerializer(serializers.ModelSerializer):
     employee_name = serializers.SerializerMethodField()
     manager_name = serializers.SerializerMethodField()
     leave_type = serializers.SerializerMethodField()
+    leave_duration = serializers.SerializerMethodField()
     class Meta:
         model = EmpLeave
-        fields = ['id', 'employee_name', 'manager_name', 'from_date', 'to_date', 'status','reason','leave_type']
+        fields = ['id', 'employee_name', 'manager_name', 'from_date', 'to_date', 'status','reason','leave_type', 'leave_duration']
 
     def get_employee_name(self, obj):
         return str(obj.employee)
@@ -1560,6 +1561,10 @@ class LeaveLogSerializer(serializers.ModelSerializer):
     
     def get_leave_type(self, obj):
         return obj.leave_type.leave_name if obj.leave_type else ''
+
+    def get_leave_duration(self, obj):
+        return obj.get_leave_duration_display()
+
         
 class UserLogSerializer(serializers.ModelSerializer):
     class Meta:
