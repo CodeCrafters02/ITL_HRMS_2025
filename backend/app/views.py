@@ -1250,17 +1250,27 @@ class LeaveViewSet(viewsets.ModelViewSet):
 class LearningCornerViewSet(viewsets.ModelViewSet):
     queryset = LearningCorner.objects.all()
     serializer_class = LearningCornerSerializer
-    permission_classes = [IsAuthenticated,IsAdminUser]
+    permission_classes = [IsAuthenticated, IsAdminUser]
     pagination_class = CustomPagination
     filter_backends = [filters.SearchFilter]
     search_fields = ['title', 'description']
+    parser_classes = [MultiPartParser, FormParser, JSONParser]
 
     def get_queryset(self):
         user = self.request.user
-        return LearningCorner.objects.filter(company=user.company).order_by('id')
+        return LearningCorner.objects.filter(company=user.company).prefetch_related('media_items').order_by('id')
 
     def perform_create(self, serializer):
         serializer.save(company=self.request.user.company)
+
+    @action(detail=True, methods=['delete'], url_path=r'media/(?P<media_id>[0-9]+)')
+    def delete_media(self, request, pk=None, media_id=None):
+        learning_corner = self.get_object()
+        media = get_object_or_404(LearningCornerMedia, id=int(media_id), learning_corner=learning_corner)
+        if media.file:
+            media.file.delete(save=False)
+        media.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 class NotificationViewSet(viewsets.ModelViewSet):

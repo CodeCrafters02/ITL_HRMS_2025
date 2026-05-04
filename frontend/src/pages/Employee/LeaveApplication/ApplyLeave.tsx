@@ -39,6 +39,22 @@ const dateDiff = (fromDate: string, toDate: string) => {
     return Math.max(0, diff);
 };
 
+const getLocalTodayISO = (): string => {
+    const n = new Date();
+    return `${n.getFullYear()}-${String(n.getMonth() + 1).padStart(2, '0')}-${String(n.getDate()).padStart(2, '0')}`;
+};
+
+const isLocalDateBeforeToday = (isoDate: string): boolean => {
+    const parts = isoDate.split('-').map(Number);
+    if (parts.length !== 3 || parts.some((n) => Number.isNaN(n))) return false;
+    const [y, m, d] = parts;
+    const cand = new Date(y, m - 1, d);
+    cand.setHours(0, 0, 0, 0);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    return cand.getTime() < today.getTime();
+};
+
 const formatLeaveDurationLabel = (d?: string) => (d === 'half_day' ? 'Half day' : 'Full day');
 
 const requestDayUnits = (fromDate: string, toDate: string, leaveDuration?: string) => {
@@ -71,6 +87,14 @@ const ApplyLeave = () => {
     const [toDate, setToDate] = useState('');
     const [reason, setReason] = useState('');
     const [leaveDuration, setLeaveDuration] = useState<LeaveDuration>('full_day');
+
+    const minLeaveDateStr = getLocalTodayISO();
+    const toDateInputMin =
+        leaveDuration === 'half_day' && fromDate
+            ? fromDate
+            : fromDate && fromDate >= minLeaveDateStr
+              ? fromDate
+              : minLeaveDateStr;
 
     const loadData = useCallback(async () => {
         setLoading(true);
@@ -159,6 +183,14 @@ const ApplyLeave = () => {
         }
         if (!fromDate || !toDate) {
             setError('Please choose both from and to dates.');
+            return;
+        }
+        if (isLocalDateBeforeToday(fromDate)) {
+            setError('From date cannot be in the past.');
+            return;
+        }
+        if (isLocalDateBeforeToday(toDate)) {
+            setError('To date cannot be in the past.');
             return;
         }
         if (new Date(fromDate).getTime() > new Date(toDate).getTime()) {
@@ -498,13 +530,21 @@ const ApplyLeave = () => {
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                 <div>
                                     <label className="form-label">From Date</label>
-                                    <input type="date" className="form-input" value={fromDate} onChange={(e) => setFromDate(e.target.value)} required />
+                                    <input
+                                        type="date"
+                                        className="form-input"
+                                        min={minLeaveDateStr}
+                                        value={fromDate}
+                                        onChange={(e) => setFromDate(e.target.value)}
+                                        required
+                                    />
                                 </div>
                                 <div>
                                     <label className="form-label">To Date</label>
                                     <input
                                         type="date"
                                         className="form-input"
+                                        min={toDateInputMin}
                                         value={toDate}
                                         onChange={(e) => setToDate(e.target.value)}
                                         disabled={leaveDuration === 'half_day'}

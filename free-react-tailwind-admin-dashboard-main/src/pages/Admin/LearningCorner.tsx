@@ -9,9 +9,17 @@ import IconPencil from '../../components/Icon/IconPencil';
 import IconTrashLines from '../../components/Icon/IconTrashLines';
 import IconEye from '../../components/Icon/IconEye';
 import IconX from '../../components/Icon/IconX';
+import LearningCornerDetailModal, { sanitizeLearningCornerLinks } from './LearningCornerDetailModal';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000';
 const API_URL = `${API_BASE_URL}/app/learning-corner/`;
+
+type LearningCornerMediaItem = {
+    id: number | null;
+    url: string;
+    media_type: 'image' | 'video' | 'document';
+    filename: string;
+};
 
 type LearningCornerItem = {
     id: number;
@@ -24,9 +32,20 @@ type LearningCornerItem = {
     video_url?: string | null;
     document_url?: string | null;
     links?: { title: string; url: string }[] | null;
+    media?: LearningCornerMediaItem[];
 };
 
 type FilterType = 'all' | 'image' | 'video' | 'document';
+
+const itemHasMediaType = (item: LearningCornerItem, ft: FilterType): boolean => {
+    if (ft === 'all') return true;
+    const media = item.media ?? [];
+    if (media.some((m) => m.media_type === ft)) return true;
+    if (ft === 'image') return !!(item.image_url || item.image);
+    if (ft === 'video') return !!(item.video_url || item.video);
+    if (ft === 'document') return !!(item.document_url || item.document);
+    return false;
+};
 type SortType = 'newest' | 'oldest' | 'az';
 type ViewType = 'card' | 'table';
 
@@ -44,7 +63,6 @@ const AdminLearningCorner = () => {
     const [totalCount, setTotalCount] = useState(0);
     const [totalPages, setTotalPages] = useState(1);
     const [modalOpen, setModalOpen] = useState(false);
-    const [previewOpen, setPreviewOpen] = useState(false);
     const [editingItem, setEditingItem] = useState<LearningCornerItem | null>(null);
     const [previewItem, setPreviewItem] = useState<LearningCornerItem | null>(null);
     const [formData, setFormData] = useState({
@@ -52,15 +70,7 @@ const AdminLearningCorner = () => {
         description: '',
         links: [] as { title: string; url: string }[],
     });
-    const [files, setFiles] = useState<{
-        image: File | null;
-        video: File | null;
-        document: File | null;
-    }>({
-        image: null,
-        video: null,
-        document: null,
-    });
+    const [pendingMediaFiles, setPendingMediaFiles] = useState<File[]>([]);
 
     useEffect(() => {
         dispatch(setPageTitle('Learning Corner'));
@@ -111,15 +121,7 @@ const AdminLearningCorner = () => {
     };
 
     const filteredItems = useMemo(() => {
-        const result = items.filter((item) => {
-            const matchesType =
-                filterType === 'all' ||
-                (filterType === 'image' && !!(item.image_url || item.image)) ||
-                (filterType === 'video' && !!(item.video_url || item.video)) ||
-                (filterType === 'document' && !!(item.document_url || item.document));
-
-            return matchesType;
-        });
+        const result = items.filter((item) => itemHasMediaType(item, filterType));
 
         result.sort((a, b) => {
             if (sortType === 'az') return a.title.localeCompare(b.title);
@@ -136,7 +138,7 @@ const AdminLearningCorner = () => {
 
     const resetForm = () => {
         setFormData({ title: '', description: '', links: [] });
-        setFiles({ image: null, video: null, document: null });
+        setPendingMediaFiles([]);
         setEditingItem(null);
     };
 
@@ -150,9 +152,9 @@ const AdminLearningCorner = () => {
         setFormData({
             title: item.title || '',
             description: item.description || '',
-            links: Array.isArray(item.links) ? [...item.links] : [],
+            links: sanitizeLearningCornerLinks(item.links),
         });
-        setFiles({ image: null, video: null, document: null });
+        setPendingMediaFiles([]);
         setModalOpen(true);
     };
 
@@ -168,10 +170,10 @@ const AdminLearningCorner = () => {
             const payload = new FormData();
             payload.append('title', formData.title);
             payload.append('description', formData.description);
-            payload.append('links', JSON.stringify(formData.links));
-            if (files.image) payload.append('image', files.image);
-            if (files.video) payload.append('video', files.video);
-            if (files.document) payload.append('document', files.document);
+            payload.append('links', JSON.stringify(sanitizeLearningCornerLinks(formData.links)));
+            pendingMediaFiles.forEach((file) => {
+                payload.append('media_files', file);
+            });
 
             const response = await fetch(editingItem ? `${API_URL}${editingItem.id}/` : API_URL, {
                 method: editingItem ? 'PATCH' : 'POST',
@@ -236,12 +238,47 @@ const AdminLearningCorner = () => {
         }
     };
 
+    const handleDeleteMedia = async (resourceId: number, mediaId: number) => {
+        const result = await Swal.fire({
+            title: 'Remove file?',
+            text: 'This file will be permanently removed from this resource.',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonText: 'Remove',
+            customClass: { popup: 'sweet-alerts' },
+        });
+        if (!result.isConfirmed) return;
+        try {
+            const response = await fetch(`${API_URL}${resourceId}/media/${mediaId}/`, {
+                method: 'DELETE',
+                headers: getHeaders(),
+            });
+            if (response.ok || response.status === 204) {
+                await fetchItems();
+                setEditingItem((prev) => {
+                    if (!prev || prev.id !== resourceId) return prev;
+                    return { ...prev, media: (prev.media || []).filter((m) => m.id !== mediaId) };
+                });
+                Swal.fire({ title: 'Removed', icon: 'success', timer: 1500, showConfirmButton: false, customClass: { popup: 'sweet-alerts' } });
+            } else {
+                Swal.fire({ title: 'Error', text: 'Could not remove file.', icon: 'error', customClass: { popup: 'sweet-alerts' } });
+            }
+        } catch {
+            Swal.fire({ title: 'Error', text: 'Could not remove file.', icon: 'error', customClass: { popup: 'sweet-alerts' } });
+        }
+    };
+
     const getBadges = (item: LearningCornerItem) => {
         const badges: string[] = [];
-        if (item.image_url || item.image) badges.push('Image');
-        if (item.video_url || item.video) badges.push('Video');
-        if (item.document_url || item.document) badges.push('Document');
-        if (item.links && item.links.length > 0) badges.push(`${item.links.length} Link(s)`);
+        const media = item.media ?? [];
+        const ni = media.filter((m) => m.media_type === 'image').length;
+        const nv = media.filter((m) => m.media_type === 'video').length;
+        const nd = media.filter((m) => m.media_type === 'document').length;
+        if (ni) badges.push(ni === 1 ? 'Image' : `${ni} Images`);
+        if (nv) badges.push(nv === 1 ? 'Video' : `${nv} Videos`);
+        if (nd) badges.push(nd === 1 ? 'Document' : `${nd} Documents`);
+        const linkCount = sanitizeLearningCornerLinks(item.links).length;
+        if (linkCount > 0) badges.push(`${linkCount} Link(s)`);
         return badges;
     };
 
@@ -301,11 +338,7 @@ const AdminLearningCorner = () => {
                 <div className="panel text-center py-10 text-gray-500">No learning resources found.</div>
             ) : viewType === 'card' ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-                    {filteredItems.map((item) => {
-                        const imageUrl = buildAssetUrl(item.image_url || item.image);
-                        const videoUrl = buildAssetUrl(item.video_url || item.video);
-                        const documentUrl = buildAssetUrl(item.document_url || item.document);
-                        return (
+                    {filteredItems.map((item) => (
                             <div key={item.id} className="panel overflow-hidden border-0 shadow-md">
                                 <div className="flex items-start justify-between gap-3">
                                     <div>
@@ -313,7 +346,7 @@ const AdminLearningCorner = () => {
                                         <p className="text-sm text-gray-500 mt-1 line-clamp-3">{item.description || 'No description available.'}</p>
                                     </div>
                                     <div className="flex items-center gap-1">
-                                        <button type="button" className="text-info hover:text-info-dark" onClick={() => { setPreviewItem(item); setPreviewOpen(true); }}>
+                                        <button type="button" className="text-info hover:text-info-dark" onClick={() => setPreviewItem(item)}>
                                             <IconEye className="w-5 h-5" />
                                         </button>
                                         <button type="button" className="text-primary hover:text-primary-dark" onClick={() => openEditModal(item)}>
@@ -331,19 +364,8 @@ const AdminLearningCorner = () => {
                                         </span>
                                     ))}
                                 </div>
-                                <div className="mt-4 space-y-2 text-sm">
-                                    {imageUrl && <a href={imageUrl} target="_blank" rel="noreferrer" className="text-primary underline block">View Image</a>}
-                                    {videoUrl && <a href={videoUrl} target="_blank" rel="noreferrer" className="text-primary underline block">View Video</a>}
-                                    {documentUrl && <a href={documentUrl} target="_blank" rel="noreferrer" className="text-primary underline block">View Document</a>}
-                                    {item.links && item.links.map((link, idx) => (
-                                        <a key={idx} href={link.url} target="_blank" rel="noreferrer" className="text-primary underline block">
-                                            {link.title || link.url}
-                                        </a>
-                                    ))}
-                                </div>
                             </div>
-                        );
-                    })}
+                    ))}
                 </div>
             ) : (
                 <div className="panel p-0 border-0 overflow-hidden">
@@ -369,7 +391,7 @@ const AdminLearningCorner = () => {
                                         </td>
                                         <td className="text-center">
                                             <div className="flex items-center justify-center gap-2">
-                                                <button type="button" className="text-info" onClick={() => { setPreviewItem(item); setPreviewOpen(true); }}>
+                                                <button type="button" className="text-info" onClick={() => setPreviewItem(item)}>
                                                     <IconEye className="w-5 h-5" />
                                                 </button>
                                                 <button type="button" className="text-primary" onClick={() => openEditModal(item)}>
@@ -470,34 +492,59 @@ const AdminLearningCorner = () => {
                                                 <label className="font-semibold mb-1 block">Description</label>
                                                 <textarea className="form-textarea min-h-[120px]" value={formData.description} onChange={(e) => setFormData({ ...formData, description: e.target.value })} />
                                             </div>
-                                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                                <div>
-                                                    <label className="font-semibold mb-1 block">Image</label>
-                                                    {editingItem && buildAssetUrl(editingItem.image_url || editingItem.image) && (
-                                                        <a href={buildAssetUrl(editingItem.image_url || editingItem.image) || '#'} className="text-primary underline text-xs block mb-2" target="_blank" rel="noreferrer">
-                                                            View current image
-                                                        </a>
-                                                    )}
-                                                    <input type="file" accept="image/*" className="form-input" onChange={(e) => setFiles({ ...files, image: e.target.files?.[0] || null })} />
-                                                </div>
-                                                <div>
-                                                    <label className="font-semibold mb-1 block">Video</label>
-                                                    {editingItem && buildAssetUrl(editingItem.video_url || editingItem.video) && (
-                                                        <a href={buildAssetUrl(editingItem.video_url || editingItem.video) || '#'} className="text-primary underline text-xs block mb-2" target="_blank" rel="noreferrer">
-                                                            View current video
-                                                        </a>
-                                                    )}
-                                                    <input type="file" accept="video/*" className="form-input" onChange={(e) => setFiles({ ...files, video: e.target.files?.[0] || null })} />
-                                                </div>
-                                                <div>
-                                                    <label className="font-semibold mb-1 block">Document</label>
-                                                    {editingItem && buildAssetUrl(editingItem.document_url || editingItem.document) && (
-                                                        <a href={buildAssetUrl(editingItem.document_url || editingItem.document) || '#'} className="text-primary underline text-xs block mb-2" target="_blank" rel="noreferrer">
-                                                            View current document
-                                                        </a>
-                                                    )}
-                                                    <input type="file" className="form-input" onChange={(e) => setFiles({ ...files, document: e.target.files?.[0] || null })} />
-                                                </div>
+                                            <div>
+                                                <label className="font-semibold mb-1 block">Files (images, videos, documents)</label>
+                                                <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">Select multiple files. Type is detected from the file extension.</p>
+                                                {editingItem && (editingItem.media?.length ?? 0) > 0 && (
+                                                    <ul className="mb-3 space-y-2 text-sm border border-[#ebedf2] dark:border-[#1b2e4b] rounded-md p-3 bg-gray-50 dark:bg-[#0e1726]">
+                                                        {(editingItem.media || []).map((m) => (
+                                                            <li key={m.id ?? m.url} className="flex items-center justify-between gap-2">
+                                                                <span className="truncate">
+                                                                    <span className="font-semibold capitalize">{m.media_type}:</span>{' '}
+                                                                    <a href={m.url} target="_blank" rel="noreferrer" className="text-primary underline">
+                                                                        {m.filename || 'Open'}
+                                                                    </a>
+                                                                </span>
+                                                                {m.id != null && (
+                                                                    <button
+                                                                        type="button"
+                                                                        className="text-danger shrink-0"
+                                                                        onClick={() => handleDeleteMedia(editingItem.id, m.id as number)}
+                                                                    >
+                                                                        <IconTrashLines className="w-4 h-4" />
+                                                                    </button>
+                                                                )}
+                                                            </li>
+                                                        ))}
+                                                    </ul>
+                                                )}
+                                                <input
+                                                    type="file"
+                                                    multiple
+                                                    accept="image/*,video/*,.pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.txt,.zip"
+                                                    className="form-input"
+                                                    onChange={(e) => {
+                                                        const list = e.target.files ? Array.from(e.target.files) : [];
+                                                        setPendingMediaFiles((prev) => [...prev, ...list]);
+                                                        e.target.value = '';
+                                                    }}
+                                                />
+                                                {pendingMediaFiles.length > 0 && (
+                                                    <ul className="mt-2 space-y-1 text-xs">
+                                                        {pendingMediaFiles.map((f, i) => (
+                                                            <li key={`${f.name}-${i}`} className="flex justify-between gap-2">
+                                                                <span className="truncate">{f.name}</span>
+                                                                <button
+                                                                    type="button"
+                                                                    className="text-danger"
+                                                                    onClick={() => setPendingMediaFiles((prev) => prev.filter((_, j) => j !== i))}
+                                                                >
+                                                                    Remove
+                                                                </button>
+                                                            </li>
+                                                        ))}
+                                                    </ul>
+                                                )}
                                             </div>
 
                                             <div className="border-t border-[#ebedf2] dark:border-[#1b2e4b] pt-4 mt-4">
@@ -575,82 +622,7 @@ const AdminLearningCorner = () => {
                 </Dialog>
             </Transition>
 
-            <Transition appear show={previewOpen} as={Fragment}>
-                <Dialog as="div" open={previewOpen} onClose={() => setPreviewOpen(false)} className="relative z-50">
-                    <Transition.Child as={Fragment} enter="ease-out duration-300" enterFrom="opacity-0" enterTo="opacity-100" leave="ease-in duration-200" leaveFrom="opacity-100" leaveTo="opacity-0">
-                        <div className="fixed inset-0 bg-[black]/60" />
-                    </Transition.Child>
-                    <div className="fixed inset-0 overflow-y-auto">
-                        <div className="flex min-h-full items-center justify-center px-4 py-8">
-                            <Transition.Child as={Fragment} enter="ease-out duration-300" enterFrom="opacity-0 scale-95" enterTo="opacity-100 scale-100" leave="ease-in duration-200" leaveFrom="opacity-100 scale-100" leaveTo="opacity-0 scale-95">
-                                <Dialog.Panel className="panel border-0 p-0 rounded-lg overflow-hidden w-full max-w-4xl text-black dark:text-white-dark shadow-xl">
-                                    <button type="button" onClick={() => setPreviewOpen(false)} className="absolute top-4 ltr:right-4 rtl:left-4 text-gray-400 hover:text-gray-800 dark:hover:text-gray-600 outline-none">
-                                        <IconX />
-                                    </button>
-                                    <div className="text-lg font-medium bg-[#fbfbfb] dark:bg-[#121c2c] py-3 px-5">Preview Resource</div>
-                                    <div className="p-5">
-                                        {previewItem && (
-                                            <div className="space-y-4">
-                                                <div>
-                                                    <h3 className="text-xl font-bold">{previewItem.title}</h3>
-                                                    <p className="text-sm text-gray-500 mt-1">{previewItem.description || 'No description available.'}</p>
-                                                </div>
-                                                {buildAssetUrl(previewItem.image_url || previewItem.image) && (
-                                                    <div>
-                                                        <div className="font-semibold mb-2">Image</div>
-                                                        <img src={buildAssetUrl(previewItem.image_url || previewItem.image) || ''} alt={previewItem.title} className="max-h-80 rounded-lg border border-[#e0e6ed]" />
-                                                    </div>
-                                                )}
-                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                                                    <div>
-                                                        <div className="font-semibold mb-1">Video</div>
-                                                        {buildAssetUrl(previewItem.video_url || previewItem.video) ? (
-                                                            <a className="text-primary underline" href={buildAssetUrl(previewItem.video_url || previewItem.video) || '#'} target="_blank" rel="noreferrer">
-                                                                Open video
-                                                            </a>
-                                                        ) : (
-                                                            <span className="text-gray-400">No video</span>
-                                                        )}
-                                                    </div>
-                                                    <div>
-                                                        <div className="font-semibold mb-1">Document</div>
-                                                        {buildAssetUrl(previewItem.document_url || previewItem.document) ? (
-                                                            <a className="text-primary underline" href={buildAssetUrl(previewItem.document_url || previewItem.document) || '#'} target="_blank" rel="noreferrer">
-                                                                Open document
-                                                            </a>
-                                                        ) : (
-                                                            <span className="text-gray-400">No document</span>
-                                                        )}
-                                                    </div>
-                                                </div>
-                                                
-                                                {previewItem.links && previewItem.links.length > 0 && (
-                                                    <div>
-                                                        <div className="font-semibold mb-2">External Links</div>
-                                                        <div className="flex flex-wrap gap-3">
-                                                            {previewItem.links.map((link, idx) => (
-                                                                <a 
-                                                                    key={idx} 
-                                                                    href={link.url} 
-                                                                    target="_blank" 
-                                                                    rel="noreferrer" 
-                                                                    className="btn btn-sm btn-outline-primary"
-                                                                >
-                                                                    {link.title || 'Link'}
-                                                                </a>
-                                                            ))}
-                                                        </div>
-                                                    </div>
-                                                )}
-                                            </div>
-                                        )}
-                                    </div>
-                                </Dialog.Panel>
-                            </Transition.Child>
-                        </div>
-                    </div>
-                </Dialog>
-            </Transition>
+            <LearningCornerDetailModal resource={previewItem} onClose={() => setPreviewItem(null)} />
         </div>
     );
 };

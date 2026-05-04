@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from django.db.models import Q
+from django.db.models import Q, Max
 from datetime import datetime, timedelta
 from django.core.mail import send_mail
 from django.conf import settings
@@ -13,6 +13,7 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from .models import *
 from rest_framework import viewsets, permissions
 import json
+import os
 
 User = get_user_model()
 
@@ -1167,20 +1168,31 @@ class FlexibleJSONField(serializers.JSONField):
                 self.fail('invalid')
         return super().to_internal_value(data)
 
+def guess_learning_corner_media_type(filename: str) -> str:
+    ext = (filename or "").rsplit(".", 1)[-1].lower()
+    if ext in ("jpg", "jpeg", "png", "gif", "webp", "bmp", "svg"):
+        return LearningCornerMedia.MEDIA_IMAGE
+    if ext in ("mp4", "webm", "mov", "avi", "mkv", "ogv", "m4v", "wmv"):
+        return LearningCornerMedia.MEDIA_VIDEO
+    return LearningCornerMedia.MEDIA_DOCUMENT
+
+
 class LearningCornerSerializer(serializers.ModelSerializer):
     links = FlexibleJSONField(required=False, allow_null=True)
     image_url = serializers.SerializerMethodField()
     video_url = serializers.SerializerMethodField()
     document_url = serializers.SerializerMethodField()
+    media = serializers.SerializerMethodField()
 
     class Meta:
         model = LearningCorner
         fields = [
             'id', 'title', 'description',
             'image', 'video', 'document', 'links',
-            'image_url', 'video_url', 'document_url'
+            'image_url', 'video_url', 'document_url',
+            'media',
         ]
-        read_only_fields = ['id', 'image_url', 'video_url', 'document_url']
+        read_only_fields = ['id', 'image_url', 'video_url', 'document_url', 'media']
         extra_kwargs = {
             'image': {'required': False, 'allow_null': True},
             'video': {'required': False, 'allow_null': True},
@@ -1199,6 +1211,69 @@ class LearningCornerSerializer(serializers.ModelSerializer):
         request = self.context.get('request')
         return request.build_absolute_uri(obj.document.url) if obj.document else None
 
+    def get_media(self, obj):
+        request = self.context.get('request')
+        if not request:
+            return []
+        out = []
+        seen_urls = set()
+        for m in obj.media_items.all().order_by('sort_order', 'id'):
+            if not m.file:
+                continue
+            try:
+                url = request.build_absolute_uri(m.file.url)
+            except ValueError:
+                continue
+            seen_urls.add(url)
+            out.append({
+                'id': m.id,
+                'url': url,
+                'media_type': m.media_type,
+                'filename': os.path.basename(m.file.name) if m.file.name else '',
+            })
+        for field_name, mtype in (('image', LearningCornerMedia.MEDIA_IMAGE), ('video', LearningCornerMedia.MEDIA_VIDEO), ('document', LearningCornerMedia.MEDIA_DOCUMENT)):
+            f = getattr(obj, field_name, None)
+            if not f:
+                continue
+            try:
+                url = request.build_absolute_uri(f.url)
+            except ValueError:
+                continue
+            if url in seen_urls:
+                continue
+            seen_urls.add(url)
+            out.append({
+                'id': None,
+                'url': url,
+                'media_type': mtype,
+                'filename': os.path.basename(f.name) if getattr(f, 'name', None) else '',
+            })
+        return out
+
+    def _save_media_files_from_request(self, instance, request):
+        files = request.FILES.getlist('media_files')
+        if not files:
+            return
+
+        agg = instance.media_items.aggregate(m=Max('sort_order'))
+        max_order = agg['m']
+        if max_order is None:
+            max_order = -1
+        for i, f in enumerate(files):
+            LearningCornerMedia.objects.create(
+                learning_corner=instance,
+                file=f,
+                media_type=guess_learning_corner_media_type(getattr(f, 'name', '') or ''),
+                sort_order=max_order + 1 + i,
+            )
+
+    def create(self, validated_data):
+        instance = super().create(validated_data)
+        request = self.context.get('request')
+        if request:
+            self._save_media_files_from_request(instance, request)
+        return instance
+
     def update(self, instance, validated_data):
         # Only update fields that are present in validated_data
         for attr, value in validated_data.items():
@@ -1209,7 +1284,12 @@ class LearningCornerSerializer(serializers.ModelSerializer):
             else:
                 setattr(instance, attr, value)
         instance.save()
+        request = self.context.get('request')
+        if request:
+            self._save_media_files_from_request(instance, request)
         return instance
+
+
 class NotificationSerializer(serializers.ModelSerializer):
     class Meta:
         model = Notification

@@ -600,6 +600,35 @@ class LearningCorner(models.Model):
         return self.title or "Untitled"
 
 
+class LearningCornerMedia(models.Model):
+    """Multiple files (images, videos, documents) per learning corner item."""
+
+    MEDIA_IMAGE = "image"
+    MEDIA_VIDEO = "video"
+    MEDIA_DOCUMENT = "document"
+    MEDIA_TYPE_CHOICES = [
+        (MEDIA_IMAGE, "Image"),
+        (MEDIA_VIDEO, "Video"),
+        (MEDIA_DOCUMENT, "Document"),
+    ]
+
+    learning_corner = models.ForeignKey(
+        LearningCorner,
+        on_delete=models.CASCADE,
+        related_name="media_items",
+    )
+    file = models.FileField(upload_to="learning_corner/media")
+    media_type = models.CharField(max_length=20, choices=MEDIA_TYPE_CHOICES, default=MEDIA_DOCUMENT)
+    sort_order = models.PositiveIntegerField(default=0)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["sort_order", "id"]
+
+    def __str__(self):
+        return f"{self.learning_corner_id} {self.media_type}"
+
+
 class Notification(models.Model):  
     title = models.CharField(max_length=255, null=True)
     description = models.TextField(null=True, blank=True)

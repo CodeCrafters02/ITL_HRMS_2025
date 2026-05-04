@@ -5,6 +5,7 @@ import { setPageTitle } from '../../store/themeConfigSlice';
 import IconSearch from '../../components/Icon/IconSearch';
 import Flatpickr from 'react-flatpickr';
 import 'flatpickr/dist/flatpickr.css';
+import { formatLeaveRequestDate } from '../../utils/formatLeaveRequestDate';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000';
 
@@ -190,7 +191,7 @@ const LeaveHistory = () => {
                                         </td>
                                         <td className="py-5 px-6">
                                             <div className="text-[11px] font-bold text-gray-500 bg-gray-100 dark:bg-gray-700 px-2.5 py-1 rounded-md inline-block">
-                                                {new Date(r.from_date).toLocaleDateString()} — {new Date(r.to_date).toLocaleDateString()}
+                                                {formatLeaveRequestDate(r.from_date)} — {formatLeaveRequestDate(r.to_date)}
                                             </div>
                                         </td>
                                         <td className="py-5 px-6">

@@ -15,8 +15,40 @@ import IconTrendingUp from '../../components/Icon/IconTrendingUp';
 import IconSun from '../../components/Icon/IconSun';
 import CountUp from 'react-countup';
 import Dropdown from '../../components/Dropdown';
+import { fetchMyLeaveRequests, type LeaveRequest } from './LeaveApplication/api';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000';
+
+const pickLatestLeaveRequest = (results: LeaveRequest[]): LeaveRequest | null => {
+    if (!results.length) return null;
+    return [...results].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())[0];
+};
+
+const formatLeaveDateRange = (from?: string, to?: string) => {
+    if (!from) return '—';
+    const opts: Intl.DateTimeFormatOptions = { month: 'short', day: 'numeric' };
+    try {
+        const f = new Date(from).toLocaleDateString(undefined, opts);
+        if (!to || from === to) return f;
+        const t = new Date(to).toLocaleDateString(undefined, opts);
+        return `${f} – ${t}`;
+    } catch {
+        return from;
+    }
+};
+
+const leaveStatusBadgeClass = (status: LeaveRequest['status']) => {
+    switch (status) {
+        case 'Approved':
+            return 'badge badge-outline-success';
+        case 'Rejected':
+            return 'badge badge-outline-danger';
+        case 'Cancelled':
+            return 'badge badge-outline-secondary';
+        default:
+            return 'badge badge-outline-warning';
+    }
+};
 
 interface DashboardData {
     today: string;
@@ -112,6 +144,7 @@ const EmployeeDashboard = () => {
     const [isWFH, setIsWFH] = useState<boolean>(false);
     const [geofenceRequired, setGeofenceRequired] = useState<boolean>(false);
     const [geoError, setGeoError] = useState<string | null>(null);
+    const [latestLeave, setLatestLeave] = useState<LeaveRequest | null>(null);
 
     const haversineDistance = (lat1: number, lon1: number, lat2: number, lon2: number) => {
         const R = 6371e3; // Earth radius in meters
@@ -283,6 +316,22 @@ const EmployeeDashboard = () => {
         fetchAllData();
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [dispatch]);
+
+    useEffect(() => {
+        let cancelled = false;
+        (async () => {
+            try {
+                const { results } = await fetchMyLeaveRequests({ page: 1, page_size: 40 });
+                if (cancelled) return;
+                setLatestLeave(pickLatestLeaveRequest(results));
+            } catch {
+                if (!cancelled) setLatestLeave(null);
+            }
+        })();
+        return () => {
+            cancelled = true;
+        };
+    }, []);
 
     useEffect(() => {
         if (data?.birthday_message) {
@@ -695,7 +744,9 @@ const EmployeeDashboard = () => {
                             {!checkin_time && (
                                 <button 
                                     type="button" 
-                                    className="btn btn-primary shadow-md rounded-xl disabled:opacity-50 disabled:cursor-not-allowed" 
+                                    className={`btn btn-primary shadow-md rounded-xl disabled:opacity-50 disabled:cursor-not-allowed disabled:animate-none ${
+                                        canPerformAction ? 'animate-checkin-pulse motion-reduce:animate-none' : ''
+                                    }`}
                                     onClick={handleCheckIn}
                                     disabled={!canPerformAction}
                                     title={!canPerformAction ? 'You must be at the office to check in' : ''}
@@ -860,7 +911,34 @@ const EmployeeDashboard = () => {
                 </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-6 gap-4">
+                <Link
+                    to="/employee/leave-application"
+                    className="panel p-4 hover:-translate-y-1 transition-all duration-300 border border-[#ebedf2] dark:border-[#1b2e4b] hover:border-primary dark:hover:border-primary block no-underline text-inherit min-w-0 group"
+                >
+                    <div className="flex items-start justify-between gap-2">
+                        <p className="text-[11px] uppercase tracking-wider text-white-dark font-semibold">Leave application</p>
+                     
+                    </div>
+                    {latestLeave ? (
+                        <>
+                            <p className="text-lg font-black mt-2 truncate" title={latestLeave.leave_type_name}>
+                                {latestLeave.leave_type_name}
+                            </p>
+                            <p className="mt-2">
+                                <span className={leaveStatusBadgeClass(latestLeave.status)}>{latestLeave.status}</span>
+                            </p>
+                            <p className="text-xs text-white-dark mt-1.5 truncate" title={`${latestLeave.from_date} → ${latestLeave.to_date}`}>
+                                {formatLeaveDateRange(latestLeave.from_date, latestLeave.to_date)}
+                            </p>
+                            </>
+                    ) : (
+                        <>
+                            <p className="text-lg font-black mt-2 text-white-dark">No requests yet</p>
+                            <p className="text-xs text-white-dark mt-1">Open leave application to submit</p>
+                        </>
+                    )}
+                </Link>
                 <div className="panel p-4 hover:-translate-y-1 transition-all duration-300 border border-[#ebedf2] dark:border-[#1b2e4b]">
                     <p className="text-[11px] uppercase tracking-wider text-white-dark font-semibold">Effective Time</p>
                     <p className="text-2xl font-black mt-2">{liveTime}</p>

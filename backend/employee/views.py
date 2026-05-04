@@ -9,7 +9,7 @@ from datetime import datetime, timedelta
 import pytz
 import calendar
 from datetime import date
-from django.db.models import Q, Prefetch, Max
+from django.db.models import Q, Prefetch, Max, Exists, OuterRef
 from rest_framework.views import APIView
 from calendar import month_name
 from django_filters.rest_framework import DjangoFilterBackend
@@ -22,7 +22,22 @@ class EmployeePagination(PageNumberPagination):
     max_page_size = 100
 from .utils import calculate_worked_time, calculate_effective_time
 import re
-from app.models import Attendance,Notification,LearningCorner, ShiftPolicy, Employee, BreakLog,Payroll,CalendarEvent,EmpLeave,CompanyPolicies,Level,Designation,DepartmentWiseWorkingDays
+from app.models import (
+    Attendance,
+    Notification,
+    LearningCorner,
+    LearningCornerMedia,
+    ShiftPolicy,
+    Employee,
+    BreakLog,
+    Payroll,
+    CalendarEvent,
+    EmpLeave,
+    CompanyPolicies,
+    Level,
+    Designation,
+    DepartmentWiseWorkingDays,
+)
 from .models import *
 from .serializers import *
 
@@ -1594,14 +1609,38 @@ class EmpLearningCornerAPIView(generics.ListAPIView):
         if not employee_profile:
             return LearningCorner.objects.none()
 
-        qs = LearningCorner.objects.filter(company=employee_profile.company)
+        qs = LearningCorner.objects.filter(company=employee_profile.company).prefetch_related("media_items")
         asset_type = (self.request.query_params.get("type") or "all").strip().lower()
         if asset_type == "image":
-            qs = qs.filter(image__isnull=False).exclude(image="")
+            qs = qs.filter(
+                Q(image__isnull=False) & ~Q(image="")
+                | Exists(
+                    LearningCornerMedia.objects.filter(
+                        learning_corner_id=OuterRef("pk"),
+                        media_type=LearningCornerMedia.MEDIA_IMAGE,
+                    )
+                )
+            ).distinct()
         elif asset_type == "video":
-            qs = qs.filter(video__isnull=False).exclude(video="")
+            qs = qs.filter(
+                Q(video__isnull=False) & ~Q(video="")
+                | Exists(
+                    LearningCornerMedia.objects.filter(
+                        learning_corner_id=OuterRef("pk"),
+                        media_type=LearningCornerMedia.MEDIA_VIDEO,
+                    )
+                )
+            ).distinct()
         elif asset_type == "document":
-            qs = qs.filter(document__isnull=False).exclude(document="")
+            qs = qs.filter(
+                Q(document__isnull=False) & ~Q(document="")
+                | Exists(
+                    LearningCornerMedia.objects.filter(
+                        learning_corner_id=OuterRef("pk"),
+                        media_type=LearningCornerMedia.MEDIA_DOCUMENT,
+                    )
+                )
+            ).distinct()
         return qs.order_by("-id")
 
 class EmployeeProfileAPIView(generics.RetrieveUpdateAPIView):

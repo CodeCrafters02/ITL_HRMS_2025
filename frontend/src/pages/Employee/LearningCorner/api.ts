@@ -1,5 +1,14 @@
 import { authFetch } from '../../../utils/authFetch';
 
+export type LearningMediaType = 'image' | 'video' | 'document';
+
+export interface LearningMediaItem {
+    id: number | null;
+    url: string;
+    media_type: LearningMediaType;
+    filename: string;
+}
+
 export interface LearningResource {
     id: number;
     title: string;
@@ -7,6 +16,8 @@ export interface LearningResource {
     image: string | null;
     video: string | null;
     document: string | null;
+    links?: { title: string; url: string }[] | null;
+    media?: LearningMediaItem[];
 }
 
 export interface PaginatedLearningResources {

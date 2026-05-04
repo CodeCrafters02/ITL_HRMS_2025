@@ -15,11 +15,20 @@ type LeaveRequest = {
     employee_name: string;
     manager_name: string;
     leave_type: string;
+    leave_duration?: string | null;
     from_date: string;
     to_date: string;
     reason: string;
     status: string;
 };
+
+function formatLeaveDuration(v?: string | null): string {
+    if (v == null || v === '') return '—';
+    const s = String(v).trim().toLowerCase();
+    if (s === 'half_day' || s === 'half day') return 'Half day';
+    if (s === 'full_day' || s === 'full day') return 'Full day';
+    return String(v).trim();
+}
 
 const LeaveApproval = () => {
     const dispatch = useDispatch();
@@ -184,6 +193,7 @@ const LeaveApproval = () => {
                                 <th className="py-4 px-6 font-bold uppercase text-xs tracking-wider">Employee</th>
                                 <th className="py-4 px-6 font-bold uppercase text-xs tracking-wider">Type</th>
                                 <th className="py-4 px-6 font-bold uppercase text-xs tracking-wider">Period</th>
+                                <th className="py-4 px-6 font-bold uppercase text-xs tracking-wider">Duration</th>
                                 <th className="py-4 px-6 font-bold uppercase text-xs tracking-wider">Reason</th>
                                 <th className="py-4 px-6 font-bold uppercase text-xs tracking-wider">Actions</th>
                             </tr>
@@ -191,7 +201,7 @@ const LeaveApproval = () => {
                         <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
                             {loading ? (
                                 <tr>
-                                    <td colSpan={5} className="py-12 text-center">
+                                    <td colSpan={6} className="py-12 text-center">
                                         <div className="flex flex-col items-center gap-2">
                                             <span className="w-8 h-8 border-4 border-blue-500 border-l-transparent rounded-full animate-spin"></span>
                                             <span className="text-gray-500 font-medium">Crunching requests...</span>
@@ -220,6 +230,11 @@ const LeaveApproval = () => {
                                             </div>
                                         </td>
                                         <td className="py-4 px-6">
+                                            <span className="text-sm font-medium text-gray-700 dark:text-gray-300 whitespace-nowrap">
+                                                {formatLeaveDuration(r.leave_duration)}
+                                            </span>
+                                        </td>
+                                        <td className="py-4 px-6">
                                             <p className="text-sm text-gray-500 line-clamp-1 max-w-[200px]" title={r.reason}>{r.reason}</p>
                                         </td>
                                         <td className="py-4 px-6">
@@ -244,7 +259,7 @@ const LeaveApproval = () => {
                                 ))
                             ) : (
                                 <tr>
-                                    <td colSpan={5} className="py-12 text-center text-gray-400 italic">No pending leave requests found.</td>
+                                    <td colSpan={6} className="py-12 text-center text-gray-400 italic">No pending leave requests found.</td>
                                 </tr>
                             )}
                         </tbody>

@@ -71,6 +71,21 @@ module.exports = {
             boxShadow: {
                 '3xl': '0 2px 2px rgb(224 230 237 / 46%), 1px 6px 7px rgb(224 230 237 / 46%)',
             },
+            keyframes: {
+                'checkin-pulse': {
+                    '0%, 100%': {
+                        boxShadow:
+                            '0 0 0 0 rgba(255,255,255,0.45), 0 10px 24px -10px rgba(67, 97, 238, 0.65)',
+                    },
+                    '50%': {
+                        boxShadow:
+                            '0 0 0 5px rgba(165, 243, 252, 0.35), 0 14px 32px -6px rgba(129, 140, 248, 0.95)',
+                    },
+                },
+            },
+            animation: {
+                'checkin-pulse': 'checkin-pulse 2.1s ease-in-out infinite',
+            },
             typography: ({ theme }) => ({
                 DEFAULT: {
                     css: {

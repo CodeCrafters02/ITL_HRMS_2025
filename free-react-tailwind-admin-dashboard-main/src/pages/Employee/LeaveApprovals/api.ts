@@ -7,6 +7,7 @@ export interface ManagerLeaveRequest {
     employee_name: string;
     reporting_manager_name: string;
     leave_type_name: string;
+    leave_duration?: string | null;
     from_date: string;
     to_date: string;
     reason: string;

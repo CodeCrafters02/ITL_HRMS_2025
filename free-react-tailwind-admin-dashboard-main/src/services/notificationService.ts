@@ -5,6 +5,97 @@ import Swal from 'sweetalert2';
 const VAPID_KEY = 'BGpsX5ZRU1qgUMCjDOC3501_1UnI3dvQCqS9QmG68-Ykliw1YzqcRjMCSbe7JluixMMV_3TmEU8PJhHfgbGgQAI'; // User needs to replace this
 const DEVICE_TOKEN_ENDPOINT = '/notifications/devices/';
 
+/** Character count before description is collapsed with "See more". */
+const DESCRIPTION_PREVIEW_MAX = 120;
+
+function escapeHtml(text: string): string {
+    return text
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+}
+
+function getPushTitleBody(payload: MessagePayload): { title: string; body: string } {
+    const title =
+        payload.notification?.title ||
+        (payload.data?.title as string | undefined) ||
+        'Notification';
+    const body =
+        payload.notification?.body ||
+        (payload.data?.body as string | undefined) ||
+        '';
+    return { title: String(title), body: String(body) };
+}
+
+function showPushToast(payload: MessagePayload) {
+    const { title, body } = getPushTitleBody(payload);
+    const safeTitle = escapeHtml(title);
+    const safeBody = escapeHtml(body);
+    const needsTruncate = body.length > DESCRIPTION_PREVIEW_MAX;
+    const previewText = needsTruncate
+        ? `${body.slice(0, DESCRIPTION_PREVIEW_MAX).trimEnd()}…`
+        : body;
+    const safePreview = escapeHtml(previewText);
+
+    const html = `
+        <div class="hrms-fcm-toast-inner">
+            <div class="hrms-fcm-toast-title">${safeTitle}</div>
+            <div class="hrms-fcm-toast-description-wrap">
+                <p class="hrms-fcm-toast-desc hrms-fcm-toast-desc--short">${needsTruncate ? safePreview : safeBody}</p>
+                ${
+                    needsTruncate
+                        ? `<p class="hrms-fcm-toast-desc hrms-fcm-toast-desc--full" style="display:none">${safeBody}</p>`
+                        : ''
+                }
+            </div>
+            ${
+                needsTruncate
+                    ? `<button type="button" class="hrms-fcm-toast-toggle" data-expanded="false">See more</button>`
+                    : ''
+            }
+        </div>
+    `;
+
+    void Swal.fire({
+        html,
+        toast: true,
+        position: 'top-end',
+        showConfirmButton: false,
+        timer: 8000,
+        timerProgressBar: true,
+        showCloseButton: true,
+        width: 'min(100vw - 24px, 400px)',
+        padding: '14px 16px',
+        customClass: {
+            popup: 'hrms-fcm-toast-popup',
+            htmlContainer: 'hrms-fcm-toast-html',
+        },
+        didOpen: (popup) => {
+            const btn = popup.querySelector('.hrms-fcm-toast-toggle') as HTMLButtonElement | null;
+            const shortEl = popup.querySelector('.hrms-fcm-toast-desc--short') as HTMLElement | null;
+            const fullEl = popup.querySelector('.hrms-fcm-toast-desc--full') as HTMLElement | null;
+            if (!btn || !shortEl || !fullEl) return;
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const expanded = btn.getAttribute('data-expanded') === 'true';
+                if (!expanded) {
+                    shortEl.style.display = 'none';
+                    fullEl.style.display = 'block';
+                    btn.textContent = 'See less';
+                    btn.setAttribute('data-expanded', 'true');
+                } else {
+                    shortEl.style.display = 'block';
+                    fullEl.style.display = 'none';
+                    btn.textContent = 'See more';
+                    btn.setAttribute('data-expanded', 'false');
+                }
+            });
+        },
+    });
+}
+
 class NotificationService {
     async requestPermission() {
         if (!messaging) return;
@@ -55,7 +146,7 @@ class NotificationService {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${accessToken}`,
+                    Authorization: `Bearer ${accessToken}`,
                 },
                 body: JSON.stringify({ token }),
             });
@@ -74,24 +165,12 @@ class NotificationService {
 
         if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
             // Re-register token on app load so backend always has a current token.
-            this.registerToken();
+            void this.registerToken();
         }
 
         onMessage(messaging, (payload: MessagePayload) => {
             console.log('Message received. ', payload);
-            
-            // Show SweetAlert2 toast
-            Swal.fire({
-                title: payload.data?.title || 'Notification',
-                text: payload.data?.body || '',
-                toast: true,
-                position: 'top-end',
-                showConfirmButton: false,
-                timer: 5000,
-                timerProgressBar: true,
-                showCloseButton: true,
-                icon: 'info',
-            });
+            showPushToast(payload);
         });
     }
 }
