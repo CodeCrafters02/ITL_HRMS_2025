@@ -58,7 +58,8 @@ class _EmployeeDashboardPageState extends State<EmployeeDashboardPage> {
 
   void _startBadgeRefresh() {
     _refreshBadges();
-    _badgeRefreshTimer = Timer.periodic(const Duration(seconds: 60), (_) => _refreshBadges());
+    // Reduced from 60s to 120s - badges don't need such frequent updates
+    _badgeRefreshTimer = Timer.periodic(const Duration(seconds: 120), (_) => _refreshBadges());
   }
 
   Future<void> _refreshBadges() async {

@@ -856,8 +856,19 @@ class EmployeeService {
         headers: ApiConfig.getAuthHeaders(token),
       );
 
+      // ignore: avoid_print
+      print('[LeaveTypes] status=${response.statusCode} body=${response.body}');
+
       if (response.statusCode == 200) {
-        final List<dynamic> data = jsonDecode(response.body);
+        final decoded = jsonDecode(response.body);
+        List<dynamic> data;
+        if (decoded is List) {
+          data = decoded;
+        } else if (decoded is Map && decoded['results'] is List) {
+          data = decoded['results'] as List<dynamic>;
+        } else {
+          data = [];
+        }
         final leaveTypes = data
             .map((item) => LeaveType.fromJson(item))
             .toList();
@@ -870,10 +881,12 @@ class EmployeeService {
         final error = jsonDecode(response.body);
         return ApiResponse(
           success: false,
-          message: error['detail'] ?? 'Failed to load leave types',
+          message: error['detail'] ?? 'Failed to load leave types (${response.statusCode})',
         );
       }
-    } catch (e) {
+    } catch (e, st) {
+      // ignore: avoid_print
+      print('[LeaveTypes] exception: $e\n$st');
       return ApiResponse(
         success: false,
         message: 'Network error: ${e.toString()}',
@@ -926,6 +939,7 @@ class EmployeeService {
     required String fromDate,
     required String toDate,
     required String reason,
+    String? leaveDuration,
   }) async {
     try {
       final token = await StorageService.getAccessToken();
@@ -933,15 +947,20 @@ class EmployeeService {
         return ApiResponse(success: false, message: 'No access token found');
       }
 
+      final Map<String, dynamic> body = {
+        'leave_type': leaveType,
+        'from_date': fromDate,
+        'to_date': toDate,
+        'reason': reason,
+      };
+      if (leaveDuration != null) {
+        body['leave_duration'] = leaveDuration;
+      }
+
       final response = await http.post(
         Uri.parse(ApiConfig.employeeLeaveCreateUrl),
         headers: ApiConfig.getAuthHeaders(token),
-        body: jsonEncode({
-          'leave_type': leaveType,
-          'from_date': fromDate,
-          'to_date': toDate,
-          'reason': reason,
-        }),
+        body: jsonEncode(body),
       );
 
       if (response.statusCode == 200 || response.statusCode == 201) {
@@ -2133,6 +2152,79 @@ class EmployeeService {
               error['detail'] ??
               error['message'] ??
               'Failed to update photo',
+        );
+      }
+    } catch (e) {
+      String errorMsg = 'Network error occurred';
+      if (e.toString().contains('FormatException')) {
+        errorMsg = 'Invalid response from server. Please try again.';
+      } else if (e.toString().contains('SocketException') ||
+          e.toString().contains('TimeoutException')) {
+        errorMsg = 'Connection error. Please check your internet connection.';
+      } else {
+        errorMsg = 'Error: ${e.toString()}';
+      }
+
+      return ApiResponse(success: false, message: errorMsg);
+    }
+  }
+
+  // Update employee profile fields (text + optional document files)
+  static Future<ApiResponse<EmployeeProfile>> updateEmployeeProfile(
+    Map<String, String> fields, {
+    File? aadharCard,
+    File? panCard,
+  }) async {
+    try {
+      final token = await StorageService.getAccessToken();
+      if (token == null) {
+        return ApiResponse(success: false, message: 'No access token found');
+      }
+
+      final request = http.MultipartRequest(
+        'PATCH',
+        Uri.parse(ApiConfig.employeeProfileUrl),
+      );
+
+      request.headers.addAll({
+        'Authorization': 'Bearer $token',
+        'Accept': 'application/json',
+      });
+
+      fields.forEach((key, value) {
+        if (value.isNotEmpty) request.fields[key] = value;
+      });
+
+      if (aadharCard != null) {
+        request.files.add(
+          await http.MultipartFile.fromPath('aadhar_card', aadharCard.path),
+        );
+      }
+      if (panCard != null) {
+        request.files.add(
+          await http.MultipartFile.fromPath('pan_card', panCard.path),
+        );
+      }
+
+      final streamedResponse = await request.send();
+      final response = await http.Response.fromStream(streamedResponse);
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        final profile = EmployeeProfile.fromJson(data);
+        return ApiResponse(
+          success: true,
+          message: 'Profile updated successfully',
+          data: profile,
+        );
+      } else {
+        final error = jsonDecode(response.body);
+        return ApiResponse(
+          success: false,
+          message:
+              error['detail'] ??
+              error['message'] ??
+              'Failed to update profile',
         );
       }
     } catch (e) {

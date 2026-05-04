@@ -9,6 +9,7 @@ import 'widgets/profile_info_card.dart';
 import 'widgets/profile_address_card.dart';
 import 'widgets/profile_professional_card.dart';
 import 'widgets/profile_hierarchy_card.dart';
+import 'profile_edit_page.dart';
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
@@ -158,6 +159,26 @@ class _ProfilePageState extends State<ProfilePage>
                                     color: AppStitchTheme.lightOnSurface,
                                   ),
                             ),
+                          ),
+                          IconButton(
+                            onPressed: _profile == null
+                                ? null
+                                : () async {
+                                    final updated =
+                                        await Navigator.push<EmployeeProfile>(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (_) => ProfileEditPage(
+                                          profile: _profile!,
+                                        ),
+                                      ),
+                                    );
+                                    if (updated != null) {
+                                      setState(() => _profile = updated);
+                                    }
+                                  },
+                            icon: const Icon(Icons.edit_rounded, size: 20),
+                            tooltip: 'Edit Profile',
                           ),
                           IconButton(
                             onPressed: () => Navigator.pushNamed(context, '/change-password'),

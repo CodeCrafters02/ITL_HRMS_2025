@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../services/employee_service.dart';
 import '../models/profile_model.dart';
+import '../widgets/optimized_image.dart';
 import '../pages/employee/widgets/notification_button.dart';
 
 class EmployeeAppBar extends StatefulWidget implements PreferredSizeWidget {
@@ -95,13 +96,15 @@ class _EmployeeAppBarState extends State<EmployeeAppBar> {
                 ),
               )
             : _profile?.photo != null && _profile!.photo!.isNotEmpty
-                ? ClipOval(
-                    child: Image.network(
-                      _profile!.photo!,
-                      fit: BoxFit.cover,
-                      errorBuilder: (context, error, stackTrace) =>
-                          _buildInitialsWidget(),
-                    ),
+                ? OptimizedImage(
+                    imageUrl: _profile!.photo!,
+                    width: 40,
+                    height: 40,
+                    fit: BoxFit.cover,
+                    shape: BoxShape.circle,
+                    memCacheWidth: 80,
+                    memCacheHeight: 80,
+                    errorWidget: _buildInitialsWidget(),
                   )
                 : _buildInitialsWidget(),
       ),

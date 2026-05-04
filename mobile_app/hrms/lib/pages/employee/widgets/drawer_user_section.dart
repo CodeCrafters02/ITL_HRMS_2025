@@ -3,6 +3,7 @@ import '../../../services/auth_service.dart';
 import '../../../services/storage_service.dart';
 import '../../../services/employee_service.dart';
 import '../../../models/profile_model.dart';
+import '../../../widgets/optimized_image.dart';
 
 class DrawerUserSection extends StatefulWidget {
   const DrawerUserSection({super.key});
@@ -135,14 +136,15 @@ class _DrawerUserSectionState extends State<DrawerUserSection> {
                                 )
                               : _profile?.photo != null &&
                                       _profile!.photo!.isNotEmpty
-                                  ? ClipOval(
-                                      child: Image.network(
-                                        _profile!.photo!,
-                                        fit: BoxFit.cover,
-                                        errorBuilder:
-                                            (context, error, stackTrace) =>
-                                                _buildInitialsAvatar(),
-                                      ),
+                                  ? OptimizedImage(
+                                      imageUrl: _profile!.photo!,
+                                      width: 48,
+                                      height: 48,
+                                      fit: BoxFit.cover,
+                                      shape: BoxShape.circle,
+                                      memCacheWidth: 96,
+                                      memCacheHeight: 96,
+                                      errorWidget: _buildInitialsAvatar(),
                                     )
                                   : _buildInitialsAvatar(),
                         ),

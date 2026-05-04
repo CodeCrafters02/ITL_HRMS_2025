@@ -69,6 +69,9 @@ class _LearningCornerPageState extends State<LearningCornerPage> {
                 child: Image.network(
                   imageUrl,
                   headers: headers,
+                  cacheWidth: 800,
+                  cacheHeight: 600,
+                  filterQuality: FilterQuality.low,
                   errorBuilder: (context, error, stackTrace) =>
                       const Icon(Icons.error, color: Colors.white, size: 64),
                 ),
@@ -265,6 +268,9 @@ class _LearningCornerPageState extends State<LearningCornerPage> {
                               height: 48,
                               fit: BoxFit.cover,
                               headers: snapshot.data ?? {},
+                              cacheWidth: 96,
+                              cacheHeight: 96,
+                              filterQuality: FilterQuality.low,
                               errorBuilder: (context, error, stackTrace) =>
                                   const Text('—'),
                             ),

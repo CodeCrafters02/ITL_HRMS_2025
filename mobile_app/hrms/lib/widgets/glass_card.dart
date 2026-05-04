@@ -11,7 +11,7 @@ class GlassCard extends StatelessWidget {
     this.padding = const EdgeInsets.all(20),
     this.borderRadius = 28,
     this.enableBlur = true,
-    this.blurSigma = 18,
+    this.blurSigma = 10, // Reduced from 18 for performance
   });
 
   final Widget child;
@@ -59,14 +59,19 @@ class GlassCard extends StatelessWidget {
       ),
     );
 
-    return ClipRRect(
-      borderRadius: r,
-      child: enableBlur
-          ? BackdropFilter(
-              filter: ImageFilter.blur(sigmaX: blurSigma, sigmaY: blurSigma),
-              child: content,
-            )
-          : content,
+    // Clamp blur for performance on low-end devices
+    final effectiveBlur = blurSigma.clamp(0.0, 12.0);
+    
+    return RepaintBoundary(
+      child: ClipRRect(
+        borderRadius: r,
+        child: enableBlur && effectiveBlur > 0
+            ? BackdropFilter(
+                filter: ImageFilter.blur(sigmaX: effectiveBlur, sigmaY: effectiveBlur),
+                child: content,
+              )
+            : content,
+      ),
     );
   }
 }

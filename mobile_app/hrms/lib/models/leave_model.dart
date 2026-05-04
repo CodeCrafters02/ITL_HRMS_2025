@@ -3,8 +3,8 @@ class LeaveType {
   final String leaveName;
   final int count;
   final bool isPaid;
-  final int usedCount;
-  final int remainingCount;
+  final double usedCount;
+  final double remainingCount;
 
   LeaveType({
     required this.id,
@@ -21,8 +21,8 @@ class LeaveType {
       leaveName: json['leave_name'] ?? '',
       count: json['count'] ?? 0,
       isPaid: json['is_paid'] ?? false,
-      usedCount: json['used_count'] ?? 0,
-      remainingCount: json['remaining_count'] ?? 0,
+      usedCount: (json['used_count'] ?? 0).toDouble(),
+      remainingCount: (json['remaining_count'] ?? 0).toDouble(),
     );
   }
 }
@@ -36,6 +36,7 @@ class AppliedLeave {
   final String toDate;
   final String status;
   final String createdAt;
+  final String? leaveDuration;
 
   AppliedLeave({
     required this.id,
@@ -46,6 +47,7 @@ class AppliedLeave {
     required this.toDate,
     required this.status,
     required this.createdAt,
+    this.leaveDuration,
   });
 
   factory AppliedLeave.fromJson(Map<String, dynamic> json) {
@@ -58,6 +60,7 @@ class AppliedLeave {
       toDate: json['to_date'] ?? '',
       status: json['status'] ?? 'Pending',
       createdAt: json['created_at'] ?? '',
+      leaveDuration: json['leave_duration'],
     );
   }
 }
