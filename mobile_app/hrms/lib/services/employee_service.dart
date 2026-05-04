@@ -856,8 +856,19 @@ class EmployeeService {
         headers: ApiConfig.getAuthHeaders(token),
       );
 
+      // ignore: avoid_print
+      print('[LeaveTypes] status=${response.statusCode} body=${response.body}');
+
       if (response.statusCode == 200) {
-        final List<dynamic> data = jsonDecode(response.body);
+        final decoded = jsonDecode(response.body);
+        List<dynamic> data;
+        if (decoded is List) {
+          data = decoded;
+        } else if (decoded is Map && decoded['results'] is List) {
+          data = decoded['results'] as List<dynamic>;
+        } else {
+          data = [];
+        }
         final leaveTypes = data
             .map((item) => LeaveType.fromJson(item))
             .toList();
@@ -870,10 +881,12 @@ class EmployeeService {
         final error = jsonDecode(response.body);
         return ApiResponse(
           success: false,
-          message: error['detail'] ?? 'Failed to load leave types',
+          message: error['detail'] ?? 'Failed to load leave types (${response.statusCode})',
         );
       }
-    } catch (e) {
+    } catch (e, st) {
+      // ignore: avoid_print
+      print('[LeaveTypes] exception: $e\n$st');
       return ApiResponse(
         success: false,
         message: 'Network error: ${e.toString()}',
@@ -926,6 +939,7 @@ class EmployeeService {
     required String fromDate,
     required String toDate,
     required String reason,
+    String? leaveDuration,
   }) async {
     try {
       final token = await StorageService.getAccessToken();
@@ -933,15 +947,20 @@ class EmployeeService {
         return ApiResponse(success: false, message: 'No access token found');
       }
 
+      final Map<String, dynamic> body = {
+        'leave_type': leaveType,
+        'from_date': fromDate,
+        'to_date': toDate,
+        'reason': reason,
+      };
+      if (leaveDuration != null) {
+        body['leave_duration'] = leaveDuration;
+      }
+
       final response = await http.post(
         Uri.parse(ApiConfig.employeeLeaveCreateUrl),
         headers: ApiConfig.getAuthHeaders(token),
-        body: jsonEncode({
-          'leave_type': leaveType,
-          'from_date': fromDate,
-          'to_date': toDate,
-          'reason': reason,
-        }),
+        body: jsonEncode(body),
       );
 
       if (response.statusCode == 200 || response.statusCode == 201) {

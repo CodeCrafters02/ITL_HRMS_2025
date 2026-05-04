@@ -362,7 +362,8 @@ class ChatProvider extends ChangeNotifier {
 
   void _startUnreadPolling() {
     _unreadPollTimer?.cancel();
-    _unreadPollTimer = Timer.periodic(const Duration(seconds: 10), (_) {
+    // Reduced from 10s to 30s to minimize battery and CPU usage on low-end devices
+    _unreadPollTimer = Timer.periodic(const Duration(seconds: 30), (_) {
       if (!_foreground) return;
       refreshConversations(showLoading: false);
     });
@@ -370,11 +371,15 @@ class ChatProvider extends ChangeNotifier {
 
   void _startThreadSync(int conversationId) {
     _threadSyncTimer?.cancel();
-    _threadSyncTimer = Timer.periodic(const Duration(seconds: 6), (_) {
+    // Reduced from 6s to 15s - messages don't need such frequent syncing
+    _threadSyncTimer = Timer.periodic(const Duration(seconds: 15), (_) {
       if (!_foreground) return;
       if (_activeConversationId != conversationId) return;
       refreshMessages(conversationId: conversationId, showLoading: false);
-      refreshConversations(showLoading: false);
+      // Only refresh conversations periodically, not on every message sync
+      if (_unreadPollTimer == null || !_unreadPollTimer!.isActive) {
+        refreshConversations(showLoading: false);
+      }
     });
   }
 
