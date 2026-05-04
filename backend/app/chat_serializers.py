@@ -9,9 +9,28 @@ User = get_user_model()
 
 
 class ChatUserSerializer(serializers.ModelSerializer):
+    status = serializers.SerializerMethodField()
+    photo = serializers.SerializerMethodField()
+
     class Meta:
         model = User
-        fields = ["id", "username", "email", "first_name", "last_name"]
+        fields = ["id", "username", "email", "first_name", "last_name", "status", "photo"]
+
+    def get_status(self, obj):
+        try:
+            return obj.employee.status
+        except Exception:
+            return "offline"
+
+    def get_photo(self, obj):
+        try:
+            request = self.context.get("request")
+            photo = obj.employee.photo
+            if photo and hasattr(photo, 'url'):
+                return request.build_absolute_uri(photo.url) if request else photo.url
+        except Exception:
+            pass
+        return None
 
 
 class ChatConversationMemberSerializer(serializers.ModelSerializer):

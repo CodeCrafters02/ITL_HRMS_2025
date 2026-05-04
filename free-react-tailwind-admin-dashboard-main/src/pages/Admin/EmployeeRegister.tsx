@@ -218,7 +218,7 @@ const AdminEmployeeRegister = () => {
             const headers: Record<string, string> = {};
             if (token) headers['Authorization'] = `Bearer ${token}`;
             const [profileRes, depRes, desRes, levelRes] = await Promise.all([
-                fetch(`${API_BASE_URL}/app/profile/`, { headers }),
+                fetch(`${API_BASE_URL}/app/user-profile/`, { headers }),
                 fetch(`${API_BASE_URL}/app/departments/?page_size=1000`, { headers }),
                 fetch(`${API_BASE_URL}/app/designations/?page_size=1000`, { headers }),
                 fetch(`${API_BASE_URL}/app/levels/?page_size=1000`, { headers }),
@@ -539,6 +539,52 @@ const AdminEmployeeRegister = () => {
         }
     };
 
+    const toggleStatus = async (emp: EmployeeRecord) => {
+        try {
+            const token = localStorage.getItem('access_token');
+            const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+            if (token) headers['Authorization'] = `Bearer ${token}`;
+
+            const res = await fetch(`${API_URL}${emp.id}/`, {
+                method: 'PATCH',
+                headers,
+                body: JSON.stringify({ is_active: !emp.is_active }),
+            });
+
+            if (res.ok) {
+                // Optimistically update the UI
+                setEmployees((prev) =>
+                    prev.map((e) => (e.id === emp.id ? { ...e, is_active: !e.is_active } : e))
+                );
+                Swal.fire({
+                    title: 'Status Updated!',
+                    text: `Employee status changed to ${!emp.is_active ? 'Active' : 'Inactive'}.`,
+                    icon: 'success',
+                    toast: true,
+                    position: 'top-end',
+                    showConfirmButton: false,
+                    timer: 3000,
+                    customClass: { popup: 'sweet-alerts' },
+                });
+            } else {
+                const err = await res.json().catch(() => null);
+                Swal.fire({
+                    title: 'Error!',
+                    text: err ? JSON.stringify(err) : 'Failed to update status.',
+                    icon: 'error',
+                    customClass: { popup: 'sweet-alerts' },
+                });
+            }
+        } catch {
+            Swal.fire({
+                title: 'Error!',
+                text: 'Failed to update status.',
+                icon: 'error',
+                customClass: { popup: 'sweet-alerts' },
+            });
+        }
+    };
+
     const fullName = (e: EmployeeRecord) => [e.first_name, e.middle_name, e.last_name].filter(Boolean).join(' ') || '-';
 
     return (
@@ -606,9 +652,14 @@ const AdminEmployeeRegister = () => {
                                         <td className="text-gray-500">{emp.department_name || '-'}</td>
                                         <td className="text-gray-500">{emp.designation_name || '-'}</td>
                                         <td>
-                                            <span className={`badge ${emp.is_active ? 'badge-outline-success' : 'badge-outline-danger'}`}>
+                                            <button
+                                                type="button"
+                                                onClick={() => toggleStatus(emp)}
+                                                className={`badge ${emp.is_active ? 'badge-outline-success hover:bg-success hover:text-white' : 'badge-outline-danger hover:bg-danger hover:text-white'} transition-all duration-200 cursor-pointer`}
+                                                title={`Click to mark as ${emp.is_active ? 'Inactive' : 'Active'}`}
+                                            >
                                                 {emp.is_active ? 'Active' : 'Inactive'}
-                                            </span>
+                                            </button>
                                         </td>
                                         <td className="text-center">
                                             <div className="flex items-center justify-center gap-3">

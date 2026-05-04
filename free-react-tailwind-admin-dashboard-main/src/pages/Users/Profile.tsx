@@ -100,6 +100,17 @@ const Profile = () => {
                                 YOU
                             </span>
                         )}
+                        {node.status && (
+                            <span 
+                                className={`absolute bottom-0 right-0 w-4 h-4 rounded-full border-2 border-white dark:border-[#1b2e4b] ${
+                                    node.status === 'online' ? 'bg-success' :
+                                    node.status === 'away' ? 'bg-warning' :
+                                    node.status === 'dnd' ? 'bg-danger' :
+                                    'bg-secondary'
+                                }`}
+                                title={node.status === 'dnd' ? 'Do Not Disturb' : node.status.charAt(0).toUpperCase() + node.status.slice(1)}
+                            ></span>
+                        )}
                     </div>
                     <span className={`font-bold text-sm text-center truncate w-full ${isYou ? 'text-primary' : 'dark:text-white-light'}`}>
                         {node.name}

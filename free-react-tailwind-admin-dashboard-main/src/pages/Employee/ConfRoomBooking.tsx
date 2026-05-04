@@ -20,6 +20,7 @@ const ConfRoomBooking = () => {
     const [selectedFloor, setSelectedFloor] = useState<any>(null);
     const [elements, setElements] = useState<any[]>([]);
     const [bookings, setBookings] = useState<any[]>([]);
+    const [myBookings, setMyBookings] = useState<any[]>([]);
     const [selectedDate, setSelectedDate] = useState<string>(new Date().toISOString().split('T')[0]);
 
     const [startTime, setStartTime] = useState('09:00');
@@ -36,6 +37,7 @@ const ConfRoomBooking = () => {
         fetchLocations();
         fetchConfig();
         fetchCurrentEmployee();
+        fetchMyBookings();
     }, []);
 
     useEffect(() => {
@@ -101,6 +103,21 @@ const ConfRoomBooking = () => {
             }
         } catch (error) {
             console.error('Error fetching bookings:', error);
+        }
+    };
+
+    const fetchMyBookings = async () => {
+        try {
+            const token = localStorage.getItem('access_token');
+            const res = await fetch(`${API_BASE_URL}/app/conference-room-bookings/`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (res.ok) {
+                const data = await res.json();
+                setMyBookings(data || []);
+            }
+        } catch (error) {
+            console.error('Error fetching my bookings:', error);
         }
     };
 
@@ -216,6 +233,7 @@ const ConfRoomBooking = () => {
                     Swal.fire('Success', 'Room booked successfully!', 'success');
                 }
                 fetchBookings(selectedFloor.id, selectedDate);
+                fetchMyBookings();
                 setSelectedRoom(null);
                 setPurpose('');
             } else {
@@ -248,6 +266,7 @@ const ConfRoomBooking = () => {
                 if (res.ok) {
                     Swal.fire('Cancelled!', 'Your booking has been cancelled.', 'success');
                     fetchBookings(selectedFloor.id, selectedDate);
+                    fetchMyBookings();
                     // Update the selectedRoom bookings in real-time
                     if (selectedRoom) {
                         const updatedRoomBookings = selectedRoom.bookings.map((b: any) =>
@@ -509,7 +528,7 @@ const ConfRoomBooking = () => {
                                                 endTimeDate.setHours(endH, endM, 0, 0);
                                                 const isCompleted = b.date < todayStr || (b.date === todayStr && endTimeDate < now);
 
-                                                const isMyBooking = currentEmployee && b.employee === currentEmployee.id;
+                                                const isMyBooking = b.is_mine;
                                                 const canCancel = isMyBooking && (b.status === 'pending' || b.status === 'approved') && !isCompleted;
 
                                                 return (
@@ -518,9 +537,9 @@ const ConfRoomBooking = () => {
                                                             <div className="flex items-center gap-2 mb-1">
                                                                 <span className="font-black text-gray-700 dark:text-gray-300">{b.start_time.substring(0, 5)} - {b.end_time.substring(0, 5)}</span>
                                                                 <span className={`px-1.5 py-0.5 rounded-full font-bold uppercase tracking-tighter text-[8px] ${isCompleted ? 'bg-gray-200 text-gray-700' :
-                                                                        b.status === 'approved' ? 'bg-green-100 text-green-700' :
-                                                                            b.status === 'pending' ? 'bg-amber-100 text-amber-700' :
-                                                                                'bg-gray-100 text-gray-600'
+                                                                    b.status === 'approved' ? 'bg-green-100 text-green-700' :
+                                                                        b.status === 'pending' ? 'bg-amber-100 text-amber-700' :
+                                                                            'bg-gray-100 text-gray-600'
                                                                     }`}>
                                                                     {isCompleted ? 'COMPLETED' : b.status}
                                                                 </span>
@@ -533,7 +552,7 @@ const ConfRoomBooking = () => {
                                                         {canCancel && (
                                                             <button
                                                                 onClick={() => handleCancelBooking(b.id)}
-                                                                className="opacity-0 group-hover:opacity-100 transition-opacity bg-red-50 text-red-600 hover:bg-red-600 hover:text-white px-2 py-1 rounded font-bold uppercase text-[8px]"
+                                                                className="bg-red-50 text-red-600 hover:bg-red-600 hover:text-white px-2 py-1 rounded font-bold uppercase text-[8px] transition-colors"
                                                             >
                                                                 Cancel
                                                             </button>
@@ -555,10 +574,50 @@ const ConfRoomBooking = () => {
                             <p className="font-bold">Select a room</p>
                             <p className="text-xs">Select a room from the map to see its availability and book a slot.</p>
 
-                            <div className="mt-10 text-left w-full space-y-3 p-4 bg-gray-50 dark:bg-gray-800/50 rounded-xl">
+                            <div className="mt-8 text-left w-full space-y-3 p-4 bg-gray-50 dark:bg-gray-800/50 rounded-xl">
                                 <p className="text-[10px] uppercase font-black border-b pb-1 dark:border-gray-700 tracking-wider">Legend</p>
-                                <div className="flex items-center gap-2 text-xs font-bold"><span className="w-4 h-4 rounded bg-[#10B981]"></span> Available Now</div>
-                                <div className="flex items-center gap-2 text-xs font-bold"><span className="w-4 h-4 rounded bg-[#FB923C]"></span> Currently Occupied</div>
+                                <div className="flex items-center gap-2 text-xs font-bold"><span className="w-4 h-4 rounded bg-[#10B981]"></span> Available</div>
+                                <div className="flex items-center gap-2 text-xs font-bold"><span className="w-4 h-4 rounded bg-[#FB923C]"></span> Room Booked</div>
+                                <div className="flex items-center gap-2 text-xs font-bold"><span className="w-4 h-4 rounded bg-[#FBBF24]"></span> Pending Approval</div>
+                            </div>
+
+                            {/* My Upcoming Bookings Section */}
+                            <div className="mt-8 text-left w-full">
+                                <p className="text-[10px] uppercase font-black border-b pb-1 dark:border-gray-700 tracking-wider mb-3">My Upcoming Bookings</p>
+                                {myBookings.length > 0 ? (
+                                    <div className="space-y-2">
+                                        {myBookings.map((b: any) => (
+                                            <div key={b.id} className="p-2 bg-gray-50 dark:bg-gray-800/40 rounded border dark:border-gray-800 text-[10px] flex items-center justify-between">
+                                                <div>
+                                                    <div className="flex items-center gap-2 mb-1">
+                                                        <span className="font-bold text-gray-700 dark:text-gray-300">{b.room_details?.name}</span>
+                                                        <span className={`px-1.5 py-0.5 rounded-full font-bold uppercase tracking-tighter text-[8px] ${
+                                                                b.status === 'approved' ? 'bg-green-100 text-green-700' :
+                                                                b.status === 'pending' ? 'bg-amber-100 text-amber-700' :
+                                                                'bg-gray-100 text-gray-600'
+                                                            }`}>
+                                                            {b.status}
+                                                        </span>
+                                                    </div>
+                                                    <div className="opacity-60 space-y-0.5">
+                                                        <p className="font-bold">{b.date}</p>
+                                                        <p className="italic">{b.start_time.substring(0, 5)} - {b.end_time.substring(0, 5)}</p>
+                                                    </div>
+                                                </div>
+                                                {b.is_mine && b.status !== 'cancelled' && (
+                                                    <button
+                                                        onClick={() => handleCancelBooking(b.id)}
+                                                        className="bg-red-50 text-red-600 hover:bg-red-600 hover:text-white px-2 py-1 rounded font-bold uppercase text-[8px] transition-colors"
+                                                    >
+                                                        Cancel
+                                                    </button>
+                                                )}
+                                            </div>
+                                        ))}
+                                    </div>
+                                ) : (
+                                    <p className="text-[10px] opacity-50 italic">You have no upcoming bookings.</p>
+                                )}
                             </div>
                         </div>
                     )}

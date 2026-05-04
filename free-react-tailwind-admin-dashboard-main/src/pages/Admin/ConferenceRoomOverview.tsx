@@ -16,7 +16,7 @@ const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000
 const ConferenceRoomOverview = () => {
     const dispatch = useDispatch();
     const isDarkMode = useSelector((state: any) => state.themeConfig.theme === 'dark' || state.themeConfig.isDarkMode);
-    
+
     const [locations, setLocations] = useState<any[]>([]);
     const [selectedLocation, setSelectedLocation] = useState<any>(null);
     const [floors, setFloors] = useState<any[]>([]);
@@ -131,7 +131,7 @@ const ConferenceRoomOverview = () => {
             const token = localStorage.getItem('access_token');
             const method = config.id ? 'PATCH' : 'POST';
             const url = config.id ? `${API_BASE_URL}/app/conference-room-config/${config.id}/` : `${API_BASE_URL}/app/conference-room-config/`;
-            
+
             const res = await fetch(url, {
                 method,
                 headers: {
@@ -172,16 +172,16 @@ const ConferenceRoomOverview = () => {
             if (b.room_details.layout_element_id !== el.id) return false;
             if (b.status === 'rejected' || b.status === 'cancelled') return false;
             if (b.date !== todayStr) return false;
-            
+
             const [startH, startM] = b.start_time.split(':').map(Number);
             const [endH, endM] = b.end_time.split(':').map(Number);
-            
+
             const startTimeDate = new Date();
             startTimeDate.setHours(startH, startM, 0, 0);
-            
+
             const endTimeDate = new Date();
             endTimeDate.setHours(endH, endM, 0, 0);
-            
+
             return now >= startTimeDate && now <= endTimeDate;
         });
 
@@ -220,7 +220,7 @@ const ConferenceRoomOverview = () => {
                         timer: 2000,
                         showConfirmButton: false
                     });
-                    
+
                     // Refresh data
                     if (selectedFloor) {
                         fetchBookings(selectedFloor.id, selectedDate);
@@ -304,8 +304,8 @@ const ConferenceRoomOverview = () => {
                                 onChange={(e) => setConfig({ ...config, approval_limit_minutes: parseInt(e.target.value) })}
                             />
                         </div>
-                        <button 
-                            onClick={handleSaveConfig} 
+                        <button
+                            onClick={handleSaveConfig}
                             disabled={savingConfig}
                             className="bg-primary hover:bg-primary-dark text-white p-2.5 rounded-lg mt-5 transition-colors shadow-sm"
                             title="Save Policy"
@@ -330,8 +330,8 @@ const ConferenceRoomOverview = () => {
                             height={stageSize.height}
                             ref={stageRef}
                             className="bg-white dark:bg-[#1a2233]"
-                            style={{ 
-                                backgroundImage: 'radial-gradient(#ccc 1px, transparent 1px)', 
+                            style={{
+                                backgroundImage: 'radial-gradient(#ccc 1px, transparent 1px)',
                                 backgroundSize: '20px 20px',
                                 minWidth: stageSize.width,
                                 minHeight: stageSize.height
@@ -344,10 +344,10 @@ const ConferenceRoomOverview = () => {
                                     const opacity = isRoom ? 0.8 : 0.2;
 
                                     return (
-                                        <Group 
-                                            key={el.id} 
-                                            x={el.x} 
-                                            y={el.y} 
+                                        <Group
+                                            key={el.id}
+                                            x={el.x}
+                                            y={el.y}
                                             rotation={el.rotation}
                                             onClick={() => isRoom && handleRoomClick(el)}
                                             onMouseEnter={(e) => {
@@ -384,7 +384,7 @@ const ConferenceRoomOverview = () => {
                                                         const now = new Date();
                                                         const todayStr = now.toISOString().split('T')[0];
                                                         const dayBookings = bookings.filter(b => b.room_details.layout_element_id === el.id && b.status !== 'rejected' && b.status !== 'cancelled');
-                                                        
+
                                                         const isNow = dayBookings.some(b => {
                                                             if (b.date !== todayStr) return false;
                                                             const [sH, sM] = b.start_time.split(':').map(Number);
@@ -426,14 +426,14 @@ const ConferenceRoomOverview = () => {
                         <div className="animate-fade-in-right">
                             <h5 className="font-bold text-xl mb-4">{selectedRoom.name}</h5>
                             <div className="space-y-4">
-                               <div className="bg-blue-50 dark:bg-blue-900/20 p-3 rounded-xl">
+                                <div className="bg-blue-50 dark:bg-blue-900/20 p-3 rounded-xl">
                                     <p className="text-[10px] font-black uppercase text-blue-500 tracking-wider mb-1">Capacity</p>
                                     <p className="font-bold text-lg">{selectedRoom.capacity || 'N/A'} Persons</p>
-                               </div>
+                                </div>
 
-                               <h6 className="text-[10px] uppercase font-black text-gray-400 mt-6 mb-2 border-b pb-1">Today's Schedule</h6>
-                               {selectedRoom.bookings.length > 0 ? (
-                                   <div className="space-y-3">
+                                <h6 className="text-[10px] uppercase font-black text-gray-400 mt-6 mb-2 border-b pb-1">Today's Schedule</h6>
+                                {selectedRoom.bookings.length > 0 ? (
+                                    <div className="space-y-3">
                                         {selectedRoom.bookings.map((b: any) => {
                                             const now = new Date();
                                             const todayStr = now.toISOString().split('T')[0];
@@ -444,37 +444,37 @@ const ConferenceRoomOverview = () => {
 
                                             return (
                                                 <div key={b.id} className={`p-3 bg-gray-50 dark:bg-gray-800/40 rounded-xl border border-gray-100 dark:border-gray-800 relative group overflow-hidden ${isCompleted ? 'opacity-50 grayscale' : ''}`}>
-                                                     <div className="flex justify-between items-start mb-1">
-                                                         <p className="font-bold text-xs">{b.employee_details.name}</p>
-                                                         {isCompleted && <span className="text-[8px] font-black bg-gray-200 px-1 rounded text-gray-600">COMPLETED</span>}
-                                                     </div>
-                                                     <p className="text-[10px] text-gray-500 font-bold italic mb-2">
-                                                         {b.start_time.substring(0, 5)} - {b.end_time.substring(0, 5)}
-                                                     </p>
-                                                     <div className="max-w-full truncate text-[10px] text-gray-400" title={b.purpose}>
-                                                         {b.purpose || 'No purpose mentioned'}
-                                                     </div>
+                                                    <div className="flex justify-between items-start mb-1">
+                                                        <p className="font-bold text-xs">{b.employee_details.name}</p>
+                                                        {isCompleted && <span className="text-[8px] font-black bg-gray-200 px-1 rounded text-gray-600">COMPLETED</span>}
+                                                    </div>
+                                                    <p className="text-[10px] text-gray-500 font-bold italic mb-2">
+                                                        {b.start_time.substring(0, 5)} - {b.end_time.substring(0, 5)}
+                                                    </p>
+                                                    <div className="max-w-full truncate text-[10px] text-gray-400" title={b.purpose}>
+                                                        {b.purpose || 'No purpose mentioned'}
+                                                    </div>
 
-                                                     {/* Admin Cancel Button */}
-                                                     {!isCompleted && b.status !== 'cancelled' && (
-                                                         <button 
+                                                    {/* Admin Cancel Button */}
+                                                    {!isCompleted && b.status !== 'cancelled' && (
+                                                        <button
                                                             onClick={() => handleCancelBooking(b.id)}
                                                             className="absolute top-2 right-2 p-1.5 bg-danger/10 text-danger rounded-lg opacity-0 group-hover:opacity-100 transition-opacity z-20 hover:bg-danger hover:text-white"
                                                             title="Cancel Booking"
-                                                         >
-                                                             <IconTrash className="w-3.5 h-3.5" />
-                                                         </button>
-                                                     )}
+                                                        >
+                                                            <IconTrash className="w-3.5 h-3.5" />
+                                                        </button>
+                                                    )}
                                                 </div>
                                             );
                                         })}
-                                   </div>
-                               ) : (
-                                   <div className="text-center py-10 opacity-40">
-                                       <IconCalendar className="w-8 h-8 mx-auto mb-2" />
-                                       <p className="text-xs font-bold">No bookings for this date</p>
-                                   </div>
-                               )}
+                                    </div>
+                                ) : (
+                                    <div className="text-center py-10 opacity-40">
+                                        <IconCalendar className="w-8 h-8 mx-auto mb-2" />
+                                        <p className="text-xs font-bold">No bookings for this date</p>
+                                    </div>
+                                )}
                             </div>
                             <button onClick={() => setSelectedRoom(null)} className="btn btn-outline-secondary w-full mt-8 font-bold">Close Details</button>
                         </div>

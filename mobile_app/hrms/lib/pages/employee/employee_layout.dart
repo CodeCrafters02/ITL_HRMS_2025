@@ -6,6 +6,8 @@ import '../../services/auth_service.dart';
 import '../../services/fcm_service.dart';
 import '../../models/profile_model.dart';
 import '../../providers/chat_scope.dart';
+import '../../utils/performance_helper.dart';
+import '../../widgets/optimized_image.dart';
 import 'employee_dashboard_page.dart';
 import 'my_tasks_page.dart';
 import 'attendance_history_page.dart';
@@ -269,13 +271,15 @@ class _EmployeeLayoutState extends State<EmployeeLayout> with WidgetsBindingObse
                 ),
               )
             : _profile?.photo != null && _profile!.photo!.isNotEmpty
-                ? ClipOval(
-                    child: Image.network(
-                      _profile!.photo!,
-                      fit: BoxFit.cover,
-                      errorBuilder: (context, error, stackTrace) =>
-                          _buildInitialsWidget(),
-                    ),
+                ? OptimizedImage(
+                    imageUrl: _profile!.photo!,
+                    width: 40,
+                    height: 40,
+                    fit: BoxFit.cover,
+                    shape: BoxShape.circle,
+                    memCacheWidth: 80,
+                    memCacheHeight: 80,
+                    errorWidget: _buildInitialsWidget(),
                   )
                 : _buildInitialsWidget(),
       ),
@@ -307,6 +311,7 @@ class _EmployeeLayoutState extends State<EmployeeLayout> with WidgetsBindingObse
         onItemTap: _onDrawerItemTap,
       ),
       body: StitchBackground(
+        enableAnimations: PerformanceHelper.enableParticles,
         child: SafeArea(
           child: Column(
             children: [

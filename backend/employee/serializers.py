@@ -528,7 +528,7 @@ class EmployeeUpdateSerializer(serializers.ModelSerializer):
             'first_name', 'middle_name', 'last_name',
             'mobile', 'temporary_address', 'permanent_address',
             'photo', 'aadhar_card', 'pan_card','aadhar_no','pan_no',
-            'date_of_birth','employee_id']        
+            'date_of_birth','employee_id', 'status']        
         
         
 class EmployeeBreakConfigSerializer(serializers.ModelSerializer):

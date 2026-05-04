@@ -10,11 +10,15 @@ class StitchBackground extends StatelessWidget {
     required this.child,
     this.backgroundAssetPath = 'assets/reference/vector-background.jpg',
     this.showParticles = true,
+    this.enableAnimations = true,
   });
+
+  /// Set to false on low-end devices to disable particle animations
 
   final Widget child;
   final String backgroundAssetPath;
   final bool showParticles;
+  final bool enableAnimations;
 
   @override
   Widget build(BuildContext context) {
@@ -81,7 +85,7 @@ class StitchBackground extends StatelessWidget {
                   ),
                 ),
               ),
-              if (showParticles)
+              if (showParticles && enableAnimations)
                 const Positioned.fill(
                   child: RepaintBoundary(
                     child: IgnorePointer(child: StitchParticlesLayer()),
@@ -113,7 +117,7 @@ class _StitchParticlesLayerState extends State<StitchParticlesLayer>
     super.initState();
     _controller = AnimationController(
       vsync: this,
-      duration: const Duration(seconds: 28),
+      duration: const Duration(seconds: 45), // Slowed from 28s
     )..repeat();
   }
 
@@ -173,7 +177,7 @@ class _ParticlesPainter extends CustomPainter {
 
   static List<_ParticleSpec> _buildSpecs() {
     final rnd = math.Random(2026);
-    return List<_ParticleSpec>.generate(56, (i) {
+    return List<_ParticleSpec>.generate(20, (i) { // Reduced from 56 to 20
       final hue = i % 3;
       return _ParticleSpec(
         nx: rnd.nextDouble(),

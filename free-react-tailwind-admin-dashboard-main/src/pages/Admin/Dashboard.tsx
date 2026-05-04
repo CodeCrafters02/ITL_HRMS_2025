@@ -83,6 +83,7 @@ const AdminDashboard = () => {
     const [data, setData] = useState<DashboardData | null>(null);
     const [events, setEvents] = useState<CalendarEventType[]>([]);
     const [loading, setLoading] = useState(true);
+    const [currentStatus, setCurrentStatus] = useState<string>('online');
 
     useEffect(() => {
         dispatch(setPageTitle('Admin Dashboard'));
@@ -95,9 +96,10 @@ const AdminDashboard = () => {
                 Authorization: `Bearer ${localStorage.getItem('access_token')}`,
             };
 
-            const [dashRes, eventsRes] = await Promise.all([
+            const [dashRes, eventsRes, profileRes] = await Promise.all([
                 fetch(`${API_BASE_URL}/app/admin-dashboard/`, { headers }),
                 fetch(`${API_BASE_URL}/app/calendar-events/`, { headers }).catch(() => null),
+                fetch(`${API_BASE_URL}/employee/employee-profile/`, { headers }).catch(() => null),
             ]);
 
             if (dashRes.ok) {
@@ -115,10 +117,34 @@ const AdminDashboard = () => {
                     .slice(0, 5);
                 setEvents(upcoming);
             }
+            if (profileRes && profileRes.ok) {
+                const profileResult = await profileRes.json();
+                if (profileResult.status) {
+                    setCurrentStatus(profileResult.status);
+                }
+            }
         } catch (error) {
             console.error('Error fetching admin dashboard:', error);
         } finally {
             setLoading(false);
+        }
+    };
+
+    const handleStatusUpdate = async (newStatus: string) => {
+        try {
+            const res = await fetch(`${API_BASE_URL}/employee/employee-profile/`, {
+                method: 'PATCH',
+                headers: {
+                    'Content-Type': 'application/json',
+                    Authorization: `Bearer ${localStorage.getItem('access_token')}`,
+                },
+                body: JSON.stringify({ status: newStatus }),
+            });
+            if (res.ok) {
+                setCurrentStatus(newStatus);
+            }
+        } catch (e) {
+            console.error('Failed to update status:', e);
         }
     };
 
@@ -216,7 +242,29 @@ const AdminDashboard = () => {
                         <h1 className="text-2xl md:text-3xl font-bold flex items-center gap-2">
                             {greeting} <span className="text-3xl">{GreetingEmoji}</span>
                         </h1>
-                        <p className="text-sm text-white/60 mt-1">{todayFormatted}</p>
+                        <div className="flex items-center gap-3 mt-2">
+                            <p className="text-sm text-white/60">{todayFormatted}</p>
+                            <div className="h-4 w-px bg-white/20"></div>
+                            <div className="flex items-center gap-2">
+                                <span className="text-xs text-white/70 uppercase tracking-wider font-semibold">Status:</span>
+                                <select
+                                    className="bg-white/10 text-white text-xs font-semibold py-1 px-2 rounded-lg border border-white/20 outline-none focus:border-white/40 appearance-none pr-6 cursor-pointer"
+                                    value={currentStatus}
+                                    onChange={(e) => handleStatusUpdate(e.target.value)}
+                                    style={{
+                                        backgroundImage: `url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%23ffffff' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e")`,
+                                        backgroundPosition: 'right 0.2rem center',
+                                        backgroundSize: '1.2em 1.2em',
+                                        backgroundRepeat: 'no-repeat'
+                                    }}
+                                >
+                                    <option value="online" className="text-black">🟢 Online</option>
+                                    <option value="away" className="text-black">🟡 Away</option>
+                                    <option value="dnd" className="text-black">🔴 Do Not Disturb</option>
+                                    <option value="offline" className="text-black">⚪ Offline</option>
+                                </select>
+                            </div>
+                        </div>
                         {data.birthday_message && (
                             <p className="mt-3 inline-flex items-center gap-2 px-3 py-1 bg-gradient-to-r from-pink-500 to-rose-500 rounded-full text-xs font-bold shadow-lg animate-bounce border border-white/20">
                                 🎂 {data.birthday_message}

@@ -19,6 +19,7 @@ class _LeaveApplicationFormDialogState extends State<LeaveApplicationFormDialog>
   int? _selectedLeaveType;
   DateTime? _fromDate;
   DateTime? _toDate;
+  String _leaveDuration = 'full_day';
   final TextEditingController _reasonController = TextEditingController();
   bool _isLoading = false;
   String? _error;
@@ -46,8 +47,9 @@ class _LeaveApplicationFormDialogState extends State<LeaveApplicationFormDialog>
     if (picked != null) {
       setState(() {
         _fromDate = picked;
-        // If to_date is before from_date, reset it
-        if (_toDate != null && _toDate!.isBefore(picked)) {
+        if (_leaveDuration == 'half_day') {
+          _toDate = picked;
+        } else if (_toDate != null && _toDate!.isBefore(picked)) {
           _toDate = null;
         }
       });
@@ -106,6 +108,15 @@ class _LeaveApplicationFormDialogState extends State<LeaveApplicationFormDialog>
       return;
     }
 
+    if (_leaveDuration == 'half_day' &&
+        DateFormat('yyyy-MM-dd').format(_fromDate!) !=
+            DateFormat('yyyy-MM-dd').format(_toDate!)) {
+      setState(() {
+        _error = 'Half day leave must use the same from and to date.';
+      });
+      return;
+    }
+
     if (_reasonController.text.trim().isEmpty) {
       setState(() {
         _error = 'Please enter a reason';
@@ -125,6 +136,7 @@ class _LeaveApplicationFormDialogState extends State<LeaveApplicationFormDialog>
         fromDate: DateFormat('yyyy-MM-dd').format(_fromDate!),
         toDate: DateFormat('yyyy-MM-dd').format(_toDate!),
         reason: _reasonController.text.trim(),
+        leaveDuration: _leaveDuration,
       );
 
       if (mounted) {
@@ -165,9 +177,7 @@ class _LeaveApplicationFormDialogState extends State<LeaveApplicationFormDialog>
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
       ),
-      child: Container(
-        constraints: const BoxConstraints(maxHeight: 600),
-        child: SingleChildScrollView(
+      child: SingleChildScrollView(
           child: Padding(
             padding: const EdgeInsets.all(24),
             child: Column(
@@ -210,17 +220,48 @@ class _LeaveApplicationFormDialogState extends State<LeaveApplicationFormDialog>
                   ),
                 ),
                 const SizedBox(height: 8),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12),
-                  decoration: BoxDecoration(
-                    border: Border.all(color: const Color(0xFFE5E7EB)),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: DropdownButton<int>(
+                if (widget.leaveTypes.isEmpty)
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF3F4F6),
+                      border: Border.all(color: const Color(0xFFE5E7EB)),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: const Row(
+                      children: [
+                        SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        ),
+                        SizedBox(width: 10),
+                        Text(
+                          'Loading leave types...',
+                          style: TextStyle(fontSize: 14, color: Color(0xFF9CA3AF)),
+                        ),
+                      ],
+                    ),
+                  )
+                else
+                  DropdownButtonFormField<int>(
                     value: _selectedLeaveType,
-                    isExpanded: true,
-                    underline: const SizedBox(),
-                    hint: const Text('Select leave type'),
+                    decoration: InputDecoration(
+                      hintText: 'Select leave type',
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                        borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                        borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                        borderSide: const BorderSide(color: Color(0xFF4F46E5), width: 2),
+                      ),
+                    ),
                     items: widget.leaveTypes.map((type) {
                       return DropdownMenuItem<int>(
                         value: type.id,
@@ -234,6 +275,48 @@ class _LeaveApplicationFormDialogState extends State<LeaveApplicationFormDialog>
                       });
                     },
                   ),
+                const SizedBox(height: 16),
+                // Leave Duration
+                const Text(
+                  'Leave Duration *',
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500,
+                    color: Color(0xFF1A2233),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    Expanded(
+                      child: _DurationChip(
+                        label: 'Full Day',
+                        selected: _leaveDuration == 'full_day',
+                        onTap: () {
+                          setState(() {
+                            _leaveDuration = 'full_day';
+                            _error = null;
+                          });
+                        },
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: _DurationChip(
+                        label: 'Half Day',
+                        selected: _leaveDuration == 'half_day',
+                        onTap: () {
+                          setState(() {
+                            _leaveDuration = 'half_day';
+                            if (_fromDate != null) {
+                              _toDate = _fromDate;
+                            }
+                            _error = null;
+                          });
+                        },
+                      ),
+                    ),
+                  ],
                 ),
                 const SizedBox(height: 16),
                 // Date Range
@@ -300,6 +383,7 @@ class _LeaveApplicationFormDialogState extends State<LeaveApplicationFormDialog>
                         children: [
                           const Text(
                             'To Date *',
+                            // To Date label
                             style: TextStyle(
                               fontSize: 14,
                               fontWeight: FontWeight.w500,
@@ -308,13 +392,16 @@ class _LeaveApplicationFormDialogState extends State<LeaveApplicationFormDialog>
                           ),
                           const SizedBox(height: 8),
                           InkWell(
-                            onTap: _selectToDate,
+                            onTap: _leaveDuration == 'half_day' ? null : _selectToDate,
                             child: Container(
                               padding: const EdgeInsets.symmetric(
                                 horizontal: 12,
                                 vertical: 14,
                               ),
                               decoration: BoxDecoration(
+                                color: _leaveDuration == 'half_day'
+                                    ? const Color(0xFFF3F4F6)
+                                    : null,
                                 border: Border.all(color: const Color(0xFFE5E7EB)),
                                 borderRadius: BorderRadius.circular(8),
                               ),
@@ -326,6 +413,7 @@ class _LeaveApplicationFormDialogState extends State<LeaveApplicationFormDialog>
                                       _toDate != null
                                           ? DateFormat('yyyy-MM-dd').format(_toDate!)
                                           : 'Select to date',
+                                      // To Date value
                                       style: TextStyle(
                                         fontSize: 14,
                                         color: _toDate != null
@@ -491,8 +579,47 @@ class _LeaveApplicationFormDialogState extends State<LeaveApplicationFormDialog>
             ),
           ),
         ),
-      ),
     );
   }
 }
 
+class _DurationChip extends StatelessWidget {
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  const _DurationChip({
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        padding: const EdgeInsets.symmetric(vertical: 10),
+        decoration: BoxDecoration(
+          color: selected ? const Color(0xFF4F46E5) : const Color(0xFFF9FAFB),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(
+            color: selected ? const Color(0xFF4F46E5) : const Color(0xFFE5E7EB),
+            width: selected ? 2 : 1,
+          ),
+        ),
+        child: Center(
+          child: Text(
+            label,
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+              color: selected ? Colors.white : const Color(0xFF6B7280),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}

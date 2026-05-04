@@ -212,6 +212,9 @@ class _ChatConversationsPageState extends State<ChatConversationsPage>
 
                           return ListView.separated(
                             physics: const AlwaysScrollableScrollPhysics(),
+                            addAutomaticKeepAlives: true,
+                            addRepaintBoundaries: true,
+                            cacheExtent: 200.0,
                             itemCount: filtered.length,
                             separatorBuilder: (_, __) =>
                                 const SizedBox(height: 6),
@@ -227,7 +230,8 @@ class _ChatConversationsPageState extends State<ChatConversationsPage>
 
                               final isUnread = unread > 0;
 
-                              return InkWell(
+                              return RepaintBoundary(
+                                child: InkWell(
                                 borderRadius: BorderRadius.circular(16),
                                 onTap: () {
                                   // Navigate instantly. The thread page will load/join messages.
@@ -328,10 +332,11 @@ class _ChatConversationsPageState extends State<ChatConversationsPage>
                                     ],
                                   ),
                                 ),
-                              );
-                            },
-                          );
-                        },
+                              ),
+                            );
+                          },
+                        );
+                      },
                       ),
                     ),
                   ),

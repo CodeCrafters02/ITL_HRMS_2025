@@ -65,10 +65,18 @@ class _LeaveApplicationPageState extends State<LeaveApplicationPage> {
           setState(() {
             _leaveTypes = response.data!;
           });
+        } else if (!response.success) {
+          setState(() {
+            _error = response.message ?? 'Failed to load leave types';
+          });
         }
       }
     } catch (e) {
-      // Handle error silently, will show in main error state
+      if (mounted) {
+        setState(() {
+          _error = 'Failed to load leave types: ${e.toString()}';
+        });
+      }
     }
   }
 
@@ -182,6 +190,10 @@ class _LeaveApplicationPageState extends State<LeaveApplicationPage> {
         }
       }
     }
+  }
+
+  String _formatDays(double value) {
+    return value == value.truncateToDouble() ? value.toInt().toString() : value.toString();
   }
 
   Color _getStatusColor(String status) {
@@ -375,8 +387,8 @@ class _LeaveApplicationPageState extends State<LeaveApplicationPage> {
           ),
           const SizedBox(height: 6),
           _buildLeaveInfoRow('Total', leaveType.count.toString()),
-          _buildLeaveInfoRow('Used', leaveType.usedCount.toString()),
-          _buildLeaveInfoRow('Remaining', leaveType.remainingCount.toString()),
+          _buildLeaveInfoRow('Used', _formatDays(leaveType.usedCount)),
+          _buildLeaveInfoRow('Remaining', _formatDays(leaveType.remainingCount)),
           const Spacer(),
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
@@ -521,11 +533,36 @@ class _LeaveApplicationPageState extends State<LeaveApplicationPage> {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      '${leave.fromDate} - ${leave.toDate}',
+                      '${DateFormat('MMM dd, yyyy').format(DateTime.parse(leave.fromDate))} - ${DateFormat('MMM dd, yyyy').format(DateTime.parse(leave.toDate))}',
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
                             fontWeight: FontWeight.w600,
                             color: AppStitchTheme.lightOnSurfaceMuted,
                           ),
+                    ),
+                    const SizedBox(height: 4),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: leave.leaveDuration == 'half_day'
+                            ? const Color(0xFFF59E0B).withValues(alpha: 0.12)
+                            : const Color(0xFF2563EB).withValues(alpha: 0.10),
+                        borderRadius: BorderRadius.circular(4),
+                        border: Border.all(
+                          color: leave.leaveDuration == 'half_day'
+                              ? const Color(0xFFF59E0B).withValues(alpha: 0.35)
+                              : const Color(0xFF2563EB).withValues(alpha: 0.25),
+                        ),
+                      ),
+                      child: Text(
+                        leave.leaveDuration == 'half_day' ? 'Half Day' : 'Full Day',
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                          color: leave.leaveDuration == 'half_day'
+                              ? const Color(0xFFF59E0B)
+                              : const Color(0xFF2563EB),
+                        ),
+                      ),
                     ),
                   ],
                 ),

@@ -20,6 +20,7 @@ const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000
 
 interface DashboardData {
     today: string;
+    status?: string;
     checkin_time: string | null;
     checkout_time: string | null;
     shift: any;
@@ -135,6 +136,7 @@ const EmployeeDashboard = () => {
     const groupedBreaks = useMemo(() => {
         const groups: { [key: string]: BreakConfig[] } = {};
         breakConfigs.forEach((bc) => {
+            if (bc.break_choice === 'dont_disturb') return;
             if (!groups[bc.break_choice]) {
                 groups[bc.break_choice] = [];
             }
@@ -446,6 +448,26 @@ const EmployeeDashboard = () => {
         }
     };
 
+    const handleStatusUpdate = async (newStatus: string) => {
+        try {
+            const res = await fetch(`${API_BASE_URL}/employee/employee-profile/`, {
+                method: 'PATCH',
+                headers: authHeaders,
+                body: JSON.stringify({ status: newStatus })
+            });
+            if (res.ok) {
+                const responseData = await res.json();
+                setData(prev => prev ? { ...prev, status: responseData.status || newStatus } : null);
+                Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Status Updated', showConfirmButton: false, timer: 3000 });
+            } else {
+                const errData = await res.json();
+                showCompactError(errData.detail || 'Could not update status');
+            }
+        } catch (e: any) {
+            showCompactError(e.message || 'Could not update status');
+        }
+    };
+
     const handleStartBreak = async (configId: number) => {
         try {
             const res = await fetch(`${API_BASE_URL}/employee/employee-breaks/`, {
@@ -663,6 +685,7 @@ const EmployeeDashboard = () => {
 
                         <div className="flex flex-wrap items-center gap-2">
                             <span className="text-[11px] px-2.5 py-1 rounded-full bg-[#58b8df]/20 text-cyan-100 border border-cyan-200/40 font-semibold">Realtime</span>
+
                             {isGeofenceRequired && (
                                 <span className={`text-[11px] px-2.5 py-1 rounded-full border font-bold flex items-center gap-1 ${isInOffice ? 'bg-success/20 text-success-light border-success/30' : 'bg-danger/20 text-danger-light border-danger/30'}`}>
                                     <span className={`w-1.5 h-1.5 rounded-full ${isInOffice ? 'bg-success animate-pulse' : 'bg-danger'}`}></span>
@@ -721,9 +744,41 @@ const EmployeeDashboard = () => {
                         </div>
                     </div>
 
-                    {checkin_time && !checkout_time && (breakConfigs.length > 0 || active_break) && (
+                    {checkin_time && !checkout_time && (
                         <div className="flex flex-wrap items-center gap-2 border-t border-dashed border-white/20 pt-3">
-                            <p className="text-xs font-semibold uppercase tracking-wider text-blue-100 mr-1">Breaks</p>
+                            <p className="text-xs font-semibold uppercase tracking-wider text-blue-100 mr-1">Status & Breaks</p>
+                            
+                            {/* Live Status Dropdown inside Breaks Section */}
+                            <div className="dropdown relative">
+                                <Dropdown
+                                    offset={[0, 5]}
+                                    placement="bottom-start"
+                                    usePortal={true}
+                                    strategy="fixed"
+                                    button={
+                                        <button type="button" className="px-3 py-1.5 text-xs font-semibold rounded-lg border border-cyan-200/45 bg-cyan-200/10 text-cyan-100 hover:bg-cyan-200/20 transition-colors capitalize flex items-center gap-1">
+                                            <span className={`w-2 h-2 rounded-full ${
+                                                data.status === 'online' ? 'bg-success' :
+                                                data.status === 'away' ? 'bg-warning' :
+                                                data.status === 'dnd' ? 'bg-danger' :
+                                                'bg-secondary'
+                                            }`}></span>
+                                            {data.status === 'dnd' ? 'Do Not Disturb' : (data.status || 'Online')}
+                                            <svg className="w-4 h-4 ml-1" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                                <polyline points="6 9 12 15 18 9"></polyline>
+                                            </svg>
+                                        </button>
+                                    }
+                                >
+                                    <ul className="text-black dark:text-white-dark bg-white dark:bg-[#1b2e4b] shadow-[0_0_10px_rgba(0,0,0,0.1)] dark:shadow-[0_0_10px_rgba(0,0,0,0.4)] rounded-md border border-white-light dark:border-[#253b5c] py-1 min-w-[160px]">
+                                        <li><button type="button" onClick={() => handleStatusUpdate('online')} className="w-full text-left px-4 py-2 hover:bg-black/5 dark:hover:bg-black/10 text-sm flex items-center gap-2"><span className="w-2 h-2 rounded-full bg-success"></span> Online</button></li>
+                                        <li><button type="button" onClick={() => handleStatusUpdate('away')} className="w-full text-left px-4 py-2 hover:bg-black/5 dark:hover:bg-black/10 text-sm flex items-center gap-2"><span className="w-2 h-2 rounded-full bg-warning"></span> Away</button></li>
+                                        <li><button type="button" onClick={() => handleStatusUpdate('dnd')} className="w-full text-left px-4 py-2 hover:bg-black/5 dark:hover:bg-black/10 text-sm flex items-center gap-2"><span className="w-2 h-2 rounded-full bg-danger"></span> Start dont disturb</button></li>
+                                        <li><button type="button" onClick={() => handleStatusUpdate('offline')} className="w-full text-left px-4 py-2 hover:bg-black/5 dark:hover:bg-black/10 text-sm flex items-center gap-2"><span className="w-2 h-2 rounded-full bg-secondary"></span> Offline</button></li>
+                                    </ul>
+                                </Dropdown>
+                            </div>
+
                             {!active_break ? (
                                 Object.entries(groupedBreaks).map(([choice, configs]) => {
                                     const formattedChoice = choice.replace(/_/g, ' ');

@@ -10,7 +10,7 @@ import IconUserPlus from '../../components/Icon/IconUserPlus';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000';
 
-type ChatUser = { id: number; username: string; email: string; first_name?: string; last_name?: string };
+type ChatUser = { id: number; username: string; email: string; first_name?: string; last_name?: string; status?: string; photo?: string | null };
 type ChatMember = {
     id: number;
     user: ChatUser;
@@ -463,10 +463,17 @@ ${filtered
                 .map((u) => {
                     const name = `${u.first_name || ''} ${u.last_name || ''}`.trim();
                     const title = name ? `${name} (${u.username})` : u.username;
+                    const statusColor = u.status === 'online' ? 'bg-success' : u.status === 'away' ? 'bg-warning' : u.status === 'dnd' ? 'bg-danger' : 'bg-secondary';
                     return `
-<button type="button" data-user-id="${u.id}" class="w-full text-left px-3 py-2 rounded-md border border-[#e0e6ed] hover:bg-[#f5f5f5] mb-2">
-  <div class="font-semibold">${title}</div>
-  <div class="text-xs text-gray-500">${u.email}</div>
+<button type="button" data-user-id="${u.id}" class="w-full text-left px-3 py-2 rounded-md border border-[#e0e6ed] hover:bg-[#f5f5f5] mb-2 flex items-center gap-3">
+  <div class="relative shrink-0">
+    <img src="${u.photo || '/assets/images/profile-34.jpeg'}" alt="user" class="w-10 h-10 rounded-full object-cover border border-[#e0e6ed]" />
+    <span class="absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-white ${statusColor}"></span>
+  </div>
+  <div class="min-w-0">
+    <div class="font-semibold truncate">${title}</div>
+    <div class="text-xs text-gray-500 truncate">${u.email}</div>
+  </div>
 </button>`;
                 })
                 .join('');
@@ -711,6 +718,12 @@ ${filtered
         return other ? other.username : 'Direct message';
     };
 
+    const getOtherUser = (c: Conversation) => {
+        if (c.type === 'group') return null;
+        const me = localStorage.getItem('username') || '';
+        return c.members.map((m) => m.user).find((u) => u.username !== me) || c.members[0]?.user || null;
+    };
+
     const handleSend = async () => {
         if (!activeId) return;
         const text = messageText.trim();
@@ -862,19 +875,48 @@ ${filtered
                                     key={c.id}
                                     type="button"
                                     onClick={() => setActiveId(c.id)}
-                                    className={`w-full text-left px-3 py-2 rounded-md hover:bg-white-light/60 dark:hover:bg-[#1b2e4b] ${
+                                    className={`w-full text-left px-3 py-2 rounded-md hover:bg-white-light/60 dark:hover:bg-[#1b2e4b] flex items-center gap-3 ${
                                         activeId === c.id ? 'bg-white-light/60 dark:bg-[#1b2e4b]' : ''
                                     }`}
                                 >
-                                    <div className="flex items-center justify-between gap-2">
-                                        <div className="font-semibold truncate">{displayName(c)}</div>
-                                        {!!unreadByConv[c.id] && (
-                                            <span className="min-w-[22px] h-[22px] px-1.5 rounded-full bg-success text-white text-xs flex items-center justify-center">
-                                                {unreadByConv[c.id]}
-                                            </span>
-                                        )}
+                                    {(() => {
+                                        const otherUser = getOtherUser(c);
+                                        if (c.type === 'dm' && otherUser) {
+                                            return (
+                                                <div className="relative shrink-0">
+                                                    <img 
+                                                        src={otherUser.photo || '/assets/images/profile-34.jpeg'} 
+                                                        alt={otherUser.username} 
+                                                        className="w-10 h-10 rounded-full object-cover border border-[#e0e6ed] dark:border-[#1b2e4b]" 
+                                                    />
+                                                    <span 
+                                                        className={`absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-white dark:border-[#1b2e4b] ${
+                                                            otherUser.status === 'online' ? 'bg-success' :
+                                                            otherUser.status === 'away' ? 'bg-warning' :
+                                                            otherUser.status === 'dnd' ? 'bg-danger' :
+                                                            'bg-secondary'
+                                                        }`}
+                                                    ></span>
+                                                </div>
+                                            );
+                                        }
+                                        return (
+                                            <div className="w-10 h-10 rounded-full shrink-0 bg-primary text-white flex items-center justify-center text-xs font-bold">
+                                                {c.name ? c.name.substring(0, 2).toUpperCase() : 'G'}
+                                            </div>
+                                        );
+                                    })()}
+                                    <div className="flex-1 min-w-0">
+                                        <div className="flex items-center justify-between gap-2">
+                                            <div className="font-semibold truncate">{displayName(c)}</div>
+                                            {!!unreadByConv[c.id] && (
+                                                <span className="min-w-[22px] h-[22px] px-1.5 rounded-full bg-success text-white text-xs flex items-center justify-center">
+                                                    {unreadByConv[c.id]}
+                                                </span>
+                                            )}
+                                        </div>
+                                        <div className="text-xs text-white-dark truncate">{c.last_message?.content || 'No messages yet'}</div>
                                     </div>
-                                    <div className="text-xs text-white-dark truncate">{c.last_message?.content || 'No messages yet'}</div>
                                 </button>
                             ))}
                             {!filteredConversations.length && (
@@ -888,10 +930,33 @@ ${filtered
                 <div className="flex-1 flex flex-col">
                     <div className="p-4 border-b border-[#e0e6ed] dark:border-[#1b2e4b]">
                         <div className="flex items-center justify-between gap-3">
-                            <div className="min-w-0">
-                                <div className="font-bold truncate">{activeConv ? displayName(activeConv) : 'Chat'}</div>
-                                <div className="text-xs text-white-dark">
-                                    {activeConv?.type === 'group' ? 'Group chat' : 'Direct message'}
+                            <div className="flex items-center gap-3 min-w-0">
+                                {activeConv && activeConv.type === 'dm' && getOtherUser(activeConv) ? (
+                                    <div className="relative shrink-0">
+                                        <img 
+                                            src={getOtherUser(activeConv)!.photo || '/assets/images/profile-34.jpeg'} 
+                                            alt={getOtherUser(activeConv)!.username} 
+                                            className="w-10 h-10 rounded-full object-cover border border-[#e0e6ed] dark:border-[#1b2e4b]" 
+                                        />
+                                        <span 
+                                            className={`absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-white dark:border-[#1b2e4b] ${
+                                                getOtherUser(activeConv)!.status === 'online' ? 'bg-success' :
+                                                getOtherUser(activeConv)!.status === 'away' ? 'bg-warning' :
+                                                getOtherUser(activeConv)!.status === 'dnd' ? 'bg-danger' :
+                                                'bg-secondary'
+                                            }`}
+                                        ></span>
+                                    </div>
+                                ) : activeConv && activeConv.type === 'group' ? (
+                                    <div className="w-10 h-10 rounded-full shrink-0 bg-primary text-white flex items-center justify-center text-xs font-bold">
+                                        {activeConv.name ? activeConv.name.substring(0, 2).toUpperCase() : 'G'}
+                                    </div>
+                                ) : null}
+                                <div className="min-w-0">
+                                    <div className="font-bold truncate">{activeConv ? displayName(activeConv) : 'Chat'}</div>
+                                    <div className="text-xs text-white-dark">
+                                        {activeConv?.type === 'group' ? 'Group chat' : 'Direct message'}
+                                    </div>
                                 </div>
                             </div>
                             {/* Everyone can open Manage to view members; actions inside are permission-gated */}

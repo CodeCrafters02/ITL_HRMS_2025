@@ -6,6 +6,7 @@ import '../../services/asset_service.dart';
 import '../../theme/app_stitch_theme.dart';
 import '../../widgets/glass_card.dart';
 import '../../widgets/stitch_background.dart';
+import '../../widgets/optimized_image.dart';
 
 // Filter chip configuration
 class FilterOption {
@@ -1816,10 +1817,14 @@ class _SupplyItemCard extends StatelessWidget {
               child: item.image != null
                   ? ClipRRect(
                       borderRadius: BorderRadius.circular(8),
-                      child: Image.network(
-                        item.image!,
+                      child: OptimizedImage(
+                        imageUrl: item.image!,
+                        width: 48,
+                        height: 48,
                         fit: BoxFit.cover,
-                        errorBuilder: (_, __, ___) => const Icon(
+                        memCacheWidth: 96,
+                        memCacheHeight: 96,
+                        errorWidget: const Icon(
                           Icons.inventory_2_rounded,
                           color: Colors.grey,
                         ),

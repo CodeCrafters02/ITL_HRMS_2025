@@ -37,7 +37,8 @@ class NotificationService {
   // Start polling for badge updates
   static void startPolling() {
     _pollingTimer?.cancel();
-    _pollingTimer = Timer.periodic(const Duration(minutes: 1), (_) {
+    // Reduced from 1 minute to 5 minutes to reduce battery and data usage
+    _pollingTimer = Timer.periodic(const Duration(minutes: 5), (_) {
       _fetchAllBadges();
     });
     // Fetch immediately

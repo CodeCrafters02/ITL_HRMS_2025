@@ -17,6 +17,7 @@ import '../../../providers/chat_scope.dart';
 import '../../../theme/app_stitch_theme.dart';
 import '../../../widgets/glass_card.dart';
 import '../../../widgets/stitch_background.dart';
+import '../../../widgets/optimized_image.dart';
 import '../../../config/api_config.dart';
 
 String? _resolveAttachmentUrlForDisplay(String? raw) {
@@ -715,17 +716,16 @@ class _MessageBubble extends StatelessWidget {
                                 borderRadius: BorderRadius.circular(18),
                                 child: AspectRatio(
                                   aspectRatio: 4 / 3,
-                                  child: Image.network(
-                                    _resolveAttachmentUrlForDisplay(
+                                  child: OptimizedImage(
+                                    imageUrl: _resolveAttachmentUrlForDisplay(
                                             message.attachmentUrl) ??
                                         '',
                                     fit: BoxFit.cover,
-                                    filterQuality: FilterQuality.low,
-                                    cacheWidth: _thumbCacheWidth(context),
-                                    cacheHeight:
+                                    memCacheWidth: _thumbCacheWidth(context),
+                                    memCacheHeight:
                                         (_thumbCacheWidth(context) * 3 / 4)
                                             .round(),
-                                    errorBuilder: (_, __, ___) => Container(
+                                    errorWidget: Container(
                                       color: Colors.black.withValues(alpha: 0.10),
                                       alignment: Alignment.center,
                                       child: Icon(
@@ -1437,10 +1437,10 @@ class _ImageViewerDialog extends StatelessWidget {
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(18),
                 child: InteractiveViewer(
-                  child: Image.network(
-                    url,
+                  child: OptimizedImage(
+                    imageUrl: url,
                     fit: BoxFit.contain,
-                    errorBuilder: (_, __, ___) => const Center(
+                    errorWidget: const Center(
                       child: Text('Unable to load image'),
                     ),
                   ),
