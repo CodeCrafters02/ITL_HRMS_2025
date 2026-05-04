@@ -1441,6 +1441,7 @@ class EmpLeaveListCreateAPIView(generics.ListCreateAPIView):
         start_date = serializer.validated_data.get("from_date")
         end_date = serializer.validated_data.get("to_date")
         leave_type = serializer.validated_data.get("leave_type")
+        leave_duration = serializer.validated_data.get("leave_duration", "full_day")
 
         # Check if leave already exists in the given date range (ignore Rejected and Cancelled)
         exists = EmpLeave.objects.filter(
@@ -1452,11 +1453,22 @@ class EmpLeaveListCreateAPIView(generics.ListCreateAPIView):
         if exists:
             raise ValidationError("An active leave application (Pending or Approved) already exists for the given dates.")
 
-        # Calculate requested leave days
-        days_requested = (end_date - start_date).days + 1
+        # Calculate requested leave days (half day on a single date counts as 0.5)
+        span_days = (end_date - start_date).days + 1
+        if leave_duration == "half_day":
+            days_requested = 0.5
+        else:
+            days_requested = float(span_days)
+
+        def _approved_leave_units(leave):
+            if not leave.from_date or not leave.to_date:
+                return 0.0
+            s = (leave.to_date - leave.from_date).days + 1
+            if getattr(leave, "leave_duration", None) == "half_day" and leave.from_date == leave.to_date:
+                return 0.5
+            return float(s)
 
         # Get approved leaves for this leave type
-        from datetime import datetime
         current_year = datetime.now().year
         approved_leaves = EmpLeave.objects.filter(
             employee=emp,
@@ -1466,12 +1478,12 @@ class EmpLeaveListCreateAPIView(generics.ListCreateAPIView):
         )
 
         # Calculate total approved days used
-        days_used = 0
+        days_used = 0.0
         for leave in approved_leaves:
-            days_used += (leave.to_date - leave.from_date).days + 1
+            days_used += _approved_leave_units(leave)
 
         # Get leave type count (available days per year)
-        available_days = leave_type.count if leave_type else 0
+        available_days = float(leave_type.count) if leave_type else 0.0
         remaining_days = available_days - days_used
 
         # Validate requested days against remaining balance

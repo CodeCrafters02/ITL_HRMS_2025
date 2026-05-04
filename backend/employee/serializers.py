@@ -315,6 +315,7 @@ class EmpLeaveSerializer(serializers.ModelSerializer):
             'reporting_manager_name',
             'leave_type',
             'leave_type_name',
+            'leave_duration',
             'status',
             'reason',
             'rejection_reason',
@@ -323,6 +324,19 @@ class EmpLeaveSerializer(serializers.ModelSerializer):
             'created_at',
         ]
         read_only_fields = ['company', 'employee_name', 'employee_id', 'reporting_manager_name','leave_type_name', 'status', 'created_at']
+
+    def validate(self, attrs):
+        from_date = attrs.get('from_date')
+        to_date = attrs.get('to_date')
+        leave_duration = attrs.get('leave_duration', 'full_day')
+        if isinstance(leave_duration, str) and leave_duration not in ('half_day', 'full_day'):
+            raise serializers.ValidationError({'leave_duration': 'Invalid leave duration.'})
+        if leave_duration == 'half_day':
+            if not from_date or not to_date or from_date != to_date:
+                raise serializers.ValidationError(
+                    {'leave_duration': 'Half day leave requires the same from and to date.'}
+                )
+        return attrs
 
     def get_employee_name(self, obj):
         if obj.employee:
@@ -359,11 +373,14 @@ class LeaveSerializer(serializers.ModelSerializer):
                 status='Approved'
             )
 
-            total_days = 0
+            total_days = 0.0
             for leave in leaves:
                 if leave.from_date and leave.to_date:
-                    delta = (leave.to_date - leave.from_date).days + 1  # inclusive
-                    total_days += max(delta, 0)
+                    span = (leave.to_date - leave.from_date).days + 1
+                    if getattr(leave, 'leave_duration', None) == 'half_day' and leave.from_date == leave.to_date:
+                        total_days += 0.5
+                    else:
+                        total_days += float(max(span, 0))
 
             return total_days
 
