@@ -282,6 +282,10 @@ class CheckInAPIView(APIView):
             is_present=True
         )
 
+        # Update status to online
+        employee.status = 'online'
+        employee.save(update_fields=['status'])
+
         serializer = EmployeeAttendanceSerializer(attendance)
         return Response({
             "detail": f"Checked in at {now_dt.strftime('%H:%M:%S')} for shift {selected_shift.shift_type}",
@@ -337,6 +341,10 @@ class CheckOutAPIView(APIView):
         attendance.check_out = now_dt
         attendance.calculate_work_duration()
         attendance.save()
+
+        # Update status to offline
+        employee.status = 'offline'
+        employee.save(update_fields=['status'])
 
         serializer = EmployeeAttendanceSerializer(attendance)
         return Response({
@@ -644,6 +652,7 @@ class DashboardAPIView(APIView):
             dashboard_data = {
                 'employee_name': f"{employee.first_name} {employee.last_name}",
                 'employee_photo': request.build_absolute_uri(employee.photo.url) if employee.photo else None,
+                'status': employee.status,
                 'checkin_time': timezone.localtime(punch_in, tz).strftime('%H:%M:%S') if punch_in else None,
                 'checkout_time': timezone.localtime(punch_out, tz).strftime('%H:%M:%S') if punch_out else None,
                 'is_late': is_late,
@@ -1714,6 +1723,11 @@ class BreakLogAPIView(APIView):
                 break_config=break_config,  
                 start=timezone.now()
             )
+
+            # Update status to away when break starts
+            employee.status = 'away'
+            employee.save(update_fields=['status'])
+
             return Response(EmployeeBreakLogSerializer(break_log).data, status=201)
 
         elif action == "end":
@@ -1731,6 +1745,10 @@ class BreakLogAPIView(APIView):
                 diff = active_break.end - active_break.start
                 active_break.duration_minutes = int(diff.total_seconds() // 60)
             active_break.save()
+
+            # Update status to online when break ends
+            employee.status = 'online'
+            employee.save(update_fields=['status'])
 
             return Response(EmployeeBreakLogSerializer(active_break).data)
 

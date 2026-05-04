@@ -236,6 +236,11 @@ class LoginAPIView(APIView):
             access_token = str(refresh.access_token)
             refresh_token = str(refresh)
 
+            # Update status to online
+            if hasattr(user, 'employee'):
+                user.employee.status = 'online'
+                user.employee.save(update_fields=['status'])
+
             return Response({
                 "access": access_token,
                 "refresh": refresh_token,
@@ -1767,6 +1772,8 @@ class ChatCompanyUsersAPIView(APIView):
                 "first_name": (getattr(getattr(u, "employee", None), "first_name", None) or u.first_name),
                 "last_name": (getattr(getattr(u, "employee", None), "last_name", None) or u.last_name),
                 "role": u.role,
+                "status": getattr(getattr(u, "employee", None), "status", "offline"),
+                "photo": request.build_absolute_uri(u.employee.photo.url) if getattr(u, "employee", None) and getattr(u.employee, "photo", None) and hasattr(u.employee.photo, "url") else None,
             }
             for u in qs
         ]
@@ -5311,6 +5318,7 @@ class OrganizationHierarchyView(APIView):
                 'mobile': emp.mobile,
                 'employee_id': emp.employee_id,
                 'department': emp.department.department_name if emp.department else None,
+                'status': emp.status,
                 'children': [build_node(child) for child in manager_map.get(emp.id, [])]
             }
 
@@ -5350,6 +5358,7 @@ class PersonalReportingLineView(APIView):
                 'mobile': emp.mobile,
                 'employee_id': emp.employee_id,
                 'department': emp.department.department_name if emp.department else None,
+                'status': emp.status,
                 'children': []
             }
 
