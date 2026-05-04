@@ -2389,11 +2389,14 @@ class PayslipViewSet(viewsets.ReadOnlyModelViewSet):
             
             # Generate PDF
             from .utils import generate_payslip_pdf
+            company = request.user.company
+            logo_path = company.logo.path if company.logo and hasattr(company.logo, 'path') else None
             pdf_file = generate_payslip_pdf(
                 employee=employee,
                 payroll=record if not is_report else None,
                 batch=record.batch if not is_report else None,
-                company=request.user.company,
+                company=company,
+                logo_path=logo_path,
                 payslip_id=unique_id,
                 finalized_salary=record if is_report else None
             )
@@ -2466,10 +2469,25 @@ class PayslipViewSet(viewsets.ReadOnlyModelViewSet):
         ).select_related('department', 'shift_assigned')
         
         # Fetch all FinalizedSalary records for this period
+        # Prioritize records that exactly match the selected date range
         finalized_salaries = FinalizedSalary.objects.filter(
             company=company, from_date__gte=s_dt, to_date__lte=e_dt
-        )
-        final_map = {fs.employee_id: fs for fs in finalized_salaries}
+        ).order_by('from_date')
+        final_map = {}
+        for fs in finalized_salaries:
+            existing = final_map.get(fs.employee_id)
+            # Prefer exact match over partial overlap
+            if not existing:
+                final_map[fs.employee_id] = fs
+            elif fs.from_date == s_dt and fs.to_date == e_dt:
+                # Exact match always wins
+                final_map[fs.employee_id] = fs
+            elif existing.from_date != s_dt or existing.to_date != e_dt:
+                # If current isn't exact either, prefer the wider range
+                existing_range = (existing.to_date - existing.from_date).days
+                new_range = (fs.to_date - fs.from_date).days
+                if new_range > existing_range:
+                    final_map[fs.employee_id] = fs
         
         # Fetch payroll batch records
         payrolls = Payroll.objects.filter(company=company).filter(
@@ -5880,6 +5898,27 @@ class GoogleLoginAPIView(APIView):
                 user.set_unusable_password()
                 user.save()
 
+            # ── Domain / Company validation ──
+            # Master and admin users always bypass domain checks
+            if user.role not in ('master', 'admin'):
+                # Check if email domain matches any company
+                matched_company = _company_for_email_domain(email)
+                user_has_company = getattr(user, 'company_id', None)
+                
+                # For brand-new users with no matching company → reject & cleanup
+                if created and not matched_company:
+                    user.delete()
+                    return Response(
+                        {"detail": "Your email domain is not authorized for any registered company. Please contact your HR administrator."},
+                        status=status.HTTP_403_FORBIDDEN
+                    )
+                
+                # For existing users with no company association and no matching domain → reject
+                if not created and not user_has_company and not matched_company:
+                    return Response(
+                        {"detail": "Your account is not associated with any company. Please contact your HR administrator."},
+                        status=status.HTTP_403_FORBIDDEN
+                    )
 
             # If this is an employee login, ensure profile is synced and ID generated
             if user.role == "employee":
