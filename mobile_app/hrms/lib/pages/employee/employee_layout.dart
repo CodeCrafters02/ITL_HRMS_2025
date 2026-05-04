@@ -11,10 +11,13 @@ import '../../widgets/optimized_image.dart';
 import 'employee_dashboard_page.dart';
 import 'my_tasks_page.dart';
 import 'attendance_history_page.dart';
+import 'my_payslips_page.dart';
+import 'reportees_page.dart';
 import 'widgets/employee_drawer.dart';
 import 'widgets/employee_bottom_nav.dart';
 import 'widgets/notification_button.dart';
 import 'widgets/chat_button.dart';
+import '../../widgets/app_header.dart';
 import '../../widgets/stitch_background.dart';
 import '../../widgets/glass_card.dart';
 
@@ -25,7 +28,8 @@ class EmployeeLayout extends StatefulWidget {
   State<EmployeeLayout> createState() => _EmployeeLayoutState();
 }
 
-class _EmployeeLayoutState extends State<EmployeeLayout> with WidgetsBindingObserver {
+class _EmployeeLayoutState extends State<EmployeeLayout>
+    with WidgetsBindingObserver {
   int _currentIndex = 0;
   bool _isReportingManager = false;
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
@@ -47,7 +51,7 @@ class _EmployeeLayoutState extends State<EmployeeLayout> with WidgetsBindingObse
       _handlePendingNotifications();
     });
   }
-  
+
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
@@ -69,11 +73,7 @@ class _EmployeeLayoutState extends State<EmployeeLayout> with WidgetsBindingObse
     // Check token validity first
     final isValid = await AuthService.ensureValidToken();
     if (!isValid && mounted) {
-      Navigator.pushNamedAndRemoveUntil(
-        context,
-        '/login',
-        (route) => false,
-      );
+      Navigator.pushNamedAndRemoveUntil(context, '/login', (route) => false);
       return;
     }
 
@@ -84,11 +84,11 @@ class _EmployeeLayoutState extends State<EmployeeLayout> with WidgetsBindingObse
     NotificationService.startPolling();
     // Initialize FCM for push notifications
     FCMService.initialize();
-    
+
     // Check for pending notifications after initialization
     _handlePendingNotifications();
   }
-  
+
   // Handle pending notifications from FCM
   void _handlePendingNotifications() {
     final pendingData = FCMService.getPendingNotificationData();
@@ -96,11 +96,11 @@ class _EmployeeLayoutState extends State<EmployeeLayout> with WidgetsBindingObse
       _navigateFromNotification(pendingData);
     }
   }
-  
+
   // Navigate based on notification type
   void _navigateFromNotification(Map<String, dynamic> data) {
     final type = data['type']?.toString().toLowerCase();
-    
+
     if (type == 'leave_request') {
       // Navigate to Leave Request page for managers
       Navigator.pushNamed(context, '/employee/leave-request');
@@ -124,11 +124,14 @@ class _EmployeeLayoutState extends State<EmployeeLayout> with WidgetsBindingObse
       setState(() {
         _currentIndex = 1; // My Tasks tab
       });
-    } else if (type == 'loan_status' || type == 'loan_request' || type == 'loan_admin_review') {
+    } else if (type == 'loan_status' ||
+        type == 'loan_request' ||
+        type == 'loan_admin_review') {
       Navigator.pushNamed(context, '/employee/loan-application');
     } else if (type == 'wfh_status' || type == 'wfh_request') {
       Navigator.pushNamed(context, '/employee/wfh-request');
-    } else if (type == 'reimbursement_status' || type == 'reimbursement_request') {
+    } else if (type == 'reimbursement_status' ||
+        type == 'reimbursement_request') {
       Navigator.pushNamed(context, '/employee/reimbursement');
     } else if (type == 'payslip_new') {
       Navigator.pushNamed(context, '/employee/my-payslips');
@@ -187,14 +190,9 @@ class _EmployeeLayoutState extends State<EmployeeLayout> with WidgetsBindingObse
   }
 
   void _onBottomNavTap(int index) {
-    if (index == 3) {
-      // "More" button - open drawer
-      _scaffoldKey.currentState?.openDrawer();
-    } else {
-      setState(() {
-        _currentIndex = index;
-      });
-    }
+    setState(() {
+      _currentIndex = index;
+    });
   }
 
   void _onDrawerItemTap(String? path) {
@@ -211,9 +209,14 @@ class _EmployeeLayoutState extends State<EmployeeLayout> with WidgetsBindingObse
       setState(() {
         _currentIndex = 1;
       });
-    } else if (path == '/employee/attendance' || path == '/employee/attendance-history') {
+    } else if (path == '/employee/attendance' ||
+        path == '/employee/attendance-history') {
       setState(() {
         _currentIndex = 2;
+      });
+    } else if (path == '/employee/my-payslips') {
+      setState(() {
+        _currentIndex = 3;
       });
     } else {
       // Navigate to full-screen page
@@ -229,6 +232,8 @@ class _EmployeeLayoutState extends State<EmployeeLayout> with WidgetsBindingObse
         return const MyTasksPage();
       case 2:
         return const AttendanceHistoryPage();
+      case 3:
+        return const MyPayslipsPage();
       default:
         return const EmployeeDashboardPage();
     }
@@ -271,17 +276,17 @@ class _EmployeeLayoutState extends State<EmployeeLayout> with WidgetsBindingObse
                 ),
               )
             : _profile?.photo != null && _profile!.photo!.isNotEmpty
-                ? OptimizedImage(
-                    imageUrl: _profile!.photo!,
-                    width: 40,
-                    height: 40,
-                    fit: BoxFit.cover,
-                    shape: BoxShape.circle,
-                    memCacheWidth: 80,
-                    memCacheHeight: 80,
-                    errorWidget: _buildInitialsWidget(),
-                  )
-                : _buildInitialsWidget(),
+            ? OptimizedImage(
+                imageUrl: _profile!.photo!,
+                width: 40,
+                height: 40,
+                fit: BoxFit.cover,
+                shape: BoxShape.circle,
+                memCacheWidth: 80,
+                memCacheHeight: 80,
+                errorWidget: _buildInitialsWidget(),
+              )
+            : _buildInitialsWidget(),
       ),
     );
   }
@@ -306,6 +311,7 @@ class _EmployeeLayoutState extends State<EmployeeLayout> with WidgetsBindingObse
   Widget build(BuildContext context) {
     return Scaffold(
       key: _scaffoldKey,
+      drawerEdgeDragWidth: MediaQuery.of(context).size.width * 0.2,
       drawer: EmployeeDrawer(
         isReportingManager: _isReportingManager,
         onItemTap: _onDrawerItemTap,
@@ -317,41 +323,19 @@ class _EmployeeLayoutState extends State<EmployeeLayout> with WidgetsBindingObse
             children: [
               Padding(
                 padding: const EdgeInsets.fromLTRB(16, 8, 16, 10),
-                child: GlassCard(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                  child: Row(
-                    children: [
-                      IconButton(
-                        icon: const Icon(Icons.menu_rounded),
-                        onPressed: () => _scaffoldKey.currentState?.openDrawer(),
-                      ),
-                      Image.asset(
-                        'assets/logo/app_logo.png',
-                        height: 28,
-                        width: 28,
-                        errorBuilder: (context, error, stackTrace) =>
-                            const SizedBox(width: 0, height: 0),
-                      ),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: Text(
-                          _getPageTitle(),
-                          style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                                fontWeight: FontWeight.w800,
-                                color: AppStitchTheme.lightOnSurface,
-                              ),
-                        ),
-                      ),
-                      const NotificationButton(),
-                      const ChatButton(),
-                      _buildProfileAvatar(),
-                    ],
-                  ),
+                child: AppHeader(
+                  title: _getPageTitle(),
+                  showLogo: true,
+                  showMenuButton: true,
+                  onMenuPressed: () => _scaffoldKey.currentState?.openDrawer(),
+                  actions: [
+                    const NotificationButton(),
+                    const ChatButton(),
+                    _buildProfileAvatar(),
+                  ],
                 ),
               ),
-              Expanded(
-                child: _getPage(_currentIndex),
-              ),
+              Expanded(child: _getPage(_currentIndex)),
             ],
           ),
         ),
@@ -371,9 +355,10 @@ class _EmployeeLayoutState extends State<EmployeeLayout> with WidgetsBindingObse
         return 'My Tasks';
       case 2:
         return 'Attendance';
+      case 3:
+        return 'My Payslips';
       default:
         return 'HRMS';
     }
   }
 }
-

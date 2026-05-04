@@ -7,6 +7,7 @@ import '../../models/task_model.dart';
 import '../../models/leave_model.dart';
 import '../../models/announcement_model.dart';
 import '../../models/break_config_model.dart';
+import '../../models/asset_request_model.dart';
 import '../../theme/app_stitch_theme.dart';
 import '../../services/employee_service.dart';
 import '../../services/geofence_service.dart';
@@ -566,7 +567,8 @@ class _EmployeeDashboardPageState extends State<EmployeeDashboardPage> {
                   ),
                   const SizedBox(height: 12),
                   _PendingRequestsSection(
-                    onNavigate: (route) => Navigator.pushNamed(context, route),
+                    onNavigate: (route, {arguments}) =>
+                        Navigator.pushNamed(context, route, arguments: arguments),
                   ),
                   const SizedBox(height: 12),
                   _RoundedTabs(

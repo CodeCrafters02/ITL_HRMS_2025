@@ -7,8 +7,8 @@ class ApiConfig {
   /// Keep a sensible dev default for local/LAN testing.
   static const String baseUrl = String.fromEnvironment(
     'API_BASE_URL',
-    // defaultValue: 'https://apihrms.innovyxtechlabs.com',
-    defaultValue: 'http://10.20.72.169:8000',
+    defaultValue: 'https://apihrms.innovyxtechlabs.com',
+    // defaultValue: 'http://10.20.72.169:8000',
   );
 
   /// Login footer "Contact IT Support" mailto. Override at build:
@@ -75,6 +75,10 @@ class ApiConfig {
   static const String employeeProfileEndpoint = '/employee/employee-profile/';
   static const String employeeHierarchyEndpoint =
       '/employee/employee-hierarchy/';
+  static const String organizationHierarchyEndpoint =
+      '/app/organization-hierarchy/';
+  static const String personalReportingLineEndpoint =
+      '/app/personal-reporting-line/';
   static const String deviceTokenEndpoint = '/notifications/devices/';
   static const String learningCornerEndpoint = '/employee/emp-learning-corner/';
   static const String announcementsEndpoint = '/employee/announcements/';
@@ -199,6 +203,10 @@ class ApiConfig {
   static String get employeeProfileUrl => '$baseUrl$employeeProfileEndpoint';
   static String get employeeHierarchyUrl =>
       '$baseUrl$employeeHierarchyEndpoint';
+  static String get organizationHierarchyUrl =>
+      '$baseUrl$organizationHierarchyEndpoint';
+  static String get personalReportingLineUrl =>
+      '$baseUrl$personalReportingLineEndpoint';
   static String get deviceTokenUrl => '$baseUrl$deviceTokenEndpoint';
   static String get learningCornerUrl => '$baseUrl$learningCornerEndpoint';
   static String get announcementsUrl => '$baseUrl$announcementsEndpoint';

@@ -5,6 +5,7 @@ import '../../services/employee_service.dart';
 import '../../theme/app_stitch_theme.dart';
 import '../../widgets/glass_card.dart';
 import '../../widgets/stitch_background.dart';
+import '../../widgets/app_header.dart';
 
 class AttendanceHistoryPage extends StatefulWidget {
   const AttendanceHistoryPage({super.key});
@@ -151,6 +152,8 @@ class _AttendanceHistoryPageState extends State<AttendanceHistoryPage> {
 
   @override
   Widget build(BuildContext context) {
+    final canPop = ModalRoute.of(context)?.canPop ?? false;
+
     return Scaffold(
       backgroundColor: Colors.transparent,
       body: StitchBackground(
@@ -159,16 +162,18 @@ class _AttendanceHistoryPageState extends State<AttendanceHistoryPage> {
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
             child: Column(
               children: [
-                _FrostHeader(
-                  title: 'Attendance',
-                  subtitle: _attendanceData == null
-                      ? 'History'
-                      : (_attendanceData!.selectedMonthName.isNotEmpty
-                          ? '${_attendanceData!.selectedMonthName} $_selectedYear'
-                          : DateFormat('MMMM yyyy')
-                              .format(DateTime(_selectedYear, _selectedMonth))),
-                ),
-                const SizedBox(height: 12),
+                if (canPop)
+                  AppHeader(
+                    title: 'Attendance',
+                    subtitle: _attendanceData == null
+                        ? 'History'
+                        : (_attendanceData!.selectedMonthName.isNotEmpty
+                            ? '${_attendanceData!.selectedMonthName} $_selectedYear'
+                            : DateFormat('MMMM yyyy').format(
+                                DateTime(_selectedYear, _selectedMonth))),
+                    showBackButton: true,
+                  ),
+                if (canPop) const SizedBox(height: 12),
                 Expanded(
                   child: _isLoading
                       ? const Center(child: CircularProgressIndicator())
@@ -1182,9 +1187,14 @@ class _FrostHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return GlassCard(
-      padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
       child: Row(
         children: [
+          IconButton(
+            onPressed: () => Navigator.pop(context),
+            icon: const Icon(Icons.arrow_back_rounded),
+          ),
+          const SizedBox(width: 4),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,

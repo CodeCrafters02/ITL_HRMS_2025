@@ -8,6 +8,7 @@ import '../../services/storage_service.dart';
 import '../../theme/app_stitch_theme.dart';
 import '../../widgets/glass_card.dart';
 import '../../widgets/stitch_background.dart';
+import '../../widgets/app_header.dart';
 import 'widgets/calendar_event_dialog.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -583,9 +584,9 @@ class _PersonalCalendarPageState extends State<PersonalCalendarPage> {
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
             child: Column(
               children: [
-                _buildTabs(),
-                const SizedBox(height: 12),
                 _buildHeader(),
+                const SizedBox(height: 12),
+                _buildTabs(),
                 const SizedBox(height: 12),
                 Expanded(child: _buildBody()),
               ],
@@ -610,33 +611,15 @@ class _PersonalCalendarPageState extends State<PersonalCalendarPage> {
   }
 
   Widget _buildHeader() {
+    final canPop = ModalRoute.of(context)?.canPop ?? false;
     final subtitle = DateFormat('MMMM yyyy').format(_currentMonth);
-    return GlassCard(
-      padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
-      child: Row(
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Calendar',
-                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                        fontWeight: FontWeight.w900,
-                        color: AppStitchTheme.lightOnSurface,
-                      ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  subtitle,
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: AppStitchTheme.lightOnSurfaceMuted,
-                        fontWeight: FontWeight.w600,
-                      ),
-                ),
-              ],
-            ),
-          ),
+
+    if (canPop) {
+      return AppHeader(
+        title: 'Calendar',
+        subtitle: subtitle,
+        showBackButton: true,
+        actions: [
           IconButton(
             onPressed: _isLoading ? null : () => _navigateMonth(-1),
             icon: const Icon(Icons.chevron_left_rounded),
@@ -646,8 +629,42 @@ class _PersonalCalendarPageState extends State<PersonalCalendarPage> {
             icon: const Icon(Icons.chevron_right_rounded),
           ),
         ],
-      ),
-    );
+      );
+    } else {
+      // Minimal header for tab view (if ever used as a tab)
+      return GlassCard(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        child: Row(
+          children: [
+            const Icon(Icons.calendar_month_rounded, size: 20, color: AppStitchTheme.primary),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                subtitle,
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w900,
+                  color: AppStitchTheme.lightOnSurface,
+                ),
+              ),
+            ),
+            IconButton(
+              onPressed: _isLoading ? null : () => _navigateMonth(-1),
+              icon: const Icon(Icons.chevron_left_rounded, size: 20),
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints(),
+            ),
+            const SizedBox(width: 8),
+            IconButton(
+              onPressed: _isLoading ? null : () => _navigateMonth(1),
+              icon: const Icon(Icons.chevron_right_rounded, size: 20),
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints(),
+            ),
+          ],
+        ),
+      );
+    }
   }
 
   Widget _buildTabs() {

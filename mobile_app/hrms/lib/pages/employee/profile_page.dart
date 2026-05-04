@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../services/employee_service.dart';
 import '../../models/profile_model.dart';
+import '../../models/reportee_model.dart';
 import '../../theme/app_stitch_theme.dart';
 import '../../widgets/glass_card.dart';
 import '../../widgets/stitch_background.dart';
@@ -9,6 +10,8 @@ import 'widgets/profile_info_card.dart';
 import 'widgets/profile_address_card.dart';
 import 'widgets/profile_professional_card.dart';
 import 'widgets/profile_hierarchy_card.dart';
+import 'widgets/organization_hierarchy_card.dart';
+import 'widgets/reporting_line_card.dart';
 import 'profile_edit_page.dart';
 
 class ProfilePage extends StatefulWidget {
@@ -23,6 +26,10 @@ class _ProfilePageState extends State<ProfilePage>
   late TabController _tabController;
   EmployeeProfile? _profile;
   EmployeeHierarchy? _hierarchy;
+  OrganizationHierarchy? _orgHierarchy;
+  PersonalReportingLine? _reportingLine;
+  List<Reportee>? _reportees;
+  int? _currentUserId;
   bool _isLoading = true;
   String? _error;
 
@@ -48,10 +55,17 @@ class _ProfilePageState extends State<ProfilePage>
     try {
       final profileResponse = await EmployeeService.getEmployeeProfile();
       final hierarchyResponse = await EmployeeService.getEmployeeHierarchy();
+      final orgHierarchyResponse = await EmployeeService.getOrganizationHierarchy();
+      final reportingLineResponse = await EmployeeService.getPersonalReportingLine();
+
+      // Get current user ID from API
+      final currentUserId = await EmployeeService.getCurrentEmployeeId();
 
       if (mounted) {
         setState(() {
           _isLoading = false;
+          _currentUserId = currentUserId;
+
           if (profileResponse.success) {
             _profile = profileResponse.data;
           } else {
@@ -73,7 +87,23 @@ class _ProfilePageState extends State<ProfilePage>
           if (hierarchyResponse.success) {
             _hierarchy = hierarchyResponse.data;
           }
+
+          if (orgHierarchyResponse.success) {
+            _orgHierarchy = orgHierarchyResponse.data;
+          }
+
+          if (reportingLineResponse.success) {
+            _reportingLine = reportingLineResponse.data;
+          }
         });
+
+        // Fetch reportees if we have an employee ID
+        if (currentUserId != null) {
+          final reporteesResponse = await EmployeeService.getReportees(currentUserId);
+          if (mounted && reporteesResponse.success && reporteesResponse.data != null) {
+            setState(() => _reportees = reporteesResponse.data);
+          }
+        }
       }
     } catch (e) {
       if (mounted) {
@@ -83,6 +113,15 @@ class _ProfilePageState extends State<ProfilePage>
         });
       }
     }
+  }
+
+  void _showEmployeeDetail(OrganizationNode node) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => EmployeeDetailModal(node: node),
+    );
   }
 
   void _onPhotoUpdated(EmployeeProfile updatedProfile) {
@@ -226,9 +265,9 @@ class _ProfilePageState extends State<ProfilePage>
                           labelStyle: const TextStyle(fontWeight: FontWeight.w800, fontSize: 13),
                           unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
                           tabs: const [
-                            Tab(text: 'Personal'),
-                            Tab(text: 'Work'),
-                            Tab(text: 'Hierarchy'),
+                            Tab(text: 'Profile'),
+                            Tab(text: 'Org Hierarchy'),
+                            Tab(text: 'Reporting Line'),
                           ],
                         ),
                       ),
@@ -240,18 +279,35 @@ class _ProfilePageState extends State<ProfilePage>
             body: TabBarView(
               controller: _tabController,
               children: [
+                // Profile Tab - Merge Personal + Work
                 _buildTabContent([
                   ProfileInfoCard(profile: _profile!),
                   const SizedBox(height: 12),
                   ProfileAddressCard(profile: _profile!),
-                ]),
-                _buildTabContent([
+                  const SizedBox(height: 12),
                   ProfileProfessionalCard(profile: _profile!),
                 ]),
+                // Org Hierarchy Tab
                 _buildTabContent([
-                  _hierarchy != null
-                      ? ProfileHierarchyCard(hierarchy: _hierarchy!)
-                      : const Center(child: Text('No hierarchy data')),
+                  _orgHierarchy != null
+                      ? OrganizationHierarchyCard(
+                          hierarchy: _orgHierarchy!,
+                          currentUserId: _currentUserId,
+                          onNodeTap: _showEmployeeDetail,
+                        )
+                      : const Center(child: Text('No organization hierarchy data')),
+                ]),
+                // Reporting Line Tab
+                _buildTabContent([
+                  _reportingLine != null
+                      ? ReportingLineCard(
+                          reportingLine: _reportingLine!,
+                          currentUserId: _currentUserId,
+                          onNodeTap: _showEmployeeDetail,
+                          hierarchy: _hierarchy,
+                          reportees: _reportees,
+                        )
+                      : const Center(child: Text('No reporting line data')),
                 ]),
               ],
             ),

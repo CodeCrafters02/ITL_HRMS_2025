@@ -15,7 +15,7 @@ class GlassCard extends StatelessWidget {
   });
 
   final Widget child;
-  final EdgeInsets padding;
+  final EdgeInsetsGeometry padding;
   final double borderRadius;
   final bool enableBlur;
   final double blurSigma;

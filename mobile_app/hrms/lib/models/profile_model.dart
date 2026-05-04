@@ -138,6 +138,7 @@ class HierarchyEmployee {
   final String name;
   final String level;
   final String designation;
+  final String? photo;
   final List<HierarchyEmployee>? reportees;
 
   HierarchyEmployee({
@@ -145,6 +146,7 @@ class HierarchyEmployee {
     required this.name,
     required this.level,
     required this.designation,
+    this.photo,
     this.reportees,
   });
 
@@ -155,6 +157,7 @@ class HierarchyEmployee {
       name: s(json['name']),
       level: s(json['level']),
       designation: s(json['designation']),
+      photo: json['photo']?.toString(),
       reportees: json['reportees'] != null
           ? (json['reportees'] as List)
               .map((item) => HierarchyEmployee.fromJson(item))
@@ -215,6 +218,82 @@ class EmployeeHierarchy {
               .map((item) => HierarchyEmployee.fromJson(item))
               .toList()
           : null,
+    );
+  }
+}
+
+// Organization Hierarchy Models (for full company tree)
+class OrganizationNode {
+  final int id;
+  final String name;
+  final String designation;
+  final String? photo;
+  final String? status;
+  final String? employeeId;
+  final String? department;
+  final String? email;
+  final String? mobile;
+  final List<OrganizationNode>? children;
+
+  OrganizationNode({
+    required this.id,
+    required this.name,
+    required this.designation,
+    this.photo,
+    this.status,
+    this.employeeId,
+    this.department,
+    this.email,
+    this.mobile,
+    this.children,
+  });
+
+  factory OrganizationNode.fromJson(Map<String, dynamic> json) {
+    return OrganizationNode(
+      id: json['id'] ?? 0,
+      name: json['name']?.toString() ?? '',
+      designation: json['designation']?.toString() ?? '',
+      photo: json['photo']?.toString(),
+      status: json['status']?.toString(),
+      employeeId: json['employee_id']?.toString(),
+      department: json['department']?.toString(),
+      email: json['email']?.toString(),
+      mobile: json['mobile']?.toString(),
+      children: json['children'] != null
+          ? (json['children'] as List)
+              .map((item) => OrganizationNode.fromJson(item))
+              .toList()
+          : null,
+    );
+  }
+
+  bool get isOnline => status == 'online';
+  bool get isAway => status == 'away';
+  bool get isDnd => status == 'dnd';
+  bool get isOffline => status == null || status == 'offline';
+}
+
+class OrganizationHierarchy {
+  final List<OrganizationNode> roots;
+
+  OrganizationHierarchy({required this.roots});
+
+  factory OrganizationHierarchy.fromJson(List<dynamic> json) {
+    return OrganizationHierarchy(
+      roots: json.map((item) => OrganizationNode.fromJson(item)).toList(),
+    );
+  }
+}
+
+// Personal Reporting Line Model (for individual reporting chain)
+class PersonalReportingLine {
+  final List<OrganizationNode> chain;
+
+  PersonalReportingLine({required this.chain});
+
+  factory PersonalReportingLine.fromJson(List<dynamic> json) {
+    return PersonalReportingLine(
+      chain: json.map((item) => OrganizationNode.fromJson(item)).toList(),
     );
   }
 }

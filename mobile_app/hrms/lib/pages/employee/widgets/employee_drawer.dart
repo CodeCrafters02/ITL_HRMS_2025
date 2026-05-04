@@ -102,60 +102,9 @@ class _EmployeeDrawerState extends State<EmployeeDrawer> {
 
   @override
   Widget build(BuildContext context) {
-    final navItems = DrawerNavItems.getItems(
+    final navGroups = DrawerNavItems.getItems(
       isReportingManager: widget.isReportingManager,
     );
-
-    // Update nav items with badge counts from notification service
-    final itemsWithBadges = navItems.map((item) {
-      int? badge;
-      switch (item.name) {
-        case 'Notifications':
-          badge = NotificationService.notificationsBadge;
-          break;
-        case 'Chat':
-          badge = ChatScope.of(context).unreadTotal;
-          break;
-        case 'My Tasks':
-          badge = NotificationService.myTasksBadge;
-          break;
-        case 'Learning Corner':
-          badge = NotificationService.learningCornerBadge;
-          break;
-        case 'Calendar':
-          badge = NotificationService.calendarBadge;
-          break;
-        case 'Leave Application':
-          badge = NotificationService.leaveApplicationBadge;
-          break;
-        case 'Leave Request':
-          badge = NotificationService.leaveRequestBadge;
-          break;
-        case 'My Payslips':
-          badge = NotificationService.payslipsBadge;
-          break;
-        case 'Asset Requests':
-          badge = NotificationService.assetRequestsBadge;
-          break;
-        case 'Loan Application':
-          badge = NotificationService.loanApplicationsBadge;
-          break;
-        case 'WFH Request':
-          badge = NotificationService.wfhRequestsBadge;
-          break;
-        case 'Reimbursement':
-          badge = NotificationService.reimbursementsBadge;
-          break;
-      }
-      return NavItem(
-        name: item.name,
-        icon: item.icon,
-        path: item.path,
-        badge: badge,
-        onClick: item.onClick,
-        isConditional: item.isConditional,
-      );
-    }).toList();
 
     // Get current route to highlight active item
     final currentRoute = ModalRoute.of(context)?.settings.name ?? '';
@@ -198,40 +147,57 @@ class _EmployeeDrawerState extends State<EmployeeDrawer> {
                 Expanded(
                   child: GlassCard(
                     padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Padding(
-                          padding: const EdgeInsets.fromLTRB(10, 8, 10, 10),
-                          child: Text(
-                            'MENU',
-                            style: Theme.of(context)
-                                .textTheme
-                                .labelSmall
-                                ?.copyWith(
-                                  letterSpacing: 1,
-                                  fontWeight: FontWeight.w800,
-                                  color: AppStitchTheme.lightOnSurfaceMuted,
-                                ),
-                          ),
-                        ),
-                        Expanded(
-                          child: ListView.builder(
-                            padding: EdgeInsets.zero,
-                            itemCount: itemsWithBadges.length,
-                            itemBuilder: (context, index) {
-                              final item = itemsWithBadges[index];
-                              final isActive = item.path != null &&
-                                  (currentRoute == item.path ||
-                                      currentRoute.startsWith(item.path!));
+                    child: ListView(
+                      padding: EdgeInsets.zero,
+                      children: navGroups.map((group) {
+                        return Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Padding(
+                              padding: const EdgeInsets.fromLTRB(10, 16, 10, 8),
+                              child: Text(
+                                group.title,
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .labelSmall
+                                    ?.copyWith(
+                                      letterSpacing: 1,
+                                      fontWeight: FontWeight.w800,
+                                      color: AppStitchTheme.lightOnSurfaceMuted,
+                                    ),
+                              ),
+                            ),
+                            ...group.items.map((item) {
+                              int? badge;
+                              if (item.name == 'Notifications') {
+                                badge = NotificationService.notificationsBadge;
+                              } else if (item.name == 'Chat') {
+                                badge = ChatScope.of(context).unreadTotal;
+                              }
+
+                              final itemWithBadge = NavItem(
+                                name: item.name,
+                                icon: item.icon,
+                                path: item.path,
+                                badge: badge,
+                                onClick: item.onClick,
+                                isConditional: item.isConditional,
+                              );
+
+                              final isActive = itemWithBadge.path != null &&
+                                  (currentRoute == itemWithBadge.path ||
+                                      currentRoute
+                                          .startsWith(itemWithBadge.path!));
+
                               return Padding(
                                 padding: const EdgeInsets.only(bottom: 4),
-                                child: _buildDrawerItem(item, isActive),
+                                child: _buildDrawerItem(itemWithBadge, isActive),
                               );
-                            },
-                          ),
-                        ),
-                      ],
+                            }),
+                            const SizedBox(height: 8),
+                          ],
+                        );
+                      }).toList(),
                     ),
                   ),
                 ),

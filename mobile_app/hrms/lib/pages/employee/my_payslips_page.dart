@@ -7,6 +7,7 @@ import '../../services/payslip_service.dart';
 import '../../theme/app_stitch_theme.dart';
 import '../../widgets/glass_card.dart';
 import '../../widgets/stitch_background.dart';
+import '../../widgets/app_header.dart';
 
 class MyPayslipsPage extends StatefulWidget {
   const MyPayslipsPage({super.key});
@@ -36,9 +37,7 @@ class _MyPayslipsPageState extends State<MyPayslipsPage> {
     });
 
     try {
-      final response = await PayslipService.getPayslips(
-        year: _selectedYear,
-      );
+      final response = await PayslipService.getPayslips(year: _selectedYear);
 
       if (mounted) {
         setState(() {
@@ -85,12 +84,19 @@ class _MyPayslipsPageState extends State<MyPayslipsPage> {
   void _showSavedToast(String filePath) {
     final displayPath = filePath
         .replaceAll('/storage/emulated/0/', 'Internal Storage/')
-        .replaceAll(RegExp(r'.*/Android/data/[^/]+/files'), 'Internal Storage/Documents');
+        .replaceAll(
+          RegExp(r'.*/Android/data/[^/]+/files'),
+          'Internal Storage/Documents',
+        );
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Row(
           children: [
-            const Icon(Icons.check_circle_rounded, color: Colors.white, size: 20),
+            const Icon(
+              Icons.check_circle_rounded,
+              color: Colors.white,
+              size: 20,
+            ),
             const SizedBox(width: 10),
             Expanded(
               child: Column(
@@ -203,10 +209,8 @@ class _MyPayslipsPageState extends State<MyPayslipsPage> {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => PdfViewerPage(
-          filePath: filePath,
-          title: payslip.formattedPeriod,
-        ),
+        builder: (context) =>
+            PdfViewerPage(filePath: filePath, title: payslip.formattedPeriod),
       ),
     );
   }
@@ -224,9 +228,9 @@ class _MyPayslipsPageState extends State<MyPayslipsPage> {
           children: [
             Text(
               'Filter by Year',
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w800,
-                  ),
+              style: Theme.of(
+                context,
+              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
             ),
             const SizedBox(height: 16),
             Wrap(
@@ -242,15 +246,17 @@ class _MyPayslipsPageState extends State<MyPayslipsPage> {
                   },
                   label: const Text('All Years'),
                 ),
-                ..._availableYears.map((year) => FilterChip(
-                      selected: _selectedYear == year,
-                      onSelected: (_) {
-                        Navigator.pop(context);
-                        setState(() => _selectedYear = year);
-                        _fetchPayslips();
-                      },
-                      label: Text(year.toString()),
-                    )),
+                ..._availableYears.map(
+                  (year) => FilterChip(
+                    selected: _selectedYear == year,
+                    onSelected: (_) {
+                      Navigator.pop(context);
+                      setState(() => _selectedYear = year);
+                      _fetchPayslips();
+                    },
+                    label: Text(year.toString()),
+                  ),
+                ),
               ],
             ),
           ],
@@ -261,44 +267,24 @@ class _MyPayslipsPageState extends State<MyPayslipsPage> {
 
   @override
   Widget build(BuildContext context) {
+    final canPop = ModalRoute.of(context)?.canPop ?? false;
+
     return Scaffold(
+      backgroundColor: Colors.transparent,
       body: StitchBackground(
         child: SafeArea(
           child: Column(
             children: [
-              // Header
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 8, 16, 10),
-                child: GlassCard(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                  child: Row(
-                    children: [
-                      IconButton(
-                        icon: const Icon(Icons.arrow_back_rounded),
-                        onPressed: () => Navigator.pop(context),
-                      ),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'My Payslips',
-                              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                                    fontWeight: FontWeight.w800,
-                                  ),
-                            ),
-                            Text(
-                              _selectedYear != null
-                                  ? 'Showing payslips for $_selectedYear'
-                                  : 'View and download your payslips',
-                              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                    color: AppStitchTheme.lightOnSurfaceMuted,
-                                    fontSize: 12,
-                                  ),
-                            ),
-                          ],
-                        ),
-                      ),
+              if (canPop)
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+                  child: AppHeader(
+                    title: 'My Payslips',
+                    subtitle: _selectedYear != null
+                        ? 'Showing payslips for $_selectedYear'
+                        : 'View and download your payslips',
+                    showBackButton: true,
+                    actions: [
                       if (_availableYears.isNotEmpty)
                         IconButton(
                           icon: const Icon(Icons.filter_list_rounded),
@@ -310,15 +296,55 @@ class _MyPayslipsPageState extends State<MyPayslipsPage> {
                             ? const SizedBox(
                                 width: 20,
                                 height: 20,
-                                child: CircularProgressIndicator(strokeWidth: 2),
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                ),
                               )
                             : const Icon(Icons.refresh_rounded),
                         onPressed: _isLoading ? null : _fetchPayslips,
                       ),
                     ],
                   ),
+                )
+              else
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 10),
+                  child: GlassCard(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            _selectedYear != null
+                                ? 'Year: $_selectedYear'
+                                : 'All Payslips',
+                            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                  fontWeight: FontWeight.w700,
+                                  color: AppStitchTheme.lightOnSurfaceMuted,
+                                ),
+                          ),
+                        ),
+                        if (_availableYears.isNotEmpty)
+                          IconButton(
+                            icon: const Icon(Icons.filter_list_rounded, size: 20),
+                            onPressed: _showYearFilter,
+                            tooltip: 'Filter by year',
+                          ),
+                        IconButton(
+                          icon: _isLoading
+                              ? const SizedBox(
+                                  width: 18,
+                                  height: 18,
+                                  child: CircularProgressIndicator(strokeWidth: 2),
+                                )
+                              : const Icon(Icons.refresh_rounded, size: 20),
+                          onPressed: _isLoading ? null : _fetchPayslips,
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
-              ),
+              const SizedBox(height: 8),
 
               // Results count if filtered
               if (_selectedYear != null)
@@ -329,9 +355,9 @@ class _MyPayslipsPageState extends State<MyPayslipsPage> {
                       Text(
                         '${_payslips.length} payslip${_payslips.length > 1 ? 's' : ''} for $_selectedYear',
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              fontWeight: FontWeight.w500,
-                              color: AppStitchTheme.lightOnSurfaceMuted,
-                            ),
+                          fontWeight: FontWeight.w500,
+                          color: AppStitchTheme.lightOnSurfaceMuted,
+                        ),
                       ),
                       const Spacer(),
                       TextButton(
@@ -346,9 +372,7 @@ class _MyPayslipsPageState extends State<MyPayslipsPage> {
                 ),
 
               // Content
-              Expanded(
-                child: _buildContent(),
-              ),
+              Expanded(child: _buildContent()),
             ],
           ),
         ),
@@ -381,9 +405,9 @@ class _MyPayslipsPageState extends State<MyPayslipsPage> {
               Text(
                 'No Payslips Yet',
                 style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.w800,
-                      color: AppStitchTheme.lightOnSurface,
-                    ),
+                  fontWeight: FontWeight.w800,
+                  color: AppStitchTheme.lightOnSurface,
+                ),
               ),
               const SizedBox(height: 8),
               Text(
@@ -392,8 +416,8 @@ class _MyPayslipsPageState extends State<MyPayslipsPage> {
                     : 'Your payslips will appear here once they are rolled out by HR.',
                 textAlign: TextAlign.center,
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: AppStitchTheme.lightOnSurfaceMuted,
-                    ),
+                  color: AppStitchTheme.lightOnSurfaceMuted,
+                ),
               ),
               if (_selectedYear != null) ...[
                 const SizedBox(height: 16),
@@ -420,7 +444,9 @@ class _MyPayslipsPageState extends State<MyPayslipsPage> {
           payslip: payslip,
           isDownloading: _isDownloading,
           isViewing: _isViewing,
-          onDownload: (_isDownloading || _isViewing) ? null : () => _downloadPayslip(payslip),
+          onDownload: (_isDownloading || _isViewing)
+              ? null
+              : () => _downloadPayslip(payslip),
           onView: (payslip.file != null && !_isDownloading && !_isViewing)
               ? () => _viewPayslip(payslip)
               : null,
@@ -454,10 +480,7 @@ class _PayslipCard extends StatelessWidget {
         child: Container(
           decoration: BoxDecoration(
             border: Border(
-              left: BorderSide(
-                color: AppStitchTheme.primary,
-                width: 4,
-              ),
+              left: BorderSide(color: AppStitchTheme.primary, width: 4),
             ),
           ),
           child: Column(
@@ -470,7 +493,10 @@ class _PayslipCard extends StatelessWidget {
                   children: [
                     // Month badge
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 6,
+                      ),
                       decoration: BoxDecoration(
                         color: AppStitchTheme.primary.withValues(alpha: 0.12),
                         borderRadius: BorderRadius.circular(6),
@@ -498,7 +524,10 @@ class _PayslipCard extends StatelessWidget {
                     const SizedBox(width: 8),
                     // Year badge
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 6,
+                      ),
                       decoration: BoxDecoration(
                         color: const Color(0xFF10B981).withValues(alpha: 0.12),
                         borderRadius: BorderRadius.circular(6),
@@ -524,7 +553,10 @@ class _PayslipCard extends StatelessWidget {
                   children: [
                     Container(
                       width: double.infinity,
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 12,
+                      ),
                       decoration: BoxDecoration(
                         color: AppStitchTheme.primary.withValues(alpha: 0.1),
                         border: Border.all(
@@ -570,14 +602,21 @@ class _PayslipCard extends StatelessWidget {
                                 ? const SizedBox(
                                     width: 16,
                                     height: 16,
-                                    child: CircularProgressIndicator(strokeWidth: 2),
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                    ),
                                   )
-                                : const Icon(Icons.visibility_rounded, size: 18),
+                                : const Icon(
+                                    Icons.visibility_rounded,
+                                    size: 18,
+                                  ),
                             label: Text(isViewing ? 'Loading...' : 'View'),
                             style: OutlinedButton.styleFrom(
                               foregroundColor: AppStitchTheme.primary,
                               side: BorderSide(
-                                color: AppStitchTheme.primary.withValues(alpha: 0.3),
+                                color: AppStitchTheme.primary.withValues(
+                                  alpha: 0.3,
+                                ),
                                 width: 1.5,
                               ),
                               padding: const EdgeInsets.symmetric(vertical: 12),
@@ -597,7 +636,9 @@ class _PayslipCard extends StatelessWidget {
                                     height: 16,
                                     child: CircularProgressIndicator(
                                       strokeWidth: 2,
-                                      valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                      valueColor: AlwaysStoppedAnimation<Color>(
+                                        Colors.white,
+                                      ),
                                     ),
                                   )
                                 : const Icon(Icons.download_rounded, size: 18),
@@ -608,7 +649,10 @@ class _PayslipCard extends StatelessWidget {
                             style: ElevatedButton.styleFrom(
                               backgroundColor: AppStitchTheme.primary,
                               foregroundColor: Colors.white,
-                              padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+                              padding: const EdgeInsets.symmetric(
+                                vertical: 12,
+                                horizontal: 8,
+                              ),
                               elevation: 2,
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(10),
@@ -634,11 +678,7 @@ class PdfViewerPage extends StatefulWidget {
   final String filePath;
   final String title;
 
-  const PdfViewerPage({
-    super.key,
-    required this.filePath,
-    required this.title,
-  });
+  const PdfViewerPage({super.key, required this.filePath, required this.title});
 
   @override
   State<PdfViewerPage> createState() => _PdfViewerPageState();
@@ -672,9 +712,9 @@ class _PdfViewerPageState extends State<PdfViewerPage> {
       );
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error sharing file: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error sharing file: $e')));
       }
     }
   }
@@ -690,7 +730,10 @@ class _PdfViewerPageState extends State<PdfViewerPage> {
               Padding(
                 padding: const EdgeInsets.fromLTRB(16, 8, 16, 10),
                 child: GlassCard(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 10,
+                  ),
                   child: Row(
                     children: [
                       IconButton(
@@ -704,16 +747,16 @@ class _PdfViewerPageState extends State<PdfViewerPage> {
                           children: [
                             Text(
                               widget.title,
-                              style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                                    fontWeight: FontWeight.w800,
-                                  ),
+                              style: Theme.of(context).textTheme.titleSmall
+                                  ?.copyWith(fontWeight: FontWeight.w800),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                             ),
                             if (_totalPages > 0)
                               Text(
                                 'Page $_currentPage of $_totalPages',
-                                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                style: Theme.of(context).textTheme.bodySmall
+                                    ?.copyWith(
                                       color: AppStitchTheme.lightOnSurfaceMuted,
                                     ),
                               ),
@@ -725,9 +768,9 @@ class _PdfViewerPageState extends State<PdfViewerPage> {
                           icon: const Icon(Icons.chevron_left_rounded),
                           onPressed: _currentPage > 1
                               ? () => _pdfController.previousPage(
-                                    duration: const Duration(milliseconds: 300),
-                                    curve: Curves.easeInOut,
-                                  )
+                                  duration: const Duration(milliseconds: 300),
+                                  curve: Curves.easeInOut,
+                                )
                               : null,
                           tooltip: 'Previous page',
                         ),
@@ -735,9 +778,9 @@ class _PdfViewerPageState extends State<PdfViewerPage> {
                           icon: const Icon(Icons.chevron_right_rounded),
                           onPressed: _currentPage < _totalPages
                               ? () => _pdfController.nextPage(
-                                    duration: const Duration(milliseconds: 300),
-                                    curve: Curves.easeInOut,
-                                  )
+                                  duration: const Duration(milliseconds: 300),
+                                  curve: Curves.easeInOut,
+                                )
                               : null,
                           tooltip: 'Next page',
                         ),
@@ -772,19 +815,21 @@ class _PdfViewerPageState extends State<PdfViewerPage> {
                       },
                       builders: PdfViewBuilders<DefaultBuilderOptions>(
                         options: const DefaultBuilderOptions(),
-                        documentLoaderBuilder: (_) => const Center(
-                          child: CircularProgressIndicator(),
-                        ),
-                        pageLoaderBuilder: (_) => const Center(
-                          child: CircularProgressIndicator(),
-                        ),
+                        documentLoaderBuilder: (_) =>
+                            const Center(child: CircularProgressIndicator()),
+                        pageLoaderBuilder: (_) =>
+                            const Center(child: CircularProgressIndicator()),
                         errorBuilder: (_, error) => Center(
                           child: Padding(
                             padding: const EdgeInsets.all(24),
                             child: Column(
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
-                                const Icon(Icons.error_outline, size: 48, color: Color(0xFFEF4444)),
+                                const Icon(
+                                  Icons.error_outline,
+                                  size: 48,
+                                  color: Color(0xFFEF4444),
+                                ),
                                 const SizedBox(height: 12),
                                 Text(
                                   'Error loading PDF: $error',

@@ -57,6 +57,14 @@
 	<string>Allow saving received images to your photo library.</string>
 	<key>NSFaceIDUsageDescription</key>
 	<string>Allow Face ID to unlock your HRMS account quickly.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>Allow location access to verify your check-in and check-out sites.</string>
+	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+	<string>Allow location access to verify your check-in and check-out sites even when the app is in the background.</string>
+	<key>NSLocationAlwaysUsageDescription</key>
+	<string>Allow location access to verify your check-in and check-out sites.</string>
+	<key>NSUserNotificationUsageDescription</key>
+	<string>Allow notifications to receive important updates, messages, and alerts from your team.</string>
 	<key>GIDClientID</key>
 	<string>482392351722-4t91e445h429erfeje0vgh8f396cmbfh.apps.googleusercontent.com</string>
 	<key>CFBundleURLTypes</key>

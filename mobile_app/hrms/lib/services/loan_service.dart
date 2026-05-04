@@ -129,13 +129,13 @@ class LoanService {
   }
 
   /// Get my loan applications
-  static Future<ApiResponse<List<LoanApplication>>> getMyLoanApplications() async {
+  static Future<ApiResponse<List<LoanApplication>>> getMyLoanApplications({String? status}) async {
     try {
+      final uri = Uri.parse(ApiConfig.loanApplicationsUrl).replace(
+        queryParameters: status != null ? {'status': status} : null,
+      );
       final response = await _makeAuthenticatedRequest(
-        () async => await http.get(
-          Uri.parse(ApiConfig.loanApplicationsUrl),
-          headers: await _getAuthHeaders(),
-        ),
+        () async => await http.get(uri, headers: await _getAuthHeaders()),
       );
 
       if (response.statusCode == 200) {

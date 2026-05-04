@@ -9,139 +9,163 @@ class BottomNavItems {
       icon: Icons.dashboard,
       path: '/employee/dashboard',
     ),
-    NavItem(
-      name: 'My Tasks',
-      icon: Icons.task,
-      path: '/employee/my-tasks',
-    ),
+    NavItem(name: 'My Tasks', icon: Icons.task, path: '/employee/my-tasks'),
     NavItem(
       name: 'Attendance',
       icon: Icons.calendar_today,
       path: '/employee/attendance',
     ),
     NavItem(
-      name: 'More',
-      icon: Icons.more_horiz,
-      path: null, // Opens drawer
+      name: 'Payslips',
+      icon: Icons.payments_rounded,
+      path: '/employee/my-payslips',
     ),
   ];
 }
 
 /// Drawer navigation items matching React sidebar
 class DrawerNavItems {
-  static List<NavItem> getItems({bool isReportingManager = false}) {
-    final baseItems = [
-      NavItem(
-        name: 'Dashboard',
-        icon: Icons.dashboard,
-        path: '/employee/dashboard',
+  static List<NavGroup> getItems({bool isReportingManager = false}) {
+    final groups = [
+      const NavGroup(
+        title: 'MAIN',
+        items: [
+          NavItem(
+            name: 'Dashboard',
+            icon: Icons.dashboard_rounded,
+            path: '/employee/dashboard',
+          ),
+          NavItem(
+            name: 'My Tasks',
+            icon: Icons.task_alt_rounded,
+            path: '/employee/my-tasks',
+          ),
+          NavItem(
+            name: 'Chat',
+            icon: Icons.chat_bubble_outline_rounded,
+            path: '/employee/chat',
+          ),
+          NavItem(
+            name: 'Notifications',
+            icon: Icons.notifications_none_rounded,
+            path: '/employee/notifications',
+          ),
+          NavItem(
+            name: 'Calendar',
+            icon: Icons.calendar_month_rounded,
+            path: '/employee/personal-calendar',
+          ),
+        ],
       ),
-      NavItem(
-        name: 'My Tasks',
-        icon: Icons.task,
-        path: '/employee/my-tasks',
+      const NavGroup(
+        title: 'TIME & ATTENDANCE',
+        items: [
+          NavItem(
+            name: 'Attendance History',
+            icon: Icons.history_rounded,
+            path: '/employee/attendance-history',
+          ),
+          NavItem(
+            name: 'Leave Application',
+            icon: Icons.event_note_rounded,
+            path: '/employee/leave-application',
+          ),
+          NavItem(
+            name: 'WFH Request',
+            icon: Icons.home_work_rounded,
+            path: '/employee/wfh-request',
+          ),
+        ],
       ),
-      NavItem(
-        name: 'Leave Application',
-        icon: Icons.event_note,
-        path: '/employee/leave-application',
+      const NavGroup(
+        title: 'PAYROLL & FINANCE',
+        items: [
+          NavItem(
+            name: 'My Payslips',
+            icon: Icons.receipt_long_rounded,
+            path: '/employee/my-payslips',
+          ),
+          NavItem(
+            name: 'Loan Application',
+            icon: Icons.account_balance_rounded,
+            path: '/employee/loan-application',
+          ),
+          NavItem(
+            name: 'Reimbursement',
+            icon: Icons.payments_rounded,
+            path: '/employee/reimbursement',
+          ),
+        ],
       ),
-      NavItem(
-        name: 'Attendance History',
-        icon: Icons.history,
-        path: '/employee/attendance-history',
+      const NavGroup(
+        title: 'WORKSPACE',
+        items: [
+          NavItem(
+            name: 'Seat Booking',
+            icon: Icons.event_seat_rounded,
+            path: '/employee/seat-booking',
+          ),
+          NavItem(
+            name: 'Room Booking',
+            icon: Icons.meeting_room_rounded,
+            path: '/employee/room-booking',
+          ),
+          NavItem(
+            name: 'Asset Requests',
+            icon: Icons.inventory_2_rounded,
+            path: '/employee/asset-requests',
+          ),
+        ],
       ),
-      NavItem(
-        name: 'Notifications',
-        icon: Icons.notifications,
-        path: '/employee/notifications',
-      ),
-      NavItem(
-        name: 'My Payslips',
-        icon: Icons.receipt_long,
-        path: '/employee/my-payslips',
-      ),
-      NavItem(
-        name: 'Chat',
-        icon: Icons.chat_bubble_outline_rounded,
-        path: '/employee/chat',
-      ),
-      NavItem(
-        name: 'Learning Corner',
-        icon: Icons.school,
-        path: '/employee/learning-corner',
-      ),
-      NavItem(
-        name: 'Calendar',
-        icon: Icons.calendar_today,
-        path: '/employee/personal-calendar',
-      ),
-      NavItem(
-        name: 'Seat Booking',
-        icon: Icons.event_seat_rounded,
-        path: '/employee/seat-booking',
-      ),
-      NavItem(
-        name: 'Room Booking',
-        icon: Icons.meeting_room_rounded,
-        path: '/employee/room-booking',
-      ),
-      NavItem(
-        name: 'Asset Requests',
-        icon: Icons.inventory_2_rounded,
-        path: '/employee/asset-requests',
-      ),
-      NavItem(
-        name: 'Loan Application',
-        icon: Icons.account_balance_rounded,
-        path: '/employee/loan-application',
-      ),
-      NavItem(
-        name: 'WFH Request',
-        icon: Icons.home_work_rounded,
-        path: '/employee/wfh-request',
-      ),
-      NavItem(
-        name: 'Reimbursement',
-        icon: Icons.receipt_long_rounded,
-        path: '/employee/reimbursement',
-      ),
-      NavItem(
-        name: 'Company policies',
-        icon: Icons.policy,
-        path: '/employee/company-policy',
-      ),
-      NavItem(
-        name: 'References',
-        icon: Icons.folder,
-        path: '/employee/references',
-      ),
-      NavItem(
-        name: 'Reportees',
-        icon: Icons.people,
-        path: '/employee/reportees',
+      const NavGroup(
+        title: 'RESOURCES',
+        items: [
+          NavItem(
+            name: 'Learning Corner',
+            icon: Icons.school_rounded,
+            path: '/employee/learning-corner',
+          ),
+          NavItem(
+            name: 'Company policies',
+            icon: Icons.policy_rounded,
+            path: '/employee/company-policy',
+          ),
+          NavItem(
+            name: 'References',
+            icon: Icons.folder_shared_rounded,
+            path: '/employee/references',
+          ),
+        ],
       ),
     ];
 
-    // Add conditional items for reporting managers
     if (isReportingManager) {
-      baseItems.addAll([
-        NavItem(
-          name: 'Assign Task',
-          icon: Icons.assignment,
-          path: '/employee/assign-task',
-          isConditional: true,
+      groups.add(
+        const NavGroup(
+          title: 'TEAM MANAGEMENT',
+          items: [
+            NavItem(
+              name: 'Reportees',
+              icon: Icons.people_alt_rounded,
+              path: '/employee/reportees',
+            ),
+            NavItem(
+              name: 'Assign Task',
+              icon: Icons.assignment_rounded,
+              path: '/employee/assign-task',
+              isConditional: true,
+            ),
+            NavItem(
+              name: 'Leave Request',
+              icon: Icons.send_rounded,
+              path: '/employee/leave-request',
+              isConditional: true,
+            ),
+          ],
         ),
-        NavItem(
-          name: 'Leave Request',
-          icon: Icons.send,
-          path: '/employee/leave-request',
-          isConditional: true,
-        ),
-      ]);
+      );
     }
 
-    return baseItems;
+    return groups;
   }
 }
-

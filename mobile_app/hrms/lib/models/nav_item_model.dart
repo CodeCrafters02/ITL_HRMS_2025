@@ -19,3 +19,14 @@ class NavItem {
   });
 }
 
+/// Model representing a group of navigation items
+class NavGroup {
+  final String title;
+  final List<NavItem> items;
+
+  const NavGroup({
+    required this.title,
+    required this.items,
+  });
+}
+

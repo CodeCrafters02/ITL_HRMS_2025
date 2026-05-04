@@ -37,10 +37,13 @@ class WFHService {
   }
 
   /// Get my WFH requests
-  static Future<ApiResponse<List<WFHRequest>>> getMyWFHRequests() async {
+  static Future<ApiResponse<List<WFHRequest>>> getMyWFHRequests({String? status}) async {
     try {
+      final queryParams = {'mine': 'true'};
+      if (status != null) queryParams['status'] = status;
+
       final uri = Uri.parse(ApiConfig.wfhRequestsUrl).replace(
-        queryParameters: {'mine': 'true'},
+        queryParameters: queryParams,
       );
       final response = await _makeAuthenticatedRequest(
         () async => await http.get(uri, headers: await _getAuthHeaders()),

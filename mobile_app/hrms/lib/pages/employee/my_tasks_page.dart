@@ -6,6 +6,7 @@ import '../../services/notification_service.dart';
 import '../../theme/app_stitch_theme.dart';
 import '../../widgets/glass_card.dart';
 import '../../widgets/stitch_background.dart';
+import '../../widgets/app_header.dart';
 
 class MyTasksPage extends StatefulWidget {
   const MyTasksPage({super.key});
@@ -325,6 +326,8 @@ class _MyTasksPageState extends State<MyTasksPage>
 
   @override
   Widget build(BuildContext context) {
+    final canPop = ModalRoute.of(context)?.canPop ?? false;
+
     return Scaffold(
       backgroundColor: Colors.transparent,
       body: StitchBackground(
@@ -333,12 +336,34 @@ class _MyTasksPageState extends State<MyTasksPage>
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
             child: Column(
               children: [
-                _FrostHeader(
-                  title: 'My tasks',
-                  subtitle: 'Assignments & subtasks',
-                  trailing: _CountPill(count: _tasks.length),
-                ),
-                const SizedBox(height: 12),
+                if (canPop)
+                  AppHeader(
+                    title: 'My Tasks',
+                    subtitle: 'Assignments & subtasks',
+                    showBackButton: true,
+                    actions: [_CountPill(count: _tasks.length)],
+                  )
+                else
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 10),
+                    child: GlassCard(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              'Assignments & subtasks',
+                              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                    color: AppStitchTheme.lightOnSurfaceMuted,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                            ),
+                          ),
+                          _CountPill(count: _tasks.length),
+                        ],
+                      ),
+                    ),
+                  ),
                 Expanded(
                   child: _isLoading
                       ? const Center(
@@ -1099,6 +1124,11 @@ class _FrostHeader extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
       child: Row(
         children: [
+          IconButton(
+            onPressed: () => Navigator.pop(context),
+            icon: const Icon(Icons.arrow_back_rounded),
+          ),
+          const SizedBox(width: 4),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,

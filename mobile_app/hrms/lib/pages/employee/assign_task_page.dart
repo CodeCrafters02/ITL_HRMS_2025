@@ -7,6 +7,7 @@ import '../../services/employee_service.dart';
 import '../../theme/app_stitch_theme.dart';
 import '../../widgets/glass_card.dart';
 import '../../widgets/stitch_background.dart';
+import '../../widgets/app_header.dart';
 
 class AssignTaskPage extends StatefulWidget {
   const AssignTaskPage({super.key});
@@ -227,19 +228,23 @@ class _AssignTaskPageState extends State<AssignTaskPage> with SingleTickerProvid
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
             child: Column(
               children: [
-                _FrostHeader(
+                AppHeader(
                   title: 'Assign Task',
                   subtitle: _showCreateForm ? 'New team assignment' : 'Manage your team',
-                  trailing: _showCreateForm
-                      ? IconButton(
-                          onPressed: _toggleCreateForm,
-                          icon: const Icon(Icons.close_rounded, color: AppStitchTheme.lightOnSurface),
-                          style: IconButton.styleFrom(
-                            backgroundColor: AppStitchTheme.lightOutline.withValues(alpha: 0.1),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                          ),
-                        )
-                      : _CountPill(count: _tasks.length),
+                  showBackButton: true,
+                  actions: [
+                    if (_showCreateForm)
+                      IconButton(
+                        onPressed: _toggleCreateForm,
+                        icon: const Icon(Icons.close_rounded),
+                        style: IconButton.styleFrom(
+                          backgroundColor: AppStitchTheme.lightOutline.withValues(alpha: 0.1),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        ),
+                      )
+                    else
+                      _CountPill(count: _tasks.length),
+                  ],
                 ),
                 if (!_showCreateForm) ...[
                   const SizedBox(height: 12),
@@ -1046,6 +1051,11 @@ class _FrostHeader extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(20, 16, 12, 16),
       child: Row(
         children: [
+          IconButton(
+            onPressed: () => Navigator.pop(context),
+            icon: const Icon(Icons.arrow_back_rounded),
+          ),
+          const SizedBox(width: 4),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,

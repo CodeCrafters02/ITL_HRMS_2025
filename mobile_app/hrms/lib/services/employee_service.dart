@@ -895,15 +895,20 @@ class EmployeeService {
   }
 
   // Get applied leaves
-  static Future<ApiResponse<List<AppliedLeave>>> getAppliedLeaves() async {
+  static Future<ApiResponse<List<AppliedLeave>>> getAppliedLeaves({String? status}) async {
     try {
       final token = await StorageService.getAccessToken();
       if (token == null) {
         return ApiResponse(success: false, message: 'No access token found');
       }
 
+      final uri = Uri.parse(ApiConfig.employeeLeaveCreateUrl);
+      final finalUri = status != null
+          ? uri.replace(queryParameters: {'status': status})
+          : uri;
+
       final response = await http.get(
-        Uri.parse(ApiConfig.employeeLeaveCreateUrl),
+        finalUri,
         headers: ApiConfig.getAuthHeaders(token),
       );
 
@@ -2276,6 +2281,108 @@ class EmployeeService {
         return ApiResponse(
           success: false,
           message: error['detail'] ?? 'Failed to load hierarchy',
+        );
+      }
+    } catch (e) {
+      String errorMsg = 'Network error occurred';
+      if (e.toString().contains('FormatException')) {
+        errorMsg = 'Invalid response from server. Please try again.';
+      } else if (e.toString().contains('SocketException') ||
+          e.toString().contains('TimeoutException')) {
+        errorMsg = 'Connection error. Please check your internet connection.';
+      } else {
+        errorMsg = 'Error: ${e.toString()}';
+      }
+
+      return ApiResponse(success: false, message: errorMsg);
+    }
+  }
+
+  // Get organization hierarchy (full company tree)
+  static Future<ApiResponse<OrganizationHierarchy>> getOrganizationHierarchy() async {
+    try {
+      final token = await StorageService.getAccessToken();
+      if (token == null) {
+        return ApiResponse(success: false, message: 'No access token found');
+      }
+
+      final response = await _makeAuthenticatedRequest(
+        () async => await http.get(
+          Uri.parse(ApiConfig.organizationHierarchyUrl),
+          headers: await _getAuthHeaders(),
+        ),
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        final hierarchy = OrganizationHierarchy.fromJson(data);
+        return ApiResponse(
+          success: true,
+          message: 'Organization hierarchy loaded successfully',
+          data: hierarchy,
+        );
+      } else if (response.statusCode == 401) {
+        await AuthService.logout();
+        return ApiResponse(
+          success: false,
+          message: 'Session expired. Please login again.',
+        );
+      } else {
+        final error = jsonDecode(response.body);
+        return ApiResponse(
+          success: false,
+          message: error['detail'] ?? 'Failed to load organization hierarchy',
+        );
+      }
+    } catch (e) {
+      String errorMsg = 'Network error occurred';
+      if (e.toString().contains('FormatException')) {
+        errorMsg = 'Invalid response from server. Please try again.';
+      } else if (e.toString().contains('SocketException') ||
+          e.toString().contains('TimeoutException')) {
+        errorMsg = 'Connection error. Please check your internet connection.';
+      } else {
+        errorMsg = 'Error: ${e.toString()}';
+      }
+
+      return ApiResponse(success: false, message: errorMsg);
+    }
+  }
+
+  // Get personal reporting line
+  static Future<ApiResponse<PersonalReportingLine>> getPersonalReportingLine() async {
+    try {
+      final token = await StorageService.getAccessToken();
+      if (token == null) {
+        return ApiResponse(success: false, message: 'No access token found');
+      }
+
+      final response = await _makeAuthenticatedRequest(
+        () async => await http.get(
+          Uri.parse(ApiConfig.personalReportingLineUrl),
+          headers: await _getAuthHeaders(),
+        ),
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        final reportingLine = PersonalReportingLine.fromJson(data);
+        return ApiResponse(
+          success: true,
+          message: 'Reporting line loaded successfully',
+          data: reportingLine,
+        );
+      } else if (response.statusCode == 401) {
+        await AuthService.logout();
+        return ApiResponse(
+          success: false,
+          message: 'Session expired. Please login again.',
+        );
+      } else {
+        final error = jsonDecode(response.body);
+        return ApiResponse(
+          success: false,
+          message: error['detail'] ?? 'Failed to load reporting line',
         );
       }
     } catch (e) {
