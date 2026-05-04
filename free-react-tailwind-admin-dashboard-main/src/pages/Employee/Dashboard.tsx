@@ -744,7 +744,9 @@ const EmployeeDashboard = () => {
                             {!checkin_time && (
                                 <button 
                                     type="button" 
-                                    className="btn btn-primary shadow-md rounded-xl disabled:opacity-50 disabled:cursor-not-allowed"
+                                    className={`btn btn-primary shadow-md rounded-xl disabled:opacity-50 disabled:cursor-not-allowed disabled:animate-none ${
+                                        canPerformAction ? 'animate-checkin-pulse motion-reduce:animate-none' : ''
+                                    }`}
                                     onClick={handleCheckIn}
                                     disabled={!canPerformAction}
                                     title={!canPerformAction ? 'You must be at the office to check in' : ''}
