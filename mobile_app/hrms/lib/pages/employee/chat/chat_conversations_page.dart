@@ -335,8 +335,8 @@ class _ChatConversationsPageState extends State<ChatConversationsPage>
                               ),
                             );
                           },
-                          );
-                        },
+                        );
+                      },
                       ),
                     ),
                   ),

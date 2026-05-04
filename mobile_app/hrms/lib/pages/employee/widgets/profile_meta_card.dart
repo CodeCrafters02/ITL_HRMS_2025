@@ -5,6 +5,7 @@ import '../../../models/profile_model.dart';
 import '../../../services/employee_service.dart';
 import '../../../theme/app_stitch_theme.dart';
 import '../../../widgets/glass_card.dart';
+import '../../../widgets/optimized_image.dart';
 
 class ProfileMetaCard extends StatefulWidget {
   final EmployeeProfile profile;
@@ -110,13 +111,15 @@ class _ProfileMetaCardState extends State<ProfileMetaCard> {
                   ),
                   child: widget.profile.photo != null &&
                           widget.profile.photo!.isNotEmpty
-                      ? ClipOval(
-                          child: Image.network(
-                            widget.profile.photo!,
-                            fit: BoxFit.cover,
-                            errorBuilder: (context, error, stackTrace) =>
-                                _buildInitials(),
-                          ),
+                      ? OptimizedImage(
+                          imageUrl: widget.profile.photo!,
+                          width: 80,
+                          height: 80,
+                          fit: BoxFit.cover,
+                          shape: BoxShape.circle,
+                          memCacheWidth: 160,
+                          memCacheHeight: 160,
+                          errorWidget: _buildInitials(),
                         )
                       : _buildInitials(),
                 ),

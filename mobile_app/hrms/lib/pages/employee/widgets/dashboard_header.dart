@@ -3,6 +3,7 @@ import 'package:intl/intl.dart';
 import '../../../models/dashboard_model.dart';
 import '../../../theme/app_stitch_theme.dart';
 import '../../../widgets/glass_card.dart';
+import '../../../widgets/optimized_image.dart';
 import 'timer_widget.dart';
 
 class DashboardHeader extends StatelessWidget {
@@ -70,30 +71,28 @@ class DashboardHeader extends StatelessWidget {
                                       ),
                                     ),
                               child: dashboardData.employeePhoto != null
-                                  ? ClipOval(
-                                      child: Image.network(
-                                        dashboardData.employeePhoto!,
-                                        fit: BoxFit.cover,
-                                        errorBuilder:
-                                            (context, error, stackTrace) {
-                                              return Container(
-                                                color: AppStitchTheme.primary,
-                                                child: Center(
-                                                  child: Text(
-                                                    _getInitials(
-                                                      dashboardData
-                                                          .employeeName,
-                                                    ),
-                                                    style: const TextStyle(
-                                                      color: Colors.white,
-                                                      fontSize: 24,
-                                                      fontWeight:
-                                                          FontWeight.bold,
-                                                    ),
-                                                  ),
-                                                ),
-                                              );
-                                            },
+                                  ? OptimizedImage(
+                                      imageUrl: dashboardData.employeePhoto!,
+                                      width: 80,
+                                      height: 80,
+                                      fit: BoxFit.cover,
+                                      shape: BoxShape.circle,
+                                      memCacheWidth: 160,
+                                      memCacheHeight: 160,
+                                      errorWidget: Container(
+                                        color: AppStitchTheme.primary,
+                                        child: Center(
+                                          child: Text(
+                                            _getInitials(
+                                              dashboardData.employeeName,
+                                            ),
+                                            style: const TextStyle(
+                                              color: Colors.white,
+                                              fontSize: 24,
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                          ),
+                                        ),
                                       ),
                                     )
                                   : Container(
@@ -312,30 +311,29 @@ class DashboardHeader extends StatelessWidget {
                               ),
                             ),
                             child: dashboardData.employeePhoto != null
-                                ? ClipOval(
-                                    child: Image.network(
-                                      dashboardData.employeePhoto!,
-                                      fit: BoxFit.cover,
-                                      errorBuilder:
-                                          (context, error, stackTrace) {
-                                            return Container(
-                                              color: AppStitchTheme.primary,
-                                              child: Center(
-                                                child: Text(
-                                                  _getInitials(
-                                                    dashboardData.employeeName,
-                                                  ),
-                                                  style: const TextStyle(
-                                                    color: Colors.white,
-                                                    fontSize: 24,
-                                                    fontWeight: FontWeight.bold,
-                                                  ),
-                                                ),
-                                              ),
-                                            );
-                                          },
-                                    ),
-                                  )
+                                ? OptimizedImage(
+                                    imageUrl: dashboardData.employeePhoto!,
+                                    width: 80,
+                                    height: 80,
+                                    fit: BoxFit.cover,
+                                    shape: BoxShape.circle,
+                                    memCacheWidth: 160,
+                                    memCacheHeight: 160,
+                                    errorWidget: Container(
+                                      color: AppStitchTheme.primary,
+                                      child: Center(
+                                        child: Text(
+                                          _getInitials(
+                                            dashboardData.employeeName,
+                                          ),
+                                          style: const TextStyle(
+                                            color: Colors.white,
+                                            fontSize: 24,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                      ),
+                                    )
                                 : Container(
                                     color: AppStitchTheme.primary,
                                     child: Center(
