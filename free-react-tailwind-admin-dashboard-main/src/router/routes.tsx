@@ -167,8 +167,8 @@ const EmployeeCompanyPolicy = lazy(() => import('../pages/Employee/CompanyPolicy
 const EmployeeAssetRequests = lazy(() => import('../pages/Employee/AssetRequests'));
 const EmployeeSeatBooking = lazy(() => import('../pages/Employee/SeatBooking'));
 const EmployeeConfRoomBooking = lazy(() => import('../pages/Employee/ConfRoomBooking'));
-const EmployeeReferences = lazy(() => import('../pages/Employee/References/References'));
-const EmployeeReportees = lazy(() => import('../pages/Employee/Reportees/Reportees'));
+const EmployeeReferences = lazy(() => import('../pages/Employee/references/References'));
+const EmployeeReportees = lazy(() => import('../pages/Employee/reportees/Reportees'));
 const EmployeeAssignTask = lazy(() => import('../pages/Employee/AssignTask/AssignTask'));
 const EmployeeLeaveApprovals = lazy(() => import('../pages/Employee/LeaveApprovals/LeaveApprovals'));
 const EmployeeMyPayslips = lazy(() => import('../pages/Employee/MyPayslips'));

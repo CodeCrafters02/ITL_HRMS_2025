@@ -1,6 +1,20 @@
 from rest_framework import serializers
 from django.utils import timezone
-from app.models import Notification,LearningCorner,BreakConfig, BreakLog,Attendance, ShiftPolicy, Employee,EmpLeave,Leave,CompanyPolicies
+import os
+
+from app.models import (
+    Notification,
+    LearningCorner,
+    LearningCornerMedia,
+    BreakConfig,
+    BreakLog,
+    Attendance,
+    ShiftPolicy,
+    Employee,
+    EmpLeave,
+    Leave,
+    CompanyPolicies,
+)
 from .models import *
 
 class ReportingManagerSerializer(serializers.ModelSerializer):
@@ -336,6 +350,13 @@ class EmpLeaveSerializer(serializers.ModelSerializer):
                 raise serializers.ValidationError(
                     {'leave_duration': 'Half day leave requires the same from and to date.'}
                 )
+
+        today = timezone.localdate()
+        if from_date is not None and from_date < today:
+            raise serializers.ValidationError({'from_date': 'Leave cannot start on a past date.'})
+        if to_date is not None and to_date < today:
+            raise serializers.ValidationError({'to_date': 'Leave cannot end on a past date.'})
+
         return attrs
 
     def get_employee_name(self, obj):
@@ -395,22 +416,80 @@ class EmpLearningCornerSerializer(serializers.ModelSerializer):
     image = serializers.SerializerMethodField()
     video = serializers.SerializerMethodField()
     document = serializers.SerializerMethodField()
+    media = serializers.SerializerMethodField()
 
     class Meta:
         model = LearningCorner
-        fields = ['id', 'title', 'description', 'image', 'video', 'document', 'links']
+        fields = ['id', 'title', 'description', 'image', 'video', 'document', 'links', 'media']
+
+    def _media_payload(self, obj):
+        cached = getattr(self, '_lc_media_cache', None)
+        if cached and cached[0] == obj.pk:
+            return cached[1]
+        request = self.context.get('request')
+        if not request:
+            self._lc_media_cache = (obj.pk, [])
+            return []
+        out = []
+        seen_urls = set()
+        for m in obj.media_items.all().order_by('sort_order', 'id'):
+            if not m.file:
+                continue
+            try:
+                url = request.build_absolute_uri(m.file.url)
+            except ValueError:
+                continue
+            seen_urls.add(url)
+            out.append({
+                'id': m.id,
+                'url': url,
+                'media_type': m.media_type,
+                'filename': os.path.basename(m.file.name) if m.file.name else '',
+            })
+        for field_name, mtype in (
+            ('image', LearningCornerMedia.MEDIA_IMAGE),
+            ('video', LearningCornerMedia.MEDIA_VIDEO),
+            ('document', LearningCornerMedia.MEDIA_DOCUMENT),
+        ):
+            f = getattr(obj, field_name, None)
+            if not f:
+                continue
+            try:
+                url = request.build_absolute_uri(f.url)
+            except ValueError:
+                continue
+            if url in seen_urls:
+                continue
+            seen_urls.add(url)
+            out.append({
+                'id': None,
+                'url': url,
+                'media_type': mtype,
+                'filename': os.path.basename(f.name) if getattr(f, 'name', None) else '',
+            })
+        self._lc_media_cache = (obj.pk, out)
+        return out
+
+    def get_media(self, obj):
+        return self._media_payload(obj)
 
     def get_image(self, obj):
-        request = self.context.get('request')
-        return request.build_absolute_uri(obj.image.url) if obj.image else None
+        for item in self._media_payload(obj):
+            if item['media_type'] == LearningCornerMedia.MEDIA_IMAGE:
+                return item['url']
+        return None
 
     def get_video(self, obj):
-        request = self.context.get('request')
-        return request.build_absolute_uri(obj.video.url) if obj.video else None
+        for item in self._media_payload(obj):
+            if item['media_type'] == LearningCornerMedia.MEDIA_VIDEO:
+                return item['url']
+        return None
 
     def get_document(self, obj):
-        request = self.context.get('request')
-        return request.build_absolute_uri(obj.document.url) if obj.document else None
+        for item in self._media_payload(obj):
+            if item['media_type'] == LearningCornerMedia.MEDIA_DOCUMENT:
+                return item['url']
+        return None
 
 
 

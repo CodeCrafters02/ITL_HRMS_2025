@@ -359,3 +359,97 @@ body.swal2-toast-shown .swal2-container.toast {
 .swal2-popup.swal2-toast .swal2-success [class^='swal2-success-circular-line'][class$='right'] {
     border-radius: 0 2em 2em 0 !important;
 }
+
+/* HRMS — foreground FCM toast: green rectangle, white text, title + description */
+.swal2-popup.swal2-toast.hrms-fcm-toast-popup {
+    background: #15803d !important;
+    color: #ffffff !important;
+    border-radius: 8px !important;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2) !important;
+    border: 1px solid rgba(255, 255, 255, 0.15) !important;
+    flex-direction: column !important;
+    align-items: stretch !important;
+    justify-content: flex-start !important;
+}
+
+.swal2-popup.swal2-toast.hrms-fcm-toast-popup .swal2-html-container.hrms-fcm-toast-html,
+.swal2-popup.swal2-toast.hrms-fcm-toast-popup .swal2-html-container {
+    color: #ffffff !important;
+    font-weight: 400 !important;
+    text-align: left !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+}
+
+.swal2-popup.swal2-toast.hrms-fcm-toast-popup .hrms-fcm-toast-inner {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    text-align: left;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.swal2-popup.swal2-toast.hrms-fcm-toast-popup .hrms-fcm-toast-title {
+    font-weight: 700;
+    font-size: 1rem;
+    line-height: 1.35;
+    margin: 0 0 8px 0;
+    padding-right: 28px;
+    color: #ffffff;
+}
+
+.swal2-popup.swal2-toast.hrms-fcm-toast-popup .hrms-fcm-toast-description-wrap {
+    width: 100%;
+}
+
+.swal2-popup.swal2-toast.hrms-fcm-toast-popup .hrms-fcm-toast-desc {
+    margin: 0;
+    font-size: 0.875rem;
+    line-height: 1.45;
+    color: rgba(255, 255, 255, 0.96);
+    word-break: break-word;
+    white-space: pre-wrap;
+}
+
+.swal2-popup.swal2-toast.hrms-fcm-toast-popup .hrms-fcm-toast-toggle {
+    margin-top: 8px;
+    padding: 0;
+    align-self: flex-start;
+    background: none;
+    border: none;
+    color: #ffffff;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    text-decoration: underline;
+    cursor: pointer;
+    text-align: left;
+}
+
+.swal2-popup.swal2-toast.hrms-fcm-toast-popup .hrms-fcm-toast-toggle:hover {
+    color: rgba(255, 255, 255, 0.88);
+}
+
+.swal2-popup.swal2-toast.hrms-fcm-toast-popup .swal2-close {
+    color: rgba(255, 255, 255, 0.92) !important;
+    box-shadow: none !important;
+}
+
+.swal2-popup.swal2-toast.hrms-fcm-toast-popup .swal2-close:hover {
+    color: #ffffff !important;
+}
+
+.swal2-popup.swal2-toast.hrms-fcm-toast-popup .swal2-timer-progress-bar {
+    background: rgba(255, 255, 255, 0.4) !important;
+}
+
+.swal2-popup.swal2-toast.hrms-fcm-toast-popup .swal2-timer-progress-bar-container {
+    background: rgba(0, 0, 0, 0.12) !important;
+}
+
+.swal2-popup.swal2-toast.hrms-fcm-toast-popup .swal2-icon {
+    display: none !important;
+    margin: 0 !important;
+}
