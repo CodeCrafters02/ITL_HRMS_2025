@@ -6,7 +6,7 @@ import { setPageTitle } from '../../store/themeConfigSlice';
 import IconListCheck from '../../components/Icon/IconListCheck';
 import IconSearch from '../../components/Icon/IconSearch';
 import IconTrashLines from '../../components/Icon/IconTrashLines';
-import { fetchMyReportees, Reportee } from '../Employee/reportees/api';
+import { fetchMyReportees, Reportee } from '../Employee/Reportees/api';
 import {
     createManagerSubtask,
     createManagerTask,
@@ -510,13 +510,13 @@ const AdminAssignTask = () => {
             <div className="panel bg-gradient-to-r from-[#220fb6] via-[#4f6be5] to-[#0f52af] text-white border-0">
                 <div className="flex items-start justify-between gap-4">
                     <div className="flex items-start gap-4">
-                    <div className="w-10 h-10 rounded-lg bg-white/15 flex items-center justify-center shrink-0">
-                        <IconListCheck className="w-5 h-5" />
-                    </div>
-                    <div>
-                        <h1 className="text-2xl md:text-3xl font-bold">Assign Task</h1>
-                        <p className="mt-1 text-white/75 text-sm md:text-base">Create tasks for your reportees and track team execution in one place.</p>
-                    </div>
+                        <div className="w-10 h-10 rounded-lg bg-white/15 flex items-center justify-center shrink-0">
+                            <IconListCheck className="w-5 h-5" />
+                        </div>
+                        <div>
+                            <h1 className="text-2xl md:text-3xl font-bold">Assign Task</h1>
+                            <p className="mt-1 text-white/75 text-sm md:text-base">Create tasks for your reportees and track team execution in one place.</p>
+                        </div>
                     </div>
                     <button
                         type="button"
@@ -542,276 +542,276 @@ const AdminAssignTask = () => {
             </div>
 
             {showCreateForm && (
-            <div className="panel">
-                <form className="space-y-4" onSubmit={handleCreateTask}>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <input className="form-input" placeholder="Task title" value={title} onChange={(e) => setTitle(e.target.value)} />
-                        <div className="grid grid-cols-2 gap-3">
-                            <div>
-                                <label className="mb-1 block text-xs font-semibold text-white-dark">Deadline</label>
-                                <input type="date" className="form-input" value={deadline} onChange={(e) => setDeadline(e.target.value)} />
+                <div className="panel">
+                    <form className="space-y-4" onSubmit={handleCreateTask}>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <input className="form-input" placeholder="Task title" value={title} onChange={(e) => setTitle(e.target.value)} />
+                            <div className="grid grid-cols-2 gap-3">
+                                <div>
+                                    <label className="mb-1 block text-xs font-semibold text-white-dark">Deadline</label>
+                                    <input type="date" className="form-input" value={deadline} onChange={(e) => setDeadline(e.target.value)} />
+                                </div>
+                                <select className="form-select" value={priority} onChange={(e) => setPriority(e.target.value as TaskPriority)}>
+                                    <option value="high">High</option>
+                                    <option value="medium">Medium</option>
+                                    <option value="low">Low</option>
+                                </select>
                             </div>
-                            <select className="form-select" value={priority} onChange={(e) => setPriority(e.target.value as TaskPriority)}>
-                                <option value="high">High</option>
-                                <option value="medium">Medium</option>
-                                <option value="low">Low</option>
+                        </div>
+                        <textarea className="form-textarea min-h-[100px]" placeholder="Task description" value={description} onChange={(e) => setDescription(e.target.value)} />
+
+                        <div>
+                            <p className="text-sm font-semibold mb-2">Assign Reportees</p>
+                            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-2 max-h-52 overflow-auto border border-white-light dark:border-[#1b2e4b] rounded-lg p-3">
+                                {reportees.length === 0 ? (
+                                    <p className="text-sm text-white-dark">No reportees found.</p>
+                                ) : (
+                                    reportees.map((emp) => (
+                                        <label key={emp.id} className="inline-flex items-center gap-2 text-sm">
+                                            <input type="checkbox" checked={selectedEmployees.includes(emp.id)} onChange={() => toggleEmployee(emp.id)} />
+                                            <span>{emp.full_name}</span>
+                                        </label>
+                                    ))
+                                )}
+                            </div>
+                        </div>
+
+                        <div>
+                            <p className="text-sm font-semibold mb-2">Task Owner</p>
+                            <select
+                                className="form-select"
+                                value={ownerId ?? ''}
+                                onChange={(e) => setOwnerId(e.target.value ? Number(e.target.value) : null)}
+                                disabled={selectedEmployees.length === 0}
+                            >
+                                <option value="">Select owner</option>
+                                {reportees
+                                    .filter((emp) => selectedEmployees.includes(emp.id))
+                                    .map((emp) => (
+                                        <option key={emp.id} value={emp.id}>
+                                            {emp.full_name}
+                                        </option>
+                                    ))}
                             </select>
                         </div>
-                    </div>
-                    <textarea className="form-textarea min-h-[100px]" placeholder="Task description" value={description} onChange={(e) => setDescription(e.target.value)} />
 
-                    <div>
-                        <p className="text-sm font-semibold mb-2">Assign Reportees</p>
-                        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-2 max-h-52 overflow-auto border border-white-light dark:border-[#1b2e4b] rounded-lg p-3">
-                            {reportees.length === 0 ? (
-                                <p className="text-sm text-white-dark">No reportees found.</p>
-                            ) : (
-                                reportees.map((emp) => (
-                                    <label key={emp.id} className="inline-flex items-center gap-2 text-sm">
-                                        <input type="checkbox" checked={selectedEmployees.includes(emp.id)} onChange={() => toggleEmployee(emp.id)} />
-                                        <span>{emp.full_name}</span>
-                                    </label>
-                                ))
+                    </form>
+                    {showCreateForm && (
+                        <div className="mt-5 border-t border-white-light dark:border-[#1b2e4b] pt-5 space-y-4">
+                            <div className="flex items-center gap-2">
+                                <input
+                                    id="has-subtasks"
+                                    type="checkbox"
+                                    checked={hasSubtasks}
+                                    onChange={(e) => setHasSubtasks(e.target.checked)}
+                                />
+                                <label htmlFor="has-subtasks" className="text-sm font-semibold">
+                                    Is there any subtask?
+                                </label>
+                            </div>
+                            {hasSubtasks && (
+                                <>
+                                    <div className="flex items-center justify-between gap-3">
+                                        <h4 className="font-semibold">{editingTaskId ? 'Manage Subtasks' : 'Subtasks for Parent Task'}</h4>
+                                        <button type="button" className="btn btn-outline-primary btn-sm" onClick={addSubtask}>
+                                            Add Subtask
+                                        </button>
+                                    </div>
+                                    <div className="space-y-3">
+                                        {subtasks.length === 0 ? (
+                                            <p className="text-xs text-white-dark">{editingTaskId ? 'No subtasks found for this task.' : 'No subtasks added yet.'}</p>
+                                        ) : (
+                                            subtasks.map((sub, idx) => (
+                                                <div key={`${sub.id || 'new'}-${idx}`} className="rounded-md border border-white-light dark:border-[#1b2e4b] p-3 space-y-3">
+                                                    <div className="flex items-center justify-between gap-3">
+                                                        <p className="font-semibold text-sm">Subtask {idx + 1}</p>
+                                                        <button
+                                                            type="button"
+                                                            className="btn btn-sm btn-outline-danger p-2"
+                                                            onClick={() => (sub.id ? deleteSubtask(idx) : removeSubtask(idx))}
+                                                            title="Delete subtask"
+                                                            aria-label="Delete subtask"
+                                                            disabled={submitting}
+                                                        >
+                                                            <IconTrashLines className="h-4 w-4" />
+                                                        </button>
+                                                    </div>
+                                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                                        <input
+                                                            className="form-input"
+                                                            placeholder="Subtask title"
+                                                            value={sub.title}
+                                                            onChange={(e) => updateSubtaskField(idx, 'title', e.target.value)}
+                                                        />
+                                                        <div className="grid grid-cols-2 gap-3">
+                                                            <input
+                                                                type="date"
+                                                                className="form-input"
+                                                                value={sub.deadline}
+                                                                onChange={(e) => updateSubtaskField(idx, 'deadline', e.target.value)}
+                                                            />
+                                                            <select
+                                                                className="form-select"
+                                                                value={sub.priority}
+                                                                onChange={(e) => updateSubtaskField(idx, 'priority', e.target.value as TaskPriority)}
+                                                            >
+                                                                <option value="high">High</option>
+                                                                <option value="medium">Medium</option>
+                                                                <option value="low">Low</option>
+                                                            </select>
+                                                        </div>
+                                                    </div>
+                                                    <textarea
+                                                        className="form-textarea min-h-[72px]"
+                                                        placeholder="Subtask description"
+                                                        value={sub.description}
+                                                        onChange={(e) => updateSubtaskField(idx, 'description', e.target.value)}
+                                                    />
+                                                    <div>
+                                                        <p className="text-sm font-semibold mb-2">Subtask Assignees</p>
+                                                        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-2 max-h-36 overflow-auto border border-white-light dark:border-[#1b2e4b] rounded-lg p-3">
+                                                            {reportees.map((emp) => (
+                                                                <label key={`sub-existing-${sub.id || idx}-${emp.id}`} className="inline-flex items-center gap-2 text-sm">
+                                                                    <input
+                                                                        type="checkbox"
+                                                                        checked={sub.assignedEmployees.includes(emp.id)}
+                                                                        onChange={() => toggleExistingSubtaskEmployee(idx, emp.id)}
+                                                                    />
+                                                                    <span>{emp.full_name}</span>
+                                                                </label>
+                                                            ))}
+                                                        </div>
+                                                    </div>
+                                                    <div>
+                                                        <p className="text-sm font-semibold mb-2">Subtask Owner</p>
+                                                        <select
+                                                            className="form-select"
+                                                            value={sub.taskOwner ?? ''}
+                                                            onChange={(e) => updateSubtaskField(idx, 'taskOwner', e.target.value ? Number(e.target.value) : null)}
+                                                            disabled={sub.assignedEmployees.length === 0}
+                                                        >
+                                                            <option value="">Select owner</option>
+                                                            {reportees
+                                                                .filter((emp) => sub.assignedEmployees.includes(emp.id))
+                                                                .map((emp) => (
+                                                                    <option key={`sub-existing-owner-${sub.id || idx}-${emp.id}`} value={emp.id}>
+                                                                        {emp.full_name}
+                                                                    </option>
+                                                                ))}
+                                                        </select>
+                                                    </div>
+                                                </div>
+                                            ))
+                                        )}
+                                    </div>
+                                </>
                             )}
                         </div>
-                    </div>
-
-                    <div>
-                        <p className="text-sm font-semibold mb-2">Task Owner</p>
-                        <select
-                            className="form-select"
-                            value={ownerId ?? ''}
-                            onChange={(e) => setOwnerId(e.target.value ? Number(e.target.value) : null)}
-                            disabled={selectedEmployees.length === 0}
-                        >
-                            <option value="">Select owner</option>
-                            {reportees
-                                .filter((emp) => selectedEmployees.includes(emp.id))
-                                .map((emp) => (
-                                    <option key={emp.id} value={emp.id}>
-                                        {emp.full_name}
-                                    </option>
-                                ))}
-                        </select>
-                    </div>
-
-                </form>
-                {showCreateForm && (
-                    <div className="mt-5 border-t border-white-light dark:border-[#1b2e4b] pt-5 space-y-4">
-                        <div className="flex items-center gap-2">
-                            <input
-                                id="has-subtasks"
-                                type="checkbox"
-                                checked={hasSubtasks}
-                                onChange={(e) => setHasSubtasks(e.target.checked)}
-                            />
-                            <label htmlFor="has-subtasks" className="text-sm font-semibold">
-                                Is there any subtask?
-                            </label>
-                        </div>
-                        {hasSubtasks && (
-                            <>
-                        <div className="flex items-center justify-between gap-3">
-                            <h4 className="font-semibold">{editingTaskId ? 'Manage Subtasks' : 'Subtasks for Parent Task'}</h4>
-                            <button type="button" className="btn btn-outline-primary btn-sm" onClick={addSubtask}>
-                                Add Subtask
+                    )}
+                    {showCreateForm && (
+                        <div className="mt-5 flex justify-start">
+                            <button type="button" className="btn btn-primary min-w-[150px]" onClick={submitTask} disabled={submitting}>
+                                {submitting ? (editingTaskId ? 'Updating...' : 'Creating...') : (editingTaskId ? 'Update Task' : 'Create Task')}
                             </button>
                         </div>
-                        <div className="space-y-3">
-                            {subtasks.length === 0 ? (
-                                <p className="text-xs text-white-dark">{editingTaskId ? 'No subtasks found for this task.' : 'No subtasks added yet.'}</p>
-                            ) : (
-                                subtasks.map((sub, idx) => (
-                                    <div key={`${sub.id || 'new'}-${idx}`} className="rounded-md border border-white-light dark:border-[#1b2e4b] p-3 space-y-3">
-                                        <div className="flex items-center justify-between gap-3">
-                                            <p className="font-semibold text-sm">Subtask {idx + 1}</p>
-                                            <button
-                                                type="button"
-                                                className="btn btn-sm btn-outline-danger p-2"
-                                                onClick={() => (sub.id ? deleteSubtask(idx) : removeSubtask(idx))}
-                                                title="Delete subtask"
-                                                aria-label="Delete subtask"
-                                                disabled={submitting}
-                                            >
-                                                <IconTrashLines className="h-4 w-4" />
-                                            </button>
-                                        </div>
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                                            <input
-                                                className="form-input"
-                                                placeholder="Subtask title"
-                                                value={sub.title}
-                                                onChange={(e) => updateSubtaskField(idx, 'title', e.target.value)}
-                                            />
-                                            <div className="grid grid-cols-2 gap-3">
-                                                <input
-                                                    type="date"
-                                                    className="form-input"
-                                                    value={sub.deadline}
-                                                    onChange={(e) => updateSubtaskField(idx, 'deadline', e.target.value)}
-                                                />
-                                                <select
-                                                    className="form-select"
-                                                    value={sub.priority}
-                                                    onChange={(e) => updateSubtaskField(idx, 'priority', e.target.value as TaskPriority)}
-                                                >
-                                                    <option value="high">High</option>
-                                                    <option value="medium">Medium</option>
-                                                    <option value="low">Low</option>
-                                                </select>
-                                            </div>
-                                        </div>
-                                        <textarea
-                                            className="form-textarea min-h-[72px]"
-                                            placeholder="Subtask description"
-                                            value={sub.description}
-                                            onChange={(e) => updateSubtaskField(idx, 'description', e.target.value)}
-                                        />
-                                        <div>
-                                            <p className="text-sm font-semibold mb-2">Subtask Assignees</p>
-                                            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-2 max-h-36 overflow-auto border border-white-light dark:border-[#1b2e4b] rounded-lg p-3">
-                                                {reportees.map((emp) => (
-                                                    <label key={`sub-existing-${sub.id || idx}-${emp.id}`} className="inline-flex items-center gap-2 text-sm">
-                                                        <input
-                                                            type="checkbox"
-                                                            checked={sub.assignedEmployees.includes(emp.id)}
-                                                            onChange={() => toggleExistingSubtaskEmployee(idx, emp.id)}
-                                                        />
-                                                        <span>{emp.full_name}</span>
-                                                    </label>
-                                                ))}
-                                            </div>
-                                        </div>
-                                        <div>
-                                            <p className="text-sm font-semibold mb-2">Subtask Owner</p>
-                                            <select
-                                                className="form-select"
-                                                value={sub.taskOwner ?? ''}
-                                                onChange={(e) => updateSubtaskField(idx, 'taskOwner', e.target.value ? Number(e.target.value) : null)}
-                                                disabled={sub.assignedEmployees.length === 0}
-                                            >
-                                                <option value="">Select owner</option>
-                                                {reportees
-                                                    .filter((emp) => sub.assignedEmployees.includes(emp.id))
-                                                    .map((emp) => (
-                                                        <option key={`sub-existing-owner-${sub.id || idx}-${emp.id}`} value={emp.id}>
-                                                            {emp.full_name}
-                                                        </option>
-                                                    ))}
-                                            </select>
-                                        </div>
-                                    </div>
-                                ))
-                            )}
-                        </div>
-                            </>
-                        )}
-                    </div>
-                )}
-                {showCreateForm && (
-                    <div className="mt-5 flex justify-start">
-                        <button type="button" className="btn btn-primary min-w-[150px]" onClick={submitTask} disabled={submitting}>
-                            {submitting ? (editingTaskId ? 'Updating...' : 'Creating...') : (editingTaskId ? 'Update Task' : 'Create Task')}
-                        </button>
-                    </div>
-                )}
-            </div>
+                    )}
+                </div>
             )}
 
             {!showCreateForm && (
-            <div className="panel">
-                <div className="flex flex-col sm:flex-row sm:items-center gap-6 mb-4">
-                    <div className="flex items-center gap-3 w-full sm:w-auto">
-                        <h3 className="text-lg font-bold whitespace-nowrap">Assigned Tasks</h3>
-                    </div>
-                    <div className="relative w-full sm:w-72">
-                        <input className="form-input pl-10" placeholder="Search tasks..." value={search} onChange={(e) => setSearch(e.target.value)} />
-                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-white-dark">
-                            <IconSearch className="w-4 h-4" />
-                        </span>
-                    </div>
-                </div>
-
-                {loadingTasks ? (
-                    <div className="text-center py-10 text-white-dark">Loading tasks...</div>
-                ) : tasks.length === 0 ? (
-                    <div className="text-center py-10 text-white-dark">No tasks available.</div>
-                ) : (
-                    <div className="table-responsive">
-                        <div className="mb-3 flex flex-col sm:flex-row items-center justify-between gap-3 px-1">
-                            <div className="text-xs text-white-dark">
-                                Showing {(page - 1) * pageSize + 1} to {Math.min(page * pageSize, totalCount)} of {totalCount}
-                            </div>
-                            <div className="flex items-center gap-2">
-                                <label className="text-xs text-white-dark">Per page</label>
-                                <select
-                                    className="form-select w-20 text-xs"
-                                    value={pageSize}
-                                    onChange={(e) => {
-                                        setPageSize(Number(e.target.value));
-                                        setPage(1);
-                                    }}
-                                >
-                                    <option value={5}>5</option>
-                                    <option value={10}>10</option>
-                                    <option value={20}>20</option>
-                                </select>
-                                <button type="button" className="btn btn-sm btn-outline-primary" disabled={page === 1} onClick={() => setPage((p) => Math.max(1, p - 1))}>
-                                    Prev
-                                </button>
-                                <span className="text-xs font-semibold px-2">{page} / {totalPages}</span>
-                                <button type="button" className="btn btn-sm btn-outline-primary" disabled={page >= totalPages} onClick={() => setPage((p) => Math.min(totalPages, p + 1))}>
-                                    Next
-                                </button>
-                            </div>
+                <div className="panel">
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-6 mb-4">
+                        <div className="flex items-center gap-3 w-full sm:w-auto">
+                            <h3 className="text-lg font-bold whitespace-nowrap">Assigned Tasks</h3>
                         </div>
-                        <table className="table-hover">
-                            <thead>
-                                <tr>
-                                    <th>Task</th>
-                                    <th>Priority</th>
-                                    <th>Status</th>
-                                    <th>Deadline</th>
-                                    <th>Created On</th>
-                                    <th>Progress</th>
-                                    <th>Assignees</th>
-                                    <th>Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {tasks.map((task) => (
-                                    <tr key={task.id} className="cursor-pointer" onClick={() => openTaskDetail(task.id)}>
-                                        <td>
-                                            <p className="font-semibold">{task.title}</p>
-                                            <p className="text-xs text-white-dark line-clamp-1">{task.description || '-'}</p>
-                                        </td>
-                                        <td>
-                                            <span className={`badge ${priorityClasses[task.priority]}`}>{task.priority}</span>
-                                        </td>
-                                        <td>{statusLabel[task.status]}</td>
-                                        <td>{task.deadline ? new Date(task.deadline).toLocaleDateString() : '-'}</td>
-                                        <td>{task.created_at ? task.created_at.replace('T', ' ') : '-'}</td>
-                                        <td>{task.progress}%</td>
-                                        <td>{task.assignments?.length || 0}</td>
-                                        <td>
-                                            <button
-                                                type="button"
-                                                className="btn btn-sm btn-outline-primary"
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    startEditTask(task.id);
-                                                }}
-                                            >
-                                                Edit
-                                            </button>
-                                        </td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
+                        <div className="relative w-full sm:w-72">
+                            <input className="form-input pl-10" placeholder="Search tasks..." value={search} onChange={(e) => setSearch(e.target.value)} />
+                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-white-dark">
+                                <IconSearch className="w-4 h-4" />
+                            </span>
+                        </div>
                     </div>
-                )}
-            </div>
+
+                    {loadingTasks ? (
+                        <div className="text-center py-10 text-white-dark">Loading tasks...</div>
+                    ) : tasks.length === 0 ? (
+                        <div className="text-center py-10 text-white-dark">No tasks available.</div>
+                    ) : (
+                        <div className="table-responsive">
+                            <div className="mb-3 flex flex-col sm:flex-row items-center justify-between gap-3 px-1">
+                                <div className="text-xs text-white-dark">
+                                    Showing {(page - 1) * pageSize + 1} to {Math.min(page * pageSize, totalCount)} of {totalCount}
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    <label className="text-xs text-white-dark">Per page</label>
+                                    <select
+                                        className="form-select w-20 text-xs"
+                                        value={pageSize}
+                                        onChange={(e) => {
+                                            setPageSize(Number(e.target.value));
+                                            setPage(1);
+                                        }}
+                                    >
+                                        <option value={5}>5</option>
+                                        <option value={10}>10</option>
+                                        <option value={20}>20</option>
+                                    </select>
+                                    <button type="button" className="btn btn-sm btn-outline-primary" disabled={page === 1} onClick={() => setPage((p) => Math.max(1, p - 1))}>
+                                        Prev
+                                    </button>
+                                    <span className="text-xs font-semibold px-2">{page} / {totalPages}</span>
+                                    <button type="button" className="btn btn-sm btn-outline-primary" disabled={page >= totalPages} onClick={() => setPage((p) => Math.min(totalPages, p + 1))}>
+                                        Next
+                                    </button>
+                                </div>
+                            </div>
+                            <table className="table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Task</th>
+                                        <th>Priority</th>
+                                        <th>Status</th>
+                                        <th>Deadline</th>
+                                        <th>Created On</th>
+                                        <th>Progress</th>
+                                        <th>Assignees</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {tasks.map((task) => (
+                                        <tr key={task.id} className="cursor-pointer" onClick={() => openTaskDetail(task.id)}>
+                                            <td>
+                                                <p className="font-semibold">{task.title}</p>
+                                                <p className="text-xs text-white-dark line-clamp-1">{task.description || '-'}</p>
+                                            </td>
+                                            <td>
+                                                <span className={`badge ${priorityClasses[task.priority]}`}>{task.priority}</span>
+                                            </td>
+                                            <td>{statusLabel[task.status]}</td>
+                                            <td>{task.deadline ? new Date(task.deadline).toLocaleDateString() : '-'}</td>
+                                            <td>{task.created_at ? task.created_at.replace('T', ' ') : '-'}</td>
+                                            <td>{task.progress}%</td>
+                                            <td>{task.assignments?.length || 0}</td>
+                                            <td>
+                                                <button
+                                                    type="button"
+                                                    className="btn btn-sm btn-outline-primary"
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        startEditTask(task.id);
+                                                    }}
+                                                >
+                                                    Edit
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    )}
+                </div>
             )}
 
             {selectedTask && typeof document !== 'undefined' && createPortal((
