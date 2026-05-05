@@ -20,6 +20,7 @@ import '../models/time_log_model.dart';
 import '../models/conference_room_model.dart';
 import '../services/storage_service.dart';
 import '../services/auth_service.dart';
+import '../services/demo_service.dart';
 import 'dart:io';
 
 class ApiResponse<T> {
@@ -50,7 +51,13 @@ class EmployeeService {
             retryCount: retryCount + 1,
           );
         } else {
+          // Check if in demo mode - don't logout if we are
+          if (await StorageService.isDemoMode()) {
+            return response;
+          }
+
           // Token refresh failed, return the 401 response
+          await AuthService.logout();
           return response;
         }
       }
@@ -90,6 +97,16 @@ class EmployeeService {
   // Get dashboard data
   static Future<ApiResponse<DashboardData>> getDashboardData() async {
     try {
+      // Check if in demo mode - return dummy data
+      if (await StorageService.isDemoMode()) {
+        await DemoService.simulateDelay(milliseconds: 500);
+        return ApiResponse(
+          success: true,
+          message: 'Demo dashboard data loaded',
+          data: DemoService.getDemoDashboardData(),
+        );
+      }
+
       final token = await StorageService.getAccessToken();
       if (token == null) {
         return ApiResponse(success: false, message: 'No access token found');
@@ -119,7 +136,7 @@ class EmployeeService {
         }
       } else if (response.statusCode == 401) {
         // Token is invalid even after refresh, logout user
-        await AuthService.logout();
+        await AuthService.logout(isAutomatic: true);
         return ApiResponse(
           success: false,
           message: 'Session expired. Please login again.',
@@ -145,6 +162,16 @@ class EmployeeService {
     double? lon,
   }) async {
     try {
+      // Check demo mode - return dummy success
+      if (await StorageService.isDemoMode()) {
+        await DemoService.simulateDelay();
+        return ApiResponse(
+          success: true,
+          message: 'Demo check-in successful',
+          data: {'message': 'Checked in successfully (Demo Mode)', 'status': 'success'},
+        );
+      }
+
       final token = await StorageService.getAccessToken();
       if (token == null) {
         return ApiResponse(success: false, message: 'No access token found');
@@ -171,7 +198,7 @@ class EmployeeService {
           data: data,
         );
       } else if (response.statusCode == 401) {
-        await AuthService.logout();
+        await AuthService.logout(isAutomatic: true);
         return ApiResponse(
           success: false,
           message: 'Session expired. Please login again.',
@@ -194,6 +221,16 @@ class EmployeeService {
   // Check-out
   static Future<ApiResponse<Map<String, dynamic>>> checkOut() async {
     try {
+      // Check demo mode - return dummy success
+      if (await StorageService.isDemoMode()) {
+        await DemoService.simulateDelay();
+        return ApiResponse(
+          success: true,
+          message: 'Demo check-out successful',
+          data: {'message': 'Checked out successfully (Demo Mode)', 'status': 'success'},
+        );
+      }
+
       final token = await StorageService.getAccessToken();
       if (token == null) {
         return ApiResponse(success: false, message: 'No access token found');
@@ -231,6 +268,16 @@ class EmployeeService {
     int breakConfigId,
   ) async {
     try {
+      // Check demo mode - return dummy success
+      if (await StorageService.isDemoMode()) {
+        await DemoService.simulateDelay();
+        return ApiResponse(
+          success: true,
+          message: 'Demo break started',
+          data: {'message': 'Break started successfully (Demo Mode)', 'status': 'success'},
+        );
+      }
+
       final token = await StorageService.getAccessToken();
       if (token == null) {
         return ApiResponse(success: false, message: 'No access token found');
@@ -269,6 +316,16 @@ class EmployeeService {
     int breakConfigId,
   ) async {
     try {
+      // Check demo mode - return dummy success
+      if (await StorageService.isDemoMode()) {
+        await DemoService.simulateDelay();
+        return ApiResponse(
+          success: true,
+          message: 'Demo break ended',
+          data: {'message': 'Break ended successfully (Demo Mode)', 'status': 'success'},
+        );
+      }
+
       final token = await StorageService.getAccessToken();
       if (token == null) {
         return ApiResponse(success: false, message: 'No access token found');
@@ -303,10 +360,16 @@ class EmployeeService {
   }
 
   // Update employee status
-  static Future<ApiResponse<Map<String, dynamic>>> updateEmployeeStatus(
+  static Future<ApiResponse<void>> updateEmployeeStatus(
+    int employeeId,
     String status,
   ) async {
     try {
+      // Check demo mode
+      if (await StorageService.isDemoMode()) {
+        return ApiResponse(success: true, message: 'Demo status updated');
+      }
+
       final token = await StorageService.getAccessToken();
       if (token == null) {
         return ApiResponse(success: false, message: 'No access token found');
@@ -392,6 +455,17 @@ class EmployeeService {
   // Get break configurations
   static Future<ApiResponse<List<BreakConfig>>> getBreakConfigs() async {
     try {
+      // Check demo mode - return dummy break configs
+      if (await StorageService.isDemoMode()) {
+        await DemoService.simulateDelay();
+        final configs = DemoService.getDemoBreakConfigs().map((json) => BreakConfig.fromJson(json)).toList();
+        return ApiResponse(
+          success: true,
+          message: 'Demo break configs loaded',
+          data: configs,
+        );
+      }
+
       final token = await StorageService.getAccessToken();
       if (token == null) {
         return ApiResponse(success: false, message: 'No access token found');
@@ -431,6 +505,11 @@ class EmployeeService {
   // Check if user is a reporting manager
   static Future<bool> isReportingManager() async {
     try {
+      // Check demo mode - demo users are never reporting managers
+      if (await StorageService.isDemoMode()) {
+        return false;
+      }
+
       final token = await StorageService.getAccessToken();
       if (token == null) return false;
 
@@ -477,6 +556,16 @@ class EmployeeService {
   // Get company info
   static Future<ApiResponse<Map<String, dynamic>>> getCompanyInfo() async {
     try {
+      // Check demo mode - return dummy company info
+      if (await StorageService.isDemoMode()) {
+        await DemoService.simulateDelay();
+        return ApiResponse(
+          success: true,
+          message: 'Demo company info loaded',
+          data: DemoService.getDemoCompanyInfo(),
+        );
+      }
+
       final token = await StorageService.getAccessToken();
       if (token == null) {
         return ApiResponse(success: false, message: 'No access token found');
@@ -514,6 +603,17 @@ class EmployeeService {
   // Get my tasks
   static Future<ApiResponse<List<Task>>> getMyTasks() async {
     try {
+      // Check demo mode - return dummy tasks
+      if (await StorageService.isDemoMode()) {
+        await DemoService.simulateDelay();
+        final tasks = DemoService.getDemoTasks().map((json) => Task.fromJson(json)).toList();
+        return ApiResponse(
+          success: true,
+          message: 'Demo tasks loaded',
+          data: tasks,
+        );
+      }
+
       final token = await StorageService.getAccessToken();
       if (token == null) {
         return ApiResponse(success: false, message: 'No access token found');
@@ -554,7 +654,7 @@ class EmployeeService {
           data: tasks,
         );
       } else if (response.statusCode == 401) {
-        await AuthService.logout();
+        await AuthService.logout(isAutomatic: true);
         return ApiResponse(
           success: false,
           message: 'Session expired. Please login again.',
@@ -587,6 +687,17 @@ class EmployeeService {
 
   static Future<ApiResponse<List<Announcement>>> getAnnouncements({int limit = 3}) async {
     try {
+      // Check demo mode - return dummy announcements
+      if (await StorageService.isDemoMode()) {
+        await DemoService.simulateDelay();
+        final announcements = DemoService.getDemoAnnouncements().take(limit).toList();
+        return ApiResponse(
+          success: true,
+          message: 'Demo announcements loaded',
+          data: announcements.map((json) => Announcement.fromJson(json)).toList(),
+        );
+      }
+
       final token = await StorageService.getAccessToken();
       if (token == null) {
         return ApiResponse(success: false, message: 'No access token found');
@@ -603,7 +714,7 @@ class EmployeeService {
         final items = data.map((e) => Announcement.fromJson(e)).toList();
         return ApiResponse(success: true, data: items);
       } else if (response.statusCode == 401) {
-        await AuthService.logout();
+        await AuthService.logout(isAutomatic: true);
         return ApiResponse(success: false, message: 'Session expired. Please login again.');
       } else {
         final error = jsonDecode(response.body);
@@ -614,8 +725,127 @@ class EmployeeService {
     }
   }
 
+  static Future<ApiResponse<List<Announcement>>> getCustomNotificationsAsAnnouncements() async {
+    try {
+      // Check if in demo mode - return empty list
+      if (await StorageService.isDemoMode()) {
+        return ApiResponse(success: true, data: []);
+      }
+
+      final token = await StorageService.getAccessToken();
+      if (token == null) {
+        return ApiResponse(success: false, message: 'No access token found');
+      }
+
+      final url = Uri.parse('${ApiConfig.allNotificationsUrl}?page_size=50');
+      final response = await _makeAuthenticatedRequest(
+        () async => await http.get(url, headers: await _getAuthHeaders()),
+      );
+
+      if (response.statusCode == 200) {
+        final decoded = jsonDecode(response.body);
+        final data = _extractList(decoded);
+        final announcementTypes = {'admin', 'announcement'};
+        final items = data
+            .where((e) => announcementTypes.contains(e['type']))
+            .map((e) => Announcement.fromNotification(e))
+            .toList();
+        return ApiResponse(success: true, data: items);
+      } else if (response.statusCode == 401) {
+        await AuthService.logout(isAutomatic: true);
+        return ApiResponse(success: false, message: 'Session expired. Please login again.');
+      } else {
+        return ApiResponse(success: false, message: 'Failed to load custom notifications');
+      }
+    } catch (e) {
+      return ApiResponse(success: false, message: 'Network error: ${e.toString()}');
+    }
+  }
+
+  static Future<ApiResponse<void>> dismissAnnouncement(String notificationId) async {
+    try {
+      // Check if in demo mode
+      if (await StorageService.isDemoMode()) {
+        return ApiResponse(success: true);
+      }
+
+      final token = await StorageService.getAccessToken();
+      if (token == null) {
+        return ApiResponse(success: false, message: 'No access token found');
+      }
+
+      final response = await _makeAuthenticatedRequest(
+        () async => await http.post(
+          Uri.parse(ApiConfig.dismissAnnouncementUrl),
+          headers: await _getAuthHeaders(),
+          body: jsonEncode({'notification_id': notificationId}),
+        ),
+      );
+
+      if (response.statusCode == 200) {
+        return ApiResponse(success: true, message: 'Announcement dismissed');
+      } else if (response.statusCode == 401) {
+        await AuthService.logout(isAutomatic: true);
+        return ApiResponse(success: false, message: 'Session expired. Please login again.');
+      } else {
+        final error = jsonDecode(response.body);
+        return ApiResponse(success: false, message: error['detail'] ?? 'Failed to dismiss announcement');
+      }
+    } catch (e) {
+      return ApiResponse(success: false, message: 'Network error: ${e.toString()}');
+    }
+  }
+
+  static Future<ApiResponse<List<String>>> getDismissedAnnouncements() async {
+    try {
+      // Check if in demo mode
+      if (await StorageService.isDemoMode()) {
+        return ApiResponse(success: true, data: []);
+      }
+
+      final token = await StorageService.getAccessToken();
+      if (token == null) {
+        return ApiResponse(success: false, message: 'No access token found');
+      }
+
+      final response = await _makeAuthenticatedRequest(
+        () async => await http.get(
+          Uri.parse(ApiConfig.dismissedAnnouncementsUrl),
+          headers: await _getAuthHeaders(),
+        ),
+      );
+
+      if (response.statusCode == 200) {
+        final List<dynamic> data = jsonDecode(response.body);
+        final ids = data.map((e) => e.toString()).toList();
+        return ApiResponse(success: true, data: ids);
+      } else if (response.statusCode == 401) {
+        await AuthService.logout(isAutomatic: true);
+        return ApiResponse(success: false, message: 'Session expired. Please login again.');
+      } else {
+        return ApiResponse(success: false, message: 'Failed to load dismissed announcements');
+      }
+    } catch (e) {
+      return ApiResponse(success: false, message: 'Network error: ${e.toString()}');
+    }
+  }
+
   static Future<ApiResponse<List<Project>>> getTimeLogProjects() async {
     try {
+      // Check demo mode - return dummy projects
+      if (await StorageService.isDemoMode()) {
+        await DemoService.simulateDelay();
+        return ApiResponse(
+          success: true,
+          message: 'Demo projects loaded',
+          data: [
+            Project(id: 1, name: 'Demo Project Alpha', client: 'Internal'),
+            Project(id: 2, name: 'Demo Project Beta', client: 'External'),
+            Project(id: 3, name: 'Training & Development', client: 'HR'),
+          ],
+        );
+      }
+
       final token = await StorageService.getAccessToken();
       if (token == null) {
         return ApiResponse(success: false, message: 'No access token found');
@@ -632,7 +862,7 @@ class EmployeeService {
         final projects = projectsRaw.map((e) => Project.fromJson(e)).toList();
         return ApiResponse(success: true, data: projects);
       } else if (response.statusCode == 401) {
-        await AuthService.logout();
+        await AuthService.logout(isAutomatic: true);
         return ApiResponse(success: false, message: 'Session expired. Please login again.');
       } else {
         final error = jsonDecode(response.body);
@@ -645,6 +875,16 @@ class EmployeeService {
 
   static Future<ApiResponse<List<TimeEntry>>> getTimeEntries({String? date}) async {
     try {
+      // Check demo mode - return dummy time entries
+      if (await StorageService.isDemoMode()) {
+        await DemoService.simulateDelay();
+        return ApiResponse(
+          success: true,
+          message: 'Demo time entries loaded',
+          data: [],
+        );
+      }
+
       final token = await StorageService.getAccessToken();
       if (token == null) {
         return ApiResponse(success: false, message: 'No access token found');
@@ -662,7 +902,7 @@ class EmployeeService {
         final entries = entriesRaw.map((e) => TimeEntry.fromJson(e)).toList();
         return ApiResponse(success: true, data: entries);
       } else if (response.statusCode == 401) {
-        await AuthService.logout();
+        await AuthService.logout(isAutomatic: true);
         return ApiResponse(success: false, message: 'Session expired. Please login again.');
       } else {
         final error = jsonDecode(response.body);
@@ -703,7 +943,7 @@ class EmployeeService {
         final data = jsonDecode(response.body) as Map<String, dynamic>;
         return ApiResponse(success: true, data: TimeEntry.fromJson(data));
       } else if (response.statusCode == 401) {
-        await AuthService.logout();
+        await AuthService.logout(isAutomatic: true);
         return ApiResponse(success: false, message: 'Session expired. Please login again.');
       } else {
         final error = jsonDecode(response.body);
@@ -720,6 +960,15 @@ class EmployeeService {
     String status,
   ) async {
     try {
+      // Check if in demo mode
+      if (await StorageService.isDemoMode()) {
+        return ApiResponse(
+          success: true,
+          message: 'Demo status update successful',
+          data: {'status': status},
+        );
+      }
+
       final token = await StorageService.getAccessToken();
       if (token == null) {
         return ApiResponse(success: false, message: 'No access token found');
@@ -802,14 +1051,40 @@ class EmployeeService {
     int? pageSize,
   }) async {
     try {
+      final now = DateTime.now();
+      final selectedMonth = month ?? now.month;
+      final selectedYear = year ?? now.year;
+
+      // Check demo mode - return dummy attendance history
+      if (await StorageService.isDemoMode()) {
+        await DemoService.simulateDelay();
+        final history = DemoService.getDemoAttendanceHistory();
+        return ApiResponse(
+          success: true,
+          message: 'Demo attendance history loaded',
+          data: AttendanceHistoryData(
+            monthlyData: history.map<MonthlyAttendance>((json) => MonthlyAttendance.fromJson(json)).toList(),
+            summary: AttendanceSummary(
+              present: 22,
+              absent: 0,
+              leave: 0,
+              halfDay: 0,
+              late: 0,
+              workingDays: 22,
+            ),
+            months: [],
+            years: [now.year],
+            selectedMonth: selectedMonth,
+            selectedYear: selectedYear,
+            selectedMonthName: 'January',
+          ),
+        );
+      }
+
       final token = await StorageService.getAccessToken();
       if (token == null) {
         return ApiResponse(success: false, message: 'No access token found');
       }
-
-      final now = DateTime.now();
-      final selectedMonth = month ?? now.month;
-      final selectedYear = year ?? now.year;
 
       final response = await http.get(
         Uri.parse(ApiConfig.attendanceHistoryUrl(
@@ -846,6 +1121,17 @@ class EmployeeService {
   // Get leave types
   static Future<ApiResponse<List<LeaveType>>> getLeaveTypes() async {
     try {
+      // Check demo mode - return dummy leave types
+      if (await StorageService.isDemoMode()) {
+        await DemoService.simulateDelay();
+        final leaveTypes = DemoService.getDemoLeaveTypes();
+        return ApiResponse(
+          success: true,
+          message: 'Demo leave types loaded',
+          data: leaveTypes.map((json) => LeaveType.fromJson(json)).toList(),
+        );
+      }
+
       final token = await StorageService.getAccessToken();
       if (token == null) {
         return ApiResponse(success: false, message: 'No access token found');
@@ -897,6 +1183,17 @@ class EmployeeService {
   // Get applied leaves
   static Future<ApiResponse<List<AppliedLeave>>> getAppliedLeaves({String? status}) async {
     try {
+      // Check demo mode - return dummy applied leaves
+      if (await StorageService.isDemoMode()) {
+        await DemoService.simulateDelay();
+        final leaves = DemoService.getDemoAppliedLeaves();
+        return ApiResponse(
+          success: true,
+          message: 'Demo applied leaves loaded',
+          data: leaves.map((json) => AppliedLeave.fromJson(json)).toList(),
+        );
+      }
+
       final token = await StorageService.getAccessToken();
       if (token == null) {
         return ApiResponse(success: false, message: 'No access token found');
@@ -1055,6 +1352,16 @@ class EmployeeService {
   static Future<ApiResponse<List<NotificationModel>>>
   getAllNotifications() async {
     try {
+      // Check demo mode - return dummy notifications
+      if (await StorageService.isDemoMode()) {
+        await DemoService.simulateDelay();
+        return ApiResponse(
+          success: true,
+          message: 'Demo notifications loaded',
+          data: [],
+        );
+      }
+
       final token = await StorageService.getAccessToken();
       if (token == null) {
         return ApiResponse(success: false, message: 'No access token found');
@@ -1075,7 +1382,7 @@ class EmployeeService {
             .toList();
         return ApiResponse(success: true, data: notifications);
       } else if (response.statusCode == 401) {
-        await AuthService.logout();
+        await AuthService.logout(isAutomatic: true);
         return ApiResponse(
           success: false,
           message: 'Session expired. Please login again.',
@@ -1109,6 +1416,23 @@ class EmployeeService {
     int? day,
   }) async {
     try {
+      // Check demo mode - return dummy calendar data
+      if (await StorageService.isDemoMode()) {
+        await DemoService.simulateDelay();
+        final events = DemoService.getDemoCalendarEvents();
+        final now = DateTime.now();
+        return ApiResponse(
+          success: true,
+          message: 'Demo calendar data loaded',
+          data: CalendarData(
+            currentDate: now,
+            weeks: [],
+            prevMonth: {},
+            nextMonth: {},
+          ),
+        );
+      }
+
       final token = await StorageService.getAccessToken();
       if (token == null) {
         return ApiResponse(success: false, message: 'No access token found');
@@ -1155,6 +1479,17 @@ class EmployeeService {
   // Get all calendar events (holidays and company events)
   static Future<ApiResponse<List<CalendarEvent>>> getCalendarEvents() async {
     try {
+      // Check demo mode - return dummy calendar events
+      if (await StorageService.isDemoMode()) {
+        await DemoService.simulateDelay();
+        final events = DemoService.getDemoCalendarEvents();
+        return ApiResponse(
+          success: true,
+          message: 'Demo calendar events loaded',
+          data: events.map<CalendarEvent>((json) => CalendarEvent.fromJson(json as Map<String, dynamic>, json['type'] ?? 'personal')).toList(),
+        );
+      }
+
       final token = await StorageService.getAccessToken();
       if (token == null) {
         return ApiResponse(success: false, message: 'No access token found');
@@ -1342,6 +1677,17 @@ class EmployeeService {
   // Get company policies
   static Future<ApiResponse<List<CompanyPolicy>>> getCompanyPolicies() async {
     try {
+      // Check demo mode - return dummy company policies
+      if (await StorageService.isDemoMode()) {
+        await DemoService.simulateDelay();
+        final policies = DemoService.getDemoCompanyPolicies();
+        return ApiResponse(
+          success: true,
+          message: 'Demo company policies loaded',
+          data: policies.map((json) => CompanyPolicy.fromJson(json)).toList(),
+        );
+      }
+
       final token = await StorageService.getAccessToken();
       if (token == null) {
         return ApiResponse(success: false, message: 'No access token found');
@@ -1386,6 +1732,15 @@ class EmployeeService {
     int employeeId,
   ) async {
     try {
+      // Check demo mode
+      if (await StorageService.isDemoMode()) {
+        return ApiResponse(
+          success: true,
+          message: 'Demo reportees loaded',
+          data: [],
+        );
+      }
+
       final token = await StorageService.getAccessToken();
       if (token == null) {
         return ApiResponse(success: false, message: 'No access token found');
@@ -1717,6 +2072,15 @@ class EmployeeService {
   // Get leave requests (for manager)
   static Future<ApiResponse<List<LeaveRequest>>> getLeaveRequests() async {
     try {
+      // Check demo mode
+      if (await StorageService.isDemoMode()) {
+        return ApiResponse(
+          success: true,
+          message: 'Demo leave requests loaded',
+          data: [], // Add dummy data if needed
+        );
+      }
+
       final token = await StorageService.getAccessToken();
       if (token == null) {
         return ApiResponse(success: false, message: 'No access token found');
@@ -2067,6 +2431,16 @@ class EmployeeService {
   // Get employee profile
   static Future<ApiResponse<EmployeeProfile>> getEmployeeProfile() async {
     try {
+      // Check if in demo mode - return dummy profile
+      if (await StorageService.isDemoMode()) {
+        await DemoService.simulateDelay(milliseconds: 400);
+        return ApiResponse(
+          success: true,
+          message: 'Demo profile loaded',
+          data: DemoService.getDemoProfile(),
+        );
+      }
+
       final token = await StorageService.getAccessToken();
       if (token == null) {
         return ApiResponse(success: false, message: 'No access token found');
@@ -2088,7 +2462,7 @@ class EmployeeService {
           data: profile,
         );
       } else if (response.statusCode == 401) {
-        await AuthService.logout();
+        await AuthService.logout(isAutomatic: true);
         return ApiResponse(
           success: false,
           message: 'Session expired. Please login again.',
@@ -2250,6 +2624,16 @@ class EmployeeService {
   // Get employee hierarchy
   static Future<ApiResponse<EmployeeHierarchy>> getEmployeeHierarchy() async {
     try {
+      // Check demo mode
+      if (await StorageService.isDemoMode()) {
+        await DemoService.simulateDelay();
+        return ApiResponse(
+          success: true,
+          message: 'Demo hierarchy loaded',
+          data: EmployeeHierarchy.fromJson({}),
+        );
+      }
+
       final token = await StorageService.getAccessToken();
       if (token == null) {
         return ApiResponse(success: false, message: 'No access token found');
@@ -2271,7 +2655,7 @@ class EmployeeService {
           data: hierarchy,
         );
       } else if (response.statusCode == 401) {
-        await AuthService.logout();
+        await AuthService.logout(isAutomatic: true);
         return ApiResponse(
           success: false,
           message: 'Session expired. Please login again.',
@@ -2301,6 +2685,16 @@ class EmployeeService {
   // Get organization hierarchy (full company tree)
   static Future<ApiResponse<OrganizationHierarchy>> getOrganizationHierarchy() async {
     try {
+      // Check demo mode
+      if (await StorageService.isDemoMode()) {
+        await DemoService.simulateDelay();
+        return ApiResponse(
+          success: true,
+          message: 'Demo organization hierarchy loaded',
+          data: OrganizationHierarchy.fromJson([]),
+        );
+      }
+
       final token = await StorageService.getAccessToken();
       if (token == null) {
         return ApiResponse(success: false, message: 'No access token found');
@@ -2322,7 +2716,7 @@ class EmployeeService {
           data: hierarchy,
         );
       } else if (response.statusCode == 401) {
-        await AuthService.logout();
+        await AuthService.logout(isAutomatic: true);
         return ApiResponse(
           success: false,
           message: 'Session expired. Please login again.',
@@ -2352,6 +2746,16 @@ class EmployeeService {
   // Get personal reporting line
   static Future<ApiResponse<PersonalReportingLine>> getPersonalReportingLine() async {
     try {
+      // Check demo mode
+      if (await StorageService.isDemoMode()) {
+        await DemoService.simulateDelay();
+        return ApiResponse(
+          success: true,
+          message: 'Demo reporting line loaded',
+          data: PersonalReportingLine.fromJson([]),
+        );
+      }
+
       final token = await StorageService.getAccessToken();
       if (token == null) {
         return ApiResponse(success: false, message: 'No access token found');
@@ -2373,7 +2777,7 @@ class EmployeeService {
           data: reportingLine,
         );
       } else if (response.statusCode == 401) {
-        await AuthService.logout();
+        await AuthService.logout(isAutomatic: true);
         return ApiResponse(
           success: false,
           message: 'Session expired. Please login again.',

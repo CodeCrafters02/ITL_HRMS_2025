@@ -9,6 +9,7 @@ class StorageService {
   static const String _firstNameKey = 'first_name';
   static const String _lastNameKey = 'last_name';
   static const String _biometricEnabledKey = 'biometric_enabled';
+  static const String _isDemoModeKey = 'is_demo_mode';
 
   // Save tokens after login
   static Future<void> saveTokens({
@@ -91,6 +92,18 @@ class StorageService {
     return prefs.getBool(_biometricEnabledKey) ?? false;
   }
 
+  // Demo mode methods
+  static Future<void> setDemoMode(bool enabled) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_isDemoModeKey, enabled);
+  }
+
+  static Future<bool> isDemoMode() async {
+    // Returns true if the app is currently in Demo Mode
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getBool(_isDemoModeKey) ?? false;
+  }
+
   // Check if user is logged in
   static Future<bool> isLoggedIn() async {
     final token = await getAccessToken();
@@ -108,5 +121,6 @@ class StorageService {
     await prefs.remove(_firstNameKey);
     await prefs.remove(_lastNameKey);
     await prefs.remove(_biometricEnabledKey);
+    await prefs.remove(_isDemoModeKey);
   }
 }

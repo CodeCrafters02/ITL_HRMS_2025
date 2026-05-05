@@ -60,7 +60,7 @@ class ReimbursementService {
           data: results.map((j) => ReimbursementCategory.fromJson(j)).toList(),
         );
       } else if (response.statusCode == 401) {
-        await AuthService.logout();
+        await AuthService.logout(isAutomatic: true);
         return ApiResponse(success: false, message: 'Session expired. Please login again.');
       }
       return ApiResponse(success: false, message: 'Failed to load categories');
@@ -95,7 +95,7 @@ class ReimbursementService {
           data: results.map((j) => ReimbursementRequest.fromJson(j)).toList(),
         );
       } else if (response.statusCode == 401) {
-        await AuthService.logout();
+        await AuthService.logout(isAutomatic: true);
         return ApiResponse(success: false, message: 'Session expired. Please login again.');
       }
       return ApiResponse(success: false, message: 'Failed to load reimbursements');
@@ -149,7 +149,7 @@ class ReimbursementService {
           data: ReimbursementRequest.fromJson(jsonDecode(response.body)),
         );
       } else if (response.statusCode == 401) {
-        await AuthService.logout();
+        await AuthService.logout(isAutomatic: true);
         return ApiResponse(success: false, message: 'Session expired. Please login again.');
       } else {
         try {
@@ -179,7 +179,7 @@ class ReimbursementService {
       );
       if (response.statusCode == 200) return ApiResponse(success: true, message: 'Approved');
       if (response.statusCode == 401) {
-        await AuthService.logout();
+        await AuthService.logout(isAutomatic: true);
         return ApiResponse(success: false, message: 'Session expired. Please login again.');
       }
       return ApiResponse(success: false, message: 'Failed to approve');
@@ -200,7 +200,7 @@ class ReimbursementService {
       );
       if (response.statusCode == 200) return ApiResponse(success: true, message: 'Rejected');
       if (response.statusCode == 401) {
-        await AuthService.logout();
+        await AuthService.logout(isAutomatic: true);
         return ApiResponse(success: false, message: 'Session expired. Please login again.');
       }
       return ApiResponse(success: false, message: 'Failed to reject');

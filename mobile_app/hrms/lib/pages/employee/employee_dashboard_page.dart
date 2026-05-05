@@ -34,7 +34,7 @@ class _EmployeeDashboardPageState extends State<EmployeeDashboardPage> {
   Timer? _breakTimerRef;
 
   bool _isLoadingOverview = true;
-  List<Announcement> _announcements = const [];
+  List<Announcement> _announcements = [];
   List<CalendarEvent> _events = const [];
   int _myTasksCount = 0;
   int _holidaysCount = 0;
@@ -151,6 +151,7 @@ class _EmployeeDashboardPageState extends State<EmployeeDashboardPage> {
         EmployeeService.getAppliedLeaves(),
         EmployeeService.getCalendarData(year: now.year, month: now.month, day: now.day),
         EmployeeService.getCalendarEvents(), // Fetch holidays from correct endpoint
+        EmployeeService.getCustomNotificationsAsAnnouncements(),
       ]);
 
       final a = results[0] as ApiResponse<List<Announcement>>;
@@ -158,6 +159,7 @@ class _EmployeeDashboardPageState extends State<EmployeeDashboardPage> {
       final l = results[2] as ApiResponse<List<AppliedLeave>>;
       final c = results[3] as ApiResponse<CalendarData>;
       final holidaysResponse = results[4] as ApiResponse<List<CalendarEvent>>;
+      final customNotifs = results[5] as ApiResponse<List<Announcement>>;
 
       final upcomingEvents = <CalendarEvent>[];
       if (c.success && c.data != null) {
@@ -179,8 +181,27 @@ class _EmployeeDashboardPageState extends State<EmployeeDashboardPage> {
           : 0;
 
       if (mounted) {
+        final mergedAnnouncements = <Announcement>[
+          ...a.data ?? const [],
+          ...customNotifs.data ?? const [],
+        ];
+        // Sort: today's announcements first, then by recency
+        final today = DateTime.now();
+        mergedAnnouncements.sort((a, b) {
+          final aDate = DateTime.tryParse(a.createdAt) ?? DateTime(2000);
+          final bDate = DateTime.tryParse(b.createdAt) ?? DateTime(2000);
+          final aIsToday = aDate.year == today.year &&
+              aDate.month == today.month &&
+              aDate.day == today.day;
+          final bIsToday = bDate.year == today.year &&
+              bDate.month == today.month &&
+              bDate.day == today.day;
+          if (aIsToday && !bIsToday) return -1;
+          if (!aIsToday && bIsToday) return 1;
+          return bDate.compareTo(aDate);
+        });
         setState(() {
-          _announcements = a.data ?? const [];
+          _announcements = mergedAnnouncements;
           _myTasksCount = t.data?.length ?? 0;
           _leavesCount = l.data?.length ?? 0;
           _calendarCount = upcomingEvents.length;
@@ -195,6 +216,24 @@ class _EmployeeDashboardPageState extends State<EmployeeDashboardPage> {
           _isLoadingOverview = false;
         });
       }
+    }
+  }
+
+  Future<void> _dismissAnnouncement(Announcement announcement) async {
+    if (announcement.notificationId == null) return;
+    final res = await EmployeeService.dismissAnnouncement(announcement.notificationId!);
+    if (res.success && mounted) {
+      setState(() {
+        _announcements.removeWhere(
+          (a) => a.notificationId == announcement.notificationId,
+        );
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Announcement cleared'),
+          duration: Duration(seconds: 2),
+        ),
+      );
     }
   }
 
@@ -596,6 +635,7 @@ class _EmployeeDashboardPageState extends State<EmployeeDashboardPage> {
                               isLoading: _isLoadingOverview,
                               items: _announcements,
                               controller: _announcementPager,
+                              onDismiss: _dismissAnnouncement,
                             ),
                     ),
                   ),
@@ -1298,10 +1338,20 @@ class _AnnouncementsCarousel extends StatelessWidget {
     required this.isLoading,
     required this.items,
     required this.controller,
+    this.onDismiss,
   });
   final bool isLoading;
   final List<Announcement> items;
   final PageController controller;
+  final void Function(Announcement)? onDismiss;
+
+  static const _cardGradients = [
+    [Color(0xFF6366F1), Color(0xFF8B5CF6)],
+    [Color(0xFF0EA5E9), Color(0xFF6366F1)],
+    [Color(0xFF10B981), Color(0xFF059669)],
+    [Color(0xFFF59E0B), Color(0xFFEF4444)],
+    [Color(0xFFEC4899), Color(0xFF8B5CF6)],
+  ];
 
   @override
   Widget build(BuildContext context) {
@@ -1309,13 +1359,58 @@ class _AnnouncementsCarousel extends StatelessWidget {
       return const Center(child: CircularProgressIndicator());
     }
     if (items.isEmpty) {
-      return Center(
-        child: Text(
-          'No announcements',
-          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: AppStitchTheme.lightOnSurfaceMuted,
-                fontWeight: FontWeight.w700,
+      return Container(
+        margin: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(18),
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              AppStitchTheme.primary.withValues(alpha: 0.10),
+              const Color(0xFF8B5CF6).withValues(alpha: 0.06),
+            ],
+          ),
+          border: Border.all(
+            color: AppStitchTheme.primary.withValues(alpha: 0.15),
+            width: 1.2,
+          ),
+        ),
+        child: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: AppStitchTheme.primary.withValues(alpha: 0.10),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  Icons.waving_hand_rounded,
+                  size: 32,
+                  color: AppStitchTheme.primary,
+                ),
               ),
+              const SizedBox(height: 12),
+              Text(
+                'Welcome to People Suite!',
+                style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                      fontWeight: FontWeight.w900,
+                      color: AppStitchTheme.lightOnSurface,
+                      letterSpacing: -0.3,
+                    ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                'Stay tuned for announcements',
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: AppStitchTheme.lightOnSurfaceMuted,
+                      fontWeight: FontWeight.w500,
+                    ),
+              ),
+            ],
+          ),
         ),
       );
     }
@@ -1327,59 +1422,220 @@ class _AnnouncementsCarousel extends StatelessWidget {
             itemCount: items.length,
             itemBuilder: (context, index) {
               final a = items[index];
+              final colors = _cardGradients[index % _cardGradients.length];
+              final hasImage = a.imageUrl != null && a.imageUrl!.isNotEmpty;
+
               return Padding(
-                padding: const EdgeInsets.only(right: 6),
-                child: GlassCard(
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        a.title,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                              fontWeight: FontWeight.w900,
-                              color: AppStitchTheme.lightOnSurface,
-                            ),
-                      ),
-                      const SizedBox(height: 6),
-                      Expanded(
-                        child: Text(
-                          a.body.isEmpty ? '—' : a.body,
-                          maxLines: 6,
-                          overflow: TextOverflow.ellipsis,
-                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                color: AppStitchTheme.lightOnSurfaceVariant,
-                                fontWeight: FontWeight.w600,
-                              ),
-                        ),
+                padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                child: Container(
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(18),
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [
+                        colors[0].withValues(alpha: 0.12),
+                        colors[1].withValues(alpha: 0.06),
+                      ],
+                    ),
+                    border: Border.all(
+                      color: colors[0].withValues(alpha: 0.20),
+                      width: 1.2,
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: colors[0].withValues(alpha: 0.08),
+                        blurRadius: 12,
+                        offset: const Offset(0, 4),
                       ),
                     ],
+                  ),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(18),
+                    child: Stack(
+                      children: [
+                        // Background image (full bleed) if available
+                        if (hasImage)
+                          Positioned.fill(
+                            child: Image.network(
+                              a.imageUrl!,
+                              fit: BoxFit.cover,
+                              errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+                            ),
+                          ),
+                        // Dark overlay for readability when image is present
+                        if (hasImage)
+                          Positioned.fill(
+                            child: Container(
+                              decoration: BoxDecoration(
+                                gradient: LinearGradient(
+                                  begin: Alignment.topCenter,
+                                  end: Alignment.bottomCenter,
+                                  colors: [
+                                    Colors.black.withValues(alpha: 0.25),
+                                    Colors.black.withValues(alpha: 0.70),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
+                        // Content
+                        Padding(
+                          padding: const EdgeInsets.all(14),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.all(6),
+                                    decoration: BoxDecoration(
+                                      color: hasImage
+                                          ? Colors.white.withValues(alpha: 0.20)
+                                          : colors[0].withValues(alpha: 0.15),
+                                      borderRadius: BorderRadius.circular(10),
+                                    ),
+                                    child: Icon(
+                                      Icons.campaign_rounded,
+                                      size: 18,
+                                      color: hasImage ? Colors.white : colors[0],
+                                    ),
+                                  ),
+                                  const SizedBox(width: 10),
+                                  Expanded(
+                                    child: Text(
+                                      a.title,
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                                            fontWeight: FontWeight.w900,
+                                            color: hasImage
+                                                ? Colors.white
+                                                : AppStitchTheme.lightOnSurface,
+                                            letterSpacing: -0.3,
+                                          ),
+                                    ),
+                                  ),
+                                  if (a.isDismissible && onDismiss != null)
+                                    InkWell(
+                                      onTap: () => onDismiss!(a),
+                                      borderRadius: BorderRadius.circular(16),
+                                      child: Container(
+                                        padding: const EdgeInsets.all(4),
+                                        decoration: BoxDecoration(
+                                          color: hasImage
+                                              ? Colors.white.withValues(alpha: 0.20)
+                                              : Colors.grey.withValues(alpha: 0.10),
+                                          shape: BoxShape.circle,
+                                        ),
+                                        child: Icon(
+                                          Icons.close_rounded,
+                                          size: 14,
+                                          color: hasImage
+                                              ? Colors.white70
+                                              : AppStitchTheme.lightOnSurfaceMuted,
+                                        ),
+                                      ),
+                                    ),
+                                ],
+                              ),
+                              const SizedBox(height: 8),
+                              Expanded(
+                                child: Text(
+                                  a.body.isEmpty ? '—' : a.body,
+                                  maxLines: hasImage ? 3 : 5,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                        color: hasImage
+                                            ? Colors.white.withValues(alpha: 0.90)
+                                            : AppStitchTheme.lightOnSurfaceVariant,
+                                        fontWeight: FontWeight.w500,
+                                        height: 1.4,
+                                      ),
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Row(
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 8, vertical: 3),
+                                    decoration: BoxDecoration(
+                                      color: hasImage
+                                          ? Colors.white.withValues(alpha: 0.18)
+                                          : colors[0].withValues(alpha: 0.10),
+                                      borderRadius: BorderRadius.circular(20),
+                                    ),
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Icon(
+                                          Icons.schedule_rounded,
+                                          size: 11,
+                                          color: hasImage
+                                              ? Colors.white70
+                                              : colors[0],
+                                        ),
+                                        const SizedBox(width: 4),
+                                        Text(
+                                          _formatAnnouncementDate(a.createdAt),
+                                          style: TextStyle(
+                                            fontSize: 10,
+                                            fontWeight: FontWeight.w700,
+                                            color: hasImage
+                                                ? Colors.white70
+                                                : colors[0],
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  const Spacer(),
+                                  if (items.length > 1)
+                                    Text(
+                                      '${index + 1}/${items.length}',
+                                      style: TextStyle(
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.w700,
+                                        color: hasImage
+                                            ? Colors.white54
+                                            : AppStitchTheme.lightOnSurfaceMuted
+                                                .withValues(alpha: 0.5),
+                                      ),
+                                    ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               );
             },
           ),
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: 10),
         Row(
           mainAxisAlignment: MainAxisAlignment.center,
-          children: List.generate(items.length, (i) {
+          children: List.generate(items.length > 8 ? 8 : items.length, (i) {
             return AnimatedBuilder(
               animation: controller,
               builder: (context, child) {
                 final page = controller.hasClients ? (controller.page ?? 0) : 0.0;
                 final active = (page - i).abs() < 0.5;
-                return Container(
-                  width: active ? 16 : 7,
-                  height: 7,
-                  margin: const EdgeInsets.symmetric(horizontal: 4),
+                return AnimatedContainer(
+                  duration: const Duration(milliseconds: 300),
+                  curve: Curves.easeOutCubic,
+                  width: active ? 20 : 6,
+                  height: 6,
+                  margin: const EdgeInsets.symmetric(horizontal: 3),
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(99),
                     color: active
-                        ? AppStitchTheme.primary.withValues(alpha: 0.85)
-                        : AppStitchTheme.lightOutline.withValues(alpha: 0.6),
+                        ? AppStitchTheme.primary
+                        : AppStitchTheme.lightOutline.withValues(alpha: 0.4),
                   ),
                 );
               },
@@ -1388,6 +1644,21 @@ class _AnnouncementsCarousel extends StatelessWidget {
         ),
       ],
     );
+  }
+
+  String _formatAnnouncementDate(String dateStr) {
+    if (dateStr.isEmpty) return '';
+    try {
+      final date = DateTime.parse(dateStr);
+      final now = DateTime.now();
+      final diff = now.difference(date).inDays;
+      if (diff == 0) return 'Today';
+      if (diff == 1) return 'Yesterday';
+      if (diff < 7) return '$diff days ago';
+      return '${date.day}/${date.month}/${date.year}';
+    } catch (_) {
+      return dateStr.length > 10 ? dateStr.substring(0, 10) : dateStr;
+    }
   }
 }
 

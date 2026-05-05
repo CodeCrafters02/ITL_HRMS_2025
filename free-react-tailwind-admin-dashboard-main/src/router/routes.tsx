@@ -151,6 +151,7 @@ const AdminReportees = lazy(() => import('../pages/Admin/Reportees'));
 const AdminGeofencing = lazy(() => import('../pages/Admin/Geofencing'));
 const AdminAssignTask = lazy(() => import('../pages/Admin/AssignTask'));
 const AdminPayslipRollout = lazy(() => import('../pages/Admin/PayslipRollout'));
+const AdminSystemSettings = lazy(() => import('../pages/Admin/SystemSettings'));
 
 // Employee Pages
 const EmployeeDashboard = lazy(() => import('../pages/Employee/Dashboard'));
@@ -167,8 +168,8 @@ const EmployeeCompanyPolicy = lazy(() => import('../pages/Employee/CompanyPolicy
 const EmployeeAssetRequests = lazy(() => import('../pages/Employee/AssetRequests'));
 const EmployeeSeatBooking = lazy(() => import('../pages/Employee/SeatBooking'));
 const EmployeeConfRoomBooking = lazy(() => import('../pages/Employee/ConfRoomBooking'));
-const EmployeeReferences = lazy(() => import('../pages/Employee/References/References'));
-const EmployeeReportees = lazy(() => import('../pages/Employee/Reportees/Reportees'));
+const EmployeeReferences = lazy(() => import('../pages/Employee/references/References'));
+const EmployeeReportees = lazy(() => import('../pages/Employee/reportees/Reportees'));
 const EmployeeAssignTask = lazy(() => import('../pages/Employee/AssignTask/AssignTask'));
 const EmployeeLeaveApprovals = lazy(() => import('../pages/Employee/LeaveApprovals/LeaveApprovals'));
 const EmployeeMyPayslips = lazy(() => import('../pages/Employee/MyPayslips'));
@@ -819,6 +820,10 @@ const routes = [
     {
         path: '/admin/geofencing',
         element: <AdminGeofencing />,
+    },
+    {
+        path: '/admin/system-settings',
+        element: <AdminSystemSettings />,
     },
     {
         path: '/employee/dashboard',

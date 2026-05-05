@@ -25,6 +25,11 @@ class LoanService {
         final refreshResponse = await AuthService.refreshToken();
         if (refreshResponse.success) {
           return _makeAuthenticatedRequest(request, retryCount: retryCount + 1);
+        } else {
+          // Check if in demo mode - don't logout if we are
+          if (await StorageService.isDemoMode()) {
+            return response;
+          }
         }
       }
       return response;
@@ -60,7 +65,7 @@ class LoanService {
           data: results.map((j) => LoanCategory.fromJson(j)).toList(),
         );
       } else if (response.statusCode == 401) {
-        await AuthService.logout();
+        await AuthService.logout(isAutomatic: true);
         return ApiResponse(success: false, message: 'Session expired. Please login again.');
       } else {
         return ApiResponse(success: false, message: 'Failed to load loan categories');
@@ -119,7 +124,7 @@ class LoanService {
         final data = jsonDecode(response.body) as Map<String, dynamic>;
         return ApiResponse(success: true, data: data);
       } else if (response.statusCode == 401) {
-        await AuthService.logout();
+        await AuthService.logout(isAutomatic: true);
         return ApiResponse(success: false, message: 'Session expired. Please login again.');
       }
       return ApiResponse(success: false, message: 'Eligibility check failed');
@@ -150,7 +155,7 @@ class LoanService {
           data: results.map((j) => LoanApplication.fromJson(j)).toList(),
         );
       } else if (response.statusCode == 401) {
-        await AuthService.logout();
+        await AuthService.logout(isAutomatic: true);
         return ApiResponse(success: false, message: 'Session expired. Please login again.');
       }
       return ApiResponse(success: false, message: 'Failed to load applications');
@@ -181,7 +186,7 @@ class LoanService {
           data: all.where((a) => a.status == LoanStatus.pending).toList(),
         );
       } else if (response.statusCode == 401) {
-        await AuthService.logout();
+        await AuthService.logout(isAutomatic: true);
         return ApiResponse(success: false, message: 'Session expired. Please login again.');
       }
       return ApiResponse(success: false, message: 'Failed to load pending applications');
@@ -203,7 +208,7 @@ class LoanService {
       if (response.statusCode == 200) {
         return ApiResponse(success: true, message: 'Loan application approved');
       } else if (response.statusCode == 401) {
-        await AuthService.logout();
+        await AuthService.logout(isAutomatic: true);
         return ApiResponse(success: false, message: 'Session expired. Please login again.');
       }
       try {
@@ -230,7 +235,7 @@ class LoanService {
       if (response.statusCode == 200) {
         return ApiResponse(success: true, message: 'Loan application rejected');
       } else if (response.statusCode == 401) {
-        await AuthService.logout();
+        await AuthService.logout(isAutomatic: true);
         return ApiResponse(success: false, message: 'Session expired. Please login again.');
       }
       try {
@@ -287,7 +292,7 @@ class LoanService {
           data: LoanApplication.fromJson(jsonDecode(response.body)),
         );
       } else if (response.statusCode == 401) {
-        await AuthService.logout();
+        await AuthService.logout(isAutomatic: true);
         return ApiResponse(success: false, message: 'Session expired. Please login again.');
       } else {
         try {

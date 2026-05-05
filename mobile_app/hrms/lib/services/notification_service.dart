@@ -56,6 +56,11 @@ class NotificationService {
 
   // Fetch all badge counts (made public for FCM service)
   static Future<void> _fetchAllBadges() async {
+    // Skip polling in demo mode
+    if (await StorageService.isDemoMode()) {
+      return;
+    }
+
     await Future.wait([
       _fetchNotificationsCount(),
       _fetchMyTasksCount(),

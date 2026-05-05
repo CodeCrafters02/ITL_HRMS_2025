@@ -751,6 +751,16 @@ const Sidebar = () => {
                                             </ul>
                                         </AnimateHeight>
                                     </li>
+
+                                    {/* System Settings */}
+                                    <li className="menu nav-item">
+                                        <NavLink to="/admin/system-settings" className="group">
+                                            <div className="flex items-center">
+                                                <IconMenuElements className="group-hover:!text-primary shrink-0" />
+                                                <span className="ltr:pl-3 rtl:pr-3 text-black dark:text-[#506690] dark:group-hover:text-white-dark">{t('System Settings')}</span>
+                                            </div>
+                                        </NavLink>
+                                    </li>
                                 </>
                             )}
 

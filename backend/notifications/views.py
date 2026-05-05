@@ -46,5 +46,49 @@ class UserNotificationListAPIView(generics.ListAPIView):
         return UserNotification.objects.none()
 
 
+class DismissAnnouncementAPIView(APIView):
+    """Allow a user to dismiss (clear) a specific announcement for themselves only."""
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        employee = getattr(request.user, 'employee_profile', None)
+        if not employee:
+            return Response({"detail": "No employee profile."}, status=status.HTTP_400_BAD_REQUEST)
+
+        notification_id = request.data.get("notification_id")
+        if not notification_id:
+            return Response({"detail": "notification_id is required."}, status=status.HTTP_400_BAD_REQUEST)
+
+        DismissedNotification.objects.get_or_create(
+            employee=employee,
+            notification_id=str(notification_id),
+        )
+        return Response({"detail": "Announcement dismissed."}, status=status.HTTP_200_OK)
+
+    def delete(self, request):
+        """Clear all dismissed announcements (restore all)."""
+        employee = getattr(request.user, 'employee_profile', None)
+        if not employee:
+            return Response({"detail": "No employee profile."}, status=status.HTTP_400_BAD_REQUEST)
+
+        DismissedNotification.objects.filter(employee=employee).delete()
+        return Response({"detail": "All dismissed announcements restored."}, status=status.HTTP_200_OK)
+
+
+class DismissedAnnouncementListAPIView(APIView):
+    """Get list of notification IDs dismissed by the current user."""
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        employee = getattr(request.user, 'employee_profile', None)
+        if not employee:
+            return Response([], status=status.HTTP_200_OK)
+
+        dismissed_ids = list(
+            DismissedNotification.objects.filter(employee=employee).values_list('notification_id', flat=True)
+        )
+        return Response(dismissed_ids, status=status.HTTP_200_OK)
+
+
 
 

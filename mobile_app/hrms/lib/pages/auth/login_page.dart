@@ -10,6 +10,7 @@ import '../../config/api_config.dart';
 import '../../services/biometric_service.dart';
 import '../../services/auth_service.dart';
 import '../../theme/app_stitch_theme.dart';
+import 'demo_login_page.dart';
 
 /// Google SSO login — vector background, floating particles, glassmorphic card.
 class LoginPage extends StatefulWidget {
@@ -66,6 +67,33 @@ class _LoginDesign {
 
 class _LoginPageState extends State<LoginPage> {
   bool _isLoading = false;
+  bool _demoModeEnabled = false;
+  bool _isCheckingDemoStatus = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkDemoModeStatus();
+  }
+
+  Future<void> _checkDemoModeStatus() async {
+    try {
+      final response = await AuthService.checkDemoModeStatus();
+      if (mounted) {
+        setState(() {
+          _demoModeEnabled = response;
+          _isCheckingDemoStatus = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _demoModeEnabled = false;
+          _isCheckingDemoStatus = false;
+        });
+      }
+    }
+  }
 
   Future<void> _promptBiometricEnrollment() async {
     final supported = await BiometricService.isBiometricAvailable();
@@ -468,6 +496,42 @@ class _LoginPageState extends State<LoginPage> {
                       ),
                     ),
                   ),
+                  // Demo Mode Link (only shown when demo mode is enabled)
+                  if (!_isCheckingDemoStatus && _demoModeEnabled) ...[
+                    const SizedBox(height: 20),
+                    Center(
+                      child: TextButton(
+                        onPressed: _isLoading ? null : () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(builder: (context) => const DemoLoginPage()),
+                          );
+                        },
+                        style: TextButton.styleFrom(
+                          foregroundColor: Colors.amber.shade700,
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              Icons.science_outlined,
+                              size: 16,
+                              color: Colors.amber.shade700,
+                            ),
+                            const SizedBox(width: 6),
+                            Text(
+                              'Try Demo Mode',
+                              style: theme.textTheme.bodyMedium?.copyWith(
+                                fontWeight: FontWeight.w600,
+                                color: Colors.amber.shade700,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
                   const SizedBox(height: 24),
                   Text(
                     'Quick Access',

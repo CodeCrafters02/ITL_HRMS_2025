@@ -1,3 +1,4 @@
+from django.conf import settings
 from .service import send_fcm_to_users
 from django.db.models.signals import post_save, pre_save, post_migrate
 from django.dispatch import receiver
@@ -182,6 +183,16 @@ def admin_notification_broadcast(sender, instance, created, **kwargs):
     if created and instance.company:
         user_ids = _company_user_ids(instance.company)
         default_sender = UserRegister.objects.filter(role='admin').first()
+
+        # Build absolute image URL if image is attached
+        notification_image_url = None
+        if instance.image:
+            site_url = getattr(settings, "SITE_URL", None)
+            if site_url:
+                notification_image_url = f"{site_url.rstrip('/')}{instance.image.url}"
+            else:
+                notification_image_url = instance.image.url
+
         try:
             send_fcm_to_users(
                 user_ids,
@@ -196,6 +207,7 @@ def admin_notification_broadcast(sender, instance, created, **kwargs):
                     "company_id": instance.company_id,
                 },
                 create_user_notifications=True,
+                image_url=notification_image_url,
             )
         except Exception as e:
             logger.error(f"Failed to send admin notification broadcast: {e}")
