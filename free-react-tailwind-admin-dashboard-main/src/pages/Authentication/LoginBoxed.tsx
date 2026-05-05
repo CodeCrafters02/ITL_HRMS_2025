@@ -79,6 +79,13 @@ const LoginBoxed = () => {
                 } else if (data.role === 'admin') {
                     navigate('/admin/dashboard');
                 } else if (data.role === 'employee') {
+                    const uid = String(data.id ?? '');
+                    if (uid && !localStorage.getItem(`hrms_leave_intro_ack_${uid}`)) {
+                        sessionStorage.setItem('hrms_leave_intro_pulse', '1');
+                    }
+                    if (uid && !localStorage.getItem(`hrms_checkin_intro_ack_${uid}`)) {
+                        sessionStorage.setItem('hrms_checkin_intro_pulse', '1');
+                    }
                     navigate('/employee/dashboard');
                 } else {
                     navigate('/master/dashboard');
@@ -129,6 +136,13 @@ const LoginBoxed = () => {
                 } else if (data.role === 'admin') {
                     navigate('/admin/dashboard');
                 } else if (data.role === 'employee') {
+                    const uid = String(data.id ?? '');
+                    if (uid && !localStorage.getItem(`hrms_leave_intro_ack_${uid}`)) {
+                        sessionStorage.setItem('hrms_leave_intro_pulse', '1');
+                    }
+                    if (uid && !localStorage.getItem(`hrms_checkin_intro_ack_${uid}`)) {
+                        sessionStorage.setItem('hrms_checkin_intro_pulse', '1');
+                    }
                     navigate('/employee/dashboard');
                 } else {
                     navigate('/master/dashboard');

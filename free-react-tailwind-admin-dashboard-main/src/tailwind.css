@@ -65,10 +65,10 @@
         @apply relative rounded-md bg-white p-5 shadow dark:bg-black;
     }
 
-    /* Navbar */
+    /* Navbar — z-20 on mobile stays under sidebar drawer overlay (z-50); lg+ lifts above docked sidebar (see .sidebar lg:z-) */
     .navbar-sticky header,
     .navbar-floating header {
-        @apply sticky top-0 z-20;
+        @apply sticky top-0 z-20 lg:z-[48];
     }
     .navbar-floating header {
         @apply bg-[#fafafa]/90 px-6 pt-4 dark:bg-[#060818]/90;
