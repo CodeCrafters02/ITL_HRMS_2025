@@ -1,4 +1,5 @@
-import { useEffect, useState, useMemo, useRef } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { setPageTitle } from '../../store/themeConfigSlice';
 import { Link } from 'react-router-dom';
@@ -15,6 +16,7 @@ import IconTrendingUp from '../../components/Icon/IconTrendingUp';
 import IconSun from '../../components/Icon/IconSun';
 import CountUp from 'react-countup';
 import Dropdown from '../../components/Dropdown';
+import IconXCircle from '../../components/Icon/IconXCircle';
 import { fetchMyLeaveRequests, type LeaveRequest } from './LeaveApplication/api';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000';
@@ -145,6 +147,10 @@ const EmployeeDashboard = () => {
     const [geofenceRequired, setGeofenceRequired] = useState<boolean>(false);
     const [geoError, setGeoError] = useState<string | null>(null);
     const [latestLeave, setLatestLeave] = useState<LeaveRequest | null>(null);
+    const [introBump, setIntroBump] = useState(0);
+    const [checkinIntroHudClosed, setCheckinIntroHudClosed] = useState(false);
+    const [checkinIntroAnchorRect, setCheckinIntroAnchorRect] = useState<DOMRect | null>(null);
+    const checkinIntroAnchorRef = useRef<HTMLDivElement>(null);
 
     const haversineDistance = (lat1: number, lon1: number, lat2: number, lon2: number) => {
         const R = 6371e3; // Earth radius in meters
@@ -209,6 +215,40 @@ const EmployeeDashboard = () => {
         Authorization: `Bearer ${localStorage.getItem('access_token')}`,
         'Content-Type': 'application/json',
     }), []);
+
+    useEffect(() => {
+        const bump = () => setIntroBump((x) => x + 1);
+        window.addEventListener('hrms-intro-updated', bump);
+        return () => window.removeEventListener('hrms-intro-updated', bump);
+    }, []);
+
+    const acknowledgeCheckinIntro = useCallback(() => {
+        if (typeof sessionStorage !== 'undefined') sessionStorage.removeItem('hrms_checkin_intro_pulse');
+        const uid = (localStorage.getItem('user_id') || '').trim();
+        if (uid && uid !== 'anonymous') localStorage.setItem(`hrms_checkin_intro_ack_${uid}`, '1');
+        setCheckinIntroHudClosed(true);
+    }, []);
+
+    const introSession = useMemo(
+        () => ({
+            leavePulse: typeof sessionStorage !== 'undefined' && sessionStorage.getItem('hrms_leave_intro_pulse') === '1',
+            checkinPulse: typeof sessionStorage !== 'undefined' && sessionStorage.getItem('hrms_checkin_intro_pulse') === '1',
+        }),
+        [introBump],
+    );
+
+    const employeeUserIdForIntro = (localStorage.getItem('user_id') || '').trim();
+    const validEmployeeIdForIntro = Boolean(employeeUserIdForIntro && employeeUserIdForIntro !== 'anonymous');
+    const checkinIntroAckStored = validEmployeeIdForIntro
+        ? localStorage.getItem(`hrms_checkin_intro_ack_${employeeUserIdForIntro}`)
+        : null;
+
+    const showCheckinIntroEligible =
+        validEmployeeIdForIntro &&
+        introSession.checkinPulse &&
+        checkinIntroAckStored === null &&
+        !checkinIntroHudClosed &&
+        !introSession.leavePulse;
 
     const fetchAllData = async (background = false) => {
         if (!background) setLoading(true);
@@ -466,6 +506,9 @@ const EmployeeDashboard = () => {
             const result = await res.json();
             if (res.ok) {
                 Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Successfully Checked In!', showConfirmButton: false, timer: 3000 });
+                if (typeof sessionStorage !== 'undefined' && sessionStorage.getItem('hrms_checkin_intro_pulse') === '1') {
+                    acknowledgeCheckinIntro();
+                }
                 fetchAllData(true);
             } else {
                 showCompactError(result.detail || 'Could not check in');
@@ -628,6 +671,32 @@ const EmployeeDashboard = () => {
         }
     }, [activeBreakForAlert?.start_time, activeBreakForAlert?.break_config_id, breakRemainingSecondsForAlert]);
 
+    useLayoutEffect(() => {
+        if (!showCheckinIntroEligible || loading || !data) {
+            setCheckinIntroAnchorRect(null);
+            return;
+        }
+        const el = checkinIntroAnchorRef.current;
+        if (!el) return;
+        const sync = () => setCheckinIntroAnchorRect(el.getBoundingClientRect());
+        sync();
+        const ro = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(sync) : null;
+        ro?.observe(el);
+        window.addEventListener('resize', sync);
+        window.addEventListener('scroll', sync, true);
+        return () => {
+            ro?.disconnect();
+            window.removeEventListener('resize', sync);
+            window.removeEventListener('scroll', sync, true);
+        };
+    }, [showCheckinIntroEligible, loading, data, introBump]);
+
+    useEffect(() => {
+        if (loading || !data?.checkin_time) return;
+        if (typeof sessionStorage === 'undefined' || sessionStorage.getItem('hrms_checkin_intro_pulse') !== '1') return;
+        acknowledgeCheckinIntro();
+    }, [loading, data?.checkin_time, acknowledgeCheckinIntro, introBump]);
+
     if (loading) {
         return (
             <div className="space-y-6 animate-pulse">
@@ -687,8 +756,80 @@ const EmployeeDashboard = () => {
     const isGeofenceRequired = officeLocations.length > 0;
     const canPerformAction = !isGeofenceRequired || isInOffice;
 
+    const checkinIntroTitle = 'Start with Check In';
+    const checkinIntroBody = (
+        <>
+            Tap <span className="font-semibold">Check In</span> when your shift begins and <span className="font-semibold">Check Out</span> when you finish — the buttons
+            live in this colorful top card each day. If your employer uses office location, stay inside the allowed area so attendance stays unlocked.
+        </>
+    );
+    const checkinIntroDismissLabel = 'Got it';
+
+    const checkinIntroPortal =
+        showCheckinIntroEligible &&
+        typeof document !== 'undefined' &&
+        createPortal(
+            <>
+                {checkinIntroAnchorRect && (
+                    <div
+                        role="dialog"
+                        aria-live="polite"
+                        className="pointer-events-auto fixed z-[60000] hidden w-[min(19rem,calc(100vw-3rem))] -translate-x-1/2 sm:block"
+                        style={{
+                            left: checkinIntroAnchorRect.left + checkinIntroAnchorRect.width / 2,
+                            top: checkinIntroAnchorRect.bottom + 8,
+                        }}
+                    >
+                        <div className="absolute left-1/2 top-0 z-10 -translate-x-1/2 -translate-y-full border-[10px] border-transparent border-b-white dark:border-b-[#1b2e4b]" aria-hidden />
+                        <div className="rounded-2xl border border-white/80 bg-white p-3.5 pr-11 shadow-xl dark:border-primary/40 dark:bg-[#1b2e4b] dark:shadow-[0_12px_40px_rgba(0,0,0,0.45)] ring-2 ring-primary/25">
+                            <button
+                                type="button"
+                                aria-label="Close tip"
+                                className="absolute right-2.5 top-2.5 rounded-full p-1 text-black/45 hover:bg-black/10 hover:text-primary dark:text-white/50 dark:hover:bg-white/10 dark:hover:text-white"
+                                onClick={() => acknowledgeCheckinIntro()}
+                            >
+                                <IconXCircle className="h-5 w-5 shrink-0" />
+                            </button>
+                            <p className="text-sm font-semibold text-gray-900 dark:text-white">{checkinIntroTitle}</p>
+                            <p className="mt-2 text-xs leading-snug text-black/80 dark:text-white/85">{checkinIntroBody}</p>
+                            <button
+                                type="button"
+                                className="mt-2 text-xs font-semibold uppercase text-primary hover:text-primary/90"
+                                onClick={() => acknowledgeCheckinIntro()}
+                            >
+                                {checkinIntroDismissLabel}
+                            </button>
+                        </div>
+                    </div>
+                )}
+                <div className="pointer-events-auto fixed inset-x-4 bottom-5 z-[60000] rounded-2xl border border-primary/35 bg-white/95 p-4 shadow-2xl backdrop-blur dark:border-primary/45 dark:bg-[#1b2e4b]/95 sm:hidden">
+                    <div className="flex items-start gap-3">
+                        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-primary/15 to-cyan-500/25 text-lg" aria-hidden>
+                            🕐
+                        </span>
+                        <div className="min-w-0 flex-1">
+                            <p className="text-sm font-semibold text-gray-900 dark:text-white">{checkinIntroTitle}</p>
+                            <p className="mt-1 text-xs leading-relaxed text-gray-600 dark:text-white/75">{checkinIntroBody}</p>
+                            <button
+                                type="button"
+                                className="mt-2 text-xs font-semibold uppercase text-primary hover:text-primary/90"
+                                onClick={() => acknowledgeCheckinIntro()}
+                            >
+                                {checkinIntroDismissLabel}
+                            </button>
+                        </div>
+                        <button type="button" aria-label="Close tip" className="shrink-0 p-1 text-black/35 dark:text-white/40" onClick={() => acknowledgeCheckinIntro()}>
+                            <IconXCircle className="h-5 w-5" />
+                        </button>
+                    </div>
+                </div>
+            </>,
+            document.body,
+        );
+
     return (
-        <div className="space-y-6 animate__animated animate__fadeIn">
+        <>
+            <div className="space-y-6 animate__animated animate__fadeIn">
             {isGeofenceRequired && !isInOffice && (
                 <div className="panel bg-danger/10 border-danger/20 text-danger p-3 rounded-xl flex items-center gap-3">
                     <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -732,7 +873,7 @@ const EmployeeDashboard = () => {
                             )}
                         </div>
 
-                        <div className="flex flex-wrap items-center gap-2">
+                        <div ref={checkinIntroAnchorRef} className="flex flex-wrap items-center gap-2">
                             <span className="text-[11px] px-2.5 py-1 rounded-full bg-[#58b8df]/20 text-cyan-100 border border-cyan-200/40 font-semibold">Realtime</span>
 
                             {isGeofenceRequired && (
@@ -1278,6 +1419,8 @@ const EmployeeDashboard = () => {
                 </div>
             </div>
         </div>
+            {checkinIntroPortal}
+        </>
     );
 };
 

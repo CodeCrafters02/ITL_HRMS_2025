@@ -85,8 +85,18 @@ class AllNotificationsAPIView(APIView):
                     })
 
         # Admin Notification (company-wide)
+        # Scheduled notifications should appear only on/after their date.
         if hasattr(user, 'employee_profile') and user.employee_profile and user.employee_profile.company_id:
-            for n in Notification.objects.filter(company_id=user.employee_profile.company_id).distinct():
+            today = timezone.localdate()
+            admin_notifications = Notification.objects.filter(
+                company_id=user.employee_profile.company_id
+            ).filter(
+                date__isnull=True
+            ) | Notification.objects.filter(
+                company_id=user.employee_profile.company_id,
+                date__lte=today
+            )
+            for n in admin_notifications.distinct():
                 unique_id = f"admin_notif_{n.id}"
                 if unique_id not in seen_ids:
                     seen_ids.add(unique_id)
@@ -179,7 +189,7 @@ class AllNotificationsAPIView(APIView):
             # If date is None, use a very old date so it appears last
             d = x["date"]
             if d is None or d == "None":
-                return "1970-01-01T00:00:00"
+                return "2026-01-01T00:00:00"
             return d
         
         # Remove duplicates based on unique combination of title, description, and date

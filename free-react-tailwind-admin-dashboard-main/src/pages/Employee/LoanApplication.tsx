@@ -191,10 +191,10 @@ const LoanApplication = () => {
     return (
         <div className="pb-10">
             {/* Header Banner */}
-            <div className="bg-gradient-to-r from-[#1e3a5f] to-[#14b8a6] p-10 rounded-2xl shadow-2xl mb-10 relative overflow-hidden">
+            <div className="bg-gradient-to-r from-[#1e3a5f] to-[#14b8a6] p-5 rounded-2xl shadow-2xl mb-10 relative overflow-hidden">
                 <div className="relative z-10">
-                    <h1 className="text-4xl font-black text-white tracking-tight uppercase italic drop-shadow-md">Employee Loan Center</h1>
-                    <p className="text-white/90 mt-3 text-lg font-semibold max-w-2xl leading-relaxed">Financial support when you need it most. Check your eligibility and apply for company-sponsored loans with ease.</p>
+                    <h1 className="text-2xl md:text-3xl font-black text-white tracking-tight uppercase italic drop-shadow-md">Employee Loan Center</h1>
+                    <p className="text-white/90 mt-1.5 text-sm md:text-base font-semibold max-w-2xl leading-relaxed">Financial support when you need it most. Check your eligibility and apply for company-sponsored loans with ease.</p>
                 </div>
                 <div className="absolute top-0 right-0 -mt-20 -mr-20 w-96 h-96 bg-white/10 rounded-full blur-3xl animate-pulse"></div>
             </div>

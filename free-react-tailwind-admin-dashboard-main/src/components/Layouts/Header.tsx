@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { IRootState } from '../../store';
@@ -136,6 +137,7 @@ const Header = () => {
     const leaveRoute = userRole === 'employee' ? '/employee/leave-application' : userRole === 'admin' ? '/admin/leave-approval' : '/master/dashboard';
     const notificationSeenKey = `header_notification_seen_count_${userId}`;
     const leaveSeenKey = `header_leave_seen_decisions_${userId}`;
+    const leaveIntroAckKey = `hrms_leave_intro_ack_${userId}`;
     const displayName = profileName || `${firstName} ${lastName}`.trim() || storedUsername || 'User';
     const displayEmail = profileEmail || storedEmail || '-';
     const nameParts = (displayName || '').trim().split(/\s+/).filter(Boolean);
@@ -145,6 +147,50 @@ const Header = () => {
     const notificationBadgeCount = Math.max(0, notificationUnreadCount - notificationSeenCount);
     const leaveBadgeCount = leaveDecisionKeys.filter((key) => !leaveSeenDecisionKeys.includes(key)).length;
     const isReportingManager = localStorage.getItem('is_reporting_manager') === 'true';
+
+    const [leaveIntroHudClosed, setLeaveIntroHudClosed] = useState(false);
+    const leaveIntroPulse = typeof sessionStorage !== 'undefined' && sessionStorage.getItem('hrms_leave_intro_pulse') === '1';
+    const showLeaveIntro =
+        userRole === 'employee' &&
+        Boolean(userId && userId !== 'anonymous') &&
+        leaveIntroPulse &&
+        !localStorage.getItem(leaveIntroAckKey) &&
+        !leaveIntroHudClosed;
+
+    const acknowledgeLeaveIntro = useCallback(() => {
+        const hadPulse = typeof sessionStorage !== 'undefined' && sessionStorage.getItem('hrms_leave_intro_pulse') === '1';
+        sessionStorage.removeItem('hrms_leave_intro_pulse');
+        localStorage.setItem(leaveIntroAckKey, '1');
+        setLeaveIntroHudClosed(true);
+        if (hadPulse && typeof window !== 'undefined') {
+            window.dispatchEvent(new CustomEvent('hrms-intro-updated'));
+        }
+    }, [leaveIntroAckKey]);
+
+    const leaveIntroAnchorRef = useRef<HTMLSpanElement>(null);
+    const [leaveIntroAnchorRect, setLeaveIntroAnchorRect] = useState<DOMRect | null>(null);
+
+    useLayoutEffect(() => {
+        if (!showLeaveIntro) {
+            setLeaveIntroAnchorRect(null);
+            return;
+        }
+        const el = leaveIntroAnchorRef.current;
+        if (!el) return;
+        const sync = () => {
+            setLeaveIntroAnchorRect(el.getBoundingClientRect());
+        };
+        sync();
+        const ro = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(sync) : null;
+        ro?.observe(el);
+        window.addEventListener('resize', sync);
+        window.addEventListener('scroll', sync, true);
+        return () => {
+            ro?.disconnect();
+            window.removeEventListener('resize', sync);
+            window.removeEventListener('scroll', sync, true);
+        };
+    }, [showLeaveIntro]);
 
     const sidebarSearchItems: Array<{ label: string; path: string }> = useMemo(() => {
         if (userRole === 'master') {
@@ -384,8 +430,112 @@ const Header = () => {
         }
     }, [leaveDecisionKeys, leaveRoute, leaveSeenKey, location.pathname, userRole]);
 
+    useEffect(() => {
+        if (
+            userRole !== 'employee' ||
+            !userId ||
+            userId === 'anonymous' ||
+            localStorage.getItem(leaveIntroAckKey) ||
+            sessionStorage.getItem('hrms_leave_intro_pulse') !== '1'
+        )
+            return;
+        if (!location.pathname.startsWith('/employee/leave-application')) return;
+        sessionStorage.removeItem('hrms_leave_intro_pulse');
+        localStorage.setItem(leaveIntroAckKey, '1');
+        setLeaveIntroHudClosed(true);
+        if (typeof window !== 'undefined') {
+            window.dispatchEvent(new CustomEvent('hrms-intro-updated'));
+        }
+    }, [leaveIntroAckKey, location.pathname, userId, userRole]);
+
+    const leaveIntroTitle = 'Need time off?';
+    const leaveIntroBody = (
+        <>
+            Walks through <span className="font-semibold">Menu → Leave Application</span>, then mentions the pencil in the top bar on wider screens, with “hops into the top bar” for a bit of personality.
+        </>
+    );
+    const leaveIntroDismissLabel = 'Got it';
+    const leaveIntroCtaLabel = 'Go to Leave Application →';
+
+    const leaveIntroAcknowledgeLinkClick = () => {
+        setLeaveSeenDecisionKeys(leaveDecisionKeys);
+        localStorage.setItem(leaveSeenKey, JSON.stringify(leaveDecisionKeys));
+        acknowledgeLeaveIntro();
+    };
+
+    const leaveIntroPortal =
+        showLeaveIntro &&
+        typeof document !== 'undefined' &&
+        createPortal(
+            <>
+                {leaveIntroAnchorRect && (
+                    <div
+                        role="dialog"
+                        aria-live="polite"
+                        className="pointer-events-auto fixed z-[60000] hidden w-[min(18rem,calc(100vw-3rem))] -translate-x-1/2 sm:block"
+                        style={{
+                            left: leaveIntroAnchorRect.left + leaveIntroAnchorRect.width / 2,
+                            top: leaveIntroAnchorRect.bottom + 8,
+                        }}
+                    >
+                        <div className="absolute left-1/2 top-0 z-10 -translate-x-1/2 -translate-y-full border-[10px] border-transparent border-b-white dark:border-b-[#1b2e4b]" aria-hidden />
+                        <div className="rounded-2xl border border-white/80 bg-white p-3.5 pr-11 shadow-xl dark:border-primary/40 dark:bg-[#1b2e4b] dark:shadow-[0_12px_40px_rgba(0,0,0,0.45)] ring-2 ring-primary/25">
+                            <button
+                                type="button"
+                                aria-label="Close tip"
+                                className="absolute right-2.5 top-2.5 rounded-full p-1 text-black/45 hover:bg-black/10 hover:text-primary dark:text-white/50 dark:hover:bg-white/10 dark:hover:text-white"
+                                onClick={() => acknowledgeLeaveIntro()}
+                            >
+                                <IconXCircle className="h-5 w-5 shrink-0" />
+                            </button>
+                            <p className="text-sm font-semibold text-gray-900 dark:text-white">{leaveIntroTitle}</p>
+                            <p className="mt-2 text-xs leading-snug text-black/80 dark:text-white/85">{leaveIntroBody}</p>
+                            <button
+                                type="button"
+                                className="mt-2 text-xs font-semibold uppercase text-primary hover:text-primary/90"
+                                onClick={() => acknowledgeLeaveIntro()}
+                            >
+                                {leaveIntroDismissLabel}
+                            </button>
+                            
+                        </div>
+                    </div>
+                )}
+                <div className="pointer-events-auto fixed inset-x-4 bottom-5 z-[60000] rounded-2xl border border-primary/35 bg-white/95 p-4 shadow-2xl backdrop-blur dark:border-primary/45 dark:bg-[#1b2e4b]/95 sm:hidden">
+                    <div className="flex items-start gap-3">
+                        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-primary/15 to-purple-500/25 text-lg" aria-hidden>
+                            ✈
+                        </span>
+                        <div className="min-w-0 flex-1">
+                            <p className="text-sm font-semibold text-gray-900 dark:text-white">{leaveIntroTitle}</p>
+                            <p className="mt-1 text-xs leading-relaxed text-gray-600 dark:text-white/75">{leaveIntroBody}</p>
+                            <button
+                                type="button"
+                                className="mt-2 text-xs font-semibold uppercase text-primary hover:text-primary/90"
+                                onClick={() => acknowledgeLeaveIntro()}
+                            >
+                                {leaveIntroDismissLabel}
+                            </button>
+                            <Link
+                                to={leaveRoute}
+                                className="mt-2 block text-xs font-semibold uppercase text-primary underline decoration-primary/40 underline-offset-2"
+                                onClick={() => leaveIntroAcknowledgeLinkClick()}
+                            >
+                                {leaveIntroCtaLabel}
+                            </Link>
+                        </div>
+                        <button type="button" aria-label="Close tip" className="shrink-0 p-1 text-black/35 dark:text-white/40" onClick={() => acknowledgeLeaveIntro()}>
+                            <IconXCircle className="h-5 w-5" />
+                        </button>
+                    </div>
+                </div>
+            </>,
+            document.body,
+        );
+
     return (
-        <header className={`z-40 ${themeConfig.semidark && themeConfig.menu === 'horizontal' ? 'dark' : ''}`}>
+        <>
+            <header className={`${themeConfig.semidark && themeConfig.menu === 'horizontal' ? 'dark' : ''}`}>
             <div className="shadow-sm">
                 <div className="relative bg-white flex w-full items-center px-5 py-2.5 dark:bg-black">
                     <div className="horizontal-logo flex lg:hidden justify-between items-center ltr:mr-2 rtl:ml-2">
@@ -411,25 +561,38 @@ const Header = () => {
                                     <IconCalendar />
                                 </Link>
                             </li>
-                            <li>
-                                <Link
-                                    to={leaveRoute}
-                                    className="relative block p-2 rounded-full bg-white-light/40 dark:bg-dark/40 hover:text-primary hover:bg-white-light/90 dark:hover:bg-dark/60"
-                                    onClick={() => {
-                                        if (userRole === 'employee') {
-                                            setLeaveSeenDecisionKeys(leaveDecisionKeys);
-                                            localStorage.setItem(leaveSeenKey, JSON.stringify(leaveDecisionKeys));
-                                        }
-                                    }}
-                                >
-                                    <IconEdit />
-                                    {userRole === 'employee' && leaveBadgeCount > 0 && (
-                                        <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center">
-                                            <span className="absolute inline-flex h-full w-full rounded-full bg-success opacity-70 animate-ping"></span>
-                                            <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-success border border-white dark:border-black animate-bounce"></span>
-                                        </span>
-                                    )}
-                                </Link>
+                            <li className="relative">
+                                <span ref={leaveIntroAnchorRef} className="relative inline-flex">
+                                    <Link
+                                        to={leaveRoute}
+                                        aria-label="Leave application"
+                                        title={userRole === 'employee' ? 'Leave application — submit requests & view status' : undefined}
+                                        className={`relative block p-2 rounded-full bg-white-light/40 dark:bg-dark/40 hover:text-primary hover:bg-white-light/90 dark:hover:bg-dark/60 ${showLeaveIntro ? 'text-primary shadow-[0_0_0_3px_rgba(67,97,238,0.35)] dark:shadow-[0_0_0_3px_rgba(138,169,251,0.35)] animate-pulse' : ''}`}
+                                        onClick={() => {
+                                            if (userRole === 'employee') {
+                                                setLeaveSeenDecisionKeys(leaveDecisionKeys);
+                                                localStorage.setItem(leaveSeenKey, JSON.stringify(leaveDecisionKeys));
+                                                if (leaveIntroPulse) acknowledgeLeaveIntro();
+                                            }
+                                        }}
+                                    >
+                                        <IconEdit />
+                                        {showLeaveIntro && leaveBadgeCount === 0 && (
+                                            <span
+                                                aria-hidden
+                                                className="absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-gradient-to-br from-primary to-purple-500 text-[10px] font-bold text-white shadow-md animate-bounce"
+                                            >
+                                                ✈
+                                            </span>
+                                        )}
+                                        {userRole === 'employee' && leaveBadgeCount > 0 && (
+                                            <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center">
+                                                <span className="absolute inline-flex h-full w-full rounded-full bg-success opacity-70 animate-ping"></span>
+                                                <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-success border border-white dark:border-black animate-bounce"></span>
+                                            </span>
+                                        )}
+                                    </Link>
+                                </span>
                             </li>
                             {userRole !== 'employee' && (
                                 <li>
@@ -1168,6 +1331,8 @@ const Header = () => {
                 </ul>
             </div>
         </header>
+            {leaveIntroPortal}
+        </>
     );
 };
 
