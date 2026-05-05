@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useDispatch } from 'react-redux';
 import { setPageTitle } from '../../store/themeConfigSlice';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import IconUsersGroup from '../../components/Icon/IconUsersGroup';
 import IconServer from '../../components/Icon/IconServer';
 import IconUser from '../../components/Icon/IconUser';
@@ -59,6 +59,7 @@ interface CalendarEventType {
 
 const AdminDashboard = () => {
     const dispatch = useDispatch();
+    const navigate = useNavigate();
     const userName = localStorage.getItem('username') || 'Admin';
     const formattedName = userName.charAt(0).toUpperCase() + userName.slice(1);
 
@@ -102,10 +103,17 @@ const AdminDashboard = () => {
                 fetch(`${API_BASE_URL}/employee/employee-profile/`, { headers }).catch(() => null),
             ]);
 
-            if (dashRes.ok) {
-                const result = await dashRes.json();
-                setData(result);
+            if (!dashRes.ok) {
+                if (dashRes.status === 401 || dashRes.status === 403) {
+                    navigate('/pages/error503', { replace: true });
+                    return;
+                }
+                navigate('/pages/error500', { replace: true });
+                return;
             }
+
+            const result = await dashRes.json();
+            setData(result);
 
             if (eventsRes && eventsRes.ok) {
                 const evResult = await eventsRes.json();
@@ -125,6 +133,7 @@ const AdminDashboard = () => {
             }
         } catch (error) {
             console.error('Error fetching admin dashboard:', error);
+            navigate('/pages/error500', { replace: true });
         } finally {
             setLoading(false);
         }
@@ -295,7 +304,7 @@ const AdminDashboard = () => {
                         </Link>
 
                         <Link
-                            to="/admin/approved-leaves"
+                            to="/admin/leave-history"
                             className="flex items-center gap-2.5 bg-white/15 backdrop-blur-sm rounded-xl px-4 py-2.5 hover:bg-white/25 transition-colors"
                         >
                             <div className="p-1.5 bg-white/20 rounded-lg">
@@ -682,7 +691,7 @@ const AdminDashboard = () => {
                         {[
                             { label: 'Calendar', icon: <IconCalendar className="w-5 h-5" />, to: '/admin/calendar', color: 'text-indigo-500', bg: 'bg-indigo-500/10 dark:bg-indigo-500/20', hoverBg: 'hover:bg-indigo-500/20 dark:hover:bg-indigo-500/30', border: 'border-indigo-500/20' },
                             { label: 'Employees', icon: <IconMenuUsers className="w-5 h-5" />, to: '/admin/employee-register', color: 'text-primary', bg: 'bg-primary/10 dark:bg-primary/20', hoverBg: 'hover:bg-primary/20 dark:hover:bg-primary/30', border: 'border-primary/20' },
-                            { label: 'Leaves', icon: <IconMenuCalendar className="w-5 h-5" />, to: '/admin/approved-leaves', color: 'text-success', bg: 'bg-success/10 dark:bg-success/20', hoverBg: 'hover:bg-success/20 dark:hover:bg-success/30', border: 'border-success/20' },
+                            { label: 'Leaves', icon: <IconMenuCalendar className="w-5 h-5" />, to: '/admin/leave-history', color: 'text-success', bg: 'bg-success/10 dark:bg-success/20', hoverBg: 'hover:bg-success/20 dark:hover:bg-success/30', border: 'border-success/20' },
                             { label: 'Attendance', icon: <IconBarChart className="w-5 h-5" />, to: '/admin/attendance-logs', color: 'text-secondary', bg: 'bg-secondary/10 dark:bg-secondary/20', hoverBg: 'hover:bg-secondary/20 dark:hover:bg-secondary/30', border: 'border-secondary/20' },
                             { label: 'Payroll', icon: <IconMenuInvoice className="w-5 h-5" />, to: '/admin/payroll-batches', color: 'text-warning', bg: 'bg-warning/10 dark:bg-warning/20', hoverBg: 'hover:bg-warning/20 dark:hover:bg-warning/30', border: 'border-warning/20' },
                             { label: 'Departments', icon: <IconMenuContacts className="w-5 h-5" />, to: '/admin/branch-mgt/department', color: 'text-danger', bg: 'bg-danger/10 dark:bg-danger/20', hoverBg: 'hover:bg-danger/20 dark:hover:bg-danger/30', border: 'border-danger/20' },

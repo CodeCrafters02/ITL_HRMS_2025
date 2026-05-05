@@ -5,7 +5,7 @@ import IconSearch from '../../components/Icon/IconSearch';
 import IconLayoutGrid from '../../components/Icon/IconLayoutGrid';
 import IconListCheck from '../../components/Icon/IconListCheck';
 import IconUser from '../../components/Icon/IconUser';
-import { Reportee, fetchMyReportees } from '../Employee/Reportees/api';
+import { Reportee, fetchMyReportees } from '../Employee/reportees/api';
 
 type ViewMode = 'card' | 'table';
 

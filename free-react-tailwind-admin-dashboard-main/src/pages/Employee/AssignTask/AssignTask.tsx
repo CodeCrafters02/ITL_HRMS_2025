@@ -6,7 +6,7 @@ import { setPageTitle } from '../../../store/themeConfigSlice';
 import IconListCheck from '../../../components/Icon/IconListCheck';
 import IconSearch from '../../../components/Icon/IconSearch';
 import IconTrashLines from '../../../components/Icon/IconTrashLines';
-import { fetchMyReportees, Reportee } from '../Reportees/api';
+import { fetchMyReportees, Reportee } from '../reportees/api';
 import {
     createManagerSubtask,
     createManagerTask,
