@@ -170,8 +170,8 @@ const AttendanceHistory = () => {
                             <IconCalendar className="w-6 h-6" />
                         </div>
                         <div>
-                            <h1 className="text-2xl md:text-3xl font-bold">Attendance History</h1>
-                            <p className="mt-1 text-white/75">View day-wise attendance, time logs, and status records.</p>
+                            <h1 className="text-xl sm:text-2xl md:text-3xl font-bold">Attendance History</h1>
+                            <p className="mt-1 text-white/75 text-sm">View day-wise attendance, time logs, and status records.</p>
                         </div>
                     </div>
                     <button type="button" className="btn btn-outline-light w-full md:w-auto" onClick={loadAttendance}>
@@ -186,13 +186,13 @@ const AttendanceHistory = () => {
                 </div>
             )}
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-6 gap-4">
-                <div className="panel"><p className="text-white-dark text-xs uppercase tracking-wide">Working Days</p><p className="text-2xl font-bold mt-2">{summary?.working_days ?? 0}</p></div>
-                <div className="panel"><p className="text-white-dark text-xs uppercase tracking-wide">Present</p><p className="text-2xl font-bold mt-2 text-success">{summary?.present ?? 0}</p></div>
-                <div className="panel"><p className="text-white-dark text-xs uppercase tracking-wide">Absent</p><p className="text-2xl font-bold mt-2 text-danger">{summary?.absent ?? 0}</p></div>
-                <div className="panel"><p className="text-white-dark text-xs uppercase tracking-wide">Leave</p><p className="text-2xl font-bold mt-2 text-info">{summary?.leave ?? 0}</p></div>
-                <div className="panel"><p className="text-white-dark text-xs uppercase tracking-wide">Half Day</p><p className="text-2xl font-bold mt-2 text-warning">{summary?.half_day ?? 0}</p></div>
-                <div className="panel"><p className="text-white-dark text-xs uppercase tracking-wide">Late Entries</p><p className="text-2xl font-bold mt-2 text-secondary">{summary?.late ?? 0}</p></div>
+            <div className="grid grid-cols-2 xl:grid-cols-6 gap-3 sm:gap-4">
+                <div className="panel p-3 sm:p-4"><p className="text-white-dark text-[10px] sm:text-xs uppercase tracking-wide">Working Days</p><p className="text-xl sm:text-2xl font-bold mt-1.5 sm:mt-2">{summary?.working_days ?? 0}</p></div>
+                <div className="panel p-3 sm:p-4"><p className="text-white-dark text-[10px] sm:text-xs uppercase tracking-wide">Present</p><p className="text-xl sm:text-2xl font-bold mt-1.5 sm:mt-2 text-success">{summary?.present ?? 0}</p></div>
+                <div className="panel p-3 sm:p-4"><p className="text-white-dark text-[10px] sm:text-xs uppercase tracking-wide">Absent</p><p className="text-xl sm:text-2xl font-bold mt-1.5 sm:mt-2 text-danger">{summary?.absent ?? 0}</p></div>
+                <div className="panel p-3 sm:p-4"><p className="text-white-dark text-[10px] sm:text-xs uppercase tracking-wide">Leave</p><p className="text-xl sm:text-2xl font-bold mt-1.5 sm:mt-2 text-info">{summary?.leave ?? 0}</p></div>
+                <div className="panel p-3 sm:p-4"><p className="text-white-dark text-[10px] sm:text-xs uppercase tracking-wide">Half Day</p><p className="text-xl sm:text-2xl font-bold mt-1.5 sm:mt-2 text-warning">{summary?.half_day ?? 0}</p></div>
+                <div className="panel p-3 sm:p-4"><p className="text-white-dark text-[10px] sm:text-xs uppercase tracking-wide">Late Entries</p><p className="text-xl sm:text-2xl font-bold mt-1.5 sm:mt-2 text-secondary">{summary?.late ?? 0}</p></div>
             </div>
 
             <div className="panel p-0 overflow-hidden">
@@ -231,17 +231,19 @@ const AttendanceHistory = () => {
                     </div>
                 ) : (
                     <div className="p-4">
-                        <div className="grid grid-cols-7 gap-2 mb-2">
-                            {weekDayHeaders.map((label) => (
-                                <div key={label} className="text-center text-xs font-bold uppercase text-white-dark py-2">
-                                    {label}
+                        <div className="overflow-x-auto">
+                            <div className="min-w-[720px]">
+                                <div className="grid grid-cols-7 gap-2 mb-2">
+                                    {weekDayHeaders.map((label) => (
+                                        <div key={label} className="text-center text-xs font-bold uppercase text-white-dark py-2">
+                                            {label}
+                                        </div>
+                                    ))}
                                 </div>
-                            ))}
-                        </div>
-                        <div className="grid grid-cols-7 gap-2">
-                            {calendarWeeks.flat().map((cell, idx) => {
+                                <div className="grid grid-cols-7 gap-2">
+                                    {calendarWeeks.flat().map((cell, idx) => {
                                 if (!cell) {
-                                    return <div key={`blank-${idx}`} className="min-h-[128px] rounded-lg bg-transparent" />;
+                                        return <div key={`blank-${idx}`} className="min-h-[92px] md:min-h-[128px] rounded-lg bg-transparent" />;
                                 }
 
                                 const row = recordsByDate.get(cell.dateKey);
@@ -256,7 +258,7 @@ const AttendanceHistory = () => {
                                             setSelectedDateKey(cell.dateKey);
                                             setIsDetailsModalOpen(true);
                                         }}
-                                        className={`min-h-[128px] rounded-lg border bg-white dark:bg-[#0e1726] p-2.5 flex flex-col gap-1 text-left transition ${
+                                        className={`min-h-[92px] md:min-h-[128px] rounded-lg border bg-white dark:bg-[#0e1726] p-2 md:p-2.5 flex flex-col gap-1 text-left transition ${
                                             isSelected
                                                 ? 'border-primary ring-1 ring-primary/40 shadow-md shadow-primary/10'
                                                 : 'border-[#ebedf2] dark:border-[#1b2e4b] hover:border-primary/50'
@@ -288,7 +290,9 @@ const AttendanceHistory = () => {
                                         {row?.is_late && row.late_duration && <p className="text-[11px] font-semibold text-danger mt-auto">Late: {row.late_duration}</p>}
                                     </button>
                                 );
-                            })}
+                                    })}
+                                </div>
+                            </div>
                         </div>
                         {!loading && attendanceData && attendanceData.monthly_data.length === 0 && (
                             <div className="text-center py-8">
