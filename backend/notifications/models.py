@@ -16,6 +16,19 @@ class UserNotification(models.Model):
     def __str__(self):
         return f"{self.recipient.full_name} - {self.title}"
 
+class DismissedNotification(models.Model):
+    """Track which announcements/notifications a user has dismissed."""
+    employee = models.ForeignKey(Employee, related_name='dismissed_notifications', on_delete=models.CASCADE)
+    notification_id = models.CharField(max_length=100)
+    dismissed_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ('employee', 'notification_id')
+
+    def __str__(self):
+        return f"{self.employee.full_name} dismissed {self.notification_id}"
+
+
 class UserDevice(models.Model):
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="devices")
     token = models.CharField(max_length=255, unique=True) 

@@ -4,10 +4,12 @@ import '../../services/employee_service.dart';
 import '../../services/notification_service.dart';
 import '../../services/auth_service.dart';
 import '../../services/fcm_service.dart';
+import '../../services/storage_service.dart';
 import '../../models/profile_model.dart';
 import '../../providers/chat_scope.dart';
 import '../../utils/performance_helper.dart';
 import '../../widgets/optimized_image.dart';
+import '../../widgets/demo_mode_indicator.dart';
 import 'employee_dashboard_page.dart';
 import 'my_tasks_page.dart';
 import 'attendance_history_page.dart';
@@ -27,6 +29,7 @@ class _EmployeeLayoutState extends State<EmployeeLayout>
     with WidgetsBindingObserver {
   int _currentIndex = 0;
   bool _isReportingManager = false;
+  bool _isDemoMode = false;
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
   EmployeeProfile? _profile;
   bool _isLoadingProfile = true;
@@ -35,6 +38,7 @@ class _EmployeeLayoutState extends State<EmployeeLayout>
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    _checkDemoMode();
     _checkAuthAndInitialize();
     // Keep chat badge/conversations warm for global unread counts.
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -82,6 +86,19 @@ class _EmployeeLayoutState extends State<EmployeeLayout>
 
     // Check for pending notifications after initialization
     _handlePendingNotifications();
+  }
+
+  Future<void> _checkDemoMode() async {
+    try {
+      final isDemo = await StorageService.isDemoMode();
+      if (mounted) {
+        setState(() {
+          _isDemoMode = isDemo;
+        });
+      }
+    } catch (e) {
+      // Silent fail - demo mode disabled by default
+    }
   }
 
   // Handle pending notifications from FCM
@@ -310,36 +327,113 @@ class _EmployeeLayoutState extends State<EmployeeLayout>
 
     final bool? shouldExit = await showDialog<bool>(
       context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: AppStitchTheme.surface,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text(
-          'Exit App',
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-        ),
-        content: const Text(
-          'Are you sure you want to exit the application?',
-          style: TextStyle(color: Colors.white70),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: const Text(
-              'Cancel',
-              style: TextStyle(color: Colors.white54, fontWeight: FontWeight.w600),
-            ),
+      barrierColor: Colors.black.withValues(alpha: 0.4),
+      builder: (context) => Dialog(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        child: Container(
+          padding: const EdgeInsets.all(24),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(24),
+            boxShadow: [
+              BoxShadow(
+                color: AppStitchTheme.primary.withValues(alpha: 0.10),
+                blurRadius: 30,
+                offset: const Offset(0, 10),
+              ),
+            ],
           ),
-          ElevatedButton(
-            onPressed: () => Navigator.of(context).pop(true),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFFEF4444), // Red for exit
-              foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            ),
-            child: const Text('Exit'),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [
+                      AppStitchTheme.primary.withValues(alpha: 0.12),
+                      const Color(0xFF8B5CF6).withValues(alpha: 0.08),
+                    ],
+                  ),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  Icons.exit_to_app_rounded,
+                  color: AppStitchTheme.primary,
+                  size: 32,
+                ),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                'Exit App?',
+                style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                      fontWeight: FontWeight.w900,
+                      color: AppStitchTheme.lightOnSurface,
+                      letterSpacing: -0.5,
+                    ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Are you sure you want to exit the application?',
+                textAlign: TextAlign.center,
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: AppStitchTheme.lightOnSurfaceMuted,
+                      height: 1.4,
+                    ),
+              ),
+              const SizedBox(height: 24),
+              Row(
+                children: [
+                  Expanded(
+                    child: TextButton(
+                      onPressed: () => Navigator.of(context).pop(false),
+                      style: TextButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
+                          side: BorderSide(
+                            color: AppStitchTheme.lightOutline.withValues(alpha: 0.5),
+                          ),
+                        ),
+                      ),
+                      child: Text(
+                        'Stay',
+                        style: TextStyle(
+                          color: AppStitchTheme.lightOnSurfaceMuted,
+                          fontWeight: FontWeight.w700,
+                          fontSize: 14,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: () => Navigator.of(context).pop(true),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppStitchTheme.primary,
+                        foregroundColor: Colors.white,
+                        elevation: 0,
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                      ),
+                      child: const Text(
+                        'Exit',
+                        style: TextStyle(
+                          fontWeight: FontWeight.w800,
+                          fontSize: 14,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     );
 
@@ -362,6 +456,8 @@ class _EmployeeLayoutState extends State<EmployeeLayout>
         child: SafeArea(
           child: Column(
             children: [
+              // Demo Mode Indicator (shown only when in demo mode)
+              if (_isDemoMode) const DemoModeIndicator(),
               Padding(
                 padding: const EdgeInsets.fromLTRB(12, 8, 12, 4),
                 child: Container(

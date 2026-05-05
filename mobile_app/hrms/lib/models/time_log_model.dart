@@ -1,11 +1,16 @@
 class Project {
   final int id;
   final String name;
+  final String client;
 
-  Project({required this.id, required this.name});
+  Project({required this.id, required this.name, required this.client});
 
   factory Project.fromJson(Map<String, dynamic> json) {
-    return Project(id: json['id'] ?? 0, name: json['name'] ?? '');
+    return Project(
+      id: json['id'] ?? 0,
+      name: json['name'] ?? '',
+      client: json['client'] ?? '',
+    );
   }
 }
 

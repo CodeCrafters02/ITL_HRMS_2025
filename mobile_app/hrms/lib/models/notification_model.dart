@@ -5,6 +5,7 @@ class NotificationModel {
   final DateTime date;
   final String type;
   final bool? read;
+  final String? imageUrl;
 
   NotificationModel({
     required this.id,
@@ -13,6 +14,7 @@ class NotificationModel {
     required this.date,
     required this.type,
     this.read,
+    this.imageUrl,
   });
 
   factory NotificationModel.fromJson(Map<String, dynamic> json) {
@@ -23,6 +25,7 @@ class NotificationModel {
       date: _parseDate(json['date']),
       type: json['type'] ?? 'notification',
       read: json['read'],
+      imageUrl: json['image_url'],
     );
   }
 
@@ -48,6 +51,7 @@ class NotificationModel {
       'date': date.toIso8601String(),
       'type': type,
       'read': read,
+      'image_url': imageUrl,
     };
   }
 

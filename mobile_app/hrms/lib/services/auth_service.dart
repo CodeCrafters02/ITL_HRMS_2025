@@ -9,8 +9,9 @@ import 'package:http/http.dart' as http;
 import '../config/api_config.dart';
 import '../config/google_oauth_config.dart';
 import '../models/user_model.dart';
-import 'storage_service.dart';
-import 'fcm_service.dart';
+import '../services/storage_service.dart';
+import '../services/fcm_service.dart';
+import '../services/demo_service.dart';
 
 class AuthService {
   static GoogleSignIn? _googleSignIn;
@@ -150,6 +151,196 @@ class AuthService {
     }
   }
 
+  /// Check if demo mode is enabled on the backend
+  static Future<bool> checkDemoModeStatus() async {
+    try {
+      final response = await http.get(
+        Uri.parse(ApiConfig.demoStatusUrl),
+        headers: ApiConfig.headers,
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        return data['demo_mode_enabled'] ?? false;
+      }
+      return false;
+    } catch (e) {
+      // If backend is unavailable, assume demo mode is disabled
+      return false;
+    }
+  }
+
+  /// Demo mode login: calls backend demo endpoint or falls back to local demo data
+  static Future<ApiResponse<LoginResponse>> loginWithDemo() async {
+    try {
+      // First, check if demo mode is enabled on the backend
+      final statusResponse = await http.get(
+        Uri.parse(ApiConfig.demoStatusUrl),
+        headers: ApiConfig.headers,
+      );
+
+      bool demoEnabled = false;
+      if (statusResponse.statusCode == 200) {
+        final statusData = jsonDecode(statusResponse.body);
+        demoEnabled = statusData['demo_mode_enabled'] ?? false;
+      }
+
+      if (!demoEnabled) {
+        return ApiResponse(
+          success: false,
+          message: 'Demo mode is currently disabled.',
+        );
+      }
+
+      // Attempt to login via backend demo endpoint
+      final response = await http.post(
+        Uri.parse(ApiConfig.demoLoginUrl),
+        headers: ApiConfig.headers,
+        body: jsonEncode({
+          'username': DemoService.demoUsername,
+          'password': DemoService.demoPassword,
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body) as Map<String, dynamic>;
+        final loginResponse = LoginResponse.fromJson(data);
+
+        // Save tokens and set demo mode flag
+        await StorageService.saveTokens(
+          accessToken: loginResponse.accessToken,
+          refreshToken: loginResponse.refreshToken,
+          role: loginResponse.role,
+          username: loginResponse.username,
+          userEmail: data['email'] ?? 'demo@innovyx.com',
+          firstName: loginResponse.firstName,
+          lastName: loginResponse.lastName,
+        );
+        await StorageService.setDemoMode(true);
+
+        return ApiResponse(
+          success: true,
+          message: 'Demo login successful',
+          data: loginResponse,
+        );
+      } else {
+        // Backend returned error
+        try {
+          final error = jsonDecode(response.body);
+          return ApiResponse(
+            success: false,
+            message: error['detail'] ?? 'Demo login failed',
+          );
+        } catch (_) {
+          return ApiResponse(
+            success: false,
+            message: 'Demo login failed: ${response.statusCode}',
+          );
+        }
+      }
+    } catch (e) {
+      // Network error - fallback to local demo mode (offline demo)
+      return await _loginWithLocalDemo();
+    }
+  }
+
+  /// Local fallback for demo mode when backend is unavailable
+  static Future<ApiResponse<LoginResponse>> _loginWithLocalDemo() async {
+    try {
+      // Simulate network delay
+      await DemoService.simulateDelay(milliseconds: 800);
+
+      final loginResponse = DemoService.getDemoLoginResponse();
+
+      // Save tokens and set demo mode flag
+      await StorageService.saveTokens(
+        accessToken: loginResponse.accessToken,
+        refreshToken: loginResponse.refreshToken,
+        role: loginResponse.role,
+        username: loginResponse.username,
+        userEmail: 'demo@innovyx.com',
+        firstName: loginResponse.firstName,
+        lastName: loginResponse.lastName,
+      );
+      await StorageService.setDemoMode(true);
+
+      return ApiResponse(
+        success: true,
+        message: 'Demo login successful (offline mode)',
+        data: loginResponse,
+      );
+    } catch (e) {
+      return ApiResponse(
+        success: false,
+        message: 'Demo login failed: ${e.toString()}',
+      );
+    }
+  }
+
+  /// Check if current user is in demo mode
+  static Future<bool> isDemoUser() async {
+    return await StorageService.isDemoMode();
+  }
+
+  /// Login with demo credentials (used by DemoLoginPage)
+  static Future<ApiResponse<LoginResponse>> loginWithDemoCredentials({
+    required String username,
+    required String password,
+  }) async {
+    try {
+      // Attempt to login via backend demo endpoint
+      final response = await http.post(
+        Uri.parse(ApiConfig.demoLoginUrl),
+        headers: ApiConfig.headers,
+        body: jsonEncode({
+          'username': username,
+          'password': password,
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body) as Map<String, dynamic>;
+        final loginResponse = LoginResponse.fromJson(data);
+
+        // Save tokens and set demo mode flag
+        await StorageService.saveTokens(
+          accessToken: loginResponse.accessToken,
+          refreshToken: loginResponse.refreshToken,
+          role: loginResponse.role,
+          username: loginResponse.username,
+          userEmail: data['email'] ?? 'demo@innovyx.com',
+          firstName: loginResponse.firstName,
+          lastName: loginResponse.lastName,
+        );
+        await StorageService.setDemoMode(true);
+
+        return ApiResponse(
+          success: true,
+          message: 'Demo login successful',
+          data: loginResponse,
+        );
+      } else if (response.statusCode == 403) {
+        // Demo mode disabled
+        return ApiResponse(
+          success: false,
+          message: 'Demo mode is currently disabled on the server.',
+        );
+      } else if (response.statusCode == 401) {
+        // Invalid credentials
+        return ApiResponse(
+          success: false,
+          message: 'Invalid demo credentials.',
+        );
+      } else {
+        // Backend error - fallback to local demo
+        return await _loginWithLocalDemo();
+      }
+    } catch (e) {
+      // Network error - fallback to local demo (offline demo)
+      return await _loginWithLocalDemo();
+    }
+  }
+
   // Register (Signup)
   static Future<ApiResponse<UserModel>> register({
     required String username,
@@ -201,7 +392,13 @@ class AuthService {
   }
 
   // Logout
-  static Future<void> logout() async {
+  static Future<void> logout({bool isAutomatic = false}) async {
+    // If it's an automatic logout (e.g. 401 error) and we are in demo mode, skip it
+    // to prevent background network errors from clearing the demo session.
+    if (isAutomatic && await StorageService.isDemoMode()) {
+      return;
+    }
+
     try {
       await _googleSignIn?.signOut();
     } catch (_) {
@@ -243,6 +440,12 @@ class AuthService {
   // Check and refresh token if needed
   static Future<bool> ensureValidToken() async {
     try {
+      // Check if in demo mode - demo tokens never expire/don't need refresh
+      final bool isDemo = await StorageService.isDemoMode();
+      if (isDemo) {
+        return true;
+      }
+
       final accessToken = await StorageService.getAccessToken();
       final refreshTokenValue = await StorageService.getRefreshToken();
 
@@ -303,6 +506,16 @@ class AuthService {
   // Refresh token
   static Future<ApiResponse<String>> refreshToken() async {
     try {
+      // Check if in demo mode
+      if (await StorageService.isDemoMode()) {
+        final token = await StorageService.getAccessToken();
+        return ApiResponse(
+          success: true,
+          message: 'Demo token refresh simulated',
+          data: token ?? 'demo_token',
+        );
+      }
+
       final refreshToken = await StorageService.getRefreshToken();
       if (refreshToken == null) {
         return ApiResponse(success: false, message: 'No refresh token found');

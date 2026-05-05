@@ -41,6 +41,8 @@ const AdminNotifications = () => {
         description: '',
         date: new Date().toISOString().split('T')[0],
     });
+    const [imageFile, setImageFile] = useState<File | null>(null);
+    const [imagePreview, setImagePreview] = useState<string | null>(null);
 
     useEffect(() => {
         dispatch(setPageTitle('Notifications Mgt'));
@@ -98,6 +100,8 @@ const AdminNotifications = () => {
             date: new Date().toISOString().split('T')[0],
         });
         setEditingItem(null);
+        setImageFile(null);
+        setImagePreview(null);
     };
 
     const openCreateModal = () => {
@@ -112,17 +116,46 @@ const AdminNotifications = () => {
             description: item.description || '',
             date: item.date || new Date().toISOString().split('T')[0],
         });
+        setImageFile(null);
+        setImagePreview((item as any).image_url || null);
         setModalOpen(true);
+    };
+
+    const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (file) {
+            setImageFile(file);
+            setImagePreview(URL.createObjectURL(file));
+        }
     };
 
     const handleSave = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
         setSaving(true);
         try {
+            const token = localStorage.getItem('access_token');
+            const headers: Record<string, string> = {};
+            if (token) headers.Authorization = `Bearer ${token}`;
+
+            let body: FormData | string;
+            let finalHeaders = headers;
+
+            if (imageFile) {
+                const fd = new FormData();
+                fd.append('title', formData.title);
+                fd.append('description', formData.description);
+                fd.append('date', formData.date);
+                fd.append('image', imageFile);
+                body = fd;
+            } else {
+                finalHeaders = { ...headers, 'Content-Type': 'application/json' };
+                body = JSON.stringify(formData);
+            }
+
             const response = await fetch(editingItem ? `${API_URL}${editingItem.id}/` : API_URL, {
                 method: editingItem ? 'PATCH' : 'POST',
-                headers: getHeaders(),
-                body: JSON.stringify(formData),
+                headers: finalHeaders,
+                body,
             });
 
             if (response.ok) {
@@ -372,6 +405,34 @@ const AdminNotifications = () => {
                                                     value={formData.description}
                                                     onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                                                 />
+                                            </div>
+                                            <div>
+                                                <label className="font-semibold mb-1 block">Image (Optional)</label>
+                                                <input
+                                                    type="file"
+                                                    accept="image/*"
+                                                    className="form-input"
+                                                    onChange={handleImageChange}
+                                                />
+                                                {imagePreview && (
+                                                    <div className="mt-2 relative inline-block">
+                                                        <img
+                                                            src={imagePreview}
+                                                            alt="Preview"
+                                                            className="max-h-32 rounded-lg border border-gray-200"
+                                                        />
+                                                        <button
+                                                            type="button"
+                                                            className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs hover:bg-red-600"
+                                                            onClick={() => {
+                                                                setImageFile(null);
+                                                                setImagePreview(null);
+                                                            }}
+                                                        >
+                                                            ×
+                                                        </button>
+                                                    </div>
+                                                )}
                                             </div>
                                             <div className="flex justify-end gap-3 pt-4 border-t border-[#e0e6ed] dark:border-[#1b2e4b] -mx-5 px-5 mt-5">
                                                 <button type="button" className="btn btn-outline-danger" onClick={() => setModalOpen(false)}>

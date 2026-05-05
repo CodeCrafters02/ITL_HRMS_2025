@@ -31,6 +31,8 @@ class ApiConfig {
   // API Endpoints
   static const String loginEndpoint = '/app/login/';
   static const String googleLoginEndpoint = '/app/google-login/';
+  static const String demoLoginEndpoint = '/app/demo-login/';
+  static const String demoStatusEndpoint = '/app/demo-status/';
   static const String registerEndpoint = '/app/master-register/';
   static const String tokenRefreshEndpoint = '/api/token/refresh/';
   static const String changePasswordEndpoint = '/app/change-password/';
@@ -80,6 +82,8 @@ class ApiConfig {
   static const String personalReportingLineEndpoint =
       '/app/personal-reporting-line/';
   static const String deviceTokenEndpoint = '/notifications/devices/';
+  static const String dismissAnnouncementEndpoint = '/notifications/dismiss-announcement/';
+  static const String dismissedAnnouncementsEndpoint = '/notifications/dismissed-announcements/';
   static const String learningCornerEndpoint = '/employee/emp-learning-corner/';
   static const String announcementsEndpoint = '/employee/announcements/';
   static const String timeLogMetaEndpoint = '/employee/time-log/meta/';
@@ -124,6 +128,8 @@ class ApiConfig {
   // Full URLs
   static String get loginUrl => '$baseUrl$loginEndpoint';
   static String get googleLoginUrl => '$baseUrl$googleLoginEndpoint';
+  static String get demoLoginUrl => '$baseUrl$demoLoginEndpoint'; // Backend demo login
+  static String get demoStatusUrl => '$baseUrl$demoStatusEndpoint'; // Backend demo status check
   static String get registerUrl => '$baseUrl$registerEndpoint';
   static String get tokenRefreshUrl => '$baseUrl$tokenRefreshEndpoint';
   static String get changePasswordUrl => '$baseUrl$changePasswordEndpoint';
@@ -208,6 +214,8 @@ class ApiConfig {
   static String get personalReportingLineUrl =>
       '$baseUrl$personalReportingLineEndpoint';
   static String get deviceTokenUrl => '$baseUrl$deviceTokenEndpoint';
+  static String get dismissAnnouncementUrl => '$baseUrl$dismissAnnouncementEndpoint';
+  static String get dismissedAnnouncementsUrl => '$baseUrl$dismissedAnnouncementsEndpoint';
   static String get learningCornerUrl => '$baseUrl$learningCornerEndpoint';
   static String get announcementsUrl => '$baseUrl$announcementsEndpoint';
   static String get timeLogMetaUrl => '$baseUrl$timeLogMetaEndpoint';

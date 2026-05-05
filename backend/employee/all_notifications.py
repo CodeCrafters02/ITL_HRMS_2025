@@ -2,7 +2,8 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from app.models import Notification, CalendarEvent, LearningCorner,Employee
-from notifications.models import UserNotification
+from employee.models import Announcement
+from notifications.models import UserNotification, DismissedNotification
 from django.utils import timezone
 from datetime import datetime
 import json
@@ -89,12 +90,19 @@ class AllNotificationsAPIView(APIView):
                 unique_id = f"admin_notif_{n.id}"
                 if unique_id not in seen_ids:
                     seen_ids.add(unique_id)
+                    image_url = None
+                    if n.image:
+                        try:
+                            image_url = request.build_absolute_uri(n.image.url)
+                        except Exception:
+                            image_url = n.image.url if n.image else None
                     notifications.append({
                         "id": f"admin_notif_{n.id}",
                         "title": n.title or "Admin Notification",
                         "description": n.description or n.title or "",
                         "date": n.created_at.isoformat() if hasattr(n, 'created_at') and n.created_at else timezone.now().isoformat(),
-                        "type": "admin"
+                        "type": "admin",
+                        "image_url": image_url,
                     })
 
         # Calendar Events (company-wide)
@@ -123,6 +131,27 @@ class AllNotificationsAPIView(APIView):
                         "description": getattr(l, 'description', "Learning Corner"),
                         "date": getattr(l, 'created_at', timezone.now()).isoformat() if hasattr(l, 'created_at') else timezone.now().isoformat(),
                         "type": "learning_corner"
+                    })
+
+        # Announcements (company-scoped)
+        if hasattr(user, 'employee_profile') and user.employee_profile and user.employee_profile.company_id:
+            for a in Announcement.objects.filter(company_id=user.employee_profile.company_id, is_active=True):
+                unique_id = f"announcement_{a.id}"
+                if unique_id not in seen_ids:
+                    seen_ids.add(unique_id)
+                    image_url = None
+                    if a.image:
+                        try:
+                            image_url = request.build_absolute_uri(a.image.url)
+                        except Exception:
+                            image_url = a.image.url if a.image else None
+                    notifications.append({
+                        "id": f"announcement_{a.id}",
+                        "title": a.title or "Announcement",
+                        "description": a.body or a.title or "",
+                        "date": a.created_at.isoformat() if a.created_at else timezone.now().isoformat(),
+                        "type": "announcement",
+                        "image_url": image_url,
                     })
 
         # Birthday wishes for all employees whose birthday is today
@@ -164,6 +193,15 @@ class AllNotificationsAPIView(APIView):
                 unique_notifications.append(notif)
         
         unique_notifications.sort(key=sort_key, reverse=True)
+
+        # Filter out dismissed notifications for this user
+        employee = getattr(user, 'employee_profile', None)
+        if employee:
+            dismissed_ids = set(
+                DismissedNotification.objects.filter(employee=employee).values_list('notification_id', flat=True)
+            )
+            if dismissed_ids:
+                unique_notifications = [n for n in unique_notifications if n['id'] not in dismissed_ids]
 
         lowered_search = (request.query_params.get("search") or "").strip().lower()
         notification_type = (request.query_params.get("type") or "all").strip().lower()

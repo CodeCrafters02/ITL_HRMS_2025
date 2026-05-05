@@ -61,7 +61,7 @@ class WFHService {
           data: results.map((j) => WFHRequest.fromJson(j)).toList(),
         );
       } else if (response.statusCode == 401) {
-        await AuthService.logout();
+        await AuthService.logout(isAutomatic: true);
         return ApiResponse(success: false, message: 'Session expired. Please login again.');
       }
       return ApiResponse(success: false, message: 'Failed to load WFH requests');
@@ -93,7 +93,7 @@ class WFHService {
           data: all.where((r) => r.status == WFHStatus.pending).toList(),
         );
       } else if (response.statusCode == 401) {
-        await AuthService.logout();
+        await AuthService.logout(isAutomatic: true);
         return ApiResponse(success: false, message: 'Session expired. Please login again.');
       }
       return ApiResponse(success: false, message: 'Failed to load pending requests');
@@ -130,7 +130,7 @@ class WFHService {
           data: WFHRequest.fromJson(jsonDecode(response.body)),
         );
       } else if (response.statusCode == 401) {
-        await AuthService.logout();
+        await AuthService.logout(isAutomatic: true);
         return ApiResponse(success: false, message: 'Session expired. Please login again.');
       } else {
         try {
@@ -161,7 +161,7 @@ class WFHService {
       if (response.statusCode == 200) {
         return ApiResponse(success: true, message: 'Request approved');
       } else if (response.statusCode == 401) {
-        await AuthService.logout();
+        await AuthService.logout(isAutomatic: true);
         return ApiResponse(success: false, message: 'Session expired. Please login again.');
       }
       return ApiResponse(success: false, message: 'Failed to approve request');
@@ -183,7 +183,7 @@ class WFHService {
       if (response.statusCode == 200) {
         return ApiResponse(success: true, message: 'Request rejected');
       } else if (response.statusCode == 401) {
-        await AuthService.logout();
+        await AuthService.logout(isAutomatic: true);
         return ApiResponse(success: false, message: 'Session expired. Please login again.');
       }
       return ApiResponse(success: false, message: 'Failed to reject request');

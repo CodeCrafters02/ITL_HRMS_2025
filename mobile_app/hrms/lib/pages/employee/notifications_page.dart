@@ -39,7 +39,6 @@ class _NotificationsPageState extends State<NotificationsPage> {
         _notifications = response.data!;
         _loading = false;
       });
-      // Mark all as read when page is visited
       if (_notifications.isNotEmpty) {
         _markAllAsRead();
       }
@@ -107,7 +106,6 @@ class _NotificationsPageState extends State<NotificationsPage> {
       groups[label]!.add(notification);
     }
 
-    // Sort groups: Today first, then Yesterday, then by date descending
     final sortedLabels = groups.keys.toList()
       ..sort((a, b) {
         if (a == 'Today') return -1;
@@ -600,4 +598,5 @@ class _NotificationsPageState extends State<NotificationsPage> {
       ),
     );
   }
+
 }

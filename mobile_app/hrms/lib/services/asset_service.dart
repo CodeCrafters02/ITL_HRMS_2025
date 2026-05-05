@@ -28,11 +28,18 @@ class AssetService {
       if (response.statusCode == 401 && retryCount == 0) {
         final refreshResponse = await AuthService.refreshToken();
         if (refreshResponse.success) {
+          // Token refreshed successfully, retry the request with new token
           return _makeAuthenticatedRequest(
             request,
             retryCount: retryCount + 1,
           );
         } else {
+          // Check if in demo mode - don't logout if we are
+          if (await StorageService.isDemoMode()) {
+            return response;
+          }
+
+          // Token refresh failed, return the 401 response
           return response;
         }
       }
@@ -129,7 +136,7 @@ class AssetService {
           data: requests,
         );
       } else if (response.statusCode == 401) {
-        await AuthService.logout();
+        await AuthService.logout(isAutomatic: true);
         return ApiResponse(
           success: false,
           message: 'Session expired. Please login again.',
@@ -193,7 +200,7 @@ class AssetService {
           data: assets,
         );
       } else if (response.statusCode == 401) {
-        await AuthService.logout();
+        await AuthService.logout(isAutomatic: true);
         return ApiResponse(
           success: false,
           message: 'Session expired. Please login again.',
@@ -264,7 +271,7 @@ class AssetService {
           data: items,
         );
       } else if (response.statusCode == 401) {
-        await AuthService.logout();
+        await AuthService.logout(isAutomatic: true);
         return ApiResponse(
           success: false,
           message: 'Session expired. Please login again.',

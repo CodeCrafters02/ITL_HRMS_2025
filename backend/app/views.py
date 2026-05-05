@@ -25,7 +25,7 @@ import uuid
 from rest_framework.views import APIView
 from rest_framework.response import Response
 import re
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, AllowAny
 from .permissions import IsMaster, IsAdminUser, IsCompanyChatUser, CanReadCompanyCalendar
 from .serializers import *
 from .models import *
@@ -1277,6 +1277,7 @@ class NotificationViewSet(viewsets.ModelViewSet):
     queryset = Notification.objects.all()
     serializer_class = NotificationSerializer
     permission_classes = [IsAuthenticated,IsAdminUser]
+    parser_classes = [MultiPartParser, FormParser, JSONParser]
 
     def get_queryset(self):
         user = self.request.user
@@ -6350,5 +6351,130 @@ class WorkLocationLogViewSet(viewsets.ReadOnlyModelViewSet):
 
     def get_queryset(self):
         return WorkLocationLog.objects.all().order_by('-date')
+
+
+# --------------------------- DEMO MODE ENDPOINTS ---------------------------------
+
+class DemoStatusAPIView(APIView):
+    """Check if demo mode is enabled on the backend."""
+    permission_classes = [AllowAny]
+
+    def get(self, request):
+        settings = SystemSettings.get_settings()
+        return Response({
+            "demo_mode_enabled": settings.demo_mode_enabled,
+            "demo_username": settings.demo_username if settings.demo_mode_enabled else None
+        })
+
+
+class DemoLoginAPIView(APIView):
+    """Login with demo credentials - only works when demo mode is enabled."""
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        settings = SystemSettings.get_settings()
+
+        # Check if demo mode is enabled
+        if not settings.demo_mode_enabled:
+            return Response(
+                {"detail": "Demo mode is currently disabled."},
+                status=status.HTTP_403_FORBIDDEN
+            )
+
+        # Validate credentials
+        username = request.data.get("username")
+        password = request.data.get("password")
+
+        if username != settings.demo_username or password != settings.demo_password:
+            return Response(
+                {"detail": "Invalid demo credentials."},
+                status=status.HTTP_401_UNAUTHORIZED
+            )
+
+        # Generate JWT tokens for demo user
+        # Create a mock user data structure for the response
+        demo_user_data = {
+            "id": 0,
+            "username": settings.demo_username,
+            "email": "demo@innovyx.com",
+            "role": "employee",
+            "first_name": "Alex",
+            "last_name": "Demo"
+        }
+
+        # Generate tokens with demo-specific claims
+        from rest_framework_simplejwt.tokens import RefreshToken
+        refresh = RefreshToken()
+        refresh.payload['user_id'] = 0
+        refresh.payload['username'] = settings.demo_username
+        refresh.payload['role'] = 'employee'
+        refresh.payload['demo'] = True  # Flag to identify demo tokens
+
+        return Response({
+            "access": str(refresh.access_token),
+            "refresh": str(refresh),
+            "username": settings.demo_username,
+            "role": "employee",
+            "first_name": "Alex",
+            "last_name": "Demo",
+            "email": "demo@innovyx.com",
+            "demo_mode": True
+        })
+
+
+class SystemSettingsAPIView(APIView):
+    """Get or update system settings (admin only)."""
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, pk=None):
+        """Get current system settings."""
+        # Check if user is admin
+        if request.user.role != 'admin':
+            return Response(
+                {"detail": "Only admin users can access system settings."},
+                status=status.HTTP_403_FORBIDDEN
+            )
+
+        settings = SystemSettings.get_settings()
+        return Response({
+            "id": settings.id,
+            "demo_mode_enabled": settings.demo_mode_enabled,
+            "demo_username": settings.demo_username,
+            "demo_password": settings.demo_password,
+            "updated_at": settings.updated_at.isoformat() if settings.updated_at else None,
+        })
+
+    def post(self, request, pk=None):
+        """Create or update system settings."""
+        # Check if user is admin
+        if request.user.role != 'admin':
+            return Response(
+                {"detail": "Only admin users can modify system settings."},
+                status=status.HTTP_403_FORBIDDEN
+            )
+
+        settings = SystemSettings.get_settings()
+
+        # Update fields if provided
+        if 'demo_mode_enabled' in request.data:
+            settings.demo_mode_enabled = request.data['demo_mode_enabled']
+        if 'demo_username' in request.data:
+            settings.demo_username = request.data['demo_username']
+        if 'demo_password' in request.data:
+            settings.demo_password = request.data['demo_password']
+
+        settings.save()
+
+        return Response({
+            "id": settings.id,
+            "demo_mode_enabled": settings.demo_mode_enabled,
+            "demo_username": settings.demo_username,
+            "demo_password": settings.demo_password,
+            "updated_at": settings.updated_at.isoformat() if settings.updated_at else None,
+        })
+
+    def put(self, request, pk=None):
+        """Update system settings (same as POST for convenience)."""
+        return self.post(request, pk=pk)
 
 

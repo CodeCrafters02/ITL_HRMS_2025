@@ -47,7 +47,7 @@ def _stringify_payload_data(data):
     return out
 
 
-def send_fcm_push(token, title, body, data=None):
+def send_fcm_push(token, title, body, data=None, image_url=None):
     """
     Send a push notification to a single device using FCM HTTP v1 API and service account JSON.
     Returns (status_code, response_text) or (None, error_message) on failure.
@@ -82,17 +82,23 @@ def send_fcm_push(token, title, body, data=None):
         }
         payload_data = _stringify_payload_data(data)
 
+        # Build notification payload
+        notification_payload = {
+            "title": title,
+            "body": body,
+        }
+        if image_url:
+            notification_payload["image"] = image_url
+
         # Send both notification + data payload for reliable system-tray behavior.
         message = {
             "message": {
                 "token": token,
-                "notification": {
-                    "title": title,
-                    "body": body,
-                },
+                "notification": notification_payload,
                 "data": {
                     "title": title,
                     "body": body,
+                    **({"image_url": image_url} if image_url else {}),
                     **payload_data,
                 },
                 "android": {
@@ -100,6 +106,7 @@ def send_fcm_push(token, title, body, data=None):
                     "notification": {
                         "channel_id": "hrms_notifications",
                         "sound": "default",
+                        **({"image": image_url} if image_url else {}),
                     },
                 },
                 "apns": {
@@ -109,8 +116,10 @@ def send_fcm_push(token, title, body, data=None):
                     "payload": {
                         "aps": {
                             "sound": "default",
+                            "mutable-content": 1,
                         }
                     },
+                    **({"fcm_options": {"image": image_url}} if image_url else {}),
                 },
             }
         }
@@ -185,6 +194,7 @@ def send_fcm_to_users(
     related_object_id=None,
     extra_data=None,
     create_user_notifications=True,
+    image_url=None,
 ):
     """
     Create UserNotification, then send FCM push to all user devices.
@@ -225,7 +235,7 @@ def send_fcm_to_users(
         this_extra_data['company_logo'] = emp_logo_map.get(user_id, "")
         this_extra_data['company_name'] = emp_name_map.get(user_id, "")
         try:
-            send_fcm_push(tk, title or notif_type.capitalize(), message, this_extra_data)
+            send_fcm_push(tk, title or notif_type.capitalize(), message, this_extra_data, image_url=image_url)
         except Exception as e:
             # Log but don't break the workflow
             logger.error(f"Failed to send FCM push to user {user_id}: {e}")

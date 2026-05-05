@@ -633,7 +633,16 @@ class Notification(models.Model):
     title = models.CharField(max_length=255, null=True)
     description = models.TextField(null=True, blank=True)
     date = models.DateField(null=True)
+    image = models.ImageField(
+        upload_to="notifications/",
+        blank=True,
+        null=True,
+    )
     company = models.ForeignKey('Company', on_delete=models.CASCADE, null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True, null=True)
+
+    class Meta:
+        ordering = ["-created_at"]
 
     def __str__(self):
         return self.title or "Untitled"
@@ -1363,3 +1372,33 @@ class WorkLocationLog(models.Model):
 
     def __str__(self):
         return f"{self.employee.full_name}: {self.from_location} -> {self.to_location}"
+
+
+# --------------------------- SYSTEM SETTINGS ---------------------------------
+
+class SystemSettings(models.Model):
+    """Singleton model for global system configuration."""
+    demo_mode_enabled = models.BooleanField(default=False, help_text="Enable demo mode for testing/review purposes")
+    demo_username = models.CharField(max_length=50, default="demo", help_text="Username for demo login")
+    demo_password = models.CharField(max_length=50, default="demo123", help_text="Password for demo login")
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "System Setting"
+        verbose_name_plural = "System Settings"
+
+    def save(self, *args, **kwargs):
+        # Ensure only one settings record exists (singleton pattern)
+        if not self.pk and SystemSettings.objects.exists():
+            raise ValueError("Only one SystemSettings record is allowed")
+        return super().save(*args, **kwargs)
+
+    @classmethod
+    def get_settings(cls):
+        """Get or create the singleton settings instance."""
+        settings, _ = cls.objects.get_or_create(pk=1)
+        return settings
+
+    def __str__(self):
+        status = "Enabled" if self.demo_mode_enabled else "Disabled"
+        return f"System Settings (Demo Mode: {status})"

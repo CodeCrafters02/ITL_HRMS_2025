@@ -64,6 +64,8 @@ class FCMService {
         provisional: false,
       );
 
+      print('FCM DEBUG: Authorization Status: ${settings.authorizationStatus}');
+
       if (settings.authorizationStatus == AuthorizationStatus.authorized ||
           settings.authorizationStatus == AuthorizationStatus.provisional) {
         // Get FCM token
@@ -121,13 +123,20 @@ class FCMService {
   // Get FCM token
   static Future<String?> _getToken() async {
     try {
+      // For iOS, check APNS token first
+      final apnsToken = await _messaging.getAPNSToken();
+      print('FCM DEBUG: APNS Token: $apnsToken');
+      
       final token = await _messaging.getToken();
       _currentToken = token;
+      print('FCM DEBUG: FCM Token: $token');
+      
       if (token != null) {
         await _registerTokenWithBackend(token);
       }
       return token;
     } catch (e) {
+      print('FCM DEBUG: Error getting token: $e');
       return null;
     }
   }
@@ -135,13 +144,19 @@ class FCMService {
   // Get FCM token (public method for debugging)
   static Future<String?> getToken() async {
     try {
+      final apnsToken = await _messaging.getAPNSToken();
+      print('FCM DEBUG: APNS Token: $apnsToken');
+
       final token = await _messaging.getToken();
       _currentToken = token;
+      print('FCM DEBUG: FCM Token: $token');
+
       if (token != null) {
         await _registerTokenWithBackend(token);
       }
       return token;
     } catch (e) {
+      print('FCM DEBUG: Error getting token: $e');
       return null;
     }
   }

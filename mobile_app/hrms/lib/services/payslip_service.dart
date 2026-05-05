@@ -30,6 +30,11 @@ class PayslipService {
             retryCount: retryCount + 1,
           );
         } else {
+          // Check if in demo mode - don't logout if we are
+          if (await StorageService.isDemoMode()) {
+            return response;
+          }
+
           // Token refresh failed, return the 401 response
           return response;
         }
@@ -53,6 +58,15 @@ class PayslipService {
     int? year,
   }) async {
     try {
+      // Check demo mode
+      if (await StorageService.isDemoMode()) {
+        return ApiResponse(
+          success: true,
+          message: 'Demo payslips loaded',
+          data: [], // Add dummy data if needed
+        );
+      }
+
       final token = await StorageService.getAccessToken();
       if (token == null) {
         return ApiResponse(success: false, message: 'No access token found');
@@ -105,7 +119,7 @@ class PayslipService {
           data: payslips,
         );
       } else if (response.statusCode == 401) {
-        await AuthService.logout();
+        await AuthService.logout(isAutomatic: true);
         return ApiResponse(
           success: false,
           message: 'Session expired. Please login again.',
@@ -171,7 +185,7 @@ class PayslipService {
           data: filePath,
         );
       } else if (response.statusCode == 401) {
-        await AuthService.logout();
+        await AuthService.logout(isAutomatic: true);
         return ApiResponse(
           success: false,
           message: 'Session expired. Please login again.',

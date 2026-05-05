@@ -143,6 +143,11 @@ class HttpClientService {
             retryCount: retryCount + 1,
           );
         } else {
+          // Check if in demo mode - don't logout if we are
+          if (await StorageService.isDemoMode()) {
+            return response;
+          }
+
           // Token refresh failed, logout user
           await AuthService.logout();
           return response; // Return the original 401 response
