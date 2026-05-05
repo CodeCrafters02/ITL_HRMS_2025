@@ -4,6 +4,7 @@ import math
 from io import BytesIO
 from weasyprint import HTML
 from django.utils import timezone
+from django.conf import settings
 from django.template.loader import render_to_string
 import os
 import calendar
@@ -407,12 +408,37 @@ def generate_payslip_pdf(employee, payroll, batch=None, company=None, logo_path=
         if hasattr(salary_structure, 'deductions'):
             extra_deductions = sum([d.amount for d in salary_structure.deductions.all()])
 
-    # Convert logo_path to file URL if it's a local file path
+    # Resolve company logo for WeasyPrint with robust fallbacks:
+    # 1) explicit local path -> file:// URL
+    # 2) explicit URL -> as-is
+    # 3) company.logo.path if available
+    # 4) company.logo.url (+ SITE_URL for relative media URLs)
     logo_url = None
-    if logo_path and os.path.exists(logo_path):
-        logo_url = 'file:///' + logo_path.replace('\\', '/').replace(os.sep, '/')
-    else:
-        logo_url = logo_path
+    if logo_path:
+        if isinstance(logo_path, str) and logo_path.startswith(("http://", "https://", "file:///")):
+            logo_url = logo_path
+        elif os.path.exists(logo_path):
+            logo_url = 'file:///' + logo_path.replace('\\', '/').replace(os.sep, '/')
+
+    if not logo_url and company and getattr(company, 'logo', None):
+        try:
+            if hasattr(company.logo, 'path') and os.path.exists(company.logo.path):
+                logo_url = 'file:///' + company.logo.path.replace('\\', '/').replace(os.sep, '/')
+        except Exception:
+            # Some storage backends may not expose a local .path
+            pass
+
+        if not logo_url:
+            try:
+                raw_logo_url = company.logo.url
+                if raw_logo_url:
+                    if raw_logo_url.startswith(("http://", "https://", "file:///")):
+                        logo_url = raw_logo_url
+                    else:
+                        site_url = getattr(settings, 'SITE_URL', 'http://127.0.0.1:8000').rstrip('/')
+                        logo_url = f"{site_url}{raw_logo_url}"
+            except Exception:
+                pass
 
     # Generate QR Code for authentication
     qr_base64 = None
@@ -601,4 +627,4 @@ def validate_geofence(user, lat, lon, request_ip):
 
     # If we reached here, the user passed all enabled global restrictions
     print(f"DEBUG: Geofence ALLOWED for {user.username} - Passed GPS company policy")
-    return True, ""
+    return True, ""
