@@ -1,0 +1,64 @@
+import UserNotifications
+
+class NotificationService: UNNotificationServiceExtension {
+
+    var contentHandler: ((UNNotificationContent) -> Void)?
+    var bestAttemptContent: UNMutableNotificationContent?
+
+    override func didReceive(_ request: UNNotificationRequest, withContentHandler contentHandler: @escaping (UNNotificationContent) -> Void) {
+        self.contentHandler = contentHandler
+        bestAttemptContent = (request.content.mutableCopy() as? UNMutableNotificationContent)
+        
+        if let bestAttemptContent = bestAttemptContent {
+            // Check for image URL in the payload
+            // FCM sends image URL in 'fcm_options' or 'data'
+            let userInfo = request.content.userInfo
+            var imageURLString: String? = nil
+            
+            // 1. Check for standard FCM image field
+            if let fcmOptions = userInfo["fcm_options"] as? [String: Any] {
+                imageURLString = fcmOptions["image"] as? String
+            }
+            
+            // 2. Check for custom data fields
+            if imageURLString == nil {
+                imageURLString = userInfo["image"] as? String ?? userInfo["imageUrl"] as? String
+            }
+            
+            guard let urlString = imageURLString, let fileURL = URL(string: urlString) else {
+                contentHandler(bestAttemptContent)
+                return
+            }
+            
+            // Download the image
+            let task = URLSession.shared.downloadTask(with: fileURL) { (location, response, error) in
+                if let location = location {
+                    let tmpDirectory = FileManager.default.temporaryDirectory
+                    let tmpFile = "notification_image.\(fileURL.pathExtension)"
+                    let tmpURL = tmpDirectory.appendingPathComponent(tmpFile)
+                    
+                    // Cleanup existing file
+                    try? FileManager.default.removeItem(at: tmpURL)
+                    
+                    do {
+                        try FileManager.default.moveItem(at: location, to: tmpURL)
+                        
+                        // Add as attachment
+                        let attachment = try UNNotificationAttachment(identifier: "image", url: tmpURL, options: nil)
+                        bestAttemptContent.attachments = [attachment]
+                    } catch {
+                        print("Error saving notification attachment: \(error)")
+                    }
+                }
+                contentHandler(bestAttemptContent)
+            }
+            task.resume()
+        }
+    }
+    
+    override func serviceExtensionTimeWillExpire() {
+        if let contentHandler = contentHandler, let bestAttemptContent =  bestAttemptContent {
+            contentHandler(bestAttemptContent)
+        }
+    }
+}

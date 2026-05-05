@@ -1,9 +1,11 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:http/http.dart' as http;
+import 'package:path_provider/path_provider.dart';
 import '../firebase_options.dart';
 import '../config/api_config.dart';
 import '../services/storage_service.dart';
@@ -189,22 +191,27 @@ class FCMService {
     // Backend sends data-only messages, so check both notification and data fields
     String title = 'Notification';
     String body = '';
+    String? imageUrl;
 
     if (message.notification != null) {
       // Has notification payload
       title = message.notification!.title ?? title;
       body = message.notification!.body ?? body;
+      imageUrl = message.notification!.android?.imageUrl ??
+          message.notification!.apple?.imageUrl;
     } else if (message.data.isNotEmpty) {
       // Data-only message (backend sends this way)
       title = message.data['title']?.toString() ?? title;
       body = message.data['body']?.toString() ?? body;
+      imageUrl = message.data['image']?.toString() ??
+          message.data['imageUrl']?.toString();
     }
-    
+
     if (title.isNotEmpty || body.isNotEmpty) {
       // When app is in foreground, show in-app notification (not in system tray)
       // The notification will appear as a banner/dialog inside the app
       // For background/terminated, FCM automatically shows in system tray
-      await _showLocalNotification(title, body, message.data);
+      await _showLocalNotification(title, body, message.data, imageUrl: imageUrl);
     }
   }
 
@@ -212,9 +219,46 @@ class FCMService {
   static Future<void> _showLocalNotification(
     String title,
     String body,
-    Map<String, dynamic> data,
-  ) async {
-    const androidDetails = AndroidNotificationDetails(
+    Map<String, dynamic> data, {
+    String? imageUrl,
+  }) async {
+    AndroidNotificationDetails? androidDetails;
+    DarwinNotificationDetails? iosDetails;
+
+    if (imageUrl != null && imageUrl.isNotEmpty) {
+      try {
+        final String largeIconPath =
+            await _downloadAndSaveFile(imageUrl, 'notification_large_icon');
+        final String bigPicturePath =
+            await _downloadAndSaveFile(imageUrl, 'notification_big_picture');
+
+        androidDetails = AndroidNotificationDetails(
+          'hrms_notifications',
+          'HRMS Notifications',
+          channelDescription: 'Notifications for HRMS app',
+          importance: Importance.high,
+          priority: Priority.high,
+          largeIcon: FilePathAndroidBitmap(largeIconPath),
+          styleInformation: BigPictureStyleInformation(
+            FilePathAndroidBitmap(bigPicturePath),
+            hideExpandedLargeIcon: true,
+            contentTitle: title,
+            summaryText: body,
+          ),
+        );
+
+        iosDetails = DarwinNotificationDetails(
+          presentAlert: true,
+          presentBadge: true,
+          presentSound: true,
+          attachments: [DarwinNotificationAttachment(bigPicturePath)],
+        );
+      } catch (e) {
+        print('FCM DEBUG: Error downloading notification image: $e');
+      }
+    }
+
+    androidDetails ??= const AndroidNotificationDetails(
       'hrms_notifications',
       'HRMS Notifications',
       channelDescription: 'Notifications for HRMS app',
@@ -223,13 +267,13 @@ class FCMService {
       showWhen: true,
     );
 
-    const iosDetails = DarwinNotificationDetails(
+    iosDetails ??= const DarwinNotificationDetails(
       presentAlert: true,
       presentBadge: true,
       presentSound: true,
     );
 
-    const details = NotificationDetails(
+    final details = NotificationDetails(
       android: androidDetails,
       iOS: iosDetails,
     );
@@ -241,6 +285,16 @@ class FCMService {
       details,
       payload: jsonEncode(data),
     );
+  }
+
+  // Download and save file for notifications
+  static Future<String> _downloadAndSaveFile(String url, String fileName) async {
+    final Directory directory = await getApplicationDocumentsDirectory();
+    final String filePath = '${directory.path}/$fileName';
+    final response = await http.get(Uri.parse(url));
+    final File file = File(filePath);
+    await file.writeAsBytes(response.bodyBytes);
+    return filePath;
   }
 
   // Handle notification tap
