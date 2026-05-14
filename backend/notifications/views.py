@@ -5,6 +5,7 @@ from rest_framework.response import Response
 from rest_framework import status
 from .serializers import UserNotificationSerializer
 from .models import *
+from app.permissions import IsAdminUser
 
 
 
@@ -88,6 +89,36 @@ class DismissedAnnouncementListAPIView(APIView):
             DismissedNotification.objects.filter(employee=employee).values_list('notification_id', flat=True)
         )
         return Response(dismissed_ids, status=status.HTTP_200_OK)
+
+
+class TriggerCheckoutReminderView(APIView):
+    """
+    Admin-only endpoint to immediately send checkout-reminder notifications
+    to all employees who have checked in today but not yet checked out and
+    whose shift end time has already passed.
+
+    POST /notifications/trigger-checkout-reminder/
+
+    Optionally accepts a JSON body:
+        { "dry_run": true }  — reports who would be notified without sending.
+    """
+    permission_classes = [IsAdminUser]
+
+    def post(self, request):
+        from notifications.management.commands.send_checkout_reminders import send_checkout_reminders
+
+        dry_run = bool(request.data.get("dry_run", False))
+        results = send_checkout_reminders(dry_run=dry_run)
+        return Response(
+            {
+                "detail": "Checkout reminders processed.",
+                "dry_run": dry_run,
+                "notified": results["notified"],
+                "skipped": results["skipped"],
+                "errors": results["errors"],
+            },
+            status=status.HTTP_200_OK,
+        )
 
 
 
