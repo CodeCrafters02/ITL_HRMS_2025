@@ -105,7 +105,7 @@ class TriggerCheckoutReminderView(APIView):
     permission_classes = [IsAdminUser]
 
     def post(self, request):
-        from notifications.management.commands.send_checkout_reminders import send_checkout_reminders
+        from notifications.service import send_checkout_reminders
 
         dry_run = bool(request.data.get("dry_run", False))
         results = send_checkout_reminders(dry_run=dry_run)
