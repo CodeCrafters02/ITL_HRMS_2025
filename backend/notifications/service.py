@@ -1,6 +1,7 @@
 from django.conf import settings
 from django.utils import timezone
-from app.models import UserRegister
+from datetime import time as _time
+from app.models import UserRegister, Attendance
 import json
 import requests
 import logging
@@ -271,9 +272,6 @@ def send_checkout_reminders(today=None, now_local=None, dry_run=False):
     (send_checkout_reminders) and the admin API endpoint
     (TriggerCheckoutReminderView).
     """
-    from datetime import datetime as _datetime
-    from app.models import Attendance, UserRegister
-
     if now_local is None:
         now_local = timezone.localtime(timezone.now())
     if today is None:
@@ -282,9 +280,7 @@ def send_checkout_reminders(today=None, now_local=None, dry_run=False):
     current_time = now_local.time()
 
     # Default fallback shift-end time object
-    default_shift_end = _datetime(
-        2000, 1, 1, _DEFAULT_SHIFT_END_HOUR, 0, 0
-    ).time()
+    default_shift_end = _time(_DEFAULT_SHIFT_END_HOUR, 0)
 
     # All attendance records for today where check-in exists but check-out is missing
     pending_qs = (
@@ -305,6 +301,8 @@ def send_checkout_reminders(today=None, now_local=None, dry_run=False):
     )
 
     default_sender = UserRegister.objects.filter(role="admin").first()
+    if default_sender is None:
+        logger.warning("send_checkout_reminders: no admin user found; notifications will have no sender.")
 
     notified = 0
     skipped = 0
