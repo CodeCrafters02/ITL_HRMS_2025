@@ -26,7 +26,7 @@ logger = logging.getLogger(__name__)
 
 # Default shift-end time used when an employee has no shift assigned.
 # This acts as a fallback so no-one slips through completely unnoticed.
-DEFAULT_SHIFT_END_HOUR = 18  # 06:00 PM
+DEFAULT_SHIFT_END_HOUR = 18  # 6:00 PM
 
 
 class Command(BaseCommand):
@@ -121,14 +121,15 @@ def send_checkout_reminders(today=None, now_local=None, dry_run=False):
             ).time()
 
         # ── Only notify if the shift end time has already passed ─────────────
-        if current_time <= shift_end:
+        if current_time < shift_end:
             skipped += 1
             continue
 
         # ── Deduplication: skip if we already notified this employee today ───
+        CHECKOUT_REMINDER_TITLE = "⏰ Checkout Reminder"
         already_notified = UserNotification.objects.filter(
             recipient=employee,
-            title__icontains="Checkout Reminder",
+            title=CHECKOUT_REMINDER_TITLE,
             created_at__date=today,
         ).exists()
 
@@ -139,14 +140,14 @@ def send_checkout_reminders(today=None, now_local=None, dry_run=False):
         # ── Build notification content ────────────────────────────────────────
         employee_name = employee.full_name or "Employee"
         shift_end_str = shift_end.strftime("%I:%M %p")
-        title = "⏰ Checkout Reminder"
+        title = CHECKOUT_REMINDER_TITLE
         message = (
             f"Hi {employee_name}, your shift ended at {shift_end_str} but you haven't "
             f"checked out yet. Please check out to keep your attendance record accurate."
         )
 
         if dry_run:
-            logger.info("[DRY RUN] Would notify employee %s (id=%s)", employee_name, employee.id)
+            logger.info("[DRY RUN] Would notify employee %s", employee_name)
             notified += 1
             continue
 
@@ -159,7 +160,7 @@ def send_checkout_reminders(today=None, now_local=None, dry_run=False):
                     message=message,
                     sender=default_sender,
                     title=title,
-                    extra_data={"type": "checkout_reminder", "attendance_id": str(attendance.id)},
+                    extra_data={"attendance_id": str(attendance.id)},
                     create_user_notifications=True,
                 )
             else:
@@ -171,13 +172,12 @@ def send_checkout_reminders(today=None, now_local=None, dry_run=False):
                     message=message,
                 )
             notified += 1
-            logger.info("Checkout reminder sent to employee %s (id=%s)", employee_name, employee.id)
+            logger.info("Checkout reminder sent to employee %s", employee_name)
         except Exception as exc:
             errors += 1
             logger.error(
-                "Failed to send checkout reminder to employee %s (id=%s): %s",
+                "Failed to send checkout reminder to employee %s: %s",
                 employee_name,
-                employee.id,
                 exc,
             )
 
