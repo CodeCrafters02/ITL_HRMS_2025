@@ -63,6 +63,12 @@ INSTALLED_APPS = [
     'website'
 ]
 
+# Celery / periodic tasks
+INSTALLED_APPS += [
+    'django_celery_beat',
+    'django_celery_results',
+]
+
 
 
 AUTH_USER_MODEL = 'app.UserRegister'
@@ -126,6 +132,7 @@ ASGI_APPLICATION = 'innovyx_hrms.asgi.application'
 WSGI_APPLICATION = 'innovyx_hrms.wsgi.application'
 
 # Channels / WebSocket (Redis)
+# REDIS_URL may include a DB suffix; keep for Channels default (usually DB 0)
 REDIS_URL = os.getenv("REDIS_URL", "redis://127.0.0.1:6379/0")
 CHANNEL_LAYERS = {
     "default": {
@@ -258,3 +265,31 @@ MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+# Celery configuration — use separate Redis DB numbers for isolation
+# Provide a base Redis URL without DB (e.g. REDIS_URL_BASE=redis://127.0.0.1:6379)
+REDIS_URL_BASE = os.getenv('REDIS_URL_BASE')
+if not REDIS_URL_BASE:
+    # fall back to REDIS_URL without DB suffix if provided, else default
+    r = os.getenv('REDIS_URL', 'redis://127.0.0.1:6379/0')
+    # strip any trailing /<db>
+    if '/' in r.rsplit('/', 1)[-1]:
+        REDIS_URL_BASE = r
+    else:
+        # remove DB suffix if present
+        REDIS_URL_BASE = r.rsplit('/', 1)[0]
+
+# DB indexes for isolation (defaults: channels DB 0, broker DB 1, results DB 2)
+CELERY_REDIS_DB_BROKER = os.getenv('CELERY_REDIS_DB_BROKER', '1')
+CELERY_REDIS_DB_RESULTS = os.getenv('CELERY_REDIS_DB_RESULTS', '2')
+
+CELERY_BROKER_URL = f"{REDIS_URL_BASE}/{CELERY_REDIS_DB_BROKER}"
+CELERY_RESULT_BACKEND = f"{REDIS_URL_BASE}/{CELERY_REDIS_DB_RESULTS}"
+
+# Use Redis scheduler via django-celery-beat's database scheduler (keeps schedule in Django DB)
+CELERY_BEAT_SCHEDULER = 'django_celery_beat.schedulers:DatabaseScheduler'
+
+# Celery serialization settings
+CELERY_ACCEPT_CONTENT = ['json']
+CELERY_TASK_SERIALIZER = 'json'
+CELERY_RESULT_SERIALIZER = 'json'

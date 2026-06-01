@@ -301,6 +301,18 @@ class CheckInAPIView(APIView):
         employee.status = 'online'
         employee.save(update_fields=['status'])
 
+        # If yesterday has a missing checkout, fire the morning alert asynchronously
+        yesterday = today - timedelta(days=1)
+        yesterday_att = Attendance.objects.filter(
+            employee=employee,
+            date=yesterday,
+            check_in__isnull=False,
+            check_out__isnull=True,
+        ).first()
+        if yesterday_att and 'MISSING_CHECKOUT' in (yesterday_att.remarks or ''):
+            from employee.tasks import send_late_checkout_morning_alert
+            send_late_checkout_morning_alert.delay(employee.id, yesterday_att.id)
+
         serializer = EmployeeAttendanceSerializer(attendance)
         return Response({
             "detail": f"Checked in at {now_dt.strftime('%H:%M:%S')} for shift {selected_shift.shift_type}",
@@ -823,6 +835,7 @@ class AttendanceHistoryAPIView(APIView):
             'leave': 0,
             'half_day': 0,
             'late': 0,
+            'missing_checkout': 0,
             'working_days': 0
         }
 
@@ -922,10 +935,12 @@ class AttendanceHistoryAPIView(APIView):
                         overtime_hours = round(att.overtime_duration.total_seconds() / 3600, 2)
 
                 else:
-                    # Check if the day has passed (not today)
+                    # Missing checkout (incomplete record). For past days mark as 'missing_checkout'
+                    # so it does not get treated as an outright 'absent'. For today, keep 'checked_in'.
                     if day < today:
-                        status = 'absent'
-                        stats['absent'] += 1
+                        status = 'missing_checkout'
+                        stats.setdefault('missing_checkout', 0)
+                        stats['missing_checkout'] += 1
                     else:
                         status = 'checked_in'
                         if shift:

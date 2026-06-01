@@ -7,8 +7,8 @@ class ApiConfig {
   /// Keep a sensible dev default for local/LAN testing.
   static const String baseUrl = String.fromEnvironment(
     'API_BASE_URL',
-    defaultValue: 'https://apihrms.innovyxtechlabs.com',
-    // defaultValue: 'http://10.20.72.169:8000',
+    // defaultValue: 'https://apihrms.innovyxtechlabs.com',
+    defaultValue: 'http://10.20.71.41:8000',
   );
 
   /// Login footer "Contact IT Support" mailto. Override at build:
