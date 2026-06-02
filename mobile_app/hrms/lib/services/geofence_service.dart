@@ -99,12 +99,26 @@ class GeofenceService {
       }
       if (permission == LocationPermission.deniedForever) return null;
 
-      return await Geolocator.getCurrentPosition(
-        locationSettings: const LocationSettings(
-          accuracy: LocationAccuracy.high,
-          timeLimit: Duration(seconds: 10),
-        ),
-      );
+      try {
+        // Request the best accuracy possible and allow more warm-up time
+        return await Geolocator.getCurrentPosition(
+          locationSettings: const LocationSettings(
+            accuracy: LocationAccuracy.best,
+            timeLimit: Duration(seconds: 15),
+          ),
+        );
+      } catch (e) {
+        // Fallback to last known position if active scan fails/times out (e.g. indoors)
+        final lastKnown = await Geolocator.getLastKnownPosition();
+        if (lastKnown != null) {
+          // Only use if the cached coordinates are fresh (less than 5 minutes old)
+          final age = DateTime.now().difference(lastKnown.timestamp);
+          if (age.inMinutes < 5) {
+            return lastKnown;
+          }
+        }
+        rethrow;
+      }
     } catch (_) {
       return null;
     }

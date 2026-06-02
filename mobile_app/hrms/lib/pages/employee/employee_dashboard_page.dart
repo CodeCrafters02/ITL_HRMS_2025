@@ -381,8 +381,12 @@ class _EmployeeDashboardPageState extends State<EmployeeDashboardPage> {
           if (mounted) setState(() => _locationStatus = locStatus);
           if (!locStatus.isAtOffice) {
             setState(() => _checkInOutLoading = false);
+            final distanceStr = locStatus.distanceMeters != null
+                ? '${locStatus.distanceMeters!.toStringAsFixed(1)}m away'
+                : 'unknown distance';
+            final coordsStr = '(${position.latitude.toStringAsFixed(5)}, ${position.longitude.toStringAsFixed(5)})';
             _showNotification(
-              'You are outside the office boundary. Check-in is not allowed.',
+              'You are outside the office boundary ($distanceStr). Captured: $coordsStr',
               isError: true,
             );
             return;
