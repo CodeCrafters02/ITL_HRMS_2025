@@ -193,3 +193,5 @@ node_modules/
 !*/migrations/__init__.py
 backend/employee/migrations/__init__.py
 backend/firebase-service-account.json
+firebase-service-account.json
+*firebase-service-account.json

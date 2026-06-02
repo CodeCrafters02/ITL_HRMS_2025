@@ -408,6 +408,18 @@ class _EmployeeDashboardPageState extends State<EmployeeDashboardPage> {
             isError: false,
           );
           await _fetchDashboardData();
+
+          // Check if employee forgot to check out on their last working day
+          if (!isCheckedIn &&
+              response.data != null &&
+              response.data!['missing_checkout_yesterday'] == true) {
+            final rawDate = response.data!['missing_checkout_date']?.toString() ?? '';
+            Future.delayed(const Duration(milliseconds: 600), () {
+              if (mounted) {
+                _showMissedCheckoutDialog(context, rawDate);
+              }
+            });
+          }
         } else {
           _showNotification(
             response.message ?? 'Operation failed',
@@ -507,6 +519,143 @@ class _EmployeeDashboardPageState extends State<EmployeeDashboardPage> {
         duration: const Duration(seconds: 5),
         behavior: SnackBarBehavior.floating,
       ),
+    );
+  }
+
+  Future<void> _showMissedCheckoutDialog(BuildContext context, String rawDate) async {
+    String dateLabel = 'a previous working day';
+    if (rawDate.isNotEmpty) {
+      try {
+        final parsedDate = DateTime.parse(rawDate);
+        dateLabel = DateFormat('EEEE, MMMM d').format(parsedDate);
+      } catch (_) {
+        dateLabel = rawDate;
+      }
+    }
+
+    await showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      barrierColor: Colors.black.withValues(alpha: 0.4),
+      builder: (context) {
+        final isDark = Theme.of(context).brightness == Brightness.dark;
+        final dialogBg = isDark ? AppStitchTheme.surfaceElevated : Colors.white;
+        final titleColor = isDark ? AppStitchTheme.onSurface : AppStitchTheme.lightOnSurface;
+        final bodyColor = isDark ? AppStitchTheme.onSurfaceVariant : AppStitchTheme.lightOnSurfaceMuted;
+
+        return Dialog(
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          child: Container(
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              color: dialogBg,
+              borderRadius: BorderRadius.circular(24),
+              border: isDark ? Border.all(color: AppStitchTheme.outline) : null,
+              boxShadow: [
+                BoxShadow(
+                  color: AppStitchTheme.primary.withValues(alpha: 0.10),
+                  blurRadius: 30,
+                  offset: const Offset(0, 10),
+                ),
+              ],
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: isDark
+                          ? [
+                              const Color(0xFFD97706).withValues(alpha: 0.15),
+                              const Color(0xFFB45309).withValues(alpha: 0.10),
+                            ]
+                          : [
+                              const Color(0xFFFEF3C7),
+                              const Color(0xFFFDE68A).withValues(alpha: 0.70),
+                            ],
+                    ),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                    Icons.warning_amber_rounded,
+                    color: Color(0xFFD97706),
+                    size: 32,
+                  ),
+                ),
+                const SizedBox(height: 18),
+                Text(
+                  'Missed Checkout — Action Required',
+                  textAlign: TextAlign.center,
+                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                        fontWeight: FontWeight.w900,
+                        fontSize: 18,
+                        color: titleColor,
+                        letterSpacing: -0.5,
+                      ),
+                ),
+                const SizedBox(height: 14),
+                RichText(
+                  textAlign: TextAlign.center,
+                  text: TextSpan(
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          fontSize: 14,
+                          color: bodyColor,
+                          height: 1.5,
+                        ),
+                    children: [
+                      const TextSpan(text: 'You forgot to check out on '),
+                      TextSpan(
+                        text: dateLabel,
+                        style: const TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                      const TextSpan(text: '.\n\nYour attendance for that day has been marked as '),
+                      const TextSpan(
+                        text: 'Absent',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFFEF4444),
+                        ),
+                      ),
+                      const TextSpan(text: '.\n\nPlease contact your '),
+                      const TextSpan(
+                        text: 'Admin',
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                      const TextSpan(text: ' to correct your attendance record.'),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 24),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: () => Navigator.of(context).pop(),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppStitchTheme.primary,
+                      foregroundColor: Colors.white,
+                      elevation: 0,
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                    ),
+                    child: const Text(
+                      'I Understand',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w800,
+                        fontSize: 14,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 
