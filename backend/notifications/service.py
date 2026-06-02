@@ -140,6 +140,12 @@ def send_fcm_push(token, title, body, data=None, image_url=None):
                 token[:12],
                 response.text,
             )
+        else:
+            logger.info(
+                "FCM push notification sent successfully to token %s... response: %s",
+                token[:12],
+                response.text,
+            )
 
         return response.status_code, response.text
     except Exception as e:

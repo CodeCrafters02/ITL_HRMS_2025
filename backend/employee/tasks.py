@@ -33,21 +33,42 @@ def _send_missing_checkout_fcm_and_inapp(employee, attendance, title, message):
         pass
 
 
-def _send_missing_checkout_email(employee, title, message):
-    from django.core.mail import send_mail
+def _send_missing_checkout_email(employee, title, plain_message,
+                                  checkin_time='', shift_end_time='', attendance_date=''):
+    from django.core.mail import EmailMultiAlternatives
     from django.conf import settings
+    from django.template.loader import render_to_string
+    from django.utils import timezone
+    import logging
+    logger = logging.getLogger(__name__)
+
     if not employee.email:
+        logger.warning('Missing checkout email skipped: employee %s has no email', employee.id)
         return
+
+    portal_url = getattr(settings, 'HRMS_PORTAL_URL', 'http://localhost:5173')
+
+    html_body = render_to_string('emails/missing_checkout.html', {
+        'subject': title,
+        'employee_name': f"{employee.first_name or ''} {employee.last_name or ''}".strip() or employee.email,
+        'checkin_time': checkin_time,
+        'shift_end_time': shift_end_time,
+        'attendance_date': attendance_date or str(timezone.localdate()),
+        'portal_url': portal_url,
+        'year': timezone.localdate().year,
+    })
+
     try:
-        send_mail(
+        msg = EmailMultiAlternatives(
             subject=title,
-            message=message,
+            body=plain_message,
             from_email=settings.DEFAULT_FROM_EMAIL,
-            recipient_list=[employee.email],
-            fail_silently=True,
+            to=[employee.email],
         )
-    except Exception:
-        pass
+        msg.attach_alternative(html_body, 'text/html')
+        msg.send(fail_silently=False)
+    except Exception as exc:
+        logger.error('Missing checkout email failed for %s: %s', employee.email, exc)
 
 
 # ---------------------------------------------------------------------------
@@ -59,8 +80,9 @@ def send_missing_checkout_alerts():
     """
     Runs every 30 minutes. For each employee whose shift checkout time was
     2+ hours ago and who still hasn't checked out, sends FCM push + email.
-    Idempotent: skips employees already flagged MISSING_CHECKOUT_ALERTED.
+    Idempotent per employee: skips anyone already flagged MISSING_CHECKOUT_ALERTED.
     """
+    from app.models import ShiftPolicy
     tz = pytz.timezone('Asia/Kolkata')
     now = timezone.now()
     today = timezone.localdate()
@@ -69,16 +91,30 @@ def send_missing_checkout_alerts():
         date=today,
         check_in__isnull=False,
         check_out__isnull=True,
-    ).select_related('employee', 'employee__shift_assigned', 'employee__user')
+    ).select_related('employee', 'employee__shift_assigned', 'employee__user', 'employee__company').order_by('employee_id', 'id')
 
+    seen_employees: set = set()
     alerted = 0
+
     for a in atts:
-        remarks = a.remarks or ''
-        if 'MISSING_CHECKOUT_ALERTED' in remarks:
+        emp = a.employee
+
+        # One alert per employee per day regardless of duplicate rows
+        if emp.id in seen_employees:
+            continue
+        seen_employees.add(emp.id)
+
+        # Prefer employee's own assigned shift; fall back to any company shift
+        shift = emp.shift_assigned
+        if not shift:
+            shift = ShiftPolicy.objects.filter(company=emp.company).first()
+        if not shift:
             continue
 
-        shift = a.employee.shift_assigned
-        if not shift:
+        remarks = a.remarks or ''
+        shift_time_str = shift.checkout.strftime('%H:%M')
+        alert_flag = f"MISSING_CHECKOUT_ALERTED_AT_{shift_time_str}"
+        if alert_flag in remarks:
             continue
 
         # Build shift checkout datetime; handle overnight shifts
@@ -89,13 +125,22 @@ def send_missing_checkout_alerts():
         if now < checkout_dt + timedelta(hours=2):
             continue
 
-        # Mark idempotent flags before sending (avoids duplicates on retry)
-        new_flags = 'MISSING_CHECKOUT | MISSING_CHECKOUT_ALERTED'
-        a.remarks = f"{remarks} | {new_flags}".lstrip(' | ') if remarks else new_flags
-        a.save(update_fields=['remarks'])
+        # Stamp ALL duplicate rows for this employee+date so no row re-alerts
+        new_flags = f"MISSING_CHECKOUT | MISSING_CHECKOUT_ALERTED | {alert_flag}"
+        # Deduplicate existing flags to keep remarks clean
+        existing_parts = [p.strip() for p in remarks.split('|') if p.strip()]
+        for flag in [f"MISSING_CHECKOUT_ALERTED_AT_{shift_time_str}", 'MISSING_CHECKOUT', 'MISSING_CHECKOUT_ALERTED']:
+            if flag not in existing_parts:
+                existing_parts.append(flag)
+        stamped_remarks = ' | '.join(existing_parts)
 
-        emp = a.employee
+        Attendance.objects.filter(
+            employee=emp, date=today,
+            check_in__isnull=False, check_out__isnull=True,
+        ).update(remarks=stamped_remarks)
+
         checkin_local = timezone.localtime(a.check_in, tz).strftime('%H:%M')
+        shift_end_local = shift.checkout.strftime('%H:%M')
         title = "Checkout Reminder"
         message = (
             f"Hi {emp.first_name}, you checked in today at {checkin_local} "
@@ -103,7 +148,12 @@ def send_missing_checkout_alerts():
             "your attendance will be marked as missing checkout."
         )
         _send_missing_checkout_fcm_and_inapp(emp, a, title, message)
-        _send_missing_checkout_email(emp, title, message)
+        _send_missing_checkout_email(
+            emp, title, message,
+            checkin_time=checkin_local,
+            shift_end_time=shift_end_local,
+            attendance_date=today.strftime('%d %b %Y'),
+        )
         alerted += 1
 
     return {'alerted': alerted}
@@ -132,8 +182,14 @@ def send_late_checkout_morning_alert(employee_id, attendance_id):
         "to check out. Your attendance has been marked as late checkout. "
         "Please contact your manager to confirm and maintain correct attendance records."
     )
+    tz = pytz.timezone('Asia/Kolkata')
+    checkin_local = timezone.localtime(a.check_in, tz).strftime('%H:%M') if a.check_in else ''
     _send_missing_checkout_fcm_and_inapp(emp, a, title, message)
-    _send_missing_checkout_email(emp, title, message)
+    _send_missing_checkout_email(
+        emp, title, message,
+        checkin_time=checkin_local,
+        attendance_date=a.date.strftime('%d %b %Y'),
+    )
 
 
 # ---------------------------------------------------------------------------

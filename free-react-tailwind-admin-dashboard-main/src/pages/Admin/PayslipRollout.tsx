@@ -480,16 +480,6 @@ const PayslipRollout = () => {
                                                     >
                                                         {actionLoading === `gen-${item.payroll_id}` ? <span className="animate-spin border-2 border-amber-600 border-l-transparent rounded-full w-4 h-4 inline-block"></span> : <IconRefresh className="w-4 h-4" />}
                                                     </button>
-                                                    <a 
-                                                        href={`${import.meta.env.VITE_API_BASE_URL}${item.file}`}
-                                                        target="_blank"
-                                                        rel="noopener noreferrer"
-                                                        onClick={() => item.id && handleVerify(item.id)}
-                                                        className="p-2 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 dark:bg-blue-900/20 dark:text-blue-400 transition-colors"
-                                                        title="View & Verify"
-                                                    >
-                                                        <IconEye className="w-4 h-4" />
-                                                    </a>
                                                 </>
                                             )}
                                         </div>

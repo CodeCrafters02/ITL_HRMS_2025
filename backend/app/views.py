@@ -2859,18 +2859,59 @@ class PayslipViewSet(viewsets.ReadOnlyModelViewSet):
             })
         return Response(data)
 
+    def _notify_payslip_published(self, payslip, sender):
+        try:
+            from notifications.service import send_fcm_to_users
+            import calendar
+            
+            employee = payslip.employee
+            if not employee.user_id:
+                return
+                
+            month_name = calendar.month_name[payslip.month]
+            title = "Payslip Published"
+            message = f"Your payslip for {month_name} {payslip.year} has been published. You can now view and download it."
+            
+            send_fcm_to_users(
+                user_ids=[employee.user_id],
+                notif_type='payroll',
+                message=message,
+                sender=sender,
+                title=title,
+                related_object_id=payslip.id,
+                create_user_notifications=True
+            )
+        except Exception as e:
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.error(f"Failed to send payslip notification: {e}")
+
     @action(detail=True, methods=['post'], url_path='publish')
     def publish(self, request, pk=None):
         payslip = self.get_object()
+        already_published = (payslip.status == 'Published')
         payslip.status = 'Published'
         payslip.save()
+        
+        if not already_published:
+            self._notify_payslip_published(payslip, request.user)
+            
         return Response({'message': 'Payslip published successfully'})
 
     @action(detail=False, methods=['post'], url_path='bulk-publish')
     def bulk_publish(self, request):
         ids = request.data.get('ids', [])
-        Payslip.objects.filter(id__in=ids, company=request.user.company).update(status='Published')
-        return Response({'message': f'{len(ids)} payslips published.'})
+        payslips = Payslip.objects.filter(id__in=ids, company=request.user.company)
+        
+        count = 0
+        for payslip in payslips:
+            if payslip.status != 'Published':
+                payslip.status = 'Published'
+                payslip.save()
+                self._notify_payslip_published(payslip, request.user)
+                count += 1
+                
+        return Response({'message': f'{count} payslips published.'})
 
 class IncomeTaxConfigViewSet(viewsets.ModelViewSet):
     serializer_class = IncomeTaxConfigSerializer
@@ -3313,12 +3354,26 @@ class AttendanceLogView(APIView):
         except Exception:
             return Response({'error': 'Invalid date format. Use YYYY-MM-DD.'}, status=status.HTTP_400_BAD_REQUEST)
 
-        att, created = Attendance.objects.get_or_create(
-                            employee=emp,
-                            date=date_obj,
-                            company=emp.company,  # Ensure company is set
-                            defaults={}
-                        )        # Prefill check-in if exists and no check-out
+        # Prefer the record that has real check-in data (the "live" attendance row).
+        # Falls back to oldest record, then creates if none exist at all.
+        # Uses filter+first throughout to safely handle duplicate rows.
+        att = (
+            Attendance.objects
+            .filter(employee=emp, date=date_obj, check_in__isnull=False)
+            .order_by('id')
+            .first()
+        )
+        if att is None:
+            att = (
+                Attendance.objects
+                .filter(employee=emp, date=date_obj)
+                .order_by('id')
+                .first()
+            )
+        if att is None:
+            att = Attendance.objects.create(employee=emp, date=date_obj, company=emp.company)
+
+        # Prefill check-in if exists and no check-out
         prefill = {}
         if att.check_in and not att.check_out:
             prefill['check_in'] = att.check_in.strftime('%H:%M')
@@ -3369,7 +3424,20 @@ class AttendanceLogView(APIView):
         if remarks is not None:
             att.remarks = remarks
 
-        att.save()
+        att.save(update_fields=[
+            'is_present', 'check_in', 'check_out',
+            'total_work_duration', 'overtime_duration', 'total_break_time',
+            'remarks', 'updated_at',
+        ])
+
+        # Silence all other duplicate rows for this (employee, date) so the
+        # GET deduplication always returns this record's data, not a stale duplicate.
+        Attendance.objects.filter(
+            employee=emp, date=date_obj
+        ).exclude(pk=att.pk).update(
+            check_in=None, check_out=None,
+            total_work_duration=None, overtime_duration=None, total_break_time=None,
+        )
 
         return Response({
             'message': 'Attendance updated successfully.',
@@ -3462,8 +3530,16 @@ class AttendanceLogView(APIView):
             total_worked_hours = 0.0
             leave_summary = {}
 
-            # Process each attendance record (only days that are working days for this department)
-            for att in attendance_qs:
+            # Deduplicate by date: prefer the record that has check_in (real attendance).
+            # This ensures the same row is used by both GET and POST so edits are visible.
+            best_by_date = {}
+            for att in attendance_qs.order_by('date', 'id'):
+                d = att.date
+                if d not in best_by_date or (not best_by_date[d].check_in and att.check_in):
+                    best_by_date[d] = att
+
+            # Process one record per date (only working days for this department)
+            for att in sorted(best_by_date.values(), key=lambda x: x.date):
                 ad = att.date
                 if ad in holidays_dict:
                     continue
@@ -3520,7 +3596,7 @@ class AttendanceLogView(APIView):
                     })
 
             # Fill missing days as Absent (only for elapsed working days, not future)
-            all_dates = {att.date for att in attendance_qs}
+            all_dates = set(best_by_date.keys())   # deduplicated dates only
             all_dates.update(holidays_dict.keys())
             
             for single_date in elapsed_working_days:

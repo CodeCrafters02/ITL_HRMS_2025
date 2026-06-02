@@ -66,6 +66,7 @@ INSTALLED_APPS = [
 # Celery / periodic tasks
 INSTALLED_APPS += [
     'django_celery_beat',
+    'django_apscheduler',
     'django_celery_results',
 ]
 
@@ -283,8 +284,9 @@ if not REDIS_URL_BASE:
 CELERY_REDIS_DB_BROKER = os.getenv('CELERY_REDIS_DB_BROKER', '1')
 CELERY_REDIS_DB_RESULTS = os.getenv('CELERY_REDIS_DB_RESULTS', '2')
 
-CELERY_BROKER_URL = f"{REDIS_URL_BASE}/{CELERY_REDIS_DB_BROKER}"
-CELERY_RESULT_BACKEND = f"{REDIS_URL_BASE}/{CELERY_REDIS_DB_RESULTS}"
+# redis:// URLs — append ?protocol=2 so redis-py 6+ doesn't send HELLO (requires Redis 6+)
+CELERY_BROKER_URL = f"{REDIS_URL_BASE}/{CELERY_REDIS_DB_BROKER}?protocol=2"
+CELERY_RESULT_BACKEND = f"{REDIS_URL_BASE}/{CELERY_REDIS_DB_RESULTS}?protocol=2"
 
 # Use Redis scheduler via django-celery-beat's database scheduler (keeps schedule in Django DB)
 CELERY_BEAT_SCHEDULER = 'django_celery_beat.schedulers:DatabaseScheduler'
@@ -293,3 +295,38 @@ CELERY_BEAT_SCHEDULER = 'django_celery_beat.schedulers:DatabaseScheduler'
 CELERY_ACCEPT_CONTENT = ['json']
 CELERY_TASK_SERIALIZER = 'json'
 CELERY_RESULT_SERIALIZER = 'json'
+
+# Logging — makes scheduler and task output visible in the Django console
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'formatters': {
+        'simple': {
+            'format': '[%(asctime)s] %(levelname)s %(name)s: %(message)s',
+            'datefmt': '%H:%M:%S',
+        },
+    },
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+            'formatter': 'simple',
+        },
+    },
+    'loggers': {
+        'employee': {          # covers employee.apps, employee.tasks
+            'handlers': ['console'],
+            'level': 'INFO',
+            'propagate': False,
+        },
+        'notifications': {     # covers notifications.service, etc.
+            'handlers': ['console'],
+            'level': 'INFO',
+            'propagate': False,
+        },
+        'apscheduler': {       # APScheduler internal logs
+            'handlers': ['console'],
+            'level': 'WARNING',
+            'propagate': False,
+        },
+    },
+}

@@ -81,6 +81,8 @@ interface DashboardData {
     break_quota_used_percent?: number;
     server_time: string;
     birthday_message: string | null;
+    missing_checkout_yesterday?: boolean;
+    missing_checkout_date?: string | null;
 }
 
 interface BreakConfig {
@@ -396,6 +398,7 @@ const EmployeeDashboard = () => {
         }
     }, [data?.birthday_message]);
 
+
     useEffect(() => {
         let interval: any = null;
         if (data?.checkin_time && !data.checkout_time) {
@@ -505,10 +508,33 @@ const EmployeeDashboard = () => {
             });
             const result = await res.json();
             if (res.ok) {
-                Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Successfully Checked In!', showConfirmButton: false, timer: 3000 });
                 if (typeof sessionStorage !== 'undefined' && sessionStorage.getItem('hrms_checkin_intro_pulse') === '1') {
                     acknowledgeCheckinIntro();
                 }
+                // Always show success first
+                Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Successfully Checked In!', showConfirmButton: false, timer: 2500 });
+
+                if (result.missing_checkout_yesterday) {
+                    const rawDate: string = result.missing_checkout_date || '';
+                    const dateLabel = rawDate
+                        ? new Date(rawDate + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })
+                        : 'a previous working day';
+                    // Small delay so the success toast is visible before the modal takes over
+                    await new Promise((r) => setTimeout(r, 600));
+                    await Swal.fire({
+                        icon: 'warning',
+                        title: 'Missed Checkout — Action Required',
+                        html: `
+                            <p>You forgot to check out on <strong>${dateLabel}</strong>.</p>
+                            <p style="margin-top:10px">Your attendance for that day has been marked as <strong style="color:#e7515a">Absent</strong>.</p>
+                            <p style="margin-top:8px">Please contact your <strong>Admin</strong> to correct your attendance record.</p>
+                        `,
+                        confirmButtonText: 'I Understand',
+                        confirmButtonColor: '#e2a03f',
+                        allowOutsideClick: false,
+                    });
+                }
+
                 fetchAllData(true);
             } else {
                 showCompactError(result.detail || 'Could not check in');

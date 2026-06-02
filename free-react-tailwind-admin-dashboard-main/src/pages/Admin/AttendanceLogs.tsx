@@ -9,6 +9,10 @@ import IconX from '../../components/Icon/IconX';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000';
 
+type DeptWorkingDayConfig = {
+    working_days?: string[];
+};
+
 type DailyRecord = {
     date: string;
     status: string;
@@ -96,11 +100,62 @@ const AdminAttendanceLogs = () => {
 
     const todayISO = useMemo(() => new Date().toISOString().split('T')[0], []);
 
+    // JS getDay() index → day name matching DepartmentWiseWorkingDays.working_days values
+    const JS_DAY_TO_NAME = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+    const ALL_DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+
+    // Off-day names derived from dept working days config (default Sat/Sun until loaded)
+    const [offDayNames, setOffDayNames] = useState<Set<string>>(new Set(['Saturday', 'Sunday']));
+    // ISO date strings of company holidays
+    const [holidayDates, setHolidayDates] = useState<Set<string>>(new Set());
+
+    // Fetch dept working days + calendar holidays once on mount
+    useEffect(() => {
+        const loadCalendarConfig = async () => {
+            try {
+                const h = headers();
+                const [wdRes, holRes] = await Promise.all([
+                    fetch(`${API_BASE_URL}/app/department-working-days/`, { headers: h }),
+                    fetch(`${API_BASE_URL}/app/calendar-events/`, { headers: h }),
+                ]);
+                if (wdRes.ok) {
+                    const wdData = await wdRes.json();
+                    const configs: DeptWorkingDayConfig[] = Array.isArray(wdData) ? wdData : wdData?.results || [];
+                    if (configs.length > 0) {
+                        // A day is a working day if ANY department works on it
+                        const allWorkingDays = new Set<string>();
+                        configs.forEach((c) => (c.working_days || []).forEach((d: string) => allWorkingDays.add(d)));
+                        setOffDayNames(new Set(ALL_DAYS.filter((d) => !allWorkingDays.has(d))));
+                    }
+                }
+                if (holRes.ok) {
+                    const holData = await holRes.json();
+                    const events: any[] = Array.isArray(holData) ? holData : holData?.results || [];
+                    setHolidayDates(new Set(events.filter((e) => e.is_holiday).map((e) => e.date as string)));
+                }
+            } catch {
+                // keep defaults
+            }
+        };
+        loadCalendarConfig();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
+
+    // Walk back from yesterday skipping off-days and public holidays
     const lastWorkingDayISO = useMemo(() => {
         const d = new Date();
         d.setDate(d.getDate() - 1);
-        return d.toISOString().split('T')[0];
-    }, []);
+        for (let i = 0; i < 14; i++) {
+            const dayName = JS_DAY_TO_NAME[d.getDay()];
+            const iso = d.toISOString().split('T')[0];
+            if (!offDayNames.has(dayName) && !holidayDates.has(iso)) return iso;
+            d.setDate(d.getDate() - 1);
+        }
+        // Fallback: yesterday regardless
+        const fb = new Date();
+        fb.setDate(fb.getDate() - 1);
+        return fb.toISOString().split('T')[0];
+    }, [offDayNames, holidayDates]);
 
     useEffect(() => {
         dispatch(setPageTitle('Attendance Logs'));
@@ -221,6 +276,8 @@ const AdminAttendanceLogs = () => {
             const data = await resp.json();
             if (!resp.ok) throw new Error(data.error || 'Failed to update attendance');
 
+            setEditModalOpen(false);
+            await fetchMonth();
             Swal.fire({
                 title: 'Success',
                 text: 'Attendance updated successfully',
@@ -229,8 +286,6 @@ const AdminAttendanceLogs = () => {
                 showConfirmButton: false,
                 customClass: { popup: 'sweet-alerts' },
             });
-            setEditModalOpen(false);
-            fetchMonth();
         } catch (e: any) {
             Swal.fire('Error', e.message, 'error');
         } finally {

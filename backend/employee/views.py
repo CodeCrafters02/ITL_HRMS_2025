@@ -20,7 +20,7 @@ class EmployeePagination(PageNumberPagination):
     page_size = 10
     page_size_query_param = 'page_size'
     max_page_size = 100
-from .utils import calculate_worked_time, calculate_effective_time
+from .utils import calculate_worked_time, calculate_effective_time, get_missing_checkout
 import re
 from app.models import (
     Attendance,
@@ -240,7 +240,14 @@ class CheckInAPIView(APIView):
         today = timezone.localdate()
         now_dt = timezone.localtime(timezone.now(), tz)
 
-        existing = Attendance.objects.filter(employee=employee, date=today).first()
+        # Prefer the record that already has check_in so we don't create a duplicate
+        existing = (
+            Attendance.objects
+            .filter(employee=employee, date=today, check_in__isnull=False)
+            .order_by('id')
+            .first()
+        ) or Attendance.objects.filter(employee=employee, date=today).order_by('id').first()
+
         if existing and existing.check_in:
             return Response({
                 "detail": f"Already checked in at {existing.check_in.astimezone(tz).strftime('%H:%M:%S')}"
@@ -289,35 +296,52 @@ class CheckInAPIView(APIView):
 
         is_late = now_dt > shift_start_with_grace
 
-        attendance = Attendance.objects.create(
-            employee=employee,
-            company=employee.company,
-            date=today,
-            check_in=now_dt,
-            is_present=True
-        )
+        # Reuse the existing record fetched above (handles duplicate-row DBs safely)
+        if existing:
+            existing.check_in = now_dt
+            existing.is_present = True
+            existing.company = employee.company
+            existing.save(update_fields=['check_in', 'is_present', 'company'])
+            attendance = existing
+        else:
+            attendance = Attendance.objects.create(
+                employee=employee,
+                company=employee.company,
+                date=today,
+                check_in=now_dt,
+                is_present=True,
+            )
 
         # Update status to online
         employee.status = 'online'
         employee.save(update_fields=['status'])
 
-        # If yesterday has a missing checkout, fire the morning alert asynchronously
-        yesterday = today - timedelta(days=1)
-        yesterday_att = Attendance.objects.filter(
-            employee=employee,
-            date=yesterday,
-            check_in__isnull=False,
-            check_out__isnull=True,
-        ).first()
-        if yesterday_att and 'MISSING_CHECKOUT' in (yesterday_att.remarks or ''):
-            from employee.tasks import send_late_checkout_morning_alert
-            send_late_checkout_morning_alert.delay(employee.id, yesterday_att.id)
+        # Detect missing checkout, skipping weekends and holidays
+        missing_checkout_att, missing_checkout_date_val = get_missing_checkout(employee, today)
+
+        if missing_checkout_att:
+            try:
+                # Stamp the flag so the admin grid and Celery daily task can see it
+                if 'MISSING_CHECKOUT' not in (missing_checkout_att.remarks or ''):
+                    missing_checkout_att.remarks = (
+                        f"{missing_checkout_att.remarks} | MISSING_CHECKOUT"
+                        if missing_checkout_att.remarks
+                        else 'MISSING_CHECKOUT'
+                    )
+                    missing_checkout_att.save(update_fields=['remarks'])
+                from employee.tasks import send_late_checkout_morning_alert
+                send_late_checkout_morning_alert.delay(employee.id, missing_checkout_att.id)
+            except Exception:
+                # Celery broker may not be running — check-in must never fail because of this
+                pass
 
         serializer = EmployeeAttendanceSerializer(attendance)
         return Response({
             "detail": f"Checked in at {now_dt.strftime('%H:%M:%S')} for shift {selected_shift.shift_type}",
             "is_late": is_late,
-            "attendance": serializer.data
+            "attendance": serializer.data,
+            "missing_checkout_yesterday": missing_checkout_att is not None,
+            "missing_checkout_date": str(missing_checkout_date_val) if missing_checkout_date_val else None,
         })
 
 
@@ -345,9 +369,14 @@ class CheckOutAPIView(APIView):
         today = timezone.localdate()
         now_dt = timezone.localtime(timezone.now(), pytz.timezone('Asia/Kolkata'))
 
-        try:
-            attendance = Attendance.objects.get(employee=employee, date=today)
-        except Attendance.DoesNotExist:
+        # Use filter+first to safely handle duplicate rows in the table
+        attendance = (
+            Attendance.objects
+            .filter(employee=employee, date=today, check_in__isnull=False)
+            .order_by('-check_in')
+            .first()
+        )
+        if not attendance:
             return Response({"detail": "No check-in record found for today."}, status=404)
 
         if attendance.check_out:
@@ -675,6 +704,10 @@ class DashboardAPIView(APIView):
             total_weekly_mins = int(total_weekly_minutes % 60)
             total_work_duration_week = f"{total_weekly_hours}h {total_weekly_mins}m"
 
+            # Detect missing checkout, skipping weekends and holidays
+            _mc_att, missing_checkout_date_val = get_missing_checkout(employee, today)
+            missing_checkout_yesterday = _mc_att is not None
+
             # Dashboard response
             dashboard_data = {
                 'employee_name': f"{employee.first_name} {employee.last_name}",
@@ -720,6 +753,8 @@ class DashboardAPIView(APIView):
                 'overtime': overtime,
                 'latest_payroll': latest_payroll_data,
                 'birthday_message': birthday_message,
+                'missing_checkout_yesterday': missing_checkout_yesterday,
+                'missing_checkout_date': str(missing_checkout_date_val) if missing_checkout_date_val else None,
             }
 
             return Response({"dashboard_data": dashboard_data})

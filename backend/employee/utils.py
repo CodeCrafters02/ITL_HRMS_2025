@@ -1,4 +1,78 @@
-from datetime import datetime
+from datetime import datetime, timedelta
+
+# Monday=0 … Sunday=6  (matches Python's date.weekday())
+_DAY_NAMES = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
+
+
+def get_missing_checkout(employee, today):
+    """
+    Return (Attendance, date) for the most recent past *working* day on which
+    the employee genuinely checked in but never checked out.
+
+    Skips:
+    - Company holidays and the department's configured weekend days
+    - Auto-generated / placeholder records (remarks contain 'Off day',
+      'No attendance record', 'auto', etc.)
+    Looks back up to 14 calendar days.
+    Returns (None, None) when nothing is found or on any unexpected error.
+    """
+    # Remarks substrings that indicate a system-generated placeholder row,
+    # NOT a real employee check-in.
+    SKIP_REMARKS = ('off day', 'no attendance record', 'auto', 'holiday')
+
+    try:
+        from app.models import CalendarEvent, DepartmentWiseWorkingDays, Attendance
+
+        # Weekend days from the employee's department config (default: Sat + Sun)
+        weekend_names = {'Saturday', 'Sunday'}
+        if getattr(employee, 'department_id', None):
+            dwwd = DepartmentWiseWorkingDays.objects.filter(
+                department_id=employee.department_id
+            ).first()
+            if dwwd and dwwd.weekend_days:
+                weekend_names = set(dwwd.weekend_days)
+
+        # Company holiday dates
+        holiday_dates: set = set()
+        if getattr(employee, 'company_id', None):
+            holiday_dates = set(
+                CalendarEvent.objects.filter(
+                    is_holiday=True,
+                    company_id=employee.company_id,
+                ).values_list('date', flat=True)
+            )
+
+        for days_back in range(1, 15):
+            check_date = today - timedelta(days=days_back)
+
+            # Skip weekends
+            if _DAY_NAMES[check_date.weekday()] in weekend_names:
+                continue
+
+            # Skip holidays
+            if check_date in holiday_dates:
+                continue
+
+            att = Attendance.objects.filter(
+                employee=employee,
+                date=check_date,
+                check_in__isnull=False,   # must have genuinely checked in
+                check_out__isnull=True,
+            ).first()
+
+            if not att:
+                continue
+
+            # Skip system-generated / placeholder records
+            remarks_lower = (att.remarks or '').lower()
+            if any(kw in remarks_lower for kw in SKIP_REMARKS):
+                continue
+
+            return att, check_date
+
+        return None, None
+    except Exception:
+        return None, None
 
 
 def calculate_worked_time(check_in, check_out=None, now=None):
