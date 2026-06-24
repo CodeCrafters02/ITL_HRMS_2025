@@ -2459,6 +2459,206 @@ class PayslipViewSet(viewsets.ReadOnlyModelViewSet):
             traceback.print_exc()
             return Response({'error': str(e)}, status=400)
 
+    @action(detail=False, methods=['post'], url_path='bulk-generate')
+    def bulk_generate(self, request):
+        payroll_ids = request.data.get('payroll_ids', [])
+        is_report = request.data.get('is_report', False)
+        regenerate = request.data.get('regenerate', False)
+        start_date_req = request.data.get('start_date')
+        end_date_req = request.data.get('end_date')
+
+        if not payroll_ids:
+            return Response({'error': 'No payroll_ids provided'}, status=400)
+
+        company = request.user.company
+        logo_path = company.logo.path if company.logo and hasattr(company.logo, 'path') else None
+
+        success_count = 0
+        failed_count = 0
+        errors = []
+
+        from django.db import close_old_connections
+        from django.core.files.base import ContentFile
+        from django.utils import timezone
+        import concurrent.futures
+        import uuid
+        from decimal import Decimal, ROUND_HALF_UP
+
+        def worker(payroll_id):
+            close_old_connections()
+            try:
+                if is_report:
+                    record = FinalizedSalary.objects.get(id=payroll_id)
+                    employee = record.employee
+                    if start_date_req and end_date_req:
+                        req_from = datetime.strptime(start_date_req, '%Y-%m-%d').date()
+                        req_to = datetime.strptime(end_date_req, '%Y-%m-%d').date()
+                        existing = FinalizedSalary.objects.filter(
+                            employee=employee, from_date=req_from, to_date=req_to
+                        ).exclude(id=record.id).first()
+                        if existing:
+                            record = existing
+                        elif record.from_date != req_from or record.to_date != req_to:
+                            record.from_date = req_from
+                            record.to_date = req_to
+                            record.save()
+                    month = record.from_date.month
+                    year = record.from_date.year
+                else:
+                    record = Payroll.objects.get(id=payroll_id)
+                    employee = record.employee
+                    month = record.batch.month
+                    year = record.batch.year
+
+                payslip = None
+                try:
+                    payslip = record.payslip_record
+                except Exception:
+                    pass
+
+                if not payslip:
+                    if not is_report:
+                        payslip = Payslip.objects.filter(
+                            employee=employee, month=month, year=year, company=company
+                        ).first()
+                        if payslip and not payslip.payroll_id:
+                            payslip.payroll = record
+                            payslip.save(update_fields=['payroll'])
+
+                if payslip and not regenerate and not is_report:
+                    return {'status': 'skipped', 'payroll_id': payroll_id}
+
+                if is_report:
+                    from .utils import compute_attendance_metrics
+                    m = compute_attendance_metrics(employee, record.from_date, record.to_date)
+                    d_paid = Decimal(str(m['present_days'])) + (Decimal(str(m['half_days'])) * Decimal('0.5')) + Decimal(str(m['paid_leaves']))
+                    record.days_paid = d_paid
+                    conf = record.config or {}
+                    conf.update({
+                        'present_days': m['present_days'],
+                        'half_days': m['half_days'],
+                        'paid_leaves': m['paid_leaves'],
+                        'unpaid_leaves': m['unpaid_leaves'],
+                        'expected_working_days': m['expected_working_days'],
+                        'absent_days': m['absent_days'],
+                        'overtime_hours': m['overtime_hours'],
+                        'checked_in_days': m['checked_in_days'],
+                    })
+                    record.config = conf
+                    fixed_basic = employee.basic_salary or Decimal(0)
+                    if m['expected_working_days'] > 0:
+                        record.earned_basic = ((fixed_basic / Decimal(m['expected_working_days'])) * d_paid).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+                    from .utils import compute_loan_emi, compute_loan_disbursement, compute_asset_deductions
+                    record.loan_emi = compute_loan_emi(employee, record.from_date, record.to_date)
+                    record.loan_disbursement = compute_loan_disbursement(employee, record.from_date, record.to_date)
+                    record.asset_deduction = compute_asset_deductions(employee, record.from_date, record.to_date)
+                    ot_hours = Decimal(str(m['overtime_hours']))
+                    record.ot_hours = ot_hours
+                    if conf.get('otEnabled') and m['expected_working_days'] > 0:
+                        hourly_rate = (fixed_basic / Decimal(str(m['expected_working_days']))) / Decimal(8)
+                        record.ot_pay = (hourly_rate * ot_hours).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+                    else:
+                        record.ot_pay = Decimal(0)
+                    total_gross = record.earned_basic + record.ot_pay + record.loan_disbursement
+                    from app.models import GrossSalaryComponent, SalaryDeductionComponent
+                    all_gross = GrossSalaryComponent.objects.filter(company=employee.company, is_active=True)
+                    g_chk = conf.get('gChk', {})
+                    all_gross_names = set()
+                    for gc in all_gross:
+                        all_gross_names.add(gc.name.lower())
+                        if not g_chk.get(f'g-{gc.id}', True): continue
+                        amount = (record.earned_basic * gc.value) / Decimal(100) if gc.calc_type == 'percentage' else gc.value
+                        total_gross += amount
+                    from .utils import compute_salary_structure_allowances
+                    struct_allowances = compute_salary_structure_allowances(employee, record.earned_basic, total_gross)
+                    for sa in struct_allowances:
+                        if sa['name'].lower() not in all_gross_names:
+                            total_gross += sa['amount']
+                    from app.models import ReimbursementRequest
+                    reimbursements = ReimbursementRequest.objects.filter(
+                        employee=employee,
+                        status='approved',
+                        created_at__date__range=[record.from_date, record.to_date]
+                    )
+                    total_reimb = sum(r.amount for r in reimbursements)
+                    record.total_gross = (total_gross + Decimal(str(total_reimb))).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+                    total_ded = record.loan_emi or Decimal(0)
+                    total_ded += record.asset_deduction or Decimal(0)
+                    all_ded = SalaryDeductionComponent.objects.filter(company=employee.company, is_active=True)
+                    d_chk = conf.get('dChk', {})
+                    for dc in all_ded:
+                        if not d_chk.get(f'd-{dc.id}', True): continue
+                        fixed_gross = employee.gross_salary or Decimal(0)
+                        t_base = fixed_basic if dc.threshold_on == 'basic' else fixed_gross
+                        if dc.has_threshold and t_base < dc.threshold_amount: continue
+                        d_base = record.earned_basic if dc.deduct_from == 'basic' else record.total_gross
+                        amount = (d_base * dc.value) / Decimal(100) if dc.calc_type == 'percentage' else dc.value
+                        total_ded += amount
+                    record.total_deductions = total_ded.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+                    record.net_salary = (record.total_gross - record.total_deductions).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+                    record.save()
+
+                unique_id = payslip.payslip_id if payslip else f"PAY-{uuid.uuid4().hex[:8].upper()}"
+                from .utils import generate_payslip_pdf
+                pdf_file = generate_payslip_pdf(
+                    employee=employee,
+                    payroll=record if not is_report else None,
+                    batch=record.batch if not is_report else None,
+                    company=company,
+                    logo_path=logo_path,
+                    payslip_id=unique_id,
+                    finalized_salary=record if is_report else None
+                )
+
+                if not payslip:
+                    payslip = Payslip.objects.create(
+                        employee=employee,
+                        company=company,
+                        payroll=record if not is_report else None,
+                        finalized_salary=record if is_report else None,
+                        payslip_id=unique_id,
+                        month=month,
+                        year=year,
+                        status='Draft'
+                    )
+
+                if payslip.file:
+                    try:
+                        payslip.file.delete(save=False)
+                    except Exception:
+                        pass
+
+                ts = int(timezone.now().timestamp())
+                payslip.file.save(f"payslip_{unique_id}_{ts}.pdf", ContentFile(pdf_file.read()))
+                payslip.save()
+                return {'status': 'success', 'payroll_id': payroll_id}
+            except Exception as ex:
+                import traceback
+                traceback.print_exc()
+                return {'status': 'error', 'payroll_id': payroll_id, 'error': str(ex)}
+            finally:
+                close_old_connections()
+
+        max_workers = min(16, (os.cpu_count() or 4) * 2)
+        with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
+            results = list(executor.map(worker, payroll_ids))
+
+        for r in results:
+            if r['status'] == 'success':
+                success_count += 1
+            elif r['status'] == 'skipped':
+                success_count += 1
+            else:
+                failed_count += 1
+                errors.append(f"Payroll {r['payroll_id']}: {r['error']}")
+
+        return Response({
+            'message': f'Bulk payslip generation completed: {success_count} succeeded, {failed_count} failed.',
+            'success_count': success_count,
+            'failed_count': failed_count,
+            'errors': errors
+        })
+
     @action(detail=False, methods=['get'], url_path='rollout-dashboard')
     def rollout_dashboard(self, request):
         start_date = request.query_params.get('start_date')

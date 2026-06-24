@@ -123,6 +123,17 @@ export const bulkPublishPayslips = async (ids: number[]) => {
     return response.data;
 };
 
+export const bulkGeneratePayslips = async (payrollIds: number[], isReport: boolean = false, regenerate: boolean = false, startDate?: string, endDate?: string) => {
+    const response = await axios.post(`${API_URL}payslips/bulk-generate/`, {
+        payroll_ids: payrollIds,
+        is_report: isReport,
+        regenerate: regenerate,
+        start_date: startDate,
+        end_date: endDate
+    }, { headers: getHeaders() });
+    return response.data;
+};
+
 export const downloadPayslip = async (fileUrl: string) => {
     try {
         const response = await fetch(fileUrl);

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useDispatch } from 'react-redux';
 import { setPageTitle } from '../../store/themeConfigSlice';
-import { fetchPayrollBatches, fetchRolloutDashboard, rolloutPayslips, publishPayslip, bulkPublishPayslips, PayrollBatch, RolloutDashboardItem, generatePayslip } from '../Payroll/payslipApi';
+import { fetchPayrollBatches, fetchRolloutDashboard, rolloutPayslips, publishPayslip, bulkPublishPayslips, PayrollBatch, RolloutDashboardItem, generatePayslip, bulkGeneratePayslips } from '../Payroll/payslipApi';
 import Swal from 'sweetalert2';
 import IconFile from '../../components/Icon/IconFile';
 import IconSend from '../../components/Icon/IconSend';
@@ -142,28 +142,23 @@ const PayslipRollout = () => {
         if (!confirm.isConfirmed) return;
 
         setActionLoading('generate-all');
-        let success = 0;
-        let failed = 0;
+        const payrollIds = eligible.map(item => item.payroll_id!);
+        const isReport = eligible[0]?.is_report || false;
 
-        for (const item of eligible) {
-            try {
-                const regenerate = !!item.payslip_id;
-                await generatePayslip(item.payroll_id!, item.is_report, regenerate, start, end);
-                success++;
-            } catch (e) {
-                console.error(`Failed for ${item.employee_name}`, e);
-                failed++;
-            }
+        try {
+            const res = await bulkGeneratePayslips(payrollIds, isReport, true, start, end);
+            loadDashboard();
+            Swal.fire({
+                title: 'Batch Complete',
+                html: `<b>${res.success_count || eligible.length}</b> payslips processed successfully.${res.failed_count > 0 ? `<br/><span style="color:red">${res.failed_count} failed.</span>` : ''}`,
+                icon: res.failed_count > 0 ? 'warning' : 'success',
+            });
+        } catch (e: any) {
+            console.error('Failed to generate all payslips', e);
+            Swal.fire('Error', 'Failed to generate payslips in bulk.', 'error');
+        } finally {
+            setActionLoading(null);
         }
-
-        setActionLoading(null);
-        loadDashboard();
-
-        Swal.fire({
-            title: 'Batch Complete',
-            html: `<b>${success}</b> payslips generated successfully.${failed > 0 ? `<br/><span style="color:red">${failed} failed.</span>` : ''}`,
-            icon: failed > 0 ? 'warning' : 'success',
-        });
     };
 
     const handleView = (payslipId: number, fileUrl: string) => {
