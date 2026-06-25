@@ -2018,6 +2018,7 @@ class OfficeLocationSerializer(serializers.ModelSerializer):
     class Meta:
         model = OfficeLocation
         fields = '__all__'
+        read_only_fields = ['company']
 
     def create(self, validated_data):
         request = self.context.get('request')
