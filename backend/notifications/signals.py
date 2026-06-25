@@ -599,35 +599,6 @@ def reimbursement_created_notify_manager(sender, instance, created, **kwargs):
             logger.error(f"Failed to notify manager about new reimbursement: {e}")
 
 
-@receiver(post_save, sender=FinalizedSalary)
-def payslip_generated_notify(sender, instance, created, **kwargs):
-    """
-    Notify employee when a new payslip is generated.
-    """
-    if not created:
-        return
-    if instance.employee and instance.employee.user and instance.employee.user.id:
-        default_sender = UserRegister.objects.filter(role='admin').first()
-        from_month = instance.from_date.strftime('%B %Y') if instance.from_date else 'this period'
-        body = f"Your payslip for {from_month} has been generated. Net salary: ₹{instance.net_salary}."
-        try:
-            send_fcm_to_users(
-                [instance.employee.user.id],
-                "payslip",
-                body,
-                sender=default_sender,
-                title="New Payslip Available",
-                extra_data={"type": "payslip_new", "payslip_id": instance.id}
-            )
-            UserNotification.objects.create(
-                recipient=instance.employee,
-                title="New Payslip Available",
-                message=body,
-                related_object_id=instance.id,
-                sender=default_sender
-            )
-        except Exception as e:
-            logger.error(f"Failed to notify employee about new payslip: {e}")
 
 
 @receiver(pre_save, sender=LoanApplication)

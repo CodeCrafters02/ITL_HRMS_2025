@@ -2244,7 +2244,7 @@ class PayslipViewSet(viewsets.ReadOnlyModelViewSet):
         user = self.request.user
         if user.role in ['admin', 'master']:
             return Payslip.objects.filter(company=user.company).order_by('-year', '-month')
-        return Payslip.objects.filter(employee__user=user, status='Published').order_by('-year', '-month')
+        return Payslip.objects.filter(employee__user=user, status='Published').order_by('-created_at')
 
     @action(detail=False, methods=['post'], url_path='generate')
     def generate(self, request):
@@ -2435,6 +2435,8 @@ class PayslipViewSet(viewsets.ReadOnlyModelViewSet):
                     year=year,
                     status='Draft'
                 )
+            else:
+                payslip.status = 'Draft'
             
             # Delete old file first, then save new one (prevents browser caching old URL)
             if payslip.file:
@@ -2621,6 +2623,8 @@ class PayslipViewSet(viewsets.ReadOnlyModelViewSet):
                         year=year,
                         status='Draft'
                     )
+                else:
+                    payslip.status = 'Draft'
 
                 if payslip.file:
                     try:
