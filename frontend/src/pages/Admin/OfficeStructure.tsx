@@ -205,12 +205,10 @@ const OfficeStructure = () => {
 
         if (floorName) {
             try {
-                const token = localStorage.getItem('access_token');
-                const res = await fetch(`${API_BASE_URL}/app/office-floors/`, {
+                const res = await authFetch(`${API_BASE_URL}/app/office-floors/`, {
                     method: 'POST',
                     headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${token}`
+                        'Content-Type': 'application/json'
                     },
                     body: JSON.stringify({
                         name: floorName,
@@ -236,12 +234,10 @@ const OfficeStructure = () => {
     const handleSave = async () => {
         if (!selectedFloor) return;
         try {
-            const token = localStorage.getItem('access_token');
-            const res = await fetch(`${API_BASE_URL}/app/office-floors/${selectedFloor.id}/`, {
+            const res = await authFetch(`${API_BASE_URL}/app/office-floors/${selectedFloor.id}/`, {
                 method: 'PATCH',
                 headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
+                    'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({
                     layout_data: { elements }
