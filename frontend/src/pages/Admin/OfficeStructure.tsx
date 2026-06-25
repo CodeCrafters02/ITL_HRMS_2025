@@ -12,6 +12,7 @@ import IconNotes from '../../components/Icon/IconNotes';
 import IconChecks from '../../components/Icon/IconChecks';
 import { IRootState } from '../../store';
 import Swal from 'sweetalert2';
+import { authFetch } from '../../utils/authFetch';
 
 interface LayoutElement {
     id: string;
@@ -56,10 +57,7 @@ const OfficeStructure = () => {
     const fetchLocations = async () => {
         setLoadingLocations(true);
         try {
-            const token = localStorage.getItem('access_token');
-            const res = await fetch(`${API_BASE_URL}/app/office-locations/`, {
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
+            const res = await authFetch(`${API_BASE_URL}/app/office-locations/`);
             if (res.ok) {
                 const data = await res.json();
                 const locList = Array.isArray(data) ? data : (data.results || []);
@@ -88,10 +86,7 @@ const OfficeStructure = () => {
 
         setLoadingFloors(true);
         try {
-            const token = localStorage.getItem('access_token');
-            const res = await fetch(`${API_BASE_URL}/app/office-floors/?location=${locId}`, {
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
+            const res = await authFetch(`${API_BASE_URL}/app/office-floors/?location=${locId}`);
             if (res.ok) {
                 const data = await res.json();
                 const floorList = Array.isArray(data) ? data : (data.results || []);
@@ -173,12 +168,10 @@ const OfficeStructure = () => {
 
         if (formValues && formValues.name) {
             try {
-                const token = localStorage.getItem('access_token');
-                const res = await fetch(`${API_BASE_URL}/app/office-locations/`, {
+                const res = await authFetch(`${API_BASE_URL}/app/office-locations/`, {
                     method: 'POST',
                     headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${token}`
+                        'Content-Type': 'application/json'
                     },
                     body: JSON.stringify(formValues)
                 });
