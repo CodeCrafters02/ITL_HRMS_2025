@@ -6,8 +6,12 @@ from .all_notifications import AllNotificationsAPIView, NotificationSSEView
 router = DefaultRouter()
 
 router.register('employeereference', EmployeeReferenceViewSet, basename='employeereference')
+router.register('multirater', MultiRaterMappingViewSet, basename='multirater')
+router.register('kra-master', KRAMasterViewSet, basename='kra-master')
+router.register('employee-kra', EmployeeKRAViewSet, basename='employee-kra')
 
 urlpatterns = [
+    path('all-employees-list/', AllEmployeesAPIView.as_view(), name='all-employees-list'),
     path('employee/company-info/', EmployeeCompanyInfoAPIView.as_view(), name='employee-company-info'),
     path('reporting-managers/', ReportingManagerAPIView.as_view(), name='reporting_managers'),
     path('employee-id/', EmployeeIdAPIView.as_view(), name='employee_id'),
@@ -43,6 +47,8 @@ urlpatterns = [
     path('employee-companypolicies/', EmployeeCompanyPoliciesAPIView.as_view(), name='employee-company-policies'),
     path('employee-hierarchy/', EmployeeHierarchyAPIView.as_view(), name='employee-hierarchy'),
     path('attendance-chart/', AttendanceChartDataAPIView.as_view(), name='attendance-chart'),
+    path('performance-profile/<int:emp_id>/', EmployeePerformanceProfileAPIView.as_view(), name='employee-performance-profile'),
+    path('kra-tasks/', EmployeeKRATasksAPIView.as_view(), name='kra-tasks'),
 
 
     path('all-notifications/', AllNotificationsAPIView.as_view(), name='all-notifications'),

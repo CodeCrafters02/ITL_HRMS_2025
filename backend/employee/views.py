@@ -2238,3 +2238,243 @@ class AttendanceChartDataAPIView(APIView):
             "period_label": period_label,
             "offset": offset
         })
+
+
+class AllEmployeesAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        employees = Employee.objects.filter(is_active=True, user__role='employee').select_related(
+            'department', 'designation', 'reporting_manager'
+        )
+        data = []
+        for emp in employees:
+            photo_url = None
+            if emp.photo:
+                try:
+                    photo_url = request.build_absolute_uri(emp.photo.url)
+                except Exception:
+                    photo_url = emp.photo.name
+            
+            data.append({
+                'id': emp.id,
+                'employee_id': emp.employee_id,
+                'first_name': emp.first_name,
+                'last_name': emp.last_name,
+                'full_name': f"{emp.first_name} {emp.last_name}".strip(),
+                'department': emp.department_id,
+                'department_name': emp.department.department_name if emp.department else None,
+                'designation_name': emp.designation.designation_name if emp.designation else None,
+                'reporting_manager_name': f"{emp.reporting_manager.first_name} {emp.reporting_manager.last_name}".strip() if emp.reporting_manager else None,
+                'photo': photo_url,
+                'avatarBg': 'bg-teal-500',
+                'initials': ((emp.first_name or '')[:1] + (emp.last_name or '')[:1]).upper(),
+            })
+        return Response(data)
+
+
+class MultiRaterMappingViewSet(viewsets.ModelViewSet):
+    queryset = MultiRaterMapping.objects.all()
+    serializer_class = MultiRaterMappingSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        queryset = self.queryset
+        employee_id = self.request.query_params.get('employee_id')
+        if employee_id:
+            queryset = queryset.filter(employee_id=employee_id)
+        return queryset
+
+    def perform_create(self, serializer):
+        cycle = serializer.validated_data.get('cycle')
+        if not cycle:
+            cycle = AppraisalCycle.objects.filter(status='active').first() or AppraisalCycle.objects.first()
+            serializer.save(cycle=cycle)
+        else:
+            serializer.save()
+
+
+class EmployeePerformanceProfileAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, emp_id):
+        employee = get_object_or_404(Employee, id=emp_id)
+        
+        # 1. Fetch KRAs
+        kras = EmployeeKRA.objects.filter(employee=employee).select_related('kra_master')
+        kras_data = []
+        for k in kras:
+            kras_data.append({
+                'id': k.id,
+                'kra_name': k.kra_master.title if k.kra_master else None,
+                'weightage': k.weightage,
+                'target_description': k.target_description,
+            })
+
+        # 2. Fetch Skills
+        skills = EmployeeSkill.objects.filter(employee=employee).select_related('skill')
+        skills_data = []
+        for s in skills:
+            skills_data.append({
+                'id': s.id,
+                'skill_name': s.skill.name if s.skill else None,
+                'proficiency_level': s.proficiency_level,
+                'approval_status': s.approval_status
+            })
+
+        # 3. Fetch Appraisals & Evaluations
+        evals = AppraisalEvaluation.objects.filter(employee=employee).select_related('cycle')
+        evals_data = []
+        for ev in evals:
+            final_rating = ev.hr_overall_rating or ev.manager_overall_rating
+            evals_data.append({
+                'id': ev.id,
+                'cycle_name': ev.cycle.name if ev.cycle else "General Cycle",
+                'self_rating': float(ev.self_overall_rating) if ev.self_overall_rating is not None else None,
+                'manager_rating': float(ev.manager_overall_rating) if ev.manager_overall_rating is not None else None,
+                'final_rating': float(final_rating) if final_rating is not None else None,
+                'status': ev.status
+            })
+
+        # 4. Fetch Continuous Feedback
+        feedback = ContinuousFeedback.objects.filter(receiver=employee).select_related('sender')
+        feedback_data = []
+        for f in feedback:
+            feedback_data.append({
+                'id': f.id,
+                'feedback_type': f.category,
+                'feedback_text': f.feedback_text,
+                'given_by_name': f"{f.sender.first_name} {f.sender.last_name}".strip() if f.sender else "System",
+                'created_at': f.created_at.strftime('%Y-%m-%d %H:%M') if f.created_at else None
+            })
+
+        # 5. Formulate 9-Box positioning (derived or default if empty)
+        perf_score = 0.0
+        pot_score = 0.0
+        rated = [float(ev.hr_overall_rating or ev.manager_overall_rating or 0.0) for ev in evals]
+        if rated:
+            perf_score = sum(rated) / len(rated)
+        if skills.exists():
+            prof_map = {'beginner': 2.0, 'intermediate': 3.5, 'expert': 5.0}
+            pot_score = sum([prof_map.get((s.proficiency_level or '').lower(), 3.0) for s in skills]) / skills.count()
+            
+        perf_label = "Medium"
+        if perf_score < 2.5: perf_label = "Low"
+        elif perf_score >= 4.0: perf_label = "High"
+        
+        pot_label = "Medium"
+        if pot_score < 2.5: pot_label = "Low"
+        elif pot_score >= 4.0: pot_label = "High"
+
+        box_matrix = {
+            ("Low", "Low"): "Risk",
+            ("Low", "Medium"): "Inconsistent Player",
+            ("Low", "High"): "Potential Gem",
+            ("Medium", "Low"): "Average Performer",
+            ("Medium", "Medium"): "Core Player",
+            ("Medium", "High"): "High Potential",
+            ("High", "Low"): "Solid Performer",
+            ("High", "Medium"): "High Performer",
+            ("High", "High"): "Star Performer",
+        }
+        box_title = box_matrix.get((perf_label, pot_label), "Core Player")
+
+        return Response({
+            'kras': kras_data,
+            'skills': skills_data,
+            'evaluations': evals_data,
+            'feedbacks': feedback_data,
+            'nine_box': {
+                'performance_score': round(perf_score, 2),
+                'potential_score': round(pot_score, 2),
+                'performance_label': perf_label,
+                'potential_label': pot_label,
+                'box_title': box_title
+            }
+        })
+
+
+class KRAMasterViewSet(viewsets.ModelViewSet):
+    queryset = KRAMaster.objects.all()
+    serializer_class = KRAMasterSerializer
+    permission_classes = [IsAuthenticated]
+
+
+class EmployeeKRAViewSet(viewsets.ModelViewSet):
+    queryset = EmployeeKRA.objects.all()
+    serializer_class = EmployeeKRASerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        queryset = self.queryset
+        employee_id = self.request.query_params.get('employee_id')
+        if employee_id:
+            queryset = queryset.filter(employee_id=employee_id)
+        return queryset
+
+
+class EmployeeKRATasksAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        employee_id = request.query_params.get('employee_id')
+        if not employee_id:
+            return Response({"detail": "employee_id is required"}, status=status.HTTP_400_BAD_REQUEST)
+            
+        tasks = Task.objects.filter(assignments__employee_id=employee_id, kra__isnull=False).select_related('kra__kra_master')
+        data = []
+        for t in tasks:
+            data.append({
+                'id': t.id,
+                'title': t.title,
+                'description': t.description,
+                'priority': t.priority,
+                'status': t.status,
+                'deadline': t.deadline.strftime('%Y-%m-%d') if t.deadline else None,
+                'kra_id': t.kra_id,
+                'kra_title': t.kra.kra_master.title if t.kra and t.kra.kra_master else None
+            })
+        return Response(data)
+
+    def post(self, request):
+        employee_id = request.data.get('employee_id')
+        kra_id = request.data.get('kra_id')
+        title = request.data.get('title')
+        description = request.data.get('description')
+        priority = request.data.get('priority', 'medium')
+        deadline = request.data.get('deadline')
+
+        if not (employee_id and kra_id and title and deadline):
+            return Response({"detail": "Missing required fields"}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            creator = request.user.employee_profile
+        except Employee.DoesNotExist:
+            creator = Employee.objects.first()
+
+        task = Task.objects.create(
+            title=title,
+            description=description,
+            created_by=creator,
+            priority=priority,
+            status='todo',
+            deadline=deadline,
+            kra_id=kra_id
+        )
+
+        TaskAssignment.objects.create(
+            task=task,
+            employee_id=employee_id,
+            role='owner',
+            status='todo'
+        )
+
+        return Response({
+            'id': task.id,
+            'title': task.title,
+            'description': task.description,
+            'priority': task.priority,
+            'status': task.status,
+            'deadline': task.deadline.strftime('%Y-%m-%d') if task.deadline else None,
+            'kra_id': task.kra_id
+        }, status=status.HTTP_201_CREATED)

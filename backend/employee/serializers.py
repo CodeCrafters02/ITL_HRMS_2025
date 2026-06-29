@@ -597,3 +597,84 @@ class EmployeeReferenceSerializer(serializers.ModelSerializer):
             'employee_designation',
             'employee_department',
         ]
+
+
+class MultiRaterMappingSerializer(serializers.ModelSerializer):
+    reviewer_name = serializers.SerializerMethodField()
+    reviewer_designation = serializers.SerializerMethodField()
+    reviewer_initials = serializers.SerializerMethodField()
+    reviewer_avatar_bg = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = MultiRaterMapping
+        fields = [
+            'id', 'employee', 'reviewer', 'cycle', 'status', 'created_at',
+            'reviewer_name', 'reviewer_designation', 'reviewer_initials', 'reviewer_avatar_bg'
+        ]
+        
+    def get_reviewer_name(self, obj):
+        if obj.reviewer:
+            return f"{obj.reviewer.first_name} {obj.reviewer.last_name}".strip()
+        return ""
+
+    def get_reviewer_designation(self, obj):
+        return obj.reviewer.designation.designation_name if obj.reviewer and obj.reviewer.designation else ""
+
+    def get_reviewer_initials(self, obj):
+        if obj.reviewer:
+            fn = obj.reviewer.first_name or ""
+            ln = obj.reviewer.last_name or ""
+            return (fn[:1] + ln[:1]).upper()
+        return ""
+
+    def get_reviewer_avatar_bg(self, obj):
+        colors = ['bg-emerald-500', 'bg-indigo-500', 'bg-amber-500', 'bg-teal-500', 'bg-rose-500', 'bg-blue-500', 'bg-purple-500', 'bg-pink-500', 'bg-cyan-500']
+        if obj.reviewer:
+            return colors[obj.reviewer.id % len(colors)]
+        return 'bg-gray-500'
+
+    def validate(self, attrs):
+        employee = attrs.get('employee')
+        reviewer = attrs.get('reviewer')
+        if employee and reviewer:
+            if employee.id == reviewer.id:
+                raise serializers.ValidationError("An employee cannot review themselves.")
+            if employee.department_id != reviewer.department_id:
+                raise serializers.ValidationError("Reviewer must belong to the same department as the employee.")
+        return attrs
+
+
+class KRAMasterSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = KRAMaster
+        fields = ['id', 'title', 'description']
+
+
+class EmployeeKRASerializer(serializers.ModelSerializer):
+    kra_title = serializers.CharField(source='kra_master.title', read_only=True)
+    kra_description = serializers.CharField(source='kra_master.description', read_only=True)
+
+    class Meta:
+        model = EmployeeKRA
+        fields = ['id', 'employee', 'kra_master', 'kra_title', 'kra_description', 'weightage', 'target_description', 'created_at']
+
+    def validate(self, attrs):
+        employee = attrs.get('employee')
+        weightage = attrs.get('weightage', 0)
+        kra_master = attrs.get('kra_master')
+        
+        # If updating, exclude self from weightage sum
+        instance_id = self.instance.id if self.instance else None
+        
+        existing_kras = EmployeeKRA.objects.filter(employee=employee)
+        if instance_id:
+            existing_kras = existing_kras.exclude(id=instance_id)
+            
+        total_weight = sum([k.weightage for k in existing_kras]) + weightage
+        if total_weight > 100:
+            raise serializers.ValidationError(f"Total weightage cannot exceed 100%. Current total with this assignment would be {total_weight}%.")
+            
+        if not instance_id and EmployeeKRA.objects.filter(employee=employee, kra_master=kra_master).exists():
+            raise serializers.ValidationError("This KRA is already assigned to the employee.")
+            
+        return attrs

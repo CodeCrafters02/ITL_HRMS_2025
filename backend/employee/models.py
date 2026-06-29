@@ -45,6 +45,13 @@ class Task(models.Model):
         related_name='subtasks',
         on_delete=models.CASCADE
     )
+    
+    kra = models.ForeignKey(
+        'EmployeeKRA',
+        null=True, blank=True,
+        related_name='tasks',
+        on_delete=models.SET_NULL
+    )
 
     def __str__(self):
         return self.title
@@ -237,3 +244,138 @@ class TimeEntry(models.Model):
 
     def __str__(self):
         return f"{self.employee_id} {self.date} {self.minutes}m"
+
+
+class KRAMaster(models.Model):
+    title = models.CharField(max_length=255)
+    description = models.TextField(blank=True)
+    department = models.ForeignKey('app.Department', on_delete=models.SET_NULL, null=True, blank=True, related_name='kra_masters')
+    designation = models.ForeignKey('app.Designation', on_delete=models.SET_NULL, null=True, blank=True, related_name='kra_masters')
+    status = models.CharField(max_length=20, default='active')
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return self.title
+
+
+class EmployeeKRA(models.Model):
+    employee = models.ForeignKey('app.Employee', on_delete=models.CASCADE, related_name='employee_kras')
+    kra_master = models.ForeignKey(KRAMaster, on_delete=models.CASCADE, related_name='employee_linkages')
+    weightage = models.IntegerField(default=0)
+    target_description = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.employee} - {self.kra_master.title} ({self.weightage}%)"
+
+
+class SkillMaster(models.Model):
+    name = models.CharField(max_length=150)
+    category = models.CharField(max_length=100, blank=True)
+
+    def __str__(self):
+        return self.name
+
+
+class EmployeeSkill(models.Model):
+    employee = models.ForeignKey('app.Employee', on_delete=models.CASCADE, related_name='employee_skills')
+    skill = models.ForeignKey(SkillMaster, on_delete=models.CASCADE, related_name='employee_linkages')
+    proficiency_level = models.CharField(max_length=20, default='beginner')
+    upgrade_requested = models.BooleanField(default=False)
+    requested_level = models.CharField(max_length=20, null=True, blank=True)
+    approval_status = models.CharField(max_length=20, default='pending')
+
+    def __str__(self):
+        return f"{self.employee} - {self.skill.name} ({self.proficiency_level})"
+
+
+class AppraisalCycle(models.Model):
+    name = models.CharField(max_length=255)
+    start_date = models.DateField()
+    end_date = models.DateField()
+    self_appraisal_deadline = models.DateTimeField()
+    manager_eval_deadline = models.DateTimeField()
+    status = models.CharField(max_length=20, default='draft')
+
+    def __str__(self):
+        return self.name
+
+
+class AppraisalQuestion(models.Model):
+    cycle = models.ForeignKey(AppraisalCycle, on_delete=models.CASCADE, related_name='questions')
+    question_text = models.TextField()
+    question_type = models.CharField(max_length=20, default='scale')
+    role_type = models.CharField(max_length=20, default='self')
+
+    def __str__(self):
+        return f"{self.cycle.name} - {self.role_type} - {self.question_text[:30]}"
+
+
+class AppraisalEvaluation(models.Model):
+    employee = models.ForeignKey('app.Employee', on_delete=models.CASCADE, related_name='appraisal_evaluations')
+    manager = models.ForeignKey('app.Employee', on_delete=models.SET_NULL, null=True, blank=True, related_name='managed_appraisal_evaluations')
+    cycle = models.ForeignKey(AppraisalCycle, on_delete=models.CASCADE, related_name='evaluations')
+    self_overall_rating = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
+    manager_overall_rating = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
+    hr_overall_rating = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
+    status = models.CharField(max_length=30, default='draft')
+
+    def __str__(self):
+        return f"{self.employee} - {self.cycle.name} ({self.status})"
+
+
+class AppraisalAnswer(models.Model):
+    evaluation = models.ForeignKey(AppraisalEvaluation, on_delete=models.CASCADE, related_name='answers')
+    question = models.ForeignKey(AppraisalQuestion, on_delete=models.CASCADE, related_name='answers')
+    submitted_by = models.ForeignKey('app.Employee', on_delete=models.CASCADE, related_name='submitted_appraisal_answers')
+    rating_score = models.IntegerField(null=True, blank=True)
+    comment = models.TextField(blank=True)
+
+    def __str__(self):
+        return f"{self.evaluation.employee} - Answer by {self.submitted_by}"
+
+
+class AppraisalExtension(models.Model):
+    cycle = models.ForeignKey(AppraisalCycle, on_delete=models.CASCADE, related_name='extensions')
+    employee = models.ForeignKey('app.Employee', on_delete=models.CASCADE, related_name='appraisal_extensions')
+    requester = models.ForeignKey('app.Employee', on_delete=models.CASCADE, related_name='requested_appraisal_extensions')
+    original_deadline = models.DateTimeField()
+    extended_deadline = models.DateTimeField()
+    reason = models.TextField(blank=True)
+    status = models.CharField(max_length=20, default='pending')
+
+    def __str__(self):
+        return f"{self.employee} - Extension to {self.extended_deadline}"
+
+
+class SalaryHikeConfig(models.Model):
+    cycle = models.ForeignKey(AppraisalCycle, on_delete=models.CASCADE, related_name='hike_configs')
+    min_rating = models.DecimalField(max_digits=5, decimal_places=2)
+    max_rating = models.DecimalField(max_digits=5, decimal_places=2)
+    recommended_hike_percentage = models.DecimalField(max_digits=5, decimal_places=2)
+
+    def __str__(self):
+        return f"{self.cycle.name}: Rating {self.min_rating}-{self.max_rating} -> {self.recommended_hike_percentage}%"
+
+
+class ContinuousFeedback(models.Model):
+    sender = models.ForeignKey('app.Employee', on_delete=models.CASCADE, related_name='sent_feedback')
+    receiver = models.ForeignKey('app.Employee', on_delete=models.CASCADE, related_name='received_feedback')
+    feedback_text = models.TextField()
+    category = models.CharField(max_length=50, default='peer_recognition')
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.sender} -> {self.receiver} ({self.category})"
+
+
+class MultiRaterMapping(models.Model):
+    employee = models.ForeignKey('app.Employee', on_delete=models.CASCADE, related_name='multirater_profiles')
+    reviewer = models.ForeignKey('app.Employee', on_delete=models.CASCADE, related_name='multirater_assigned_reviews')
+    cycle = models.ForeignKey(AppraisalCycle, on_delete=models.CASCADE, related_name='multirater_mappings')
+    status = models.CharField(max_length=30, default='nominated')
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.employee} reviewed by {self.reviewer} for {self.cycle.name}"

@@ -507,6 +507,16 @@ const Sidebar = () => {
                                     {!isHubPage && (<>
                                         {isPerfPage ? (
                                             <>
+                                                {/* Return to Performance Dashboard */}
+                                                <li className="menu nav-item">
+                                                    <NavLink to="/admin/performance" end className="group">
+                                                        <div className="flex items-center">
+                                                            <IconMenuCharts className="group-hover:!text-primary shrink-0" />
+                                                            <span className="ltr:pl-3 rtl:pr-3 text-black dark:text-[#506690] dark:group-hover:text-white-dark">{t('Performance Dashboard')}</span>
+                                                        </div>
+                                                    </NavLink>
+                                                </li>
+
                                                 {/* Group 1: USER SPECIFIC OPERATIONS */}
                                                 <li className="menu nav-item">
                                                     <button type="button" className={`${currentMenu === 'adminUserOps' ? 'active' : ''} nav-link group w-full`} onClick={() => toggleMenu('adminUserOps')}>
