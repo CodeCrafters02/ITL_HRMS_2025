@@ -250,6 +250,7 @@ class KRAMaster(models.Model):
     title = models.CharField(max_length=255)
     description = models.TextField(blank=True)
     department = models.ForeignKey('app.Department', on_delete=models.SET_NULL, null=True, blank=True, related_name='kra_masters')
+    departments = models.ManyToManyField('app.Department', blank=True, related_name='kra_masters_m2m')
     designation = models.ForeignKey('app.Designation', on_delete=models.SET_NULL, null=True, blank=True, related_name='kra_masters')
     status = models.CharField(max_length=20, default='active')
     created_at = models.DateTimeField(auto_now_add=True)
@@ -257,6 +258,21 @@ class KRAMaster(models.Model):
 
     def __str__(self):
         return self.title
+
+
+class KPIMaster(models.Model):
+    name = models.CharField(max_length=255)
+    description = models.TextField(blank=True)
+    kra_master = models.ForeignKey(KRAMaster, on_delete=models.SET_NULL, null=True, blank=True, related_name='kpis')
+    departments = models.ManyToManyField('app.Department', blank=True, related_name='kpi_masters')
+    measurement_unit = models.CharField(max_length=50, blank=True)  # %, count, hours, score, currency
+    target_value = models.CharField(max_length=100, blank=True)
+    status = models.CharField(max_length=20, default='active')
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return self.name
 
 
 class EmployeeKRA(models.Model):

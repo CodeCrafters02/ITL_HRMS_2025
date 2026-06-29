@@ -645,9 +645,27 @@ class MultiRaterMappingSerializer(serializers.ModelSerializer):
 
 
 class KRAMasterSerializer(serializers.ModelSerializer):
+    department_names = serializers.SerializerMethodField(read_only=True)
+
     class Meta:
         model = KRAMaster
-        fields = ['id', 'title', 'description']
+        fields = ['id', 'title', 'description', 'departments', 'department_names', 'designation', 'status']
+
+    def get_department_names(self, obj):
+        return [d.department_name for d in obj.departments.all()]
+
+
+class KPIMasterSerializer(serializers.ModelSerializer):
+    department_names = serializers.SerializerMethodField(read_only=True)
+    kra_title = serializers.CharField(source='kra_master.title', read_only=True)
+
+    class Meta:
+        model = KPIMaster
+        fields = ['id', 'name', 'description', 'kra_master', 'kra_title', 'departments',
+                  'department_names', 'measurement_unit', 'target_value', 'status', 'created_at']
+
+    def get_department_names(self, obj):
+        return [d.department_name for d in obj.departments.all()]
 
 
 class EmployeeKRASerializer(serializers.ModelSerializer):

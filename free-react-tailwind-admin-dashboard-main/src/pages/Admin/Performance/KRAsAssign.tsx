@@ -20,6 +20,25 @@ interface KRAMaster {
     id: number;
     title: string;
     description: string;
+    departments?: number[];
+    department_names?: string[];
+}
+
+interface Department {
+    id: number;
+    department_name: string;
+}
+
+interface KPIMaster {
+    id: number;
+    name: string;
+    description: string;
+    kra_master: number | null;
+    kra_title?: string;
+    departments: number[];
+    department_names: string[];
+    measurement_unit: string;
+    target_value: string;
 }
 
 interface EmployeeKRA {
@@ -50,6 +69,24 @@ const KRAsAssign = () => {
     const [masterKras, setMasterKras] = useState<KRAMaster[]>([]);
     const [employeeKras, setEmployeeKras] = useState<EmployeeKRA[]>([]);
     const [kraTasks, setKraTasks] = useState<KRATask[]>([]);
+    const [departments, setDepartments] = useState<Department[]>([]);
+    const [kpis, setKpis] = useState<KPIMaster[]>([]);
+
+    // Inline KRA creation
+    const [showCreateKra, setShowCreateKra] = useState(false);
+    const [newKraTitle, setNewKraTitle] = useState('');
+    const [newKraDesc, setNewKraDesc] = useState('');
+    const [newKraDepts, setNewKraDepts] = useState<number[]>([]);
+
+    // Inline KPI creation + picker
+    const [showCreateKpi, setShowCreateKpi] = useState(false);
+    const [newKpiName, setNewKpiName] = useState('');
+    const [newKpiDesc, setNewKpiDesc] = useState('');
+    const [newKpiUnit, setNewKpiUnit] = useState('');
+    const [newKpiTarget, setNewKpiTarget] = useState('');
+    const [newKpiKra, setNewKpiKra] = useState('');
+    const [newKpiDepts, setNewKpiDepts] = useState<number[]>([]);
+    const [selectedKpiId, setSelectedKpiId] = useState('');
 
     // Acting Manager (Master Selection)
     const [actingManager, setActingManager] = useState<Employee | null>(null);
@@ -101,11 +138,15 @@ const KRAsAssign = () => {
                     setActingManager(empRes.data[0]); // By default acting as first employee
                 }
 
-                // Fetch KRA registry
-                const kraRes = await axios.get(`${API_BASE}/employee/kra-master/`, {
-                    headers: getHeaders(),
-                });
+                // Fetch KRA registry, KPI library and departments in parallel
+                const [kraRes, kpiRes, deptRes] = await Promise.all([
+                    axios.get(`${API_BASE}/employee/kra-master/`, { headers: getHeaders() }),
+                    axios.get(`${API_BASE}/employee/kpi-master/`, { headers: getHeaders() }),
+                    axios.get(`${API_BASE}/app/departments/`, { headers: getHeaders() }),
+                ]);
                 setMasterKras(kraRes.data);
+                setKpis(kpiRes.data);
+                setDepartments(deptRes.data);
             } catch (err) {
                 console.error('Error fetching initial data:', err);
                 setErrorMsg('Failed to load employees or KRA master registry.');
@@ -265,6 +306,60 @@ const KRAsAssign = () => {
             setErrorMsg('Failed to create KRA Task.');
         }
     };
+
+    // Multi-select helper for department <select multiple>
+    const readDeptSelection = (e: React.ChangeEvent<HTMLSelectElement>) =>
+        Array.from(e.target.selectedOptions).map(o => parseInt(o.value));
+
+    // Create new KRA Master inline
+    const handleCreateKra = async () => {
+        setErrorMsg(''); setSuccessMsg('');
+        if (!newKraTitle.trim()) return;
+        try {
+            const payload = { title: newKraTitle.trim(), description: newKraDesc, departments: newKraDepts, status: 'active' };
+            const res = await axios.post(`${API_BASE}/employee/kra-master/`, payload, { headers: getHeaders() });
+            setMasterKras(prev => [...prev, res.data]);
+            setSelectedMasterKraId(String(res.data.id));
+            setNewKraTitle(''); setNewKraDesc(''); setNewKraDepts([]); setShowCreateKra(false);
+            setSuccessMsg('New KRA created and added to the registry.');
+        } catch (err: any) {
+            setErrorMsg(err.response?.data?.title?.[0] || 'Failed to create KRA.');
+        }
+    };
+
+    // Create new KPI in library inline
+    const handleCreateKpi = async () => {
+        setErrorMsg(''); setSuccessMsg('');
+        if (!newKpiName.trim()) return;
+        try {
+            const payload = {
+                name: newKpiName.trim(), description: newKpiDesc, measurement_unit: newKpiUnit,
+                target_value: newKpiTarget, kra_master: newKpiKra ? parseInt(newKpiKra) : null,
+                departments: newKpiDepts, status: 'active'
+            };
+            const res = await axios.post(`${API_BASE}/employee/kpi-master/`, payload, { headers: getHeaders() });
+            setKpis(prev => [...prev, res.data]);
+            setNewKpiName(''); setNewKpiDesc(''); setNewKpiUnit(''); setNewKpiTarget(''); setNewKpiKra(''); setNewKpiDepts([]); setShowCreateKpi(false);
+            setSuccessMsg('New KPI created and added to the library.');
+        } catch (err: any) {
+            setErrorMsg(err.response?.data?.name?.[0] || 'Failed to create KPI.');
+        }
+    };
+
+    // Append a library KPI into the free-text "Define KPIs & Details" field
+    const appendKpiToDetails = (id: string) => {
+        const kpi = kpis.find(k => k.id === parseInt(id));
+        if (!kpi) return;
+        const target = kpi.target_value ? ` — Target: ${kpi.target_value}${kpi.measurement_unit ? ' ' + kpi.measurement_unit : ''}` : '';
+        const line = `KPI: ${kpi.name}${target}`;
+        setTaskKPIs(prev => (prev ? `${prev}\n${line}` : line));
+        setSelectedKpiId('');
+    };
+
+    // KPIs relevant to the selected employee's department (or global KPIs with no dept scope)
+    const deptKpis = kpis.filter(k =>
+        k.departments.length === 0 || (selectedEmployee?.department != null && k.departments.includes(selectedEmployee.department))
+    );
 
     return (
         <div className="space-y-6 py-2 animate__animated animate__fadeIn">
@@ -436,7 +531,12 @@ const KRAsAssign = () => {
                                         <form onSubmit={handleAssignKra} className="bg-gray-50 dark:bg-gray-800/40 border border-gray-100 dark:border-gray-800/50 p-4 rounded-2xl mb-4 space-y-3 animate__animated animate__fadeIn">
                                             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                                                 <div className="md:col-span-2">
-                                                    <label className="block text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-1">Select KRA Master</label>
+                                                    <div className="flex justify-between items-center mb-1">
+                                                        <label className="block text-[10px] font-bold uppercase tracking-wider text-gray-400">Select KRA Master</label>
+                                                        <button type="button" onClick={() => setShowCreateKra(s => !s)} className="text-[10px] font-black text-teal-600 dark:text-teal-400 hover:underline">
+                                                            {showCreateKra ? '× Cancel' : '＋ New KRA'}
+                                                        </button>
+                                                    </div>
                                                     <select
                                                         value={selectedMasterKraId}
                                                         onChange={(e) => setSelectedMasterKraId(e.target.value)}
@@ -464,6 +564,35 @@ const KRAsAssign = () => {
                                                     />
                                                 </div>
                                             </div>
+
+                                            {showCreateKra && (
+                                                <div className="bg-white dark:bg-gray-900 border border-teal-200 dark:border-teal-900/40 p-3 rounded-2xl space-y-2 animate__animated animate__fadeIn">
+                                                    <span className="text-[10px] font-black uppercase tracking-wider text-teal-600 dark:text-teal-400">Create New KRA</span>
+                                                    <input
+                                                        type="text" placeholder="KRA title e.g. Customer Satisfaction"
+                                                        value={newKraTitle} onChange={(e) => setNewKraTitle(e.target.value)}
+                                                        className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 px-3 py-2 rounded-xl text-xs font-semibold text-gray-800 dark:text-white focus:outline-none"
+                                                    />
+                                                    <textarea
+                                                        placeholder="Description (optional)" rows={2}
+                                                        value={newKraDesc} onChange={(e) => setNewKraDesc(e.target.value)}
+                                                        className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 px-3 py-2 rounded-xl text-xs font-semibold text-gray-800 dark:text-white focus:outline-none resize-none"
+                                                    />
+                                                    <div>
+                                                        <label className="block text-[9px] font-bold uppercase tracking-wider text-gray-400 mb-1">Assign to Department(s) — Ctrl/Cmd-click for multiple</label>
+                                                        <select multiple value={newKraDepts.map(String)} onChange={(e) => setNewKraDepts(readDeptSelection(e))}
+                                                            className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 px-3 py-2 rounded-xl text-xs font-semibold text-gray-800 dark:text-white focus:outline-none h-24">
+                                                            {departments.map(d => (<option key={d.id} value={d.id}>{d.department_name}</option>))}
+                                                        </select>
+                                                    </div>
+                                                    <div className="flex justify-end">
+                                                        <button type="button" onClick={handleCreateKra} disabled={!newKraTitle.trim()}
+                                                            className="px-3 py-1.5 bg-teal-600 hover:bg-teal-700 disabled:bg-gray-300 text-white rounded-lg text-[10px] font-bold">
+                                                            Save KRA
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            )}
 
                                             <div>
                                                 <label className="block text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-1">Target description / metrics</label>
@@ -594,12 +723,67 @@ const KRAsAssign = () => {
                                             </div>
 
                                             <div>
-                                                <label className="block text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-1">Define KPIs & Details</label>
+                                                <div className="flex justify-between items-center mb-1">
+                                                    <label className="block text-[10px] font-bold uppercase tracking-wider text-gray-400">Define KPIs & Details</label>
+                                                    <button type="button" onClick={() => setShowCreateKpi(s => !s)} className="text-[10px] font-black text-teal-600 dark:text-teal-400 hover:underline">
+                                                        {showCreateKpi ? '× Cancel' : '＋ New KPI'}
+                                                    </button>
+                                                </div>
+
+                                                {/* Pick from KPI library (filtered to employee department) */}
+                                                <select
+                                                    value={selectedKpiId}
+                                                    onChange={(e) => appendKpiToDetails(e.target.value)}
+                                                    className="w-full bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 px-3 py-2 rounded-xl text-xs font-semibold text-gray-800 dark:text-white focus:outline-none mb-2"
+                                                >
+                                                    <option value="">＋ Add KPI from library...</option>
+                                                    {deptKpis.map(k => (
+                                                        <option key={k.id} value={k.id}>
+                                                            {k.name}{k.target_value ? ` (Target: ${k.target_value}${k.measurement_unit ? ' ' + k.measurement_unit : ''})` : ''}
+                                                        </option>
+                                                    ))}
+                                                </select>
+
+                                                {showCreateKpi && (
+                                                    <div className="bg-white dark:bg-gray-900 border border-teal-200 dark:border-teal-900/40 p-3 rounded-2xl space-y-2 mb-2 animate__animated animate__fadeIn">
+                                                        <span className="text-[10px] font-black uppercase tracking-wider text-teal-600 dark:text-teal-400">Create New KPI</span>
+                                                        <input type="text" placeholder="KPI name e.g. First Response Time"
+                                                            value={newKpiName} onChange={(e) => setNewKpiName(e.target.value)}
+                                                            className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 px-3 py-2 rounded-xl text-xs font-semibold text-gray-800 dark:text-white focus:outline-none" />
+                                                        <div className="grid grid-cols-2 gap-2">
+                                                            <input type="text" placeholder="Target e.g. < 2"
+                                                                value={newKpiTarget} onChange={(e) => setNewKpiTarget(e.target.value)}
+                                                                className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 px-3 py-2 rounded-xl text-xs font-semibold text-gray-800 dark:text-white focus:outline-none" />
+                                                            <input type="text" placeholder="Unit e.g. hours, %, count"
+                                                                value={newKpiUnit} onChange={(e) => setNewKpiUnit(e.target.value)}
+                                                                className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 px-3 py-2 rounded-xl text-xs font-semibold text-gray-800 dark:text-white focus:outline-none" />
+                                                        </div>
+                                                        <select value={newKpiKra} onChange={(e) => setNewKpiKra(e.target.value)}
+                                                            className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 px-3 py-2 rounded-xl text-xs font-semibold text-gray-800 dark:text-white focus:outline-none">
+                                                            <option value="">Link to KRA (optional)</option>
+                                                            {masterKras.map(k => (<option key={k.id} value={k.id}>{k.title}</option>))}
+                                                        </select>
+                                                        <div>
+                                                            <label className="block text-[9px] font-bold uppercase tracking-wider text-gray-400 mb-1">Department(s) — Ctrl/Cmd-click for multiple (leave empty = all)</label>
+                                                            <select multiple value={newKpiDepts.map(String)} onChange={(e) => setNewKpiDepts(readDeptSelection(e))}
+                                                                className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 px-3 py-2 rounded-xl text-xs font-semibold text-gray-800 dark:text-white focus:outline-none h-24">
+                                                                {departments.map(d => (<option key={d.id} value={d.id}>{d.department_name}</option>))}
+                                                            </select>
+                                                        </div>
+                                                        <div className="flex justify-end">
+                                                            <button type="button" onClick={handleCreateKpi} disabled={!newKpiName.trim()}
+                                                                className="px-3 py-1.5 bg-teal-600 hover:bg-teal-700 disabled:bg-gray-300 text-white rounded-lg text-[10px] font-bold">
+                                                                Save KPI
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                )}
+
                                                 <textarea
-                                                    placeholder="Specify measurable KPIs e.g. KPI 1: Response time < 200ms; KPI 2: Zero database locks..."
+                                                    placeholder="Specify measurable KPIs e.g. KPI 1: Response time < 200ms; KPI 2: Zero database locks... (or pick from library above)"
                                                     value={taskKPIs}
                                                     onChange={(e) => setTaskKPIs(e.target.value)}
-                                                    rows={2}
+                                                    rows={3}
                                                     className="w-full bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 px-3 py-2 rounded-xl text-xs font-semibold text-gray-800 dark:text-white focus:outline-none resize-none"
                                                 />
                                             </div>

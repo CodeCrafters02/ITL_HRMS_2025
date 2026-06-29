@@ -2395,9 +2395,32 @@ class EmployeePerformanceProfileAPIView(APIView):
 
 
 class KRAMasterViewSet(viewsets.ModelViewSet):
-    queryset = KRAMaster.objects.all()
+    queryset = KRAMaster.objects.all().prefetch_related('departments')
     serializer_class = KRAMasterSerializer
     permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        qs = self.queryset
+        dept = self.request.query_params.get('department')
+        if dept:
+            qs = qs.filter(departments__id=dept).distinct()
+        return qs
+
+
+class KPIMasterViewSet(viewsets.ModelViewSet):
+    queryset = KPIMaster.objects.all().prefetch_related('departments').select_related('kra_master')
+    serializer_class = KPIMasterSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        qs = self.queryset
+        dept = self.request.query_params.get('department')
+        kra = self.request.query_params.get('kra_master')
+        if dept:
+            qs = qs.filter(departments__id=dept).distinct()
+        if kra:
+            qs = qs.filter(kra_master_id=kra)
+        return qs
 
 
 class EmployeeKRAViewSet(viewsets.ModelViewSet):

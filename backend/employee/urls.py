@@ -8,6 +8,7 @@ router = DefaultRouter()
 router.register('employeereference', EmployeeReferenceViewSet, basename='employeereference')
 router.register('multirater', MultiRaterMappingViewSet, basename='multirater')
 router.register('kra-master', KRAMasterViewSet, basename='kra-master')
+router.register('kpi-master', KPIMasterViewSet, basename='kpi-master')
 router.register('employee-kra', EmployeeKRAViewSet, basename='employee-kra')
 
 urlpatterns = [
