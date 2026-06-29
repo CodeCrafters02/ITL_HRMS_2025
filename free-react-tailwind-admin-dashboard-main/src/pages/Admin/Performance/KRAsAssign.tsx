@@ -47,6 +47,8 @@ interface EmployeeKRA {
     kra_master: number;
     kra_title: string;
     kra_description: string;
+    reviewer: number | null;
+    reviewer_name: string | null;
     weightage: number;
     target_description: string;
 }
@@ -72,11 +74,19 @@ const KRAsAssign = () => {
     const [departments, setDepartments] = useState<Department[]>([]);
     const [kpis, setKpis] = useState<KPIMaster[]>([]);
 
-    // Inline KRA creation
+    // Inline KRA creation (with nested KPIs)
     const [showCreateKra, setShowCreateKra] = useState(false);
     const [newKraTitle, setNewKraTitle] = useState('');
     const [newKraDesc, setNewKraDesc] = useState('');
     const [newKraDepts, setNewKraDepts] = useState<number[]>([]);
+    const [newKraKpis, setNewKraKpis] = useState<{ name: string; target: string; unit: string }[]>([
+        { name: '', target: '', unit: '' },
+    ]);
+
+    // Reviewer ("master") + which department KRAs are selected when assigning to a person
+    const [assignReviewerId, setAssignReviewerId] = useState('');
+    const [assignChecked, setAssignChecked] = useState<number[]>([]);
+    const [assignWeights, setAssignWeights] = useState<Record<number, string>>({});
 
     // Inline KPI creation + picker
     const [showCreateKpi, setShowCreateKpi] = useState(false);
@@ -103,8 +113,6 @@ const KRAsAssign = () => {
     const [activeTab, setActiveTab] = useState<'kras' | 'tasks'>('kras');
 
     // Form inputs for new KRA assignment
-    const [selectedMasterKraId, setSelectedMasterKraId] = useState('');
-    const [weightage, setWeightage] = useState('');
     const [targetDescription, setTargetDescription] = useState('');
 
     // Form inputs for new Task
@@ -144,9 +152,10 @@ const KRAsAssign = () => {
                     axios.get(`${API_BASE}/employee/kpi-master/`, { headers: getHeaders() }),
                     axios.get(`${API_BASE}/app/departments/`, { headers: getHeaders() }),
                 ]);
-                setMasterKras(kraRes.data);
-                setKpis(kpiRes.data);
-                setDepartments(deptRes.data);
+                const asArray = (d: any) => Array.isArray(d) ? d : (d?.results ?? []);
+                setMasterKras(asArray(kraRes.data));
+                setKpis(asArray(kpiRes.data));
+                setDepartments(asArray(deptRes.data));
             } catch (err) {
                 console.error('Error fetching initial data:', err);
                 setErrorMsg('Failed to load employees or KRA master registry.');
@@ -207,48 +216,46 @@ const KRAsAssign = () => {
         emp.full_name.toLowerCase().includes(searchManagerQuery.toLowerCase())
     );
 
-    // Assign new KRA
+    // Assign the selected department KRAs to the employee (with reviewer)
     const handleAssignKra = async (e: React.FormEvent) => {
         e.preventDefault();
         setErrorMsg('');
         setSuccessMsg('');
-        if (!selectedEmployee || !selectedMasterKraId || !weightage) return;
-
-        const weight = parseInt(weightage);
-        if (isNaN(weight) || weight <= 0) {
-            setErrorMsg('Weightage must be a positive integer.');
-            return;
-        }
+        if (!selectedEmployee || assignChecked.length === 0) return;
+        if (!assignReviewerId) { setErrorMsg('Select a reviewer (master) for these KRAs.'); return; }
 
         try {
-            const payload = {
-                employee: selectedEmployee.id,
-                kra_master: parseInt(selectedMasterKraId),
-                weightage: weight,
-                target_description: targetDescription
-            };
+            // Sequential so backend cumulative weightage validation (<=100%) holds
+            for (const kraId of assignChecked) {
+                const weight = parseInt(assignWeights[kraId] || '0');
+                await axios.post(`${API_BASE}/employee/employee-kra/`, {
+                    employee: selectedEmployee.id,
+                    kra_master: kraId,
+                    reviewer: parseInt(assignReviewerId),
+                    weightage: isNaN(weight) ? 0 : weight,
+                    target_description: targetDescription
+                }, { headers: getHeaders() });
+            }
 
-            await axios.post(`${API_BASE}/employee/employee-kra/`, payload, {
-                headers: getHeaders(),
-            });
-
-            // Re-fetch assigned KRAs
             const res = await axios.get(`${API_BASE}/employee/employee-kra/?employee_id=${selectedEmployee.id}`, {
                 headers: getHeaders(),
             });
             setEmployeeKras(res.data);
-            
-            // Reset form
-            setSelectedMasterKraId('');
-            setWeightage('');
+
+            setAssignChecked([]);
+            setAssignWeights({});
             setTargetDescription('');
-            setSuccessMsg('KRA assigned successfully.');
+            setAssignReviewerId('');
+            setSuccessMsg('KRA(s) assigned successfully.');
         } catch (err: any) {
             console.error('Error assigning KRA:', err);
             const serverMsg = err.response?.data?.non_field_errors?.[0] || err.response?.data?.[0] || 'Failed to assign KRA.';
             setErrorMsg(serverMsg);
         }
     };
+
+    const toggleAssignKra = (id: number) =>
+        setAssignChecked(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
 
     // Remove KRA assignment
     const handleRemoveKra = async (id: number) => {
@@ -311,21 +318,39 @@ const KRAsAssign = () => {
     const readDeptSelection = (e: React.ChangeEvent<HTMLSelectElement>) =>
         Array.from(e.target.selectedOptions).map(o => parseInt(o.value));
 
-    // Create new KRA Master inline
+    // Create new KRA + its KPIs inline (no person involved)
     const handleCreateKra = async () => {
         setErrorMsg(''); setSuccessMsg('');
         if (!newKraTitle.trim()) return;
         try {
             const payload = { title: newKraTitle.trim(), description: newKraDesc, departments: newKraDepts, status: 'active' };
             const res = await axios.post(`${API_BASE}/employee/kra-master/`, payload, { headers: getHeaders() });
+            const kraId = res.data.id;
+
+            // Create each non-empty KPI under this KRA, scoped to the same departments
+            const validKpis = newKraKpis.filter(k => k.name.trim());
+            const created = await Promise.all(validKpis.map(k =>
+                axios.post(`${API_BASE}/employee/kpi-master/`, {
+                    name: k.name.trim(), target_value: k.target, measurement_unit: k.unit,
+                    kra_master: kraId, departments: newKraDepts, status: 'active'
+                }, { headers: getHeaders() })
+            ));
+
             setMasterKras(prev => [...prev, res.data]);
-            setSelectedMasterKraId(String(res.data.id));
-            setNewKraTitle(''); setNewKraDesc(''); setNewKraDepts([]); setShowCreateKra(false);
-            setSuccessMsg('New KRA created and added to the registry.');
+            setKpis(prev => [...prev, ...created.map(c => c.data)]);
+            setNewKraTitle(''); setNewKraDesc(''); setNewKraDepts([]);
+            setNewKraKpis([{ name: '', target: '', unit: '' }]);
+            setShowCreateKra(false);
+            setSuccessMsg(`KRA created with ${created.length} KPI(s).`);
         } catch (err: any) {
             setErrorMsg(err.response?.data?.title?.[0] || 'Failed to create KRA.');
         }
     };
+
+    const updateKpiRow = (i: number, field: 'name' | 'target' | 'unit', val: string) =>
+        setNewKraKpis(rows => rows.map((r, idx) => idx === i ? { ...r, [field]: val } : r));
+    const addKpiRow = () => setNewKraKpis(rows => [...rows, { name: '', target: '', unit: '' }]);
+    const removeKpiRow = (i: number) => setNewKraKpis(rows => rows.length > 1 ? rows.filter((_, idx) => idx !== i) : rows);
 
     // Create new KPI in library inline
     const handleCreateKpi = async () => {
@@ -355,6 +380,13 @@ const KRAsAssign = () => {
         setTaskKPIs(prev => (prev ? `${prev}\n${line}` : line));
         setSelectedKpiId('');
     };
+
+    // Department KRAs available to assign (scoped to person's dept, excluding already-assigned)
+    const assignedKraIds = new Set(employeeKras.map(k => k.kra_master));
+    const deptKras = masterKras.filter(k =>
+        !assignedKraIds.has(k.id) &&
+        (!(k.departments && k.departments.length) || (selectedEmployee?.department != null && k.departments.includes(selectedEmployee.department)))
+    );
 
     // KPIs relevant to the selected employee's department (or global KPIs with no dept scope)
     const deptKpis = kpis.filter(k =>
@@ -527,47 +559,33 @@ const KRAsAssign = () => {
                                             </span>
                                         </div>
 
-                                        {/* Form: Assign KRA */}
+                                        {/* Form: Assign department KRAs + reviewer (no KRA-master picker) */}
                                         <form onSubmit={handleAssignKra} className="bg-gray-50 dark:bg-gray-800/40 border border-gray-100 dark:border-gray-800/50 p-4 rounded-2xl mb-4 space-y-3 animate__animated animate__fadeIn">
-                                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                                <div className="md:col-span-2">
-                                                    <div className="flex justify-between items-center mb-1">
-                                                        <label className="block text-[10px] font-bold uppercase tracking-wider text-gray-400">Select KRA Master</label>
-                                                        <button type="button" onClick={() => setShowCreateKra(s => !s)} className="text-[10px] font-black text-teal-600 dark:text-teal-400 hover:underline">
-                                                            {showCreateKra ? '× Cancel' : '＋ New KRA'}
-                                                        </button>
-                                                    </div>
-                                                    <select
-                                                        value={selectedMasterKraId}
-                                                        onChange={(e) => setSelectedMasterKraId(e.target.value)}
-                                                        className="w-full bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 px-3 py-2 rounded-xl text-xs font-semibold text-gray-800 dark:text-white focus:outline-none"
-                                                        required
-                                                    >
-                                                        <option value="">-- Select KRA Master --</option>
-                                                        {masterKras.map(k => (
-                                                            <option key={k.id} value={k.id}>{k.title}</option>
-                                                        ))}
-                                                    </select>
-                                                </div>
 
-                                                <div>
-                                                    <label className="block text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-1">Weightage (%)</label>
-                                                    <input
-                                                        type="number"
-                                                        min="1"
-                                                        max="100"
-                                                        required
-                                                        placeholder="e.g. 20"
-                                                        value={weightage}
-                                                        onChange={(e) => setWeightage(e.target.value)}
-                                                        className="w-full bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 px-3 py-2 rounded-xl text-xs font-semibold text-gray-800 dark:text-white focus:outline-none"
-                                                    />
+                                            {/* Reviewer (Master) */}
+                                            <div>
+                                                <div className="flex justify-between items-center mb-1">
+                                                    <label className="block text-[10px] font-bold uppercase tracking-wider text-gray-400">Reviewer / Master (reviews these KRAs)</label>
+                                                    <button type="button" onClick={() => setShowCreateKra(s => !s)} className="text-[10px] font-black text-teal-600 dark:text-teal-400 hover:underline">
+                                                        {showCreateKra ? '× Cancel' : '＋ New KRA'}
+                                                    </button>
                                                 </div>
+                                                <select
+                                                    value={assignReviewerId}
+                                                    onChange={(e) => setAssignReviewerId(e.target.value)}
+                                                    className="w-full bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 px-3 py-2 rounded-xl text-xs font-semibold text-gray-800 dark:text-white focus:outline-none"
+                                                >
+                                                    <option value="">-- Select reviewer (admin or employee) --</option>
+                                                    {employees.map(emp => (
+                                                        <option key={emp.id} value={emp.id}>{emp.full_name} ({emp.designation_name || 'No Desig'})</option>
+                                                    ))}
+                                                </select>
                                             </div>
 
+                                            {/* Create New KRA + nested KPIs */}
                                             {showCreateKra && (
                                                 <div className="bg-white dark:bg-gray-900 border border-teal-200 dark:border-teal-900/40 p-3 rounded-2xl space-y-2 animate__animated animate__fadeIn">
-                                                    <span className="text-[10px] font-black uppercase tracking-wider text-teal-600 dark:text-teal-400">Create New KRA</span>
+                                                    <span className="text-[10px] font-black uppercase tracking-wider text-teal-600 dark:text-teal-400">Create New KRA (with KPIs)</span>
                                                     <input
                                                         type="text" placeholder="KRA title e.g. Customer Satisfaction"
                                                         value={newKraTitle} onChange={(e) => setNewKraTitle(e.target.value)}
@@ -579,23 +597,68 @@ const KRAsAssign = () => {
                                                         className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 px-3 py-2 rounded-xl text-xs font-semibold text-gray-800 dark:text-white focus:outline-none resize-none"
                                                     />
                                                     <div>
-                                                        <label className="block text-[9px] font-bold uppercase tracking-wider text-gray-400 mb-1">Assign to Department(s) — Ctrl/Cmd-click for multiple</label>
+                                                        <label className="block text-[9px] font-bold uppercase tracking-wider text-gray-400 mb-1">Department(s) — Ctrl/Cmd-click for multiple</label>
                                                         <select multiple value={newKraDepts.map(String)} onChange={(e) => setNewKraDepts(readDeptSelection(e))}
-                                                            className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 px-3 py-2 rounded-xl text-xs font-semibold text-gray-800 dark:text-white focus:outline-none h-24">
+                                                            className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 px-3 py-2 rounded-xl text-xs font-semibold text-gray-800 dark:text-white focus:outline-none h-20">
                                                             {departments.map(d => (<option key={d.id} value={d.id}>{d.department_name}</option>))}
                                                         </select>
                                                     </div>
+
+                                                    {/* Nested KPIs */}
+                                                    <div className="space-y-1.5">
+                                                        <div className="flex justify-between items-center">
+                                                            <label className="block text-[9px] font-bold uppercase tracking-wider text-gray-400">KPIs under this KRA</label>
+                                                            <button type="button" onClick={addKpiRow} className="text-[10px] font-black text-teal-600 dark:text-teal-400 hover:underline">＋ Add KPI</button>
+                                                        </div>
+                                                        {newKraKpis.map((kpi, i) => (
+                                                            <div key={i} className="grid grid-cols-12 gap-1.5 items-center">
+                                                                <input type="text" placeholder="KPI name" value={kpi.name} onChange={(e) => updateKpiRow(i, 'name', e.target.value)}
+                                                                    className="col-span-6 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 px-2 py-1.5 rounded-lg text-[11px] font-semibold text-gray-800 dark:text-white focus:outline-none" />
+                                                                <input type="text" placeholder="Target" value={kpi.target} onChange={(e) => updateKpiRow(i, 'target', e.target.value)}
+                                                                    className="col-span-3 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 px-2 py-1.5 rounded-lg text-[11px] font-semibold text-gray-800 dark:text-white focus:outline-none" />
+                                                                <input type="text" placeholder="Unit" value={kpi.unit} onChange={(e) => updateKpiRow(i, 'unit', e.target.value)}
+                                                                    className="col-span-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 px-2 py-1.5 rounded-lg text-[11px] font-semibold text-gray-800 dark:text-white focus:outline-none" />
+                                                                <button type="button" onClick={() => removeKpiRow(i)} className="col-span-1 text-rose-500 text-sm font-bold">×</button>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+
                                                     <div className="flex justify-end">
                                                         <button type="button" onClick={handleCreateKra} disabled={!newKraTitle.trim()}
                                                             className="px-3 py-1.5 bg-teal-600 hover:bg-teal-700 disabled:bg-gray-300 text-white rounded-lg text-[10px] font-bold">
-                                                            Save KRA
+                                                            Save KRA & KPIs
                                                         </button>
                                                     </div>
                                                 </div>
                                             )}
 
+                                            {/* Department KRA checklist (auto-filtered to this person's department) */}
                                             <div>
-                                                <label className="block text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-1">Target description / metrics</label>
+                                                <label className="block text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-1">
+                                                    KRAs for {selectedEmployee.department_name || 'this department'} — tick to assign & set weight
+                                                </label>
+                                                <div className="border border-gray-200 dark:border-gray-700 rounded-xl divide-y divide-gray-100 dark:divide-gray-800 max-h-44 overflow-y-auto bg-white dark:bg-gray-900">
+                                                    {deptKras.length === 0 && (
+                                                        <div className="text-center py-4 text-[11px] text-gray-400 italic">No unassigned KRAs for this department. Use ＋ New KRA.</div>
+                                                    )}
+                                                    {deptKras.map(k => {
+                                                        const checked = assignChecked.includes(k.id);
+                                                        return (
+                                                            <div key={k.id} className="flex items-center gap-2 p-2">
+                                                                <input type="checkbox" checked={checked} onChange={() => toggleAssignKra(k.id)} className="accent-teal-600" />
+                                                                <span className="flex-1 text-[11px] font-semibold text-gray-800 dark:text-white">{k.title}</span>
+                                                                <input type="number" min="1" max="100" placeholder="wt%" disabled={!checked}
+                                                                    value={assignWeights[k.id] || ''}
+                                                                    onChange={(e) => setAssignWeights(w => ({ ...w, [k.id]: e.target.value }))}
+                                                                    className="w-16 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 px-2 py-1 rounded-lg text-[11px] font-semibold text-gray-800 dark:text-white focus:outline-none disabled:opacity-40" />
+                                                            </div>
+                                                        );
+                                                    })}
+                                                </div>
+                                            </div>
+
+                                            <div>
+                                                <label className="block text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-1">Target description / metrics (optional)</label>
                                                 <textarea
                                                     placeholder="Specify targets e.g. Close 15 customer tickets per week with >95% CSAT..."
                                                     value={targetDescription}
@@ -608,10 +671,10 @@ const KRAsAssign = () => {
                                             <div className="flex justify-end pt-1">
                                                 <button
                                                     type="submit"
-                                                    disabled={!selectedMasterKraId || !weightage}
+                                                    disabled={assignChecked.length === 0 || !assignReviewerId}
                                                     className="px-4 py-2 bg-teal-500 hover:bg-teal-600 disabled:bg-gray-300 text-white rounded-xl text-xs font-bold shadow-md shadow-teal-500/10 transition duration-300"
                                                 >
-                                                    Assign KRA Target
+                                                    Assign {assignChecked.length || ''} KRA(s) to {selectedEmployee.first_name}
                                                 </button>
                                             </div>
                                         </form>
@@ -623,6 +686,7 @@ const KRAsAssign = () => {
                                                     <tr className="bg-gray-50 dark:bg-gray-800/40 text-[9px] font-black uppercase text-gray-400 tracking-wider">
                                                         <th className="p-3 pl-4">KRA Title</th>
                                                         <th className="p-3">Weight</th>
+                                                        <th className="p-3">Reviewer</th>
                                                         <th className="p-3">Target Metrics</th>
                                                         <th className="p-3 text-center pr-4">Action</th>
                                                     </tr>
@@ -630,12 +694,13 @@ const KRAsAssign = () => {
                                                 <tbody className="divide-y divide-gray-100 dark:divide-gray-800 text-xs font-medium text-gray-700 dark:text-gray-300">
                                                     {loadingKras ? (
                                                         <tr>
-                                                            <td colSpan={4} className="text-center py-5 text-gray-400">Loading assignments...</td>
+                                                            <td colSpan={5} className="text-center py-5 text-gray-400">Loading assignments...</td>
                                                         </tr>
                                                     ) : employeeKras.map((k) => (
                                                         <tr key={k.id} className="hover:bg-gray-50/50 dark:hover:bg-gray-800/10">
                                                             <td className="p-3 pl-4 font-bold text-gray-800 dark:text-white">{k.kra_title}</td>
                                                             <td className="p-3 font-extrabold text-teal-600 dark:text-teal-400">{k.weightage}%</td>
+                                                            <td className="p-3">{k.reviewer_name || '—'}</td>
                                                             <td className="p-3 max-w-xs truncate">{k.target_description || 'None'}</td>
                                                             <td className="p-3 text-center pr-4">
                                                                 <button 
@@ -649,7 +714,7 @@ const KRAsAssign = () => {
                                                     ))}
                                                     {!loadingKras && employeeKras.length === 0 && (
                                                         <tr>
-                                                            <td colSpan={4} className="text-center py-5 text-gray-400 italic">No KRAs mapped yet.</td>
+                                                            <td colSpan={5} className="text-center py-5 text-gray-400 italic">No KRAs mapped yet.</td>
                                                         </tr>
                                                     )}
                                                 </tbody>

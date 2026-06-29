@@ -671,10 +671,16 @@ class KPIMasterSerializer(serializers.ModelSerializer):
 class EmployeeKRASerializer(serializers.ModelSerializer):
     kra_title = serializers.CharField(source='kra_master.title', read_only=True)
     kra_description = serializers.CharField(source='kra_master.description', read_only=True)
+    reviewer_name = serializers.SerializerMethodField(read_only=True)
 
     class Meta:
         model = EmployeeKRA
-        fields = ['id', 'employee', 'kra_master', 'kra_title', 'kra_description', 'weightage', 'target_description', 'created_at']
+        fields = ['id', 'employee', 'kra_master', 'kra_title', 'kra_description', 'reviewer', 'reviewer_name', 'weightage', 'target_description', 'created_at']
+
+    def get_reviewer_name(self, obj):
+        if obj.reviewer:
+            return f"{obj.reviewer.first_name} {obj.reviewer.last_name}".strip()
+        return None
 
     def validate(self, attrs):
         employee = attrs.get('employee')

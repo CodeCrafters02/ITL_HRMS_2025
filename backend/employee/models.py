@@ -278,6 +278,7 @@ class KPIMaster(models.Model):
 class EmployeeKRA(models.Model):
     employee = models.ForeignKey('app.Employee', on_delete=models.CASCADE, related_name='employee_kras')
     kra_master = models.ForeignKey(KRAMaster, on_delete=models.CASCADE, related_name='employee_linkages')
+    reviewer = models.ForeignKey('app.Employee', on_delete=models.SET_NULL, null=True, blank=True, related_name='kra_reviews')
     weightage = models.IntegerField(default=0)
     target_description = models.TextField(blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
