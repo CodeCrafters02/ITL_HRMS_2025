@@ -17,7 +17,9 @@ const DefaultLayout = ({ children }: PropsWithChildren) => {
     const navigate = useNavigate();
     const location = useLocation();
     const role = localStorage.getItem('user_role');
-    const isHubPage = role === 'admin' && ['/admin/hub', '/admin/performance', '/admin/learning'].includes(location.pathname);
+    const isHubPage = 
+        (role === 'admin' && ['/admin/hub', '/admin/learning'].includes(location.pathname)) ||
+        (role === 'employee' && ['/employee/hub'].includes(location.pathname));
 
     const [showLoader, setShowLoader] = useState(true);
     const [showTopButton, setShowTopButton] = useState(false);

@@ -110,6 +110,25 @@ const MasterEmployee = lazy(() => import('../pages/Master/Employee'));
 
 // Admin Pages
 const AdminHub = lazy(() => import('../pages/Admin/AdminHub'));
+const AdminPerformanceDashboard = lazy(() => import('../pages/Admin/Performance/AdminPerformanceDashboard'));
+const SearchProfile = lazy(() => import('../pages/Admin/Performance/SearchProfile'));
+const KRAsAssign = lazy(() => import('../pages/Admin/Performance/KRAsAssign'));
+const TrackFeedback = lazy(() => import('../pages/Admin/Performance/TrackFeedback'));
+const ManagerSummaries = lazy(() => import('../pages/Admin/Performance/ManagerSummaries'));
+const BulkMap = lazy(() => import('../pages/Admin/Performance/BulkMap'));
+const ReviewQuestions = lazy(() => import('../pages/Admin/Performance/ReviewQuestions'));
+const EvaluationQuestions = lazy(() => import('../pages/Admin/Performance/EvaluationQuestions'));
+const AppraisalCycles = lazy(() => import('../pages/Admin/Performance/AppraisalCycles'));
+const SalaryHike = lazy(() => import('../pages/Admin/Performance/SalaryHike'));
+const ReviewExtensions = lazy(() => import('../pages/Admin/Performance/ReviewExtensions'));
+const MultiRaterSelection = lazy(() => import('../pages/Admin/Performance/MultiRaterSelection'));
+const ContinuousExtensions = lazy(() => import('../pages/Admin/Performance/ContinuousExtensions'));
+const ImportGoals = lazy(() => import('../pages/Admin/Performance/ImportGoals'));
+const KRARegistry = lazy(() => import('../pages/Admin/Performance/KRARegistry'));
+const CompetencyMapping = lazy(() => import('../pages/Admin/Performance/CompetencyMapping'));
+const ImportModule = lazy(() => import('../pages/Admin/Performance/ImportModule'));
+const ExportModule = lazy(() => import('../pages/Admin/Performance/ExportModule'));
+const MultiRaterLog = lazy(() => import('../pages/Admin/Performance/MultiRaterLog'));
 const AdminDashboard = lazy(() => import('../pages/Admin/Dashboard'));
 const AdminComingSoon = lazy(() => import('../pages/Admin/ComingSoon'));
 const AdminDepartment = lazy(() => import('../pages/Admin/Department'));
@@ -155,6 +174,19 @@ const AdminPayslipRollout = lazy(() => import('../pages/Admin/PayslipRollout'));
 const AdminSystemSettings = lazy(() => import('../pages/Admin/SystemSettings'));
 
 // Employee Pages
+const EmployeeHub = lazy(() => import('../pages/Employee/EmployeeHub'));
+const PerformanceDashboard = lazy(() => import('../pages/Employee/Performance/PerformanceDashboard'));
+const KRAs = lazy(() => import('../pages/Employee/Performance/KRAs'));
+const SelfMapKRAs = lazy(() => import('../pages/Employee/Performance/SelfMapKRAs'));
+const Goals = lazy(() => import('../pages/Employee/Performance/Goals'));
+const Competencies = lazy(() => import('../pages/Employee/Performance/Competencies'));
+const SkillsInventory = lazy(() => import('../pages/Employee/Performance/SkillsInventory'));
+const SkillUpgrades = lazy(() => import('../pages/Employee/Performance/SkillUpgrades'));
+const FeedbackReceived = lazy(() => import('../pages/Employee/Performance/FeedbackReceived'));
+const FeedbackProvided = lazy(() => import('../pages/Employee/Performance/FeedbackProvided'));
+const SelfAppraisal = lazy(() => import('../pages/Employee/Performance/SelfAppraisal'));
+const AppraisalHistory = lazy(() => import('../pages/Employee/Performance/AppraisalHistory'));
+const ExtensionStatus = lazy(() => import('../pages/Employee/Performance/ExtensionStatus'));
 const EmployeeDashboard = lazy(() => import('../pages/Employee/Dashboard'));
 const EmployeeChat = lazy(() => import('../pages/Employee/Chat'));
 const LoanApplication = lazy(() => import('../pages/Employee/LoanApplication'));
@@ -668,7 +700,79 @@ const routes = [
     },
     {
         path: '/admin/performance',
-        element: <AdminComingSoon />,
+        element: <AdminPerformanceDashboard />,
+    },
+    {
+        path: '/admin/performance/search-profile',
+        element: <SearchProfile />,
+    },
+    {
+        path: '/admin/performance/assign-kras',
+        element: <KRAsAssign />,
+    },
+    {
+        path: '/admin/performance/track-feedback',
+        element: <TrackFeedback />,
+    },
+    {
+        path: '/admin/performance/manager-summaries',
+        element: <ManagerSummaries />,
+    },
+    {
+        path: '/admin/performance/bulk-map',
+        element: <BulkMap />,
+    },
+    {
+        path: '/admin/performance/review-questions',
+        element: <ReviewQuestions />,
+    },
+    {
+        path: '/admin/performance/evaluation-questions',
+        element: <EvaluationQuestions />,
+    },
+    {
+        path: '/admin/performance/appraisal-cycles',
+        element: <AppraisalCycles />,
+    },
+    {
+        path: '/admin/performance/salary-hike',
+        element: <SalaryHike />,
+    },
+    {
+        path: '/admin/performance/review-extensions',
+        element: <ReviewExtensions />,
+    },
+    {
+        path: '/admin/performance/multi-rater-selection',
+        element: <MultiRaterSelection />,
+    },
+    {
+        path: '/admin/performance/continuous-extensions',
+        element: <ContinuousExtensions />,
+    },
+    {
+        path: '/admin/performance/import-goals',
+        element: <ImportGoals />,
+    },
+    {
+        path: '/admin/performance/kra-registry',
+        element: <KRARegistry />,
+    },
+    {
+        path: '/admin/performance/competency-mapping',
+        element: <CompetencyMapping />,
+    },
+    {
+        path: '/admin/performance/import-module',
+        element: <ImportModule />,
+    },
+    {
+        path: '/admin/performance/export-module',
+        element: <ExportModule />,
+    },
+    {
+        path: '/admin/performance/multi-rater-log',
+        element: <MultiRaterLog />,
     },
     {
         path: '/admin/learning',
@@ -837,6 +941,58 @@ const routes = [
     {
         path: '/admin/system-settings',
         element: <AdminSystemSettings />,
+    },
+    {
+        path: '/employee/hub',
+        element: <EmployeeHub />,
+    },
+    {
+        path: '/employee/performance',
+        element: <PerformanceDashboard />,
+    },
+    {
+        path: '/employee/performance/kras',
+        element: <KRAs />,
+    },
+    {
+        path: '/employee/performance/self-map-kras',
+        element: <SelfMapKRAs />,
+    },
+    {
+        path: '/employee/performance/goals',
+        element: <Goals />,
+    },
+    {
+        path: '/employee/performance/competencies',
+        element: <Competencies />,
+    },
+    {
+        path: '/employee/performance/skills-inventory',
+        element: <SkillsInventory />,
+    },
+    {
+        path: '/employee/performance/skill-upgrades',
+        element: <SkillUpgrades />,
+    },
+    {
+        path: '/employee/performance/feedback-received',
+        element: <FeedbackReceived />,
+    },
+    {
+        path: '/employee/performance/feedback-provided',
+        element: <FeedbackProvided />,
+    },
+    {
+        path: '/employee/performance/self-appraisal',
+        element: <SelfAppraisal />,
+    },
+    {
+        path: '/employee/performance/appraisal-history',
+        element: <AppraisalHistory />,
+    },
+    {
+        path: '/employee/performance/extension-status',
+        element: <ExtensionStatus />,
     },
     {
         path: '/employee/dashboard',

@@ -86,7 +86,7 @@ const LoginBoxed = () => {
                     if (uid && !localStorage.getItem(`hrms_checkin_intro_ack_${uid}`)) {
                         sessionStorage.setItem('hrms_checkin_intro_pulse', '1');
                     }
-                    navigate('/employee/dashboard');
+                    navigate('/employee/hub');
                 } else {
                     navigate('/master/dashboard');
                 }
@@ -143,7 +143,7 @@ const LoginBoxed = () => {
                     if (uid && !localStorage.getItem(`hrms_checkin_intro_ack_${uid}`)) {
                         sessionStorage.setItem('hrms_checkin_intro_pulse', '1');
                     }
-                    navigate('/employee/dashboard');
+                    navigate('/employee/hub');
                 } else {
                     navigate('/master/dashboard');
                 }

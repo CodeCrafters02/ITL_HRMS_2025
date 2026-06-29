@@ -495,15 +495,140 @@ const Sidebar = () => {
 
                             {/* ===== ADMIN SIDEBAR ===== */}
                             {userRole === 'admin' && (() => {
-                                const isHubPage = ['/admin/hub', '/admin/performance', '/admin/learning'].includes(location.pathname);
+                                const isHubPage = ['/admin/hub', '/admin/learning'].includes(location.pathname);
+                                const isPerfPage = location.pathname.startsWith('/admin/performance');
                                 return (
                                 <>
                                     <h2 className="py-3 px-7 flex items-center uppercase font-extrabold bg-white-light/30 dark:bg-dark dark:bg-opacity-[0.08] -mx-4 mb-1">
                                         <IconMinus className="w-4 h-5 flex-none hidden" />
-                                        <span>{t('Admin Dashboard')}</span>
+                                        <span>{isPerfPage ? t('Performance Management Systems') : t('Admin Dashboard')}</span>
                                     </h2>
 
                                     {!isHubPage && (<>
+                                        {isPerfPage ? (
+                                            <>
+                                                {/* Group 1: USER SPECIFIC OPERATIONS */}
+                                                <li className="menu nav-item">
+                                                    <button type="button" className={`${currentMenu === 'adminUserOps' ? 'active' : ''} nav-link group w-full`} onClick={() => toggleMenu('adminUserOps')}>
+                                                        <div className="flex items-center">
+                                                            <IconMenuUsers className="group-hover:!text-primary shrink-0" />
+                                                            <span className="ltr:pl-3 rtl:pr-3 text-black dark:text-[#506690] dark:group-hover:text-white-dark">{t('User Specific Operations')}</span>
+                                                        </div>
+                                                        <div className={currentMenu !== 'adminUserOps' ? 'rtl:rotate-90 -rotate-90' : ''}>
+                                                            <IconCaretDown />
+                                                        </div>
+                                                    </button>
+                                                    <AnimateHeight duration={300} height={currentMenu === 'adminUserOps' ? 'auto' : 0}>
+                                                        <ul className="sub-menu text-gray-500">
+                                                            <li><NavLink to="/admin/performance/search-profile">{t('Search Profile')}</NavLink></li>
+                                                            <li><NavLink to="/admin/performance/assign-kras">{t('Assign KRAs/Goals')}</NavLink></li>
+                                                            <li><NavLink to="/admin/performance/track-feedback">{t('Track Feedback')}</NavLink></li>
+                                                            <li><NavLink to="/admin/performance/manager-summaries">{t('Manager Summaries')}</NavLink></li>
+                                                        </ul>
+                                                    </AnimateHeight>
+                                                </li>
+
+                                                {/* Group 2: METHODS */}
+                                                <li className="menu nav-item">
+                                                    <button type="button" className={`${currentMenu === 'adminMethods' ? 'active' : ''} nav-link group w-full`} onClick={() => toggleMenu('adminMethods')}>
+                                                        <div className="flex items-center">
+                                                            <IconMenuForms className="group-hover:!text-primary shrink-0" />
+                                                            <span className="ltr:pl-3 rtl:pr-3 text-black dark:text-[#506690] dark:group-hover:text-white-dark">{t('Methods & Setup')}</span>
+                                                        </div>
+                                                        <div className={currentMenu !== 'adminMethods' ? 'rtl:rotate-90 -rotate-90' : ''}>
+                                                            <IconCaretDown />
+                                                        </div>
+                                                    </button>
+                                                    <AnimateHeight duration={300} height={currentMenu === 'adminMethods' ? 'auto' : 0}>
+                                                        <ul className="sub-menu text-gray-500">
+                                                            <li><NavLink to="/admin/performance/bulk-map">{t('Bulk Map KRAs')}</NavLink></li>
+                                                            <li><NavLink to="/admin/performance/review-questions">{t('Create Review Questions')}</NavLink></li>
+                                                            <li><NavLink to="/admin/performance/evaluation-questions">{t('Create Eval Questions')}</NavLink></li>
+                                                        </ul>
+                                                    </AnimateHeight>
+                                                </li>
+
+                                                {/* Group 3: APPRAISALS */}
+                                                <li className="menu nav-item">
+                                                    <button type="button" className={`${currentMenu === 'adminAppraisals' ? 'active' : ''} nav-link group w-full`} onClick={() => toggleMenu('adminAppraisals')}>
+                                                        <div className="flex items-center">
+                                                            <IconMenuCalendar className="group-hover:!text-primary shrink-0" />
+                                                            <span className="ltr:pl-3 rtl:pr-3 text-black dark:text-[#506690] dark:group-hover:text-white-dark">{t('Appraisal Cycles')}</span>
+                                                        </div>
+                                                        <div className={currentMenu !== 'adminAppraisals' ? 'rtl:rotate-90 -rotate-90' : ''}>
+                                                            <IconCaretDown />
+                                                        </div>
+                                                    </button>
+                                                    <AnimateHeight duration={300} height={currentMenu === 'adminAppraisals' ? 'auto' : 0}>
+                                                        <ul className="sub-menu text-gray-500">
+                                                            <li><NavLink to="/admin/performance/appraisal-cycles">{t('Create Cycles')}</NavLink></li>
+                                                            <li><NavLink to="/admin/performance/salary-hike">{t('Configure Salary Hikes')}</NavLink></li>
+                                                            <li><NavLink to="/admin/performance/review-extensions">{t('Review Extensions')}</NavLink></li>
+                                                            <li><NavLink to="/admin/performance/multi-rater-selection">{t('Multi-Rater Selection')}</NavLink></li>
+                                                        </ul>
+                                                    </AnimateHeight>
+                                                </li>
+
+                                                {/* Group 4: CONTINUOUS REVIEW */}
+                                                <li className="menu nav-item">
+                                                    <button type="button" className={`${currentMenu === 'adminContReview' ? 'active' : ''} nav-link group w-full`} onClick={() => toggleMenu('adminContReview')}>
+                                                        <div className="flex items-center">
+                                                            <IconMenuChat className="group-hover:!text-primary shrink-0" />
+                                                            <span className="ltr:pl-3 rtl:pr-3 text-black dark:text-[#506690] dark:group-hover:text-white-dark">{t('Continuous Review')}</span>
+                                                        </div>
+                                                        <div className={currentMenu !== 'adminContReview' ? 'rtl:rotate-90 -rotate-90' : ''}>
+                                                            <IconCaretDown />
+                                                        </div>
+                                                    </button>
+                                                    <AnimateHeight duration={300} height={currentMenu === 'adminContReview' ? 'auto' : 0}>
+                                                        <ul className="sub-menu text-gray-500">
+                                                            <li><NavLink to="/admin/performance/continuous-extensions">{t('Manage Extensions')}</NavLink></li>
+                                                        </ul>
+                                                    </AnimateHeight>
+                                                </li>
+
+                                                {/* Group 5: GOALS / KRAs / COMPETENCIES */}
+                                                <li className="menu nav-item">
+                                                    <button type="button" className={`${currentMenu === 'adminGoalsMaster' ? 'active' : ''} nav-link group w-full`} onClick={() => toggleMenu('adminGoalsMaster')}>
+                                                        <div className="flex items-center">
+                                                            <IconMenuNotes className="group-hover:!text-primary shrink-0" />
+                                                            <span className="ltr:pl-3 rtl:pr-3 text-black dark:text-[#506690] dark:group-hover:text-white-dark">{t('Master Inventories')}</span>
+                                                        </div>
+                                                        <div className={currentMenu !== 'adminGoalsMaster' ? 'rtl:rotate-90 -rotate-90' : ''}>
+                                                            <IconCaretDown />
+                                                        </div>
+                                                    </button>
+                                                    <AnimateHeight duration={300} height={currentMenu === 'adminGoalsMaster' ? 'auto' : 0}>
+                                                        <ul className="sub-menu text-gray-500">
+                                                            <li><NavLink to="/admin/performance/import-goals">{t('Import Corp. Goals')}</NavLink></li>
+                                                            <li><NavLink to="/admin/performance/kra-registry">{t('KRA Registry')}</NavLink></li>
+                                                            <li><NavLink to="/admin/performance/competency-mapping">{t('Competency Mapping')}</NavLink></li>
+                                                        </ul>
+                                                    </AnimateHeight>
+                                                </li>
+
+                                                {/* Group 6: DATA UTILITIES & MULTI-RATER LOGS */}
+                                                <li className="menu nav-item">
+                                                    <button type="button" className={`${currentMenu === 'adminDataUtils' ? 'active' : ''} nav-link group w-full`} onClick={() => toggleMenu('adminDataUtils')}>
+                                                        <div className="flex items-center">
+                                                            <IconMenuInvoice className="group-hover:!text-primary shrink-0" />
+                                                            <span className="ltr:pl-3 rtl:pr-3 text-black dark:text-[#506690] dark:group-hover:text-white-dark">{t('Utilities & Logs')}</span>
+                                                        </div>
+                                                        <div className={currentMenu !== 'adminDataUtils' ? 'rtl:rotate-90 -rotate-90' : ''}>
+                                                            <IconCaretDown />
+                                                        </div>
+                                                    </button>
+                                                    <AnimateHeight duration={300} height={currentMenu === 'adminDataUtils' ? 'auto' : 0}>
+                                                        <ul className="sub-menu text-gray-500">
+                                                            <li><NavLink to="/admin/performance/import-module">{t('Import Module')}</NavLink></li>
+                                                            <li><NavLink to="/admin/performance/export-module">{t('Export Module')}</NavLink></li>
+                                                            <li><NavLink to="/admin/performance/multi-rater-log">{t('Multi-Rater Log')}</NavLink></li>
+                                                        </ul>
+                                                    </AnimateHeight>
+                                                </li>
+                                            </>
+                                        ) : (
+                                            <>
 
                                     {/* Dashboard */}
                                     <li className="menu nav-item">
@@ -765,7 +890,10 @@ const Sidebar = () => {
                                             </div>
                                         </NavLink>
                                     </li>
-                                    </>)}
+
+                                            </>
+                                        )
+                                    }                                    </>)}
                                 </>
                                 );
                             })()}

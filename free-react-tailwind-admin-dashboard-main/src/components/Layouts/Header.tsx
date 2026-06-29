@@ -148,7 +148,9 @@ const Header = () => {
     const notificationBadgeCount = Math.max(0, notificationUnreadCount - notificationSeenCount);
     const leaveBadgeCount = leaveDecisionKeys.filter((key) => !leaveSeenDecisionKeys.includes(key)).length;
     const isReportingManager = localStorage.getItem('is_reporting_manager') === 'true';
-    const hideHRQuickLinks = userRole === 'admin' && ['/admin/hub', '/admin/performance', '/admin/learning'].includes(location.pathname);
+    const hideHRQuickLinks = 
+        (userRole === 'admin' && ['/admin/hub', '/admin/learning'].includes(location.pathname)) ||
+        (userRole === 'employee' && ['/employee/hub'].includes(location.pathname));
 
     const [leaveIntroHudClosed, setLeaveIntroHudClosed] = useState(false);
     const leaveIntroPulse = typeof sessionStorage !== 'undefined' && sessionStorage.getItem('hrms_leave_intro_pulse') === '1';
@@ -558,10 +560,22 @@ const Header = () => {
 
                     <div className="ltr:mr-2 rtl:ml-2 hidden sm:block">
                         <ul className="flex items-center space-x-2 rtl:space-x-reverse dark:text-[#d0d2d6]">
-                            {userRole === 'admin' && (
+                            {userRole === 'admin' && location.pathname !== '/admin/hub' && (
                                 <li>
                                     <Link 
                                         to="/admin/hub" 
+                                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-primary/20 bg-primary/10 text-primary hover:bg-primary hover:text-white transition-all duration-300 shadow-sm hover:shadow-md text-xs font-bold"
+                                        title="Workspace Home"
+                                    >
+                                        <IconHome className="w-4 h-4" />
+                                        <span>Workspace Home</span>
+                                    </Link>
+                                </li>
+                            )}
+                            {userRole === 'employee' && location.pathname !== '/employee/hub' && (
+                                <li>
+                                    <Link 
+                                        to="/employee/hub" 
                                         className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-primary/20 bg-primary/10 text-primary hover:bg-primary hover:text-white transition-all duration-300 shadow-sm hover:shadow-md text-xs font-bold"
                                         title="Workspace Home"
                                     >
