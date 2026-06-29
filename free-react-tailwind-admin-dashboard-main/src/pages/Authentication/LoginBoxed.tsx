@@ -77,7 +77,7 @@ const LoginBoxed = () => {
                 if (data.role === 'master') {
                     navigate('/master/dashboard');
                 } else if (data.role === 'admin') {
-                    navigate('/admin/dashboard');
+                    navigate('/admin/hub');
                 } else if (data.role === 'employee') {
                     const uid = String(data.id ?? '');
                     if (uid && !localStorage.getItem(`hrms_leave_intro_ack_${uid}`)) {
@@ -134,7 +134,7 @@ const LoginBoxed = () => {
                 if (data.role === 'master') {
                     navigate('/master/dashboard');
                 } else if (data.role === 'admin') {
-                    navigate('/admin/dashboard');
+                    navigate('/admin/hub');
                 } else if (data.role === 'employee') {
                     const uid = String(data.id ?? '');
                     if (uid && !localStorage.getItem(`hrms_leave_intro_ack_${uid}`)) {

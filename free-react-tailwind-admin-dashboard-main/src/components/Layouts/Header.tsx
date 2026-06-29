@@ -26,6 +26,7 @@ import IconMail from '../Icon/IconMail';
 import IconLockDots from '../Icon/IconLockDots';
 import IconLogout from '../Icon/IconLogout';
 import IconMenuDashboard from '../Icon/Menu/IconMenuDashboard';
+import IconHome from '../Icon/IconHome';
 import IconCaretDown from '../Icon/IconCaretDown';
 import IconMenuApps from '../Icon/Menu/IconMenuApps';
 import IconMenuComponents from '../Icon/Menu/IconMenuComponents';
@@ -147,6 +148,7 @@ const Header = () => {
     const notificationBadgeCount = Math.max(0, notificationUnreadCount - notificationSeenCount);
     const leaveBadgeCount = leaveDecisionKeys.filter((key) => !leaveSeenDecisionKeys.includes(key)).length;
     const isReportingManager = localStorage.getItem('is_reporting_manager') === 'true';
+    const hideHRQuickLinks = userRole === 'admin' && ['/admin/hub', '/admin/performance', '/admin/learning'].includes(location.pathname);
 
     const [leaveIntroHudClosed, setLeaveIntroHudClosed] = useState(false);
     const leaveIntroPulse = typeof sessionStorage !== 'undefined' && sessionStorage.getItem('hrms_leave_intro_pulse') === '1';
@@ -556,115 +558,135 @@ const Header = () => {
 
                     <div className="ltr:mr-2 rtl:ml-2 hidden sm:block">
                         <ul className="flex items-center space-x-2 rtl:space-x-reverse dark:text-[#d0d2d6]">
-                            <li>
-                                <Link to={calendarRoute} className="block p-2 rounded-full bg-white-light/40 dark:bg-dark/40 hover:text-primary hover:bg-white-light/90 dark:hover:bg-dark/60">
-                                    <IconCalendar />
-                                </Link>
-                            </li>
-                            <li className="relative">
-                                <span ref={leaveIntroAnchorRef} className="relative inline-flex">
-                                    <Link
-                                        to={leaveRoute}
-                                        aria-label="Leave application"
-                                        title={userRole === 'employee' ? 'Leave application — submit requests & view status' : undefined}
-                                        className={`relative block p-2 rounded-full bg-white-light/40 dark:bg-dark/40 hover:text-primary hover:bg-white-light/90 dark:hover:bg-dark/60 ${showLeaveIntro ? 'text-primary shadow-[0_0_0_3px_rgba(67,97,238,0.35)] dark:shadow-[0_0_0_3px_rgba(138,169,251,0.35)] animate-pulse' : ''}`}
-                                        onClick={() => {
-                                            if (userRole === 'employee') {
-                                                setLeaveSeenDecisionKeys(leaveDecisionKeys);
-                                                localStorage.setItem(leaveSeenKey, JSON.stringify(leaveDecisionKeys));
-                                                if (leaveIntroPulse) acknowledgeLeaveIntro();
-                                            }
-                                        }}
-                                    >
-                                        <IconEdit />
-                                        {showLeaveIntro && leaveBadgeCount === 0 && (
-                                            <span
-                                                aria-hidden
-                                                className="absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-gradient-to-br from-primary to-purple-500 text-[10px] font-bold text-white shadow-md animate-bounce"
-                                            >
-                                                ✈
-                                            </span>
-                                        )}
-                                        {userRole === 'employee' && leaveBadgeCount > 0 && (
-                                            <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center">
-                                                <span className="absolute inline-flex h-full w-full rounded-full bg-success opacity-70 animate-ping"></span>
-                                                <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-success border border-white dark:border-black animate-bounce"></span>
-                                            </span>
-                                        )}
-                                    </Link>
-                                </span>
-                            </li>
-                            {userRole !== 'employee' && (
+                            {userRole === 'admin' && (
                                 <li>
-                                    <Link to="/apps/chat" className="block p-2 rounded-full bg-white-light/40 dark:bg-dark/40 hover:text-primary hover:bg-white-light/90 dark:hover:bg-dark/60">
-                                        <IconChatNotification />
+                                    <Link 
+                                        to="/admin/hub" 
+                                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-primary/20 bg-primary/10 text-primary hover:bg-primary hover:text-white transition-all duration-300 shadow-sm hover:shadow-md text-xs font-bold"
+                                        title="Workspace Home"
+                                    >
+                                        <IconHome className="w-4 h-4" />
+                                        <span>Workspace Home</span>
                                     </Link>
                                 </li>
+                            )}
+                            {!hideHRQuickLinks && (
+                                <>
+                                    <li>
+                                        <Link to={calendarRoute} className="block p-2 rounded-full bg-white-light/40 dark:bg-dark/40 hover:text-primary hover:bg-white-light/90 dark:hover:bg-dark/60">
+                                            <IconCalendar />
+                                        </Link>
+                                    </li>
+                                    <li className="relative">
+                                        <span ref={leaveIntroAnchorRef} className="relative inline-flex">
+                                            <Link
+                                                to={leaveRoute}
+                                                aria-label="Leave application"
+                                                title={userRole === 'employee' ? 'Leave application — submit requests & view status' : undefined}
+                                                className={`relative block p-2 rounded-full bg-white-light/40 dark:bg-dark/40 hover:text-primary hover:bg-white-light/90 dark:hover:bg-dark/60 ${showLeaveIntro ? 'text-primary shadow-[0_0_0_3px_rgba(67,97,238,0.35)] dark:shadow-[0_0_0_3px_rgba(138,169,251,0.35)] animate-pulse' : ''}`}
+                                                onClick={() => {
+                                                    if (userRole === 'employee') {
+                                                        setLeaveSeenDecisionKeys(leaveDecisionKeys);
+                                                        localStorage.setItem(leaveSeenKey, JSON.stringify(leaveDecisionKeys));
+                                                        if (leaveIntroPulse) acknowledgeLeaveIntro();
+                                                    }
+                                                }}
+                                            >
+                                                <IconEdit />
+                                                {showLeaveIntro && leaveBadgeCount === 0 && (
+                                                    <span
+                                                        aria-hidden
+                                                        className="absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-gradient-to-br from-primary to-purple-500 text-[10px] font-bold text-white shadow-md animate-bounce"
+                                                    >
+                                                        ✈
+                                                    </span>
+                                                )}
+                                                {userRole === 'employee' && leaveBadgeCount > 0 && (
+                                                    <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center">
+                                                        <span className="absolute inline-flex h-full w-full rounded-full bg-success opacity-70 animate-ping"></span>
+                                                        <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-success border border-white dark:border-black animate-bounce"></span>
+                                                    </span>
+                                                )}
+                                            </Link>
+                                        </span>
+                                    </li>
+                                    {userRole !== 'employee' && (
+                                        <li>
+                                            <Link to="/apps/chat" className="block p-2 rounded-full bg-white-light/40 dark:bg-dark/40 hover:text-primary hover:bg-white-light/90 dark:hover:bg-dark/60">
+                                                <IconChatNotification />
+                                            </Link>
+                                        </li>
+                                    )}
+                                </>
                             )}
                         </ul>
                     </div>
                     <div className="sm:flex-1 ltr:sm:ml-0 ltr:ml-auto sm:rtl:mr-0 rtl:mr-auto flex items-center space-x-1.5 lg:space-x-2 rtl:space-x-reverse dark:text-[#d0d2d6]">
                         <div className="sm:ltr:mr-auto sm:rtl:ml-auto">
-                            <form
-                                className={`${search && '!block'} sm:relative absolute inset-x-0 sm:top-0 top-1/2 sm:translate-y-0 -translate-y-1/2 sm:mx-0 mx-4 z-10 sm:block hidden`}
-                                onSubmit={(e) => {
-                                    e.preventDefault();
-                                    const firstMatch = filteredSidebarItems[0];
-                                    if (firstMatch) {
-                                        navigate(firstMatch.path);
-                                        setMenuSearchQuery('');
-                                        setSearch(false);
-                                    }
-                                }}
-                            >
-                                <div className="relative">
-                                    <input
-                                        type="text"
-                                        className="form-input ltr:pl-9 rtl:pr-9 ltr:sm:pr-4 rtl:sm:pl-4 ltr:pr-9 rtl:pl-9 peer sm:bg-transparent bg-gray-100 placeholder:tracking-widest"
-                                        placeholder="Search sidebar menus..."
-                                        value={menuSearchQuery}
-                                        onChange={(e) => setMenuSearchQuery(e.target.value)}
-                                    />
-                                    <button type="button" className="absolute w-9 h-9 inset-0 ltr:right-auto rtl:left-auto appearance-none peer-focus:text-primary">
-                                        <IconSearch className="mx-auto" />
-                                    </button>
-                                    <button type="button" className="hover:opacity-80 sm:hidden block absolute top-1/2 -translate-y-1/2 ltr:right-2 rtl:left-2" onClick={() => setSearch(false)}>
-                                        <IconXCircle />
-                                    </button>
-                                    {menuSearchQuery.trim() && (
-                                        <div className="absolute left-0 right-0 mt-2 bg-white dark:bg-[#1b2e4b] rounded-lg shadow-lg border border-[#ebedf2] dark:border-[#253b5c] overflow-hidden z-20">
-                                            {filteredSidebarItems.length > 0 ? (
-                                                <ul className="py-1">
-                                                    {filteredSidebarItems.map((item) => (
-                                                        <li key={item.path}>
-                                                            <button
-                                                                type="button"
-                                                                className="w-full text-left px-3 py-2 text-sm hover:bg-gray-100 dark:hover:bg-[#253b5c] dark:text-white-dark"
-                                                                onClick={() => {
-                                                                    navigate(item.path);
-                                                                    setMenuSearchQuery('');
-                                                                    setSearch(false);
-                                                                }}
-                                                            >
-                                                                {item.label}
-                                                            </button>
-                                                        </li>
-                                                    ))}
-                                                </ul>
-                                            ) : (
-                                                <p className="px-3 py-2 text-sm text-white-dark">No menu found</p>
+                            {!hideHRQuickLinks && (
+                                <>
+                                    <form
+                                        className={`${search && '!block'} sm:relative absolute inset-x-0 sm:top-0 top-1/2 sm:translate-y-0 -translate-y-1/2 sm:mx-0 mx-4 z-10 sm:block hidden`}
+                                        onSubmit={(e) => {
+                                            e.preventDefault();
+                                            const firstMatch = filteredSidebarItems[0];
+                                            if (firstMatch) {
+                                                navigate(firstMatch.path);
+                                                setMenuSearchQuery('');
+                                                setSearch(false);
+                                            }
+                                        }}
+                                    >
+                                        <div className="relative">
+                                            <input
+                                                type="text"
+                                                className="form-input ltr:pl-9 rtl:pr-9 ltr:sm:pr-4 rtl:sm:pl-4 ltr:pr-9 rtl:pl-9 peer sm:bg-transparent bg-gray-100 placeholder:tracking-widest"
+                                                placeholder="Search sidebar menus..."
+                                                value={menuSearchQuery}
+                                                onChange={(e) => setMenuSearchQuery(e.target.value)}
+                                            />
+                                            <button type="button" className="absolute w-9 h-9 inset-0 ltr:right-auto rtl:left-auto appearance-none peer-focus:text-primary">
+                                                <IconSearch className="mx-auto" />
+                                            </button>
+                                            <button type="button" className="hover:opacity-80 sm:hidden block absolute top-1/2 -translate-y-1/2 ltr:right-2 rtl:left-2" onClick={() => setSearch(false)}>
+                                                <IconXCircle />
+                                            </button>
+                                            {menuSearchQuery.trim() && (
+                                                <div className="absolute left-0 right-0 mt-2 bg-white dark:bg-[#1b2e4b] rounded-lg shadow-lg border border-[#ebedf2] dark:border-[#253b5c] overflow-hidden z-20">
+                                                    {filteredSidebarItems.length > 0 ? (
+                                                        <ul className="py-1">
+                                                            {filteredSidebarItems.map((item) => (
+                                                                <li key={item.path}>
+                                                                    <button
+                                                                        type="button"
+                                                                        className="w-full text-left px-3 py-2 text-sm hover:bg-gray-100 dark:hover:bg-[#253b5c] dark:text-white-dark"
+                                                                        onClick={() => {
+                                                                            navigate(item.path);
+                                                                            setMenuSearchQuery('');
+                                                                            setSearch(false);
+                                                                        }}
+                                                                    >
+                                                                        {item.label}
+                                                                    </button>
+                                                                </li>
+                                                            ))}
+                                                        </ul>
+                                                    ) : (
+                                                        <p className="px-3 py-2 text-sm text-white-dark">No menu found</p>
+                                                    )}
+                                                </div>
                                             )}
                                         </div>
-                                    )}
-                                </div>
-                            </form>
-                            <button
-                                type="button"
-                                onClick={() => setSearch(!search)}
-                                className="search_btn sm:hidden p-2 rounded-full bg-white-light/40 dark:bg-dark/40 hover:bg-white-light/90 dark:hover:bg-dark/60"
-                            >
-                                <IconSearch className="w-4.5 h-4.5 mx-auto dark:text-[#d0d2d6]" />
-                            </button>
+                                    </form>
+                                    <button
+                                        type="button"
+                                        onClick={() => setSearch(!search)}
+                                        className="search_btn sm:hidden p-2 rounded-full bg-white-light/40 dark:bg-dark/40 hover:bg-white-light/90 dark:hover:bg-dark/60"
+                                    >
+                                        <IconSearch className="w-4.5 h-4.5 mx-auto dark:text-[#d0d2d6]" />
+                                    </button>
+                                </>
+                            )}
                         </div>
                         <div>
                             {themeConfig.theme === 'light' ? (

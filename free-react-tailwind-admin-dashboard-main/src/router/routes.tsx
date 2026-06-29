@@ -109,6 +109,7 @@ const MasterUserManagement = lazy(() => import('../pages/Master/UserManagement')
 const MasterEmployee = lazy(() => import('../pages/Master/Employee'));
 
 // Admin Pages
+const AdminHub = lazy(() => import('../pages/Admin/AdminHub'));
 const AdminDashboard = lazy(() => import('../pages/Admin/Dashboard'));
 const AdminComingSoon = lazy(() => import('../pages/Admin/ComingSoon'));
 const AdminDepartment = lazy(() => import('../pages/Admin/Department'));
@@ -658,8 +659,20 @@ const routes = [
     },
     // Admin Dashboard Routes
     {
+        path: '/admin/hub',
+        element: <AdminHub />,
+    },
+    {
         path: '/admin/dashboard',
         element: <AdminDashboard />,
+    },
+    {
+        path: '/admin/performance',
+        element: <AdminComingSoon />,
+    },
+    {
+        path: '/admin/learning',
+        element: <AdminComingSoon />,
     },
     {
         path: '/admin/branch-mgt/department',

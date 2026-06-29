@@ -16,6 +16,8 @@ const DefaultLayout = ({ children }: PropsWithChildren) => {
     const dispatch = useDispatch();
     const navigate = useNavigate();
     const location = useLocation();
+    const role = localStorage.getItem('user_role');
+    const isHubPage = role === 'admin' && ['/admin/hub', '/admin/performance', '/admin/learning'].includes(location.pathname);
 
     const [showLoader, setShowLoader] = useState(true);
     const [showTopButton, setShowTopButton] = useState(false);
@@ -83,7 +85,9 @@ const DefaultLayout = ({ children }: PropsWithChildren) => {
             {/* BEGIN MAIN CONTAINER */}
             <div className="relative">
                 {/* sidebar menu overlay */}
-                <div className={`${(!themeConfig.sidebar && 'hidden') || ''} fixed inset-0 bg-[black]/60 z-50 lg:hidden`} onClick={() => dispatch(toggleSidebar())}></div>
+                {!isHubPage && (
+                    <div className={`${(!themeConfig.sidebar && 'hidden') || ''} fixed inset-0 bg-[black]/60 z-50 lg:hidden`} onClick={() => dispatch(toggleSidebar())}></div>
+                )}
                 {/* screen loader */}
                 {showLoader && (
                     <div className="screen_loader fixed inset-0 bg-[#fafafa] dark:bg-[#060818] z-[60] grid place-content-center animate__animated">
@@ -115,10 +119,10 @@ const DefaultLayout = ({ children }: PropsWithChildren) => {
 
                 <div className={`${themeConfig.navbar} main-container text-black dark:text-white-dark min-h-screen`}>
                     {/* BEGIN SIDEBAR */}
-                    <Sidebar />
+                    {!isHubPage && <Sidebar />}
                     {/* END SIDEBAR */}
 
-                    <div className="main-content flex flex-col min-h-screen">
+                    <div className={`main-content flex flex-col min-h-screen ${isHubPage ? '!pl-0 !pr-0 ltr:xl:!pl-0 rtl:xl:!pr-0' : ''}`}>
                         {/* BEGIN TOP NAVBAR */}
                         <Header />
                         {/* END TOP NAVBAR */}
