@@ -1402,3 +1402,134 @@ class SystemSettings(models.Model):
     def __str__(self):
         status = "Enabled" if self.demo_mode_enabled else "Disabled"
         return f"System Settings (Demo Mode: {status})"
+# -----------------------------------------------------------------
+# ----------------------------------------------------------------
+# ----------------------------------------------------------------------
+
+# --------------------------- TASK MANAGEMENT ---------------------------------
+
+class Task(models.Model):
+    PRIORITY_CHOICES = [
+        ('low', 'Low'),
+        ('medium', 'Medium'),
+        ('high', 'High'),
+        ('urgent', 'Urgent'),
+    ]
+    STATUS_CHOICES = [
+        ('pending', 'Pending'),
+        ('in_progress', 'In Progress'),
+        ('completed', 'Completed'),
+        ('cancelled', 'Cancelled'),
+    ]
+
+    company = models.ForeignKey(Company, on_delete=models.CASCADE, related_name='tasks')
+
+    title = models.CharField(max_length=255)
+    description = models.TextField(blank=True, null=True)
+
+    # Who created/assigned the task — admin or manager (any Employee can assign, validated in view/serializer)
+    assigned_by = models.ForeignKey(
+        Employee, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='tasks_assigned'
+    )
+
+    # Who the task is assigned to — could be an employee or a manager (both are Employee rows)
+    assigned_to = models.ManyToManyField(
+        Employee,
+        related_name='tasks_received',
+        blank=True,
+    )
+
+    priority = models.CharField(max_length=10, choices=PRIORITY_CHOICES, default='medium')
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
+    progress = models.PositiveIntegerField(default=0)#progrress percentage
+
+    start_date = models.DateField(null=True, blank=True)
+    due_date = models.DateField(null=True, blank=True)
+    completed_at = models.DateTimeField(null=True, blank=True)
+
+    attachment = models.FileField(upload_to='tasks/attachments/', null=True, blank=True)
+    remarks = models.TextField(blank=True, null=True)  # notes added on completion/rejection
+
+
+    requires_approval = models.BooleanField(default=False)
+
+    approved_by = models.ForeignKey(
+        Employee,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name='approved_tasks'
+    )
+
+    approved_at = models.DateTimeField(null=True,blank=True )
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    is_active = models.BooleanField(default=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        assignees = ", ".join(e.full_name for e in self.assigned_to.all()[:3])
+        return f"{self.title} -> {assignees or 'Unassigned'} ({self.status})"
+
+    def clean(self):
+        if self.due_date and self.start_date and self.due_date < self.start_date:
+            raise ValidationError('Due date cannot be before start date.')
+        super().clean()
+
+    def save(self, *args, **kwargs):
+        if all(s.status == "completed" for s in self.subtasks.all()):
+            self.status = "completed"
+
+        elif any(s.status in ["in_progress", "completed"] for s in self.subtasks.all()):
+            self.status = "in_progress"
+
+        else:
+            self.status = "pending"
+
+
+class TaskComment(models.Model):
+    """Allows back-and-forth comments/updates on a task between assigner and assignee."""
+    task = models.ForeignKey(Task, on_delete=models.CASCADE, related_name='comments')
+    commented_by = models.ForeignKey(Employee, on_delete=models.SET_NULL, null=True, related_name='task_comments')
+    comment = models.TextField()
+    attachment = models.FileField(upload_to='tasks/comment_attachments/', null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['created_at']
+
+    def __str__(self):
+        return f"Comment on {self.task_id} by {self.commented_by_id}"
+
+
+class TaskDeadlineRequest(models.Model):
+    STATUS_CHOICES = [
+        ('pending', 'Pending'),
+        ('approved', 'Approved'),
+        ('rejected', 'Rejected'),
+    ]
+
+    task = models.ForeignKey(Task,on_delete=models.CASCADE,related_name='deadline_requests')
+    requested_by = models.ForeignKey(Employee,on_delete=models.CASCADE,related_name='deadline_requests')
+    current_due_date = models.DateField()
+    requested_due_date = models.DateField()
+    reason = models.TextField()
+    status = models.CharField(max_length=20,choices=STATUS_CHOICES,default='pending')
+    reviewed_by = models.ForeignKey(Employee,on_delete=models.SET_NULL,null=True,blank=True,related_name='reviewed_deadline_requests')
+    review_remarks = models.TextField(blank=True,null=True)
+    reviewed_at = models.DateTimeField(null=True,blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def clean(self):
+        if self.requested_due_date <= self.current_due_date:
+            raise ValidationError("Requested due date must be later than the current due date.")
+
+    def __str__(self):
+        return f"{self.task.title} - {self.status}"
