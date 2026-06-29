@@ -668,6 +668,26 @@ class KPIMasterSerializer(serializers.ModelSerializer):
         return [d.department_name for d in obj.departments.all()]
 
 
+class ContinuousFeedbackSerializer(serializers.ModelSerializer):
+    sender_name = serializers.SerializerMethodField(read_only=True)
+    receiver_name = serializers.SerializerMethodField(read_only=True)
+    category_display = serializers.CharField(source='get_category_display', read_only=True)
+
+    class Meta:
+        model = ContinuousFeedback
+        fields = ['id', 'sender', 'receiver', 'sender_name', 'receiver_name', 'feedback_text',
+                  'category', 'category_display', 'rating', 'visibility', 'acknowledged',
+                  'created_at', 'updated_at']
+        read_only_fields = ['created_at', 'updated_at']
+        extra_kwargs = {'sender': {'required': False, 'allow_null': True}}
+
+    def get_sender_name(self, obj):
+        return f"{obj.sender.first_name} {obj.sender.last_name}".strip() if obj.sender else "System"
+
+    def get_receiver_name(self, obj):
+        return f"{obj.receiver.first_name} {obj.receiver.last_name}".strip() if obj.receiver else None
+
+
 class EmployeeKRASerializer(serializers.ModelSerializer):
     kra_title = serializers.CharField(source='kra_master.title', read_only=True)
     kra_description = serializers.CharField(source='kra_master.description', read_only=True)

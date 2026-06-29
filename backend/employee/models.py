@@ -377,11 +377,30 @@ class SalaryHikeConfig(models.Model):
 
 
 class ContinuousFeedback(models.Model):
+    CATEGORY = [
+        ('peer_recognition', 'Peer Recognition'),
+        ('appreciation', 'Appreciation'),
+        ('manager_coaching', 'Manager Coaching'),
+        ('constructive', 'Constructive'),
+        ('goal_progress', 'Goal Progress'),
+    ]
+    VISIBILITY = [
+        ('private', 'Private'),
+        ('team', 'Team'),
+        ('public', 'Public'),
+    ]
     sender = models.ForeignKey('app.Employee', on_delete=models.CASCADE, related_name='sent_feedback')
     receiver = models.ForeignKey('app.Employee', on_delete=models.CASCADE, related_name='received_feedback')
     feedback_text = models.TextField()
-    category = models.CharField(max_length=50, default='peer_recognition')
+    category = models.CharField(max_length=50, choices=CATEGORY, default='peer_recognition')
+    rating = models.PositiveSmallIntegerField(null=True, blank=True)  # 1-5, optional
+    visibility = models.CharField(max_length=20, choices=VISIBILITY, default='private')
+    acknowledged = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-created_at']
 
     def __str__(self):
         return f"{self.sender} -> {self.receiver} ({self.category})"

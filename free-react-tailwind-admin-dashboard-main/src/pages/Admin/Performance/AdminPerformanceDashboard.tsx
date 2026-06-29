@@ -116,7 +116,7 @@ const boxCells: BoxCell[] = [
 
 const AdminPerformanceDashboard = () => {
     const dispatch = useDispatch();
-    const [activeTab, setActiveTab] = useState<'console' | 'matrix'>('console');
+    const [activeTab, setActiveTab] = useState<'matrix'>('matrix');
     
     // Filter states
     const [searchQuery, setSearchQuery] = useState('');
@@ -196,17 +196,6 @@ const AdminPerformanceDashboard = () => {
             <div className="flex justify-between items-center bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 p-2.5 rounded-2xl shadow-sm">
                 <div className="flex gap-2">
                     <button
-                        onClick={() => { setActiveTab('console'); setSelectedCell(null); }}
-                        className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-bold transition duration-300 ${
-                            activeTab === 'console' 
-                            ? 'bg-teal-500 text-white shadow-md shadow-teal-500/10' 
-                            : 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'
-                        }`}
-                    >
-                        <IconLayoutGrid className="w-4 h-4" />
-                        Control Console
-                    </button>
-                    <button
                         onClick={() => setActiveTab('matrix')}
                         className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-bold transition duration-300 ${
                             activeTab === 'matrix' 
@@ -226,40 +215,7 @@ const AdminPerformanceDashboard = () => {
                 )}
             </div>
 
-            {/* TAB CONTENT: 1. CONTROL CONSOLE */}
-            {activeTab === 'console' && (
-                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-                    {groups.map((g, idx) => (
-                        <div 
-                            key={idx} 
-                            className="bg-white dark:bg-gray-800/40 border border-gray-100 dark:border-gray-700/50 rounded-2xl p-6 shadow-sm flex flex-col justify-between hover:scale-[1.01] hover:shadow-md transition-all duration-300"
-                        >
-                            <div>
-                                <div className="flex justify-between items-start gap-4 mb-3">
-                                    <h2 className="text-lg font-bold text-gray-800 dark:text-white leading-tight">{g.title}</h2>
-                                    <span className="text-[10px] font-extrabold uppercase tracking-widest text-teal-600 dark:text-teal-400 bg-teal-500/10 px-2 py-0.5 rounded-full shrink-0">
-                                        {g.badge}
-                                    </span>
-                                </div>
-                                <p className="text-xs text-gray-500 dark:text-gray-400 leading-relaxed mb-5">{g.desc}</p>
-                            </div>
-
-                            <div className="border-t border-gray-100 dark:border-gray-700/50 pt-4">
-                                <ul className="flex flex-wrap gap-1.5">
-                                    {g.features.map((f, i) => (
-                                        <li key={i} className="flex items-center gap-1 text-[10px] font-semibold text-gray-600 dark:text-gray-400 bg-gray-50 dark:bg-gray-700/30 px-2 py-0.5 rounded-lg">
-                                            <div className="w-1.5 h-1.5 rounded-full bg-teal-500" />
-                                            {f}
-                                        </li>
-                                    ))}
-                                </ul>
-                            </div>
-                        </div>
-                    ))}
-                </div>
-            )}
-
-            {/* TAB CONTENT: 2. 9-BOX TALENT MATRIX */}
+            {/* TAB CONTENT: 9-BOX TALENT MATRIX */}
             {activeTab === 'matrix' && (
                 <div className="flex flex-col lg:flex-row gap-6 animate__animated animate__fadeIn">
                     

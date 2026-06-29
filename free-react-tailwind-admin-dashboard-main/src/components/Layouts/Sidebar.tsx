@@ -533,7 +533,6 @@ const Sidebar = () => {
                                                             <li><NavLink to="/admin/performance/search-profile">{t('Search Profile')}</NavLink></li>
                                                             <li><NavLink to="/admin/performance/assign-kras">{t('Assign KRAs/Goals')}</NavLink></li>
                                                             <li><NavLink to="/admin/performance/track-feedback">{t('Track Feedback')}</NavLink></li>
-                                                            <li><NavLink to="/admin/performance/manager-summaries">{t('Manager Summaries')}</NavLink></li>
                                                         </ul>
                                                     </AnimateHeight>
                                                 </li>

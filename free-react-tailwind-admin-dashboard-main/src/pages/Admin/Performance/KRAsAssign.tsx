@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
 import IconSearch from '../../../components/Icon/IconSearch';
-import IconUsers from '../../../components/Icon/IconUsers';
 import IconTrendingUp from '../../../components/Icon/IconTrendingUp';
 
 interface Employee {
@@ -53,26 +52,16 @@ interface EmployeeKRA {
     target_description: string;
 }
 
-interface KRATask {
-    id: number;
-    title: string;
-    description: string;
-    priority: string;
-    status: string;
-    deadline: string;
-    kra_id: number;
-    kra_title: string;
-}
-
 const KRAsAssign = () => {
     // Directories
     const [employees, setEmployees] = useState<Employee[]>([]);
     const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
     const [masterKras, setMasterKras] = useState<KRAMaster[]>([]);
     const [employeeKras, setEmployeeKras] = useState<EmployeeKRA[]>([]);
-    const [kraTasks, setKraTasks] = useState<KRATask[]>([]);
     const [departments, setDepartments] = useState<Department[]>([]);
     const [kpis, setKpis] = useState<KPIMaster[]>([]);
+
+    const [savingKra, setSavingKra] = useState(false);
 
     // Inline KRA creation (with nested KPIs)
     const [showCreateKra, setShowCreateKra] = useState(false);
@@ -83,44 +72,53 @@ const KRAsAssign = () => {
         { name: '', target: '', unit: '' },
     ]);
 
+    // Add KPI(s) to an EXISTING KRA
+    const [showAddKpi, setShowAddKpi] = useState(false);
+    const [addKpiKraId, setAddKpiKraId] = useState('');
+    const [addKpiRows, setAddKpiRows] = useState<{ name: string; target: string; unit: string }[]>([
+        { name: '', target: '', unit: '' },
+    ]);
+
     // Reviewer ("master") + which department KRAs are selected when assigning to a person
     const [assignReviewerId, setAssignReviewerId] = useState('');
+    const [reviewerSearch, setReviewerSearch] = useState('');
+    const [showReviewerList, setShowReviewerList] = useState(false);
     const [assignChecked, setAssignChecked] = useState<number[]>([]);
     const [assignWeights, setAssignWeights] = useState<Record<number, string>>({});
-
-    // Inline KPI creation + picker
-    const [showCreateKpi, setShowCreateKpi] = useState(false);
-    const [newKpiName, setNewKpiName] = useState('');
-    const [newKpiDesc, setNewKpiDesc] = useState('');
-    const [newKpiUnit, setNewKpiUnit] = useState('');
-    const [newKpiTarget, setNewKpiTarget] = useState('');
-    const [newKpiKra, setNewKpiKra] = useState('');
-    const [newKpiDepts, setNewKpiDepts] = useState<number[]>([]);
-    const [selectedKpiId, setSelectedKpiId] = useState('');
-
-    // Acting Manager (Master Selection)
-    const [actingManager, setActingManager] = useState<Employee | null>(null);
-    const [searchManagerQuery, setSearchManagerQuery] = useState('');
-    const [showManagerDropdown, setShowManagerDropdown] = useState(false);
 
     // UI Loading & Search
     const [loadingEmployees, setLoadingEmployees] = useState(true);
     const [loadingKras, setLoadingKras] = useState(false);
-    const [loadingTasks, setLoadingTasks] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
     const [errorMsg, setErrorMsg] = useState('');
     const [successMsg, setSuccessMsg] = useState('');
-    const [activeTab, setActiveTab] = useState<'kras' | 'tasks'>('kras');
 
-    // Form inputs for new KRA assignment
+    // Page tab: assign employees vs manage KRA/KPI library
+    const [tab, setTab] = useState<'assign' | 'manage'>('assign');
+    const [manageSearch, setManageSearch] = useState('');
+    const [manageDeptFilter, setManageDeptFilter] = useState('');
+
+    // Manage tab: create KRA panel
+    const [showKraForm, setShowKraForm] = useState(false);
+
+    // Manage tab: editing a KRA
+    const [editKraId, setEditKraId] = useState<number | null>(null);
+    const [editKraTitle, setEditKraTitle] = useState('');
+    const [editKraDesc, setEditKraDesc] = useState('');
+    const [editKraDepts, setEditKraDepts] = useState<number[]>([]);
+
+    // Manage tab: editing a KPI
+    const [editKpiId, setEditKpiId] = useState<number | null>(null);
+    const [editKpiName, setEditKpiName] = useState('');
+    const [editKpiTarget, setEditKpiTarget] = useState('');
+    const [editKpiUnit, setEditKpiUnit] = useState('');
+
+    // Manage tab: inline add-KPI under a specific KRA card
+    const [addKpiForKra, setAddKpiForKra] = useState<number | null>(null);
+    const [inlineKpi, setInlineKpi] = useState<{ name: string; target: string; unit: string }>({ name: '', target: '', unit: '' });
+
+    // Form input shared by assignment
     const [targetDescription, setTargetDescription] = useState('');
-
-    // Form inputs for new Task
-    const [selectedKraId, setSelectedKraId] = useState('');
-    const [taskTitle, setTaskTitle] = useState('');
-    const [taskKPIs, setTaskKPIs] = useState('');
-    const [taskPriority, setTaskPriority] = useState('medium');
-    const [taskDeadline, setTaskDeadline] = useState('');
 
     const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
 
@@ -140,10 +138,9 @@ const KRAsAssign = () => {
                 });
                 setEmployees(empRes.data);
                 
-                // Set default selected employee and default acting manager (master)
+                // Set default selected employee
                 if (empRes.data.length > 0) {
                     setSelectedEmployee(empRes.data[0]);
-                    setActingManager(empRes.data[0]); // By default acting as first employee
                 }
 
                 // Fetch KRA registry, KPI library and departments in parallel
@@ -174,27 +171,18 @@ const KRAsAssign = () => {
         const fetchEmployeeData = async () => {
             try {
                 setLoadingKras(true);
-                setLoadingTasks(true);
                 setErrorMsg('');
                 setSuccessMsg('');
-                
-                // Fetch KRAs
+
                 const kraRes = await axios.get(`${API_BASE}/employee/employee-kra/?employee_id=${selectedEmployee.id}`, {
                     headers: getHeaders(),
                 });
                 setEmployeeKras(kraRes.data);
-
-                // Fetch KRA Tasks
-                const taskRes = await axios.get(`${API_BASE}/employee/kra-tasks/?employee_id=${selectedEmployee.id}`, {
-                    headers: getHeaders(),
-                });
-                setKraTasks(taskRes.data);
             } catch (err) {
                 console.error('Error fetching employee data:', err);
-                setErrorMsg('Failed to load KRAs or tasks for this employee.');
+                setErrorMsg('Failed to load KRAs for this employee.');
             } finally {
                 setLoadingKras(false);
-                setLoadingTasks(false);
             }
         };
 
@@ -209,11 +197,6 @@ const KRAsAssign = () => {
         emp.full_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         emp.employee_id.toLowerCase().includes(searchQuery.toLowerCase()) ||
         (emp.designation_name && emp.designation_name.toLowerCase().includes(searchQuery.toLowerCase()))
-    );
-
-    // Filter managers for acting manager selector
-    const filteredManagers = employees.filter(emp =>
-        emp.full_name.toLowerCase().includes(searchManagerQuery.toLowerCase())
     );
 
     // Assign the selected department KRAs to the employee (with reviewer)
@@ -245,7 +228,7 @@ const KRAsAssign = () => {
             setAssignChecked([]);
             setAssignWeights({});
             setTargetDescription('');
-            setAssignReviewerId('');
+            setAssignReviewerId(''); setReviewerSearch('');
             setSuccessMsg('KRA(s) assigned successfully.');
         } catch (err: any) {
             console.error('Error assigning KRA:', err);
@@ -275,45 +258,6 @@ const KRAsAssign = () => {
     };
 
     // Create KRA Task
-    const handleCreateTask = async (e: React.FormEvent) => {
-        e.preventDefault();
-        setErrorMsg('');
-        setSuccessMsg('');
-        if (!selectedEmployee || !selectedKraId || !taskTitle || !taskDeadline) return;
-
-        try {
-            const payload = {
-                employee_id: selectedEmployee.id,
-                kra_id: parseInt(selectedKraId),
-                title: taskTitle,
-                description: taskKPIs, // Store KPIs in description field
-                priority: taskPriority,
-                deadline: taskDeadline
-            };
-
-            await axios.post(`${API_BASE}/employee/kra-tasks/`, payload, {
-                headers: getHeaders(),
-            });
-
-            // Re-fetch tasks
-            const taskRes = await axios.get(`${API_BASE}/employee/kra-tasks/?employee_id=${selectedEmployee.id}`, {
-                headers: getHeaders(),
-            });
-            setKraTasks(taskRes.data);
-
-            // Reset form
-            setSelectedKraId('');
-            setTaskTitle('');
-            setTaskKPIs('');
-            setTaskPriority('medium');
-            setTaskDeadline('');
-            setSuccessMsg('KRA Task & KPIs created successfully.');
-        } catch (err: any) {
-            console.error('Error creating KRA task:', err);
-            setErrorMsg('Failed to create KRA Task.');
-        }
-    };
-
     // Multi-select helper for department <select multiple>
     const readDeptSelection = (e: React.ChangeEvent<HTMLSelectElement>) =>
         Array.from(e.target.selectedOptions).map(o => parseInt(o.value));
@@ -321,7 +265,11 @@ const KRAsAssign = () => {
     // Create new KRA + its KPIs inline (no person involved)
     const handleCreateKra = async () => {
         setErrorMsg(''); setSuccessMsg('');
-        if (!newKraTitle.trim()) return;
+        if (!newKraTitle.trim() || savingKra) return;
+        if (masterKras.some(k => k.title.trim().toLowerCase() === newKraTitle.trim().toLowerCase())) {
+            setErrorMsg('A KRA with this title already exists.'); return;
+        }
+        setSavingKra(true);
         try {
             const payload = { title: newKraTitle.trim(), description: newKraDesc, departments: newKraDepts, status: 'active' };
             const res = await axios.post(`${API_BASE}/employee/kra-master/`, payload, { headers: getHeaders() });
@@ -340,10 +288,12 @@ const KRAsAssign = () => {
             setKpis(prev => [...prev, ...created.map(c => c.data)]);
             setNewKraTitle(''); setNewKraDesc(''); setNewKraDepts([]);
             setNewKraKpis([{ name: '', target: '', unit: '' }]);
-            setShowCreateKra(false);
+            setShowCreateKra(false); setShowKraForm(false);
             setSuccessMsg(`KRA created with ${created.length} KPI(s).`);
         } catch (err: any) {
             setErrorMsg(err.response?.data?.title?.[0] || 'Failed to create KRA.');
+        } finally {
+            setSavingKra(false);
         }
     };
 
@@ -352,99 +302,148 @@ const KRAsAssign = () => {
     const addKpiRow = () => setNewKraKpis(rows => [...rows, { name: '', target: '', unit: '' }]);
     const removeKpiRow = (i: number) => setNewKraKpis(rows => rows.length > 1 ? rows.filter((_, idx) => idx !== i) : rows);
 
-    // Create new KPI in library inline
-    const handleCreateKpi = async () => {
+    // Row helpers + save for adding KPIs to an existing KRA
+    const updateAddKpiRow = (i: number, field: 'name' | 'target' | 'unit', val: string) =>
+        setAddKpiRows(rows => rows.map((r, idx) => idx === i ? { ...r, [field]: val } : r));
+    const addAddKpiRow = () => setAddKpiRows(rows => [...rows, { name: '', target: '', unit: '' }]);
+    const removeAddKpiRow = (i: number) => setAddKpiRows(rows => rows.length > 1 ? rows.filter((_, idx) => idx !== i) : rows);
+
+    const handleAddKpisToKra = async () => {
         setErrorMsg(''); setSuccessMsg('');
-        if (!newKpiName.trim()) return;
+        if (!addKpiKraId) { setErrorMsg('Select a KRA to add KPIs to.'); return; }
+        const kra = masterKras.find(k => k.id === parseInt(addKpiKraId));
+        const valid = addKpiRows.filter(r => r.name.trim());
+        if (!valid.length) { setErrorMsg('Add at least one KPI name.'); return; }
         try {
-            const payload = {
-                name: newKpiName.trim(), description: newKpiDesc, measurement_unit: newKpiUnit,
-                target_value: newKpiTarget, kra_master: newKpiKra ? parseInt(newKpiKra) : null,
-                departments: newKpiDepts, status: 'active'
-            };
-            const res = await axios.post(`${API_BASE}/employee/kpi-master/`, payload, { headers: getHeaders() });
-            setKpis(prev => [...prev, res.data]);
-            setNewKpiName(''); setNewKpiDesc(''); setNewKpiUnit(''); setNewKpiTarget(''); setNewKpiKra(''); setNewKpiDepts([]); setShowCreateKpi(false);
-            setSuccessMsg('New KPI created and added to the library.');
+            const created = await Promise.all(valid.map(r =>
+                axios.post(`${API_BASE}/employee/kpi-master/`, {
+                    name: r.name.trim(), target_value: r.target, measurement_unit: r.unit,
+                    kra_master: parseInt(addKpiKraId), departments: kra?.departments || [], status: 'active'
+                }, { headers: getHeaders() })
+            ));
+            setKpis(prev => [...prev, ...created.map(c => c.data)]);
+            setAddKpiRows([{ name: '', target: '', unit: '' }]); setAddKpiKraId(''); setShowAddKpi(false);
+            setSuccessMsg(`Added ${created.length} KPI(s) to ${kra?.title}.`);
         } catch (err: any) {
-            setErrorMsg(err.response?.data?.name?.[0] || 'Failed to create KPI.');
+            setErrorMsg(err.response?.data?.name?.[0] || 'Failed to add KPIs.');
         }
     };
 
-    // Append a library KPI into the free-text "Define KPIs & Details" field
-    const appendKpiToDetails = (id: string) => {
-        const kpi = kpis.find(k => k.id === parseInt(id));
-        if (!kpi) return;
-        const target = kpi.target_value ? ` — Target: ${kpi.target_value}${kpi.measurement_unit ? ' ' + kpi.measurement_unit : ''}` : '';
-        const line = `KPI: ${kpi.name}${target}`;
-        setTaskKPIs(prev => (prev ? `${prev}\n${line}` : line));
-        setSelectedKpiId('');
+    // KRAs scoped to the selected person's department (global KRAs with no dept included)
+    const inDept = (k: KRAMaster) =>
+        !(k.departments && k.departments.length) || (selectedEmployee?.department != null && k.departments.includes(selectedEmployee.department));
+    const deptKrasAll = masterKras.filter(inDept);
+
+    // Same list, minus KRAs already assigned to this person (for the assignment checklist)
+    const assignedKraIds = new Set(employeeKras.map(k => k.kra_master));
+    const deptKras = deptKrasAll.filter(k => !assignedKraIds.has(k.id));
+
+    // ---------- Manage tab: CRUD ----------
+    const startEditKra = (k: KRAMaster) => {
+        setEditKraId(k.id); setEditKraTitle(k.title); setEditKraDesc(k.description || '');
+        setEditKraDepts(k.departments || []);
+    };
+    const cancelEditKra = () => { setEditKraId(null); setEditKraTitle(''); setEditKraDesc(''); setEditKraDepts([]); };
+
+    const handleUpdateKra = async () => {
+        if (editKraId == null || !editKraTitle.trim()) return;
+        setErrorMsg(''); setSuccessMsg('');
+        try {
+            const res = await axios.patch(`${API_BASE}/employee/kra-master/${editKraId}/`, {
+                title: editKraTitle.trim(), description: editKraDesc, departments: editKraDepts
+            }, { headers: getHeaders() });
+            setMasterKras(prev => prev.map(k => k.id === editKraId ? res.data : k));
+            cancelEditKra();
+            setSuccessMsg('KRA updated.');
+        } catch (err: any) {
+            setErrorMsg(err.response?.data?.title?.[0] || 'Failed to update KRA.');
+        }
     };
 
-    // Department KRAs available to assign (scoped to person's dept, excluding already-assigned)
-    const assignedKraIds = new Set(employeeKras.map(k => k.kra_master));
-    const deptKras = masterKras.filter(k =>
-        !assignedKraIds.has(k.id) &&
-        (!(k.departments && k.departments.length) || (selectedEmployee?.department != null && k.departments.includes(selectedEmployee.department)))
-    );
+    const handleDeleteKra = async (id: number) => {
+        if (!window.confirm('Delete this KRA? Its KPIs will be unlinked.')) return;
+        setErrorMsg(''); setSuccessMsg('');
+        try {
+            await axios.delete(`${API_BASE}/employee/kra-master/${id}/`, { headers: getHeaders() });
+            setMasterKras(prev => prev.filter(k => k.id !== id));
+            setKpis(prev => prev.map(k => k.kra_master === id ? { ...k, kra_master: null } : k));
+            setSuccessMsg('KRA deleted.');
+        } catch (err: any) {
+            if (err.response?.status === 404) {
+                setMasterKras(prev => prev.filter(k => k.id !== id));
+                setSuccessMsg('KRA already removed.');
+            } else setErrorMsg('Failed to delete KRA.');
+        }
+    };
 
-    // KPIs relevant to the selected employee's department (or global KPIs with no dept scope)
-    const deptKpis = kpis.filter(k =>
-        k.departments.length === 0 || (selectedEmployee?.department != null && k.departments.includes(selectedEmployee.department))
-    );
+    const startEditKpi = (k: KPIMaster) => {
+        setEditKpiId(k.id); setEditKpiName(k.name); setEditKpiTarget(k.target_value || ''); setEditKpiUnit(k.measurement_unit || '');
+    };
+    const cancelEditKpi = () => { setEditKpiId(null); setEditKpiName(''); setEditKpiTarget(''); setEditKpiUnit(''); };
+
+    const handleUpdateKpi = async () => {
+        if (editKpiId == null || !editKpiName.trim()) return;
+        setErrorMsg(''); setSuccessMsg('');
+        try {
+            const res = await axios.patch(`${API_BASE}/employee/kpi-master/${editKpiId}/`, {
+                name: editKpiName.trim(), target_value: editKpiTarget, measurement_unit: editKpiUnit
+            }, { headers: getHeaders() });
+            setKpis(prev => prev.map(k => k.id === editKpiId ? res.data : k));
+            cancelEditKpi();
+            setSuccessMsg('KPI updated.');
+        } catch (err: any) {
+            setErrorMsg(err.response?.data?.name?.[0] || 'Failed to update KPI.');
+        }
+    };
+
+    const handleDeleteKpi = async (id: number) => {
+        if (!window.confirm('Delete this KPI?')) return;
+        setErrorMsg(''); setSuccessMsg('');
+        try {
+            await axios.delete(`${API_BASE}/employee/kpi-master/${id}/`, { headers: getHeaders() });
+            setKpis(prev => prev.filter(k => k.id !== id));
+            setSuccessMsg('KPI deleted.');
+        } catch (err: any) {
+            if (err.response?.status === 404) {
+                setKpis(prev => prev.filter(k => k.id !== id));
+                setSuccessMsg('KPI already removed.');
+            } else setErrorMsg('Failed to delete KPI.');
+        }
+    };
+
+    const handleAddInlineKpi = async (kra: KRAMaster) => {
+        if (!inlineKpi.name.trim()) return;
+        setErrorMsg(''); setSuccessMsg('');
+        try {
+            const res = await axios.post(`${API_BASE}/employee/kpi-master/`, {
+                name: inlineKpi.name.trim(), target_value: inlineKpi.target, measurement_unit: inlineKpi.unit,
+                kra_master: kra.id, departments: kra.departments || [], status: 'active'
+            }, { headers: getHeaders() });
+            setKpis(prev => [...prev, res.data]);
+            setInlineKpi({ name: '', target: '', unit: '' }); setAddKpiForKra(null);
+            setSuccessMsg(`KPI added to ${kra.title}.`);
+        } catch (err: any) {
+            setErrorMsg(err.response?.data?.name?.[0] || 'Failed to add KPI.');
+        }
+    };
+
+    const deptName = (id: number) => departments.find(d => d.id === id)?.department_name || `Dept ${id}`;
+
+    // Manage tab list, filtered by search + department
+    const manageKras = masterKras.filter(k => {
+        const matchSearch = !manageSearch || k.title.toLowerCase().includes(manageSearch.toLowerCase());
+        const matchDept = !manageDeptFilter || (k.departments || []).includes(parseInt(manageDeptFilter));
+        return matchSearch && matchDept;
+    });
 
     return (
         <div className="space-y-6 py-2 animate__animated animate__fadeIn">
-            {/* Header with Impersonate Dropdown */}
-            <div className="bg-white dark:bg-gray-900 p-6 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm flex flex-col md:flex-row justify-between items-start md:items-center gap-4 relative">
-                <div>
-                    <h2 className="text-xl font-bold text-gray-800 dark:text-white">Assign KRAs & Goals</h2>
-                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 leading-relaxed">
-                        Map Key Result Areas directly to employees, configure weights, and assign KRA tasks with KPIs.
-                    </p>
-                </div>
-
-                {/* Acting Manager Dropdown Selector */}
-                <div className="relative w-full md:w-72">
-                    <label className="block text-[9px] font-black uppercase tracking-wider text-gray-400 mb-1 select-none">
-                        Acting As (Master/Manager)
-                    </label>
-                    <div 
-                        onClick={() => setShowManagerDropdown(!showManagerDropdown)}
-                        className="bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 px-4 py-2.5 rounded-xl text-xs font-bold text-gray-800 dark:text-white cursor-pointer select-none flex justify-between items-center"
-                    >
-                        <span>{actingManager ? actingManager.full_name : 'Select Manager'}</span>
-                        <span className="text-[10px] text-gray-400">▼</span>
-                    </div>
-
-                    {showManagerDropdown && (
-                        <div className="absolute right-0 top-full mt-2 w-full bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl shadow-xl p-3 z-50 space-y-2">
-                            <input 
-                                type="text"
-                                placeholder="Type to filter manager..."
-                                value={searchManagerQuery}
-                                onChange={(e) => setSearchManagerQuery(e.target.value)}
-                                onClick={(e) => e.stopPropagation()}
-                                className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 px-3 py-2 rounded-xl text-xs font-semibold text-gray-800 dark:text-white focus:outline-none"
-                            />
-                            <div className="max-h-40 overflow-y-auto space-y-1">
-                                {filteredManagers.map(mgr => (
-                                    <div
-                                        key={mgr.id}
-                                        onClick={() => {
-                                            setActingManager(mgr);
-                                            setShowManagerDropdown(false);
-                                            setSearchManagerQuery('');
-                                        }}
-                                        className="p-2 hover:bg-teal-500/10 hover:text-teal-600 dark:hover:bg-gray-800 rounded-lg text-xs font-bold text-gray-700 dark:text-gray-300 cursor-pointer"
-                                    >
-                                        {mgr.full_name} ({mgr.designation_name || 'No Desig'})
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-                    )}
-                </div>
+            {/* Header */}
+            <div className="bg-white dark:bg-gray-900 p-6 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm">
+                <h2 className="text-xl font-bold text-gray-800 dark:text-white">Assign KRAs & Goals</h2>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 leading-relaxed">
+                    Create KRAs (with KPIs) per department, then assign them to employees with a reviewer.
+                </p>
             </div>
 
             {/* Notification Toast */}
@@ -459,9 +458,26 @@ const KRAsAssign = () => {
                 </div>
             )}
 
+            {/* Page Tabs */}
+            <div className="flex gap-2">
+                <button
+                    onClick={() => setTab('assign')}
+                    className={`px-4 py-2 rounded-xl text-xs font-bold transition ${tab === 'assign' ? 'bg-teal-500 text-white shadow-md shadow-teal-500/20' : 'bg-white dark:bg-gray-900 text-gray-500 border border-gray-200 dark:border-gray-800'}`}
+                >
+                    Assign to Employees
+                </button>
+                <button
+                    onClick={() => setTab('manage')}
+                    className={`px-4 py-2 rounded-xl text-xs font-bold transition ${tab === 'manage' ? 'bg-teal-500 text-white shadow-md shadow-teal-500/20' : 'bg-white dark:bg-gray-900 text-gray-500 border border-gray-200 dark:border-gray-800'}`}
+                >
+                    Manage KRA &amp; KPIs
+                </button>
+            </div>
+
             {/* Split Screen Workspace */}
+            {tab === 'assign' && (
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-stretch">
-                
+
                 {/* Left Panel: Employee selection directory */}
                 <div className="bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 p-5 rounded-3xl shadow-sm flex flex-col h-[620px]">
                     <div className="relative mb-4">
@@ -532,25 +548,10 @@ const KRAsAssign = () => {
                                             <span className="text-[10px] text-gray-400 mt-0.5 block">{selectedEmployee.designation_name || 'Designation Not Set'} • {selectedEmployee.department_name || 'No Dept'}</span>
                                         </div>
                                     </div>
-                                    
-                                    <div className="flex gap-2">
-                                        <button
-                                            onClick={() => setActiveTab('kras')}
-                                            className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider ${activeTab === 'kras' ? 'bg-teal-500 text-white shadow-sm' : 'bg-gray-50 dark:bg-gray-800 text-gray-500'}`}
-                                        >
-                                            Assigned KRAs
-                                        </button>
-                                        <button
-                                            onClick={() => setActiveTab('tasks')}
-                                            className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider ${activeTab === 'tasks' ? 'bg-teal-500 text-white shadow-sm' : 'bg-gray-50 dark:bg-gray-800 text-gray-500'}`}
-                                        >
-                                            KRA Tasks & KPIs
-                                        </button>
-                                    </div>
                                 </div>
 
-                                {/* TAB 1: Assigned KRAs */}
-                                {activeTab === 'kras' && (
+                                {/* Assigned KRAs */}
+                                {(
                                     <>
                                         <div className="flex justify-between items-center mb-3">
                                             <span className="text-xs font-bold text-gray-400 uppercase">Assigned KRA Metrics ({employeeKras.length})</span>
@@ -566,20 +567,43 @@ const KRAsAssign = () => {
                                             <div>
                                                 <div className="flex justify-between items-center mb-1">
                                                     <label className="block text-[10px] font-bold uppercase tracking-wider text-gray-400">Reviewer / Master (reviews these KRAs)</label>
-                                                    <button type="button" onClick={() => setShowCreateKra(s => !s)} className="text-[10px] font-black text-teal-600 dark:text-teal-400 hover:underline">
-                                                        {showCreateKra ? '× Cancel' : '＋ New KRA'}
-                                                    </button>
+                                                    <div className="flex gap-3">
+                                                        <button type="button" onClick={() => { setShowCreateKra(s => !s); setShowAddKpi(false); }} className="text-[10px] font-black text-teal-600 dark:text-teal-400 hover:underline">
+                                                            {showCreateKra ? '× Cancel' : '＋ New KRA'}
+                                                        </button>
+                                                        <button type="button" onClick={() => { setShowAddKpi(s => !s); setShowCreateKra(false); }} className="text-[10px] font-black text-teal-600 dark:text-teal-400 hover:underline">
+                                                            {showAddKpi ? '× Cancel' : '＋ KPI to KRA'}
+                                                        </button>
+                                                    </div>
                                                 </div>
-                                                <select
-                                                    value={assignReviewerId}
-                                                    onChange={(e) => setAssignReviewerId(e.target.value)}
-                                                    className="w-full bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 px-3 py-2 rounded-xl text-xs font-semibold text-gray-800 dark:text-white focus:outline-none"
-                                                >
-                                                    <option value="">-- Select reviewer (admin or employee) --</option>
-                                                    {employees.map(emp => (
-                                                        <option key={emp.id} value={emp.id}>{emp.full_name} ({emp.designation_name || 'No Desig'})</option>
-                                                    ))}
-                                                </select>
+                                                <div className="relative">
+                                                    <input
+                                                        type="text"
+                                                        value={reviewerSearch}
+                                                        placeholder="Type to search reviewer (admin or employee)..."
+                                                        onChange={(e) => { setReviewerSearch(e.target.value); setAssignReviewerId(''); setShowReviewerList(true); }}
+                                                        onFocus={() => setShowReviewerList(true)}
+                                                        onBlur={() => setTimeout(() => setShowReviewerList(false), 150)}
+                                                        className="w-full bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 px-3 py-2 rounded-xl text-xs font-semibold text-gray-800 dark:text-white focus:outline-none"
+                                                    />
+                                                    {showReviewerList && (
+                                                        <div className="absolute z-30 mt-1 w-full max-h-44 overflow-y-auto bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl shadow-lg">
+                                                            {employees
+                                                                .filter(emp => emp.full_name.toLowerCase().includes(reviewerSearch.toLowerCase()) || (emp.designation_name || '').toLowerCase().includes(reviewerSearch.toLowerCase()))
+                                                                .slice(0, 50)
+                                                                .map(emp => (
+                                                                    <div key={emp.id}
+                                                                        onMouseDown={() => { setAssignReviewerId(String(emp.id)); setReviewerSearch(`${emp.full_name} (${emp.designation_name || 'No Desig'})`); setShowReviewerList(false); }}
+                                                                        className="px-3 py-2 text-[11px] font-semibold text-gray-700 dark:text-gray-300 hover:bg-teal-500/10 cursor-pointer">
+                                                                        {emp.full_name} <span className="text-gray-400">({emp.designation_name || 'No Desig'})</span>
+                                                                    </div>
+                                                                ))}
+                                                            {employees.filter(emp => emp.full_name.toLowerCase().includes(reviewerSearch.toLowerCase())).length === 0 && (
+                                                                <div className="px-3 py-2 text-[11px] text-gray-400 italic">No match</div>
+                                                            )}
+                                                        </div>
+                                                    )}
+                                                </div>
                                             </div>
 
                                             {/* Create New KRA + nested KPIs */}
@@ -624,9 +648,50 @@ const KRAsAssign = () => {
                                                     </div>
 
                                                     <div className="flex justify-end">
-                                                        <button type="button" onClick={handleCreateKra} disabled={!newKraTitle.trim()}
+                                                        <button type="button" onClick={handleCreateKra} disabled={!newKraTitle.trim() || savingKra}
                                                             className="px-3 py-1.5 bg-teal-600 hover:bg-teal-700 disabled:bg-gray-300 text-white rounded-lg text-[10px] font-bold">
                                                             Save KRA & KPIs
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            )}
+
+                                            {/* Add KPI(s) to an existing KRA */}
+                                            {showAddKpi && (
+                                                <div className="bg-white dark:bg-gray-900 border border-teal-200 dark:border-teal-900/40 p-3 rounded-2xl space-y-2 animate__animated animate__fadeIn">
+                                                    <span className="text-[10px] font-black uppercase tracking-wider text-teal-600 dark:text-teal-400">Add KPI to Existing KRA</span>
+                                                    <select value={addKpiKraId} onChange={(e) => setAddKpiKraId(e.target.value)}
+                                                        className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 px-3 py-2 rounded-xl text-xs font-semibold text-gray-800 dark:text-white focus:outline-none">
+                                                        <option value="">-- Select existing KRA ({selectedEmployee.department_name || 'dept'}) --</option>
+                                                        {deptKrasAll.map(k => (<option key={k.id} value={k.id}>{k.title}</option>))}
+                                                        {deptKrasAll.length === 0 && <option value="" disabled>No KRAs for this department yet</option>}
+                                                    </select>
+                                                    <div className="space-y-1.5">
+                                                        <div className="flex justify-between items-center">
+                                                            <label className="block text-[9px] font-bold uppercase tracking-wider text-gray-400">New KPIs</label>
+                                                            <button type="button" onClick={addAddKpiRow} className="text-[10px] font-black text-teal-600 dark:text-teal-400 hover:underline">＋ Add KPI</button>
+                                                        </div>
+                                                        {addKpiRows.map((kpi, i) => (
+                                                            <div key={i} className="grid grid-cols-12 gap-1.5 items-center">
+                                                                <input type="text" placeholder="KPI name" value={kpi.name} onChange={(e) => updateAddKpiRow(i, 'name', e.target.value)}
+                                                                    className="col-span-6 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 px-2 py-1.5 rounded-lg text-[11px] font-semibold text-gray-800 dark:text-white focus:outline-none" />
+                                                                <input type="text" placeholder="Target" value={kpi.target} onChange={(e) => updateAddKpiRow(i, 'target', e.target.value)}
+                                                                    className="col-span-3 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 px-2 py-1.5 rounded-lg text-[11px] font-semibold text-gray-800 dark:text-white focus:outline-none" />
+                                                                <input type="text" placeholder="Unit" value={kpi.unit} onChange={(e) => updateAddKpiRow(i, 'unit', e.target.value)}
+                                                                    className="col-span-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 px-2 py-1.5 rounded-lg text-[11px] font-semibold text-gray-800 dark:text-white focus:outline-none" />
+                                                                <button type="button" onClick={() => removeAddKpiRow(i)} className="col-span-1 text-rose-500 text-sm font-bold">×</button>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                    {addKpiKraId && (
+                                                        <p className="text-[9px] text-gray-400">
+                                                            Existing KPIs: {kpis.filter(k => k.kra_master === parseInt(addKpiKraId)).map(k => k.name).join(', ') || 'none yet'}
+                                                        </p>
+                                                    )}
+                                                    <div className="flex justify-end">
+                                                        <button type="button" onClick={handleAddKpisToKra} disabled={!addKpiKraId}
+                                                            className="px-3 py-1.5 bg-teal-600 hover:bg-teal-700 disabled:bg-gray-300 text-white rounded-lg text-[10px] font-bold">
+                                                            Save KPIs
                                                         </button>
                                                     </div>
                                                 </div>
@@ -723,196 +788,6 @@ const KRAsAssign = () => {
                                     </>
                                 )}
 
-                                {/* TAB 2: KRA Tasks & KPIs */}
-                                {activeTab === 'tasks' && (
-                                    <>
-                                        <div className="flex justify-between items-center mb-3">
-                                            <span className="text-xs font-bold text-gray-400 uppercase">KRA Tasks & Linked KPIs ({kraTasks.length})</span>
-                                        </div>
-
-                                        {/* Form: Create Task & KPIs */}
-                                        <form onSubmit={handleCreateTask} className="bg-gray-50 dark:bg-gray-800/40 border border-gray-100 dark:border-gray-800/50 p-4 rounded-2xl mb-4 space-y-3 animate__animated animate__fadeIn">
-                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                                <div>
-                                                    <label className="block text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-1">Link to Assigned KRA</label>
-                                                    <select
-                                                        value={selectedKraId}
-                                                        onChange={(e) => setSelectedKraId(e.target.value)}
-                                                        className="w-full bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 px-3 py-2 rounded-xl text-xs font-semibold text-gray-800 dark:text-white focus:outline-none"
-                                                        required
-                                                    >
-                                                        <option value="">-- Choose Assigned KRA --</option>
-                                                        {employeeKras.map(k => (
-                                                            <option key={k.id} value={k.id}>{k.kra_title}</option>
-                                                        ))}
-                                                    </select>
-                                                </div>
-
-                                                <div>
-                                                    <label className="block text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-1">Task Title</label>
-                                                    <input
-                                                        type="text"
-                                                        placeholder="e.g. Optimize API response times"
-                                                        required
-                                                        value={taskTitle}
-                                                        onChange={(e) => setTaskTitle(e.target.value)}
-                                                        className="w-full bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 px-3 py-2 rounded-xl text-xs font-semibold text-gray-800 dark:text-white focus:outline-none"
-                                                    />
-                                                </div>
-                                            </div>
-
-                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                                <div>
-                                                    <label className="block text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-1">Priority</label>
-                                                    <select
-                                                        value={taskPriority}
-                                                        onChange={(e) => setTaskPriority(e.target.value)}
-                                                        className="w-full bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 px-3 py-2 rounded-xl text-xs font-semibold text-gray-800 dark:text-white focus:outline-none"
-                                                    >
-                                                        <option value="low">Low</option>
-                                                        <option value="medium">Medium</option>
-                                                        <option value="high">High</option>
-                                                    </select>
-                                                </div>
-
-                                                <div>
-                                                    <label className="block text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-1">Task Deadline</label>
-                                                    <input
-                                                        type="date"
-                                                        required
-                                                        value={taskDeadline}
-                                                        onChange={(e) => setTaskDeadline(e.target.value)}
-                                                        className="w-full bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 px-3 py-2 rounded-xl text-xs font-semibold text-gray-800 dark:text-white focus:outline-none"
-                                                    />
-                                                </div>
-                                            </div>
-
-                                            <div>
-                                                <div className="flex justify-between items-center mb-1">
-                                                    <label className="block text-[10px] font-bold uppercase tracking-wider text-gray-400">Define KPIs & Details</label>
-                                                    <button type="button" onClick={() => setShowCreateKpi(s => !s)} className="text-[10px] font-black text-teal-600 dark:text-teal-400 hover:underline">
-                                                        {showCreateKpi ? '× Cancel' : '＋ New KPI'}
-                                                    </button>
-                                                </div>
-
-                                                {/* Pick from KPI library (filtered to employee department) */}
-                                                <select
-                                                    value={selectedKpiId}
-                                                    onChange={(e) => appendKpiToDetails(e.target.value)}
-                                                    className="w-full bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 px-3 py-2 rounded-xl text-xs font-semibold text-gray-800 dark:text-white focus:outline-none mb-2"
-                                                >
-                                                    <option value="">＋ Add KPI from library...</option>
-                                                    {deptKpis.map(k => (
-                                                        <option key={k.id} value={k.id}>
-                                                            {k.name}{k.target_value ? ` (Target: ${k.target_value}${k.measurement_unit ? ' ' + k.measurement_unit : ''})` : ''}
-                                                        </option>
-                                                    ))}
-                                                </select>
-
-                                                {showCreateKpi && (
-                                                    <div className="bg-white dark:bg-gray-900 border border-teal-200 dark:border-teal-900/40 p-3 rounded-2xl space-y-2 mb-2 animate__animated animate__fadeIn">
-                                                        <span className="text-[10px] font-black uppercase tracking-wider text-teal-600 dark:text-teal-400">Create New KPI</span>
-                                                        <input type="text" placeholder="KPI name e.g. First Response Time"
-                                                            value={newKpiName} onChange={(e) => setNewKpiName(e.target.value)}
-                                                            className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 px-3 py-2 rounded-xl text-xs font-semibold text-gray-800 dark:text-white focus:outline-none" />
-                                                        <div className="grid grid-cols-2 gap-2">
-                                                            <input type="text" placeholder="Target e.g. < 2"
-                                                                value={newKpiTarget} onChange={(e) => setNewKpiTarget(e.target.value)}
-                                                                className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 px-3 py-2 rounded-xl text-xs font-semibold text-gray-800 dark:text-white focus:outline-none" />
-                                                            <input type="text" placeholder="Unit e.g. hours, %, count"
-                                                                value={newKpiUnit} onChange={(e) => setNewKpiUnit(e.target.value)}
-                                                                className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 px-3 py-2 rounded-xl text-xs font-semibold text-gray-800 dark:text-white focus:outline-none" />
-                                                        </div>
-                                                        <select value={newKpiKra} onChange={(e) => setNewKpiKra(e.target.value)}
-                                                            className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 px-3 py-2 rounded-xl text-xs font-semibold text-gray-800 dark:text-white focus:outline-none">
-                                                            <option value="">Link to KRA (optional)</option>
-                                                            {masterKras.map(k => (<option key={k.id} value={k.id}>{k.title}</option>))}
-                                                        </select>
-                                                        <div>
-                                                            <label className="block text-[9px] font-bold uppercase tracking-wider text-gray-400 mb-1">Department(s) — Ctrl/Cmd-click for multiple (leave empty = all)</label>
-                                                            <select multiple value={newKpiDepts.map(String)} onChange={(e) => setNewKpiDepts(readDeptSelection(e))}
-                                                                className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 px-3 py-2 rounded-xl text-xs font-semibold text-gray-800 dark:text-white focus:outline-none h-24">
-                                                                {departments.map(d => (<option key={d.id} value={d.id}>{d.department_name}</option>))}
-                                                            </select>
-                                                        </div>
-                                                        <div className="flex justify-end">
-                                                            <button type="button" onClick={handleCreateKpi} disabled={!newKpiName.trim()}
-                                                                className="px-3 py-1.5 bg-teal-600 hover:bg-teal-700 disabled:bg-gray-300 text-white rounded-lg text-[10px] font-bold">
-                                                                Save KPI
-                                                            </button>
-                                                        </div>
-                                                    </div>
-                                                )}
-
-                                                <textarea
-                                                    placeholder="Specify measurable KPIs e.g. KPI 1: Response time < 200ms; KPI 2: Zero database locks... (or pick from library above)"
-                                                    value={taskKPIs}
-                                                    onChange={(e) => setTaskKPIs(e.target.value)}
-                                                    rows={3}
-                                                    className="w-full bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 px-3 py-2 rounded-xl text-xs font-semibold text-gray-800 dark:text-white focus:outline-none resize-none"
-                                                />
-                                            </div>
-
-                                            <div className="flex justify-end pt-1">
-                                                <button
-                                                    type="submit"
-                                                    disabled={!selectedKraId || !taskTitle || !taskDeadline}
-                                                    className="px-4 py-2 bg-teal-500 hover:bg-teal-600 disabled:bg-gray-300 text-white rounded-xl text-xs font-bold shadow-md shadow-teal-500/10 transition duration-300"
-                                                >
-                                                    Create Task & KPIs
-                                                </button>
-                                            </div>
-                                        </form>
-
-                                        {/* Task list grouping */}
-                                        <div className="overflow-y-auto max-h-[220px] border border-gray-100 dark:border-gray-800 rounded-2xl">
-                                            <table className="w-full text-left border-collapse">
-                                                <thead>
-                                                    <tr className="bg-gray-50 dark:bg-gray-800/40 text-[9px] font-black uppercase text-gray-400 tracking-wider">
-                                                        <th className="p-3 pl-4">Task & Linked KRA</th>
-                                                        <th className="p-3">Priority</th>
-                                                        <th className="p-3">KPIs / Description</th>
-                                                        <th className="p-3">Status</th>
-                                                        <th className="p-3">Deadline</th>
-                                                    </tr>
-                                                </thead>
-                                                <tbody className="divide-y divide-gray-100 dark:divide-gray-800 text-xs font-medium text-gray-700 dark:text-gray-300">
-                                                    {loadingTasks ? (
-                                                        <tr>
-                                                            <td colSpan={5} className="text-center py-5 text-gray-400">Loading tasks...</td>
-                                                        </tr>
-                                                    ) : kraTasks.map((t) => (
-                                                        <tr key={t.id} className="hover:bg-gray-50/50 dark:hover:bg-gray-800/10">
-                                                            <td className="p-3 pl-4">
-                                                                <span className="block font-bold text-gray-800 dark:text-white leading-tight">{t.title}</span>
-                                                                <span className="block text-[8px] text-teal-600 dark:text-teal-400 mt-0.5 font-bold uppercase">{t.kra_title}</span>
-                                                            </td>
-                                                            <td className="p-3">
-                                                                <span className={`px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-wider ${
-                                                                    t.priority === 'high' ? 'bg-rose-100 text-rose-800 dark:bg-rose-950/40 dark:text-rose-400' : 'bg-slate-100 text-slate-800'
-                                                                }`}>
-                                                                    {t.priority}
-                                                                </span>
-                                                            </td>
-                                                            <td className="p-3 max-w-xs truncate">{t.description || 'No KPIs defined'}</td>
-                                                            <td className="p-3">
-                                                                <span className="font-extrabold uppercase text-[8px] bg-emerald-500/10 text-emerald-600 px-2 py-0.5 rounded-full">
-                                                                    {t.status}
-                                                                </span>
-                                                            </td>
-                                                            <td className="p-3 font-semibold text-gray-400">{t.deadline}</td>
-                                                        </tr>
-                                                    ))}
-                                                    {!loadingTasks && kraTasks.length === 0 && (
-                                                        <tr>
-                                                            <td colSpan={5} className="text-center py-5 text-gray-400 italic">No tasks linked to KRAs.</td>
-                                                        </tr>
-                                                    )}
-                                                </tbody>
-                                            </table>
-                                        </div>
-                                    </>
-                                )}
                             </div>
                         </>
                     ) : (
@@ -926,6 +801,181 @@ const KRAsAssign = () => {
                     )}
                 </div>
             </div>
+            )}
+
+            {/* ===================== MANAGE KRA & KPIs TAB ===================== */}
+            {tab === 'manage' && (
+            <div className="space-y-4">
+                {/* Toolbar */}
+                <div className="bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-3xl shadow-sm p-4 flex flex-col md:flex-row gap-3 md:items-center justify-between">
+                    <div className="flex flex-1 gap-3">
+                        <div className="relative flex-1 max-w-xs">
+                            <input
+                                type="text" placeholder="Search KRA..."
+                                value={manageSearch} onChange={(e) => setManageSearch(e.target.value)}
+                                className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 pl-9 pr-4 py-2 rounded-xl text-xs font-semibold text-gray-800 dark:text-white focus:outline-none"
+                            />
+                            <IconSearch className="w-4 h-4 text-gray-400 absolute left-3 top-2.5" />
+                        </div>
+                        <select
+                            value={manageDeptFilter} onChange={(e) => setManageDeptFilter(e.target.value)}
+                            className="bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 px-3 py-2 rounded-xl text-xs font-semibold text-gray-800 dark:text-white focus:outline-none"
+                        >
+                            <option value="">All departments</option>
+                            {departments.map(d => (<option key={d.id} value={d.id}>{d.department_name}</option>))}
+                        </select>
+                    </div>
+                    <button
+                        onClick={() => { setShowKraForm(s => !s); setShowCreateKra(false); }}
+                        className="px-4 py-2 bg-teal-500 hover:bg-teal-600 text-white rounded-xl text-xs font-bold shadow-md shadow-teal-500/10 whitespace-nowrap"
+                    >
+                        {showKraForm ? '× Cancel' : '＋ Create KRA'}
+                    </button>
+                </div>
+
+                {/* Create KRA panel (reuses create state + nested KPIs) */}
+                {showKraForm && (
+                    <div className="bg-white dark:bg-gray-900 border border-teal-200 dark:border-teal-900/40 p-4 rounded-3xl space-y-2 animate__animated animate__fadeIn">
+                        <span className="text-[10px] font-black uppercase tracking-wider text-teal-600 dark:text-teal-400">Create New KRA (with KPIs)</span>
+                        <input type="text" placeholder="KRA title e.g. Customer Satisfaction" value={newKraTitle} onChange={(e) => setNewKraTitle(e.target.value)}
+                            className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 px-3 py-2 rounded-xl text-xs font-semibold text-gray-800 dark:text-white focus:outline-none" />
+                        <textarea placeholder="Description (optional)" rows={2} value={newKraDesc} onChange={(e) => setNewKraDesc(e.target.value)}
+                            className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 px-3 py-2 rounded-xl text-xs font-semibold text-gray-800 dark:text-white focus:outline-none resize-none" />
+                        <div>
+                            <label className="block text-[9px] font-bold uppercase tracking-wider text-gray-400 mb-1">Department(s) — Ctrl/Cmd-click for multiple</label>
+                            <select multiple value={newKraDepts.map(String)} onChange={(e) => setNewKraDepts(readDeptSelection(e))}
+                                className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 px-3 py-2 rounded-xl text-xs font-semibold text-gray-800 dark:text-white focus:outline-none h-20">
+                                {departments.map(d => (<option key={d.id} value={d.id}>{d.department_name}</option>))}
+                            </select>
+                        </div>
+                        <div className="space-y-1.5">
+                            <div className="flex justify-between items-center">
+                                <label className="block text-[9px] font-bold uppercase tracking-wider text-gray-400">KPIs under this KRA</label>
+                                <button type="button" onClick={addKpiRow} className="text-[10px] font-black text-teal-600 dark:text-teal-400 hover:underline">＋ Add KPI</button>
+                            </div>
+                            {newKraKpis.map((kpi, i) => (
+                                <div key={i} className="grid grid-cols-12 gap-1.5 items-center">
+                                    <input type="text" placeholder="KPI name" value={kpi.name} onChange={(e) => updateKpiRow(i, 'name', e.target.value)}
+                                        className="col-span-6 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 px-2 py-1.5 rounded-lg text-[11px] font-semibold text-gray-800 dark:text-white focus:outline-none" />
+                                    <input type="text" placeholder="Target" value={kpi.target} onChange={(e) => updateKpiRow(i, 'target', e.target.value)}
+                                        className="col-span-3 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 px-2 py-1.5 rounded-lg text-[11px] font-semibold text-gray-800 dark:text-white focus:outline-none" />
+                                    <input type="text" placeholder="Unit" value={kpi.unit} onChange={(e) => updateKpiRow(i, 'unit', e.target.value)}
+                                        className="col-span-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 px-2 py-1.5 rounded-lg text-[11px] font-semibold text-gray-800 dark:text-white focus:outline-none" />
+                                    <button type="button" onClick={() => removeKpiRow(i)} className="col-span-1 text-rose-500 text-sm font-bold">×</button>
+                                </div>
+                            ))}
+                        </div>
+                        <div className="flex justify-end">
+                            <button type="button" onClick={handleCreateKra} disabled={!newKraTitle.trim() || savingKra}
+                                className="px-3 py-1.5 bg-teal-600 hover:bg-teal-700 disabled:bg-gray-300 text-white rounded-lg text-[10px] font-bold">Save KRA &amp; KPIs</button>
+                        </div>
+                    </div>
+                )}
+
+                {/* KRA cards */}
+                <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+                    {manageKras.length === 0 && (
+                        <div className="col-span-full text-center py-10 text-xs text-gray-400 italic bg-white dark:bg-gray-900 border border-dashed border-gray-200 dark:border-gray-800 rounded-3xl">
+                            No KRAs found. Use ＋ Create KRA.
+                        </div>
+                    )}
+                    {manageKras.map(kra => {
+                        const kraKpis = kpis.filter(k => k.kra_master === kra.id);
+                        const editing = editKraId === kra.id;
+                        return (
+                            <div key={kra.id} className="bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-3xl shadow-sm p-5">
+                                {/* KRA header */}
+                                {editing ? (
+                                    <div className="space-y-2 mb-3">
+                                        <input type="text" value={editKraTitle} onChange={(e) => setEditKraTitle(e.target.value)}
+                                            className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 px-3 py-2 rounded-xl text-xs font-bold text-gray-800 dark:text-white focus:outline-none" />
+                                        <textarea value={editKraDesc} onChange={(e) => setEditKraDesc(e.target.value)} rows={2} placeholder="Description"
+                                            className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 px-3 py-2 rounded-xl text-[11px] font-semibold text-gray-800 dark:text-white focus:outline-none resize-none" />
+                                        <select multiple value={editKraDepts.map(String)} onChange={(e) => setEditKraDepts(readDeptSelection(e))}
+                                            className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 px-3 py-2 rounded-xl text-[11px] font-semibold text-gray-800 dark:text-white focus:outline-none h-16">
+                                            {departments.map(d => (<option key={d.id} value={d.id}>{d.department_name}</option>))}
+                                        </select>
+                                        <div className="flex gap-2 justify-end">
+                                            <button onClick={cancelEditKra} className="px-3 py-1.5 bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 rounded-lg text-[10px] font-bold">Cancel</button>
+                                            <button onClick={handleUpdateKra} disabled={!editKraTitle.trim()} className="px-3 py-1.5 bg-teal-600 hover:bg-teal-700 disabled:bg-gray-300 text-white rounded-lg text-[10px] font-bold">Save</button>
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <div className="flex justify-between items-start mb-3">
+                                        <div className="flex-1 pr-2">
+                                            <h3 className="text-sm font-bold text-gray-800 dark:text-white leading-tight">{kra.title}</h3>
+                                            {kra.description && <p className="text-[10px] text-gray-400 mt-0.5 leading-relaxed">{kra.description}</p>}
+                                            <div className="flex flex-wrap gap-1 mt-2">
+                                                {(kra.departments || []).length === 0 && <span className="text-[8px] font-bold text-gray-400 bg-gray-50 dark:bg-gray-800 px-2 py-0.5 rounded-full">All depts</span>}
+                                                {(kra.departments || []).map(id => (
+                                                    <span key={id} className="text-[8px] font-bold text-teal-600 bg-teal-500/10 px-2 py-0.5 rounded-full">{deptName(id)}</span>
+                                                ))}
+                                            </div>
+                                        </div>
+                                        <div className="flex gap-2 shrink-0">
+                                            <button onClick={() => startEditKra(kra)} className="text-[9px] font-bold text-teal-600 hover:underline">Edit</button>
+                                            <button onClick={() => handleDeleteKra(kra.id)} className="text-[9px] font-bold text-rose-500 hover:underline">Delete</button>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* KPI list */}
+                                <div className="border-t border-gray-100 dark:border-gray-800 pt-3">
+                                    <div className="flex justify-between items-center mb-2">
+                                        <span className="text-[9px] font-black uppercase tracking-wider text-gray-400">KPIs ({kraKpis.length})</span>
+                                        <button onClick={() => { setAddKpiForKra(addKpiForKra === kra.id ? null : kra.id); setInlineKpi({ name: '', target: '', unit: '' }); }}
+                                            className="text-[10px] font-black text-teal-600 dark:text-teal-400 hover:underline">
+                                            {addKpiForKra === kra.id ? '× Cancel' : '＋ Add KPI'}
+                                        </button>
+                                    </div>
+
+                                    {addKpiForKra === kra.id && (
+                                        <div className="grid grid-cols-12 gap-1.5 items-center mb-2">
+                                            <input type="text" placeholder="KPI name" value={inlineKpi.name} onChange={(e) => setInlineKpi(p => ({ ...p, name: e.target.value }))}
+                                                className="col-span-5 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 px-2 py-1.5 rounded-lg text-[11px] font-semibold text-gray-800 dark:text-white focus:outline-none" />
+                                            <input type="text" placeholder="Target" value={inlineKpi.target} onChange={(e) => setInlineKpi(p => ({ ...p, target: e.target.value }))}
+                                                className="col-span-3 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 px-2 py-1.5 rounded-lg text-[11px] font-semibold text-gray-800 dark:text-white focus:outline-none" />
+                                            <input type="text" placeholder="Unit" value={inlineKpi.unit} onChange={(e) => setInlineKpi(p => ({ ...p, unit: e.target.value }))}
+                                                className="col-span-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 px-2 py-1.5 rounded-lg text-[11px] font-semibold text-gray-800 dark:text-white focus:outline-none" />
+                                            <button onClick={() => handleAddInlineKpi(kra)} disabled={!inlineKpi.name.trim()} className="col-span-2 bg-teal-600 hover:bg-teal-700 disabled:bg-gray-300 text-white rounded-lg text-[10px] font-bold py-1.5">Add</button>
+                                        </div>
+                                    )}
+
+                                    <div className="space-y-1">
+                                        {kraKpis.length === 0 && <p className="text-[10px] text-gray-400 italic py-1">No KPIs yet.</p>}
+                                        {kraKpis.map(kpi => (
+                                            editKpiId === kpi.id ? (
+                                                <div key={kpi.id} className="grid grid-cols-12 gap-1.5 items-center">
+                                                    <input type="text" value={editKpiName} onChange={(e) => setEditKpiName(e.target.value)}
+                                                        className="col-span-5 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 px-2 py-1.5 rounded-lg text-[11px] font-semibold text-gray-800 dark:text-white focus:outline-none" />
+                                                    <input type="text" value={editKpiTarget} onChange={(e) => setEditKpiTarget(e.target.value)} placeholder="Target"
+                                                        className="col-span-3 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 px-2 py-1.5 rounded-lg text-[11px] font-semibold text-gray-800 dark:text-white focus:outline-none" />
+                                                    <input type="text" value={editKpiUnit} onChange={(e) => setEditKpiUnit(e.target.value)} placeholder="Unit"
+                                                        className="col-span-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 px-2 py-1.5 rounded-lg text-[11px] font-semibold text-gray-800 dark:text-white focus:outline-none" />
+                                                    <button onClick={handleUpdateKpi} className="col-span-1 text-teal-600 text-[10px] font-black">✓</button>
+                                                    <button onClick={cancelEditKpi} className="col-span-1 text-gray-400 text-sm font-bold">×</button>
+                                                </div>
+                                            ) : (
+                                                <div key={kpi.id} className="flex items-center justify-between bg-gray-50 dark:bg-gray-800/40 rounded-lg px-3 py-1.5">
+                                                    <span className="text-[11px] font-semibold text-gray-700 dark:text-gray-300">
+                                                        {kpi.name}
+                                                        {kpi.target_value && <span className="text-teal-600 dark:text-teal-400 font-bold"> · {kpi.target_value}{kpi.measurement_unit ? ` ${kpi.measurement_unit}` : ''}</span>}
+                                                    </span>
+                                                    <div className="flex gap-2 shrink-0">
+                                                        <button onClick={() => startEditKpi(kpi)} className="text-[9px] font-bold text-teal-600 hover:underline">Edit</button>
+                                                        <button onClick={() => handleDeleteKpi(kpi.id)} className="text-[9px] font-bold text-rose-500 hover:underline">Delete</button>
+                                                    </div>
+                                                </div>
+                                            )
+                                        ))}
+                                    </div>
+                                </div>
+                            </div>
+                        );
+                    })}
+                </div>
+            </div>
+            )}
         </div>
     );
 };

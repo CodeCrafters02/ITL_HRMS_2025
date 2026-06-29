@@ -2342,8 +2342,9 @@ class EmployeePerformanceProfileAPIView(APIView):
         for f in feedback:
             feedback_data.append({
                 'id': f.id,
-                'feedback_type': f.category,
+                'feedback_type': f.get_category_display(),
                 'feedback_text': f.feedback_text,
+                'rating': f.rating,
                 'given_by_name': f"{f.sender.first_name} {f.sender.last_name}".strip() if f.sender else "System",
                 'created_at': f.created_at.strftime('%Y-%m-%d %H:%M') if f.created_at else None
             })
@@ -2421,6 +2422,35 @@ class KPIMasterViewSet(viewsets.ModelViewSet):
         if kra:
             qs = qs.filter(kra_master_id=kra)
         return qs
+
+
+class ContinuousFeedbackViewSet(viewsets.ModelViewSet):
+    queryset = ContinuousFeedback.objects.all().select_related('sender', 'receiver')
+    serializer_class = ContinuousFeedbackSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        qs = self.queryset
+        receiver = self.request.query_params.get('receiver')
+        sender = self.request.query_params.get('sender')
+        category = self.request.query_params.get('category')
+        if receiver:
+            qs = qs.filter(receiver_id=receiver)
+        if sender:
+            qs = qs.filter(sender_id=sender)
+        if category:
+            qs = qs.filter(category=category)
+        return qs
+
+    def perform_create(self, serializer):
+        if serializer.validated_data.get('sender'):
+            serializer.save()
+            return
+        try:
+            sender = self.request.user.employee_profile
+        except Exception:
+            sender = Employee.objects.first()
+        serializer.save(sender=sender)
 
 
 class EmployeeKRAViewSet(viewsets.ModelViewSet):

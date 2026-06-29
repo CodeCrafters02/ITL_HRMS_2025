@@ -50,6 +50,7 @@ interface Feedback {
     id: number;
     feedback_type: string;
     feedback_text: string;
+    rating: number | null;
     given_by_name: string;
     created_at: string | null;
 }
@@ -526,8 +527,13 @@ const SearchProfile = () => {
                                                         }`}>
                                                             {f.feedback_type}
                                                         </span>
+                                                        {f.rating ? (
+                                                            <span className="text-[11px] text-amber-400 font-bold leading-none">
+                                                                {'★'.repeat(f.rating)}<span className="text-gray-300 dark:text-gray-600">{'★'.repeat(5 - f.rating)}</span>
+                                                            </span>
+                                                        ) : null}
                                                     </div>
-                                                    
+
                                                     <p className="text-xs text-gray-700 dark:text-gray-300 leading-relaxed font-semibold">
                                                         "{f.feedback_text}"
                                                     </p>
