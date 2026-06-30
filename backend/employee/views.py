@@ -2298,100 +2298,112 @@ class EmployeePerformanceProfileAPIView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request, emp_id):
+        from datetime import datetime as dt
         employee = get_object_or_404(Employee, id=emp_id)
-        
-        # 1. Fetch KRAs
-        kras = EmployeeKRA.objects.filter(employee=employee).select_related('kra_master')
-        kras_data = []
-        for k in kras:
-            kras_data.append({
-                'id': k.id,
-                'kra_name': k.kra_master.title if k.kra_master else None,
-                'weightage': k.weightage,
-                'target_description': k.target_description,
-            })
 
-        # 2. Fetch Skills
+        raw_start = request.query_params.get('start_date', '').strip()
+        raw_end   = request.query_params.get('end_date', '').strip()
+        try:
+            start_date = dt.strptime(raw_start, '%Y-%m-%d').date() if raw_start else None
+            end_date   = dt.strptime(raw_end,   '%Y-%m-%d').date() if raw_end   else None
+        except ValueError:
+            start_date = end_date = None
+
+        # 1. KRAs — filter by created_at when date range given
+        kra_qs = EmployeeKRA.objects.filter(employee=employee).select_related('kra_master')
+        if start_date:
+            kra_qs = kra_qs.filter(created_at__date__gte=start_date)
+        if end_date:
+            kra_qs = kra_qs.filter(created_at__date__lte=end_date)
+        kras_data = [{
+            'id': k.id,
+            'kra_name': k.kra_master.title if k.kra_master else None,
+            'weightage': k.weightage,
+            'target_description': k.target_description,
+            'created_at': k.created_at.strftime('%Y-%m-%d') if k.created_at else None,
+        } for k in kra_qs]
+
+        # 2. Skills — no date on model; always return all
         skills = EmployeeSkill.objects.filter(employee=employee).select_related('skill')
-        skills_data = []
-        for s in skills:
-            skills_data.append({
-                'id': s.id,
-                'skill_name': s.skill.name if s.skill else None,
-                'proficiency_level': s.proficiency_level,
-                'approval_status': s.approval_status
-            })
+        skills_data = [{
+            'id': s.id,
+            'skill_name': s.skill.name if s.skill else None,
+            'proficiency_level': s.proficiency_level,
+            'approval_status': s.approval_status,
+        } for s in skills]
 
-        # 3. Fetch Appraisals & Evaluations
-        evals = AppraisalEvaluation.objects.filter(employee=employee).select_related('cycle')
+        # 3. Evaluations — filter by appraisal cycle start_date
+        eval_qs = AppraisalEvaluation.objects.filter(employee=employee).select_related('cycle')
+        if start_date:
+            eval_qs = eval_qs.filter(cycle__start_date__gte=start_date)
+        if end_date:
+            eval_qs = eval_qs.filter(cycle__start_date__lte=end_date)
         evals_data = []
-        for ev in evals:
+        for ev in eval_qs:
             final_rating = ev.hr_overall_rating or ev.manager_overall_rating
             evals_data.append({
                 'id': ev.id,
-                'cycle_name': ev.cycle.name if ev.cycle else "General Cycle",
-                'self_rating': float(ev.self_overall_rating) if ev.self_overall_rating is not None else None,
+                'cycle_name': ev.cycle.name if ev.cycle else 'General Cycle',
+                'cycle_start': ev.cycle.start_date.strftime('%Y-%m-%d') if ev.cycle and ev.cycle.start_date else None,
+                'cycle_end':   ev.cycle.end_date.strftime('%Y-%m-%d')   if ev.cycle and ev.cycle.end_date   else None,
+                'self_rating':    float(ev.self_overall_rating)    if ev.self_overall_rating    is not None else None,
                 'manager_rating': float(ev.manager_overall_rating) if ev.manager_overall_rating is not None else None,
-                'final_rating': float(final_rating) if final_rating is not None else None,
-                'status': ev.status
+                'final_rating':   float(final_rating)              if final_rating              is not None else None,
+                'status': ev.status,
             })
 
-        # 4. Fetch Continuous Feedback
-        feedback = ContinuousFeedback.objects.filter(receiver=employee).select_related('sender')
-        feedback_data = []
-        for f in feedback:
-            feedback_data.append({
-                'id': f.id,
-                'feedback_type': f.get_category_display(),
-                'feedback_text': f.feedback_text,
-                'rating': f.rating,
-                'given_by_name': f"{f.sender.first_name} {f.sender.last_name}".strip() if f.sender else "System",
-                'created_at': f.created_at.strftime('%Y-%m-%d %H:%M') if f.created_at else None
-            })
+        # 4. Feedback — filter by created_at
+        fb_qs = ContinuousFeedback.objects.filter(receiver=employee).select_related('sender')
+        if start_date:
+            fb_qs = fb_qs.filter(created_at__date__gte=start_date)
+        if end_date:
+            fb_qs = fb_qs.filter(created_at__date__lte=end_date)
+        feedback_data = [{
+            'id': f.id,
+            'feedback_type': f.get_category_display(),
+            'feedback_text': f.feedback_text,
+            'rating': f.rating,
+            'given_by_name': f"{f.sender.first_name} {f.sender.last_name}".strip() if f.sender else 'System',
+            'created_at': f.created_at.strftime('%Y-%m-%d %H:%M') if f.created_at else None,
+        } for f in fb_qs]
 
-        # 5. Formulate 9-Box positioning (derived or default if empty)
+        # 5. 9-Box — always based on all evaluations (not date-filtered) for accurate positioning
+        all_evals = AppraisalEvaluation.objects.filter(employee=employee)
         perf_score = 0.0
-        pot_score = 0.0
-        rated = [float(ev.hr_overall_rating or ev.manager_overall_rating or 0.0) for ev in evals]
+        rated = [float(ev.hr_overall_rating or ev.manager_overall_rating or 0.0) for ev in all_evals]
         if rated:
             perf_score = sum(rated) / len(rated)
+        pot_score = 0.0
         if skills.exists():
             prof_map = {'beginner': 2.0, 'intermediate': 3.5, 'expert': 5.0}
-            pot_score = sum([prof_map.get((s.proficiency_level or '').lower(), 3.0) for s in skills]) / skills.count()
-            
-        perf_label = "Medium"
-        if perf_score < 2.5: perf_label = "Low"
-        elif perf_score >= 4.0: perf_label = "High"
-        
-        pot_label = "Medium"
-        if pot_score < 2.5: pot_label = "Low"
-        elif pot_score >= 4.0: pot_label = "High"
+            pot_score = sum(prof_map.get((s.proficiency_level or '').lower(), 3.0) for s in skills) / skills.count()
 
+        def label(score):
+            if score < 2.5: return 'Low'
+            if score >= 4.0: return 'High'
+            return 'Medium'
+
+        perf_label = label(perf_score)
+        pot_label  = label(pot_score)
         box_matrix = {
-            ("Low", "Low"): "Risk",
-            ("Low", "Medium"): "Inconsistent Player",
-            ("Low", "High"): "Potential Gem",
-            ("Medium", "Low"): "Average Performer",
-            ("Medium", "Medium"): "Core Player",
-            ("Medium", "High"): "High Potential",
-            ("High", "Low"): "Solid Performer",
-            ("High", "Medium"): "High Performer",
-            ("High", "High"): "Star Performer",
+            ('Low', 'Low'): 'Risk', ('Low', 'Medium'): 'Inconsistent Player', ('Low', 'High'): 'Potential Gem',
+            ('Medium', 'Low'): 'Average Performer', ('Medium', 'Medium'): 'Core Player', ('Medium', 'High'): 'High Potential',
+            ('High', 'Low'): 'Solid Performer', ('High', 'Medium'): 'High Performer', ('High', 'High'): 'Star Performer',
         }
-        box_title = box_matrix.get((perf_label, pot_label), "Core Player")
 
         return Response({
             'kras': kras_data,
             'skills': skills_data,
             'evaluations': evals_data,
             'feedbacks': feedback_data,
+            'date_range': {'start': raw_start or None, 'end': raw_end or None},
             'nine_box': {
                 'performance_score': round(perf_score, 2),
-                'potential_score': round(pot_score, 2),
+                'potential_score':   round(pot_score, 2),
                 'performance_label': perf_label,
-                'potential_label': pot_label,
-                'box_title': box_title
-            }
+                'potential_label':   pot_label,
+                'box_title': box_matrix.get((perf_label, pot_label), 'Core Player'),
+            },
         })
 
 

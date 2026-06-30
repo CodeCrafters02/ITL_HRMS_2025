@@ -8,9 +8,9 @@ import { NavLink } from 'react-router-dom';
 const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
 const getHeaders = () => ({ Authorization: `Bearer ${localStorage.getItem('access_token')}` });
 
-interface KRA { id: number; kra_name: string; weightage: number; target_description: string; }
+interface KRA { id: number; kra_name: string; weightage: number; target_description: string; created_at: string | null; }
 interface Skill { id: number; skill_name: string; proficiency_level: string; approval_status: string; }
-interface Evaluation { id: number; cycle_name: string; self_rating: number | null; manager_rating: number | null; final_rating: number | null; status: string; }
+interface Evaluation { id: number; cycle_name: string; cycle_start: string | null; cycle_end: string | null; self_rating: number | null; manager_rating: number | null; final_rating: number | null; status: string; }
 interface Feedback { id: number; feedback_type: string; feedback_text: string; rating: number | null; given_by_name: string; created_at: string; }
 interface NineBox { performance_score: number; potential_score: number; performance_label: string; potential_label: string; box_title: string; }
 
@@ -20,6 +20,7 @@ interface PerfData {
     evaluations: Evaluation[];
     feedbacks: Feedback[];
     nine_box: NineBox;
+    date_range: { start: string | null; end: string | null };
 }
 
 const PROF_COLOR: Record<string, string> = {
@@ -62,22 +63,34 @@ const PerformanceDashboard = () => {
     const dispatch = useDispatch();
     const [data, setData] = useState<PerfData | null>(null);
     const [loading, setLoading] = useState(true);
+    const [filtering, setFiltering] = useState(false);
     const [empName, setEmpName] = useState('');
     const [empId, setEmpId] = useState<number | null>(null);
+    const [startDate, setStartDate] = useState('');
+    const [endDate, setEndDate] = useState('');
+    const [appliedStart, setAppliedStart] = useState('');
+    const [appliedEnd, setAppliedEnd] = useState('');
 
     useEffect(() => { dispatch(setPageTitle('My Performance Dashboard')); }, [dispatch]);
+
+    const fetchData = async (id: number, start = '', end = '') => {
+        const params = new URLSearchParams();
+        if (start) params.set('start_date', start);
+        if (end)   params.set('end_date', end);
+        const url = `${API_BASE}/employee/performance-profile/${id}/${params.toString() ? '?' + params.toString() : ''}`;
+        const res = await axios.get(url, { headers: getHeaders() });
+        setData(res.data);
+    };
 
     useEffect(() => {
         (async () => {
             try {
                 const idRes = await axios.get(`${API_BASE}/employee/employee-id/`, { headers: getHeaders() });
                 const id = idRes.data?.id;
-                const name = `${idRes.data?.full_name || ''}`;
                 setEmpId(id);
-                setEmpName(name);
+                setEmpName(idRes.data?.full_name || '');
                 if (!id) return;
-                const perfRes = await axios.get(`${API_BASE}/employee/performance-profile/${id}/`, { headers: getHeaders() });
-                setData(perfRes.data);
+                await fetchData(id);
             } catch (e) {
                 console.error(e);
             } finally {
@@ -85,6 +98,34 @@ const PerformanceDashboard = () => {
             }
         })();
     }, []);
+
+    const handleApplyFilter = async () => {
+        if (!empId) return;
+        setFiltering(true);
+        try {
+            await fetchData(empId, startDate, endDate);
+            setAppliedStart(startDate);
+            setAppliedEnd(endDate);
+        } finally {
+            setFiltering(false);
+        }
+    };
+
+    const handleClearFilter = async () => {
+        setStartDate('');
+        setEndDate('');
+        setAppliedStart('');
+        setAppliedEnd('');
+        if (!empId) return;
+        setFiltering(true);
+        try {
+            await fetchData(empId);
+        } finally {
+            setFiltering(false);
+        }
+    };
+
+    const isFiltered = !!(appliedStart || appliedEnd);
 
     const totalWeight = useMemo(() => (data?.kras || []).reduce((s, k) => s + k.weightage, 0), [data]);
     const avgRating = useMemo(() => {
@@ -207,8 +248,84 @@ const PerformanceDashboard = () => {
                 </div>
             </div>
 
+            {/* ── Date Range Filter ── */}
+            <div className="bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-2xl p-4 flex flex-col sm:flex-row sm:items-end gap-3">
+                <div className="flex items-center gap-2 shrink-0">
+                    <svg className="w-4 h-4 text-teal-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                    </svg>
+                    <span className="text-xs font-black text-gray-700 dark:text-white uppercase tracking-wider">Date Range</span>
+                    {isFiltered && (
+                        <span className="text-[9px] font-black bg-teal-500 text-white px-2 py-0.5 rounded-full animate-pulse">Active</span>
+                    )}
+                </div>
+
+                <div className="flex flex-col sm:flex-row gap-2 flex-1">
+                    <div className="flex flex-col gap-1 flex-1">
+                        <label className="text-[9px] font-bold uppercase tracking-wider text-gray-400">From</label>
+                        <input
+                            type="date"
+                            value={startDate}
+                            max={endDate || undefined}
+                            onChange={e => setStartDate(e.target.value)}
+                            className="bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 px-3 py-2 rounded-xl text-xs font-semibold text-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-teal-500/30"
+                        />
+                    </div>
+                    <div className="flex flex-col gap-1 flex-1">
+                        <label className="text-[9px] font-bold uppercase tracking-wider text-gray-400">To</label>
+                        <input
+                            type="date"
+                            value={endDate}
+                            min={startDate || undefined}
+                            onChange={e => setEndDate(e.target.value)}
+                            className="bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 px-3 py-2 rounded-xl text-xs font-semibold text-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-teal-500/30"
+                        />
+                    </div>
+                </div>
+
+                <div className="flex gap-2 shrink-0">
+                    <button
+                        onClick={handleApplyFilter}
+                        disabled={filtering || (!startDate && !endDate)}
+                        className="px-4 py-2 bg-teal-500 hover:bg-teal-600 disabled:bg-gray-300 dark:disabled:bg-gray-700 text-white rounded-xl text-xs font-bold shadow-md shadow-teal-500/10 transition disabled:cursor-not-allowed"
+                    >
+                        {filtering ? (
+                            <span className="flex items-center gap-1.5">
+                                <svg className="w-3 h-3 animate-spin" fill="none" viewBox="0 0 24 24">
+                                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
+                                </svg>
+                                Applying...
+                            </span>
+                        ) : 'Apply'}
+                    </button>
+                    {isFiltered && (
+                        <button
+                            onClick={handleClearFilter}
+                            disabled={filtering}
+                            className="px-4 py-2 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300 rounded-xl text-xs font-bold transition"
+                        >
+                            Clear
+                        </button>
+                    )}
+                </div>
+
+                {isFiltered && (
+                    <div className="flex items-center gap-1.5 text-[10px] font-bold text-teal-600 dark:text-teal-400 bg-teal-500/10 px-3 py-1.5 rounded-xl shrink-0">
+                        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2a1 1 0 01-.293.707L13 13.414V19a1 1 0 01-.553.894l-4 2A1 1 0 017 21v-7.586L3.293 6.707A1 1 0 013 6V4z" />
+                        </svg>
+                        {appliedStart && appliedEnd
+                            ? `${appliedStart} → ${appliedEnd}`
+                            : appliedStart
+                            ? `From ${appliedStart}`
+                            : `Until ${appliedEnd}`}
+                    </div>
+                )}
+            </div>
+
             {/* ── Stat Cards ── */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className={`grid grid-cols-2 lg:grid-cols-4 gap-4 transition-opacity ${filtering ? 'opacity-50 pointer-events-none' : ''}`}>
                 {[
                     { label: 'KRAs Assigned', value: data?.kras.length ?? 0, sub: `${totalWeight}% total weight`, color: 'teal' },
                     { label: 'Avg Rating', value: avgRating ?? '—', sub: `across ${data?.evaluations.length ?? 0} appraisals`, color: 'indigo' },
@@ -224,7 +341,7 @@ const PerformanceDashboard = () => {
             </div>
 
             {/* ── Charts Row ── */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div className={`grid grid-cols-1 lg:grid-cols-3 gap-6 transition-opacity ${filtering ? 'opacity-50 pointer-events-none' : ''}`}>
 
                 {/* KRA Donut */}
                 <div className="bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-3xl shadow-sm p-5">
