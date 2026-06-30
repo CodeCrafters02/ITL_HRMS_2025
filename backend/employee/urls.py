@@ -15,6 +15,7 @@ router.register('appraisal-extensions', AppraisalExtensionViewSet, basename='app
 router.register('salary-hike-config', SalaryHikeConfigViewSet, basename='salary-hike-config')
 router.register('appraisal-cycles', AppraisalCycleViewSet, basename='appraisal-cycles')
 router.register('appraisal-questions', AppraisalQuestionViewSet, basename='appraisal-questions')
+router.register('appraisal-evaluations', AppraisalEvaluationViewSet, basename='appraisal-evaluations')
 
 urlpatterns = [
     path('all-employees-list/', AllEmployeesAPIView.as_view(), name='all-employees-list'),
@@ -55,6 +56,7 @@ urlpatterns = [
     path('attendance-chart/', AttendanceChartDataAPIView.as_view(), name='attendance-chart'),
     path('performance-profile/<int:emp_id>/', EmployeePerformanceProfileAPIView.as_view(), name='employee-performance-profile'),
     path('performance-dashboard/', PerformanceDashboardAPIView.as_view(), name='performance-dashboard'),
+    path('performance-dashboard/my/', MyPerformanceDashboardAPIView.as_view(), name='my-performance-dashboard'),
     path('kra-tasks/', EmployeeKRATasksAPIView.as_view(), name='kra-tasks'),
 
 

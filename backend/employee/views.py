@@ -2407,6 +2407,146 @@ class EmployeePerformanceProfileAPIView(APIView):
         })
 
 
+
+class MyPerformanceDashboardAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        employee = getattr(request.user, 'employee_profile', None)
+        if not employee:
+            return Response({"detail": "Employee profile not found."}, status=status.HTTP_404_NOT_FOUND)
+
+        # 1. Fetch KRAs
+        kras = EmployeeKRA.objects.filter(employee=employee).select_related('kra_master')
+        kras_data = []
+        for k in kras:
+            kras_data.append({
+                'id': k.id,
+                'kra_name': k.kra_master.title if k.kra_master else None,
+                'weightage': k.weightage,
+                'target_description': k.target_description,
+            })
+
+        # 2. Fetch Skills
+        skills = EmployeeSkill.objects.filter(employee=employee).select_related('skill')
+        skills_data = []
+        for s in skills:
+            skills_data.append({
+                'id': s.id,
+                'skill_name': s.skill.name if s.skill else None,
+                'category': s.skill.category if s.skill else '',
+                'proficiency_level': s.proficiency_level,
+                'approval_status': s.approval_status
+            })
+
+        # 3. Fetch Appraisals & Evaluations
+        evals = AppraisalEvaluation.objects.filter(employee=employee).select_related('cycle')
+        evals_data = []
+        for ev in evals:
+            final_rating = ev.hr_overall_rating or ev.manager_overall_rating
+            evals_data.append({
+                'id': ev.id,
+                'cycle_name': ev.cycle.name if ev.cycle else "General Cycle",
+                'self_rating': float(ev.self_overall_rating) if ev.self_overall_rating is not None else None,
+                'manager_rating': float(ev.manager_overall_rating) if ev.manager_overall_rating is not None else None,
+                'final_rating': float(final_rating) if final_rating is not None else None,
+                'status': ev.status,
+                'self_appraisal_deadline': ev.cycle.self_appraisal_deadline.strftime('%Y-%m-%d %H:%M') if ev.cycle and ev.cycle.self_appraisal_deadline else None
+            })
+
+        # 4. Fetch Continuous Feedback (Received & Provided)
+        feedbacks_received = ContinuousFeedback.objects.filter(receiver=employee).select_related('sender')
+        feedbacks_received_data = []
+        for f in feedbacks_received:
+            feedbacks_received_data.append({
+                'id': f.id,
+                'feedback_type': f.get_category_display(),
+                'feedback_text': f.feedback_text,
+                'rating': f.rating,
+                'given_by_name': f"{f.sender.first_name} {f.sender.last_name}".strip() if f.sender else "System",
+                'created_at': f.created_at.strftime('%Y-%m-%d %H:%M') if f.created_at else None
+            })
+
+        feedbacks_provided = ContinuousFeedback.objects.filter(sender=employee).select_related('receiver')
+        feedbacks_provided_data = []
+        for f in feedbacks_provided:
+            feedbacks_provided_data.append({
+                'id': f.id,
+                'feedback_type': f.get_category_display(),
+                'feedback_text': f.feedback_text,
+                'rating': f.rating,
+                'receiver_name': f"{f.receiver.first_name} {f.receiver.last_name}".strip() if f.receiver else "System",
+                'created_at': f.created_at.strftime('%Y-%m-%d %H:%M') if f.created_at else None,
+                'visibility': f.visibility or 'private',
+            })
+
+        # 5. 9-Box Calculation
+        perf_score = 0.0
+        pot_score = 0.0
+        rated = [float(ev.hr_overall_rating or ev.manager_overall_rating or 0.0) for ev in evals]
+        if rated:
+            perf_score = sum(rated) / len(rated)
+        if skills.exists():
+            prof_map = {'beginner': 2.0, 'intermediate': 3.5, 'expert': 5.0}
+            pot_score = sum([prof_map.get((s.proficiency_level or '').lower(), 3.0) for s in skills]) / skills.count()
+
+        perf_label = "Medium"
+        if perf_score < 2.5: perf_label = "Low"
+        elif perf_score >= 4.0: perf_label = "High"
+
+        pot_label = "Medium"
+        if pot_score < 2.5: pot_label = "Low"
+        elif pot_score >= 4.0: pot_label = "High"
+
+        box_matrix = {
+            ("Low", "Low"): "Risk",
+            ("Low", "Medium"): "Inconsistent Player",
+            ("Low", "High"): "Potential Gem",
+            ("Medium", "Low"): "Average Performer",
+            ("Medium", "Medium"): "Core Player",
+            ("Medium", "High"): "High Potential",
+            ("High", "Low"): "Solid Performer",
+            ("High", "Medium"): "High Performer",
+            ("High", "High"): "Star Performer",
+        }
+        box_title = box_matrix.get((perf_label, pot_label), "Core Player")
+
+        # 6. Summary metrics
+        total_weightage = sum([k.weightage for k in kras])
+        active_appraisal = next((ev for ev in evals_data if ev['status'] in ['draft', 'submitted_self']), None)
+        if not active_appraisal and evals_data:
+            active_appraisal = evals_data[0]
+
+        summary = {
+            'kras_count': len(kras_data),
+            'total_kra_weightage': total_weightage,
+            'skills_count': len(skills_data),
+            'feedbacks_received_count': len(feedbacks_received_data),
+            'feedbacks_provided_count': len(feedbacks_provided_data),
+            'active_appraisal_status': active_appraisal['status'] if active_appraisal else 'No active cycle',
+            'active_appraisal_cycle': active_appraisal['cycle_name'] if active_appraisal else None,
+            'performance_label': perf_label,
+            'potential_label': pot_label,
+            'box_title': box_title
+        }
+
+        return Response({
+            'summary': summary,
+            'kras': kras_data,
+            'skills': skills_data,
+            'evaluations': evals_data,
+            'feedbacks_received': feedbacks_received_data,
+            'feedbacks_provided': feedbacks_provided_data,
+            'nine_box': {
+                'performance_score': round(perf_score, 2),
+                'potential_score': round(pot_score, 2),
+                'performance_label': perf_label,
+                'potential_label': pot_label,
+                'box_title': box_title
+            }
+        })
+
+
 class PerformanceDashboardAPIView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -2616,6 +2756,101 @@ class AppraisalCycleViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         return self.queryset.all()
+
+
+
+class AppraisalEvaluationViewSet(viewsets.ModelViewSet):
+    queryset = AppraisalEvaluation.objects.all().select_related('employee', 'cycle', 'manager').prefetch_related('answers__question')
+    serializer_class = AppraisalEvaluationSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        qs = self.queryset.all()
+        # Default behavior: filter for logged-in employee unless they are requesting for managees
+        mine = self.request.query_params.get('mine')
+        cycle_id = self.request.query_params.get('cycle')
+        
+        try:
+            employee = self.request.user.employee_profile
+        except Exception:
+            return qs.none()
+
+        if mine == 'true' or not self.request.user.is_staff:
+            qs = qs.filter(employee=employee)
+        else:
+            # Let manager see managees
+            qs = qs.filter(Q(employee=employee) | Q(manager=employee))
+            
+        if cycle_id:
+            qs = qs.filter(cycle_id=cycle_id)
+            
+        return qs
+
+    def perform_create(self, serializer):
+        try:
+            employee = self.request.user.employee_profile
+        except Exception:
+            raise ValidationError("You must have an employee profile to create an evaluation.")
+        
+        # Determine manager
+        manager = employee.reporting_manager
+        
+        # Check if already exists for this cycle
+        cycle = serializer.validated_data.get('cycle')
+        if AppraisalEvaluation.objects.filter(employee=employee, cycle=cycle).exists():
+            raise ValidationError("An appraisal evaluation already exists for this cycle.")
+            
+        serializer.save(employee=employee, manager=manager, status='draft')
+
+    @action(detail=True, methods=['post'])
+    def save_answers(self, request, pk=None):
+        evaluation = self.get_object()
+        
+        # Check permissions
+        try:
+            employee = request.user.employee_profile
+        except Exception:
+            return Response({"detail": "Employee profile required."}, status=403)
+            
+        if evaluation.employee != employee and evaluation.manager != employee:
+            raise PermissionDenied("You do not have permission to edit this evaluation.")
+            
+        answers_data = request.data.get('answers', [])
+        is_submit = request.data.get('submit', False) # True if final submit
+        
+        # Save each answer
+        for ans in answers_data:
+            q_id = ans.get('question_id')
+            rating = ans.get('rating_score')
+            comment = ans.get('comment', '')
+            
+            question = get_object_or_404(AppraisalQuestion, id=q_id)
+            
+            # Create or update answer
+            AppraisalAnswer.objects.update_or_create(
+                evaluation=evaluation,
+                question=question,
+                submitted_by=employee,
+                defaults={
+                    'rating_score': rating,
+                    'comment': comment
+                }
+            )
+            
+        if is_submit:
+            # Calculate overall rating
+            # Get all answers for this evaluation submitted by employee
+            self_answers = AppraisalAnswer.objects.filter(evaluation=evaluation, question__role_type='self')
+            ratings = [a.rating_score for a in self_answers if a.rating_score is not None]
+            
+            if ratings:
+                evaluation.self_overall_rating = sum(ratings) / len(ratings)
+            
+            evaluation.status = 'submitted_self'
+            evaluation.save(update_fields=['self_overall_rating', 'status'])
+            
+        # Return serialized evaluation
+        return Response(self.get_serializer(evaluation).data)
 
 
 class AppraisalQuestionViewSet(viewsets.ModelViewSet):

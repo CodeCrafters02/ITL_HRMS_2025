@@ -791,7 +791,37 @@ class AppraisalCycleSerializer(serializers.ModelSerializer):
 
 class AppraisalQuestionSerializer(serializers.ModelSerializer):
     cycle_name = serializers.CharField(source='cycle.name', read_only=True)
+    max_score = serializers.IntegerField(required=False, allow_null=True, default=5)
 
     class Meta:
         model = AppraisalQuestion
         fields = ['id', 'cycle', 'cycle_name', 'question_text', 'question_type', 'role_type', 'max_score']
+
+    def validate_max_score(self, value):
+        if value is None:
+            return 5
+        return value
+
+
+class AppraisalAnswerSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = AppraisalAnswer
+        fields = ['id', 'evaluation', 'question', 'submitted_by', 'rating_score', 'comment']
+        read_only_fields = ['submitted_by']
+
+
+class AppraisalEvaluationSerializer(serializers.ModelSerializer):
+    answers = AppraisalAnswerSerializer(many=True, read_only=True)
+    cycle_name = serializers.CharField(source='cycle.name', read_only=True)
+    employee_name = serializers.SerializerMethodField()
+
+    class Meta:
+        model = AppraisalEvaluation
+        fields = ['id', 'employee', 'employee_name', 'manager', 'cycle', 'cycle_name',
+                  'self_overall_rating', 'manager_overall_rating', 'hr_overall_rating',
+                  'status', 'answers']
+        read_only_fields = ['employee', 'manager', 'self_overall_rating',
+                            'manager_overall_rating', 'hr_overall_rating']
+
+    def get_employee_name(self, obj):
+        return f"{obj.employee.first_name} {obj.employee.last_name}".strip() if obj.employee else ""
