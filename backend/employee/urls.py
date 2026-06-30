@@ -11,6 +11,10 @@ router.register('kra-master', KRAMasterViewSet, basename='kra-master')
 router.register('kpi-master', KPIMasterViewSet, basename='kpi-master')
 router.register('continuous-feedback', ContinuousFeedbackViewSet, basename='continuous-feedback')
 router.register('employee-kra', EmployeeKRAViewSet, basename='employee-kra')
+router.register('appraisal-extensions', AppraisalExtensionViewSet, basename='appraisal-extensions')
+router.register('salary-hike-config', SalaryHikeConfigViewSet, basename='salary-hike-config')
+router.register('appraisal-cycles', AppraisalCycleViewSet, basename='appraisal-cycles')
+router.register('appraisal-questions', AppraisalQuestionViewSet, basename='appraisal-questions')
 
 urlpatterns = [
     path('all-employees-list/', AllEmployeesAPIView.as_view(), name='all-employees-list'),

@@ -18,10 +18,9 @@ interface Employee {
 }
 
 interface PeerReviewerMapping {
-    id: number; // The mapping ID in Django DB
+    id: number;
     employee: number;
     reviewer: number;
-    relationship: 'Peer' | 'Subordinate' | 'External Partner';
     status: 'nominated' | 'approved' | 'completed';
     created_at: string;
     reviewer_name: string;
@@ -39,8 +38,8 @@ const MultiRaterSelection = () => {
     const [loadingEmployees, setLoadingEmployees] = useState(true);
     const [loadingReviewers, setLoadingReviewers] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
-    const [selectedPeerId, setSelectedPeerId] = useState('');
-    const [relationship, setRelationship] = useState<'Peer' | 'Subordinate' | 'External Partner'>('Peer');
+    const [assigningId, setAssigningId] = useState<number | null>(null);
+    const [removingId, setRemovingId] = useState<number | null>(null);
     const [errorMsg, setErrorMsg] = useState('');
 
     // Fetch Auth Headers
@@ -98,67 +97,32 @@ const MultiRaterSelection = () => {
         fetchReviewers();
     }, [selectedEmployee]);
 
-    // Nominate Peer Reviewer
-    const handleAddReviewer = async (e: React.FormEvent) => {
-        e.preventDefault();
-        setErrorMsg('');
-        if (!selectedEmployee || !selectedPeerId) return;
-
-        const peerId = parseInt(selectedPeerId);
-
-        // Find details of nominated peer to check business rules on client-side too
-        const nominatedPeer = employees.find(emp => emp.id === peerId);
-        if (!nominatedPeer) return;
-
-        // Enforce same department filter rule
-        if (selectedEmployee.department !== nominatedPeer.department) {
-            setErrorMsg('Nominated peer reviewer must belong to the same department.');
-            return;
-        }
-
+    const handleAssignPeer = async (peerId: number) => {
+        if (!selectedEmployee) return;
+        setErrorMsg(''); setAssigningId(peerId);
         try {
-            const payload = {
+            const res = await axios.post(`${API_BASE}/employee/multirater/`, {
                 employee: selectedEmployee.id,
                 reviewer: peerId,
-                relationship: relationship,
-                status: 'nominated'
-            };
-
-            await axios.post(`${API_BASE}/employee/multirater/`, payload, {
-                headers: getHeaders(),
-            });
-
-            // Re-fetch mappings on success
-            const response = await axios.get(`${API_BASE}/employee/multirater/?employee_id=${selectedEmployee.id}`, {
-                headers: getHeaders(),
-            });
-            setReviewers(response.data);
-            setSelectedPeerId('');
+                status: 'nominated',
+            }, { headers: getHeaders() });
+            setReviewers(prev => [...prev, res.data]);
         } catch (err: any) {
-            console.error('Error adding peer mapping:', err);
-            const serverMsg = err.response?.data?.non_field_errors?.[0] || err.response?.data?.detail || 'Failed to nominate peer reviewer.';
-            setErrorMsg(serverMsg);
+            setErrorMsg(err.response?.data?.non_field_errors?.[0] || err.response?.data?.detail || 'Failed to assign peer.');
+        } finally {
+            setAssigningId(null);
         }
     };
 
-    // Remove Peer Reviewer
-    const handleRemoveReviewer = async (mappingId: number) => {
-        setErrorMsg('');
-        if (!selectedEmployee) return;
-
+    const handleRemoveReviewer = async (mappingId: number, peerId: number) => {
+        setErrorMsg(''); setRemovingId(peerId);
         try {
-            await axios.delete(`${API_BASE}/employee/multirater/${mappingId}/`, {
-                headers: getHeaders(),
-            });
-
-            // Re-fetch mappings on success
-            const response = await axios.get(`${API_BASE}/employee/multirater/?employee_id=${selectedEmployee.id}`, {
-                headers: getHeaders(),
-            });
-            setReviewers(response.data);
-        } catch (err: any) {
-            console.error('Error removing peer mapping:', err);
-            setErrorMsg('Failed to remove nominated peer reviewer.');
+            await axios.delete(`${API_BASE}/employee/multirater/${mappingId}/`, { headers: getHeaders() });
+            setReviewers(prev => prev.filter(r => r.id !== mappingId));
+        } catch {
+            setErrorMsg('Failed to remove peer reviewer.');
+        } finally {
+            setRemovingId(null);
         }
     };
 
@@ -168,12 +132,15 @@ const MultiRaterSelection = () => {
         (emp.designation_name && emp.designation_name.toLowerCase().includes(searchQuery.toLowerCase()))
     );
 
-    // Filter potential peers shown in the nomination select dropdown:
-    // MUST NOT be the selected employee themselves AND MUST be in the same department
-    const potentialPeers = selectedEmployee 
-        ? employees.filter(emp => 
-            emp.id !== selectedEmployee.id && 
-            emp.department === selectedEmployee.department
+    const [peerSearch, setPeerSearch] = useState('');
+
+    const potentialPeers = selectedEmployee
+        ? employees.filter(emp =>
+            emp.id !== selectedEmployee.id &&
+            emp.department === selectedEmployee.department &&
+            (peerSearch === '' ||
+                emp.full_name.toLowerCase().includes(peerSearch.toLowerCase()) ||
+                (emp.designation_name && emp.designation_name.toLowerCase().includes(peerSearch.toLowerCase())))
           )
         : [];
 
@@ -223,7 +190,7 @@ const MultiRaterSelection = () => {
                             return (
                                 <div
                                     key={emp.id}
-                                    onClick={() => { setSelectedEmployee(emp); setErrorMsg(''); }}
+                                    onClick={() => { setSelectedEmployee(emp); setErrorMsg(''); setPeerSearch(''); }}
                                     className={`p-3 rounded-xl border flex items-center justify-between cursor-pointer transition duration-200 select-none ${
                                         isSelected 
                                         ? 'bg-teal-500/10 border-teal-500 text-teal-900 dark:text-white' 
@@ -252,135 +219,129 @@ const MultiRaterSelection = () => {
                     </div>
                 </div>
 
-                {/* Right Panel: Selected Employee Peer Review Mappings */}
-                <div className="lg:col-span-2 bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-3xl shadow-sm p-6 flex flex-col justify-between h-[520px]">
-                    
+                {/* Right Panel */}
+                <div className="lg:col-span-2 bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-3xl shadow-sm p-6 flex flex-col h-[520px]">
                     {selectedEmployee ? (
                         <>
-                            {/* Selected Employee Info Banner */}
-                            <div>
-                                <div className="flex justify-between items-start border-b border-gray-100 dark:border-gray-800 pb-4 mb-4">
-                                    <div className="flex items-center gap-3">
-                                        <div className="w-10 h-10 rounded-full bg-teal-600 text-white flex items-center justify-center text-sm font-bold shadow-sm shrink-0">
-                                            {selectedEmployee.initials}
-                                        </div>
-                                        <div>
-                                            <h3 className="text-sm font-bold text-gray-800 dark:text-white leading-tight">{selectedEmployee.full_name}</h3>
-                                            <span className="text-[10px] text-gray-400 dark:text-gray-500 mt-0.5 block">
-                                                {selectedEmployee.designation_name || 'Designation Not Set'} • <strong className="text-teal-600 dark:text-teal-400">{selectedEmployee.department_name || 'Department Not Set'}</strong>
-                                            </span>
-                                        </div>
+                            {/* Header */}
+                            <div className="flex justify-between items-start border-b border-gray-100 dark:border-gray-800 pb-4 mb-4 shrink-0">
+                                <div className="flex items-center gap-3">
+                                    <div className="w-10 h-10 rounded-full bg-teal-600 text-white flex items-center justify-center text-sm font-bold shadow-sm shrink-0">
+                                        {selectedEmployee.initials}
                                     </div>
-                                    <span className="text-[9px] font-black uppercase tracking-wider text-teal-600 bg-teal-500/10 px-3 py-1 rounded-full">
-                                        Department peers selection
-                                    </span>
+                                    <div>
+                                        <h3 className="text-sm font-bold text-gray-800 dark:text-white leading-tight">{selectedEmployee.full_name}</h3>
+                                        <span className="text-[10px] text-gray-400 mt-0.5 block">
+                                            {selectedEmployee.designation_name || 'Designation Not Set'} · <strong className="text-teal-600 dark:text-teal-400">{selectedEmployee.department_name || 'No Dept'}</strong>
+                                        </span>
+                                    </div>
                                 </div>
-
-                                {/* Form: Nominate Peer Reviewer (Filtered by Department) */}
-                                <form onSubmit={handleAddReviewer} className="flex flex-wrap gap-4 items-end bg-gray-50 dark:bg-gray-800/40 border border-gray-100 dark:border-gray-800/50 p-4 rounded-2xl mb-4">
-                                    <div className="flex-1 min-w-[200px]">
-                                        <label className="block text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-1">
-                                            Nominate Peer (Same Dept Only)
-                                        </label>
-                                        <select
-                                            value={selectedPeerId}
-                                            onChange={(e) => setSelectedPeerId(e.target.value)}
-                                            className="w-full bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 px-3 py-2 rounded-xl text-xs font-semibold text-gray-800 dark:text-white focus:outline-none"
-                                            required
-                                        >
-                                            <option value="">-- Select Department Peer --</option>
-                                            {potentialPeers.map(e => (
-                                                <option key={e.id} value={e.id}>
-                                                    {e.full_name} ({e.designation_name || 'No Desig'})
-                                                </option>
-                                            ))}
-                                        </select>
+                                <div className="flex flex-col items-end gap-2 shrink-0">
+                                    <div className="flex items-center gap-2">
+                                        <span className="text-[9px] font-black uppercase tracking-wider text-teal-600 bg-teal-500/10 px-3 py-1 rounded-full">
+                                            Peer Role · Same Department
+                                        </span>
+                                        <span className="text-[9px] text-gray-400">
+                                            {reviewers.length} assigned
+                                        </span>
                                     </div>
-
-                                    <div className="min-w-[150px]">
-                                        <label className="block text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-1">Relationship</label>
-                                        <select
-                                            value={relationship}
-                                            onChange={(e) => setRelationship(e.target.value as PeerReviewerMapping['relationship'])}
-                                            className="w-full bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 px-3 py-2 rounded-xl text-xs font-semibold text-gray-800 dark:text-white focus:outline-none"
-                                        >
-                                            <option value="Peer">Peer</option>
-                                            <option value="Subordinate">Subordinate</option>
-                                            <option value="External Partner">External Partner</option>
-                                        </select>
+                                    <div className="relative">
+                                        <input
+                                            type="text"
+                                            placeholder="Search peers..."
+                                            value={peerSearch}
+                                            onChange={e => setPeerSearch(e.target.value)}
+                                            className="bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 pl-7 pr-3 py-1.5 rounded-xl text-[11px] font-semibold text-gray-800 dark:text-white focus:outline-none w-44"
+                                        />
+                                        <IconSearch className="w-3.5 h-3.5 text-gray-400 absolute left-2 top-2" />
                                     </div>
-
-                                    <button
-                                        type="submit"
-                                        disabled={!selectedPeerId}
-                                        className="px-4 py-2 bg-teal-500 hover:bg-teal-600 disabled:bg-gray-300 text-white rounded-xl text-xs font-bold shadow-md shadow-teal-500/10 transition duration-300"
-                                    >
-                                        Nominate Peer
-                                    </button>
-                                </form>
+                                </div>
                             </div>
 
-                            {/* Mappings Table */}
-                            <div className="flex-1 overflow-y-auto mb-4 border border-gray-100 dark:border-gray-800 rounded-2xl">
-                                <table className="w-full text-left border-collapse">
-                                    <thead>
-                                        <tr className="bg-gray-50 dark:bg-gray-800/40 text-[9px] font-black uppercase text-gray-400 tracking-wider">
-                                            <th className="p-3 pl-4">Nominated Reviewer</th>
-                                            <th className="p-3">Relationship</th>
-                                            <th className="p-3">Evaluation Status</th>
-                                            <th className="p-3 text-center pr-4">Action</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody className="divide-y divide-gray-100 dark:divide-gray-800 text-xs font-medium text-gray-700 dark:text-gray-300">
-                                        {loadingReviewers ? (
-                                            <tr>
-                                                <td colSpan={4} className="text-center py-10 text-gray-400">Loading mappings...</td>
-                                            </tr>
-                                        ) : reviewers.map((rev) => (
-                                            <tr key={rev.id} className="hover:bg-gray-50/50 dark:hover:bg-gray-800/10">
-                                                <td className="p-3 pl-4">
-                                                    <div className="flex items-center gap-3">
-                                                        <div className={`w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-bold text-white shadow-sm shrink-0 ${rev.reviewer_avatar_bg}`}>
-                                                            {rev.reviewer_initials}
-                                                        </div>
-                                                        <div>
-                                                            <span className="block font-bold leading-tight">{rev.reviewer_name}</span>
-                                                            <span className="block text-[8px] text-gray-400 mt-0.5">{rev.reviewer_designation}</span>
-                                                        </div>
-                                                    </div>
-                                                </td>
-                                                <td className="p-3">{rev.relationship}</td>
-                                                <td className="p-3">
-                                                    <span className={`px-2 py-0.5 rounded-full text-[8px] font-black uppercase tracking-wider ${
-                                                        rev.status === 'completed' 
-                                                        ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-400' 
-                                                        : rev.status === 'approved'
-                                                        ? 'bg-blue-100 text-blue-800 dark:bg-blue-950/40 dark:text-blue-400'
-                                                        : 'bg-amber-100 text-amber-800 dark:bg-amber-950/40 dark:text-amber-400'
-                                                    }`}>
-                                                        {rev.status}
-                                                    </span>
-                                                </td>
-                                                <td className="p-3 text-center pr-4">
-                                                    <button 
-                                                        onClick={() => handleRemoveReviewer(rev.id)}
-                                                        className="text-[9px] font-bold text-rose-500 hover:underline"
-                                                    >
-                                                        Remove
-                                                    </button>
-                                                </td>
-                                            </tr>
-                                        ))}
+                            {/* Peer grid */}
+                            <div className="flex-1 overflow-y-auto space-y-4">
+                                {loadingReviewers ? (
+                                    <div className="text-center py-10 text-xs text-gray-400">Loading...</div>
+                                ) : (() => {
+                                    const allDeptPeers = employees.filter(e => e.id !== selectedEmployee.id && e.department === selectedEmployee.department);
+                                    const assignedPeers = allDeptPeers.filter(p => reviewers.find(r => r.reviewer === p.id));
+                                    const unassignedPeers = potentialPeers.filter(p => !reviewers.find(r => r.reviewer === p.id));
 
-                                        {!loadingReviewers && reviewers.length === 0 && (
-                                            <tr>
-                                                <td colSpan={4} className="text-center py-10 text-gray-400 italic">
-                                                    No nominated peer reviewers found in the database.
-                                                </td>
-                                            </tr>
-                                        )}
-                                    </tbody>
-                                </table>
+                                    const PeerCard = ({ peer }: { peer: Employee }) => {
+                                        const mapping = reviewers.find(r => r.reviewer === peer.id);
+                                        const isAssigned = !!mapping;
+                                        const isActioning = assigningId === peer.id || removingId === peer.id;
+                                        return (
+                                            <div className={`flex items-center justify-between gap-3 p-3 rounded-2xl border transition ${
+                                                isAssigned
+                                                    ? 'border-teal-300 dark:border-teal-700 bg-teal-500/5'
+                                                    : 'border-gray-100 dark:border-gray-800 hover:border-gray-200 dark:hover:border-gray-700'
+                                            }`}>
+                                                <div className="flex items-center gap-3 min-w-0">
+                                                    <div className={`w-8 h-8 rounded-full flex items-center justify-center text-[10px] font-bold text-white shrink-0 ${peer.avatarBg}`}>
+                                                        {peer.initials}
+                                                    </div>
+                                                    <div className="min-w-0">
+                                                        <span className="block text-xs font-bold text-gray-800 dark:text-white truncate leading-tight">{peer.full_name}</span>
+                                                        <span className="block text-[9px] text-gray-400 truncate">{peer.designation_name || 'No Designation'}</span>
+                                                    </div>
+                                                </div>
+                                                {isAssigned ? (
+                                                    <div className="flex items-center gap-2 shrink-0">
+                                                        <span className={`text-[8px] font-black uppercase px-2 py-0.5 rounded-full ${
+                                                            mapping.status === 'completed' ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400'
+                                                            : mapping.status === 'approved' ? 'bg-blue-100 text-blue-700 dark:bg-blue-950/40 dark:text-blue-400'
+                                                            : 'bg-teal-100 text-teal-700 dark:bg-teal-950/40 dark:text-teal-400'
+                                                        }`}>{mapping.status}</span>
+                                                        <button onClick={() => handleRemoveReviewer(mapping.id, peer.id)} disabled={isActioning}
+                                                            className="text-[9px] font-bold text-rose-500 hover:text-rose-700 disabled:opacity-40">
+                                                            {isActioning ? '...' : 'Remove'}
+                                                        </button>
+                                                    </div>
+                                                ) : (
+                                                    <button onClick={() => handleAssignPeer(peer.id)} disabled={isActioning}
+                                                        className="shrink-0 px-3 py-1.5 bg-teal-500 hover:bg-teal-600 disabled:bg-gray-200 text-white rounded-xl text-[9px] font-black transition">
+                                                        {isActioning ? '...' : '+ Assign'}
+                                                    </button>
+                                                )}
+                                            </div>
+                                        );
+                                    };
+
+                                    return (
+                                        <>
+                                            {/* Assigned peers block */}
+                                            {assignedPeers.length > 0 && (
+                                                <div>
+                                                    <div className="flex items-center gap-2 mb-2">
+                                                        <span className="text-[10px] font-black uppercase tracking-wider text-teal-600 dark:text-teal-400">Assigned Peers</span>
+                                                        <span className="text-[9px] font-bold bg-teal-500/10 text-teal-600 dark:text-teal-400 px-1.5 py-0.5 rounded-full">{assignedPeers.length}</span>
+                                                    </div>
+                                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                                        {assignedPeers.map(peer => <PeerCard key={peer.id} peer={peer} />)}
+                                                    </div>
+                                                </div>
+                                            )}
+
+                                            {/* Unassigned peers block */}
+                                            <div>
+                                                <div className="flex items-center gap-2 mb-2">
+                                                    <span className="text-[10px] font-black uppercase tracking-wider text-gray-400">Available Peers</span>
+                                                    <span className="text-[9px] font-bold bg-gray-100 dark:bg-gray-800 text-gray-500 px-1.5 py-0.5 rounded-full">{unassignedPeers.length}</span>
+                                                </div>
+                                                {unassignedPeers.length === 0 ? (
+                                                    <div className="text-center py-6 text-xs text-gray-400 italic border border-dashed border-gray-200 dark:border-gray-700 rounded-2xl">
+                                                        {allDeptPeers.length === assignedPeers.length ? 'All department peers are assigned.' : 'No peers match your search.'}
+                                                    </div>
+                                                ) : (
+                                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                                        {unassignedPeers.map(peer => <PeerCard key={peer.id} peer={peer} />)}
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </>
+                                    );
+                                })()}
                             </div>
                         </>
                     ) : (
@@ -388,7 +349,7 @@ const MultiRaterSelection = () => {
                             <IconUsers className="w-8 h-8 text-gray-300 dark:text-gray-700 mb-3" />
                             <h4 className="text-xs font-bold text-gray-500 dark:text-gray-400">Reviewer Workspace</h4>
                             <p className="text-[10px] text-gray-400 dark:text-gray-500 max-w-xs mt-1.5 leading-relaxed">
-                                Select an employee from the directory on the left to manage their nominated peer mappings.
+                                Select an employee from the directory on the left to manage their peer reviewers.
                             </p>
                         </div>
                     )}

@@ -117,7 +117,6 @@ const TrackFeedback = lazy(() => import('../pages/Admin/Performance/TrackFeedbac
 const ManagerSummaries = lazy(() => import('../pages/Admin/Performance/ManagerSummaries'));
 const BulkMap = lazy(() => import('../pages/Admin/Performance/BulkMap'));
 const ReviewQuestions = lazy(() => import('../pages/Admin/Performance/ReviewQuestions'));
-const EvaluationQuestions = lazy(() => import('../pages/Admin/Performance/EvaluationQuestions'));
 const AppraisalCycles = lazy(() => import('../pages/Admin/Performance/AppraisalCycles'));
 const SalaryHike = lazy(() => import('../pages/Admin/Performance/SalaryHike'));
 const ReviewExtensions = lazy(() => import('../pages/Admin/Performance/ReviewExtensions'));
@@ -725,10 +724,6 @@ const routes = [
     {
         path: '/admin/performance/review-questions',
         element: <ReviewQuestions />,
-    },
-    {
-        path: '/admin/performance/evaluation-questions',
-        element: <EvaluationQuestions />,
     },
     {
         path: '/admin/performance/appraisal-cycles',

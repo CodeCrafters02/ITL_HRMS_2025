@@ -58,7 +58,7 @@ const groups: MetricGroup[] = [
         title: 'Methods & Setup Templates',
         desc: 'Configure bulk templates, build review questionnaires, and map bulk competency requirements across departments.',
         badge: 'Setup Templates',
-        features: ['Bulk Map KRAs', 'Review Questions', 'Summary Evaluation Questions'],
+        features: ['Bulk Map KRAs', 'Review Questions'],
     },
     {
         title: 'Appraisals Lifecycle',

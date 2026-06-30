@@ -552,7 +552,6 @@ const Sidebar = () => {
                                                         <ul className="sub-menu text-gray-500">
                                                             <li><NavLink to="/admin/performance/bulk-map">{t('Bulk Map KRAs')}</NavLink></li>
                                                             <li><NavLink to="/admin/performance/review-questions">{t('Create Review Questions')}</NavLink></li>
-                                                            <li><NavLink to="/admin/performance/evaluation-questions">{t('Create Eval Questions')}</NavLink></li>
                                                         </ul>
                                                     </AnimateHeight>
                                                 </li>

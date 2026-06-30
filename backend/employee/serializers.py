@@ -611,7 +611,8 @@ class MultiRaterMappingSerializer(serializers.ModelSerializer):
             'id', 'employee', 'reviewer', 'cycle', 'status', 'created_at',
             'reviewer_name', 'reviewer_designation', 'reviewer_initials', 'reviewer_avatar_bg'
         ]
-        
+        extra_kwargs = {'cycle': {'required': False}}
+
     def get_reviewer_name(self, obj):
         if obj.reviewer:
             return f"{obj.reviewer.first_name} {obj.reviewer.last_name}".strip()
@@ -720,5 +721,80 @@ class EmployeeKRASerializer(serializers.ModelSerializer):
             
         if not instance_id and EmployeeKRA.objects.filter(employee=employee, kra_master=kra_master).exists():
             raise serializers.ValidationError("This KRA is already assigned to the employee.")
-            
+
         return attrs
+
+
+class AppraisalExtensionSerializer(serializers.ModelSerializer):
+    employee_name = serializers.SerializerMethodField()
+    employee_initials = serializers.SerializerMethodField()
+    employee_designation = serializers.CharField(source='employee.designation.designation_name', read_only=True, default='')
+    employee_department = serializers.CharField(source='employee.department.department_name', read_only=True, default='')
+    requester_name = serializers.SerializerMethodField()
+    cycle_name = serializers.CharField(source='cycle.name', read_only=True)
+
+    class Meta:
+        model = AppraisalExtension
+        fields = [
+            'id', 'cycle', 'cycle_name', 'employee', 'employee_name', 'employee_initials',
+            'employee_designation', 'employee_department',
+            'requester', 'requester_name', 'original_deadline', 'extended_deadline',
+            'reason', 'status',
+        ]
+
+    def get_employee_name(self, obj):
+        return f"{obj.employee.first_name} {obj.employee.last_name}".strip()
+
+    def get_employee_initials(self, obj):
+        parts = [obj.employee.first_name, obj.employee.last_name]
+        return ''.join(p[0].upper() for p in parts if p)[:2]
+
+    def get_requester_name(self, obj):
+        if not obj.requester:
+            return None
+        return f"{obj.requester.first_name} {obj.requester.last_name}".strip()
+
+
+class SalaryHikeConfigSerializer(serializers.ModelSerializer):
+    cycle_name = serializers.CharField(source='cycle.name', read_only=True)
+
+    class Meta:
+        model = SalaryHikeConfig
+        fields = ['id', 'cycle', 'cycle_name', 'min_rating', 'max_rating', 'recommended_hike_percentage']
+
+    def validate(self, attrs):
+        min_r = attrs.get('min_rating', 0)
+        max_r = attrs.get('max_rating', 0)
+        if min_r >= max_r:
+            raise serializers.ValidationError('min_rating must be less than max_rating.')
+        return attrs
+
+
+class AppraisalCycleSerializer(serializers.ModelSerializer):
+    question_count = serializers.SerializerMethodField()
+    self_count = serializers.SerializerMethodField()
+    manager_count = serializers.SerializerMethodField()
+    peer_count = serializers.SerializerMethodField()
+    hr_count = serializers.SerializerMethodField()
+
+    class Meta:
+        model = AppraisalCycle
+        fields = [
+            'id', 'name', 'start_date', 'end_date',
+            'self_appraisal_deadline', 'manager_eval_deadline', 'status',
+            'question_count', 'self_count', 'manager_count', 'peer_count', 'hr_count',
+        ]
+
+    def get_question_count(self, obj): return obj.questions.count()
+    def get_self_count(self, obj): return obj.questions.filter(role_type='self').count()
+    def get_manager_count(self, obj): return obj.questions.filter(role_type='manager').count()
+    def get_peer_count(self, obj): return obj.questions.filter(role_type='peer').count()
+    def get_hr_count(self, obj): return obj.questions.filter(role_type='hr').count()
+
+
+class AppraisalQuestionSerializer(serializers.ModelSerializer):
+    cycle_name = serializers.CharField(source='cycle.name', read_only=True)
+
+    class Meta:
+        model = AppraisalQuestion
+        fields = ['id', 'cycle', 'cycle_name', 'question_text', 'question_type', 'role_type', 'max_score']

@@ -2279,7 +2279,7 @@ class MultiRaterMappingViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
-        queryset = self.queryset
+        queryset = self.queryset.all()
         employee_id = self.request.query_params.get('employee_id')
         if employee_id:
             queryset = queryset.filter(employee_id=employee_id)
@@ -2401,7 +2401,7 @@ class KRAMasterViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
-        qs = self.queryset
+        qs = self.queryset.all()
         dept = self.request.query_params.get('department')
         if dept:
             qs = qs.filter(departments__id=dept).distinct()
@@ -2414,7 +2414,7 @@ class KPIMasterViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
-        qs = self.queryset
+        qs = self.queryset.all()
         dept = self.request.query_params.get('department')
         kra = self.request.query_params.get('kra_master')
         if dept:
@@ -2430,7 +2430,7 @@ class ContinuousFeedbackViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
-        qs = self.queryset
+        qs = self.queryset.all()
         receiver = self.request.query_params.get('receiver')
         sender = self.request.query_params.get('sender')
         category = self.request.query_params.get('category')
@@ -2459,11 +2459,82 @@ class EmployeeKRAViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
-        queryset = self.queryset
+        queryset = self.queryset.all()
         employee_id = self.request.query_params.get('employee_id')
         if employee_id:
             queryset = queryset.filter(employee_id=employee_id)
         return queryset
+
+
+class AppraisalExtensionViewSet(viewsets.ModelViewSet):
+    queryset = AppraisalExtension.objects.select_related('cycle', 'employee', 'requester').order_by('-id')
+    serializer_class = AppraisalExtensionSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        qs = self.queryset.all()
+        cycle = self.request.query_params.get('cycle')
+        status = self.request.query_params.get('status')
+        employee = self.request.query_params.get('employee')
+        if cycle:
+            qs = qs.filter(cycle_id=cycle)
+        if status:
+            qs = qs.filter(status=status)
+        if employee:
+            qs = qs.filter(employee_id=employee)
+        return qs
+
+    @action(detail=True, methods=['patch'])
+    def approve(self, request, pk=None):
+        ext = self.get_object()
+        ext.status = 'approved'
+        ext.save()
+        return Response(self.get_serializer(ext).data)
+
+    @action(detail=True, methods=['patch'])
+    def reject(self, request, pk=None):
+        ext = self.get_object()
+        ext.status = 'rejected'
+        ext.save()
+        return Response(self.get_serializer(ext).data)
+
+
+class SalaryHikeConfigViewSet(viewsets.ModelViewSet):
+    queryset = SalaryHikeConfig.objects.select_related('cycle').order_by('min_rating')
+    serializer_class = SalaryHikeConfigSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        qs = self.queryset.all()
+        cycle = self.request.query_params.get('cycle')
+        if cycle:
+            qs = qs.filter(cycle_id=cycle)
+        return qs
+
+
+class AppraisalCycleViewSet(viewsets.ModelViewSet):
+    queryset = AppraisalCycle.objects.prefetch_related('questions').order_by('-id')
+    serializer_class = AppraisalCycleSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        return self.queryset.all()
+
+
+class AppraisalQuestionViewSet(viewsets.ModelViewSet):
+    queryset = AppraisalQuestion.objects.select_related('cycle').order_by('id')
+    serializer_class = AppraisalQuestionSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        qs = self.queryset.all()
+        cycle = self.request.query_params.get('cycle')
+        role_type = self.request.query_params.get('role_type')
+        if cycle:
+            qs = qs.filter(cycle_id=cycle)
+        if role_type:
+            qs = qs.filter(role_type=role_type)
+        return qs
 
 
 class EmployeeKRATasksAPIView(APIView):

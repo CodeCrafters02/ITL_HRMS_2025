@@ -324,6 +324,7 @@ class AppraisalQuestion(models.Model):
     question_text = models.TextField()
     question_type = models.CharField(max_length=20, default='scale')
     role_type = models.CharField(max_length=20, default='self')
+    max_score = models.PositiveSmallIntegerField(default=5)
 
     def __str__(self):
         return f"{self.cycle.name} - {self.role_type} - {self.question_text[:30]}"
