@@ -719,9 +719,6 @@ class EmployeeKRASerializer(serializers.ModelSerializer):
         if total_weight > 100:
             raise serializers.ValidationError(f"Total weightage cannot exceed 100%. Current total with this assignment would be {total_weight}%.")
             
-        if not instance_id and EmployeeKRA.objects.filter(employee=employee, kra_master=kra_master).exists():
-            raise serializers.ValidationError("This KRA is already assigned to the employee.")
-
         return attrs
 
 

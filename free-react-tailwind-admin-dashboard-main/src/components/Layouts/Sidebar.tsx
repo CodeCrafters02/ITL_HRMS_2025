@@ -294,12 +294,110 @@ const Sidebar = () => {
                             )}
 
                             {/* ===== EMPLOYEE SIDEBAR ===== */}
-                            {userRole === 'employee' && (
+                            {userRole === 'employee' && (() => {
+                                const isPerfPage = location.pathname.startsWith('/employee/performance');
+                                return (
                                 <>
                                     <h2 className="py-3 px-7 flex items-center uppercase font-extrabold bg-white-light/30 dark:bg-dark dark:bg-opacity-[0.08] -mx-4 mb-1">
                                         <IconMinus className="w-4 h-5 flex-none hidden" />
-                                        <span>{t('Employee Dashboard')}</span>
+                                        <span>{isPerfPage ? t('Performance') : t('Employee Dashboard')}</span>
                                     </h2>
+
+                                    {isPerfPage ? (
+                                        <>
+                                            {/* Performance Dashboard */}
+                                            <li className="menu nav-item">
+                                                <NavLink to="/employee/performance" end className="group">
+                                                    <div className="flex items-center">
+                                                        <IconMenuCharts className="group-hover:!text-primary shrink-0" />
+                                                        <span className="ltr:pl-3 rtl:pr-3 text-black dark:text-[#506690] dark:group-hover:text-white-dark">{t('Performance Dashboard')}</span>
+                                                    </div>
+                                                </NavLink>
+                                            </li>
+
+                                            {/* Goals & KRAs */}
+                                            <li className="menu nav-item">
+                                                <button type="button" className={`${currentMenu === 'emp-perf-goals' ? 'active' : ''} nav-link group w-full`} onClick={() => toggleMenu('emp-perf-goals')}>
+                                                    <div className="flex items-center">
+                                                        <IconMenuNotes className="group-hover:!text-primary shrink-0" />
+                                                        <span className="ltr:pl-3 rtl:pr-3 text-black dark:text-[#506690] dark:group-hover:text-white-dark">{t('Goals & KRAs')}</span>
+                                                    </div>
+                                                    <div className={currentMenu !== 'emp-perf-goals' ? 'rtl:rotate-90 -rotate-90' : ''}><IconCaretDown /></div>
+                                                </button>
+                                                <AnimateHeight duration={300} height={currentMenu === 'emp-perf-goals' ? 'auto' : 0}>
+                                                    <ul className="sub-menu text-gray-500">
+                                                        <li><NavLink to="/employee/performance/kras">{t('My KRAs')}</NavLink></li>
+                                                        <li><NavLink to="/employee/performance/self-map-kras">{t('Self Map KRAs')}</NavLink></li>
+                                                        <li><NavLink to="/employee/performance/goals">{t('Goals')}</NavLink></li>
+                                                    </ul>
+                                                </AnimateHeight>
+                                            </li>
+
+                                            {/* Skills */}
+                                            <li className="menu nav-item">
+                                                <button type="button" className={`${currentMenu === 'emp-perf-skills' ? 'active' : ''} nav-link group w-full`} onClick={() => toggleMenu('emp-perf-skills')}>
+                                                    <div className="flex items-center">
+                                                        <IconMenuTables className="group-hover:!text-primary shrink-0" />
+                                                        <span className="ltr:pl-3 rtl:pr-3 text-black dark:text-[#506690] dark:group-hover:text-white-dark">{t('Skills')}</span>
+                                                    </div>
+                                                    <div className={currentMenu !== 'emp-perf-skills' ? 'rtl:rotate-90 -rotate-90' : ''}><IconCaretDown /></div>
+                                                </button>
+                                                <AnimateHeight duration={300} height={currentMenu === 'emp-perf-skills' ? 'auto' : 0}>
+                                                    <ul className="sub-menu text-gray-500">
+                                                        <li><NavLink to="/employee/performance/competencies">{t('Competencies')}</NavLink></li>
+                                                        <li><NavLink to="/employee/performance/skills-inventory">{t('Skills Inventory')}</NavLink></li>
+                                                        <li><NavLink to="/employee/performance/skill-upgrades">{t('Skill Upgrades')}</NavLink></li>
+                                                    </ul>
+                                                </AnimateHeight>
+                                            </li>
+
+                                            {/* Feedback */}
+                                            <li className="menu nav-item">
+                                                <button type="button" className={`${currentMenu === 'emp-perf-feedback' ? 'active' : ''} nav-link group w-full`} onClick={() => toggleMenu('emp-perf-feedback')}>
+                                                    <div className="flex items-center">
+                                                        <IconMenuChat className="group-hover:!text-primary shrink-0" />
+                                                        <span className="ltr:pl-3 rtl:pr-3 text-black dark:text-[#506690] dark:group-hover:text-white-dark">{t('Feedback')}</span>
+                                                    </div>
+                                                    <div className={currentMenu !== 'emp-perf-feedback' ? 'rtl:rotate-90 -rotate-90' : ''}><IconCaretDown /></div>
+                                                </button>
+                                                <AnimateHeight duration={300} height={currentMenu === 'emp-perf-feedback' ? 'auto' : 0}>
+                                                    <ul className="sub-menu text-gray-500">
+                                                        <li><NavLink to="/employee/performance/feedback-received">{t('Feedback Received')}</NavLink></li>
+                                                        <li><NavLink to="/employee/performance/feedback-provided">{t('Feedback Provided')}</NavLink></li>
+                                                    </ul>
+                                                </AnimateHeight>
+                                            </li>
+
+                                            {/* Appraisals */}
+                                            <li className="menu nav-item">
+                                                <button type="button" className={`${currentMenu === 'emp-perf-appraisal' ? 'active' : ''} nav-link group w-full`} onClick={() => toggleMenu('emp-perf-appraisal')}>
+                                                    <div className="flex items-center">
+                                                        <IconMenuCalendar className="group-hover:!text-primary shrink-0" />
+                                                        <span className="ltr:pl-3 rtl:pr-3 text-black dark:text-[#506690] dark:group-hover:text-white-dark">{t('Appraisals')}</span>
+                                                    </div>
+                                                    <div className={currentMenu !== 'emp-perf-appraisal' ? 'rtl:rotate-90 -rotate-90' : ''}><IconCaretDown /></div>
+                                                </button>
+                                                <AnimateHeight duration={300} height={currentMenu === 'emp-perf-appraisal' ? 'auto' : 0}>
+                                                    <ul className="sub-menu text-gray-500">
+                                                        <li><NavLink to="/employee/performance/self-appraisal">{t('Self Appraisal')}</NavLink></li>
+                                                        <li><NavLink to="/employee/performance/appraisal-history">{t('Appraisal History')}</NavLink></li>
+                                                        <li><NavLink to="/employee/performance/extension-status">{t('Extension Status')}</NavLink></li>
+                                                    </ul>
+                                                </AnimateHeight>
+                                            </li>
+
+                                            {/* Back to main */}
+                                            <li className="menu nav-item mt-2">
+                                                <NavLink to="/employee/dashboard" className="group">
+                                                    <div className="flex items-center">
+                                                        <IconMenuDashboard className="group-hover:!text-primary shrink-0" />
+                                                        <span className="ltr:pl-3 rtl:pr-3 text-black dark:text-[#506690] dark:group-hover:text-white-dark">{t('← Main Dashboard')}</span>
+                                                    </div>
+                                                </NavLink>
+                                            </li>
+                                        </>
+                                    ) : (
+                                    <>
                                     <li className="menu nav-item">
                                         <NavLink to="/employee/dashboard" className="group">
                                             <div className="flex items-center">
@@ -490,8 +588,21 @@ const Sidebar = () => {
                                             </div>
                                         </NavLink>
                                     </li>
+
+                                    {/* Performance link in main sidebar */}
+                                    <li className="menu nav-item">
+                                        <NavLink to="/employee/performance" className="group">
+                                            <div className="flex items-center">
+                                                <IconMenuCharts className="group-hover:!text-primary shrink-0" />
+                                                <span className="ltr:pl-3 rtl:pr-3 text-black dark:text-[#506690] dark:group-hover:text-white-dark">{t('Performance')}</span>
+                                            </div>
+                                        </NavLink>
+                                    </li>
+                                    </>
+                                    )}
                                 </>
-                            )}
+                                );
+                            })()}
 
                             {/* ===== ADMIN SIDEBAR ===== */}
                             {userRole === 'admin' && (() => {
@@ -591,26 +702,6 @@ const Sidebar = () => {
                                                     <AnimateHeight duration={300} height={currentMenu === 'adminContReview' ? 'auto' : 0}>
                                                         <ul className="sub-menu text-gray-500">
                                                             <li><NavLink to="/admin/performance/continuous-extensions">{t('Manage Extensions')}</NavLink></li>
-                                                        </ul>
-                                                    </AnimateHeight>
-                                                </li>
-
-                                                {/* Group 5: GOALS / KRAs / COMPETENCIES */}
-                                                <li className="menu nav-item">
-                                                    <button type="button" className={`${currentMenu === 'adminGoalsMaster' ? 'active' : ''} nav-link group w-full`} onClick={() => toggleMenu('adminGoalsMaster')}>
-                                                        <div className="flex items-center">
-                                                            <IconMenuNotes className="group-hover:!text-primary shrink-0" />
-                                                            <span className="ltr:pl-3 rtl:pr-3 text-black dark:text-[#506690] dark:group-hover:text-white-dark">{t('Master Inventories')}</span>
-                                                        </div>
-                                                        <div className={currentMenu !== 'adminGoalsMaster' ? 'rtl:rotate-90 -rotate-90' : ''}>
-                                                            <IconCaretDown />
-                                                        </div>
-                                                    </button>
-                                                    <AnimateHeight duration={300} height={currentMenu === 'adminGoalsMaster' ? 'auto' : 0}>
-                                                        <ul className="sub-menu text-gray-500">
-                                                            <li><NavLink to="/admin/performance/import-goals">{t('Import Corp. Goals')}</NavLink></li>
-                                                            <li><NavLink to="/admin/performance/kra-registry">{t('KRA Registry')}</NavLink></li>
-                                                            <li><NavLink to="/admin/performance/competency-mapping">{t('Competency Mapping')}</NavLink></li>
                                                         </ul>
                                                     </AnimateHeight>
                                                 </li>

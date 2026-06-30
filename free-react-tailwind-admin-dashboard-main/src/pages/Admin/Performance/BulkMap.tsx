@@ -41,6 +41,7 @@ interface EmployeeKRA {
     employee: number;
     kra_master: number;
     weightage: number;
+    created_at: string;
 }
 
 type RowResult = { empId: number; name: string; status: 'ok' | 'skip' | 'fail'; msg?: string };
@@ -113,12 +114,6 @@ const BulkMap = () => {
         return employees.filter(e => e.department != null && set.has(e.department));
     }, [selectedKra, employees]);
 
-    // Already-assigned employee ids for the selected KRA
-    const assignedEmpIds = useMemo(
-        () => new Set(assignments.filter(a => a.kra_master === selectedKraId).map(a => a.employee)),
-        [assignments, selectedKraId]
-    );
-
     const filteredEligible = useMemo(() => {
         const q = empSearch.toLowerCase();
         return eligibleEmployees.filter(
@@ -130,7 +125,7 @@ const BulkMap = () => {
         );
     }, [eligibleEmployees, empSearch]);
 
-    const selectableIds = filteredEligible.filter(e => !assignedEmpIds.has(e.id)).map(e => e.id);
+    const selectableIds = filteredEligible.map(e => e.id);
     const allSelected = selectableIds.length > 0 && selectableIds.every(id => selectedEmpIds.includes(id));
 
     const filteredKras = masterKras.filter(k => k.title.toLowerCase().includes(kraSearch.toLowerCase()));
@@ -165,10 +160,6 @@ const BulkMap = () => {
         for (const empId of selectedEmpIds) {
             const emp = employees.find(e => e.id === empId);
             const name = emp?.full_name || `#${empId}`;
-            if (assignedEmpIds.has(empId)) {
-                out.push({ empId, name, status: 'skip', msg: 'Already assigned' });
-                continue;
-            }
             try {
                 const res = await axios.post(
                     `${API_BASE}/employee/employee-kra/`,
@@ -199,11 +190,9 @@ const BulkMap = () => {
         setSelectedEmpIds([]);
 
         const ok = out.filter(r => r.status === 'ok').length;
-        const skipped = out.filter(r => r.status === 'skip').length;
         const failed = out.filter(r => r.status === 'fail').length;
-        if (ok) setSuccessMsg(`Mapped to ${ok} employee(s).${skipped ? ` ${skipped} skipped.` : ''}${failed ? ` ${failed} failed.` : ''}`);
-        else if (failed) setErrorMsg(`${failed} assignment(s) failed.${skipped ? ` ${skipped} skipped.` : ''}`);
-        else if (skipped) setErrorMsg(`All ${skipped} already assigned.`);
+        if (ok) setSuccessMsg(`Mapped to ${ok} employee(s).${failed ? ` ${failed} failed.` : ''}`);
+        else if (failed) setErrorMsg(`${failed} assignment(s) failed.`);
 
         // Re-enable immediately; reconcile with server in the background (non-blocking)
         setAssigning(false);
@@ -426,17 +415,16 @@ const BulkMap = () => {
                                     <div className="text-center py-8 text-[11px] text-gray-400 italic">No eligible employees for this KRA's departments.</div>
                                 )}
                                 {filteredEligible.map(e => {
-                                    const already = assignedEmpIds.has(e.id);
+                                    const timesAssigned = assignments.filter(a => a.kra_master === selectedKraId && a.employee === e.id).length;
                                     const checked = selectedEmpIds.includes(e.id);
                                     return (
                                         <label
                                             key={e.id}
-                                            className={`flex items-center gap-3 p-2.5 ${already ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/30'}`}
+                                            className="flex items-center gap-3 p-2.5 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/30"
                                         >
                                             <input
                                                 type="checkbox"
                                                 className="accent-teal-600"
-                                                disabled={already}
                                                 checked={checked}
                                                 onChange={() => toggleEmp(e.id)}
                                             />
@@ -449,8 +437,8 @@ const BulkMap = () => {
                                                     {e.designation_name || 'Designation Not Set'} • {e.department_name || 'No Dept'}
                                                 </span>
                                             </div>
-                                            {already && (
-                                                <span className="text-[8px] font-black text-amber-600 bg-amber-500/10 px-2 py-0.5 rounded-full shrink-0">Mapped</span>
+                                            {timesAssigned > 0 && (
+                                                <span className="text-[8px] font-black text-teal-600 bg-teal-500/10 px-2 py-0.5 rounded-full shrink-0">×{timesAssigned}</span>
                                             )}
                                         </label>
                                     );
@@ -460,7 +448,7 @@ const BulkMap = () => {
                             {/* Action bar */}
                             <div className="flex items-center justify-between pt-3 mt-3 border-t border-gray-100 dark:border-gray-800">
                                 <span className="text-[10px] font-bold text-gray-400">
-                                    {filteredEligible.length} eligible · {assignedEmpIds.size} already mapped
+                                    {filteredEligible.length} eligible
                                 </span>
                                 <button
                                     onClick={handleBulkAssign}

@@ -54,6 +54,7 @@ urlpatterns = [
     path('employee-hierarchy/', EmployeeHierarchyAPIView.as_view(), name='employee-hierarchy'),
     path('attendance-chart/', AttendanceChartDataAPIView.as_view(), name='attendance-chart'),
     path('performance-profile/<int:emp_id>/', EmployeePerformanceProfileAPIView.as_view(), name='employee-performance-profile'),
+    path('performance-dashboard/', PerformanceDashboardAPIView.as_view(), name='performance-dashboard'),
     path('kra-tasks/', EmployeeKRATasksAPIView.as_view(), name='kra-tasks'),
 
 

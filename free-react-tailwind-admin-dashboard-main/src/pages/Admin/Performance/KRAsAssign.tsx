@@ -50,6 +50,7 @@ interface EmployeeKRA {
     reviewer_name: string | null;
     weightage: number;
     target_description: string;
+    created_at: string;
 }
 
 const KRAsAssign = () => {
@@ -208,7 +209,7 @@ const KRAsAssign = () => {
         if (!assignReviewerId) { setErrorMsg('Select a reviewer (master) for these KRAs.'); return; }
 
         try {
-            // Sequential so backend cumulative weightage validation (<=100%) holds
+            // Sequential so backend cumulative weightage validation (≤100%) holds
             for (const kraId of assignChecked) {
                 const weight = parseInt(assignWeights[kraId] || '0');
                 await axios.post(`${API_BASE}/employee/employee-kra/`, {
@@ -229,10 +230,10 @@ const KRAsAssign = () => {
             setAssignWeights({});
             setTargetDescription('');
             setAssignReviewerId(''); setReviewerSearch('');
-            setSuccessMsg('KRA(s) assigned successfully.');
+            setSuccessMsg(`${assignChecked.length} KRA(s) assigned successfully.`);
         } catch (err: any) {
-            console.error('Error assigning KRA:', err);
-            const serverMsg = err.response?.data?.non_field_errors?.[0] || err.response?.data?.[0] || 'Failed to assign KRA.';
+            const d = err.response?.data;
+            const serverMsg = d?.non_field_errors?.[0] || d?.detail || d?.[0] || 'Failed to assign KRA.';
             setErrorMsg(serverMsg);
         }
     };
@@ -336,7 +337,7 @@ const KRAsAssign = () => {
 
     // Same list, minus KRAs already assigned to this person (for the assignment checklist)
     const assignedKraIds = new Set(employeeKras.map(k => k.kra_master));
-    const deptKras = deptKrasAll.filter(k => !assignedKraIds.has(k.id));
+    const deptKras = deptKrasAll; // show all; already-assigned ones rendered as disabled
 
     // ---------- Manage tab: CRUD ----------
     const startEditKra = (k: KRAMaster) => {
@@ -704,14 +705,21 @@ const KRAsAssign = () => {
                                                 </label>
                                                 <div className="border border-gray-200 dark:border-gray-700 rounded-xl divide-y divide-gray-100 dark:divide-gray-800 max-h-44 overflow-y-auto bg-white dark:bg-gray-900">
                                                     {deptKras.length === 0 && (
-                                                        <div className="text-center py-4 text-[11px] text-gray-400 italic">No unassigned KRAs for this department. Use ＋ New KRA.</div>
+                                                        <div className="text-center py-4 text-[11px] text-gray-400 italic">No KRAs for this department. Use ＋ New KRA.</div>
                                                     )}
                                                     {deptKras.map(k => {
+                                                        const timesAssigned = employeeKras.filter(ek => ek.kra_master === k.id).length;
                                                         const checked = assignChecked.includes(k.id);
                                                         return (
                                                             <div key={k.id} className="flex items-center gap-2 p-2">
-                                                                <input type="checkbox" checked={checked} onChange={() => toggleAssignKra(k.id)} className="accent-teal-600" />
-                                                                <span className="flex-1 text-[11px] font-semibold text-gray-800 dark:text-white">{k.title}</span>
+                                                                <input type="checkbox" checked={checked}
+                                                                    onChange={() => toggleAssignKra(k.id)} className="accent-teal-600" />
+                                                                <span className="flex-1 text-[11px] font-semibold text-gray-800 dark:text-white">
+                                                                    {k.title}
+                                                                </span>
+                                                                {timesAssigned > 0 && (
+                                                                    <span className="text-[8px] font-black text-teal-600 bg-teal-500/10 px-2 py-0.5 rounded-full shrink-0">×{timesAssigned}</span>
+                                                                )}
                                                                 <input type="number" min="1" max="100" placeholder="wt%" disabled={!checked}
                                                                     value={assignWeights[k.id] || ''}
                                                                     onChange={(e) => setAssignWeights(w => ({ ...w, [k.id]: e.target.value }))}
@@ -752,6 +760,7 @@ const KRAsAssign = () => {
                                                         <th className="p-3 pl-4">KRA Title</th>
                                                         <th className="p-3">Weight</th>
                                                         <th className="p-3">Reviewer</th>
+                                                        <th className="p-3">Assigned On</th>
                                                         <th className="p-3">Target Metrics</th>
                                                         <th className="p-3 text-center pr-4">Action</th>
                                                     </tr>
@@ -761,11 +770,21 @@ const KRAsAssign = () => {
                                                         <tr>
                                                             <td colSpan={5} className="text-center py-5 text-gray-400">Loading assignments...</td>
                                                         </tr>
+                                                    ) : employeeKras.length === 0 ? (
+                                                        <tr><td colSpan={6} className="text-center py-5 text-gray-400 italic">No KRAs mapped yet.</td></tr>
                                                     ) : employeeKras.map((k) => (
                                                         <tr key={k.id} className="hover:bg-gray-50/50 dark:hover:bg-gray-800/10">
                                                             <td className="p-3 pl-4 font-bold text-gray-800 dark:text-white">{k.kra_title}</td>
                                                             <td className="p-3 font-extrabold text-teal-600 dark:text-teal-400">{k.weightage}%</td>
                                                             <td className="p-3">{k.reviewer_name || '—'}</td>
+                                                            <td className="p-3 whitespace-nowrap">
+                                                                {k.created_at ? (
+                                                                    <div>
+                                                                        <span className="block text-[10px] font-bold text-gray-700 dark:text-gray-300">{new Date(k.created_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}</span>
+                                                                        <span className="block text-[9px] text-gray-400">{new Date(k.created_at).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}</span>
+                                                                    </div>
+                                                                ) : '—'}
+                                                            </td>
                                                             <td className="p-3 max-w-xs truncate">{k.target_description || 'None'}</td>
                                                             <td className="p-3 text-center pr-4">
                                                                 <button 
@@ -777,11 +796,6 @@ const KRAsAssign = () => {
                                                             </td>
                                                         </tr>
                                                     ))}
-                                                    {!loadingKras && employeeKras.length === 0 && (
-                                                        <tr>
-                                                            <td colSpan={5} className="text-center py-5 text-gray-400 italic">No KRAs mapped yet.</td>
-                                                        </tr>
-                                                    )}
                                                 </tbody>
                                             </table>
                                         </div>

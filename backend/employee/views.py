@@ -2395,6 +2395,91 @@ class EmployeePerformanceProfileAPIView(APIView):
         })
 
 
+class PerformanceDashboardAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    AVATAR_COLORS = ['bg-emerald-500','bg-indigo-500','bg-amber-500','bg-teal-500','bg-rose-500','bg-blue-500','bg-purple-500','bg-pink-500','bg-cyan-500','bg-violet-500']
+    PROF_MAP = {'beginner': 2.0, 'intermediate': 3.5, 'expert': 5.0}
+
+    def _label(self, score):
+        if score < 2.5: return 'low'
+        if score >= 4.0: return 'high'
+        return 'medium'
+
+    def get(self, request):
+        search = request.query_params.get('search', '').strip()
+        department = request.query_params.get('department', '').strip()
+        designation = request.query_params.get('designation', '').strip()
+
+        base_qs = Employee.objects.filter(is_active=True, user__role='employee').select_related('department', 'designation')
+
+        # Always pull dropdown options from the full unfiltered set
+        all_depts = sorted(set(
+            v for v in base_qs.values_list('department__department_name', flat=True) if v
+        ))
+        all_desigs = sorted(set(
+            v for v in base_qs.values_list('designation__designation_name', flat=True) if v
+        ))
+
+        qs = base_qs
+        if search:
+            qs = qs.filter(
+                Q(first_name__icontains=search) |
+                Q(last_name__icontains=search) |
+                Q(designation__designation_name__icontains=search)
+            )
+        if department:
+            qs = qs.filter(department__department_name__iexact=department)
+        if designation:
+            qs = qs.filter(designation__designation_name__icontains=designation)
+
+        # Bulk-fetch related data
+        emp_ids = list(qs.values_list('id', flat=True))
+        evals_qs = AppraisalEvaluation.objects.filter(employee_id__in=emp_ids).values('employee_id', 'hr_overall_rating', 'manager_overall_rating')
+        skills_qs = EmployeeSkill.objects.filter(employee_id__in=emp_ids).values('employee_id', 'proficiency_level')
+
+        eval_map = {}
+        for ev in evals_qs:
+            score = float(ev['hr_overall_rating'] or ev['manager_overall_rating'] or 0)
+            eval_map.setdefault(ev['employee_id'], []).append(score)
+
+        skill_map = {}
+        for sk in skills_qs:
+            v = self.PROF_MAP.get((sk['proficiency_level'] or '').lower(), 3.0)
+            skill_map.setdefault(sk['employee_id'], []).append(v)
+
+        data = []
+        for emp in qs:
+            dept_name = emp.department.department_name if emp.department else None
+            desig_name = emp.designation.designation_name if emp.designation else None
+
+            scores = eval_map.get(emp.id, [])
+            perf_score = (sum(scores) / len(scores)) if scores else 0.0
+
+            pot_scores = skill_map.get(emp.id, [])
+            pot_score = (sum(pot_scores) / len(pot_scores)) if pot_scores else 0.0
+
+            initials = ((emp.first_name or '')[:1] + (emp.last_name or '')[:1]).upper()
+            data.append({
+                'id': emp.id,
+                'name': f"{emp.first_name} {emp.last_name}".strip(),
+                'initials': initials,
+                'avatarBg': self.AVATAR_COLORS[emp.id % len(self.AVATAR_COLORS)],
+                'designation': desig_name or '',
+                'department': dept_name or '',
+                'performance': self._label(perf_score),
+                'potential': self._label(pot_score),
+                'performanceScore': round(perf_score / 5 * 100, 1),
+                'potentialScore': round(pot_score / 5 * 100, 1),
+            })
+
+        return Response({
+            'employees': data,
+            'departments': all_depts,
+            'designations': all_desigs,
+        })
+
+
 class KRAMasterViewSet(viewsets.ModelViewSet):
     queryset = KRAMaster.objects.all().prefetch_related('departments')
     serializer_class = KRAMasterSerializer

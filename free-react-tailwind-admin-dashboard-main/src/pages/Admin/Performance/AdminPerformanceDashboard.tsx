@@ -1,13 +1,12 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useDispatch } from 'react-redux';
+import axios from 'axios';
 import { setPageTitle } from '../../../store/themeConfigSlice';
 import IconTrendingUp from '../../../components/Icon/IconTrendingUp';
 import IconSearch from '../../../components/Icon/IconSearch';
 import IconUsers from '../../../components/Icon/IconUsers';
-import IconLayoutGrid from '../../../components/Icon/IconLayoutGrid';
 import IconMenuCharts from '../../../components/Icon/Menu/IconMenuCharts';
 
-// Interface for Mock Employee
 interface Employee {
     id: number;
     name: string;
@@ -20,25 +19,6 @@ interface Employee {
     performanceScore: number;
     potentialScore: number;
 }
-
-// Complete list of mock employee data
-const mockEmployees: Employee[] = [
-    { id: 1, name: 'Aarav Sharma', initials: 'AS', avatarBg: 'bg-emerald-500', designation: 'Senior Developer', department: 'Engineering', performance: 'high', potential: 'high', performanceScore: 94, potentialScore: 92 },
-    { id: 2, name: 'Neha Patel', initials: 'NP', avatarBg: 'bg-indigo-500', designation: 'UX Designer', department: 'Marketing', performance: 'medium', potential: 'high', performanceScore: 82, potentialScore: 90 },
-    { id: 3, name: 'Rahul Verma', initials: 'RV', avatarBg: 'bg-amber-500', designation: 'Project Manager', department: 'Engineering', performance: 'high', potential: 'medium', performanceScore: 91, potentialScore: 78 },
-    { id: 4, name: 'Priya Iyer', initials: 'PI', avatarBg: 'bg-teal-500', designation: 'Marketing Lead', department: 'Marketing', performance: 'medium', potential: 'medium', performanceScore: 79, potentialScore: 81 },
-    { id: 5, name: 'Vikram Singh', initials: 'VS', avatarBg: 'bg-rose-500', designation: 'Junior QA', department: 'Engineering', performance: 'low', potential: 'low', performanceScore: 45, potentialScore: 38 },
-    { id: 6, name: 'Ananya Rao', initials: 'AR', avatarBg: 'bg-blue-500', designation: 'HR Coordinator', department: 'HR', performance: 'medium', potential: 'medium', performanceScore: 80, potentialScore: 82 },
-    { id: 7, name: 'Siddharth Joshi', initials: 'SJ', avatarBg: 'bg-purple-500', designation: 'DevOps Engineer', department: 'Engineering', performance: 'high', potential: 'low', performanceScore: 95, potentialScore: 48 },
-    { id: 8, name: 'Kirti Reddy', initials: 'KR', avatarBg: 'bg-pink-500', designation: 'Account Executive', department: 'Sales', performance: 'medium', potential: 'low', performanceScore: 74, potentialScore: 42 },
-    { id: 9, name: 'Amit Das', initials: 'AD', avatarBg: 'bg-cyan-500', designation: 'Business Analyst', department: 'Sales', performance: 'low', potential: 'high', performanceScore: 52, potentialScore: 88 },
-    { id: 10, name: 'Sneha Kulkarni', initials: 'SK', avatarBg: 'bg-violet-500', designation: 'Content Writer', department: 'Marketing', performance: 'low', potential: 'medium', performanceScore: 58, potentialScore: 72 },
-    { id: 11, name: 'Rohan Mehra', initials: 'RM', avatarBg: 'bg-emerald-600', designation: 'Technical Architect', department: 'Engineering', performance: 'high', potential: 'high', performanceScore: 98, potentialScore: 95 },
-    { id: 12, name: 'Divya Nair', initials: 'DN', avatarBg: 'bg-orange-500', designation: 'Sales Manager', department: 'Sales', performance: 'high', potential: 'medium', performanceScore: 89, potentialScore: 80 },
-    { id: 13, name: 'Sanjay Dutt', initials: 'SD', avatarBg: 'bg-red-500', designation: 'Support Specialist', department: 'HR', performance: 'low', potential: 'low', performanceScore: 40, potentialScore: 35 },
-    { id: 14, name: 'Meera Sen', initials: 'MS', avatarBg: 'bg-lime-500', designation: 'Product Designer', department: 'Marketing', performance: 'medium', potential: 'high', performanceScore: 85, potentialScore: 92 },
-    { id: 15, name: 'Karan Malhotra', initials: 'KM', avatarBg: 'bg-yellow-500', designation: 'Solutions Engineer', department: 'Sales', performance: 'medium', potential: 'medium', performanceScore: 76, potentialScore: 75 },
-];
 
 interface MetricGroup {
     title: string;
@@ -117,42 +97,58 @@ const boxCells: BoxCell[] = [
 const AdminPerformanceDashboard = () => {
     const dispatch = useDispatch();
     const [activeTab, setActiveTab] = useState<'matrix'>('matrix');
-    
-    // Filter states
+
+    const [employees, setEmployees] = useState<Employee[]>([]);
+    const [departments, setDepartments] = useState<string[]>([]);
+    const [designations, setDesignations] = useState<string[]>([]);
+    const [loading, setLoading] = useState(true);
+
     const [searchQuery, setSearchQuery] = useState('');
-    const [deptFilter, setDeptFilter] = useState('All');
-    const [desigFilter, setDesigFilter] = useState('All');
-    
-    // Selected Cell for Drawer/Modal Details
+    const [deptFilter, setDeptFilter] = useState('');
+    const [desigFilter, setDesigFilter] = useState('');
     const [selectedCell, setSelectedCell] = useState<BoxCell | null>(null);
+
+    const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+    const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
+    const headers = () => ({ Authorization: `Bearer ${localStorage.getItem('access_token')}` });
+
+    const fetchDashboard = (search: string, dept: string, desig: string) => {
+        const params = new URLSearchParams();
+        if (search) params.set('search', search);
+        if (dept) params.set('department', dept);
+        if (desig) params.set('designation', desig);
+        setLoading(true);
+        axios.get(`${API_BASE}/employee/performance-dashboard/?${params}`, { headers: headers() })
+            .then(res => {
+                setEmployees(res.data.employees || []);
+                setDepartments(res.data.departments || []);
+                setDesignations(res.data.designations || []);
+            })
+            .catch(() => {})
+            .finally(() => setLoading(false));
+    };
 
     useEffect(() => {
         dispatch(setPageTitle('Performance Overview'));
+        fetchDashboard('', '', '');
     }, [dispatch]);
 
-    // Filtering logic
-    const filteredEmployees = mockEmployees.filter((emp) => {
-        const matchesSearch = emp.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                              emp.designation.toLowerCase().includes(searchQuery.toLowerCase());
-        const matchesDept = deptFilter === 'All' || emp.department === deptFilter;
-        const matchesDesig = desigFilter === 'All' || emp.designation.includes(desigFilter);
-        return matchesSearch && matchesDept && matchesDesig;
-    });
-
-    // Helper to get employees in a specific cell
-    const getCellEmployees = (cell: BoxCell) => {
-        return filteredEmployees.filter(
-            (emp) => emp.performance === cell.performance && emp.potential === cell.potential
-        );
+    const handleSearch = (val: string) => {
+        setSearchQuery(val);
+        if (debounceRef.current) clearTimeout(debounceRef.current);
+        debounceRef.current = setTimeout(() => fetchDashboard(val, deptFilter, desigFilter), 400);
     };
 
-    // Calculate aggregated overview counts
-    const starsCount = mockEmployees.filter(e => e.performance === 'high' && e.potential === 'high').length;
-    const underperformersCount = mockEmployees.filter(e => e.performance === 'low' && e.potential === 'low').length;
+    const handleDept = (val: string) => { setDeptFilter(val); fetchDashboard(searchQuery, val, desigFilter); };
+    const handleDesig = (val: string) => { setDesigFilter(val); fetchDashboard(searchQuery, deptFilter, val); };
+    const handleReset = () => { setSearchQuery(''); setDeptFilter(''); setDesigFilter(''); fetchDashboard('', '', ''); };
 
-    // Get unique departments & designations for dropdown options
-    const departments = ['All', ...Array.from(new Set(mockEmployees.map(e => e.department)))];
-    const designations = ['All', 'Developer', 'Designer', 'Lead', 'Manager', 'Architect', 'Analyst', 'Specialist'];
+    const getCellEmployees = (cell: BoxCell) =>
+        employees.filter(e => e.performance === cell.performance && e.potential === cell.potential);
+
+    const starsCount = employees.filter(e => e.performance === 'high' && e.potential === 'high').length;
+    const underperformersCount = employees.filter(e => e.performance === 'low' && e.potential === 'low').length;
 
     return (
         <div className="min-h-[75vh] flex flex-col gap-6 py-2 animate__animated animate__fadeIn">
@@ -177,7 +173,7 @@ const AdminPerformanceDashboard = () => {
                     {/* Live Metric Badges */}
                     <div className="flex flex-wrap gap-4 shrink-0 bg-white/10 p-4 rounded-2xl backdrop-blur-md border border-white/10">
                         <div className="text-center px-4 border-r border-white/10">
-                            <span className="block text-xl font-extrabold text-white">{mockEmployees.length}</span>
+                            <span className="block text-xl font-extrabold text-white">{employees.length}</span>
                             <span className="text-[10px] text-white/70 font-semibold uppercase tracking-wider">Total Evaluated</span>
                         </div>
                         <div className="text-center px-4 border-r border-white/10">
@@ -225,53 +221,46 @@ const AdminPerformanceDashboard = () => {
                         {/* Interactive Filters Panel */}
                         <div className="bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 p-5 rounded-2xl shadow-sm flex flex-wrap gap-4 items-center justify-between">
                             <div className="flex flex-wrap gap-4 items-center">
-                                {/* Search input */}
                                 <div className="relative min-w-[200px]">
-                                    <input 
-                                        type="text" 
-                                        placeholder="Search employee..." 
+                                    <input
+                                        type="text"
+                                        placeholder="Search employee or designation..."
                                         value={searchQuery}
-                                        onChange={(e) => setSearchQuery(e.target.value)}
-                                        className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 pl-9 pr-4 py-2 rounded-xl text-xs font-medium text-gray-800 dark:text-white placeholder-gray-400 focus:outline-none focus:border-teal-500 transition duration-300"
+                                        onChange={e => handleSearch(e.target.value)}
+                                        className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 pl-9 pr-4 py-2 rounded-xl text-xs font-medium text-gray-800 dark:text-white placeholder-gray-400 focus:outline-none focus:border-teal-500 transition"
                                     />
                                     <IconSearch className="w-4 h-4 text-gray-400 absolute left-3 top-2.5" />
                                 </div>
 
-                                {/* Dept Select */}
                                 <div className="flex items-center gap-2">
                                     <span className="text-[10px] font-bold text-gray-400 uppercase">Dept:</span>
-                                    <select 
-                                        value={deptFilter}
-                                        onChange={(e) => setDeptFilter(e.target.value)}
-                                        className="bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 px-3 py-2 rounded-xl text-xs font-semibold text-gray-700 dark:text-white focus:outline-none focus:border-teal-500"
-                                    >
+                                    <select value={deptFilter} onChange={e => handleDept(e.target.value)}
+                                        className="bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 px-3 py-2 rounded-xl text-xs font-semibold text-gray-700 dark:text-white focus:outline-none focus:border-teal-500">
+                                        <option value="">All</option>
                                         {departments.map((d, i) => <option key={i} value={d}>{d}</option>)}
                                     </select>
                                 </div>
 
-                                {/* Designation Select */}
                                 <div className="flex items-center gap-2">
                                     <span className="text-[10px] font-bold text-gray-400 uppercase">Designation:</span>
-                                    <select 
-                                        value={desigFilter}
-                                        onChange={(e) => setDesigFilter(e.target.value)}
-                                        className="bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 px-3 py-2 rounded-xl text-xs font-semibold text-gray-700 dark:text-white focus:outline-none focus:border-teal-500"
-                                    >
+                                    <select value={desigFilter} onChange={e => handleDesig(e.target.value)}
+                                        className="bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 px-3 py-2 rounded-xl text-xs font-semibold text-gray-700 dark:text-white focus:outline-none focus:border-teal-500">
+                                        <option value="">All</option>
                                         {designations.map((d, i) => <option key={i} value={d}>{d}</option>)}
                                     </select>
                                 </div>
+
+                                {loading && <span className="text-[10px] text-teal-500 font-bold animate-pulse">Updating...</span>}
                             </div>
 
-                            <button 
-                                onClick={() => { setSearchQuery(''); setDeptFilter('All'); setDesigFilter('All'); }}
-                                className="text-xs font-semibold text-teal-600 dark:text-teal-400 hover:underline"
-                            >
+                            <button onClick={handleReset}
+                                className="text-xs font-semibold text-teal-600 dark:text-teal-400 hover:underline">
                                 Reset Filters
                             </button>
                         </div>
 
                         {/* Interactive 3x3 Matrix Board */}
-                        <div className="bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 p-6 rounded-3xl shadow-sm flex flex-col gap-4">
+                        <div className={`bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 p-6 rounded-3xl shadow-sm flex flex-col gap-4 transition-opacity ${loading ? 'opacity-60 pointer-events-none' : 'opacity-100'}`}>
                             
                             <div className="flex flex-row items-stretch">
                                 {/* Potential Y-Axis Label */}
