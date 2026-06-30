@@ -791,10 +791,16 @@ class AppraisalCycleSerializer(serializers.ModelSerializer):
 
 class AppraisalQuestionSerializer(serializers.ModelSerializer):
     cycle_name = serializers.CharField(source='cycle.name', read_only=True)
+    max_score = serializers.IntegerField(required=False, allow_null=True, default=5)
 
     class Meta:
         model = AppraisalQuestion
         fields = ['id', 'cycle', 'cycle_name', 'question_text', 'question_type', 'role_type', 'max_score']
+
+    def validate_max_score(self, value):
+        if value is None:
+            return 5
+        return value
 
 
 class AppraisalAnswerSerializer(serializers.ModelSerializer):
