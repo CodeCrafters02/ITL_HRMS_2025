@@ -45,7 +45,7 @@ const STATUS_LABELS: Record<string, string> = {
 const AppraisalHistory = () => {
     const dispatch = useDispatch();
     const [evaluations, setEvaluations] = useState<Evaluation[]>([]);
-    const [questions, setQuestions] = useState<Record<number, string>>({}); // questionId -> text
+    const [questions, setQuestions] = useState<Record<number, { text: string; type: string }>>({}); // questionId -> { text, type }
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [expandedEvalId, setExpandedEvalId] = useState<number | null>(null);
@@ -69,12 +69,15 @@ const AppraisalHistory = () => {
             const evalList = asArray(evalRes.data);
             setEvaluations(evalList);
 
-            // 2. Fetch all questions in background to map titles
+            // 2. Fetch all questions in background to map titles and types
             const qRes = await axios.get(`${API_BASE}/employee/appraisal-questions/`, { headers: headers() });
             const qList = asArray(qRes.data);
-            const qMap: Record<number, string> = {};
+            const qMap: Record<number, { text: string; type: string }> = {};
             qList.forEach((q: any) => {
-                qMap[q.id] = q.question_text;
+                qMap[q.id] = {
+                    text: q.question_text,
+                    type: q.question_type
+                };
             });
             setQuestions(qMap);
 
@@ -203,31 +206,43 @@ const AppraisalHistory = () => {
                                         </h4>
                                         {ev.answers && ev.answers.length > 0 ? (
                                             <div className="space-y-3.5">
-                                                {ev.answers.map((ans, idx) => (
-                                                    <div
-                                                        key={ans.id || idx}
-                                                        className="bg-gray-55 dark:bg-gray-850/50 p-4 rounded-2xl border border-gray-50 dark:border-gray-800/10 space-y-2.5"
-                                                    >
-                                                        <div className="flex justify-between items-start gap-3">
-                                                            <div className="flex gap-2">
-                                                                <span className="text-xs font-bold text-gray-400 mt-0.5">{idx + 1}.</span>
-                                                                <p className="text-xs font-bold text-gray-850 dark:text-gray-200">
-                                                                    {questions[ans.question] || `Question #${ans.question}`}
-                                                                </p>
+                                                {ev.answers.map((ans, idx) => {
+                                                    const qInfo = questions[ans.question] || { text: `Question #${ans.question}`, type: 'scale' };
+                                                    return (
+                                                        <div
+                                                            key={ans.id || idx}
+                                                            className="bg-gray-55 dark:bg-gray-850/50 p-4 rounded-2xl border border-gray-50 dark:border-gray-800/10 space-y-2.5"
+                                                        >
+                                                            <div className="flex justify-between items-start gap-3">
+                                                                <div className="flex gap-2">
+                                                                    <span className="text-xs font-bold text-gray-400 mt-0.5">{idx + 1}.</span>
+                                                                    <p className="text-xs font-bold text-gray-850 dark:text-gray-200">
+                                                                        {qInfo.text}
+                                                                    </p>
+                                                                </div>
+                                                                {ans.rating_score !== null && qInfo.type !== 'text' && (
+                                                                    <span className={`text-[11px] font-black shrink-0 whitespace-nowrap px-2 py-0.5 rounded-full ${
+                                                                        qInfo.type === 'yes_no'
+                                                                            ? ans.rating_score === 5
+                                                                                ? 'bg-teal-500/10 text-teal-600 dark:text-teal-400 border border-teal-500/10'
+                                                                                : 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/10'
+                                                                            : 'text-amber-500 bg-amber-500/5 border border-amber-500/10'
+                                                                    }`}>
+                                                                        {qInfo.type === 'yes_no'
+                                                                            ? ans.rating_score === 5 ? 'Yes' : 'No'
+                                                                            : `★ ${ans.rating_score} / 5`
+                                                                        }
+                                                                    </span>
+                                                                )}
                                                             </div>
-                                                            {ans.rating_score && (
-                                                                <span className="text-[11px] font-black text-amber-500 shrink-0 whitespace-nowrap bg-amber-500/5 px-2 py-0.5 rounded-full border border-amber-500/10">
-                                                                    ★ {ans.rating_score} / 5
-                                                                </span>
+                                                            {ans.comment && (
+                                                                <div className="pl-4 border-l-2 border-teal-500/20 text-[11px] text-gray-500 dark:text-gray-400 italic">
+                                                                    "{ans.comment}"
+                                                                </div>
                                                             )}
                                                         </div>
-                                                        {ans.comment && (
-                                                            <div className="pl-4 border-l-2 border-teal-500/20 text-[11px] text-gray-500 dark:text-gray-400 italic">
-                                                                "{ans.comment}"
-                                                            </div>
-                                                        )}
-                                                    </div>
-                                                ))}
+                                                    );
+                                                })}
                                             </div>
                                         ) : (
                                             <div className="text-xs text-gray-400 italic py-2">

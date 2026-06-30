@@ -152,11 +152,16 @@ const SelfAppraisal = () => {
         setError(null);
 
         // Map answers map to array
-        const answersPayload = Object.entries(answersMap).map(([qId, val]) => ({
-            question_id: parseInt(qId),
-            rating_score: val.rating,
-            comment: val.comment
-        }));
+        const answersPayload = Object.entries(answersMap).map(([qId, val]) => {
+            const questionId = parseInt(qId);
+            const question = questions.find(q => q.id === questionId);
+            const ratingScore = question?.question_type === 'text' ? null : val.rating;
+            return {
+                question_id: questionId,
+                rating_score: ratingScore,
+                comment: val.comment
+            };
+        });
 
         try {
             const res = await axios.post(
@@ -309,30 +314,67 @@ const SelfAppraisal = () => {
                                     </h4>
                                 </div>
 
-                                {/* Star rating select */}
-                                <div className="space-y-1 pl-9">
-                                    <label className="block text-[9px] font-black uppercase tracking-wider text-gray-400">
-                                        Your Self-Rating ({q.max_score} Stars Max)
-                                    </label>
-                                    <div className="flex gap-1.5 text-2xl">
-                                        {Array.from({ length: q.max_score }).map((_, i) => {
-                                            const starNum = i + 1;
-                                            return (
-                                                <button
-                                                    key={i}
-                                                    type="button"
-                                                    disabled={isSubmitted}
-                                                    onClick={() => handleRatingChange(q.id, starNum)}
-                                                    className={`transition focus:outline-none ${!isSubmitted && 'hover:scale-110'} ${
-                                                        starNum <= val.rating ? 'text-amber-400' : 'text-gray-200 dark:text-gray-700'
-                                                    }`}
-                                                >
-                                                    ★
-                                                </button>
-                                            );
-                                        })}
+                                {/* Star rating select for scale type */}
+                                {q.question_type === 'scale' && (
+                                    <div className="space-y-1 pl-9">
+                                        <label className="block text-[9px] font-black uppercase tracking-wider text-gray-400">
+                                            Your Self-Rating ({q.max_score} Stars Max)
+                                        </label>
+                                        <div className="flex gap-1.5 text-2xl">
+                                            {Array.from({ length: q.max_score }).map((_, i) => {
+                                                const starNum = i + 1;
+                                                return (
+                                                    <button
+                                                        key={i}
+                                                        type="button"
+                                                        disabled={isSubmitted}
+                                                        onClick={() => handleRatingChange(q.id, starNum)}
+                                                        className={`transition focus:outline-none ${!isSubmitted && 'hover:scale-110'} ${
+                                                            starNum <= val.rating ? 'text-amber-400' : 'text-gray-200 dark:text-gray-700'
+                                                        }`}
+                                                    >
+                                                        ★
+                                                    </button>
+                                                );
+                                            })}
+                                        </div>
                                     </div>
-                                </div>
+                                )}
+
+                                {/* Yes/No buttons for yes_no type */}
+                                {q.question_type === 'yes_no' && (
+                                    <div className="space-y-2 pl-9">
+                                        <label className="block text-[9px] font-black uppercase tracking-wider text-gray-400">
+                                            Your Self-Response (Yes / No)
+                                        </label>
+                                        <div className="flex gap-2">
+                                            <button
+                                                type="button"
+                                                disabled={isSubmitted}
+                                                onClick={() => handleRatingChange(q.id, 5)}
+                                                className={`px-4 py-1.5 rounded-xl text-xs font-bold transition ${
+                                                    val.rating === 5
+                                                        ? 'bg-teal-500 text-white shadow-sm'
+                                                        : 'bg-gray-100 hover:bg-gray-200 text-gray-650 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700'
+                                                }`}
+                                            >
+                                                Yes
+                                            </button>
+                                            <button
+                                                type="button"
+                                                disabled={isSubmitted}
+                                                onClick={() => handleRatingChange(q.id, 1)}
+                                                className={`px-4 py-1.5 rounded-xl text-xs font-bold transition ${
+                                                    val.rating === 1
+                                                        ? 'bg-rose-500 text-white shadow-sm'
+                                                        : 'bg-gray-100 hover:bg-gray-200 text-gray-650 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700'
+                                                }`}
+                                            >
+                                                No
+                                            </button>
+                                        </div>
+                                    </div>
+                                )}
 
                                 {/* Comment textarea */}
                                 <div className="pl-9">
