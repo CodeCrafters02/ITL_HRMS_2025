@@ -2746,6 +2746,101 @@ class AppraisalCycleViewSet(viewsets.ModelViewSet):
         return self.queryset.all()
 
 
+
+class AppraisalEvaluationViewSet(viewsets.ModelViewSet):
+    queryset = AppraisalEvaluation.objects.all().select_related('employee', 'cycle', 'manager').prefetch_related('answers__question')
+    serializer_class = AppraisalEvaluationSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        qs = self.queryset.all()
+        # Default behavior: filter for logged-in employee unless they are requesting for managees
+        mine = self.request.query_params.get('mine')
+        cycle_id = self.request.query_params.get('cycle')
+        
+        try:
+            employee = self.request.user.employee_profile
+        except Exception:
+            return qs.none()
+
+        if mine == 'true' or not self.request.user.is_staff:
+            qs = qs.filter(employee=employee)
+        else:
+            # Let manager see managees
+            qs = qs.filter(Q(employee=employee) | Q(manager=employee))
+            
+        if cycle_id:
+            qs = qs.filter(cycle_id=cycle_id)
+            
+        return qs
+
+    def perform_create(self, serializer):
+        try:
+            employee = self.request.user.employee_profile
+        except Exception:
+            raise ValidationError("You must have an employee profile to create an evaluation.")
+        
+        # Determine manager
+        manager = employee.reporting_manager
+        
+        # Check if already exists for this cycle
+        cycle = serializer.validated_data.get('cycle')
+        if AppraisalEvaluation.objects.filter(employee=employee, cycle=cycle).exists():
+            raise ValidationError("An appraisal evaluation already exists for this cycle.")
+            
+        serializer.save(employee=employee, manager=manager, status='draft')
+
+    @action(detail=True, methods=['post'])
+    def save_answers(self, request, pk=None):
+        evaluation = self.get_object()
+        
+        # Check permissions
+        try:
+            employee = request.user.employee_profile
+        except Exception:
+            return Response({"detail": "Employee profile required."}, status=403)
+            
+        if evaluation.employee != employee and evaluation.manager != employee:
+            raise PermissionDenied("You do not have permission to edit this evaluation.")
+            
+        answers_data = request.data.get('answers', [])
+        is_submit = request.data.get('submit', False) # True if final submit
+        
+        # Save each answer
+        for ans in answers_data:
+            q_id = ans.get('question_id')
+            rating = ans.get('rating_score')
+            comment = ans.get('comment', '')
+            
+            question = get_object_or_404(AppraisalQuestion, id=q_id)
+            
+            # Create or update answer
+            AppraisalAnswer.objects.update_or_create(
+                evaluation=evaluation,
+                question=question,
+                submitted_by=employee,
+                defaults={
+                    'rating_score': rating,
+                    'comment': comment
+                }
+            )
+            
+        if is_submit:
+            # Calculate overall rating
+            # Get all answers for this evaluation submitted by employee
+            self_answers = AppraisalAnswer.objects.filter(evaluation=evaluation, question__role_type='self')
+            ratings = [a.rating_score for a in self_answers if a.rating_score is not None]
+            
+            if ratings:
+                evaluation.self_overall_rating = sum(ratings) / len(ratings)
+            
+            evaluation.status = 'submitted_self'
+            evaluation.save(update_fields=['self_overall_rating', 'status'])
+            
+        # Return serialized evaluation
+        return Response(self.get_serializer(evaluation).data)
+
+
 class AppraisalQuestionViewSet(viewsets.ModelViewSet):
     queryset = AppraisalQuestion.objects.select_related('cycle').order_by('id')
     serializer_class = AppraisalQuestionSerializer

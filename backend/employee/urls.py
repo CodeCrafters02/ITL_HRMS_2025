@@ -15,6 +15,7 @@ router.register('appraisal-extensions', AppraisalExtensionViewSet, basename='app
 router.register('salary-hike-config', SalaryHikeConfigViewSet, basename='salary-hike-config')
 router.register('appraisal-cycles', AppraisalCycleViewSet, basename='appraisal-cycles')
 router.register('appraisal-questions', AppraisalQuestionViewSet, basename='appraisal-questions')
+router.register('appraisal-evaluations', AppraisalEvaluationViewSet, basename='appraisal-evaluations')
 
 urlpatterns = [
     path('all-employees-list/', AllEmployeesAPIView.as_view(), name='all-employees-list'),
