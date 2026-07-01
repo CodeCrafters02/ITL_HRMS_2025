@@ -135,6 +135,8 @@ const FeedbackReceived = () => {
     const [mainTab, setMainTab]   = useState<MainTab>('appraisal');
     const [roleTab, setRoleTab]   = useState<RoleKey | 'all'>('all');
     const [ackingId, setAckingId] = useState<number | null>(null);
+    const [expandedDirectId, setExpandedDirectId] = useState<number | null>(null);
+    const [expandedAppraisalKey, setExpandedAppraisalKey] = useState<string | null>(null);
 
     const API  = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
     const auth = () => ({ Authorization: `Bearer ${localStorage.getItem('access_token')}` });
@@ -336,27 +338,37 @@ const FeedbackReceived = () => {
 
                         {/* Role content */}
                         {roleTab === 'peer' ? (
-                            <div className="space-y-4">
+                            <div className="space-y-3">
                                 {Object.entries(peerByReviewer).map(([reviewer, rans], ri) => {
                                     const rScore = avg5(rans);
                                     const bg = AVATAR_COLORS[ri % AVATAR_COLORS.length];
+                                    const key = `peer-${reviewer}`;
+                                    const isOpen = expandedAppraisalKey === key;
                                     return (
                                         <div key={reviewer} className="bg-white dark:bg-gray-900 border border-indigo-100 dark:border-indigo-900/40 rounded-2xl overflow-hidden shadow-sm">
-                                            <div className="bg-indigo-50 dark:bg-indigo-950/20 px-5 py-3 flex items-center gap-3">
+                                            <div
+                                                onClick={() => setExpandedAppraisalKey(isOpen ? null : key)}
+                                                className="bg-indigo-50 dark:bg-indigo-950/20 px-5 py-3 flex items-center gap-3 cursor-pointer select-none hover:bg-indigo-100/60 dark:hover:bg-indigo-950/30 transition"
+                                            >
                                                 <div className={`w-9 h-9 rounded-xl ${bg} text-white text-[10px] font-black flex items-center justify-center shrink-0`}>{initials(reviewer)}</div>
                                                 <div className="flex-1 min-w-0">
                                                     <p className="text-xs font-black text-gray-800 dark:text-white truncate">{reviewer}</p>
                                                     <p className="text-[9px] text-indigo-400">{rans.length} answer{rans.length!==1?'s':''}</p>
                                                 </div>
                                                 {rScore !== null && <ScoreRing score={rScore} ringCls="stroke-indigo-500" size={44}/>}
+                                                <div className={`shrink-0 text-gray-400 transition-transform duration-300 ${isOpen ? 'rotate-180' : ''}`}>
+                                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+                                                </div>
                                             </div>
-                                            {rans.map((a,i) => <AnswerRow key={a.id} a={a} idx={i}/>)}
+                                            <div className={`transition-all duration-300 ease-in-out overflow-hidden ${isOpen ? 'max-h-[2000px] opacity-100' : 'max-h-0 opacity-0'}`}>
+                                                {rans.map((a,i) => <AnswerRow key={a.id} a={a} idx={i}/>)}
+                                            </div>
                                         </div>
                                     );
                                 })}
                             </div>
                         ) : (
-                            <div className="space-y-4">
+                            <div className="space-y-3">
                                 {(roleTab === 'all' ? availRoles : [roleTab as RoleKey]).map(role => {
                                     const roleAnswers = byRole[role] || [];
                                     if (!roleAnswers.length) return null;
@@ -370,14 +382,24 @@ const FeedbackReceived = () => {
                                                     {Object.entries(peerByReviewer).map(([reviewer, rans], ri) => {
                                                         const rScore = avg5(rans);
                                                         const bg = AVATAR_COLORS[ri % AVATAR_COLORS.length];
+                                                        const key = `allpeer-${reviewer}`;
+                                                        const isOpen = expandedAppraisalKey === key;
                                                         return (
                                                             <div key={reviewer} className={`bg-white dark:bg-gray-900 border ${cfg.border} rounded-2xl overflow-hidden shadow-sm`}>
-                                                                <div className={`${cfg.headerBg} px-5 py-2.5 flex items-center gap-3`}>
+                                                                <div
+                                                                    onClick={() => setExpandedAppraisalKey(isOpen ? null : key)}
+                                                                    className={`${cfg.headerBg} px-5 py-2.5 flex items-center gap-3 cursor-pointer select-none hover:brightness-95 transition`}
+                                                                >
                                                                     <div className={`w-8 h-8 rounded-xl ${bg} text-white text-[9px] font-black flex items-center justify-center shrink-0`}>{initials(reviewer)}</div>
                                                                     <div className="flex-1 min-w-0"><p className="text-xs font-black text-gray-800 dark:text-white truncate">{reviewer}</p></div>
                                                                     {rScore !== null && <ScoreRing score={rScore} ringCls={cfg.ring} size={36}/>}
+                                                                    <div className={`shrink-0 text-gray-400 transition-transform duration-300 ${isOpen ? 'rotate-180' : ''}`}>
+                                                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+                                                                    </div>
                                                                 </div>
-                                                                {rans.map((a,i) => <AnswerRow key={a.id} a={a} idx={i}/>)}
+                                                                <div className={`transition-all duration-300 ease-in-out overflow-hidden ${isOpen ? 'max-h-[2000px] opacity-100' : 'max-h-0 opacity-0'}`}>
+                                                                    {rans.map((a,i) => <AnswerRow key={a.id} a={a} idx={i}/>)}
+                                                                </div>
                                                             </div>
                                                         );
                                                     })}
@@ -386,17 +408,27 @@ const FeedbackReceived = () => {
                                         );
                                     }
                                     const submitter = roleAnswers[0]?.submitted_by_name;
+                                    const key = `role-${role}`;
+                                    const isOpen = expandedAppraisalKey === key;
                                     return (
                                         <div key={role} className={`bg-white dark:bg-gray-900 border ${cfg.border} rounded-2xl overflow-hidden shadow-sm`}>
-                                            <div className={`${cfg.headerBg} px-5 py-3 flex items-center gap-3`}>
+                                            <div
+                                                onClick={() => setExpandedAppraisalKey(isOpen ? null : key)}
+                                                className={`${cfg.headerBg} px-5 py-3 flex items-center gap-3 cursor-pointer select-none hover:brightness-95 transition`}
+                                            >
                                                 <span className="text-xl">{cfg.icon}</span>
                                                 <div className="flex-1">
                                                     <p className={`text-xs font-black ${cfg.text}`}>{cfg.label} Feedback</p>
                                                     {submitter && role!=='self' && <p className="text-[9px] text-gray-400">by {submitter}</p>}
                                                 </div>
                                                 {s !== null && <ScoreRing score={s} ringCls={cfg.ring} size={44}/>}
+                                                <div className={`shrink-0 text-gray-400 transition-transform duration-300 ${isOpen ? 'rotate-180' : ''}`}>
+                                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+                                                </div>
                                             </div>
-                                            {roleAnswers.map((a,i) => <AnswerRow key={a.id} a={a} idx={i}/>)}
+                                            <div className={`transition-all duration-300 ease-in-out overflow-hidden ${isOpen ? 'max-h-[2000px] opacity-100' : 'max-h-0 opacity-0'}`}>
+                                                {roleAnswers.map((a,i) => <AnswerRow key={a.id} a={a} idx={i}/>)}
+                                            </div>
                                         </div>
                                     );
                                 })}
@@ -419,43 +451,61 @@ const FeedbackReceived = () => {
                         <p className="text-[10px] text-gray-400 mt-1">Managers or admins can post notes directly to you outside of appraisal cycles.</p>
                     </div>
                 ) : (
-                    <div className="space-y-3">
+                    <div className="space-y-2">
                         {directFBs.map((f, fi) => {
                             const cat  = CAT_CFG[f.category] ?? { icon:'📝', cls:'bg-gray-100 text-gray-500' };
                             const bg   = AVATAR_COLORS[fi % AVATAR_COLORS.length];
                             const date = new Date(f.created_at).toLocaleDateString('en-IN', { day:'2-digit', month:'short', year:'numeric' });
+                            const isOpen = expandedDirectId === f.id;
                             return (
-                                <div key={f.id} className={`bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-2xl shadow-sm overflow-hidden ${!f.acknowledged ? 'ring-1 ring-violet-500/20' : ''}`}>
-                                    <div className="px-5 py-3.5 flex items-start gap-3">
-                                        <div className={`w-9 h-9 rounded-xl ${bg} text-white text-[10px] font-black flex items-center justify-center shrink-0 mt-0.5`}>{initials(f.sender_name||'?')}</div>
+                                <div key={f.id} className={`bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-2xl shadow-sm overflow-hidden transition-all duration-300 ${!f.acknowledged ? 'ring-1 ring-violet-500/20' : ''}`}>
+                                    {/* Collapsed Header — always visible, clickable */}
+                                    <div
+                                        onClick={() => setExpandedDirectId(isOpen ? null : f.id)}
+                                        className="px-5 py-3.5 flex items-center gap-3 cursor-pointer select-none hover:bg-gray-50/50 dark:hover:bg-gray-850/30 transition"
+                                    >
+                                        <div className={`w-9 h-9 rounded-xl ${bg} text-white text-[10px] font-black flex items-center justify-center shrink-0`}>{initials(f.sender_name||'?')}</div>
                                         <div className="flex-1 min-w-0">
-                                            <div className="flex flex-wrap items-center gap-2 mb-0.5">
-                                                <p className="text-xs font-black text-gray-800 dark:text-white">{f.sender_name}</p>
+                                            <div className="flex flex-wrap items-center gap-2">
+                                                <p className="text-xs font-black text-gray-800 dark:text-white truncate">{f.sender_name}</p>
                                                 <span className={`text-[8px] font-black uppercase px-2 py-0.5 rounded-full ${cat.cls}`}>{cat.icon} {f.category_display}</span>
-                                                {!f.acknowledged && <span className="text-[7px] font-black bg-violet-500 text-white px-1.5 py-0.5 rounded-full">NEW</span>}
+                                                {!f.acknowledged && <span className="text-[7px] font-black bg-violet-500 text-white px-1.5 py-0.5 rounded-full animate-pulse">NEW</span>}
                                             </div>
-                                            <p className="text-[9px] text-gray-400 mb-2">{date}</p>
-                                            <p className="text-[11px] text-gray-600 dark:text-gray-300 leading-relaxed">{f.feedback_text}</p>
-                                            {f.rating && (
-                                                <div className="flex items-center gap-0.5 mt-2">
-                                                    {[1,2,3,4,5].map(i=><span key={i} className={`text-sm ${i<=f.rating!?'text-amber-400':'text-gray-200 dark:text-gray-700'}`}>★</span>)}
-                                                    <span className="text-[9px] font-black text-amber-600 ml-1">{f.rating}/5</span>
-                                                </div>
-                                            )}
+                                            <div className="flex items-center gap-3 mt-1">
+                                                <span className="text-[9px] text-gray-400">{date}</span>
+                                                {f.rating && (
+                                                    <div className="flex items-center gap-0.5">
+                                                        {[1,2,3,4,5].map(i=><span key={i} className={`text-xs ${i<=f.rating!?'text-amber-400':'text-gray-200 dark:text-gray-700'}`}>★</span>)}
+                                                        <span className="text-[8px] font-bold text-amber-600 ml-0.5">{f.rating}/5</span>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
+                                        <div className={`shrink-0 text-gray-400 transition-transform duration-300 ${isOpen ? 'rotate-180' : ''}`}>
+                                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
                                         </div>
                                     </div>
-                                    <div className="px-5 py-2.5 border-t border-gray-50 dark:border-gray-800 flex items-center justify-between">
-                                        <span className={`text-[8px] font-bold uppercase px-2 py-0.5 rounded-full ${f.visibility==='public'?'bg-emerald-100 text-emerald-600':f.visibility==='team'?'bg-blue-100 text-blue-600':'bg-gray-100 dark:bg-gray-800 text-gray-400'}`}>
-                                            {f.visibility}
-                                        </span>
-                                        {!f.acknowledged ? (
-                                            <button onClick={() => handleAck(f.id)} disabled={ackingId===f.id}
-                                                className="text-[9px] font-black text-violet-600 hover:bg-violet-50 dark:hover:bg-violet-950/20 px-2 py-1 rounded-lg transition disabled:opacity-50">
-                                                {ackingId===f.id ? 'Saving...' : '✓ Acknowledge'}
-                                            </button>
-                                        ) : (
-                                            <span className="text-[9px] font-bold text-emerald-600">✓ Acknowledged</span>
-                                        )}
+
+                                    {/* Expanded Content — only visible when open */}
+                                    <div className={`transition-all duration-300 ease-in-out overflow-hidden ${isOpen ? 'max-h-[500px] opacity-100' : 'max-h-0 opacity-0'}`}>
+                                        <div className="px-5 pb-3 pt-0">
+                                            <div className="bg-gray-50 dark:bg-gray-800/40 rounded-xl p-4 mb-3">
+                                                <p className="text-[11px] text-gray-600 dark:text-gray-300 leading-relaxed whitespace-pre-line">{f.feedback_text}</p>
+                                            </div>
+                                        </div>
+                                        <div className="px-5 py-2.5 border-t border-gray-50 dark:border-gray-800 flex items-center justify-between">
+                                            <span className={`text-[8px] font-bold uppercase px-2 py-0.5 rounded-full ${f.visibility==='public'?'bg-emerald-100 text-emerald-600':f.visibility==='team'?'bg-blue-100 text-blue-600':'bg-gray-100 dark:bg-gray-800 text-gray-400'}`}>
+                                                {f.visibility === 'public' ? '🌐 Public' : f.visibility === 'team' ? '👥 Team' : '🔒 Private'}
+                                            </span>
+                                            {!f.acknowledged ? (
+                                                <button onClick={(e) => { e.stopPropagation(); handleAck(f.id); }} disabled={ackingId===f.id}
+                                                    className="text-[9px] font-black text-violet-600 hover:bg-violet-50 dark:hover:bg-violet-950/20 px-3 py-1.5 rounded-lg transition disabled:opacity-50">
+                                                    {ackingId===f.id ? 'Saving...' : '✓ Acknowledge'}
+                                                </button>
+                                            ) : (
+                                                <span className="text-[9px] font-bold text-emerald-600">✓ Acknowledged</span>
+                                            )}
+                                        </div>
                                     </div>
                                 </div>
                             );
