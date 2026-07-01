@@ -1,15 +1,25 @@
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState } from 'react';
 import { useDispatch } from 'react-redux';
-import { setPageTitle } from '../../../store/themeConfigSlice';
-import ReactApexChart from 'react-apexcharts';
 import axios from 'axios';
+import { setPageTitle } from '../../../store/themeConfigSlice';
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
-const getHeaders = () => ({ Authorization: `Bearer ${localStorage.getItem('access_token')}` });
+/* ─── Types ─────────────────────────────────────────────── */
+interface Cycle { id: number; name: string; status: string; }
 
-interface Feedback {
+interface AAnswer {
     id: number;
-    sender: number;
+    question_text: string;
+    question_type: 'scale' | 'yes_no';
+    max_score: number;
+    role_type: 'self' | 'manager' | 'peer' | 'hr';
+    rating_score: number | null;
+    submitted_by: number | null;
+    submitted_by_name: string | null;
+    cycle_name?: string; // injected when aggregating all cycles
+}
+
+interface DirectFeedback {
+    id: number;
     sender_name: string;
     feedback_text: string;
     category: string;
@@ -20,390 +30,438 @@ interface Feedback {
     created_at: string;
 }
 
-const CATEGORIES = [
-    { key: '', label: 'All' },
-    { key: 'peer_recognition', label: 'Peer Recognition' },
-    { key: 'appreciation', label: 'Appreciation' },
-    { key: 'manager_coaching', label: 'Manager Coaching' },
-    { key: 'constructive', label: 'Constructive' },
-    { key: 'goal_progress', label: 'Goal Progress' },
-];
+type RoleKey  = 'self' | 'manager' | 'peer' | 'hr';
+type MainTab  = 'appraisal' | 'direct';
 
-const CAT_STYLE: Record<string, { badge: string; bg: string; icon: string }> = {
-    peer_recognition: { badge: 'bg-violet-500/10 text-violet-600 dark:text-violet-400', bg: 'border-l-violet-500', icon: '🤝' },
-    appreciation:     { badge: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400', bg: 'border-l-emerald-500', icon: '🌟' },
-    manager_coaching: { badge: 'bg-blue-500/10 text-blue-600 dark:text-blue-400', bg: 'border-l-blue-500', icon: '💬' },
-    constructive:     { badge: 'bg-amber-500/10 text-amber-600 dark:text-amber-400', bg: 'border-l-amber-500', icon: '🔧' },
-    goal_progress:    { badge: 'bg-teal-500/10 text-teal-600 dark:text-teal-400', bg: 'border-l-teal-500', icon: '🎯' },
+/* ─── Constants ──────────────────────────────────────────── */
+const ROLE_CFG: Record<RoleKey, { label: string; icon: string; text: string; ring: string; border: string; headerBg: string; pill: string }> = {
+    self:    { label:'Self',    icon:'👤', text:'text-violet-600 dark:text-violet-400', ring:'stroke-violet-500', border:'border-violet-100 dark:border-violet-900/40', headerBg:'bg-violet-50 dark:bg-violet-950/20',  pill:'bg-violet-100 text-violet-700 dark:bg-violet-950/40 dark:text-violet-300' },
+    manager: { label:'Manager', icon:'👔', text:'text-teal-600 dark:text-teal-400',    ring:'stroke-teal-500',   border:'border-teal-100 dark:border-teal-900/40',     headerBg:'bg-teal-50 dark:bg-teal-950/20',     pill:'bg-teal-100 text-teal-700 dark:bg-teal-950/40 dark:text-teal-300' },
+    peer:    { label:'Peer',    icon:'🤝', text:'text-indigo-600 dark:text-indigo-400', ring:'stroke-indigo-500', border:'border-indigo-100 dark:border-indigo-900/40', headerBg:'bg-indigo-50 dark:bg-indigo-950/20', pill:'bg-indigo-100 text-indigo-700 dark:bg-indigo-950/40 dark:text-indigo-300' },
+    hr:      { label:'HR',      icon:'🛡️', text:'text-rose-600 dark:text-rose-400',    ring:'stroke-rose-500',   border:'border-rose-100 dark:border-rose-900/40',     headerBg:'bg-rose-50 dark:bg-rose-950/20',     pill:'bg-rose-100 text-rose-700 dark:bg-rose-950/40 dark:text-rose-300' },
 };
 
-const AVATAR_COLORS = [
-    'bg-teal-500', 'bg-indigo-500', 'bg-violet-500', 'bg-amber-500',
-    'bg-rose-500', 'bg-blue-500', 'bg-emerald-500', 'bg-pink-500',
-];
+const CAT_CFG: Record<string, { icon: string; cls: string }> = {
+    peer_recognition: { icon:'🤝', cls:'bg-violet-100 text-violet-700 dark:bg-violet-950/40 dark:text-violet-300' },
+    appreciation:     { icon:'🌟', cls:'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300' },
+    manager_coaching: { icon:'💬', cls:'bg-blue-100 text-blue-700 dark:bg-blue-950/40 dark:text-blue-300' },
+    constructive:     { icon:'🔧', cls:'bg-amber-100 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300' },
+    goal_progress:    { icon:'🎯', cls:'bg-teal-100 text-teal-700 dark:bg-teal-950/40 dark:text-teal-300' },
+};
 
-const avatarColor = (name: string) =>
-    AVATAR_COLORS[(name.charCodeAt(0) + (name.charCodeAt(1) || 0)) % AVATAR_COLORS.length];
+const AVATAR_COLORS = ['bg-indigo-500','bg-teal-500','bg-violet-500','bg-amber-500','bg-rose-500','bg-blue-500','bg-emerald-500','bg-pink-500'];
+const avatarBg = (name: string) => AVATAR_COLORS[(name.charCodeAt(0)+(name.charCodeAt(1)||0))%AVATAR_COLORS.length];
+const initials = (name: string) => name.split(' ').map(n=>n[0]).join('').slice(0,2).toUpperCase()||'?';
 
-const initials = (name: string) =>
-    name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase();
+/* ─── Scoring helpers ────────────────────────────────────── */
+const toNorm5 = (a: AAnswer): number | null => {
+    if (a.rating_score === null) return null;
+    if (a.question_type === 'yes_no') return a.rating_score === 1 ? 5 : 0;
+    return (a.rating_score / (a.max_score || 5)) * 5;
+};
+const avg5 = (answers: AAnswer[]) => {
+    const s = answers.map(toNorm5).filter((x): x is number => x !== null);
+    return s.length ? s.reduce((a,b)=>a+b,0)/s.length : null;
+};
 
-const StarRating = ({ rating }: { rating: number | null }) => {
-    if (!rating) return null;
+/* ─── Sub-components ─────────────────────────────────────── */
+const ScoreRing = ({ score, ringCls='stroke-teal-500', size=52 }: { score:number|null; ringCls?:string; size?:number }) => {
+    const pct = score !== null ? Math.min((score/5)*100, 100) : 0;
+    const r = size*0.38, c = 2*Math.PI*r;
     return (
-        <div className="flex items-center gap-0.5">
-            {Array.from({ length: 5 }).map((_, i) => (
-                <svg key={i} className={`w-3 h-3 ${i < rating ? 'text-amber-400' : 'text-gray-200 dark:text-gray-700'}`}
-                    fill="currentColor" viewBox="0 0 20 20">
-                    <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-                </svg>
-            ))}
-            <span className="text-[10px] font-bold text-amber-500 ml-1">{rating}/5</span>
+        <div className="relative shrink-0" style={{ width:size, height:size }}>
+            <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} className="-rotate-90" style={{ display:'block' }}>
+                <circle cx={size/2} cy={size/2} r={r} fill="none" strokeWidth={size*0.1} className="stroke-gray-100 dark:stroke-gray-800"/>
+                <circle cx={size/2} cy={size/2} r={r} fill="none" strokeWidth={size*0.1}
+                    strokeDasharray={c} strokeDashoffset={c*(1-pct/100)}
+                    strokeLinecap="round" className={`${ringCls} transition-all duration-700`}/>
+            </svg>
+            <div className="absolute inset-0 flex flex-col items-center justify-center">
+                <span className="font-black text-gray-800 dark:text-white leading-none" style={{ fontSize:size*0.2 }}>
+                    {score !== null ? score.toFixed(1) : '—'}
+                </span>
+                <span className="text-gray-400 leading-none" style={{ fontSize:size*0.13 }}>/5</span>
+            </div>
         </div>
     );
 };
 
+const Stars5 = ({ score }: { score:number|null }) => {
+    const filled = score !== null ? Math.round(score) : 0;
+    return (
+        <div className="flex items-center gap-0.5">
+            {[1,2,3,4,5].map(i => <span key={i} className={`text-sm ${i<=filled?'text-amber-400':'text-gray-200 dark:text-gray-700'}`}>★</span>)}
+            {score !== null && <span className="text-[9px] font-black text-amber-600 dark:text-amber-400 ml-1">{score.toFixed(1)}</span>}
+        </div>
+    );
+};
+
+const AnswerRow = ({ a, idx }: { a:AAnswer; idx:number }) => {
+    const norm = toNorm5(a);
+    return (
+        <div className="px-5 py-3.5 flex items-start gap-3 border-b border-gray-50 dark:border-gray-800 last:border-0">
+            <span className="text-[9px] text-gray-300 font-bold shrink-0 mt-0.5 w-4">{idx+1}.</span>
+            <div className="flex-1 min-w-0">
+                <p className="text-[11px] font-bold text-gray-700 dark:text-gray-200 leading-snug mb-2">{a.question_text}</p>
+                {a.cycle_name && <span className="text-[8px] font-bold text-gray-400 bg-gray-100 dark:bg-gray-800 px-1.5 py-0.5 rounded-full mb-1.5 inline-block">{a.cycle_name}</span>}
+                <Stars5 score={norm}/>
+                {a.question_type === 'yes_no' && (
+                    <span className={`mt-1.5 inline-flex text-[8px] font-black px-2 py-0.5 rounded-full ${a.rating_score===1?'bg-emerald-100 text-emerald-600 dark:bg-emerald-950/40 dark:text-emerald-400':'bg-rose-100 text-rose-600 dark:bg-rose-950/40 dark:text-rose-400'}`}>
+                        {a.rating_score===1?'✓ Yes (5★)':'✕ No (0★)'}
+                    </span>
+                )}
+            </div>
+            {a.question_type==='scale' && a.rating_score !== null && (
+                <span className="shrink-0 text-sm font-black text-amber-500">{a.rating_score}<span className="text-[9px] text-gray-400">/{a.max_score}</span></span>
+            )}
+        </div>
+    );
+};
+
+/* ─── Main component ─────────────────────────────────────── */
 const FeedbackReceived = () => {
     const dispatch = useDispatch();
-    const [feedbacks, setFeedbacks] = useState<Feedback[]>([]);
-    const [loading, setLoading] = useState(true);
-    const [empId, setEmpId] = useState<number | null>(null);
-    const [activeCategory, setActiveCategory] = useState('');
-    const [search, setSearch] = useState('');
-    const [acknowledgingId, setAcknowledgingId] = useState<number | null>(null);
-    const [showUnreadOnly, setShowUnreadOnly] = useState(false);
 
-    useEffect(() => { dispatch(setPageTitle('Feedback Received')); }, [dispatch]);
+    // Data
+    const [cycles, setCycles]           = useState<Cycle[]>([]);
+    const [cycleId, setCycleId]         = useState<number | 'all'>('all');
+    const [answers, setAnswers]         = useState<AAnswer[]>([]);
+    const [directFBs, setDirectFBs]     = useState<DirectFeedback[]>([]);
+    const [loading, setLoading]         = useState(true);
+    const [loadingDirect, setLoadingDirect] = useState(true);
+    const [error, setError]             = useState<string | null>(null);
 
+    // UI state
+    const [mainTab, setMainTab]   = useState<MainTab>('appraisal');
+    const [roleTab, setRoleTab]   = useState<RoleKey | 'all'>('all');
+    const [ackingId, setAckingId] = useState<number | null>(null);
+
+    const API  = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
+    const auth = () => ({ Authorization: `Bearer ${localStorage.getItem('access_token')}` });
+    const arr  = (d: any) => Array.isArray(d) ? d : d?.results ?? [];
+
+    // Load cycles on mount
     useEffect(() => {
+        dispatch(setPageTitle('Feedback Received'));
         (async () => {
             try {
-                const idRes = await axios.get(`${API_BASE}/employee/employee-id/`, { headers: getHeaders() });
-                const id = idRes.data?.id;
-                setEmpId(id);
-                if (!id) return;
-                const res = await axios.get(`${API_BASE}/employee/continuous-feedback/?receiver=${id}`, { headers: getHeaders() });
-                const data = Array.isArray(res.data) ? res.data : res.data?.results ?? [];
-                setFeedbacks(data.sort((a: Feedback, b: Feedback) =>
-                    new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-                ));
-            } catch (e) {
-                console.error(e);
+                const res  = await axios.get(`${API}/employee/appraisal-cycles/`, { headers: auth() });
+                const list: Cycle[] = arr(res.data);
+                setCycles(list);
+            } catch (e: any) {
+                setError(e.response?.data?.detail || 'Failed to load.');
+            }
+        })();
+    }, [dispatch]);
+
+    // Load appraisal answers when cycleId changes
+    useEffect(() => {
+        if (!cycles.length) return;
+        (async () => {
+            setLoading(true); setError(null);
+            try {
+                const url = cycleId === 'all'
+                    ? `${API}/employee/appraisal-evaluations/?mine=true`
+                    : `${API}/employee/appraisal-evaluations/?mine=true&cycle=${cycleId}`;
+                const res  = await axios.get(url, { headers: auth() });
+                const evals = arr(res.data);
+
+                if (cycleId === 'all') {
+                    // Merge answers from all evals, inject cycle_name
+                    const all: AAnswer[] = [];
+                    evals.forEach((ev: any) => {
+                        (ev.answers || []).forEach((a: any) => all.push({ ...a, cycle_name: ev.cycle_name }));
+                    });
+                    setAnswers(all);
+                } else {
+                    setAnswers(evals[0]?.answers || []);
+                }
+            } catch (e: any) {
+                setError(e.response?.data?.detail || 'Failed to load.');
             } finally {
                 setLoading(false);
             }
         })();
+    }, [cycleId, cycles]);
+
+    // Load direct (continuous) feedback — scoped to current user via ?mine=true
+    useEffect(() => {
+        (async () => {
+            setLoadingDirect(true);
+            try {
+                const res = await axios.get(`${API}/employee/continuous-feedback/?mine=true`, { headers: auth() });
+                const data: DirectFeedback[] = arr(res.data);
+                setDirectFBs(data.sort((a,b) => new Date(b.created_at).getTime()-new Date(a.created_at).getTime()));
+            } catch { /* non-blocking */ }
+            finally { setLoadingDirect(false); }
+        })();
     }, []);
 
-    const handleAcknowledge = async (id: number) => {
-        setAcknowledgingId(id);
+    const handleAck = async (id: number) => {
+        setAckingId(id);
         try {
-            await axios.patch(`${API_BASE}/employee/continuous-feedback/${id}/`, { acknowledged: true }, { headers: getHeaders() });
-            setFeedbacks(prev => prev.map(f => f.id === id ? { ...f, acknowledged: true } : f));
-        } catch (e) {
-            console.error(e);
-        } finally {
-            setAcknowledgingId(null);
-        }
+            await axios.patch(`${API}/employee/continuous-feedback/${id}/`, { acknowledged: true }, { headers: auth() });
+            setDirectFBs(prev => prev.map(f => f.id===id ? { ...f, acknowledged:true } : f));
+        } finally { setAckingId(null); }
     };
 
-    const filtered = useMemo(() => {
-        let list = feedbacks;
-        if (activeCategory) list = list.filter(f => f.category === activeCategory);
-        if (showUnreadOnly) list = list.filter(f => !f.acknowledged);
-        if (search.trim()) {
-            const q = search.toLowerCase();
-            list = list.filter(f =>
-                f.feedback_text.toLowerCase().includes(q) ||
-                f.sender_name.toLowerCase().includes(q) ||
-                f.category_display.toLowerCase().includes(q)
-            );
-        }
-        return list;
-    }, [feedbacks, activeCategory, search, showUnreadOnly]);
+    /* ── Appraisal data derived ── */
+    const byRole: Partial<Record<RoleKey, AAnswer[]>> = {};
+    answers.forEach(a => {
+        if (!byRole[a.role_type]) byRole[a.role_type] = [];
+        byRole[a.role_type]!.push(a);
+    });
+    const availRoles = (['self','manager','peer','hr'] as RoleKey[]).filter(r => byRole[r]?.length);
 
-    // Stats
-    const totalCount = feedbacks.length;
-    const unreadCount = feedbacks.filter(f => !f.acknowledged).length;
-    const avgRating = (() => {
-        const rated = feedbacks.filter(f => f.rating);
-        if (!rated.length) return null;
-        return (rated.reduce((s, f) => s + (f.rating ?? 0), 0) / rated.length).toFixed(1);
-    })();
-
-    const catCounts = useMemo(() => {
-        const m: Record<string, number> = {};
-        feedbacks.forEach(f => { m[f.category] = (m[f.category] || 0) + 1; });
-        return m;
-    }, [feedbacks]);
-
-    // Donut chart config
-    const donutSeries = CATEGORIES.slice(1).map(c => catCounts[c.key] || 0);
-    const donutOptions: ApexCharts.ApexOptions = {
-        chart: { type: 'donut', fontFamily: 'Inter, sans-serif', toolbar: { show: false } },
-        labels: CATEGORIES.slice(1).map(c => c.label),
-        colors: ['#8b5cf6', '#10b981', '#3b82f6', '#f59e0b', '#14b8a6'],
-        legend: { position: 'bottom', fontSize: '10px' },
-        dataLabels: { enabled: false },
-        stroke: { width: 2 },
-        plotOptions: {
-            pie: {
-                donut: {
-                    size: '68%',
-                    labels: {
-                        show: true,
-                        total: {
-                            show: true,
-                            label: 'Total',
-                            fontSize: '11px',
-                            color: '#6b7280',
-                            formatter: () => String(totalCount),
-                        },
-                    },
-                },
-            },
-        },
-        tooltip: { y: { formatter: (v: number) => `${v} feedback${v !== 1 ? 's' : ''}` } },
-    };
-
-    // Monthly trend — count feedbacks per month (last 6 months)
-    const trendData = useMemo(() => {
-        const months: Record<string, number> = {};
-        const now = new Date();
-        for (let i = 5; i >= 0; i--) {
-            const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-            const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
-            months[key] = 0;
-        }
-        feedbacks.forEach(f => {
-            const key = f.created_at.slice(0, 7);
-            if (key in months) months[key]++;
-        });
-        return months;
-    }, [feedbacks]);
-
-    const trendLabels = Object.keys(trendData).map(k => {
-        const [y, m] = k.split('-');
-        return new Date(Number(y), Number(m) - 1).toLocaleString('default', { month: 'short', year: '2-digit' });
+    const peerByReviewer: Record<string, AAnswer[]> = {};
+    (byRole.peer || []).forEach(a => {
+        const k = a.submitted_by_name || `Reviewer #${a.submitted_by}`;
+        if (!peerByReviewer[k]) peerByReviewer[k] = [];
+        peerByReviewer[k].push(a);
     });
 
-    const trendOptions: ApexCharts.ApexOptions = {
-        chart: { type: 'area', fontFamily: 'Inter, sans-serif', toolbar: { show: false }, sparkline: { enabled: false } },
-        colors: ['#14b8a6'],
-        fill: { type: 'gradient', gradient: { shadeIntensity: 1, opacityFrom: 0.4, opacityTo: 0.05, stops: [0, 100] } },
-        stroke: { curve: 'smooth', width: 2 },
-        xaxis: { categories: trendLabels, labels: { style: { fontSize: '10px' } } },
-        yaxis: { labels: { formatter: (v: number) => String(Math.round(v)), style: { fontSize: '10px' } }, min: 0 },
-        grid: { borderColor: '#f1f5f9', strokeDashArray: 4 },
-        dataLabels: { enabled: false },
-        markers: { size: 4, colors: ['#14b8a6'], strokeColors: '#fff', strokeWidth: 2 },
-        tooltip: { y: { formatter: (v: number) => `${v} feedback${v !== 1 ? 's' : ''}` } },
-    };
+    const roleAvg   = (r: RoleKey) => avg5(byRole[r] || []);
+    const roleScores = availRoles.map(roleAvg).filter((s): s is number => s !== null);
+    const combined   = roleScores.length ? roleScores.reduce((a,b)=>a+b,0)/roleScores.length : null;
 
-    if (loading) {
-        return (
-            <div className="min-h-[60vh] flex items-center justify-center">
-                <div className="flex flex-col items-center gap-3">
-                    <div className="w-10 h-10 border-4 border-teal-500 border-t-transparent rounded-full animate-spin" />
-                    <span className="text-xs text-gray-400 font-semibold">Loading feedback...</span>
-                </div>
-            </div>
-        );
-    }
+    const unreadDirect = directFBs.filter(f => !f.acknowledged).length;
 
     return (
-        <div className="space-y-6 py-2 animate__animated animate__fadeIn">
-
-            {/* Header */}
-            <div className="bg-gradient-to-r from-violet-500 to-indigo-600 text-white p-6 rounded-3xl shadow-xl shadow-violet-500/10 relative overflow-hidden">
-                <div className="absolute -top-10 -right-10 w-40 h-40 rounded-full bg-white/5 blur-2xl" />
-                <div className="absolute -bottom-10 -left-10 w-56 h-56 rounded-full bg-white/5 blur-3xl" />
-                <div className="relative z-10">
-                    <p className="text-white/70 text-[10px] font-black uppercase tracking-widest mb-1">Performance · Feedback</p>
-                    <h1 className="text-2xl font-extrabold">Feedback Received</h1>
-                    <p className="text-white/70 text-xs mt-1 max-w-lg">
-                        Peer recognitions, manager coaching, and constructive feedback received from your teammates and leads.
-                    </p>
+        <div className="space-y-5 py-2">
+            {/* ── Page header ── */}
+            <div className="bg-white dark:bg-gray-900 p-5 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div>
+                    <p className="text-[9px] font-black uppercase tracking-wider text-teal-600 dark:text-teal-400 mb-0.5">Performance · You</p>
+                    <h2 className="text-xl font-bold text-gray-800 dark:text-white">Feedback Received</h2>
+                    <p className="text-[11px] text-gray-400 mt-0.5">Appraisal reviews (self/manager/peer/HR) + direct notes from managers.</p>
                 </div>
-            </div>
-
-            {/* Stat cards */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                {[
-                    { label: 'Total Received', value: totalCount, sub: 'all time', color: 'violet' },
-                    { label: 'Unread', value: unreadCount, sub: 'awaiting acknowledgement', color: 'amber' },
-                    { label: 'Avg Rating', value: avgRating ?? '—', sub: 'across rated feedback', color: 'teal' },
-                    { label: 'Categories', value: Object.keys(catCounts).length, sub: 'types of feedback', color: 'indigo' },
-                ].map((c, i) => (
-                    <div key={i} className="bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-2xl p-5 shadow-sm">
-                        <div className={`text-3xl font-extrabold text-${c.color}-600 dark:text-${c.color}-400 mb-1`}>{c.value}</div>
-                        <div className="text-xs font-bold text-gray-800 dark:text-white">{c.label}</div>
-                        <div className="text-[10px] text-gray-400 mt-0.5">{c.sub}</div>
+                {/* Cycle selector — only for appraisal tab */}
+                {mainTab === 'appraisal' && cycles.length > 0 && (
+                    <div className="flex items-center gap-2 shrink-0">
+                        <label className="text-[10px] font-black uppercase tracking-wider text-gray-400">Cycle</label>
+                        <select value={cycleId} onChange={e => setCycleId(e.target.value === 'all' ? 'all' : Number(e.target.value))}
+                            className="bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 px-3 py-2 rounded-xl text-xs font-semibold text-gray-800 dark:text-white focus:outline-none">
+                            <option value="all">All Cycles</option>
+                            {cycles.map(c => (
+                                <option key={c.id} value={c.id}>{c.name} {c.status==='active'?'● Active':c.status==='completed'?'✓':''}</option>
+                            ))}
+                        </select>
                     </div>
-                ))}
-            </div>
-
-            {/* Charts row */}
-            {totalCount > 0 && (
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                    <div className="bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-3xl shadow-sm p-5">
-                        <h3 className="text-xs font-black uppercase tracking-wider text-gray-400 mb-3">By Category</h3>
-                        <ReactApexChart options={donutOptions} series={donutSeries} type="donut" height={240} />
-                    </div>
-                    <div className="lg:col-span-2 bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-3xl shadow-sm p-5">
-                        <h3 className="text-xs font-black uppercase tracking-wider text-gray-400 mb-3">Feedback Trend (Last 6 Months)</h3>
-                        <ReactApexChart
-                            options={trendOptions}
-                            series={[{ name: 'Feedback', data: Object.values(trendData) }]}
-                            type="area"
-                            height={240}
-                        />
-                    </div>
-                </div>
-            )}
-
-            {/* Filters + Search */}
-            <div className="bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-2xl p-4 flex flex-col md:flex-row gap-3 md:items-center justify-between">
-                {/* Category tabs */}
-                <div className="flex flex-wrap gap-2">
-                    {CATEGORIES.map(c => (
-                        <button
-                            key={c.key}
-                            onClick={() => setActiveCategory(c.key)}
-                            className={`px-3 py-1.5 rounded-xl text-[10px] font-bold transition ${
-                                activeCategory === c.key
-                                    ? 'bg-violet-500 text-white shadow-md shadow-violet-500/20'
-                                    : 'bg-gray-50 dark:bg-gray-800 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700'
-                            }`}
-                        >
-                            {c.label}
-                            {c.key && catCounts[c.key] ? (
-                                <span className={`ml-1.5 ${activeCategory === c.key ? 'text-white/80' : 'text-gray-400'}`}>
-                                    {catCounts[c.key]}
-                                </span>
-                            ) : null}
-                        </button>
-                    ))}
-                </div>
-
-                <div className="flex items-center gap-2 shrink-0">
-                    {/* Unread toggle */}
-                    <button
-                        onClick={() => setShowUnreadOnly(p => !p)}
-                        className={`px-3 py-1.5 rounded-xl text-[10px] font-bold transition ${
-                            showUnreadOnly ? 'bg-amber-500 text-white' : 'bg-gray-50 dark:bg-gray-800 text-gray-500'
-                        }`}
-                    >
-                        Unread only {unreadCount > 0 && <span className="ml-1">({unreadCount})</span>}
-                    </button>
-                    {/* Search */}
-                    <div className="relative">
-                        <input
-                            type="text"
-                            placeholder="Search feedback..."
-                            value={search}
-                            onChange={e => setSearch(e.target.value)}
-                            className="bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 pl-8 pr-3 py-1.5 rounded-xl text-xs font-semibold text-gray-800 dark:text-white focus:outline-none w-44"
-                        />
-                        <svg className="w-3.5 h-3.5 text-gray-400 absolute left-2.5 top-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                        </svg>
-                    </div>
-                </div>
-            </div>
-
-            {/* Result count */}
-            <div className="flex items-center justify-between px-1">
-                <span className="text-[11px] font-bold text-gray-400">
-                    Showing {filtered.length} of {totalCount} feedback{totalCount !== 1 ? 's' : ''}
-                </span>
-                {(activeCategory || search || showUnreadOnly) && (
-                    <button
-                        onClick={() => { setActiveCategory(''); setSearch(''); setShowUnreadOnly(false); }}
-                        className="text-[10px] font-bold text-violet-600 hover:underline"
-                    >
-                        Clear filters
-                    </button>
                 )}
             </div>
 
-            {/* Feedback cards grid */}
-            {filtered.length === 0 ? (
-                <div className="text-center py-16 border border-dashed border-gray-200 dark:border-gray-800 rounded-3xl">
-                    <div className="text-4xl mb-3">💬</div>
-                    <p className="text-sm font-bold text-gray-400">No feedback found</p>
-                    <p className="text-xs text-gray-400 mt-1">
-                        {totalCount === 0 ? 'You haven\'t received any feedback yet.' : 'Try adjusting your filters.'}
-                    </p>
-                </div>
-            ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-                    {filtered.map(f => {
-                        const style = CAT_STYLE[f.category] ?? { badge: 'bg-gray-100 text-gray-500', bg: 'border-l-gray-300', icon: '📝' };
-                        const senderInitials = initials(f.sender_name || '?');
-                        const color = avatarColor(f.sender_name || '');
-                        return (
-                            <div
-                                key={f.id}
-                                className={`bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 border-l-4 ${style.bg} rounded-2xl shadow-sm p-5 flex flex-col gap-3 transition hover:shadow-md ${!f.acknowledged ? 'ring-1 ring-violet-500/20' : ''}`}
-                            >
-                                {/* Top row */}
-                                <div className="flex justify-between items-start gap-2">
-                                    <div className="flex items-center gap-2.5">
-                                        <div className={`w-9 h-9 rounded-full ${color} text-white flex items-center justify-center text-xs font-extrabold shrink-0`}>
-                                            {senderInitials}
-                                        </div>
-                                        <div>
-                                            <div className="text-xs font-bold text-gray-800 dark:text-white leading-tight">{f.sender_name}</div>
-                                            <div className="text-[9px] text-gray-400 mt-0.5">{new Date(f.created_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}</div>
+            {/* ── Main tabs ── */}
+            <div className="flex gap-2">
+                <button onClick={() => setMainTab('appraisal')}
+                    className={`px-4 py-2 rounded-xl text-xs font-black transition ${mainTab==='appraisal' ? 'bg-teal-500 text-white shadow-sm' : 'bg-gray-100 dark:bg-gray-800 text-gray-400 hover:text-gray-600'}`}>
+                    📋 Appraisal Reviews
+                </button>
+                <button onClick={() => setMainTab('direct')}
+                    className={`px-4 py-2 rounded-xl text-xs font-black transition flex items-center gap-1.5 ${mainTab==='direct' ? 'bg-violet-500 text-white shadow-sm' : 'bg-gray-100 dark:bg-gray-800 text-gray-400 hover:text-gray-600'}`}>
+                    💬 Direct Feedback
+                    {unreadDirect > 0 && <span className={`text-[8px] font-black px-1.5 py-0.5 rounded-full ${mainTab==='direct' ? 'bg-white/30 text-white' : 'bg-violet-500 text-white'}`}>{unreadDirect}</span>}
+                </button>
+            </div>
+
+            {/* ══════════ APPRAISAL TAB ══════════ */}
+            {mainTab === 'appraisal' && (
+                loading ? (
+                    <div className="space-y-3 animate-pulse">
+                        {[1,2,3].map(i=><div key={i} className="h-36 bg-gray-200 dark:bg-gray-800 rounded-2xl"/>)}
+                    </div>
+                ) : error ? (
+                    <div className="text-center py-10 text-sm text-rose-500">{error}</div>
+                ) : answers.length === 0 ? (
+                    <div className="bg-white dark:bg-gray-900 border border-dashed border-gray-200 dark:border-gray-700 rounded-3xl py-16 text-center">
+                        <div className="text-4xl mb-3">💬</div>
+                        <p className="text-sm font-bold text-gray-400">No appraisal feedback recorded yet.</p>
+                        <p className="text-[10px] text-gray-400 mt-1">Feedback will appear once reviewers submit their answers.</p>
+                    </div>
+                ) : (
+                    <>
+                        {/* Score summary */}
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                            {availRoles.map(role => {
+                                const s = roleAvg(role);
+                                const cfg = ROLE_CFG[role];
+                                return (
+                                    <div key={role} className={`bg-white dark:bg-gray-900 border ${cfg.border} rounded-2xl p-4 flex flex-col items-center gap-2`}>
+                                        <ScoreRing score={s} ringCls={cfg.ring} size={56}/>
+                                        <div className="text-center">
+                                            <p className={`text-[10px] font-black ${cfg.text}`}>{cfg.icon} {cfg.label}</p>
+                                            <p className="text-[8px] text-gray-400">{(byRole[role]||[]).length} answer{(byRole[role]||[]).length!==1?'s':''}</p>
                                         </div>
                                     </div>
-                                    <div className="flex flex-col items-end gap-1 shrink-0">
-                                        <span className={`text-[8px] font-black uppercase px-2 py-0.5 rounded-full ${style.badge}`}>
-                                            {style.icon} {f.category_display}
+                                );
+                            })}
+                        </div>
+
+                        {/* Combined score bar */}
+                        {combined !== null && (
+                            <div className="bg-gray-900 dark:bg-gray-950 rounded-2xl p-4 flex items-center gap-4">
+                                <ScoreRing score={combined} ringCls="stroke-teal-400" size={60}/>
+                                <div className="flex-1">
+                                    <p className="text-[9px] font-black uppercase tracking-wider text-gray-400 mb-0.5">Combined Average</p>
+                                    <p className="text-2xl font-black text-white">{combined.toFixed(2)}<span className="text-sm text-gray-400 ml-1">/5.00</span></p>
+                                    <div className="flex gap-0.5 mt-1">
+                                        {[1,2,3,4,5].map(i=><span key={i} className={`text-base ${i<=Math.round(combined)?'text-amber-400':'text-gray-700'}`}>★</span>)}
+                                    </div>
+                                </div>
+                                <div className="flex-1 hidden sm:block">
+                                    <div className="h-2 bg-gray-800 rounded-full overflow-hidden">
+                                        <div className="h-full rounded-full bg-gradient-to-r from-teal-400 to-teal-500 transition-all duration-700" style={{ width:`${(combined/5)*100}%` }}/>
+                                    </div>
+                                    <div className="flex justify-between text-[8px] text-gray-600 mt-0.5">
+                                        {[0,1,2,3,4,5].map(n=><span key={n}>{n}</span>)}
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Role tabs */}
+                        <div className="flex gap-1.5 overflow-x-auto">
+                            <button onClick={() => setRoleTab('all')} className={`shrink-0 px-3 py-1.5 rounded-xl text-[10px] font-black border transition ${roleTab==='all' ? 'bg-gray-900 text-white border-gray-900' : 'bg-gray-50 dark:bg-gray-800 border-transparent text-gray-400 hover:text-gray-600'}`}>
+                                All · {answers.length}
+                            </button>
+                            {availRoles.map(role => {
+                                const cfg = ROLE_CFG[role];
+                                const isAct = roleTab === role;
+                                return (
+                                    <button key={role} onClick={() => setRoleTab(role)} className={`shrink-0 flex items-center gap-1 px-3 py-1.5 rounded-xl text-[10px] font-black border transition ${isAct ? `${cfg.pill} ${cfg.border}` : 'bg-gray-50 dark:bg-gray-800 border-transparent text-gray-400 hover:text-gray-600'}`}>
+                                        {cfg.icon} {cfg.label} · {(byRole[role]||[]).length}
+                                    </button>
+                                );
+                            })}
+                        </div>
+
+                        {/* Role content */}
+                        {roleTab === 'peer' ? (
+                            <div className="space-y-4">
+                                {Object.entries(peerByReviewer).map(([reviewer, rans], ri) => {
+                                    const rScore = avg5(rans);
+                                    const bg = AVATAR_COLORS[ri % AVATAR_COLORS.length];
+                                    return (
+                                        <div key={reviewer} className="bg-white dark:bg-gray-900 border border-indigo-100 dark:border-indigo-900/40 rounded-2xl overflow-hidden shadow-sm">
+                                            <div className="bg-indigo-50 dark:bg-indigo-950/20 px-5 py-3 flex items-center gap-3">
+                                                <div className={`w-9 h-9 rounded-xl ${bg} text-white text-[10px] font-black flex items-center justify-center shrink-0`}>{initials(reviewer)}</div>
+                                                <div className="flex-1 min-w-0">
+                                                    <p className="text-xs font-black text-gray-800 dark:text-white truncate">{reviewer}</p>
+                                                    <p className="text-[9px] text-indigo-400">{rans.length} answer{rans.length!==1?'s':''}</p>
+                                                </div>
+                                                {rScore !== null && <ScoreRing score={rScore} ringCls="stroke-indigo-500" size={44}/>}
+                                            </div>
+                                            {rans.map((a,i) => <AnswerRow key={a.id} a={a} idx={i}/>)}
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        ) : (
+                            <div className="space-y-4">
+                                {(roleTab === 'all' ? availRoles : [roleTab as RoleKey]).map(role => {
+                                    const roleAnswers = byRole[role] || [];
+                                    if (!roleAnswers.length) return null;
+                                    const cfg = ROLE_CFG[role];
+                                    const s   = roleAvg(role);
+                                    if (role === 'peer') {
+                                        return (
+                                            <div key={role}>
+                                                <p className={`text-[9px] font-black uppercase tracking-wider mb-2 ${cfg.text}`}>{cfg.icon} Peer Feedback</p>
+                                                <div className="space-y-3">
+                                                    {Object.entries(peerByReviewer).map(([reviewer, rans], ri) => {
+                                                        const rScore = avg5(rans);
+                                                        const bg = AVATAR_COLORS[ri % AVATAR_COLORS.length];
+                                                        return (
+                                                            <div key={reviewer} className={`bg-white dark:bg-gray-900 border ${cfg.border} rounded-2xl overflow-hidden shadow-sm`}>
+                                                                <div className={`${cfg.headerBg} px-5 py-2.5 flex items-center gap-3`}>
+                                                                    <div className={`w-8 h-8 rounded-xl ${bg} text-white text-[9px] font-black flex items-center justify-center shrink-0`}>{initials(reviewer)}</div>
+                                                                    <div className="flex-1 min-w-0"><p className="text-xs font-black text-gray-800 dark:text-white truncate">{reviewer}</p></div>
+                                                                    {rScore !== null && <ScoreRing score={rScore} ringCls={cfg.ring} size={36}/>}
+                                                                </div>
+                                                                {rans.map((a,i) => <AnswerRow key={a.id} a={a} idx={i}/>)}
+                                                            </div>
+                                                        );
+                                                    })}
+                                                </div>
+                                            </div>
+                                        );
+                                    }
+                                    const submitter = roleAnswers[0]?.submitted_by_name;
+                                    return (
+                                        <div key={role} className={`bg-white dark:bg-gray-900 border ${cfg.border} rounded-2xl overflow-hidden shadow-sm`}>
+                                            <div className={`${cfg.headerBg} px-5 py-3 flex items-center gap-3`}>
+                                                <span className="text-xl">{cfg.icon}</span>
+                                                <div className="flex-1">
+                                                    <p className={`text-xs font-black ${cfg.text}`}>{cfg.label} Feedback</p>
+                                                    {submitter && role!=='self' && <p className="text-[9px] text-gray-400">by {submitter}</p>}
+                                                </div>
+                                                {s !== null && <ScoreRing score={s} ringCls={cfg.ring} size={44}/>}
+                                            </div>
+                                            {roleAnswers.map((a,i) => <AnswerRow key={a.id} a={a} idx={i}/>)}
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        )}
+                    </>
+                )
+            )}
+
+            {/* ══════════ DIRECT FEEDBACK TAB ══════════ */}
+            {mainTab === 'direct' && (
+                loadingDirect ? (
+                    <div className="space-y-3 animate-pulse">
+                        {[1,2].map(i=><div key={i} className="h-32 bg-gray-200 dark:bg-gray-800 rounded-2xl"/>)}
+                    </div>
+                ) : directFBs.length === 0 ? (
+                    <div className="bg-white dark:bg-gray-900 border border-dashed border-gray-200 dark:border-gray-700 rounded-3xl py-16 text-center">
+                        <div className="text-4xl mb-3">💬</div>
+                        <p className="text-sm font-bold text-gray-400">No direct feedback yet.</p>
+                        <p className="text-[10px] text-gray-400 mt-1">Managers or admins can post notes directly to you outside of appraisal cycles.</p>
+                    </div>
+                ) : (
+                    <div className="space-y-3">
+                        {directFBs.map((f, fi) => {
+                            const cat  = CAT_CFG[f.category] ?? { icon:'📝', cls:'bg-gray-100 text-gray-500' };
+                            const bg   = AVATAR_COLORS[fi % AVATAR_COLORS.length];
+                            const date = new Date(f.created_at).toLocaleDateString('en-IN', { day:'2-digit', month:'short', year:'numeric' });
+                            return (
+                                <div key={f.id} className={`bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-2xl shadow-sm overflow-hidden ${!f.acknowledged ? 'ring-1 ring-violet-500/20' : ''}`}>
+                                    <div className="px-5 py-3.5 flex items-start gap-3">
+                                        <div className={`w-9 h-9 rounded-xl ${bg} text-white text-[10px] font-black flex items-center justify-center shrink-0 mt-0.5`}>{initials(f.sender_name||'?')}</div>
+                                        <div className="flex-1 min-w-0">
+                                            <div className="flex flex-wrap items-center gap-2 mb-0.5">
+                                                <p className="text-xs font-black text-gray-800 dark:text-white">{f.sender_name}</p>
+                                                <span className={`text-[8px] font-black uppercase px-2 py-0.5 rounded-full ${cat.cls}`}>{cat.icon} {f.category_display}</span>
+                                                {!f.acknowledged && <span className="text-[7px] font-black bg-violet-500 text-white px-1.5 py-0.5 rounded-full">NEW</span>}
+                                            </div>
+                                            <p className="text-[9px] text-gray-400 mb-2">{date}</p>
+                                            <p className="text-[11px] text-gray-600 dark:text-gray-300 leading-relaxed">{f.feedback_text}</p>
+                                            {f.rating && (
+                                                <div className="flex items-center gap-0.5 mt-2">
+                                                    {[1,2,3,4,5].map(i=><span key={i} className={`text-sm ${i<=f.rating!?'text-amber-400':'text-gray-200 dark:text-gray-700'}`}>★</span>)}
+                                                    <span className="text-[9px] font-black text-amber-600 ml-1">{f.rating}/5</span>
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+                                    <div className="px-5 py-2.5 border-t border-gray-50 dark:border-gray-800 flex items-center justify-between">
+                                        <span className={`text-[8px] font-bold uppercase px-2 py-0.5 rounded-full ${f.visibility==='public'?'bg-emerald-100 text-emerald-600':f.visibility==='team'?'bg-blue-100 text-blue-600':'bg-gray-100 dark:bg-gray-800 text-gray-400'}`}>
+                                            {f.visibility}
                                         </span>
-                                        {!f.acknowledged && (
-                                            <span className="text-[7px] font-black bg-violet-500 text-white px-1.5 py-0.5 rounded-full">NEW</span>
+                                        {!f.acknowledged ? (
+                                            <button onClick={() => handleAck(f.id)} disabled={ackingId===f.id}
+                                                className="text-[9px] font-black text-violet-600 hover:bg-violet-50 dark:hover:bg-violet-950/20 px-2 py-1 rounded-lg transition disabled:opacity-50">
+                                                {ackingId===f.id ? 'Saving...' : '✓ Acknowledge'}
+                                            </button>
+                                        ) : (
+                                            <span className="text-[9px] font-bold text-emerald-600">✓ Acknowledged</span>
                                         )}
                                     </div>
                                 </div>
-
-                                {/* Feedback text */}
-                                <p className="text-[11px] text-gray-600 dark:text-gray-300 leading-relaxed flex-1">{f.feedback_text}</p>
-
-                                {/* Rating */}
-                                <StarRating rating={f.rating} />
-
-                                {/* Footer */}
-                                <div className="flex items-center justify-between pt-2 border-t border-gray-100 dark:border-gray-800">
-                                    <span className={`text-[9px] font-bold uppercase px-2 py-0.5 rounded-full ${
-                                        f.visibility === 'public' ? 'bg-emerald-500/10 text-emerald-600'
-                                        : f.visibility === 'team' ? 'bg-blue-500/10 text-blue-600'
-                                        : 'bg-gray-100 dark:bg-gray-800 text-gray-400'
-                                    }`}>
-                                        {f.visibility}
-                                    </span>
-                                    {!f.acknowledged ? (
-                                        <button
-                                            onClick={() => handleAcknowledge(f.id)}
-                                            disabled={acknowledgingId === f.id}
-                                            className="text-[9px] font-black text-violet-600 hover:bg-violet-500/10 px-2 py-1 rounded-lg transition disabled:opacity-50"
-                                        >
-                                            {acknowledgingId === f.id ? 'Saving...' : '✓ Acknowledge'}
-                                        </button>
-                                    ) : (
-                                        <span className="text-[9px] font-bold text-emerald-600 flex items-center gap-1">
-                                            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
-                                            </svg>
-                                            Acknowledged
-                                        </span>
-                                    )}
-                                </div>
-                            </div>
-                        );
-                    })}
-                </div>
+                            );
+                        })}
+                    </div>
+                )
             )}
         </div>
     );

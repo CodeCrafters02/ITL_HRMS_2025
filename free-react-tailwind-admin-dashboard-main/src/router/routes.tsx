@@ -120,7 +120,6 @@ const BulkMap = lazy(() => import('../pages/Admin/Performance/BulkMap'));
 const AppraisalCycles = lazy(() => import('../pages/Admin/Performance/AppraisalCycles'));
 const ReviewExtensions = lazy(() => import('../pages/Admin/Performance/ReviewExtensions'));
 const MultiRaterSelection = lazy(() => import('../pages/Admin/Performance/MultiRaterSelection'));
-const ContinuousExtensions = lazy(() => import('../pages/Admin/Performance/ContinuousExtensions'));
 const ImportGoals = lazy(() => import('../pages/Admin/Performance/ImportGoals'));
 const KRARegistry = lazy(() => import('../pages/Admin/Performance/KRARegistry'));
 const CompetencyMapping = lazy(() => import('../pages/Admin/Performance/CompetencyMapping'));
@@ -182,7 +181,7 @@ const SkillsInventory = lazy(() => import('../pages/Employee/Performance/SkillsI
 const SkillUpgrades = lazy(() => import('../pages/Employee/Performance/SkillUpgrades'));
 const FeedbackReceived = lazy(() => import('../pages/Employee/Performance/FeedbackReceived'));
 const FeedbackProvided = lazy(() => import('../pages/Employee/Performance/FeedbackProvided'));
-const SelfAppraisal = lazy(() => import('../pages/Employee/Performance/SelfAppraisal'));
+const ManagerDirectFeedback = lazy(() => import('../pages/Employee/Performance/ManagerDirectFeedback'));
 const AppraisalHistory = lazy(() => import('../pages/Employee/Performance/AppraisalHistory'));
 const ExtensionStatus = lazy(() => import('../pages/Employee/Performance/ExtensionStatus'));
 const EmployeeDashboard = lazy(() => import('../pages/Employee/Dashboard'));
@@ -737,10 +736,6 @@ const routes = [
         element: <MultiRaterSelection />,
     },
     {
-        path: '/admin/performance/continuous-extensions',
-        element: <ContinuousExtensions />,
-    },
-    {
         path: '/admin/performance/import-goals',
         element: <ImportGoals />,
     },
@@ -973,8 +968,8 @@ const routes = [
         element: <FeedbackProvided />,
     },
     {
-        path: '/employee/performance/self-appraisal',
-        element: <SelfAppraisal />,
+        path: '/employee/performance/manager-direct-feedback',
+        element: <ManagerDirectFeedback />,
     },
     {
         path: '/employee/performance/appraisal-history',

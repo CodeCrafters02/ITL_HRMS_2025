@@ -54,8 +54,8 @@ const NAV_LINKS = [
     { to: '/employee/performance/kras', label: 'My KRAs' },
     { to: '/employee/performance/self-map-kras', label: 'Self Map KRAs' },
     { to: '/employee/performance/skills-inventory', label: 'Skills' },
-    { to: '/employee/performance/self-appraisal', label: 'Self Appraisal' },
     { to: '/employee/performance/feedback-received', label: 'Feedback' },
+    { to: '/employee/performance/manager-direct-feedback', label: 'Give Feedback' },
     { to: '/employee/performance/appraisal-history', label: 'History' },
 ];
 

@@ -880,10 +880,23 @@ class AppraisalQuestionSerializer(serializers.ModelSerializer):
 
 
 class AppraisalAnswerSerializer(serializers.ModelSerializer):
+    question_text      = serializers.CharField(source='question.question_text', read_only=True)
+    question_type      = serializers.CharField(source='question.question_type', read_only=True)
+    max_score          = serializers.IntegerField(source='question.max_score',  read_only=True)
+    role_type          = serializers.CharField(source='question.role_type',     read_only=True)
+    submitted_by_name  = serializers.SerializerMethodField()
+
     class Meta:
         model = AppraisalAnswer
-        fields = ['id', 'evaluation', 'question', 'submitted_by', 'rating_score', 'comment']
+        fields = ['id', 'evaluation', 'question', 'question_text', 'question_type',
+                  'max_score', 'role_type', 'submitted_by', 'submitted_by_name', 'rating_score', 'comment']
         read_only_fields = ['submitted_by']
+
+    def get_submitted_by_name(self, obj):
+        if not obj.submitted_by:
+            return None
+        emp = obj.submitted_by
+        return emp.full_name or f"{emp.first_name} {emp.last_name}".strip() or f"Employee #{emp.id}"
 
 
 class AppraisalEvaluationSerializer(serializers.ModelSerializer):

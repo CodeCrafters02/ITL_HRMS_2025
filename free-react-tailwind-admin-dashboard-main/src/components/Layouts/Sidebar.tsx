@@ -364,6 +364,7 @@ const Sidebar = () => {
                                                     <ul className="sub-menu text-gray-500">
                                                         <li><NavLink to="/employee/performance/feedback-received">{t('Feedback Received')}</NavLink></li>
                                                         <li><NavLink to="/employee/performance/feedback-provided">{t('Feedback Provided')}</NavLink></li>
+                                                        <li><NavLink to="/employee/performance/manager-direct-feedback">{t('Give Direct Feedback')}</NavLink></li>
                                                     </ul>
                                                 </AnimateHeight>
                                             </li>
@@ -379,22 +380,12 @@ const Sidebar = () => {
                                                 </button>
                                                 <AnimateHeight duration={300} height={currentMenu === 'emp-perf-appraisal' ? 'auto' : 0}>
                                                     <ul className="sub-menu text-gray-500">
-                                                        <li><NavLink to="/employee/performance/self-appraisal">{t('Self Appraisal')}</NavLink></li>
                                                         <li><NavLink to="/employee/performance/appraisal-history">{t('Appraisal History')}</NavLink></li>
                                                         <li><NavLink to="/employee/performance/extension-status">{t('Extension Status')}</NavLink></li>
                                                     </ul>
                                                 </AnimateHeight>
                                             </li>
 
-                                            {/* Back to main */}
-                                            <li className="menu nav-item mt-2">
-                                                <NavLink to="/employee/dashboard" className="group">
-                                                    <div className="flex items-center">
-                                                        <IconMenuDashboard className="group-hover:!text-primary shrink-0" />
-                                                        <span className="ltr:pl-3 rtl:pr-3 text-black dark:text-[#506690] dark:group-hover:text-white-dark">{t('← Main Dashboard')}</span>
-                                                    </div>
-                                                </NavLink>
-                                            </li>
                                         </>
                                     ) : (
                                     <>
@@ -683,24 +674,6 @@ const Sidebar = () => {
                                                             <li><NavLink to="/admin/performance/appraisal-cycles">{t('Create Cycles')}</NavLink></li>
                                                             <li><NavLink to="/admin/performance/review-extensions">{t('Review Extensions')}</NavLink></li>
                                                             <li><NavLink to="/admin/performance/multi-rater-selection">{t('Multi-Rater Selection')}</NavLink></li>
-                                                        </ul>
-                                                    </AnimateHeight>
-                                                </li>
-
-                                                {/* Group 4: CONTINUOUS REVIEW */}
-                                                <li className="menu nav-item">
-                                                    <button type="button" className={`${currentMenu === 'adminContReview' ? 'active' : ''} nav-link group w-full`} onClick={() => toggleMenu('adminContReview')}>
-                                                        <div className="flex items-center">
-                                                            <IconMenuChat className="group-hover:!text-primary shrink-0" />
-                                                            <span className="ltr:pl-3 rtl:pr-3 text-black dark:text-[#506690] dark:group-hover:text-white-dark">{t('Continuous Review')}</span>
-                                                        </div>
-                                                        <div className={currentMenu !== 'adminContReview' ? 'rtl:rotate-90 -rotate-90' : ''}>
-                                                            <IconCaretDown />
-                                                        </div>
-                                                    </button>
-                                                    <AnimateHeight duration={300} height={currentMenu === 'adminContReview' ? 'auto' : 0}>
-                                                        <ul className="sub-menu text-gray-500">
-                                                            <li><NavLink to="/admin/performance/continuous-extensions">{t('Manage Extensions')}</NavLink></li>
                                                         </ul>
                                                     </AnimateHeight>
                                                 </li>

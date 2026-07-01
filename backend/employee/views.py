@@ -2854,16 +2854,43 @@ class ContinuousFeedbackViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         qs = self.queryset.all()
-        receiver = self.request.query_params.get('receiver')
-        sender = self.request.query_params.get('sender')
-        category = self.request.query_params.get('category')
-        if receiver:
+        params = self.request.query_params
+        mine     = params.get('mine')
+        receiver = params.get('receiver')
+        sender   = params.get('sender')
+        category = params.get('category')
+
+        # ?mine=true → always scope to the logged-in employee's received feedback
+        if mine == 'true':
+            try:
+                qs = qs.filter(receiver=self.request.user.employee_profile)
+            except Exception:
+                qs = qs.none()
+        elif receiver:
             qs = qs.filter(receiver_id=receiver)
+
         if sender:
             qs = qs.filter(sender_id=sender)
         if category:
             qs = qs.filter(category=category)
         return qs
+
+    @action(detail=False, methods=['get'])
+    def my_reportees(self, request):
+        """Return employees whose reporting_manager is the current user."""
+        try:
+            me = request.user.employee_profile
+        except Exception:
+            return Response([])
+        from app.models import Employee as EmpModel
+        reportees = EmpModel.objects.filter(reporting_manager=me).select_related('designation', 'department')
+        return Response([{
+            'id':          e.id,
+            'name':        e.full_name or f"{e.first_name} {e.last_name}".strip() or f"Employee #{e.id}",
+            'initials':    ((e.first_name or '')[:1] + (e.last_name or '')[:1]).upper() or '?',
+            'designation': e.designation.designation_name if e.designation else '',
+            'department':  e.department.department_name  if e.department  else '',
+        } for e in reportees])
 
     def perform_create(self, serializer):
         if serializer.validated_data.get('sender'):
