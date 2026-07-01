@@ -113,6 +113,7 @@ const AdminHub = lazy(() => import('../pages/Admin/AdminHub'));
 const AdminPerformanceDashboard = lazy(() => import('../pages/Admin/Performance/AdminPerformanceDashboard'));
 const SearchProfile = lazy(() => import('../pages/Admin/Performance/SearchProfile'));
 const AdminAppraisal = lazy(() => import('../pages/Admin/Performance/AdminAppraisal'));
+const HRAppraisalDirect = lazy(() => import('../pages/Admin/Performance/HRAppraisalDirect'));
 const KRAsAssign = lazy(() => import('../pages/Admin/Performance/KRAsAssign'));
 const AdminKRAReview = lazy(() => import('../pages/Admin/Performance/KRAReview'));
 const TrackFeedback = lazy(() => import('../pages/Admin/Performance/TrackFeedback'));
@@ -710,6 +711,10 @@ const routes = [
     {
         path: '/admin/performance/appraisal',
         element: <AdminAppraisal />,
+    },
+    {
+        path: '/admin/performance/hr-appraisal-direct',
+        element: <HRAppraisalDirect />,
     },
     {
         path: '/admin/performance/assign-kras',

@@ -1,6 +1,7 @@
 from django.urls import path
 from rest_framework.routers import DefaultRouter
 from .views import *
+from .views_direct import HRDirectAppraisalAPIView
 from .all_notifications import AllNotificationsAPIView, NotificationSSEView
 
 router = DefaultRouter()
@@ -20,6 +21,7 @@ router.register('appraisal-evaluations', AppraisalEvaluationViewSet, basename='a
 
 urlpatterns = [
     path('all-employees-list/', AllEmployeesAPIView.as_view(), name='all-employees-list'),
+    path('hr-direct-appraisal/', HRDirectAppraisalAPIView.as_view(), name='hr-direct-appraisal'),
     path('employee/company-info/', EmployeeCompanyInfoAPIView.as_view(), name='employee-company-info'),
     path('reporting-managers/', ReportingManagerAPIView.as_view(), name='reporting_managers'),
     path('employee-id/', EmployeeIdAPIView.as_view(), name='employee_id'),

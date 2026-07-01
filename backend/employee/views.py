@@ -3028,9 +3028,6 @@ class AppraisalCycleViewSet(viewsets.ModelViewSet):
         except Exception:
             pass
 
-
-
-
 class AppraisalEvaluationViewSet(viewsets.ModelViewSet):
     queryset = AppraisalEvaluation.objects.all().select_related('employee', 'cycle', 'manager').prefetch_related('answers__question')
     serializer_class = AppraisalEvaluationSerializer
@@ -3057,8 +3054,11 @@ class AppraisalEvaluationViewSet(viewsets.ModelViewSet):
         else:
             # For staff/admin, allow querying other employees
             target_emp_id = self.request.query_params.get('employee') or self.request.query_params.get('employee_id')
+            all_evals = self.request.query_params.get('all_evaluations')
             if target_emp_id:
                 qs = qs.filter(employee_id=target_emp_id)
+            elif all_evals == 'true':
+                pass
             else:
                 # Let manager see managees
                 qs = qs.filter(Q(employee=employee) | Q(manager=employee))
@@ -3185,6 +3185,17 @@ class AppraisalEvaluationViewSet(viewsets.ModelViewSet):
         evaluation, _ = AppraisalEvaluation.objects.get_or_create(
             employee=target, cycle=cycle, defaults={'status': 'draft'}
         )
+
+        # Prevent duplicate HR submission – once HR has submitted, block re-entry
+        if role_type == 'hr':
+            already_submitted = AppraisalAnswer.objects.filter(
+                evaluation=evaluation, question__role_type='hr'
+            ).exists()
+            if already_submitted:
+                return Response(
+                    {"detail": "HR appraisal has already been submitted for this employee. It cannot be edited."},
+                    status=400
+                )
 
         for ans in answers_data:
             q_id = ans.get('question_id')
