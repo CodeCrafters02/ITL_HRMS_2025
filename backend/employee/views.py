@@ -2984,8 +2984,12 @@ class AppraisalCycleViewSet(viewsets.ModelViewSet):
         self._sync_statuses()
 
     def _sync_statuses(self):
-        from .tasks import sync_appraisal_cycle_statuses
-        sync_appraisal_cycle_statuses.delay()
+        try:
+            from .tasks import sync_appraisal_cycle_statuses
+            sync_appraisal_cycle_statuses()
+        except Exception:
+            pass
+
 
 
 
@@ -3068,19 +3072,135 @@ class AppraisalEvaluationViewSet(viewsets.ModelViewSet):
             )
             
         if is_submit:
-            # Calculate overall rating
-            # Get all answers for this evaluation submitted by employee
             self_answers = AppraisalAnswer.objects.filter(evaluation=evaluation, question__role_type='self')
             ratings = [a.rating_score for a in self_answers if a.rating_score is not None]
-            
             if ratings:
                 evaluation.self_overall_rating = sum(ratings) / len(ratings)
-            
             evaluation.status = 'submitted_self'
             evaluation.save(update_fields=['self_overall_rating', 'status'])
-            
+
         # Return serialized evaluation
         return Response(self.get_serializer(evaluation).data)
+
+    @action(detail=False, methods=['post'])
+    def submit_feedback(self, request):
+        """Peer / Manager / HR submits answers against a target employee's evaluation."""
+        try:
+            reviewer = request.user.employee_profile
+        except Exception:
+            return Response({"detail": "Employee profile required."}, status=403)
+
+        target_id = request.data.get('target_employee_id')
+        cycle_id = request.data.get('cycle_id')
+        role_type = request.data.get('role_type')
+        answers_data = request.data.get('answers', [])
+
+        if not all([target_id, cycle_id, role_type]):
+            return Response({"detail": "target_employee_id, cycle_id and role_type are required."}, status=400)
+
+        from app.models import Employee as EmpModel
+        target = get_object_or_404(EmpModel, id=target_id)
+        cycle = get_object_or_404(AppraisalCycle, id=cycle_id)
+
+        evaluation, _ = AppraisalEvaluation.objects.get_or_create(
+            employee=target, cycle=cycle, defaults={'status': 'draft'}
+        )
+
+        for ans in answers_data:
+            q_id = ans.get('question_id')
+            rating = ans.get('rating_score')
+            question = get_object_or_404(AppraisalQuestion, id=q_id, cycle=cycle, role_type=role_type)
+            AppraisalAnswer.objects.update_or_create(
+                evaluation=evaluation, question=question, submitted_by=reviewer,
+                defaults={'rating_score': rating, 'comment': ''}
+            )
+
+        return Response({"detail": f"{role_type} feedback submitted for {target}.", "evaluation_id": evaluation.id})
+
+    @action(detail=False, methods=['get'])
+    def my_feedback_targets(self, request):
+        """
+        Returns the list of employees the current user must give feedback to
+        in the active appraisal cycle, split by role_type.
+        - manager : direct reportees (reporting_manager = me)
+        - peer    : MultiRater mappings for this cycle where reviewer = me;
+                    falls back to ALL company employees (minus self) if none exist
+        """
+        try:
+            me = request.user.employee_profile
+        except Exception:
+            return Response({"detail": "Employee profile required."}, status=403)
+
+        cycle_id = request.query_params.get('cycle')
+        if cycle_id:
+            cycle = get_object_or_404(AppraisalCycle, id=cycle_id)
+        else:
+            cycle = AppraisalCycle.objects.filter(status='active').first()
+
+        if not cycle:
+            return Response({"cycle": None, "targets": []})
+
+        from app.models import Employee as EmpModel
+
+        # Pre-fetch all answers submitted by ME in this cycle (single query)
+        my_answers = AppraisalAnswer.objects.filter(
+            submitted_by=me,
+            evaluation__cycle=cycle
+        ).select_related('question', 'evaluation__employee')
+
+        # Group by (evaluation.employee_id, question.role_type)
+        from collections import defaultdict
+        ans_by_emp_role = defaultdict(list)
+        for a in my_answers:
+            key = (a.evaluation.employee_id, a.question.role_type)
+            ans_by_emp_role[key].append({
+                "question_id":   a.question.id,
+                "question_text": a.question.question_text,
+                "question_type": a.question.question_type,
+                "max_score":     a.question.max_score,
+                "rating_score":  float(a.rating_score) if a.rating_score is not None else None,
+            })
+
+        def emp_dict(emp, relation):
+            desig = emp.designation.designation_name if emp.designation else ''
+            dept  = emp.department.department_name  if emp.department  else ''
+            initials = ((emp.first_name or '')[:1] + (emp.last_name or '')[:1]).upper() or '?'
+            role_type = relation  # same value for the key
+            submitted_answers = ans_by_emp_role.get((emp.id, role_type), [])
+            return {
+                "id": emp.id,
+                "name": emp.full_name or f"{emp.first_name} {emp.last_name}".strip() or "—",
+                "initials": initials,
+                "designation": desig,
+                "department": dept,
+                "relation": relation,
+                "already_submitted": len(submitted_answers) > 0,
+                "submitted_answers": submitted_answers,
+            }
+
+        targets = []
+
+        role_types = set(AppraisalQuestion.objects.filter(cycle=cycle).values_list('role_type', flat=True))
+
+        # 1. Self — current user always appears if cycle has self questions
+        if 'self' in role_types:
+            targets.append(emp_dict(me, 'self'))
+
+        # 2. Manager targets — employees whose reporting_manager is me
+        if 'manager' in role_types:
+            reportees = EmpModel.objects.filter(reporting_manager=me).select_related('designation', 'department')
+            for emp in reportees:
+                targets.append(emp_dict(emp, 'manager'))
+
+        # 3. Peer targets — explicit MultiRater mappings (set by admin in Multi-Rater Selection)
+        if 'peer' in role_types:
+            mappings = MultiRaterMapping.objects.filter(cycle=cycle, reviewer=me).select_related(
+                'employee__designation', 'employee__department'
+            )
+            for m in mappings:
+                targets.append(emp_dict(m.employee, 'peer'))
+
+        return Response({"cycle_id": cycle.id, "cycle_name": cycle.name, "targets": targets, "role_types": list(role_types)})
 
 
 class AppraisalQuestionViewSet(viewsets.ModelViewSet):

@@ -19,13 +19,13 @@ interface Question {
     cycle: number;
     cycle_name: string;
     question_text: string;
-    question_type: 'scale' | 'text' | 'yes_no';
+    question_type: 'scale' | 'yes_no';
     role_type: 'self' | 'manager' | 'peer' | 'hr';
     max_score: number;
 }
 
 type RoleTab = 'self' | 'manager' | 'peer' | 'hr';
-type QType = 'scale' | 'text' | 'yes_no';
+type QType = 'scale' | 'yes_no';
 
 const ROLE_META: Record<RoleTab, { label: string; color: string; badge: string; icon: string }> = {
     self:    { label: 'Self',    color: 'text-violet-600 dark:text-violet-400', badge: 'bg-violet-500/10 text-violet-600 dark:text-violet-400', icon: '👤' },
@@ -36,7 +36,6 @@ const ROLE_META: Record<RoleTab, { label: string; color: string; badge: string; 
 
 const QTYPE_META: Record<QType, { label: string; icon: string; badge: string }> = {
     scale:  { label: 'Rating Scale (1–5)', icon: '⭐', badge: 'bg-yellow-500/10 text-yellow-600 dark:text-yellow-400' },
-    text:   { label: 'Text Response',      icon: '📝', badge: 'bg-blue-500/10 text-blue-600 dark:text-blue-400' },
     yes_no: { label: 'Yes / No',           icon: '✅', badge: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' },
 };
 

@@ -18,9 +18,12 @@ from app.models import (
 from .models import *
 
 class ReportingManagerSerializer(serializers.ModelSerializer):
+    designation_name = serializers.CharField(source='designation.designation_name', default=None, read_only=True)
+    department_name  = serializers.CharField(source='department.department_name', default=None, read_only=True)
+
     class Meta:
         model = Employee
-        fields = ['id', 'full_name']  # Assuming `full_name` property exists in your model
+        fields = ['id', 'full_name', 'designation_name', 'department_name']
 
 class ShiftSerializer(serializers.ModelSerializer):
     class Meta:
@@ -887,14 +890,25 @@ class AppraisalEvaluationSerializer(serializers.ModelSerializer):
     answers = AppraisalAnswerSerializer(many=True, read_only=True)
     cycle_name = serializers.CharField(source='cycle.name', read_only=True)
     employee_name = serializers.SerializerMethodField()
+    perf_score = serializers.SerializerMethodField()
 
     class Meta:
         model = AppraisalEvaluation
         fields = ['id', 'employee', 'employee_name', 'manager', 'cycle', 'cycle_name',
                   'self_overall_rating', 'manager_overall_rating', 'hr_overall_rating',
-                  'status', 'answers']
+                  'perf_score', 'status', 'answers']
         read_only_fields = ['employee', 'manager', 'self_overall_rating',
                             'manager_overall_rating', 'hr_overall_rating']
 
     def get_employee_name(self, obj):
         return f"{obj.employee.first_name} {obj.employee.last_name}".strip() if obj.employee else ""
+
+    def get_perf_score(self, obj):
+        """Composite normalised score (0-100) across ALL role_types (self/manager/peer/hr)."""
+        scores = []
+        for a in obj.answers.all():  # already prefetched
+            if a.rating_score is None:
+                continue
+            max_s = a.question.max_score or 1
+            scores.append(float(a.rating_score) / float(max_s) * 100)
+        return round(sum(scores) / len(scores), 1) if scores else None

@@ -663,7 +663,6 @@ const Sidebar = () => {
                                                     <AnimateHeight duration={300} height={currentMenu === 'adminMethods' ? 'auto' : 0}>
                                                         <ul className="sub-menu text-gray-500">
                                                             <li><NavLink to="/admin/performance/bulk-map">{t('Bulk Map KRAs')}</NavLink></li>
-                                                            <li><NavLink to="/admin/performance/review-questions">{t('Create Review Questions')}</NavLink></li>
                                                         </ul>
                                                     </AnimateHeight>
                                                 </li>
@@ -682,7 +681,6 @@ const Sidebar = () => {
                                                     <AnimateHeight duration={300} height={currentMenu === 'adminAppraisals' ? 'auto' : 0}>
                                                         <ul className="sub-menu text-gray-500">
                                                             <li><NavLink to="/admin/performance/appraisal-cycles">{t('Create Cycles')}</NavLink></li>
-                                                            <li><NavLink to="/admin/performance/salary-hike">{t('Configure Salary Hikes')}</NavLink></li>
                                                             <li><NavLink to="/admin/performance/review-extensions">{t('Review Extensions')}</NavLink></li>
                                                             <li><NavLink to="/admin/performance/multi-rater-selection">{t('Multi-Rater Selection')}</NavLink></li>
                                                         </ul>

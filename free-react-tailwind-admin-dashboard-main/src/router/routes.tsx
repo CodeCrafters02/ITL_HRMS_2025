@@ -117,9 +117,7 @@ const AdminKRAReview = lazy(() => import('../pages/Admin/Performance/KRAReview')
 const TrackFeedback = lazy(() => import('../pages/Admin/Performance/TrackFeedback'));
 const ManagerSummaries = lazy(() => import('../pages/Admin/Performance/ManagerSummaries'));
 const BulkMap = lazy(() => import('../pages/Admin/Performance/BulkMap'));
-const ReviewQuestions = lazy(() => import('../pages/Admin/Performance/ReviewQuestions'));
 const AppraisalCycles = lazy(() => import('../pages/Admin/Performance/AppraisalCycles'));
-const SalaryHike = lazy(() => import('../pages/Admin/Performance/SalaryHike'));
 const ReviewExtensions = lazy(() => import('../pages/Admin/Performance/ReviewExtensions'));
 const MultiRaterSelection = lazy(() => import('../pages/Admin/Performance/MultiRaterSelection'));
 const ContinuousExtensions = lazy(() => import('../pages/Admin/Performance/ContinuousExtensions'));
@@ -727,16 +725,8 @@ const routes = [
         element: <BulkMap />,
     },
     {
-        path: '/admin/performance/review-questions',
-        element: <ReviewQuestions />,
-    },
-    {
         path: '/admin/performance/appraisal-cycles',
         element: <AppraisalCycles />,
-    },
-    {
-        path: '/admin/performance/salary-hike',
-        element: <SalaryHike />,
     },
     {
         path: '/admin/performance/review-extensions',

@@ -3,7 +3,6 @@ import axios from 'axios';
 import IconSearch from '../../../components/Icon/IconSearch';
 import IconUsers from '../../../components/Icon/IconUsers';
 
-// Interfaces for DB Models
 interface Employee {
     id: number;
     employee_id: string;
@@ -21,6 +20,7 @@ interface PeerReviewerMapping {
     id: number;
     employee: number;
     reviewer: number;
+    cycle: number;
     status: 'nominated' | 'approved' | 'completed';
     created_at: string;
     reviewer_name: string;
@@ -29,12 +29,19 @@ interface PeerReviewerMapping {
     reviewer_avatar_bg: string;
 }
 
+interface Cycle {
+    id: number;
+    name: string;
+    status: 'draft' | 'active' | 'completed';
+}
+
 const MultiRaterSelection = () => {
+    const [cycles, setCycles] = useState<Cycle[]>([]);
+    const [selectedCycleId, setSelectedCycleId] = useState<number | null>(null);
     const [employees, setEmployees] = useState<Employee[]>([]);
     const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
     const [reviewers, setReviewers] = useState<PeerReviewerMapping[]>([]);
-    
-    // UI States
+
     const [loadingEmployees, setLoadingEmployees] = useState(true);
     const [loadingReviewers, setLoadingReviewers] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
@@ -52,58 +59,60 @@ const MultiRaterSelection = () => {
 
     const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
 
-    // 1. Fetch all employees on mount
+    // 1. Fetch cycles + employees on mount
     useEffect(() => {
-        const fetchEmployees = async () => {
+        const init = async () => {
             try {
                 setLoadingEmployees(true);
-                const response = await axios.get(`${API_BASE}/employee/all-employees-list/`, {
-                    headers: getHeaders(),
-                });
-                setEmployees(response.data);
-                if (response.data.length > 0) {
-                    setSelectedEmployee(response.data[0]);
-                }
-            } catch (err: any) {
-                console.error('Error fetching employees:', err);
-                setErrorMsg('Failed to load employee list from database.');
+                const [cyclesRes, empsRes] = await Promise.all([
+                    axios.get(`${API_BASE}/employee/appraisal-cycles/`, { headers: getHeaders() }),
+                    axios.get(`${API_BASE}/employee/all-employees-list/`, { headers: getHeaders() }),
+                ]);
+                const cycleList: Cycle[] = Array.isArray(cyclesRes.data) ? cyclesRes.data : cyclesRes.data.results ?? [];
+                setCycles(cycleList);
+                const active = cycleList.find(c => c.status === 'active');
+                if (active) setSelectedCycleId(active.id);
+                else if (cycleList.length) setSelectedCycleId(cycleList[0].id);
+
+                setEmployees(empsRes.data);
+                if (empsRes.data.length > 0) setSelectedEmployee(empsRes.data[0]);
+            } catch {
+                setErrorMsg('Failed to load data.');
             } finally {
                 setLoadingEmployees(false);
             }
         };
-
-        fetchEmployees();
+        init();
     }, []);
 
-    // 2. Fetch mapped reviewers whenever selected employee changes
+    // 2. Fetch mapped reviewers whenever selected employee OR cycle changes
     useEffect(() => {
-        if (!selectedEmployee) return;
-
+        if (!selectedEmployee || !selectedCycleId) return;
         const fetchReviewers = async () => {
             try {
                 setLoadingReviewers(true);
-                const response = await axios.get(`${API_BASE}/employee/multirater/?employee_id=${selectedEmployee.id}`, {
-                    headers: getHeaders(),
-                });
-                setReviewers(response.data);
-            } catch (err: any) {
-                console.error('Error fetching peer mappings:', err);
-                setErrorMsg('Failed to load nominated peer reviewers.');
+                const res = await axios.get(
+                    `${API_BASE}/employee/multirater/?employee_id=${selectedEmployee.id}&cycle_id=${selectedCycleId}`,
+                    { headers: getHeaders() }
+                );
+                setReviewers(Array.isArray(res.data) ? res.data : res.data.results ?? []);
+            } catch {
+                setErrorMsg('Failed to load peer reviewers.');
             } finally {
                 setLoadingReviewers(false);
             }
         };
-
         fetchReviewers();
-    }, [selectedEmployee]);
+    }, [selectedEmployee, selectedCycleId]);
 
     const handleAssignPeer = async (peerId: number) => {
-        if (!selectedEmployee) return;
+        if (!selectedEmployee || !selectedCycleId) return;
         setErrorMsg(''); setAssigningId(peerId);
         try {
             const res = await axios.post(`${API_BASE}/employee/multirater/`, {
                 employee: selectedEmployee.id,
                 reviewer: peerId,
+                cycle: selectedCycleId,
                 status: 'nominated',
             }, { headers: getHeaders() });
             setReviewers(prev => [...prev, res.data]);
@@ -147,11 +156,23 @@ const MultiRaterSelection = () => {
     return (
         <div className="space-y-6 py-2 animate__animated animate__fadeIn">
             {/* Header */}
-            <div className="bg-white dark:bg-gray-900 p-6 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm">
-                <h2 className="text-xl font-bold text-gray-800 dark:text-white">Multi-Rater Review Selection</h2>
-                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 leading-relaxed">
-                    Map peer reviewers to employees for cyclical 360-degree feedback. Reviewers are filtered to the selected employee's department.
-                </p>
+            <div className="bg-white dark:bg-gray-900 p-5 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div>
+                    <h2 className="text-xl font-bold text-gray-800 dark:text-white">Multi-Rater Review Selection</h2>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Map peer reviewers to employees for 360° feedback. Assignments are cycle-specific.</p>
+                </div>
+                <div className="flex items-center gap-2 shrink-0">
+                    <label className="text-[10px] font-black uppercase tracking-wider text-gray-400">Cycle</label>
+                    <select value={selectedCycleId ?? ''} onChange={e => setSelectedCycleId(Number(e.target.value))}
+                        className="bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 px-3 py-2 rounded-xl text-xs font-semibold text-gray-800 dark:text-white focus:outline-none">
+                        {cycles.map(c => (
+                            <option key={c.id} value={c.id}>
+                                {c.name} {c.status === 'active' ? '● Active' : c.status === 'draft' ? '○ Draft' : '✓ Done'}
+                            </option>
+                        ))}
+                        {cycles.length === 0 && <option value="">No cycles found</option>}
+                    </select>
+                </div>
             </div>
 
             {/* Error Message Panel */}

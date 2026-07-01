@@ -24,7 +24,6 @@ interface Answer {
     id?: number;
     question: number;
     rating_score: number | null;
-    comment: string;
 }
 
 interface Evaluation {
@@ -49,8 +48,7 @@ const SelfAppraisal = () => {
     const [questions, setQuestions] = useState<Question[]>([]);
     const [evaluation, setEvaluation] = useState<Evaluation | null>(null);
     
-    // User input answers map: questionId -> { rating, comment }
-    const [answersMap, setAnswersMap] = useState<Record<number, { rating: number; comment: string }>>({});
+    const [answersMap, setAnswersMap] = useState<Record<number, { rating: number | null }>>({});
     const [saving, setSaving] = useState(false);
     const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
@@ -100,18 +98,13 @@ const SelfAppraisal = () => {
             setEvaluation(evalObj);
 
             // 4. Populate answers state
-            const initialAnswers: Record<number, { rating: number; comment: string }> = {};
-            // Initialize questions
+            const initialAnswers: Record<number, { rating: number | null }> = {};
             qList.forEach((q: Question) => {
-                initialAnswers[q.id] = { rating: 5, comment: '' };
+                initialAnswers[q.id] = { rating: q.question_type === 'yes_no' ? null : (q.max_score ?? 5) };
             });
-            // Overwrite with existing answers
-            if (evalObj && evalObj.answers) {
+            if (evalObj?.answers) {
                 evalObj.answers.forEach((ans: any) => {
-                    initialAnswers[ans.question] = {
-                        rating: ans.rating_score ?? 5,
-                        comment: ans.comment || ''
-                    };
+                    initialAnswers[ans.question] = { rating: ans.rating_score ?? null };
                 });
             }
             setAnswersMap(initialAnswers);
@@ -124,20 +117,9 @@ const SelfAppraisal = () => {
         }
     };
 
-    const handleRatingChange = (qId: number, stars: number) => {
+    const handleRatingChange = (qId: number, val: number | null) => {
         if (evaluation && evaluation.status !== 'draft') return;
-        setAnswersMap(prev => ({
-            ...prev,
-            [qId]: { ...prev[qId], rating: stars }
-        }));
-    };
-
-    const handleCommentChange = (qId: number, txt: string) => {
-        if (evaluation && evaluation.status !== 'draft') return;
-        setAnswersMap(prev => ({
-            ...prev,
-            [qId]: { ...prev[qId], comment: txt }
-        }));
+        setAnswersMap(prev => ({ ...prev, [qId]: { rating: val } }));
     };
 
     const handleSaveAppraisal = async (submit: boolean) => {
@@ -151,17 +133,10 @@ const SelfAppraisal = () => {
         setSuccessMsg(null);
         setError(null);
 
-        // Map answers map to array
-        const answersPayload = Object.entries(answersMap).map(([qId, val]) => {
-            const questionId = parseInt(qId);
-            const question = questions.find(q => q.id === questionId);
-            const ratingScore = question?.question_type === 'text' ? null : val.rating;
-            return {
-                question_id: questionId,
-                rating_score: ratingScore,
-                comment: val.comment
-            };
-        });
+        const answersPayload = Object.entries(answersMap).map(([qId, val]) => ({
+            question_id: parseInt(qId),
+            rating_score: val.rating,
+        }));
 
         try {
             const res = await axios.post(
@@ -285,7 +260,7 @@ const SelfAppraisal = () => {
             {isSubmitted && (
                 <div className="bg-teal-500/10 border border-teal-500/20 text-teal-800 dark:text-teal-400 p-4 rounded-2xl text-xs font-bold flex items-center gap-2">
                     <span className="text-base">🔒</span>
-                    <span>This appraisal has been submitted. Ratings and comments are locked for manager review.</span>
+                    <span>This appraisal has been submitted. Ratings are locked for manager review.</span>
                 </div>
             )}
 
@@ -299,7 +274,7 @@ const SelfAppraisal = () => {
             ) : (
                 <div className="space-y-4">
                     {questions.map((q, idx) => {
-                        const val = answersMap[q.id] || { rating: 5, comment: '' };
+                        const val = answersMap[q.id] ?? { rating: null };
                         return (
                             <div
                                 key={q.id}
@@ -314,82 +289,58 @@ const SelfAppraisal = () => {
                                     </h4>
                                 </div>
 
-                                {/* Star rating select for scale type */}
+                                {/* Star rating for scale type */}
                                 {q.question_type === 'scale' && (
-                                    <div className="space-y-1 pl-9">
+                                    <div className="space-y-2 pl-9">
                                         <label className="block text-[9px] font-black uppercase tracking-wider text-gray-400">
-                                            Your Self-Rating ({q.max_score} Stars Max)
+                                            Rating — select 1 to {q.max_score}
                                         </label>
                                         <div className="flex gap-1.5 text-2xl">
                                             {Array.from({ length: q.max_score }).map((_, i) => {
-                                                const starNum = i + 1;
+                                                const star = i + 1;
                                                 return (
-                                                    <button
-                                                        key={i}
-                                                        type="button"
-                                                        disabled={isSubmitted}
-                                                        onClick={() => handleRatingChange(q.id, starNum)}
+                                                    <button key={i} type="button" disabled={isSubmitted}
+                                                        onClick={() => handleRatingChange(q.id, star)}
                                                         className={`transition focus:outline-none ${!isSubmitted && 'hover:scale-110'} ${
-                                                            starNum <= val.rating ? 'text-amber-400' : 'text-gray-200 dark:text-gray-700'
-                                                        }`}
-                                                    >
-                                                        ★
-                                                    </button>
+                                                            val.rating !== null && star <= val.rating ? 'text-amber-400' : 'text-gray-200 dark:text-gray-700'
+                                                        }`}>★</button>
                                                 );
                                             })}
                                         </div>
+                                        {val.rating !== null && (
+                                            <span className="text-[10px] font-bold text-amber-600 dark:text-amber-400">{val.rating} / {q.max_score}</span>
+                                        )}
                                     </div>
                                 )}
 
-                                {/* Yes/No buttons for yes_no type */}
+                                {/* Yes / No for yes_no type */}
                                 {q.question_type === 'yes_no' && (
                                     <div className="space-y-2 pl-9">
                                         <label className="block text-[9px] font-black uppercase tracking-wider text-gray-400">
-                                            Your Self-Response (Yes / No)
+                                            Your Response
                                         </label>
                                         <div className="flex gap-2">
-                                            <button
-                                                type="button"
-                                                disabled={isSubmitted}
-                                                onClick={() => handleRatingChange(q.id, 5)}
-                                                className={`px-4 py-1.5 rounded-xl text-xs font-bold transition ${
-                                                    val.rating === 5
-                                                        ? 'bg-teal-500 text-white shadow-sm'
-                                                        : 'bg-gray-100 hover:bg-gray-200 text-gray-650 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700'
-                                                }`}
-                                            >
-                                                Yes
-                                            </button>
-                                            <button
-                                                type="button"
-                                                disabled={isSubmitted}
+                                            <button type="button" disabled={isSubmitted}
                                                 onClick={() => handleRatingChange(q.id, 1)}
-                                                className={`px-4 py-1.5 rounded-xl text-xs font-bold transition ${
+                                                className={`flex items-center gap-1.5 px-5 py-2 rounded-xl text-xs font-bold transition ${
                                                     val.rating === 1
-                                                        ? 'bg-rose-500 text-white shadow-sm'
-                                                        : 'bg-gray-100 hover:bg-gray-200 text-gray-650 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700'
-                                                }`}
-                                            >
-                                                No
+                                                        ? 'bg-emerald-500 text-white shadow-sm shadow-emerald-500/20'
+                                                        : 'bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/20 hover:text-emerald-600'
+                                                }`}>
+                                                <span>✓</span> Yes
+                                            </button>
+                                            <button type="button" disabled={isSubmitted}
+                                                onClick={() => handleRatingChange(q.id, 0)}
+                                                className={`flex items-center gap-1.5 px-5 py-2 rounded-xl text-xs font-bold transition ${
+                                                    val.rating === 0
+                                                        ? 'bg-rose-500 text-white shadow-sm shadow-rose-500/20'
+                                                        : 'bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 hover:bg-rose-50 dark:hover:bg-rose-950/20 hover:text-rose-600'
+                                                }`}>
+                                                <span>✕</span> No
                                             </button>
                                         </div>
                                     </div>
                                 )}
-
-                                {/* Comment textarea */}
-                                <div className="pl-9">
-                                    <label className="block text-[9px] font-black uppercase tracking-wider text-gray-400 mb-1">
-                                        Comments & Accomplishment Details
-                                    </label>
-                                    <textarea
-                                        rows={3}
-                                        disabled={isSubmitted}
-                                        value={val.comment}
-                                        onChange={e => handleCommentChange(q.id, e.target.value)}
-                                        placeholder="Describe key results, projects worked, or justification for this rating..."
-                                        className="w-full bg-gray-50 dark:bg-gray-850 border border-gray-150 dark:border-gray-750 p-3 rounded-xl text-xs font-semibold text-gray-800 dark:text-white focus:outline-none focus:border-teal-500/50"
-                                    />
-                                </div>
                             </div>
                         );
                     })}
