@@ -56,7 +56,7 @@ const MultiRaterLog = () => {
             setError(null);
 
             const [mappingsRes, cyclesRes] = await Promise.all([
-                axios.get(`${API_BASE}/employee/multi-rater-mapping/`, { headers: headers() }),
+                axios.get(`${API_BASE}/employee/multirater/`, { headers: headers() }),
                 axios.get(`${API_BASE}/employee/appraisal-cycles/`,     { headers: headers() }),
             ]);
 
