@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import IconSearch from '../../../components/Icon/IconSearch';
@@ -321,8 +322,7 @@ const AppraisalCycles = () => {
             </div>
 
             {/* Create / Edit Modal */}
-            {showForm && (
-                <div className="fixed inset-0 z-[70000] flex items-center justify-center bg-black/60 backdrop-blur-sm">
+            {showForm && createPortal((<div className="fixed inset-0 z-[70000] flex items-center justify-center bg-black/60 backdrop-blur-sm">
                     <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-3xl p-6 w-full max-w-lg shadow-2xl animate__animated animate__zoomIn">
                         <div className="flex justify-between items-center pb-4 border-b border-gray-100 dark:border-gray-800 mb-5">
                             <h3 className="text-sm font-black text-gray-800 dark:text-white">{editId ? 'Edit Cycle' : 'New Appraisal Cycle'}</h3>
@@ -380,7 +380,7 @@ const AppraisalCycles = () => {
                         </form>
                     </div>
                 </div>
-            )}
+            ), document.body)}
         </div>
     );
 };
