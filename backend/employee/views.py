@@ -2347,6 +2347,16 @@ class EmployeePerformanceProfileAPIView(APIView):
         evals_data = []
         for ev in eval_qs:
             final_rating = ev.hr_overall_rating or ev.manager_overall_rating
+            answers_qs = AppraisalAnswer.objects.filter(evaluation=ev).select_related('question')
+            answers_data = [{
+                'id': ans.id,
+                'question': ans.question.id,
+                'question_text': ans.question.question_text,
+                'question_type': ans.question.question_type,
+                'role_type': ans.question.role_type,
+                'rating_score': float(ans.rating_score) if ans.rating_score is not None else None,
+                'comment': ans.comment,
+            } for ans in answers_qs]
             evals_data.append({
                 'id': ev.id,
                 'cycle_name': ev.cycle.name if ev.cycle else 'General Cycle',
@@ -2356,6 +2366,7 @@ class EmployeePerformanceProfileAPIView(APIView):
                 'manager_rating': float(ev.manager_overall_rating) if ev.manager_overall_rating is not None else None,
                 'final_rating':   float(final_rating)              if final_rating              is not None else None,
                 'status': ev.status,
+                'answers': answers_data,
             })
 
         # 4. Feedback — filter by created_at

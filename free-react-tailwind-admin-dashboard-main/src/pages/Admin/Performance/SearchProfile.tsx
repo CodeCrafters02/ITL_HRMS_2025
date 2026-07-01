@@ -44,6 +44,15 @@ interface Evaluation {
     manager_rating: number | null;
     final_rating: number | null;
     manager_remarks: string | null;
+    answers?: {
+        id: number;
+        question: number;
+        question_text: string;
+        question_type: string;
+        role_type: string;
+        rating_score: number | null;
+        comment: string;
+    }[];
 }
 
 interface Feedback {
@@ -97,6 +106,8 @@ const SearchProfile = () => {
     const [loadingProfile, setLoadingProfile] = useState(false);
     const [activeTab, setActiveTab] = useState<'matrix' | 'kras' | 'skills' | 'appraisals' | 'feedback'>('matrix');
     const [breakdownOpen, setBreakdownOpen] = useState<'perf' | 'pot' | null>(null);
+    const [expandedEvalId, setExpandedEvalId] = useState<number | null>(null);
+    const [evalActiveTab, setEvalActiveTab] = useState<'self' | 'manager' | 'peer' | 'hr'>('self');
 
     const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
 
@@ -667,34 +678,133 @@ const SearchProfile = () => {
                                         </h3>
                                         
                                         <div className="space-y-4">
-                                            {profile.evaluations.map(ev => (
-                                                <div key={ev.id} className="border border-gray-100 dark:border-gray-800 p-5 rounded-3xl space-y-4">
-                                                    <div className="flex justify-between items-center border-b border-gray-50 dark:border-gray-850 pb-3">
-                                                        <span className="font-bold text-gray-800 dark:text-white text-xs">{ev.cycle_name}</span>
-                                                        <span className="bg-teal-500/10 text-teal-600 px-3 py-1 rounded-xl text-[10px] font-black uppercase tracking-wider">
-                                                            Final Score: {ev.final_rating ? ev.final_rating.toFixed(2) : 'Awaiting Review'}
-                                                        </span>
-                                                    </div>
-                                                    
-                                                    <div className="grid grid-cols-2 gap-4 text-xs font-semibold">
-                                                        <div className="bg-gray-50 dark:bg-gray-850/50 p-3 rounded-xl">
-                                                            <span className="block text-[9px] uppercase tracking-wider text-gray-400 mb-1">Self Assessment Score</span>
-                                                            <span className="text-gray-800 dark:text-white font-bold">{ev.self_rating || 'N/A'} / 5.00</span>
-                                                        </div>
-                                                        <div className="bg-gray-50 dark:bg-gray-850/50 p-3 rounded-xl">
-                                                            <span className="block text-[9px] uppercase tracking-wider text-gray-400 mb-1">Manager Assessment Score</span>
-                                                            <span className="text-gray-800 dark:text-white font-bold">{ev.manager_rating || 'N/A'} / 5.00</span>
-                                                        </div>
-                                                    </div>
+                                            {profile.evaluations.map(ev => {
+                                                const isExpanded = expandedEvalId === ev.id;
+                                                const ROLE_META = {
+                                                    self: { label: 'Self Appraisal', icon: '👤' },
+                                                    manager: { label: 'Manager Evaluation', icon: '👔' },
+                                                    peer: { label: 'Peer Reviews', icon: '🤝' },
+                                                    hr: { label: 'Admin/HR Review', icon: '🛡️' },
+                                                };
 
-                                                    <div className="text-xs">
-                                                        <span className="block text-[9px] uppercase tracking-wider text-gray-400 mb-1">Manager Remarks / Feedback</span>
-                                                        <p className="text-gray-600 dark:text-gray-400 leading-relaxed font-medium bg-gray-50/50 dark:bg-gray-850/20 p-3.5 rounded-xl">
-                                                            {ev.manager_remarks || 'No remarks provided.'}
-                                                        </p>
+                                                return (
+                                                    <div key={ev.id} className="border border-gray-100 dark:border-gray-800 p-5 rounded-3xl space-y-4">
+                                                        <div className="flex flex-col sm:flex-row justify-between sm:items-center border-b border-gray-50 dark:border-gray-850 pb-3 gap-3">
+                                                            <div className="flex items-center gap-2">
+                                                                <span className="font-bold text-gray-800 dark:text-white text-xs">{ev.cycle_name}</span>
+                                                                <button type="button" onClick={() => {
+                                                                    setExpandedEvalId(prev => {
+                                                                        if (prev === ev.id) return null;
+                                                                        setEvalActiveTab('self');
+                                                                        return ev.id;
+                                                                    });
+                                                                }}
+                                                                    className="px-2.5 py-1 text-[9px] font-bold text-teal-600 dark:text-teal-400 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition border border-teal-500/20">
+                                                                    {isExpanded ? 'Hide Details ▲' : 'View Full Details ▼'}
+                                                                </button>
+                                                            </div>
+                                                            <span className="bg-teal-500/10 text-teal-600 px-3 py-1 rounded-xl text-[10px] font-black uppercase tracking-wider self-start sm:self-auto">
+                                                                Final Score: {ev.final_rating ? ev.final_rating.toFixed(2) : 'Awaiting Review'}
+                                                            </span>
+                                                        </div>
+                                                        
+                                                        <div className="grid grid-cols-2 gap-4 text-xs font-semibold">
+                                                            <div className="bg-gray-50 dark:bg-gray-850/50 p-3 rounded-xl">
+                                                                <span className="block text-[9px] uppercase tracking-wider text-gray-400 mb-1">Self Assessment Score</span>
+                                                                <span className="text-gray-800 dark:text-white font-bold">{ev.self_rating || 'N/A'} / 5.00</span>
+                                                            </div>
+                                                            <div className="bg-gray-50 dark:bg-gray-850/50 p-3 rounded-xl">
+                                                                <span className="block text-[9px] uppercase tracking-wider text-gray-400 mb-1">Manager Assessment Score</span>
+                                                                <span className="text-gray-800 dark:text-white font-bold">{ev.manager_rating || 'N/A'} / 5.00</span>
+                                                            </div>
+                                                        </div>
+
+                                                        <div className="text-xs">
+                                                            <span className="block text-[9px] uppercase tracking-wider text-gray-400 mb-1">Manager Remarks / Feedback</span>
+                                                            <p className="text-gray-600 dark:text-gray-400 leading-relaxed font-medium bg-gray-50/50 dark:bg-gray-850/20 p-3.5 rounded-xl">
+                                                                {ev.manager_remarks || 'No remarks provided.'}
+                                                            </p>
+                                                        </div>
+
+                                                        {/* Detailed Response Log Section */}
+                                                        {isExpanded && ev.answers && (
+                                                            <div className="border-t border-gray-100 dark:border-gray-800 pt-5 space-y-4 animate__animated animate__fadeIn">
+                                                                <div className="flex gap-2 mb-4 shrink-0 flex-wrap">
+                                                                    {(['self', 'manager', 'peer', 'hr'] as const).map(role => {
+                                                                        const roleAnsCount = ev.answers?.filter(ans => ans.role_type === role).length ?? 0;
+                                                                        const isTabActive = evalActiveTab === role;
+                                                                        const meta = ROLE_META[role];
+                                                                        return (
+                                                                            <button key={role} type="button" onClick={() => setEvalActiveTab(role)}
+                                                                                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[10px] font-bold transition ${
+                                                                                    isTabActive 
+                                                                                        ? 'bg-teal-500 text-white shadow-md shadow-teal-500/10' 
+                                                                                        : 'bg-gray-50 dark:bg-gray-800 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-755'
+                                                                                }`}>
+                                                                                <span>{meta.icon}</span>
+                                                                                <span>{meta.label}</span>
+                                                                                <span className={`text-[8px] font-black px-1.5 py-0.5 rounded-full ${
+                                                                                    isTabActive ? 'bg-white/20 text-white' : 'bg-gray-200 dark:bg-gray-700 text-gray-500'
+                                                                                }`}>{roleAnsCount}</span>
+                                                                            </button>
+                                                                        );
+                                                                    })}
+                                                                </div>
+
+                                                                {(() => {
+                                                                    const roleAnswers = ev.answers?.filter(ans => ans.role_type === evalActiveTab) ?? [];
+                                                                    if (roleAnswers.length === 0) {
+                                                                        return (
+                                                                            <div className="text-center py-8 text-xs text-gray-400 italic bg-gray-50 dark:bg-gray-850/20 rounded-2xl border border-dashed border-gray-100 dark:border-gray-800">
+                                                                                No evaluation responses recorded under {ROLE_META[evalActiveTab].label} for this cycle.
+                                                                            </div>
+                                                                        );
+                                                                    }
+
+                                                                    return (
+                                                                        <div className="space-y-3">
+                                                                            {roleAnswers.map((ans, idx) => {
+                                                                                const isYes = ans.rating_score === 1 || ans.rating_score === 5;
+                                                                                return (
+                                                                                    <div key={ans.id || idx} className="bg-gray-55 dark:bg-gray-850/50 p-4 rounded-2xl border border-gray-100 dark:border-gray-850 space-y-2">
+                                                                                        <div className="flex justify-between items-start gap-3">
+                                                                                            <div className="flex gap-2">
+                                                                                                <span className="text-xs font-bold text-gray-400 mt-0.5">{idx + 1}.</span>
+                                                                                                <p className="text-xs font-bold text-gray-850 dark:text-gray-200">
+                                                                                                    {ans.question_text}
+                                                                                                </p>
+                                                                                            </div>
+                                                                                            {ans.rating_score !== null && ans.question_type !== 'text' && (
+                                                                                                <span className={`text-[11px] font-black shrink-0 whitespace-nowrap px-2 py-0.5 rounded-full ${
+                                                                                                    ans.question_type === 'yes_no'
+                                                                                                        ? isYes
+                                                                                                            ? 'bg-teal-500/10 text-teal-600 dark:text-teal-400 border border-teal-500/10'
+                                                                                                            : 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/10'
+                                                                                                        : 'text-amber-500 bg-amber-500/5 border border-amber-500/10'
+                                                                                                }`}>
+                                                                                                    {ans.question_type === 'yes_no'
+                                                                                                        ? isYes ? 'Yes' : 'No'
+                                                                                                        : `★ ${ans.rating_score} / 5`
+                                                                                                    }
+                                                                                                </span>
+                                                                                            )}
+                                                                                        </div>
+                                                                                        {ans.comment && (
+                                                                                            <div className="pl-4 border-l-2 border-teal-500/20 text-[11px] text-gray-500 dark:text-gray-400 italic">
+                                                                                                "{ans.comment}"
+                                                                                            </div>
+                                                                                        )}
+                                                                                    </div>
+                                                                                );
+                                                                            })}
+                                                                        </div>
+                                                                    );
+                                                                })()}
+                                                            </div>
+                                                        )}
                                                     </div>
-                                                </div>
-                                            ))}
+                                                );
+                                            })}
                                             {profile.evaluations.length === 0 && (
                                                 <div className="text-center py-8 text-gray-400 italic">No appraisal review records found.</div>
                                             )}
