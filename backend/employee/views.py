@@ -3023,8 +3023,13 @@ class AppraisalEvaluationViewSet(viewsets.ModelViewSet):
         if mine == 'true' or not self.request.user.is_staff:
             qs = qs.filter(employee=employee)
         else:
-            # Let manager see managees
-            qs = qs.filter(Q(employee=employee) | Q(manager=employee))
+            # For staff/admin, allow querying other employees
+            target_emp_id = self.request.query_params.get('employee') or self.request.query_params.get('employee_id')
+            if target_emp_id:
+                qs = qs.filter(employee_id=target_emp_id)
+            else:
+                # Let manager see managees
+                qs = qs.filter(Q(employee=employee) | Q(manager=employee))
             
         if cycle_id:
             qs = qs.filter(cycle_id=cycle_id)
@@ -3126,6 +3131,22 @@ class AppraisalEvaluationViewSet(viewsets.ModelViewSet):
                 evaluation=evaluation, question=question, submitted_by=reviewer,
                 defaults={'rating_score': rating, 'comment': comment}
             )
+
+        # Recalculate overall ratings after answers are created
+        if role_type == 'manager':
+            mgr_answers = AppraisalAnswer.objects.filter(evaluation=evaluation, question__role_type='manager')
+            mgr_ratings = [a.rating_score for a in mgr_answers if a.rating_score is not None]
+            if mgr_ratings:
+                evaluation.manager_overall_rating = sum(mgr_ratings) / len(mgr_ratings)
+                evaluation.status = 'submitted_manager'
+                evaluation.save(update_fields=['manager_overall_rating', 'status'])
+        elif role_type == 'hr':
+            hr_answers = AppraisalAnswer.objects.filter(evaluation=evaluation, question__role_type='hr')
+            hr_ratings = [a.rating_score for a in hr_answers if a.rating_score is not None]
+            if hr_ratings:
+                evaluation.hr_overall_rating = sum(hr_ratings) / len(hr_ratings)
+                evaluation.status = 'completed'
+                evaluation.save(update_fields=['hr_overall_rating', 'status'])
 
         return Response({"detail": f"{role_type} feedback submitted for {target}.", "evaluation_id": evaluation.id})
 

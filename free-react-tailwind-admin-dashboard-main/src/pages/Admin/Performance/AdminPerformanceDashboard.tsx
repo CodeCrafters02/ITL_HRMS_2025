@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useDispatch } from 'react-redux';
+import { NavLink } from 'react-router-dom';
 import axios from 'axios';
 import { setPageTitle } from '../../../store/themeConfigSlice';
 import IconTrendingUp from '../../../components/Icon/IconTrendingUp';
@@ -202,6 +203,13 @@ const AdminPerformanceDashboard = () => {
                         <IconMenuCharts className="w-4 h-4" />
                         9-Box Talent Matrix
                     </button>
+                    <NavLink
+                        to="/admin/performance/appraisal"
+                        className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-bold text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition duration-300"
+                    >
+                        <IconUsers className="w-4 h-4" />
+                        Admin/HR Appraisal
+                    </NavLink>
                 </div>
 
                 {activeTab === 'matrix' && (

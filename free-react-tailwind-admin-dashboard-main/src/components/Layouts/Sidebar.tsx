@@ -644,6 +644,7 @@ const Sidebar = () => {
                                                     <AnimateHeight duration={300} height={currentMenu === 'adminUserOps' ? 'auto' : 0}>
                                                         <ul className="sub-menu text-gray-500">
                                                             <li><NavLink to="/admin/performance/search-profile">{t('Search Profile')}</NavLink></li>
+                                                            <li><NavLink to="/admin/performance/appraisal">{t('Admin/HR Appraisal')}</NavLink></li>
                                                             <li><NavLink to="/admin/performance/assign-kras">{t('Assign KRAs/Goals')}</NavLink></li>
                                                             <li><NavLink to="/admin/performance/kra-review">{t('KRA Review')}</NavLink></li>
                                                             <li><NavLink to="/admin/performance/track-feedback">{t('Track Feedback')}</NavLink></li>
