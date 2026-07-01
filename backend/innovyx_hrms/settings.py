@@ -291,6 +291,15 @@ CELERY_RESULT_BACKEND = f"{REDIS_URL_BASE}/{CELERY_REDIS_DB_RESULTS}?protocol=2"
 # Use Redis scheduler via django-celery-beat's database scheduler (keeps schedule in Django DB)
 CELERY_BEAT_SCHEDULER = 'django_celery_beat.schedulers:DatabaseScheduler'
 
+from celery.schedules import crontab
+CELERY_BEAT_SCHEDULE = {
+    # Activate cycles whose start_date has arrived; complete when deadline passed
+    'sync-appraisal-cycle-statuses': {
+        'task': 'employee.tasks.sync_appraisal_cycle_statuses',
+        'schedule': crontab(minute=0),  # every hour on the hour
+    },
+}
+
 # Celery serialization settings
 CELERY_ACCEPT_CONTENT = ['json']
 CELERY_TASK_SERIALIZER = 'json'

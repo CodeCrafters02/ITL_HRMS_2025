@@ -55,6 +55,17 @@ interface Feedback {
     created_at: string | null;
 }
 
+interface PerfBreakdown {
+    kra: { score: number | null; weight: number; items: { title: string; score: number; weightage: number; remarks: string }[] };
+    appraisal: { score: number | null; weight: number; items: { cycle: string; rating: number; source: string }[] };
+    feedback: { score: number | null; weight: number; items: { type: string; rating: number }[] };
+}
+interface PotBreakdown {
+    skills:        { score: number | null; weight: number; items: { name: string; level: string; mapped: number }[] };
+    self_appraisal:{ score: number | null; weight: number; items: { cycle: string; rating: number }[] };
+    self_feedback: { score: number | null; weight: number; items: { type: string; rating: number; text: string }[] };
+}
+
 interface PerformanceProfile {
     kras: KRA[];
     skills: Skill[];
@@ -66,6 +77,8 @@ interface PerformanceProfile {
         performance_label: 'Low' | 'Medium' | 'High';
         potential_label: 'Low' | 'Medium' | 'High';
         box_title: string;
+        perf_breakdown: PerfBreakdown;
+        pot_breakdown: PotBreakdown;
     };
 }
 
@@ -83,6 +96,7 @@ const SearchProfile = () => {
     const [loadingList, setLoadingList] = useState(true);
     const [loadingProfile, setLoadingProfile] = useState(false);
     const [activeTab, setActiveTab] = useState<'matrix' | 'kras' | 'skills' | 'appraisals' | 'feedback'>('matrix');
+    const [breakdownOpen, setBreakdownOpen] = useState<'perf' | 'pot' | null>(null);
 
     const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
 
@@ -119,6 +133,7 @@ const SearchProfile = () => {
             });
             setProfile(response.data);
             setActiveTab('matrix');
+            setBreakdownOpen(null);
         } catch (err) {
             console.error('Error fetching performance profile:', err);
         } finally {
@@ -353,14 +368,13 @@ const SearchProfile = () => {
                                         </div>
 
                                         <div className="grid grid-cols-3 gap-3 max-w-xl mx-auto border border-gray-200 dark:border-gray-800 p-3 rounded-2xl bg-gray-50 dark:bg-gray-850/30">
-                                            {/* Row headings logic mapping */}
                                             {gridCells.map((cell) => {
                                                 const isCurrent = profile.nine_box.performance_label === cell.perf && profile.nine_box.potential_label === cell.pot;
                                                 return (
-                                                    <div 
-                                                        key={cell.key} 
+                                                    <div
+                                                        key={cell.key}
                                                         className={`border p-4 rounded-xl flex flex-col justify-between items-center text-center h-28 transition duration-200 select-none ${
-                                                            isCurrent 
+                                                            isCurrent
                                                             ? `${cell.color} border-2 shadow-sm font-black`
                                                             : 'bg-white dark:bg-gray-900 text-gray-400 border-gray-100 dark:border-gray-800 text-[10px] font-semibold'
                                                         }`}
@@ -378,6 +392,189 @@ const SearchProfile = () => {
                                                 );
                                             })}
                                         </div>
+
+                                        {/* Score Chips + Breakdown */}
+                                        {(() => {
+                                            const pb = profile.nine_box.perf_breakdown;
+                                            const potb = profile.nine_box.pot_breakdown;
+                                            const activeW = [pb.kra.score !== null ? pb.kra.weight : 0, pb.appraisal.score !== null ? pb.appraisal.weight : 0, pb.feedback.score !== null ? pb.feedback.weight : 0].reduce((a, b) => a + b, 0);
+
+                                            const SectionHeader = ({ label, weight, score, color }: { label: string; weight: number; score: number | null; color: string }) => (
+                                                <div className={`flex items-center justify-between px-4 py-2 bg-${color}-50 dark:bg-${color}-950/20`}>
+                                                    <span className={`text-[10px] font-black uppercase tracking-wider text-${color}-700 dark:text-${color}-400`}>{label}</span>
+                                                    {score !== null ? (
+                                                        <span className={`text-[10px] font-black bg-${color}-100 dark:bg-${color}-950/50 text-${color}-700 dark:text-${color}-300 px-2 py-0.5 rounded-full`}>
+                                                            {weight}% → {score.toFixed(2)} pts
+                                                        </span>
+                                                    ) : (
+                                                        <span className="text-[10px] font-bold text-gray-400 italic">No data — not factored in</span>
+                                                    )}
+                                                </div>
+                                            );
+
+                                            return (
+                                                <div className="space-y-3 pt-2">
+                                                    <div className="flex gap-3">
+                                                        <button onClick={() => setBreakdownOpen(breakdownOpen === 'perf' ? null : 'perf')}
+                                                            className={`flex-1 flex items-center justify-between px-4 py-3 rounded-2xl border text-xs font-bold transition ${breakdownOpen === 'perf' ? 'bg-teal-500 text-white border-teal-500 shadow-md' : 'bg-gray-50 dark:bg-gray-850 border-gray-200 dark:border-gray-800 text-gray-700 dark:text-gray-300 hover:border-teal-400'}`}>
+                                                            <div>
+                                                                <span className="block">Perf Score</span>
+                                                                <span className={`text-[9px] font-bold ${breakdownOpen === 'perf' ? 'text-teal-100' : 'text-gray-400'}`}>KRA · Appraisal · Feedback</span>
+                                                            </div>
+                                                            <span className="flex items-center gap-1.5">
+                                                                <span className={`text-base font-black ${breakdownOpen === 'perf' ? 'text-white' : 'text-teal-600 dark:text-teal-400'}`}>{profile.nine_box.performance_score.toFixed(1)}</span>
+                                                                <span className={`text-[10px] ${breakdownOpen === 'perf' ? 'text-teal-100' : 'text-gray-400'}`}>/ 5 {breakdownOpen === 'perf' ? '▲' : '▼'}</span>
+                                                            </span>
+                                                        </button>
+                                                        <button onClick={() => setBreakdownOpen(breakdownOpen === 'pot' ? null : 'pot')}
+                                                            className={`flex-1 flex items-center justify-between px-4 py-3 rounded-2xl border text-xs font-bold transition ${breakdownOpen === 'pot' ? 'bg-indigo-500 text-white border-indigo-500 shadow-md' : 'bg-gray-50 dark:bg-gray-850 border-gray-200 dark:border-gray-800 text-gray-700 dark:text-gray-300 hover:border-indigo-400'}`}>
+                                                            <div>
+                                                                <span className="block">Potential Score</span>
+                                                                <span className={`text-[9px] font-bold ${breakdownOpen === 'pot' ? 'text-indigo-100' : 'text-gray-400'}`}>Skills · Self-Rating</span>
+                                                            </div>
+                                                            <span className="flex items-center gap-1.5">
+                                                                <span className={`text-base font-black ${breakdownOpen === 'pot' ? 'text-white' : 'text-indigo-600 dark:text-indigo-400'}`}>{profile.nine_box.potential_score.toFixed(1)}</span>
+                                                                <span className={`text-[10px] ${breakdownOpen === 'pot' ? 'text-indigo-100' : 'text-gray-400'}`}>/ 5 {breakdownOpen === 'pot' ? '▲' : '▼'}</span>
+                                                            </span>
+                                                        </button>
+                                                    </div>
+
+                                                    {/* Perf Breakdown */}
+                                                    {breakdownOpen === 'perf' && (
+                                                        <div className="border border-teal-200 dark:border-teal-900/50 rounded-2xl overflow-hidden text-xs">
+                                                            <div className="bg-teal-50 dark:bg-teal-950/30 px-4 py-2.5 flex items-center justify-between">
+                                                                <span className="text-[10px] font-black uppercase tracking-widest text-teal-700 dark:text-teal-400">Performance Score Breakdown</span>
+                                                                <span className="text-[10px] text-teal-500 font-bold">Blended from {activeW}% active weight</span>
+                                                            </div>
+
+                                                            {/* KRA Section */}
+                                                            <SectionHeader label="KRA Evaluations" weight={pb.kra.weight} score={pb.kra.score} color="teal" />
+                                                            <div className="divide-y divide-gray-50 dark:divide-gray-800/60 px-4">
+                                                                {pb.kra.items.length === 0 ? (
+                                                                    <p className="text-[11px] text-gray-400 italic py-3">No KRA evaluations submitted yet.</p>
+                                                                ) : pb.kra.items.map((item, i) => (
+                                                                    <div key={i} className="flex items-center gap-3 py-2.5">
+                                                                        <div className="flex-1 min-w-0">
+                                                                            <span className="block font-bold text-gray-800 dark:text-white truncate">{item.title}</span>
+                                                                            {item.remarks && <span className="text-[10px] text-gray-400 italic truncate block">"{item.remarks}"</span>}
+                                                                        </div>
+                                                                        <span className="text-[9px] text-gray-400 shrink-0">{item.weightage}% wt</span>
+                                                                        <div className="w-16 h-1 bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden shrink-0">
+                                                                            <div className="h-full bg-teal-500 rounded-full" style={{ width: `${(item.score / 5) * 100}%` }} />
+                                                                        </div>
+                                                                        <span className="font-black text-teal-600 dark:text-teal-400 w-8 text-right shrink-0">{item.score.toFixed(1)}</span>
+                                                                    </div>
+                                                                ))}
+                                                            </div>
+
+                                                            {/* Appraisal Section */}
+                                                            <SectionHeader label="Appraisal Ratings" weight={pb.appraisal.weight} score={pb.appraisal.score} color="emerald" />
+                                                            <div className="divide-y divide-gray-50 dark:divide-gray-800/60 px-4">
+                                                                {pb.appraisal.items.length === 0 ? (
+                                                                    <p className="text-[11px] text-gray-400 italic py-3">No HR / Manager ratings recorded.</p>
+                                                                ) : pb.appraisal.items.map((item, i) => (
+                                                                    <div key={i} className="flex items-center gap-3 py-2.5">
+                                                                        <div className="flex-1 min-w-0">
+                                                                            <span className="block font-bold text-gray-800 dark:text-white truncate">{item.cycle}</span>
+                                                                            <span className="text-[9px] text-gray-400 uppercase">{item.source} Rating</span>
+                                                                        </div>
+                                                                        <div className="w-16 h-1 bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden shrink-0">
+                                                                            <div className="h-full bg-emerald-500 rounded-full" style={{ width: `${(item.rating / 5) * 100}%` }} />
+                                                                        </div>
+                                                                        <span className="font-black text-emerald-600 dark:text-emerald-400 w-8 text-right shrink-0">{item.rating.toFixed(1)}</span>
+                                                                    </div>
+                                                                ))}
+                                                            </div>
+
+                                                            {/* Feedback Section */}
+                                                            <SectionHeader label="Continuous Feedback" weight={pb.feedback.weight} score={pb.feedback.score} color="purple" />
+                                                            <div className="divide-y divide-gray-50 dark:divide-gray-800/60 px-4">
+                                                                {pb.feedback.items.length === 0 ? (
+                                                                    <p className="text-[11px] text-gray-400 italic py-3">No rated feedback received.</p>
+                                                                ) : pb.feedback.items.map((item, i) => (
+                                                                    <div key={i} className="flex items-center gap-3 py-2.5">
+                                                                        <span className="flex-1 font-semibold text-gray-700 dark:text-gray-300 truncate">{item.type}</span>
+                                                                        <span className="text-amber-400 text-[10px]">{'★'.repeat(item.rating)}{'☆'.repeat(5 - item.rating)}</span>
+                                                                        <span className="font-black text-purple-600 dark:text-purple-400 w-8 text-right shrink-0">{item.rating}.0</span>
+                                                                    </div>
+                                                                ))}
+                                                            </div>
+
+                                                            <div className="px-4 py-3 bg-teal-50/50 dark:bg-teal-950/20 flex items-center justify-between border-t border-teal-100 dark:border-teal-900/30">
+                                                                <span className="text-[10px] font-black uppercase tracking-wider text-teal-700 dark:text-teal-400">Blended Perf Score</span>
+                                                                <span className="text-sm font-black text-teal-600 dark:text-teal-400">{profile.nine_box.performance_score.toFixed(2)} / 5.00</span>
+                                                            </div>
+                                                        </div>
+                                                    )}
+
+                                                    {/* Potential Breakdown */}
+                                                    {breakdownOpen === 'pot' && (
+                                                        <div className="border border-indigo-200 dark:border-indigo-900/50 rounded-2xl overflow-hidden text-xs">
+                                                            <div className="bg-indigo-50 dark:bg-indigo-950/30 px-4 py-2.5 flex items-center justify-between">
+                                                                <span className="text-[10px] font-black uppercase tracking-widest text-indigo-700 dark:text-indigo-400">Potential Score Breakdown</span>
+                                                                <span className="text-[10px] text-indigo-500 font-bold">Skills 60% · Self-Appraisal 24% · Self-Feedback 16%</span>
+                                                            </div>
+
+                                                            {/* Skills */}
+                                                            <SectionHeader label="Skills Proficiency" weight={potb.skills.weight} score={potb.skills.score} color="indigo" />
+                                                            <div className="divide-y divide-gray-50 dark:divide-gray-800/60 px-4">
+                                                                {potb.skills.items.length === 0 ? (
+                                                                    <p className="text-[11px] text-gray-400 italic py-3">No skills added — add skills in the Skills tab to improve this score.</p>
+                                                                ) : potb.skills.items.map((s, i) => (
+                                                                    <div key={i} className="flex items-center gap-2 py-2.5">
+                                                                        <div className="w-2 h-2 rounded-full bg-indigo-400 shrink-0" />
+                                                                        <span className="flex-1 font-semibold text-gray-700 dark:text-gray-300">{s.name}</span>
+                                                                        <span className={`text-[9px] uppercase font-black px-1.5 py-0.5 rounded-full ${s.level?.toLowerCase() === 'expert' ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400' : s.level?.toLowerCase() === 'intermediate' ? 'bg-teal-100 text-teal-700 dark:bg-teal-950/40 dark:text-teal-400' : 'bg-gray-100 text-gray-500'}`}>{s.level || '—'}</span>
+                                                                        <div className="w-16 h-1 bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden shrink-0">
+                                                                            <div className="h-full bg-indigo-500 rounded-full" style={{ width: `${(s.mapped / 5) * 100}%` }} />
+                                                                        </div>
+                                                                        <span className="font-black text-indigo-600 dark:text-indigo-400 w-8 text-right shrink-0">{s.mapped.toFixed(1)}</span>
+                                                                    </div>
+                                                                ))}
+                                                            </div>
+
+                                                            {/* Self Appraisal */}
+                                                            <SectionHeader label="Self Appraisal" weight={potb.self_appraisal.weight} score={potb.self_appraisal.score} color="violet" />
+                                                            <div className="divide-y divide-gray-50 dark:divide-gray-800/60 px-4">
+                                                                {potb.self_appraisal.items.length === 0 ? (
+                                                                    <p className="text-[11px] text-gray-400 italic py-3">No self-appraisal submitted yet — complete a self-appraisal cycle.</p>
+                                                                ) : potb.self_appraisal.items.map((r, i) => (
+                                                                    <div key={i} className="flex items-center gap-3 py-2.5">
+                                                                        <span className="flex-1 font-semibold text-gray-700 dark:text-gray-300">{r.cycle}</span>
+                                                                        <div className="w-16 h-1 bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden shrink-0">
+                                                                            <div className="h-full bg-violet-500 rounded-full" style={{ width: `${(r.rating / 5) * 100}%` }} />
+                                                                        </div>
+                                                                        <span className="font-black text-violet-600 dark:text-violet-400 w-8 text-right shrink-0">{r.rating.toFixed(1)}</span>
+                                                                    </div>
+                                                                ))}
+                                                            </div>
+
+                                                            {/* Self Feedback */}
+                                                            <SectionHeader label="Self Assessment Notes" weight={potb.self_feedback.weight} score={potb.self_feedback.score} color="fuchsia" />
+                                                            <div className="divide-y divide-gray-50 dark:divide-gray-800/60 px-4">
+                                                                {potb.self_feedback.items.length === 0 ? (
+                                                                    <p className="text-[11px] text-gray-400 italic py-3">No self-assessment notes — log reflections from Feedback Provided page.</p>
+                                                                ) : potb.self_feedback.items.map((f, i) => (
+                                                                    <div key={i} className="py-2.5">
+                                                                        <div className="flex items-center gap-3 mb-1">
+                                                                            <span className="flex-1 font-semibold text-gray-700 dark:text-gray-300 text-[10px] uppercase tracking-wider">{f.type}</span>
+                                                                            <span className="text-amber-400 text-[10px]">{'★'.repeat(f.rating)}{'☆'.repeat(5 - f.rating)}</span>
+                                                                            <span className="font-black text-fuchsia-600 dark:text-fuchsia-400 w-8 text-right shrink-0">{f.rating}.0</span>
+                                                                        </div>
+                                                                        {f.text && <p className="text-[10px] text-gray-400 italic truncate">"{f.text}"</p>}
+                                                                    </div>
+                                                                ))}
+                                                            </div>
+
+                                                            <div className="px-4 py-3 bg-indigo-50/50 dark:bg-indigo-950/20 flex items-center justify-between border-t border-indigo-100 dark:border-indigo-900/30">
+                                                                <span className="text-[10px] font-black uppercase tracking-wider text-indigo-700 dark:text-indigo-400">Blended Potential Score</span>
+                                                                <span className="text-sm font-black text-indigo-600 dark:text-indigo-400">{profile.nine_box.potential_score.toFixed(2)} / 5.00</span>
+                                                            </div>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            );
+                                        })()}
                                     </div>
                                 )}
 

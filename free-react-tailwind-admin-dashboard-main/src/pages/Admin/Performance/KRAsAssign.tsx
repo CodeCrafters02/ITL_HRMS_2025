@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+
 import axios from 'axios';
 import IconSearch from '../../../components/Icon/IconSearch';
 import IconTrendingUp from '../../../components/Icon/IconTrendingUp';

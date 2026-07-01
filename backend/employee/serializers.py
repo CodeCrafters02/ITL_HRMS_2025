@@ -600,18 +600,44 @@ class EmployeeReferenceSerializer(serializers.ModelSerializer):
 
 
 class MultiRaterMappingSerializer(serializers.ModelSerializer):
-    reviewer_name = serializers.SerializerMethodField()
+    reviewer_name        = serializers.SerializerMethodField()
     reviewer_designation = serializers.SerializerMethodField()
-    reviewer_initials = serializers.SerializerMethodField()
-    reviewer_avatar_bg = serializers.SerializerMethodField()
-    
+    reviewer_initials    = serializers.SerializerMethodField()
+    reviewer_avatar_bg   = serializers.SerializerMethodField()
+    employee_name        = serializers.SerializerMethodField()
+    employee_designation = serializers.SerializerMethodField()
+    employee_department  = serializers.SerializerMethodField()
+    employee_initials    = serializers.SerializerMethodField()
+    cycle_name           = serializers.SerializerMethodField()
+
     class Meta:
         model = MultiRaterMapping
         fields = [
             'id', 'employee', 'reviewer', 'cycle', 'status', 'created_at',
-            'reviewer_name', 'reviewer_designation', 'reviewer_initials', 'reviewer_avatar_bg'
+            'reviewer_name', 'reviewer_designation', 'reviewer_initials', 'reviewer_avatar_bg',
+            'employee_name', 'employee_designation', 'employee_department', 'employee_initials',
+            'cycle_name',
         ]
         extra_kwargs = {'cycle': {'required': False}}
+
+    def get_employee_name(self, obj):
+        if obj.employee:
+            return f"{obj.employee.first_name} {obj.employee.last_name}".strip()
+        return ""
+
+    def get_employee_designation(self, obj):
+        return obj.employee.designation.designation_name if obj.employee and obj.employee.designation else ""
+
+    def get_employee_department(self, obj):
+        return obj.employee.department.department_name if obj.employee and obj.employee.department else ""
+
+    def get_employee_initials(self, obj):
+        if obj.employee:
+            return ((obj.employee.first_name or '')[:1] + (obj.employee.last_name or '')[:1]).upper()
+        return ""
+
+    def get_cycle_name(self, obj):
+        return obj.cycle.name if obj.cycle else ""
 
     def get_reviewer_name(self, obj):
         if obj.reviewer:
@@ -693,14 +719,37 @@ class EmployeeKRASerializer(serializers.ModelSerializer):
     kra_title = serializers.CharField(source='kra_master.title', read_only=True)
     kra_description = serializers.CharField(source='kra_master.description', read_only=True)
     reviewer_name = serializers.SerializerMethodField(read_only=True)
+    employee_name = serializers.SerializerMethodField(read_only=True)
+    employee_designation = serializers.CharField(source='employee.designation.designation_name', read_only=True, default='')
+    employee_department = serializers.CharField(source='employee.department.department_name', read_only=True, default='')
+    evaluation = serializers.SerializerMethodField(read_only=True)
 
     class Meta:
         model = EmployeeKRA
-        fields = ['id', 'employee', 'kra_master', 'kra_title', 'kra_description', 'reviewer', 'reviewer_name', 'weightage', 'target_description', 'created_at']
+        fields = ['id', 'employee', 'employee_name', 'employee_designation', 'employee_department',
+                  'kra_master', 'kra_title', 'kra_description', 'reviewer', 'reviewer_name',
+                  'weightage', 'target_description', 'created_at', 'evaluation']
 
     def get_reviewer_name(self, obj):
         if obj.reviewer:
             return f"{obj.reviewer.first_name} {obj.reviewer.last_name}".strip()
+        return None
+
+    def get_employee_name(self, obj):
+        if obj.employee:
+            return f"{obj.employee.first_name} {obj.employee.last_name}".strip()
+        return None
+
+    def get_evaluation(self, obj):
+        ev = getattr(obj, 'evaluation', None)
+        if ev is None:
+            try:
+                from .models import KRAEvaluation
+                ev = KRAEvaluation.objects.filter(employee_kra=obj).first()
+            except Exception:
+                return None
+        if ev:
+            return {'id': ev.id, 'score': float(ev.score), 'remarks': ev.remarks, 'evaluated_at': ev.evaluated_at.strftime('%Y-%m-%d')}
         return None
 
     def validate(self, attrs):
@@ -720,6 +769,30 @@ class EmployeeKRASerializer(serializers.ModelSerializer):
             raise serializers.ValidationError(f"Total weightage cannot exceed 100%. Current total with this assignment would be {total_weight}%.")
             
         return attrs
+
+
+class KRAEvaluationSerializer(serializers.ModelSerializer):
+    kra_title = serializers.CharField(source='employee_kra.kra_master.title', read_only=True)
+    weightage = serializers.IntegerField(source='employee_kra.weightage', read_only=True)
+    employee_name = serializers.SerializerMethodField(read_only=True)
+    reviewer_name = serializers.SerializerMethodField(read_only=True)
+
+    class Meta:
+        model = KRAEvaluation
+        fields = ['id', 'employee_kra', 'kra_title', 'weightage', 'score', 'remarks', 'employee_name', 'reviewer_name', 'evaluated_at', 'updated_at']
+
+    def get_employee_name(self, obj):
+        e = obj.employee_kra.employee
+        return f"{e.first_name} {e.last_name}".strip() if e else None
+
+    def get_reviewer_name(self, obj):
+        r = obj.employee_kra.reviewer
+        return f"{r.first_name} {r.last_name}".strip() if r else None
+
+    def validate_score(self, value):
+        if not (0 <= float(value) <= 5):
+            raise serializers.ValidationError("Score must be between 0 and 5.")
+        return value
 
 
 class AppraisalExtensionSerializer(serializers.ModelSerializer):

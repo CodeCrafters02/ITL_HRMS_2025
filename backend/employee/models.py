@@ -287,6 +287,17 @@ class EmployeeKRA(models.Model):
         return f"{self.employee} - {self.kra_master.title} ({self.weightage}%)"
 
 
+class KRAEvaluation(models.Model):
+    employee_kra = models.OneToOneField(EmployeeKRA, on_delete=models.CASCADE, related_name='evaluation')
+    score = models.DecimalField(max_digits=4, decimal_places=2)  # 0.00 – 5.00
+    remarks = models.TextField(blank=True)
+    evaluated_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"{self.employee_kra} → {self.score}/5"
+
+
 class SkillMaster(models.Model):
     name = models.CharField(max_length=150)
     category = models.CharField(max_length=100, blank=True)

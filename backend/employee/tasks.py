@@ -8,6 +8,36 @@ from notifications.models import UserNotification
 
 
 # ---------------------------------------------------------------------------
+# Appraisal Cycle auto-status
+# ---------------------------------------------------------------------------
+
+@shared_task
+def sync_appraisal_cycle_statuses():
+    """
+    Runs every hour.
+    - draft/upcoming → active  when start_date <= today
+    - active         → completed when self_appraisal_deadline < now
+    """
+    from .models import AppraisalCycle
+    today = timezone.localdate()
+    now   = timezone.now()
+
+    # Activate cycles whose start_date has arrived
+    activated = AppraisalCycle.objects.filter(
+        status__in=['draft', 'upcoming'],
+        start_date__lte=today,
+    ).update(status='active')
+
+    # Complete cycles whose self_appraisal_deadline has passed
+    completed = AppraisalCycle.objects.filter(
+        status='active',
+        self_appraisal_deadline__lt=now,
+    ).update(status='completed')
+
+    return {'activated': activated, 'completed': completed}
+
+
+# ---------------------------------------------------------------------------
 # Private helpers
 # ---------------------------------------------------------------------------
 

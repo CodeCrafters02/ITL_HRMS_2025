@@ -328,7 +328,7 @@ const Sidebar = () => {
                                                     <ul className="sub-menu text-gray-500">
                                                         <li><NavLink to="/employee/performance/kras">{t('My KRAs')}</NavLink></li>
                                                         <li><NavLink to="/employee/performance/self-map-kras">{t('Self Map KRAs')}</NavLink></li>
-                                                        <li><NavLink to="/employee/performance/goals">{t('Goals')}</NavLink></li>
+                                                        <li><NavLink to="/employee/performance/kra-review">{t('KRA Review')}</NavLink></li>
                                                     </ul>
                                                 </AnimateHeight>
                                             </li>
@@ -643,6 +643,7 @@ const Sidebar = () => {
                                                         <ul className="sub-menu text-gray-500">
                                                             <li><NavLink to="/admin/performance/search-profile">{t('Search Profile')}</NavLink></li>
                                                             <li><NavLink to="/admin/performance/assign-kras">{t('Assign KRAs/Goals')}</NavLink></li>
+                                                            <li><NavLink to="/admin/performance/kra-review">{t('KRA Review')}</NavLink></li>
                                                             <li><NavLink to="/admin/performance/track-feedback">{t('Track Feedback')}</NavLink></li>
                                                         </ul>
                                                     </AnimateHeight>

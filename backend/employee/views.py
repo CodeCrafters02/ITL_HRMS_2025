@@ -2279,10 +2279,16 @@ class MultiRaterMappingViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
-        queryset = self.queryset.all()
+        queryset = self.queryset.select_related('employee__designation', 'employee__department', 'reviewer__designation', 'cycle').all()
         employee_id = self.request.query_params.get('employee_id')
+        reviewer_id = self.request.query_params.get('reviewer_id')
+        cycle_id    = self.request.query_params.get('cycle_id')
         if employee_id:
             queryset = queryset.filter(employee_id=employee_id)
+        if reviewer_id:
+            queryset = queryset.filter(reviewer_id=reviewer_id)
+        if cycle_id:
+            queryset = queryset.filter(cycle_id=cycle_id)
         return queryset
 
     def perform_create(self, serializer):
@@ -2367,16 +2373,101 @@ class EmployeePerformanceProfileAPIView(APIView):
             'created_at': f.created_at.strftime('%Y-%m-%d %H:%M') if f.created_at else None,
         } for f in fb_qs]
 
-        # 5. 9-Box — always based on all evaluations (not date-filtered) for accurate positioning
+        # 5. 9-Box — Perf = KRA(50%) + Appraisal(30%) + Feedback(20%) blended
         all_evals = AppraisalEvaluation.objects.filter(employee=employee)
-        perf_score = 0.0
-        rated = [float(ev.hr_overall_rating or ev.manager_overall_rating or 0.0) for ev in all_evals]
-        if rated:
-            perf_score = sum(rated) / len(rated)
-        pot_score = 0.0
-        if skills.exists():
-            prof_map = {'beginner': 2.0, 'intermediate': 3.5, 'expert': 5.0}
-            pot_score = sum(prof_map.get((s.proficiency_level or '').lower(), 3.0) for s in skills) / skills.count()
+        kra_evals = KRAEvaluation.objects.filter(employee_kra__employee=employee).select_related('employee_kra__kra_master')
+
+        # KRA weighted score
+        kra_score = None
+        if kra_evals.exists():
+            total_w = sum(ev.employee_kra.weightage for ev in kra_evals)
+            if total_w > 0:
+                kra_score = sum(float(ev.score) * ev.employee_kra.weightage for ev in kra_evals) / total_w
+            else:
+                kra_score = sum(float(ev.score) for ev in kra_evals) / kra_evals.count()
+
+        # Appraisal score
+        rated = [float(ev.hr_overall_rating or ev.manager_overall_rating)
+                 for ev in all_evals if ev.hr_overall_rating or ev.manager_overall_rating]
+        appraisal_score = sum(rated) / len(rated) if rated else None
+
+        # Peer feedback score (received from others, rated) — excludes self-feedback
+        peer_fb = [f for f in fb_qs if f.rating and f.sender_id != employee.pk]
+        fb_ratings = [f.rating for f in peer_fb]
+        fb_score = sum(fb_ratings) / len(fb_ratings) if fb_ratings else None
+
+        # Blend perf
+        sources = [(kra_score, 0.5), (appraisal_score, 0.3), (fb_score, 0.2)]
+        available = [(s, w) for s, w in sources if s is not None]
+        if available:
+            total_w = sum(w for _, w in available)
+            perf_score = sum(s * w for s, w in available) / total_w
+        else:
+            perf_score = 0.0
+
+        # Potential = Skills(50%) + Self-appraisal(30%) + Self-feedback(20%) fallback chain
+        prof_map = {'beginner': 2.0, 'intermediate': 3.5, 'expert': 5.0}
+        skill_avg = (sum(prof_map.get((s.proficiency_level or '').lower(), 3.0) for s in skills) / skills.count()) if skills.exists() else None
+
+        self_appraisal_ratings = [float(ev.self_overall_rating) for ev in all_evals if ev.self_overall_rating]
+        self_appraisal_avg = sum(self_appraisal_ratings) / len(self_appraisal_ratings) if self_appraisal_ratings else None
+
+        # Self-feedback = ContinuousFeedback where sender = receiver = employee
+        self_fb_qs = ContinuousFeedback.objects.filter(sender=employee, receiver=employee)
+        self_fb_ratings = [f.rating for f in self_fb_qs if f.rating]
+        self_fb_avg = sum(self_fb_ratings) / len(self_fb_ratings) if self_fb_ratings else None
+
+        # Combine self signals: appraisal + self-feedback
+        self_signals = [(v, w) for v, w in [(self_appraisal_avg, 0.6), (self_fb_avg, 0.4)] if v is not None]
+        if self_signals:
+            tw = sum(w for _, w in self_signals)
+            combined_self = sum(v * w for v, w in self_signals) / tw
+        else:
+            combined_self = None
+
+        pot_sources = [(skill_avg, 0.6), (combined_self, 0.4)]
+        pot_available = [(s, w) for s, w in pot_sources if s is not None]
+        if pot_available:
+            tw = sum(w for _, w in pot_available)
+            pot_score = sum(s * w for s, w in pot_available) / tw
+        else:
+            pot_score = 0.0
+
+        # Breakdown data for frontend
+        perf_breakdown = {
+            'kra': {
+                'score': round(kra_score, 2) if kra_score is not None else None,
+                'weight': 50,
+                'items': [{'title': ev.employee_kra.kra_master.title, 'score': float(ev.score), 'weightage': ev.employee_kra.weightage, 'remarks': ev.remarks} for ev in kra_evals],
+            },
+            'appraisal': {
+                'score': round(appraisal_score, 2) if appraisal_score is not None else None,
+                'weight': 30,
+                'items': [{'cycle': ev.cycle.name if ev.cycle else 'General', 'rating': float(ev.hr_overall_rating or ev.manager_overall_rating), 'source': 'HR' if ev.hr_overall_rating else 'Manager'} for ev in all_evals if ev.hr_overall_rating or ev.manager_overall_rating],
+            },
+            'feedback': {
+                'score': round(fb_score, 2) if fb_score is not None else None,
+                'weight': 20,
+                'items': [{'type': f.get_category_display(), 'rating': f.rating} for f in peer_fb],
+            },
+        }
+        pot_breakdown = {
+            'skills': {
+                'score': round(skill_avg, 2) if skill_avg is not None else None,
+                'weight': 60,
+                'items': [{'name': s.skill.name if s.skill else '', 'level': s.proficiency_level, 'mapped': prof_map.get((s.proficiency_level or '').lower(), 3.0)} for s in skills],
+            },
+            'self_appraisal': {
+                'score': round(self_appraisal_avg, 2) if self_appraisal_avg is not None else None,
+                'weight': 24,
+                'items': [{'cycle': ev.cycle.name if ev.cycle else 'General', 'rating': float(ev.self_overall_rating)} for ev in all_evals if ev.self_overall_rating],
+            },
+            'self_feedback': {
+                'score': round(self_fb_avg, 2) if self_fb_avg is not None else None,
+                'weight': 16,
+                'items': [{'type': f.get_category_display(), 'rating': f.rating, 'text': f.feedback_text[:80]} for f in self_fb_qs if f.rating],
+            },
+        }
 
         def label(score):
             if score < 2.5: return 'Low'
@@ -2403,6 +2494,8 @@ class EmployeePerformanceProfileAPIView(APIView):
                 'performance_label': perf_label,
                 'potential_label':   pot_label,
                 'box_title': box_matrix.get((perf_label, pot_label), 'Core Player'),
+                'perf_breakdown': perf_breakdown,
+                'pot_breakdown': pot_breakdown,
             },
         })
 
@@ -2480,15 +2573,45 @@ class MyPerformanceDashboardAPIView(APIView):
                 'visibility': f.visibility or 'private',
             })
 
-        # 5. 9-Box Calculation
-        perf_score = 0.0
-        pot_score = 0.0
-        rated = [float(ev.hr_overall_rating or ev.manager_overall_rating or 0.0) for ev in evals]
-        if rated:
-            perf_score = sum(rated) / len(rated)
-        if skills.exists():
-            prof_map = {'beginner': 2.0, 'intermediate': 3.5, 'expert': 5.0}
-            pot_score = sum([prof_map.get((s.proficiency_level or '').lower(), 3.0) for s in skills]) / skills.count()
+        # 5. 9-Box — Perf = KRA(50%) + Appraisal(30%) + Feedback(20%) blended
+        kra_evals = KRAEvaluation.objects.filter(employee_kra__employee=employee).select_related('employee_kra__kra_master')
+
+        kra_score = None
+        if kra_evals.exists():
+            total_w = sum(ev.employee_kra.weightage for ev in kra_evals)
+            if total_w > 0:
+                kra_score = sum(float(ev.score) * ev.employee_kra.weightage for ev in kra_evals) / total_w
+            else:
+                kra_score = sum(float(ev.score) for ev in kra_evals) / kra_evals.count()
+
+        rated = [float(ev.hr_overall_rating or ev.manager_overall_rating)
+                 for ev in evals if ev.hr_overall_rating or ev.manager_overall_rating]
+        appraisal_score = sum(rated) / len(rated) if rated else None
+
+        fb_ratings = [f.rating for f in feedbacks_received if f.rating]
+        fb_score = sum(fb_ratings) / len(fb_ratings) if fb_ratings else None
+
+        sources = [(kra_score, 0.5), (appraisal_score, 0.3), (fb_score, 0.2)]
+        available = [(s, w) for s, w in sources if s is not None]
+        if available:
+            total_w = sum(w for _, w in available)
+            perf_score = sum(s * w for s, w in available) / total_w
+        else:
+            perf_score = 0.0
+
+        prof_map = {'beginner': 2.0, 'intermediate': 3.5, 'expert': 5.0}
+        skill_avg = (sum(prof_map.get((s.proficiency_level or '').lower(), 3.0) for s in skills) / skills.count()) if skills.exists() else None
+        self_ratings = [float(ev.self_overall_rating) for ev in evals if ev.self_overall_rating]
+        self_avg = sum(self_ratings) / len(self_ratings) if self_ratings else None
+
+        if skill_avg is not None and self_avg is not None:
+            pot_score = skill_avg * 0.6 + self_avg * 0.4
+        elif skill_avg is not None:
+            pot_score = skill_avg
+        elif self_avg is not None:
+            pot_score = self_avg
+        else:
+            pot_score = 0.0
 
         perf_label = "Medium"
         if perf_score < 2.5: perf_label = "Low"
@@ -2585,31 +2708,94 @@ class PerformanceDashboardAPIView(APIView):
         if designation:
             qs = qs.filter(designation__designation_name__icontains=designation)
 
-        # Bulk-fetch related data
+        # Bulk-fetch all related data in one pass each
         emp_ids = list(qs.values_list('id', flat=True))
-        evals_qs = AppraisalEvaluation.objects.filter(employee_id__in=emp_ids).values('employee_id', 'hr_overall_rating', 'manager_overall_rating')
-        skills_qs = EmployeeSkill.objects.filter(employee_id__in=emp_ids).values('employee_id', 'proficiency_level')
 
-        eval_map = {}
+        # Appraisal scores
+        evals_qs = AppraisalEvaluation.objects.filter(employee_id__in=emp_ids).values(
+            'employee_id', 'hr_overall_rating', 'manager_overall_rating', 'self_overall_rating')
+        eval_map   = {}  # employee_id -> [appraisal_score, ...]
+        self_rat_map = {}  # employee_id -> [self_rating, ...]
         for ev in evals_qs:
-            score = float(ev['hr_overall_rating'] or ev['manager_overall_rating'] or 0)
-            eval_map.setdefault(ev['employee_id'], []).append(score)
+            appr = float(ev['hr_overall_rating'] or ev['manager_overall_rating'] or 0)
+            if appr:
+                eval_map.setdefault(ev['employee_id'], []).append(appr)
+            if ev['self_overall_rating']:
+                self_rat_map.setdefault(ev['employee_id'], []).append(float(ev['self_overall_rating']))
 
+        # KRA evaluation scores (weighted)
+        kra_eval_qs = KRAEvaluation.objects.filter(
+            employee_kra__employee_id__in=emp_ids
+        ).values('employee_kra__employee_id', 'employee_kra__weightage', 'score')
+        kra_map = {}  # employee_id -> list of (score, weightage)
+        for ke in kra_eval_qs:
+            if ke['score'] is not None:
+                kra_map.setdefault(ke['employee_kra__employee_id'], []).append(
+                    (float(ke['score']), float(ke['employee_kra__weightage'] or 0))
+                )
+
+        # Peer feedback (exclude self-to-self)
+        fb_qs = ContinuousFeedback.objects.filter(receiver_id__in=emp_ids).exclude(
+            sender_id=None
+        ).values('receiver_id', 'sender_id', 'rating')
+        peer_fb_map  = {}  # employee_id -> [rating, ...]
+        self_fb_map  = {}  # employee_id -> [rating, ...]
+        for fb in fb_qs:
+            if fb['rating'] is None:
+                continue
+            if fb['sender_id'] == fb['receiver_id']:
+                self_fb_map.setdefault(fb['receiver_id'], []).append(float(fb['rating']))
+            else:
+                peer_fb_map.setdefault(fb['receiver_id'], []).append(float(fb['rating']))
+
+        # Skills
+        skills_qs = EmployeeSkill.objects.filter(employee_id__in=emp_ids).values('employee_id', 'proficiency_level')
         skill_map = {}
         for sk in skills_qs:
             v = self.PROF_MAP.get((sk['proficiency_level'] or '').lower(), 3.0)
             skill_map.setdefault(sk['employee_id'], []).append(v)
 
+        def _blend(sources):
+            available = [(s, w) for s, w in sources if s is not None]
+            if not available:
+                return 0.0
+            tw = sum(w for _, w in available)
+            return sum(s * w for s, w in available) / tw
+
         data = []
         for emp in qs:
-            dept_name = emp.department.department_name if emp.department else None
+            dept_name  = emp.department.department_name  if emp.department  else None
             desig_name = emp.designation.designation_name if emp.designation else None
 
-            scores = eval_map.get(emp.id, [])
-            perf_score = (sum(scores) / len(scores)) if scores else 0.0
+            # Perf score: KRA(50%) + Appraisal(30%) + Peer feedback(20%)
+            kra_pairs = kra_map.get(emp.id, [])
+            if kra_pairs:
+                total_w = sum(w for _, w in kra_pairs)
+                kra_score = sum(s * w for s, w in kra_pairs) / total_w if total_w else None
+            else:
+                kra_score = None
 
+            appr_list = eval_map.get(emp.id, [])
+            appraisal_score = sum(appr_list) / len(appr_list) if appr_list else None
+
+            peer_list = peer_fb_map.get(emp.id, [])
+            peer_score = sum(peer_list) / len(peer_list) if peer_list else None
+
+            perf_score = _blend([(kra_score, 0.5), (appraisal_score, 0.3), (peer_score, 0.2)])
+
+            # Potential score: Skills(60%) + [Self-appraisal(60%) + Self-feedback(40%)](40%)
             pot_scores = skill_map.get(emp.id, [])
-            pot_score = (sum(pot_scores) / len(pot_scores)) if pot_scores else 0.0
+            skill_avg = sum(pot_scores) / len(pot_scores) if pot_scores else None
+
+            self_rat = self_rat_map.get(emp.id, [])
+            self_appr_avg = sum(self_rat) / len(self_rat) if self_rat else None
+
+            self_fb = self_fb_map.get(emp.id, [])
+            self_fb_avg = sum(self_fb) / len(self_fb) if self_fb else None
+
+            combined_self = _blend([(self_appr_avg, 0.6), (self_fb_avg, 0.4)])
+            combined_self_val = combined_self if (self_appr_avg is not None or self_fb_avg is not None) else None
+            pot_score = _blend([(skill_avg, 0.6), (combined_self_val, 0.4)])
 
             initials = ((emp.first_name or '')[:1] + (emp.last_name or '')[:1]).upper()
             data.append({
@@ -2696,11 +2882,43 @@ class EmployeeKRAViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
-        queryset = self.queryset.all()
+        queryset = self.queryset.select_related('employee', 'kra_master', 'reviewer').all()
         employee_id = self.request.query_params.get('employee_id')
+        reviewer_id = self.request.query_params.get('reviewer_id')
         if employee_id:
             queryset = queryset.filter(employee_id=employee_id)
+        if reviewer_id:
+            queryset = queryset.filter(reviewer_id=reviewer_id)
         return queryset
+
+
+class KRAEvaluationViewSet(viewsets.ModelViewSet):
+    queryset = KRAEvaluation.objects.select_related(
+        'employee_kra__employee', 'employee_kra__kra_master', 'employee_kra__reviewer'
+    )
+    serializer_class = KRAEvaluationSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        qs = self.queryset.all()
+        employee_id = self.request.query_params.get('employee_id')
+        reviewer_id = self.request.query_params.get('reviewer_id')
+        if employee_id:
+            qs = qs.filter(employee_kra__employee_id=employee_id)
+        if reviewer_id:
+            qs = qs.filter(employee_kra__reviewer_id=reviewer_id)
+        return qs
+
+    def create(self, request, *args, **kwargs):
+        # Upsert: if evaluation already exists for this employee_kra, update it
+        employee_kra_id = request.data.get('employee_kra')
+        existing = KRAEvaluation.objects.filter(employee_kra_id=employee_kra_id).first()
+        if existing:
+            serializer = self.get_serializer(existing, data=request.data, partial=True)
+            serializer.is_valid(raise_exception=True)
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        return super().create(request, *args, **kwargs)
 
 
 class AppraisalExtensionViewSet(viewsets.ModelViewSet):
@@ -2756,6 +2974,18 @@ class AppraisalCycleViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         return self.queryset.all()
+
+    def perform_create(self, serializer):
+        serializer.save()
+        self._sync_statuses()
+
+    def perform_update(self, serializer):
+        serializer.save()
+        self._sync_statuses()
+
+    def _sync_statuses(self):
+        from .tasks import sync_appraisal_cycle_statuses
+        sync_appraisal_cycle_statuses.delay()
 
 
 

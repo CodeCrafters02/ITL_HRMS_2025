@@ -113,6 +113,7 @@ const AdminHub = lazy(() => import('../pages/Admin/AdminHub'));
 const AdminPerformanceDashboard = lazy(() => import('../pages/Admin/Performance/AdminPerformanceDashboard'));
 const SearchProfile = lazy(() => import('../pages/Admin/Performance/SearchProfile'));
 const KRAsAssign = lazy(() => import('../pages/Admin/Performance/KRAsAssign'));
+const AdminKRAReview = lazy(() => import('../pages/Admin/Performance/KRAReview'));
 const TrackFeedback = lazy(() => import('../pages/Admin/Performance/TrackFeedback'));
 const ManagerSummaries = lazy(() => import('../pages/Admin/Performance/ManagerSummaries'));
 const BulkMap = lazy(() => import('../pages/Admin/Performance/BulkMap'));
@@ -177,7 +178,7 @@ const EmployeeHub = lazy(() => import('../pages/Employee/EmployeeHub'));
 const PerformanceDashboard = lazy(() => import('../pages/Employee/Performance/PerformanceDashboard'));
 const KRAs = lazy(() => import('../pages/Employee/Performance/KRAs'));
 const SelfMapKRAs = lazy(() => import('../pages/Employee/Performance/SelfMapKRAs'));
-const Goals = lazy(() => import('../pages/Employee/Performance/Goals'));
+const EmpKRAReview = lazy(() => import('../pages/Employee/Performance/KRAReview'));
 const Competencies = lazy(() => import('../pages/Employee/Performance/Competencies'));
 const SkillsInventory = lazy(() => import('../pages/Employee/Performance/SkillsInventory'));
 const SkillUpgrades = lazy(() => import('../pages/Employee/Performance/SkillUpgrades'));
@@ -710,6 +711,10 @@ const routes = [
         element: <KRAsAssign />,
     },
     {
+        path: '/admin/performance/kra-review',
+        element: <AdminKRAReview />,
+    },
+    {
         path: '/admin/performance/track-feedback',
         element: <TrackFeedback />,
     },
@@ -954,8 +959,8 @@ const routes = [
         element: <SelfMapKRAs />,
     },
     {
-        path: '/employee/performance/goals',
-        element: <Goals />,
+        path: '/employee/performance/kra-review',
+        element: <EmpKRAReview />,
     },
     {
         path: '/employee/performance/competencies',
