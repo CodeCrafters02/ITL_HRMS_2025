@@ -112,6 +112,7 @@ const MasterEmployee = lazy(() => import('../pages/Master/Employee'));
 const AdminHub = lazy(() => import('../pages/Admin/AdminHub'));
 const AdminPerformanceDashboard = lazy(() => import('../pages/Admin/Performance/AdminPerformanceDashboard'));
 const SearchProfile = lazy(() => import('../pages/Admin/Performance/SearchProfile'));
+const AdminAppraisal = lazy(() => import('../pages/Admin/Performance/AdminAppraisal'));
 const KRAsAssign = lazy(() => import('../pages/Admin/Performance/KRAsAssign'));
 const AdminKRAReview = lazy(() => import('../pages/Admin/Performance/KRAReview'));
 const TrackFeedback = lazy(() => import('../pages/Admin/Performance/TrackFeedback'));
@@ -182,6 +183,9 @@ const SkillUpgrades = lazy(() => import('../pages/Employee/Performance/SkillUpgr
 const FeedbackReceived = lazy(() => import('../pages/Employee/Performance/FeedbackReceived'));
 const FeedbackProvided = lazy(() => import('../pages/Employee/Performance/FeedbackProvided'));
 const ManagerDirectFeedback = lazy(() => import('../pages/Employee/Performance/ManagerDirectFeedback'));
+const SelfAppraisal = lazy(() => import('../pages/Employee/Performance/SelfAppraisal'));
+const PeerAppraisal = lazy(() => import('../pages/Employee/Performance/PeerAppraisal'));
+const ManagerAppraisal = lazy(() => import('../pages/Employee/Performance/ManagerAppraisal'));
 const AppraisalHistory = lazy(() => import('../pages/Employee/Performance/AppraisalHistory'));
 const ExtensionStatus = lazy(() => import('../pages/Employee/Performance/ExtensionStatus'));
 const EmployeeDashboard = lazy(() => import('../pages/Employee/Dashboard'));
@@ -704,6 +708,10 @@ const routes = [
         element: <SearchProfile />,
     },
     {
+        path: '/admin/performance/appraisal',
+        element: <AdminAppraisal />,
+    },
+    {
         path: '/admin/performance/assign-kras',
         element: <KRAsAssign />,
     },
@@ -970,6 +978,14 @@ const routes = [
     {
         path: '/employee/performance/manager-direct-feedback',
         element: <ManagerDirectFeedback />,
+    },
+    {
+        path: '/employee/performance/peer-appraisal',
+        element: <PeerAppraisal />,
+    },
+    {
+        path: '/employee/performance/manager-appraisal',
+        element: <ManagerAppraisal />,
     },
     {
         path: '/employee/performance/appraisal-history',

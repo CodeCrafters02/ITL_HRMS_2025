@@ -2347,6 +2347,16 @@ class EmployeePerformanceProfileAPIView(APIView):
         evals_data = []
         for ev in eval_qs:
             final_rating = ev.hr_overall_rating or ev.manager_overall_rating
+            answers_qs = AppraisalAnswer.objects.filter(evaluation=ev).select_related('question')
+            answers_data = [{
+                'id': ans.id,
+                'question': ans.question.id,
+                'question_text': ans.question.question_text,
+                'question_type': ans.question.question_type,
+                'role_type': ans.question.role_type,
+                'rating_score': float(ans.rating_score) if ans.rating_score is not None else None,
+                'comment': ans.comment,
+            } for ans in answers_qs]
             evals_data.append({
                 'id': ev.id,
                 'cycle_name': ev.cycle.name if ev.cycle else 'General Cycle',
@@ -2356,6 +2366,7 @@ class EmployeePerformanceProfileAPIView(APIView):
                 'manager_rating': float(ev.manager_overall_rating) if ev.manager_overall_rating is not None else None,
                 'final_rating':   float(final_rating)              if final_rating              is not None else None,
                 'status': ev.status,
+                'answers': answers_data,
             })
 
         # 4. Feedback — filter by created_at
@@ -3039,8 +3050,13 @@ class AppraisalEvaluationViewSet(viewsets.ModelViewSet):
         if mine == 'true' or not self.request.user.is_staff:
             qs = qs.filter(employee=employee)
         else:
-            # Let manager see managees
-            qs = qs.filter(Q(employee=employee) | Q(manager=employee))
+            # For staff/admin, allow querying other employees
+            target_emp_id = self.request.query_params.get('employee') or self.request.query_params.get('employee_id')
+            if target_emp_id:
+                qs = qs.filter(employee_id=target_emp_id)
+            else:
+                # Let manager see managees
+                qs = qs.filter(Q(employee=employee) | Q(manager=employee))
             
         if cycle_id:
             qs = qs.filter(cycle_id=cycle_id)
@@ -3136,11 +3152,28 @@ class AppraisalEvaluationViewSet(viewsets.ModelViewSet):
         for ans in answers_data:
             q_id = ans.get('question_id')
             rating = ans.get('rating_score')
+            comment = ans.get('comment', '')
             question = get_object_or_404(AppraisalQuestion, id=q_id, cycle=cycle, role_type=role_type)
             AppraisalAnswer.objects.update_or_create(
                 evaluation=evaluation, question=question, submitted_by=reviewer,
-                defaults={'rating_score': rating, 'comment': ''}
+                defaults={'rating_score': rating, 'comment': comment}
             )
+
+        # Recalculate overall ratings after answers are created
+        if role_type == 'manager':
+            mgr_answers = AppraisalAnswer.objects.filter(evaluation=evaluation, question__role_type='manager')
+            mgr_ratings = [a.rating_score for a in mgr_answers if a.rating_score is not None]
+            if mgr_ratings:
+                evaluation.manager_overall_rating = sum(mgr_ratings) / len(mgr_ratings)
+                evaluation.status = 'submitted_manager'
+                evaluation.save(update_fields=['manager_overall_rating', 'status'])
+        elif role_type == 'hr':
+            hr_answers = AppraisalAnswer.objects.filter(evaluation=evaluation, question__role_type='hr')
+            hr_ratings = [a.rating_score for a in hr_answers if a.rating_score is not None]
+            if hr_ratings:
+                evaluation.hr_overall_rating = sum(hr_ratings) / len(hr_ratings)
+                evaluation.status = 'completed'
+                evaluation.save(update_fields=['hr_overall_rating', 'status'])
 
         return Response({"detail": f"{role_type} feedback submitted for {target}.", "evaluation_id": evaluation.id})
 
@@ -3186,6 +3219,7 @@ class AppraisalEvaluationViewSet(viewsets.ModelViewSet):
                 "question_type": a.question.question_type,
                 "max_score":     a.question.max_score,
                 "rating_score":  float(a.rating_score) if a.rating_score is not None else None,
+                "comment":       a.comment,
             })
 
         def emp_dict(emp, relation):
