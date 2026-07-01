@@ -854,7 +854,7 @@ class AppraisalCycleSerializer(serializers.ModelSerializer):
         model = AppraisalCycle
         fields = [
             'id', 'name', 'start_date', 'end_date',
-            'self_appraisal_deadline', 'manager_eval_deadline', 'status',
+            'self_appraisal_deadline', 'manager_eval_deadline', 'peer_deadline', 'status',
             'question_count', 'self_count', 'manager_count', 'peer_count', 'hr_count',
         ]
 

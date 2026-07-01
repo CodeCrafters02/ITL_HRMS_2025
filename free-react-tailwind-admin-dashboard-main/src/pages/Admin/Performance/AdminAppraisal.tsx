@@ -192,21 +192,11 @@ const AdminAppraisal = () => {
     return (
         <div className="space-y-6 py-2 animate__animated animate__fadeIn">
             {/* Top header banner */}
-            <div className="bg-white dark:bg-gray-900 p-6 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm flex justify-between items-center">
-                <div>
-                    <h2 className="text-xl font-bold text-gray-800 dark:text-white">Admin/HR Appraisal Reviews</h2>
-                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 leading-relaxed">
-                        Submit overall Admin/HR ratings and detailed questionnaire reviews for employees in the active cycle.
-                    </p>
-                </div>
-                {selectedEmployee && (
-                    <button
-                        onClick={() => setSelectedEmployee(null)}
-                        className="btn bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-400 rounded-xl text-xs font-bold px-4 py-2"
-                    >
-                        ← Back to Directory
-                    </button>
-                )}
+            <div className="bg-white dark:bg-gray-900 p-6 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm">
+                <h2 className="text-xl font-bold text-gray-800 dark:text-white">Admin/HR Appraisal Reviews</h2>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 leading-relaxed">
+                    Submit overall Admin/HR ratings and detailed questionnaire reviews for employees in the active cycle.
+                </p>
             </div>
 
             {successMsg && (
@@ -222,204 +212,193 @@ const AdminAppraisal = () => {
             )}
 
             {/* Split Screen Layout */}
-            {!selectedEmployee ? (
-                /* Directory Selector List */
-                <div className="space-y-6">
-                    {/* Search bar */}
-                    <div className="bg-white dark:bg-gray-900 p-4 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm flex items-center">
-                        <div className="relative w-full max-w-md">
-                            <input 
-                                type="text" 
-                                placeholder="Search by name, ID, department or designation..." 
-                                value={searchQuery}
-                                onChange={(e) => setSearchQuery(e.target.value)}
-                                className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 pl-9 pr-4 py-2.5 rounded-xl text-xs font-semibold text-gray-800 dark:text-white focus:outline-none"
-                            />
-                            <IconSearch className="w-4 h-4 text-gray-400 absolute left-3 top-3.5" />
-                        </div>
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                
+                {/* Left Side: Directory Selector list */}
+                <div className="bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 p-5 rounded-3xl shadow-sm space-y-4 h-[calc(100vh-250px)] flex flex-col">
+                    <div className="relative shrink-0">
+                        <input 
+                            type="text" 
+                            placeholder="Search by name, ID..." 
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 pl-9 pr-4 py-2.5 rounded-xl text-xs font-semibold text-gray-800 dark:text-white focus:outline-none"
+                        />
+                        <IconSearch className="w-4 h-4 text-gray-400 absolute left-3 top-3.5" />
                     </div>
 
-                    {loadingList ? (
-                        <div className="text-center py-20 text-xs text-gray-400">Loading directory...</div>
-                    ) : (
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                            {filteredEmployees.map(emp => (
-                                <div
-                                    key={emp.id}
-                                    onClick={() => handleSelectEmployee(emp)}
-                                    className="bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 p-5 rounded-3xl shadow-sm hover:shadow-md hover:border-teal-500/20 cursor-pointer transition duration-300 flex flex-col justify-between"
-                                >
-                                    <div className="space-y-4">
-                                        <div className="flex items-center gap-3">
-                                            <div className="w-10 h-10 rounded-2xl bg-teal-500 text-white font-black text-xs flex items-center justify-center shadow-sm">
-                                                {emp.initials}
-                                            </div>
-                                            <div>
-                                                <span className="block font-bold text-xs text-gray-800 dark:text-white leading-snug">{emp.full_name}</span>
-                                                <span className="block text-[10px] text-gray-400 dark:text-gray-500 mt-0.5">{emp.designation_name || 'Designation Not Set'}</span>
-                                            </div>
-                                        </div>
-
-                                        <div className="flex flex-wrap gap-2">
-                                            <span className="bg-gray-100 dark:bg-gray-850 text-gray-650 dark:text-gray-400 text-[9px] font-bold px-2 py-0.5 rounded">
-                                                ID: {emp.employee_id}
-                                            </span>
-                                            <span className="bg-teal-500/10 text-teal-650 dark:text-teal-400 text-[9px] font-bold px-2 py-0.5 rounded">
-                                                {emp.department_name || 'No Dept'}
-                                            </span>
-                                        </div>
-                                    </div>
-                                </div>
-                            ))}
-
-                            {filteredEmployees.length === 0 && (
-                                <div className="col-span-full bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 p-12 rounded-3xl text-center text-gray-400 italic">
-                                    No employees found.
-                                </div>
-                            )}
-                        </div>
-                    )}
-                </div>
-            ) : (
-                /* The Questionnaire review panel */
-                <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 items-start">
-                    {/* Left side card: Profile */}
-                    <div className="bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 p-6 rounded-3xl shadow-sm text-center space-y-4">
-                        <div className="flex flex-col items-center">
-                            <div className="w-20 h-20 rounded-3xl bg-teal-500 text-white font-black text-xl flex items-center justify-center shadow-md">
-                                {selectedEmployee.initials}
-                            </div>
-                            <h3 className="text-sm font-black text-gray-800 dark:text-white mt-4">{selectedEmployee.full_name}</h3>
-                            <span className="text-[11px] text-gray-400 mt-0.5 block">{selectedEmployee.designation_name}</span>
-                            <span className="text-[9px] bg-teal-500/10 text-teal-600 px-3 py-1 rounded-full font-black uppercase tracking-wider mt-2 block w-fit">
-                                {selectedEmployee.department_name}
-                            </span>
-                        </div>
-
-                        <div className="border-t border-gray-100 dark:border-gray-850 pt-4 space-y-2 text-left text-xs font-semibold text-gray-500">
-                            <div className="flex justify-between">
-                                <span>Employee ID:</span>
-                                <span className="text-gray-800 dark:text-white">{selectedEmployee.employee_id}</span>
-                            </div>
-                            <div className="flex justify-between">
-                                <span>Active Cycle:</span>
-                                <span className="text-teal-600 font-bold">{activeCycle?.name}</span>
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Right side form */}
-                    <div className="lg:col-span-3 bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-3xl shadow-sm p-6">
-                        {loadingQuestions ? (
-                            <div className="text-center py-20 text-xs text-gray-450">Loading questions data...</div>
-                        ) : questions.length === 0 ? (
-                            <div className="text-center py-20 text-xs text-gray-450 italic">
-                                No Admin/HR appraisal questions configured for the cycle "{activeCycle?.name}".
+                    <div className="overflow-y-auto flex-1 divide-y divide-gray-100 dark:divide-gray-800 pr-1">
+                        {loadingList ? (
+                            <div className="text-center py-20 text-xs text-gray-400">Loading directory...</div>
+                        ) : filteredEmployees.length === 0 ? (
+                            <div className="text-center py-10 text-xs text-gray-400 italic">
+                                No employees found.
                             </div>
                         ) : (
-                            <div className="space-y-6">
-                                <h3 className="text-sm font-black text-gray-800 dark:text-white pb-3 border-b border-gray-100 dark:border-gray-800">
-                                    Appraisal Questionnaires
-                                </h3>
-
-                                <div className="space-y-5">
-                                    {questions.map((q, idx) => {
-                                        const currentRating = answersMap[q.id]?.rating ?? null;
-                                        const currentComment = answersMap[q.id]?.comment ?? '';
-
-                                        return (
-                                            <div key={q.id} className="bg-gray-50 dark:bg-gray-850/50 p-5 rounded-2xl border border-gray-100 dark:border-gray-800/10 space-y-4">
-                                                <div className="flex justify-between items-start gap-4">
-                                                    <div className="flex gap-2.5">
-                                                        <span className="text-xs font-black text-teal-500">{idx + 1}.</span>
-                                                        <p className="text-xs font-bold text-gray-800 dark:text-white leading-relaxed">
-                                                            {q.question_text}
-                                                        </p>
-                                                    </div>
-
-                                                    {/* Rating inputs based on question type */}
-                                                    {q.question_type === 'scale' && (
-                                                        <div className="flex gap-1 shrink-0">
-                                                            {[1, 2, 3, 4, 5].map((star) => (
-                                                                <button
-                                                                    key={star}
-                                                                    type="button"
-                                                                    onClick={() => handleRatingChange(q.id, star)}
-                                                                    className={`text-base font-bold transition-all ${
-                                                                        currentRating && star <= currentRating 
-                                                                            ? 'text-amber-400 scale-110' 
-                                                                            : 'text-gray-300 dark:text-gray-700 hover:text-amber-300'
-                                                                    }`}
-                                                                >
-                                                                    ★
-                                                                </button>
-                                                            ))}
-                                                        </div>
-                                                    )}
-
-                                                    {q.question_type === 'yes_no' && (
-                                                        <div className="flex gap-2 shrink-0">
-                                                            {[
-                                                                { val: 5, label: 'Yes' },
-                                                                { val: 1, label: 'No' }
-                                                            ].map((btn) => (
-                                                                <button
-                                                                    key={btn.val}
-                                                                    type="button"
-                                                                    onClick={() => handleRatingChange(q.id, btn.val)}
-                                                                    className={`px-3 py-1 text-[10px] font-black uppercase rounded-lg border transition ${
-                                                                        currentRating === btn.val
-                                                                            ? btn.val === 5 
-                                                                                ? 'bg-teal-500 border-teal-500 text-white shadow-sm'
-                                                                                : 'bg-rose-500 border-rose-500 text-white shadow-sm'
-                                                                            : 'bg-white hover:bg-gray-100 border-gray-200 text-gray-500 dark:bg-gray-800 dark:border-gray-700'
-                                                                    }`}
-                                                                >
-                                                                    {btn.label}
-                                                                </button>
-                                                            ))}
-                                                        </div>
-                                                    )}
-                                                </div>
-
-                                                {/* Text comment box */}
-                                                <div className="space-y-1.5 pt-2">
-                                                    <span className="block text-[9px] uppercase tracking-wider text-gray-400 font-extrabold">Remarks / Commentary</span>
-                                                    <textarea
-                                                        placeholder="Provide qualitative details, performance logs, or improvement recommendations..."
-                                                        value={currentComment}
-                                                        onChange={(e) => handleCommentChange(q.id, e.target.value)}
-                                                        rows={2}
-                                                        className="w-full bg-white dark:bg-gray-800 border border-gray-250 dark:border-gray-700 px-3 py-2 rounded-xl text-xs font-medium focus:outline-none"
-                                                    />
-                                                </div>
-                                            </div>
-                                        );
-                                    })}
-                                </div>
-
-                                <div className="flex justify-end gap-3 pt-4 border-t border-gray-100 dark:border-gray-800">
-                                    <button
-                                        type="button"
-                                        onClick={() => setSelectedEmployee(null)}
-                                        className="btn bg-gray-100 hover:bg-gray-200 dark:bg-gray-850 dark:hover:bg-gray-800 text-gray-650 dark:text-gray-400 text-xs font-bold px-5 py-2.5 rounded-xl transition"
+                            filteredEmployees.map(emp => {
+                                const isSelected = selectedEmployee?.id === emp.id;
+                                return (
+                                    <div
+                                        key={emp.id}
+                                        onClick={() => handleSelectEmployee(emp)}
+                                        className={`p-3 rounded-2xl cursor-pointer transition flex items-center gap-3 my-1.5 ${
+                                            isSelected 
+                                                ? 'bg-teal-500/10 border-l-4 border-teal-500' 
+                                                : 'hover:bg-gray-50 dark:hover:bg-gray-850'
+                                        }`}
                                     >
-                                        Cancel
-                                    </button>
-                                    <button
-                                        type="button"
-                                        onClick={handleSubmitHRAppraisal}
-                                        disabled={saving}
-                                        className="btn bg-teal-500 hover:bg-teal-600 disabled:opacity-50 text-white text-xs font-bold px-5 py-2.5 rounded-xl shadow-md shadow-teal-500/10 transition"
-                                    >
-                                        {saving ? 'Submitting...' : 'Submit Evaluation'}
-                                    </button>
-                                </div>
-                            </div>
+                                        <div className="w-8 h-8 rounded-xl bg-teal-500 text-white font-black text-[10px] flex items-center justify-center shadow-sm shrink-0">
+                                            {emp.initials}
+                                        </div>
+                                        <div className="min-w-0">
+                                            <span className={`block font-bold text-xs truncate ${isSelected ? 'text-teal-650 dark:text-teal-400' : 'text-gray-850 dark:text-white'}`}>{emp.full_name}</span>
+                                            <span className="block text-[9px] text-gray-400 truncate">{emp.designation_name || 'Designation Not Set'} • ID: {emp.employee_id}</span>
+                                        </div>
+                                    </div>
+                                );
+                            })
                         )}
                     </div>
                 </div>
-            )}
+
+                {/* Right Side: The Questionnaire review panel or empty state */}
+                <div className="lg:col-span-2 bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-3xl shadow-sm p-6 h-[calc(100vh-250px)] flex flex-col">
+                    {!selectedEmployee ? (
+                        <div className="m-auto text-center py-12 max-w-sm space-y-3">
+                            <div className="text-4xl">👥</div>
+                            <h3 className="text-xs font-black text-gray-400">Select Employee to Evaluate</h3>
+                            <p className="text-[10px] text-gray-400 dark:text-gray-500 leading-relaxed">
+                                Select an employee from the directory on the left to load active cycle appraisal questions and submit reviews.
+                            </p>
+                        </div>
+                    ) : (
+                        <div className="flex flex-col h-full overflow-hidden">
+                            {/* Employee summary header */}
+                            <div className="pb-4 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between shrink-0">
+                                <div className="flex items-center gap-3">
+                                    <div className="w-10 h-10 rounded-2xl bg-teal-500 text-white font-black text-xs flex items-center justify-center shadow-md">
+                                        {selectedEmployee.initials}
+                                    </div>
+                                    <div>
+                                        <h3 className="text-xs font-black text-gray-800 dark:text-white">{selectedEmployee.full_name}</h3>
+                                        <span className="text-[10px] text-gray-450">{selectedEmployee.designation_name} • {selectedEmployee.department_name} • ID: {selectedEmployee.employee_id}</span>
+                                    </div>
+                                </div>
+                                <div className="text-right">
+                                    <span className="block text-[9px] uppercase tracking-wider text-gray-450 font-bold">Active Cycle</span>
+                                    <span className="text-teal-600 dark:text-teal-400 font-extrabold text-[10px]">{activeCycle?.name}</span>
+                                </div>
+                            </div>
+
+                            {/* Questionnaire scrolling area */}
+                            <div className="flex-1 overflow-y-auto py-5 space-y-4 pr-1">
+                                {loadingQuestions ? (
+                                    <div className="text-center py-20 text-xs text-gray-400">Loading questions data...</div>
+                                ) : questions.length === 0 ? (
+                                    <div className="text-center py-20 text-xs text-gray-400 italic">
+                                        No Admin/HR appraisal questions configured for the cycle "{activeCycle?.name}".
+                                    </div>
+                                ) : (
+                                    <div className="space-y-4">
+                                        {questions.map((q, idx) => {
+                                            const currentRating = answersMap[q.id]?.rating ?? null;
+                                            const currentComment = answersMap[q.id]?.comment ?? '';
+
+                                            return (
+                                                <div key={q.id} className="bg-gray-50 dark:bg-gray-850/50 p-4 rounded-2xl border border-gray-100 dark:border-gray-800/10 space-y-3.5">
+                                                    <div className="flex justify-between items-start gap-4">
+                                                        <div className="flex gap-2">
+                                                            <span className="text-xs font-black text-teal-500">{idx + 1}.</span>
+                                                            <p className="text-xs font-bold text-gray-800 dark:text-gray-250 leading-relaxed">
+                                                                {q.question_text}
+                                                            </p>
+                                                        </div>
+
+                                                        {/* Rating inputs based on question type */}
+                                                        {q.question_type === 'scale' && (
+                                                            <div className="flex gap-1 shrink-0">
+                                                                {[1, 2, 3, 4, 5].map((star) => (
+                                                                    <button
+                                                                        key={star}
+                                                                        type="button"
+                                                                        onClick={() => handleRatingChange(q.id, star)}
+                                                                        className={`text-base font-bold transition-all ${
+                                                                            currentRating && star <= currentRating 
+                                                                                ? 'text-amber-400 scale-110' 
+                                                                                : 'text-gray-300 dark:text-gray-700 hover:text-amber-300'
+                                                                        }`}
+                                                                    >
+                                                                        ★
+                                                                    </button>
+                                                                ))}
+                                                            </div>
+                                                        )}
+
+                                                        {q.question_type === 'yes_no' && (
+                                                            <div className="flex gap-2 shrink-0">
+                                                                {[
+                                                                    { val: 5, label: 'Yes' },
+                                                                    { val: 1, label: 'No' }
+                                                                ].map((btn) => (
+                                                                    <button
+                                                                        key={btn.val}
+                                                                        type="button"
+                                                                        onClick={() => handleRatingChange(q.id, btn.val)}
+                                                                        className={`px-3 py-1 text-[10px] font-black uppercase rounded-lg border transition ${
+                                                                            currentRating === btn.val
+                                                                                ? btn.val === 5 
+                                                                                    ? 'bg-teal-500 border-teal-500 text-white shadow-sm'
+                                                                                    : 'bg-rose-500 border-rose-500 text-white shadow-sm'
+                                                                                : 'bg-white hover:bg-gray-100 border-gray-200 text-gray-500 dark:bg-gray-800 dark:border-gray-700'
+                                                                        }`}
+                                                                    >
+                                                                        {btn.label}
+                                                                    </button>
+                                                                ))}
+                                                            </div>
+                                                        )}
+                                                    </div>
+
+                                                    {/* Text comment box */}
+                                                    <div className="space-y-1.5">
+                                                        <span className="block text-[9px] uppercase tracking-wider text-gray-400 font-extrabold">Remarks / Commentary</span>
+                                                        <textarea
+                                                            placeholder="Provide qualitative details, performance logs, or improvement recommendations..."
+                                                            value={currentComment}
+                                                            onChange={(e) => handleCommentChange(q.id, e.target.value)}
+                                                            rows={2}
+                                                            className="w-full bg-white dark:bg-gray-800 border border-gray-250 dark:border-gray-700 px-3 py-2 rounded-xl text-xs font-medium focus:outline-none"
+                                                        />
+                                                    </div>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Sticky footer action buttons */}
+                            <div className="pt-4 border-t border-gray-100 dark:border-gray-800 flex justify-end gap-3 shrink-0">
+                                <button
+                                    type="button"
+                                    onClick={() => setSelectedEmployee(null)}
+                                    className="btn bg-gray-100 hover:bg-gray-200 dark:bg-gray-850 dark:hover:bg-gray-800 text-gray-650 dark:text-gray-400 text-xs font-bold px-5 py-2.5 rounded-xl transition"
+                                >
+                                    Clear Selection
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={handleSubmitHRAppraisal}
+                                    disabled={saving}
+                                    className="btn bg-teal-500 hover:bg-teal-600 disabled:opacity-50 text-white text-xs font-bold px-5 py-2.5 rounded-xl shadow-md shadow-teal-500/10 transition"
+                                >
+                                    {saving ? 'Submitting...' : 'Submit Evaluation'}
+                                </button>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            </div>
         </div>
     );
 };

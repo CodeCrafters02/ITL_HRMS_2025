@@ -28,10 +28,13 @@ def sync_appraisal_cycle_statuses():
         start_date__lte=today,
     ).update(status='active')
 
-    # Complete cycles whose self_appraisal_deadline has passed
+    # Complete cycles whose self_appraisal, manager_eval, and peer deadlines have all passed
+    from django.db.models import Q
     completed = AppraisalCycle.objects.filter(
-        status='active',
-        self_appraisal_deadline__lt=now,
+        Q(status='active') &
+        Q(self_appraisal_deadline__lt=now) &
+        Q(manager_eval_deadline__lt=now) &
+        (Q(peer_deadline__isnull=True) | Q(peer_deadline__lt=now))
     ).update(status='completed')
 
     return {'activated': activated, 'completed': completed}
