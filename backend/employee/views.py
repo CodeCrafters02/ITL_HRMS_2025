@@ -3065,6 +3065,20 @@ class AppraisalEvaluationViewSet(viewsets.ModelViewSet):
         if evaluation.employee != employee and evaluation.manager != employee:
             raise PermissionDenied("You do not have permission to edit this evaluation.")
             
+        # Check deadline and extension
+        from django.utils import timezone
+        deadline = evaluation.cycle.self_appraisal_deadline
+        if deadline and timezone.now() > deadline:
+            from employee.models import AppraisalExtension
+            has_extension = AppraisalExtension.objects.filter(
+                cycle=evaluation.cycle,
+                employee=employee,
+                status='approved',
+                extended_deadline__gt=timezone.now()
+            ).exists()
+            if not has_extension:
+                return Response({"detail": f"Self appraisal deadline ({deadline.strftime('%d %b %Y, %I:%M %p')}) has passed. Contact HR for extension."}, status=400)
+
         answers_data = request.data.get('answers', [])
         is_submit = request.data.get('submit', False) # True if final submit
         
@@ -3117,6 +3131,22 @@ class AppraisalEvaluationViewSet(viewsets.ModelViewSet):
         from app.models import Employee as EmpModel
         target = get_object_or_404(EmpModel, id=target_id)
         cycle = get_object_or_404(AppraisalCycle, id=cycle_id)
+
+        # Check deadline and extension
+        if role_type in ['peer', 'manager']:
+            from django.utils import timezone
+            deadline = cycle.peer_deadline if role_type == 'peer' else cycle.manager_eval_deadline
+            if deadline and timezone.now() > deadline:
+                from employee.models import AppraisalExtension
+                has_extension = AppraisalExtension.objects.filter(
+                    cycle=cycle,
+                    employee=reviewer,
+                    status='approved',
+                    extended_deadline__gt=timezone.now()
+                ).exists()
+                if not has_extension:
+                    role_label = "Peer appraisal" if role_type == 'peer' else "Manager evaluation"
+                    return Response({"detail": f"{role_label} deadline ({deadline.strftime('%d %b %Y, %I:%M %p')}) has passed. Contact HR for extension."}, status=400)
 
         evaluation, _ = AppraisalEvaluation.objects.get_or_create(
             employee=target, cycle=cycle, defaults={'status': 'draft'}

@@ -10,6 +10,7 @@ interface Cycle {
     end_date: string;
     self_appraisal_deadline: string;
     manager_eval_deadline: string;
+    peer_deadline: string;
     status: 'draft' | 'active' | 'completed';
     question_count: number;
     self_count: number;
@@ -24,6 +25,7 @@ type FormState = {
     end_date: string;
     self_appraisal_deadline: string;
     manager_eval_deadline: string;
+    peer_deadline: string;
     status: 'draft' | 'active' | 'completed';
 };
 
@@ -43,7 +45,7 @@ const bandColor = (h: number) => h >= 15 ? 'text-violet-600 dark:text-violet-400
 
 const EMPTY_FORM: FormState = {
     name: '', start_date: '', end_date: '',
-    self_appraisal_deadline: '', manager_eval_deadline: '', status: 'draft',
+    self_appraisal_deadline: '', manager_eval_deadline: '', peer_deadline: '', status: 'draft',
 };
 
 const EMPTY_DRAFTS: DraftQuestions = { self: [], manager: [], peer: [], hr: [] };
@@ -127,6 +129,7 @@ const AppraisalCycles = () => {
             name: c.name, start_date: c.start_date, end_date: c.end_date,
             self_appraisal_deadline: c.self_appraisal_deadline?.slice(0, 10) || '',
             manager_eval_deadline: c.manager_eval_deadline?.slice(0, 10) || '',
+            peer_deadline: c.peer_deadline?.slice(0, 10) || '',
             status: c.status,
         });
         setEditId(c.id); resetModal(); setShowForm(true);
@@ -168,6 +171,7 @@ const AppraisalCycles = () => {
                 ...form,
                 self_appraisal_deadline: form.self_appraisal_deadline ? `${form.self_appraisal_deadline}T23:59:00` : `${form.end_date}T23:59:00`,
                 manager_eval_deadline: form.manager_eval_deadline ? `${form.manager_eval_deadline}T23:59:00` : `${form.end_date}T23:59:00`,
+                peer_deadline: form.peer_deadline ? `${form.peer_deadline}T23:59:00` : `${form.end_date}T23:59:00`,
             };
             if (editId) {
                 const res = await axios.patch(`${API_BASE}/employee/appraisal-cycles/${editId}/`, payload, { headers: headers() });
@@ -356,10 +360,11 @@ const AppraisalCycles = () => {
                             </div>
 
                             {/* Timeline */}
-                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
+                            <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 mb-4">
                                 {[
                                     { label: 'Start Date', value: fmt(selected.start_date), icon: '🗓️' },
                                     { label: 'Self Deadline', value: fmt(selected.self_appraisal_deadline), icon: '👤' },
+                                    { label: 'Peer Deadline', value: fmt(selected.peer_deadline), icon: '🤝' },
                                     { label: 'Manager Deadline', value: fmt(selected.manager_eval_deadline), icon: '👔' },
                                     { label: 'End Date', value: fmt(selected.end_date), icon: '🏁', extra: selected.status !== 'completed' ? `${daysLeft(selected.end_date)}d left` : 'Closed' },
                                 ].map(t => (
@@ -454,10 +459,15 @@ const AppraisalCycles = () => {
                                                 className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 px-3 py-2.5 rounded-xl text-xs font-semibold text-gray-800 dark:text-white focus:outline-none" />
                                         </div>
                                     </div>
-                                    <div className="grid grid-cols-2 gap-3">
+                                    <div className="grid grid-cols-3 gap-3">
                                         <div>
                                             <label className="block text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-1">Self Appraisal Deadline</label>
                                             <input type="date" value={form.self_appraisal_deadline} onChange={e => setForm(f => ({ ...f, self_appraisal_deadline: e.target.value }))}
+                                                className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 px-3 py-2.5 rounded-xl text-xs font-semibold text-gray-800 dark:text-white focus:outline-none" />
+                                        </div>
+                                        <div>
+                                            <label className="block text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-1">Peer Deadline</label>
+                                            <input type="date" value={form.peer_deadline} onChange={e => setForm(f => ({ ...f, peer_deadline: e.target.value }))}
                                                 className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 px-3 py-2.5 rounded-xl text-xs font-semibold text-gray-800 dark:text-white focus:outline-none" />
                                         </div>
                                         <div>

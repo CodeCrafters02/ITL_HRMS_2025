@@ -324,6 +324,7 @@ class AppraisalCycle(models.Model):
     end_date = models.DateField()
     self_appraisal_deadline = models.DateTimeField()
     manager_eval_deadline = models.DateTimeField()
+    peer_deadline = models.DateTimeField(null=True, blank=True)
     status = models.CharField(max_length=20, default='draft')
 
     def __str__(self):
