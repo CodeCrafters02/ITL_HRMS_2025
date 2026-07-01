@@ -980,6 +980,14 @@ const routes = [
         element: <ManagerDirectFeedback />,
     },
     {
+        path: '/employee/performance/self-appraisal',
+        element: <SelfAppraisal />,
+    },
+    {
+        path: '/employee/performance/self appraisal',
+        element: <SelfAppraisal />,
+    },
+    {
         path: '/employee/performance/peer-appraisal',
         element: <PeerAppraisal />,
     },

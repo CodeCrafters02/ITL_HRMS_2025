@@ -20,12 +20,6 @@ interface Question {
     max_score: number;
 }
 
-interface Answer {
-    id?: number;
-    question: number;
-    rating_score: number | null;
-}
-
 interface Evaluation {
     id: number;
     cycle: number;
@@ -48,7 +42,7 @@ const SelfAppraisal = () => {
     const [questions, setQuestions] = useState<Question[]>([]);
     const [evaluation, setEvaluation] = useState<Evaluation | null>(null);
     
-    const [answersMap, setAnswersMap] = useState<Record<number, { rating: number | null }>>({});
+    const [answersMap, setAnswersMap] = useState<Record<number, { rating: number | null; comment: string }>>({});
     const [saving, setSaving] = useState(false);
     const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
@@ -97,14 +91,18 @@ const SelfAppraisal = () => {
             
             setEvaluation(evalObj);
 
-            // 4. Populate answers state
-            const initialAnswers: Record<number, { rating: number | null }> = {};
+            // 4. Populate answers state (only for self role_type questions)
+            const initialAnswers: Record<number, { rating: number | null; comment: string }> = {};
             qList.forEach((q: Question) => {
-                initialAnswers[q.id] = { rating: q.question_type === 'yes_no' ? null : (q.max_score ?? 5) };
+                initialAnswers[q.id] = { rating: q.question_type === 'yes_no' ? null : (q.max_score ?? 5), comment: '' };
             });
+
             if (evalObj?.answers) {
+                const selfQuestionIds = new Set(qList.map((q: Question) => q.id));
                 evalObj.answers.forEach((ans: any) => {
-                    initialAnswers[ans.question] = { rating: ans.rating_score ?? null };
+                    if (selfQuestionIds.has(ans.question)) {
+                        initialAnswers[ans.question] = { rating: ans.rating_score ?? null, comment: ans.comment || '' };
+                    }
                 });
             }
             setAnswersMap(initialAnswers);
@@ -119,7 +117,24 @@ const SelfAppraisal = () => {
 
     const handleRatingChange = (qId: number, val: number | null) => {
         if (evaluation && evaluation.status !== 'draft') return;
-        setAnswersMap(prev => ({ ...prev, [qId]: { rating: val } }));
+        setAnswersMap(prev => {
+            const entry = prev[qId] || { rating: null, comment: '' };
+            return {
+                ...prev,
+                [qId]: { ...entry, rating: val }
+            };
+        });
+    };
+
+    const handleCommentChange = (qId: number, val: string) => {
+        if (evaluation && evaluation.status !== 'draft') return;
+        setAnswersMap(prev => {
+            const entry = prev[qId] || { rating: null, comment: '' };
+            return {
+                ...prev,
+                [qId]: { ...entry, comment: val }
+            };
+        });
     };
 
     const handleSaveAppraisal = async (submit: boolean) => {
@@ -136,6 +151,7 @@ const SelfAppraisal = () => {
         const answersPayload = Object.entries(answersMap).map(([qId, val]) => ({
             question_id: parseInt(qId),
             rating_score: val.rating,
+            comment: val.comment
         }));
 
         try {
@@ -194,7 +210,7 @@ const SelfAppraisal = () => {
                 <div className="bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-3xl p-8 text-center max-w-lg mx-auto">
                     <div className="text-5xl mb-3">📅</div>
                     <h3 className="text-lg font-bold text-gray-800 dark:text-white mb-1">No Active Appraisal Cycle</h3>
-                    <p className="text-xs text-gray-450 leading-relaxed mb-6">
+                    <p className="text-xs text-gray-400 leading-relaxed mb-6">
                         There are currently no active self-appraisal cycles assigned to you. Admin or HR will activate reviews during review periods.
                     </p>
                     <Link
@@ -219,7 +235,7 @@ const SelfAppraisal = () => {
                         Active Review Period
                     </span>
                     <h2 className="text-xl font-bold text-gray-800 dark:text-white">{activeCycle.name}</h2>
-                    <p className="text-xs text-gray-450 mt-0.5">
+                    <p className="text-xs text-gray-400 mt-0.5">
                         Deadline: {new Date(activeCycle.self_appraisal_deadline).toLocaleString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
                     </p>
                 </div>
@@ -246,7 +262,7 @@ const SelfAppraisal = () => {
                         to="/employee/performance"
                         className="px-4 py-2 bg-gray-100 hover:bg-gray-200 dark:bg-gray-850 dark:hover:bg-gray-800 text-gray-600 dark:text-gray-300 rounded-xl text-xs font-bold transition"
                     >
-                        ← Back
+                        ← Performance Hub
                     </Link>
                 </div>
             </div>
@@ -274,7 +290,13 @@ const SelfAppraisal = () => {
             ) : (
                 <div className="space-y-4">
                     {questions.map((q, idx) => {
-                        const val = answersMap[q.id] ?? { rating: null };
+                        const entry = answersMap[q.id];
+                        const val = {
+                            rating: entry ? entry.rating : null,
+                            comment: entry ? entry.comment : ''
+                        };
+                        const maxScore = q.max_score || 5;
+
                         return (
                             <div
                                 key={q.id}
@@ -293,10 +315,10 @@ const SelfAppraisal = () => {
                                 {q.question_type === 'scale' && (
                                     <div className="space-y-2 pl-9">
                                         <label className="block text-[9px] font-black uppercase tracking-wider text-gray-400">
-                                            Rating — select 1 to {q.max_score}
+                                            Rating — select 1 to {maxScore}
                                         </label>
                                         <div className="flex gap-1.5 text-2xl">
-                                            {Array.from({ length: q.max_score }).map((_, i) => {
+                                            {Array.from({ length: maxScore }).map((_, i) => {
                                                 const star = i + 1;
                                                 return (
                                                     <button key={i} type="button" disabled={isSubmitted}
@@ -308,7 +330,7 @@ const SelfAppraisal = () => {
                                             })}
                                         </div>
                                         {val.rating !== null && (
-                                            <span className="text-[10px] font-bold text-amber-600 dark:text-amber-400">{val.rating} / {q.max_score}</span>
+                                            <span className="text-[10px] font-bold text-amber-600 dark:text-amber-400">{val.rating} / {maxScore}</span>
                                         )}
                                     </div>
                                 )}
@@ -341,6 +363,21 @@ const SelfAppraisal = () => {
                                         </div>
                                     </div>
                                 )}
+
+                                {/* Comment text input */}
+                                <div className="pl-9 space-y-1.5">
+                                    <label className="block text-[9px] font-black uppercase tracking-wider text-gray-400">
+                                        Comments / Remarks
+                                    </label>
+                                    <textarea
+                                        rows={2}
+                                        disabled={isSubmitted}
+                                        placeholder="Add comments or notes justifying this score..."
+                                        value={val.comment || ''}
+                                        onChange={e => handleCommentChange(q.id, e.target.value)}
+                                        className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 px-3 py-2 rounded-xl text-xs font-semibold focus:outline-none resize-none text-gray-850 dark:text-white"
+                                    />
+                                </div>
                             </div>
                         );
                     })}
