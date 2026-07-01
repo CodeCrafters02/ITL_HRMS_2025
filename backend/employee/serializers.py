@@ -880,9 +880,11 @@ class AppraisalQuestionSerializer(serializers.ModelSerializer):
 
 
 class AppraisalAnswerSerializer(serializers.ModelSerializer):
+    question_role_type = serializers.CharField(source='question.role_type', read_only=True)
+
     class Meta:
         model = AppraisalAnswer
-        fields = ['id', 'evaluation', 'question', 'submitted_by', 'rating_score', 'comment']
+        fields = ['id', 'evaluation', 'question', 'submitted_by', 'rating_score', 'comment', 'question_role_type']
         read_only_fields = ['submitted_by']
 
 
