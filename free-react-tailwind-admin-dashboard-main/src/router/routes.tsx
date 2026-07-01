@@ -756,10 +756,6 @@ const routes = [
         element: <CompetencyMapping />,
     },
     {
-        path: '/admin/performance/import-module',
-        element: <ImportModule />,
-    },
-    {
         path: '/admin/performance/export-module',
         element: <ExportModule />,
     },

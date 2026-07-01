@@ -904,24 +904,37 @@ class AppraisalEvaluationSerializer(serializers.ModelSerializer):
     cycle_name = serializers.CharField(source='cycle.name', read_only=True)
     employee_name = serializers.SerializerMethodField()
     perf_score = serializers.SerializerMethodField()
+    peer_overall_rating = serializers.SerializerMethodField()
 
     class Meta:
         model = AppraisalEvaluation
         fields = ['id', 'employee', 'employee_name', 'manager', 'cycle', 'cycle_name',
                   'self_overall_rating', 'manager_overall_rating', 'hr_overall_rating',
-                  'perf_score', 'status', 'answers']
+                  'peer_overall_rating', 'perf_score', 'status', 'answers']
         read_only_fields = ['employee', 'manager', 'self_overall_rating',
                             'manager_overall_rating', 'hr_overall_rating']
 
     def get_employee_name(self, obj):
         return f"{obj.employee.first_name} {obj.employee.last_name}".strip() if obj.employee else ""
 
+    def _role_avg(self, answers, role_type):
+        """Raw score average for a given role_type (same scale as self/manager/hr fields)."""
+        vals = [float(a.rating_score) for a in answers
+                if a.question.role_type == role_type and a.rating_score is not None]
+        return sum(vals) / len(vals) if vals else None
+
+    def get_peer_overall_rating(self, obj):
+        avg = self._role_avg(list(obj.answers.all()), 'peer')
+        return round(avg, 2) if avg is not None else None
+
     def get_perf_score(self, obj):
-        """Composite normalised score (0-100) across ALL role_types (self/manager/peer/hr)."""
-        scores = []
-        for a in obj.answers.all():  # already prefetched
-            if a.rating_score is None:
-                continue
-            max_s = a.question.max_score or 1
-            scores.append(float(a.rating_score) / float(max_s) * 100)
-        return round(sum(scores) / len(scores), 1) if scores else None
+        """Equal-weight average of per-role-type raw averages (self/manager/peer/hr)."""
+        answers = list(obj.answers.all())
+        candidates = [
+            float(obj.self_overall_rating)    if obj.self_overall_rating    is not None else None,
+            float(obj.manager_overall_rating) if obj.manager_overall_rating is not None else None,
+            self._role_avg(answers, 'peer'),
+            float(obj.hr_overall_rating)      if obj.hr_overall_rating      is not None else None,
+        ]
+        valid = [v for v in candidates if v is not None]
+        return round(sum(valid) / len(valid), 2) if valid else None

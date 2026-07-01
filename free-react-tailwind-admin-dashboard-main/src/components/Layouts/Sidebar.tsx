@@ -695,8 +695,7 @@ const Sidebar = () => {
                                                     </button>
                                                     <AnimateHeight duration={300} height={currentMenu === 'adminDataUtils' ? 'auto' : 0}>
                                                         <ul className="sub-menu text-gray-500">
-                                                            <li><NavLink to="/admin/performance/import-module">{t('Import Module')}</NavLink></li>
-                                                            <li><NavLink to="/admin/performance/export-module">{t('Export Module')}</NavLink></li>
+                                                            <li><NavLink to="/admin/performance/export-module">{t('Reports & Analytics')}</NavLink></li>
                                                             <li><NavLink to="/admin/performance/multi-rater-log">{t('Multi-Rater Log')}</NavLink></li>
                                                         </ul>
                                                     </AnimateHeight>

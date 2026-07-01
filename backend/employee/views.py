@@ -3047,7 +3047,12 @@ class AppraisalEvaluationViewSet(viewsets.ModelViewSet):
         except Exception:
             return qs.none()
 
-        if mine == 'true' or not self.request.user.is_staff:
+        all_evaluations = self.request.query_params.get('all_evaluations')
+        is_admin = getattr(self.request.user, 'role', None) == 'admin' or self.request.user.is_superuser
+
+        if all_evaluations == 'true' and is_admin:
+            pass # Admin requesting all evaluations in the system
+        elif mine == 'true' or not is_admin:
             qs = qs.filter(employee=employee)
         else:
             # For staff/admin, allow querying other employees
@@ -3101,6 +3106,7 @@ class AppraisalEvaluationViewSet(viewsets.ModelViewSet):
                 cycle=evaluation.cycle,
                 employee=employee,
                 status='approved',
+                original_deadline=deadline,
                 extended_deadline__gt=timezone.now()
             ).exists()
             if not has_extension:
@@ -3169,6 +3175,7 @@ class AppraisalEvaluationViewSet(viewsets.ModelViewSet):
                     cycle=cycle,
                     employee=reviewer,
                     status='approved',
+                    original_deadline=deadline,
                     extended_deadline__gt=timezone.now()
                 ).exists()
                 if not has_extension:
@@ -3190,22 +3197,116 @@ class AppraisalEvaluationViewSet(viewsets.ModelViewSet):
             )
 
         # Recalculate overall ratings after answers are created
-        if role_type == 'manager':
+        if role_type == 'self':
+            self_answers = AppraisalAnswer.objects.filter(evaluation=evaluation, question__role_type='self')
+            self_ratings = [a.rating_score for a in self_answers if a.rating_score is not None]
+            if self_ratings:
+                evaluation.self_overall_rating = sum(self_ratings) / len(self_ratings)
+            evaluation.status = 'submitted_self'
+            evaluation.save(update_fields=['self_overall_rating', 'status'])
+        elif role_type == 'manager':
             mgr_answers = AppraisalAnswer.objects.filter(evaluation=evaluation, question__role_type='manager')
             mgr_ratings = [a.rating_score for a in mgr_answers if a.rating_score is not None]
             if mgr_ratings:
                 evaluation.manager_overall_rating = sum(mgr_ratings) / len(mgr_ratings)
-                evaluation.status = 'submitted_manager'
-                evaluation.save(update_fields=['manager_overall_rating', 'status'])
+            evaluation.status = 'submitted_manager'
+            evaluation.save(update_fields=['manager_overall_rating', 'status'])
         elif role_type == 'hr':
             hr_answers = AppraisalAnswer.objects.filter(evaluation=evaluation, question__role_type='hr')
             hr_ratings = [a.rating_score for a in hr_answers if a.rating_score is not None]
             if hr_ratings:
                 evaluation.hr_overall_rating = sum(hr_ratings) / len(hr_ratings)
-                evaluation.status = 'completed'
-                evaluation.save(update_fields=['hr_overall_rating', 'status'])
+            evaluation.status = 'completed'
+            evaluation.save(update_fields=['hr_overall_rating', 'status'])
 
         return Response({"detail": f"{role_type} feedback submitted for {target}.", "evaluation_id": evaluation.id})
+
+    @action(detail=False, methods=['post'])
+    def apply_salary_hike(self, request):
+        """
+        Apply salary hike to one or more employees based on their perf_score
+        and the SalaryHikeConfig bands for their cycle.
+
+        Body: { evaluation_ids: [int, ...] }   — bulk (pass [] for none)
+              OR omit evaluation_ids to auto-apply to all evals in the cycle.
+              cycle_id is required.
+        """
+        from app.models import Employee as EmpModel
+
+        cycle_id = request.data.get('cycle_id')
+        eval_ids  = request.data.get('evaluation_ids')   # None = apply all in cycle
+
+        if not cycle_id:
+            return Response({"detail": "cycle_id is required."}, status=400)
+
+        cycle = get_object_or_404(AppraisalCycle, id=cycle_id)
+
+        # Load hike bands for this cycle
+        bands = list(SalaryHikeConfig.objects.filter(cycle=cycle).order_by('-min_rating'))
+        if not bands:
+            return Response({"detail": "No salary hike config found for this cycle."}, status=400)
+
+        def hike_pct_for_score(score):
+            if score is None:
+                return None
+            for band in bands:
+                if float(band.min_rating) <= float(score) <= float(band.max_rating):
+                    return float(band.recommended_hike_percentage)
+            return None
+
+        # Resolve evaluations
+        qs = AppraisalEvaluation.objects.filter(cycle=cycle).select_related('employee').prefetch_related('answers__question')
+        if eval_ids is not None:
+            qs = qs.filter(id__in=eval_ids)
+
+        results = []
+        for ev in qs:
+            # Compute perf_score inline (same logic as serializer)
+            answers = list(ev.answers.all())
+            def role_avg(rt):
+                vals = [float(a.rating_score) for a in answers
+                        if a.question.role_type == rt and a.rating_score is not None]
+                return sum(vals) / len(vals) if vals else None
+
+            candidates = [
+                float(ev.self_overall_rating)    if ev.self_overall_rating    is not None else None,
+                float(ev.manager_overall_rating) if ev.manager_overall_rating is not None else None,
+                role_avg('peer'),
+                float(ev.hr_overall_rating)      if ev.hr_overall_rating      is not None else None,
+            ]
+            valid = [v for v in candidates if v is not None]
+            perf_score = round(sum(valid) / len(valid), 2) if valid else None
+
+            # Require all three core feedback types to be present
+            has_peer = any(a.question.role_type == 'peer' and a.rating_score is not None for a in answers)
+            if ev.self_overall_rating is None or ev.manager_overall_rating is None or not has_peer:
+                results.append({"evaluation_id": ev.id, "employee_id": ev.employee_id,
+                                 "skipped": True, "reason": "Incomplete feedback (needs self + manager + peer)"})
+                continue
+
+            hike = hike_pct_for_score(perf_score)
+            if hike is None:
+                results.append({"evaluation_id": ev.id, "employee_id": ev.employee_id,
+                                 "skipped": True, "reason": "No matching hike band for score"})
+                continue
+
+            emp = ev.employee
+            old_salary = float(emp.basic_salary or 0)
+            new_salary  = round(old_salary * (1 + hike / 100), 2)
+            EmpModel.objects.filter(id=emp.id).update(basic_salary=new_salary)
+
+            results.append({
+                "evaluation_id":  ev.id,
+                "employee_id":    emp.id,
+                "employee_name":  emp.full_name or f"{emp.first_name} {emp.last_name}".strip(),
+                "perf_score":     perf_score,
+                "hike_percent":   hike,
+                "old_basic":      old_salary,
+                "new_basic":      new_salary,
+                "applied":        True,
+            })
+
+        return Response({"cycle": cycle.name, "results": results})
 
     @action(detail=False, methods=['get'])
     def my_feedback_targets(self, request):
@@ -3291,7 +3392,13 @@ class AppraisalEvaluationViewSet(viewsets.ModelViewSet):
             for m in mappings:
                 targets.append(emp_dict(m.employee, 'peer'))
 
-        return Response({"cycle_id": cycle.id, "cycle_name": cycle.name, "targets": targets, "role_types": list(role_types)})
+        return Response({
+            "cycle_id": cycle.id,
+            "cycle_name": cycle.name,
+            "targets": targets,
+            "role_types": list(role_types),
+            "my_employee_id": me.id
+        })
 
 
 class AppraisalQuestionViewSet(viewsets.ModelViewSet):
