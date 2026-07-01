@@ -3109,10 +3109,11 @@ class AppraisalEvaluationViewSet(viewsets.ModelViewSet):
         for ans in answers_data:
             q_id = ans.get('question_id')
             rating = ans.get('rating_score')
+            comment = ans.get('comment', '')
             question = get_object_or_404(AppraisalQuestion, id=q_id, cycle=cycle, role_type=role_type)
             AppraisalAnswer.objects.update_or_create(
                 evaluation=evaluation, question=question, submitted_by=reviewer,
-                defaults={'rating_score': rating, 'comment': ''}
+                defaults={'rating_score': rating, 'comment': comment}
             )
 
         return Response({"detail": f"{role_type} feedback submitted for {target}.", "evaluation_id": evaluation.id})
@@ -3159,6 +3160,7 @@ class AppraisalEvaluationViewSet(viewsets.ModelViewSet):
                 "question_type": a.question.question_type,
                 "max_score":     a.question.max_score,
                 "rating_score":  float(a.rating_score) if a.rating_score is not None else None,
+                "comment":       a.comment,
             })
 
         def emp_dict(emp, relation):

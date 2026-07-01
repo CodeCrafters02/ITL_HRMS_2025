@@ -380,6 +380,8 @@ const Sidebar = () => {
                                                 <AnimateHeight duration={300} height={currentMenu === 'emp-perf-appraisal' ? 'auto' : 0}>
                                                     <ul className="sub-menu text-gray-500">
                                                         <li><NavLink to="/employee/performance/self-appraisal">{t('Self Appraisal')}</NavLink></li>
+                                                        <li><NavLink to="/employee/performance/peer-appraisal">{t('Peer Appraisal')}</NavLink></li>
+                                                        <li><NavLink to="/employee/performance/manager-appraisal">{t('Manager Appraisal')}</NavLink></li>
                                                         <li><NavLink to="/employee/performance/appraisal-history">{t('Appraisal History')}</NavLink></li>
                                                         <li><NavLink to="/employee/performance/extension-status">{t('Extension Status')}</NavLink></li>
                                                     </ul>

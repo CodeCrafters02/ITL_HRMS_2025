@@ -183,6 +183,8 @@ const SkillUpgrades = lazy(() => import('../pages/Employee/Performance/SkillUpgr
 const FeedbackReceived = lazy(() => import('../pages/Employee/Performance/FeedbackReceived'));
 const FeedbackProvided = lazy(() => import('../pages/Employee/Performance/FeedbackProvided'));
 const SelfAppraisal = lazy(() => import('../pages/Employee/Performance/SelfAppraisal'));
+const PeerAppraisal = lazy(() => import('../pages/Employee/Performance/PeerAppraisal'));
+const ManagerAppraisal = lazy(() => import('../pages/Employee/Performance/ManagerAppraisal'));
 const AppraisalHistory = lazy(() => import('../pages/Employee/Performance/AppraisalHistory'));
 const ExtensionStatus = lazy(() => import('../pages/Employee/Performance/ExtensionStatus'));
 const EmployeeDashboard = lazy(() => import('../pages/Employee/Dashboard'));
@@ -975,6 +977,14 @@ const routes = [
     {
         path: '/employee/performance/self-appraisal',
         element: <SelfAppraisal />,
+    },
+    {
+        path: '/employee/performance/peer-appraisal',
+        element: <PeerAppraisal />,
+    },
+    {
+        path: '/employee/performance/manager-appraisal',
+        element: <ManagerAppraisal />,
     },
     {
         path: '/employee/performance/appraisal-history',
