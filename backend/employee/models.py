@@ -432,25 +432,6 @@ class MultiRaterMapping(models.Model):
 
 #--------------------------- LEARNING MANAGEMENT SYSTEM (LMS) ---------------------------------
 
-class TrainerProfile(models.Model):
-    TRAINER_TYPE = [
-        ('internal', 'Internal'),
-        ('external', 'External'),
-    ]
-    employee = models.OneToOneField('app.Employee', on_delete=models.CASCADE, null=True, blank=True, related_name='trainer_profile')
-    trainer_type = models.CharField(max_length=20, choices=TRAINER_TYPE, default='internal')
-    full_name = models.CharField(max_length=150, blank=True)
-    email = models.EmailField(blank=True)
-    phone = models.CharField(max_length=20, blank=True)
-    specialization = models.CharField(max_length=150, blank=True)
-    bio = models.TextField(blank=True)
-    is_active = models.BooleanField(default=True)
-    created_at = models.DateTimeField(auto_now_add=True)
-
-    def __str__(self):
-        return self.full_name or (str(self.employee) if self.employee else f'Trainer {self.pk}')
-
-
 class CourseCategory(models.Model):
     name = models.CharField(max_length=100, unique=True)
     description = models.TextField(blank=True)
@@ -477,7 +458,6 @@ class Course(models.Model):
     title = models.CharField(max_length=255)
     description = models.TextField(blank=True)
     category = models.ForeignKey(CourseCategory, on_delete=models.SET_NULL, null=True, blank=True, related_name='courses')
-    trainer = models.ForeignKey(TrainerProfile, on_delete=models.SET_NULL, null=True, blank=True, related_name='courses')
     difficulty_level = models.CharField(max_length=20, choices=DIFFICULTY_CHOICES, default='beginner')
     duration_hours = models.DecimalField(max_digits=6, decimal_places=2, default=0)
     language = models.CharField(max_length=50, default='English')
@@ -715,7 +695,6 @@ class TrainingSession(models.Model):
     course = models.ForeignKey(Course, on_delete=models.SET_NULL, null=True, blank=True, related_name='sessions')
     title = models.CharField(max_length=255)
     session_type = models.CharField(max_length=20, choices=SESSION_TYPE, default='classroom')
-    trainer = models.ForeignKey(TrainerProfile, on_delete=models.SET_NULL, null=True, blank=True, related_name='sessions')
     start_datetime = models.DateTimeField()
     end_datetime = models.DateTimeField()
     location = models.CharField(max_length=255, blank=True)

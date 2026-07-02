@@ -3,6 +3,7 @@ import { useDispatch } from 'react-redux';
 import { Dialog, Transition } from '@headlessui/react';
 import Swal from 'sweetalert2';
 import { setPageTitle } from '../../../store/themeConfigSlice';
+import { authFetch } from '../../../utils/authFetch';
 import IconPlus from '../../../components/Icon/IconPlus';
 import IconSearch from '../../../components/Icon/IconSearch';
 import IconTrashLines from '../../../components/Icon/IconTrashLines';
@@ -11,7 +12,7 @@ import IconX from '../../../components/Icon/IconX';
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000';
 const COMPLIANCE_API = `${API_BASE_URL}/employee/compliance-assignments/`;
 const COURSES_API = `${API_BASE_URL}/employee/courses/`;
-const EMPLOYEES_API = `${API_BASE_URL}/employee/trainer-profiles/employee-options/`;
+const EMPLOYEES_API = `${API_BASE_URL}/employee/employee-options/`;
 
 type ComplianceAssignmentType = {
     id: number;
@@ -81,7 +82,7 @@ const Compliance = () => {
     const fetchAssignments = async () => {
         setLoading(true);
         try {
-            const response = await fetch(COMPLIANCE_API, { headers: getHeaders() });
+            const response = await authFetch(COMPLIANCE_API, { headers: getHeaders() });
             if (response.ok) {
                 const data = await response.json();
                 setAssignments(data.results || data || []);
@@ -95,7 +96,7 @@ const Compliance = () => {
 
     const fetchCourses = async () => {
         try {
-            const response = await fetch(COURSES_API, { headers: getHeaders() });
+            const response = await authFetch(COURSES_API, { headers: getHeaders() });
             if (response.ok) {
                 const data = await response.json();
                 // Filter only compliance courses
@@ -109,7 +110,7 @@ const Compliance = () => {
 
     const fetchEmployees = async () => {
         try {
-            const response = await fetch(EMPLOYEES_API, { headers: getHeaders() });
+            const response = await authFetch(EMPLOYEES_API, { headers: getHeaders() });
             if (response.ok) {
                 const data = await response.json();
                 setEmployees(data || []);
@@ -197,7 +198,7 @@ const Compliance = () => {
                     status: 'pending',
                 };
 
-                const response = await fetch(COMPLIANCE_API, {
+                const response = await authFetch(COMPLIANCE_API, {
                     method: 'POST',
                     headers: getHeaders(),
                     body: JSON.stringify(payload),
@@ -250,7 +251,7 @@ const Compliance = () => {
         if (!result.isConfirmed) return;
 
         try {
-            const response = await fetch(`${COMPLIANCE_API}${assignment.id}/`, {
+            const response = await authFetch(`${COMPLIANCE_API}${assignment.id}/`, {
                 method: 'DELETE',
                 headers: getHeaders(),
             });

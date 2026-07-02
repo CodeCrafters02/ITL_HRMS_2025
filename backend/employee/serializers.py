@@ -951,29 +951,6 @@ class CourseCategorySerializer(serializers.ModelSerializer):
         return obj.courses.count()
 
 
-class TrainerProfileSerializer(serializers.ModelSerializer):
-    employee_name = serializers.CharField(source='employee.full_name', read_only=True)
-    employee_email = serializers.CharField(source='employee.email', read_only=True)
-    employee_phone = serializers.CharField(source='employee.mobile', read_only=True)
-    employee_photo = serializers.SerializerMethodField()
-
-    class Meta:
-        model = TrainerProfile
-        fields = [
-            'id', 'employee', 'trainer_type', 'full_name', 'email', 'phone',
-            'specialization', 'bio', 'is_active', 'created_at',
-            'employee_name', 'employee_email', 'employee_phone', 'employee_photo'
-        ]
-
-    def get_employee_photo(self, obj):
-        request = self.context.get('request')
-        if obj.employee and obj.employee.photo:
-            if request:
-                return request.build_absolute_uri(obj.employee.photo.url)
-            return obj.employee.photo.url
-        return None
-
-
 class CourseContentSerializer(serializers.ModelSerializer):
     file_url = serializers.SerializerMethodField()
     filename = serializers.SerializerMethodField()
@@ -1001,7 +978,6 @@ class CourseContentSerializer(serializers.ModelSerializer):
 
 class CourseSerializer(serializers.ModelSerializer):
     category_name = serializers.CharField(source='category.name', read_only=True)
-    trainer_name = serializers.SerializerMethodField(read_only=True)
     thumbnail_url = serializers.SerializerMethodField()
     contents = CourseContentSerializer(many=True, read_only=True)
     enrollments_count = serializers.SerializerMethodField(read_only=True)
@@ -1010,17 +986,12 @@ class CourseSerializer(serializers.ModelSerializer):
         model = Course
         fields = [
             'id', 'title', 'description', 'category', 'category_name',
-            'trainer', 'trainer_name', 'difficulty_level', 'duration_hours',
+            'difficulty_level', 'duration_hours',
             'language', 'thumbnail', 'thumbnail_url', 'is_compliance',
             'compliance_due_days', 'status', 'created_by', 'created_at',
             'updated_at', 'contents', 'enrollments_count'
         ]
         read_only_fields = ['created_by', 'created_at', 'updated_at']
-
-    def get_trainer_name(self, obj):
-        if obj.trainer:
-            return obj.trainer.full_name or (obj.trainer.employee.full_name if obj.trainer.employee else f"Trainer {obj.trainer.id}")
-        return None
 
     def get_thumbnail_url(self, obj):
         request = self.context.get('request')
@@ -1145,22 +1116,16 @@ class TrainingRequestSerializer(serializers.ModelSerializer):
 
 class TrainingSessionSerializer(serializers.ModelSerializer):
     course_title = serializers.CharField(source='course.title', read_only=True, default=None)
-    trainer_name = serializers.SerializerMethodField(read_only=True)
     attendees_count = serializers.SerializerMethodField(read_only=True)
 
     class Meta:
         model = TrainingSession
         fields = [
-            'id', 'course', 'course_title', 'title', 'session_type', 'trainer',
-            'trainer_name', 'start_datetime', 'end_datetime', 'location',
+            'id', 'course', 'course_title', 'title', 'session_type',
+            'start_datetime', 'end_datetime', 'location',
             'meeting_link', 'max_seats', 'created_by', 'created_at', 'attendees_count'
         ]
         read_only_fields = ['created_by', 'created_at']
-
-    def get_trainer_name(self, obj):
-        if obj.trainer:
-            return obj.trainer.full_name or (obj.trainer.employee.full_name if obj.trainer.employee else f"Trainer {obj.trainer.id}")
-        return None
 
     def get_attendees_count(self, obj):
         return obj.attendance.count()

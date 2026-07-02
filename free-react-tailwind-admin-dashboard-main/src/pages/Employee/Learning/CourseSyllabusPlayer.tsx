@@ -3,6 +3,7 @@ import { useDispatch } from 'react-redux';
 import { useParams, Link } from 'react-router-dom';
 import Swal from 'sweetalert2';
 import { setPageTitle } from '../../../store/themeConfigSlice';
+import { authFetch } from '../../../utils/authFetch';
 import IconPlus from '../../../components/Icon/IconPlus';
 import IconOpenBook from '../../../components/Icon/IconOpenBook';
 import IconMenuCalendar from '../../../components/Icon/Menu/IconMenuCalendar';
@@ -126,7 +127,7 @@ const CourseSyllabusPlayer = () => {
         setLoading(true);
         try {
             // 1. Fetch enrollment metadata
-            const enrRes = await fetch(ENROLLMENT_DETAIL_API(enrollmentId!), { headers: getHeaders() });
+            const enrRes = await authFetch(ENROLLMENT_DETAIL_API(enrollmentId!), { headers: getHeaders() });
             if (!enrRes.ok) throw new Error('Enrollment fetch failed');
             const enrData = await enrRes.json();
             setEnrollment(enrData);
@@ -136,12 +137,12 @@ const CourseSyllabusPlayer = () => {
             // 2. Fetch course contents, progress logs, assessments, assignments, active submissions, and reviews in parallel
             const headers = getHeaders();
             const [contentsRes, progressRes, quizRes, assRes, subRes, reviewsRes] = await Promise.all([
-                fetch(`${CONTENTS_API}?course_id=${courseId}`, { headers }),
-                fetch(`${PROGRESS_API}?enrollment_id=${enrollmentId}`, { headers }),
-                fetch(`${ASSESSMENTS_API}?course_id=${courseId}`, { headers }),
-                fetch(`${ASSIGNMENTS_API}?course_id=${courseId}`, { headers }),
-                fetch(SUBMISSIONS_API, { headers }),
-                fetch(`${REVIEWS_API}?course_id=${courseId}`, { headers }),
+                authFetch(`${CONTENTS_API}?course_id=${courseId}`, { headers }),
+                authFetch(`${PROGRESS_API}?enrollment_id=${enrollmentId}`, { headers }),
+                authFetch(`${ASSESSMENTS_API}?course_id=${courseId}`, { headers }),
+                authFetch(`${ASSIGNMENTS_API}?course_id=${courseId}`, { headers }),
+                authFetch(SUBMISSIONS_API, { headers }),
+                authFetch(`${REVIEWS_API}?course_id=${courseId}`, { headers }),
             ]);
             if (contentsRes.ok) {
                 const contentsData = await contentsRes.json();
@@ -240,7 +241,7 @@ const CourseSyllabusPlayer = () => {
 
     const fetchQuizQuestions = async (assessmentId: number) => {
         try {
-            const response = await fetch(`${QUESTIONS_API}?assessment_id=${assessmentId}`, { headers: getHeaders() });
+            const response = await authFetch(`${QUESTIONS_API}?assessment_id=${assessmentId}`, { headers: getHeaders() });
             if (response.ok) {
                 const data = await response.json();
                 setQuizQuestions(data.results || data || []);
@@ -256,7 +257,7 @@ const CourseSyllabusPlayer = () => {
 
         setSaving(true);
         try {
-            const response = await fetch(PROGRESS_API, {
+            const response = await authFetch(PROGRESS_API, {
                 method: 'POST',
                 headers: {
                     ...getHeaders(),
@@ -271,7 +272,7 @@ const CourseSyllabusPlayer = () => {
             if (response.ok) {
                 setCompletedLessons((prev) => [...prev, contentId]);
                 // Refresh progress percentage metrics in enrollment view
-                const enrRes = await fetch(ENROLLMENT_DETAIL_API(enrollmentId!), { headers: getHeaders() });
+                const enrRes = await authFetch(ENROLLMENT_DETAIL_API(enrollmentId!), { headers: getHeaders() });
                 if (enrRes.ok) {
                     const enrData = await enrRes.json();
                     setEnrollment(enrData);
@@ -313,7 +314,7 @@ const CourseSyllabusPlayer = () => {
 
         setSaving(true);
         try {
-            const response = await fetch(ATTEMPTS_API, {
+            const response = await authFetch(ATTEMPTS_API, {
                 method: 'POST',
                 headers: {
                     ...getHeaders(),
@@ -366,7 +367,7 @@ const CourseSyllabusPlayer = () => {
                 : SUBMISSIONS_API;
             const method = submissions[activeAssignment.id] ? 'PATCH' : 'POST';
 
-            const response = await fetch(url, {
+            const response = await authFetch(url, {
                 method: method,
                 headers: headers,
                 body: formData,
@@ -391,7 +392,7 @@ const CourseSyllabusPlayer = () => {
         e.preventDefault();
         setSaving(true);
         try {
-            const response = await fetch(REVIEWS_API, {
+            const response = await authFetch(REVIEWS_API, {
                 method: 'POST',
                 headers: {
                     ...getHeaders(),

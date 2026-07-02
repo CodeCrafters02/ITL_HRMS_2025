@@ -3651,16 +3651,10 @@ class CourseCategoryViewSet(viewsets.ModelViewSet):
     search_fields = ['name', 'description']
 
 
-class TrainerProfileViewSet(viewsets.ModelViewSet):
-    queryset = TrainerProfile.objects.all()
-    serializer_class = TrainerProfileSerializer
+class EmployeeOptionsAPIView(APIView):
     permission_classes = [IsAuthenticated]
-    filter_backends = [filters.SearchFilter, DjangoFilterBackend]
-    search_fields = ['full_name', 'specialization', 'employee__first_name', 'employee__last_name']
-    filterset_fields = ['trainer_type', 'is_active']
 
-    @action(detail=False, methods=['get'], url_path='employee-options')
-    def employee_options(self, request):
+    def get(self, request):
         user_emp = getattr(request.user, 'employee_profile', None)
         if user_emp and user_emp.company:
             employees = Employee.objects.filter(company=user_emp.company, is_active=True)
@@ -3676,7 +3670,7 @@ class CourseViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
     filter_backends = [filters.SearchFilter, DjangoFilterBackend]
     search_fields = ['title', 'description']
-    filterset_fields = ['category', 'trainer', 'difficulty_level', 'status', 'is_compliance']
+    filterset_fields = ['category', 'difficulty_level', 'status', 'is_compliance']
 
     def get_queryset(self):
         user_emp = getattr(self.request.user, 'employee_profile', None)
@@ -3825,7 +3819,7 @@ class TrainingSessionViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
     filter_backends = [filters.SearchFilter, DjangoFilterBackend]
     search_fields = ['title', 'location', 'meeting_link', 'course__title']
-    filterset_fields = ['course', 'trainer', 'session_type']
+    filterset_fields = ['course', 'session_type']
 
     def get_queryset(self):
         user_emp = getattr(self.request.user, 'employee_profile', None)
@@ -4242,7 +4236,6 @@ class LMSDashboardAPIView(APIView):
                 'title': s.title,
                 'session_type': s.session_type,
                 'start_datetime': s.start_datetime,
-                'trainer': s.trainer.full_name if s.trainer else None,
                 'registered_count': s.attendance.count(),
             }
             for s in TrainingSession.objects.filter(start_datetime__gte=now).order_by('start_datetime')[:5]

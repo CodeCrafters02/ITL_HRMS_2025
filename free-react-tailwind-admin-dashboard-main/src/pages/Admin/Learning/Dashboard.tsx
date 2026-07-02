@@ -27,7 +27,7 @@ interface MonthTrend { month: string; enrollments: number; completions: number; 
 interface CertTrend { month: string; count: number; }
 interface TopCourse { id: number; title: string; category: string; enrollments: number; completion_rate: number; avg_rating: number; }
 interface DeptCompletion { department: string; enrolled: number; completed: number; completion_rate: number; }
-interface UpcomingSession { id: number; title: string; session_type: string; start_datetime: string; trainer: string | null; registered_count: number; }
+interface UpcomingSession { id: number; title: string; session_type: string; start_datetime: string; registered_count: number; }
 
 interface LMSDashboardData {
     summary: Summary;
@@ -377,7 +377,6 @@ const AdminLearningDashboard = () => {
                                 </div>
                                 <div className="text-[10px] text-gray-400">
                                     {new Date(sess.start_datetime).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
-                                    {sess.trainer ? ` · ${sess.trainer}` : ''}
                                 </div>
                                 <div className="text-[9px] text-gray-400 mt-1">{sess.registered_count} registered</div>
                             </div>

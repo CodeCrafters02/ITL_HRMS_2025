@@ -3,6 +3,7 @@ import { useDispatch } from 'react-redux';
 import { Dialog, Transition } from '@headlessui/react';
 import Swal from 'sweetalert2';
 import { setPageTitle } from '../../../store/themeConfigSlice';
+import { authFetch } from '../../../utils/authFetch';
 import IconPlus from '../../../components/Icon/IconPlus';
 import IconSearch from '../../../components/Icon/IconSearch';
 import IconEye from '../../../components/Icon/IconEye';
@@ -13,8 +14,7 @@ const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000
 const SESSIONS_API = `${API_BASE_URL}/employee/training-sessions/`;
 const ATTENDANCE_API = `${API_BASE_URL}/employee/session-attendances/`;
 const COURSES_API = `${API_BASE_URL}/employee/courses/`;
-const TRAINERS_API = `${API_BASE_URL}/employee/trainer-profiles/`;
-const EMPLOYEES_API = `${API_BASE_URL}/employee/trainer-profiles/employee-options/`;
+const EMPLOYEES_API = `${API_BASE_URL}/employee/employee-options/`;
 
 type TrainingSessionType = {
     id: number;
@@ -22,8 +22,6 @@ type TrainingSessionType = {
     course_title?: string | null;
     title: string;
     session_type: 'classroom' | 'online' | 'webinar';
-    trainer?: number | null;
-    trainer_name?: string | null;
     start_datetime: string;
     end_datetime: string;
     location?: string;
@@ -50,14 +48,12 @@ type SessionAttendanceType = {
 };
 
 type DropdownOption = { id: number; title: string };
-type TrainerOption = { id: number; full_name: string; employee_name?: string };
 type EmployeeOption = { id: number; full_name: string; designation_name?: string; department_name?: string };
 
 const TrainingCalendar = () => {
     const dispatch = useDispatch();
     const [sessions, setSessions] = useState<TrainingSessionType[]>([]);
     const [courses, setCourses] = useState<DropdownOption[]>([]);
-    const [trainers, setTrainers] = useState<TrainerOption[]>([]);
     const [employees, setEmployees] = useState<EmployeeOption[]>([]);
     
     const [loading, setLoading] = useState(true);
@@ -70,7 +66,6 @@ const TrainingCalendar = () => {
         course: '',
         title: '',
         session_type: 'classroom' as 'classroom' | 'online' | 'webinar',
-        trainer: '',
         start_datetime: '',
         end_datetime: '',
         location: '',
@@ -92,7 +87,6 @@ const TrainingCalendar = () => {
         dispatch(setPageTitle('Training Calendar'));
         fetchSessions();
         fetchCourses();
-        fetchTrainers();
         fetchEmployees();
     }, [dispatch]);
 
@@ -108,7 +102,7 @@ const TrainingCalendar = () => {
     const fetchSessions = async () => {
         setLoading(true);
         try {
-            const response = await fetch(SESSIONS_API, { headers: getHeaders() });
+            const response = await authFetch(SESSIONS_API, { headers: getHeaders() });
             if (response.ok) {
                 const data = await response.json();
                 setSessions(data.results || data || []);
@@ -122,7 +116,7 @@ const TrainingCalendar = () => {
 
     const fetchCourses = async () => {
         try {
-            const response = await fetch(COURSES_API, { headers: getHeaders() });
+            const response = await authFetch(COURSES_API, { headers: getHeaders() });
             if (response.ok) {
                 const data = await response.json();
                 setCourses(data.results || data || []);
@@ -132,21 +126,9 @@ const TrainingCalendar = () => {
         }
     };
 
-    const fetchTrainers = async () => {
-        try {
-            const response = await fetch(TRAINERS_API, { headers: getHeaders() });
-            if (response.ok) {
-                const data = await response.json();
-                setTrainers(data.results || data || []);
-            }
-        } catch (error) {
-            console.error('Error fetching trainers:', error);
-        }
-    };
-
     const fetchEmployees = async () => {
         try {
-            const response = await fetch(EMPLOYEES_API, { headers: getHeaders() });
+            const response = await authFetch(EMPLOYEES_API, { headers: getHeaders() });
             if (response.ok) {
                 const data = await response.json();
                 setEmployees(data || []);
@@ -159,7 +141,7 @@ const TrainingCalendar = () => {
     const fetchAttendeeList = async (sessionId: number) => {
         setAttendanceLoading(true);
         try {
-            const response = await fetch(`${ATTENDANCE_API}?session_id=${sessionId}`, { headers: getHeaders() });
+            const response = await authFetch(`${ATTENDANCE_API}?session_id=${sessionId}`, { headers: getHeaders() });
             if (response.ok) {
                 const data = await response.json();
                 setAttendeeList(data.results || data || []);
@@ -186,7 +168,6 @@ const TrainingCalendar = () => {
             course: '',
             title: '',
             session_type: 'classroom',
-            trainer: '',
             start_datetime: '',
             end_datetime: '',
             location: '',
@@ -203,12 +184,11 @@ const TrainingCalendar = () => {
         const payload = {
             ...sessionForm,
             course: sessionForm.course ? Number(sessionForm.course) : null,
-            trainer: sessionForm.trainer ? Number(sessionForm.trainer) : null,
             max_seats: sessionForm.max_seats ? Number(sessionForm.max_seats) : null,
         };
 
         try {
-            const response = await fetch(SESSIONS_API, {
+            const response = await authFetch(SESSIONS_API, {
                 method: 'POST',
                 headers: getHeaders(),
                 body: JSON.stringify(payload),
@@ -248,7 +228,7 @@ const TrainingCalendar = () => {
         if (!result.isConfirmed) return;
 
         try {
-            const response = await fetch(`${SESSIONS_API}${session.id}/`, {
+            const response = await authFetch(`${SESSIONS_API}${session.id}/`, {
                 method: 'DELETE',
                 headers: getHeaders(),
             });
@@ -273,7 +253,7 @@ const TrainingCalendar = () => {
 
     const handleUpdateAttendanceStatus = async (attendanceId: number, status: 'registered' | 'attended' | 'absent') => {
         try {
-            const response = await fetch(`${ATTENDANCE_API}${attendanceId}/`, {
+            const response = await authFetch(`${ATTENDANCE_API}${attendanceId}/`, {
                 method: 'PATCH',
                 headers: getHeaders(),
                 body: JSON.stringify({ status }),
@@ -299,7 +279,7 @@ const TrainingCalendar = () => {
         };
 
         try {
-            const response = await fetch(ATTENDANCE_API, {
+            const response = await authFetch(ATTENDANCE_API, {
                 method: 'POST',
                 headers: getHeaders(),
                 body: JSON.stringify(payload),
@@ -330,7 +310,7 @@ const TrainingCalendar = () => {
 
     const handleDeleteAttendee = async (attendance: SessionAttendanceType) => {
         try {
-            const response = await fetch(`${ATTENDANCE_API}${attendance.id}/`, {
+            const response = await authFetch(`${ATTENDANCE_API}${attendance.id}/`, {
                 method: 'DELETE',
                 headers: getHeaders(),
             });
@@ -424,10 +404,6 @@ const TrainingCalendar = () => {
                                         <span className="font-semibold text-gray-400 mr-1">Course:</span>
                                         <span className="font-bold text-primary">{session.course_title || 'General Training'}</span>
                                     </div>
-                                    <div>
-                                        <span className="font-semibold text-gray-400 mr-1">Trainer:</span>
-                                        <span className="font-bold text-gray-700 dark:text-gray-300">{session.trainer_name || 'Unassigned'}</span>
-                                    </div>
                                     <div className="bg-gray-50 dark:bg-gray-800/40 p-2 rounded border border-gray-100 dark:border-gray-800 mt-2 space-y-1">
                                         <div>
                                             <span className="font-bold text-gray-400 mr-1">Start:</span>
@@ -512,22 +488,13 @@ const TrainingCalendar = () => {
                                                 </div>
                                             </div>
 
-                                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                                 <div>
                                                     <label className="font-semibold mb-1 block text-xs">Session Type</label>
                                                     <select className="form-select rounded-lg" value={sessionForm.session_type} onChange={(e) => setSessionForm({ ...sessionForm, session_type: e.target.value as any })}>
                                                         <option value="classroom">Classroom (Offline)</option>
                                                         <option value="online">Online Virtual</option>
                                                         <option value="webinar">Webinar Stream</option>
-                                                    </select>
-                                                </div>
-                                                <div>
-                                                    <label className="font-semibold mb-1 block text-xs">Assigned Trainer</label>
-                                                    <select className="form-select rounded-lg" value={sessionForm.trainer} onChange={(e) => setSessionForm({ ...sessionForm, trainer: e.target.value })}>
-                                                        <option value="">-- Choose Trainer --</option>
-                                                        {trainers.map(t => (
-                                                            <option key={t.id} value={t.id}>{t.full_name || t.employee_name}</option>
-                                                        ))}
                                                     </select>
                                                 </div>
                                                 <div>

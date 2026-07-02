@@ -3,6 +3,7 @@ import { useDispatch } from 'react-redux';
 import { Dialog, Transition } from '@headlessui/react';
 import Swal from 'sweetalert2';
 import { setPageTitle } from '../../../store/themeConfigSlice';
+import { authFetch } from '../../../utils/authFetch';
 import IconPlus from '../../../components/Icon/IconPlus';
 import IconSearch from '../../../components/Icon/IconSearch';
 import IconPencil from '../../../components/Icon/IconPencil';
@@ -93,7 +94,7 @@ const LearningPath = () => {
     const fetchPaths = async () => {
         setLoading(true);
         try {
-            const response = await fetch(PATHS_API, { headers: getHeaders() });
+            const response = await authFetch(PATHS_API, { headers: getHeaders() });
             if (response.ok) {
                 const data = await response.json();
                 setPaths(data.results || data || []);
@@ -107,7 +108,7 @@ const LearningPath = () => {
 
     const fetchCoursesList = async () => {
         try {
-            const response = await fetch(COURSES_API, { headers: getHeaders() });
+            const response = await authFetch(COURSES_API, { headers: getHeaders() });
             if (response.ok) {
                 const data = await response.json();
                 setCoursesList(data.results || data || []);
@@ -120,7 +121,7 @@ const LearningPath = () => {
     const fetchMappedCourses = async (pathId: number) => {
         setMappingLoading(true);
         try {
-            const response = await fetch(`${PATH_COURSES_API}?learning_path_id=${pathId}`, { headers: getHeaders() });
+            const response = await authFetch(`${PATH_COURSES_API}?learning_path_id=${pathId}`, { headers: getHeaders() });
             if (response.ok) {
                 const data = await response.json();
                 setMappedCourses(data.results || data || []);
@@ -167,7 +168,7 @@ const LearningPath = () => {
             const url = editingPath ? `${PATHS_API}${editingPath.id}/` : PATHS_API;
             const method = editingPath ? 'PUT' : 'POST';
 
-            const response = await fetch(url, {
+            const response = await authFetch(url, {
                 method: method,
                 headers: getHeaders(),
                 body: JSON.stringify(pathForm),
@@ -212,7 +213,7 @@ const LearningPath = () => {
         if (!result.isConfirmed) return;
 
         try {
-            const response = await fetch(`${PATHS_API}${path.id}/`, {
+            const response = await authFetch(`${PATHS_API}${path.id}/`, {
                 method: 'DELETE',
                 headers: getHeaders(),
             });
@@ -256,7 +257,7 @@ const LearningPath = () => {
         };
 
         try {
-            const response = await fetch(PATH_COURSES_API, {
+            const response = await authFetch(PATH_COURSES_API, {
                 method: 'POST',
                 headers: getHeaders(),
                 body: JSON.stringify(payload),
@@ -297,7 +298,7 @@ const LearningPath = () => {
         if (!result.isConfirmed) return;
 
         try {
-            const response = await fetch(`${PATH_COURSES_API}${mapping.id}/`, {
+            const response = await authFetch(`${PATH_COURSES_API}${mapping.id}/`, {
                 method: 'DELETE',
                 headers: getHeaders(),
             });

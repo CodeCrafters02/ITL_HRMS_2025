@@ -3,6 +3,7 @@ import { useDispatch } from 'react-redux';
 import { Link, useNavigate } from 'react-router-dom';
 import Swal from 'sweetalert2';
 import { setPageTitle } from '../../../store/themeConfigSlice';
+import { authFetch } from '../../../utils/authFetch';
 import IconSearch from '../../../components/Icon/IconSearch';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000';
@@ -20,7 +21,6 @@ type CourseType = {
     estimated_hours?: number | null;
     is_published: boolean;
     course_image?: string | null;
-    trainer_name?: string | null;
 };
 
 type EnrollmentType = {
@@ -65,9 +65,9 @@ const EmployeeCourseCatalog = () => {
         setLoading(true);
         try {
             const [coursesRes, enrollmentsRes, wishlistsRes] = await Promise.all([
-                fetch(COURSES_API, { headers: getHeaders() }),
-                fetch(ENROLLMENTS_API, { headers: getHeaders() }),
-                fetch(WISHLISTS_API, { headers: getHeaders() }),
+                authFetch(COURSES_API, { headers: getHeaders() }),
+                authFetch(ENROLLMENTS_API, { headers: getHeaders() }),
+                authFetch(WISHLISTS_API, { headers: getHeaders() }),
             ]);
 
             if (coursesRes.ok && enrollmentsRes.ok && wishlistsRes.ok) {
@@ -85,7 +85,6 @@ const EmployeeCourseCatalog = () => {
                     estimated_hours: Number(c.duration_hours) || 0,
                     is_published: c.status === 'published',
                     course_image: c.thumbnail_url || c.thumbnail || null,
-                    trainer_name: c.trainer_name,
                 }));
                 setCourses(coursesList.filter((c: any) => c.is_published));
                 setEnrollments(enrollmentsData.results || enrollmentsData || []);
@@ -112,7 +111,7 @@ const EmployeeCourseCatalog = () => {
 
         setEnrollingId(courseId);
         try {
-            const response = await fetch(ENROLLMENTS_API, {
+            const response = await authFetch(ENROLLMENTS_API, {
                 method: 'POST',
                 headers: getHeaders(),
                 body: JSON.stringify({ course: courseId }),
@@ -131,7 +130,7 @@ const EmployeeCourseCatalog = () => {
                 // Remove from wishlist automatically if it was there
                 const existingWish = wishlist.find((w) => w.course === courseId);
                 if (existingWish) {
-                    fetch(`${WISHLISTS_API}${existingWish.id}/`, {
+                    authFetch(`${WISHLISTS_API}${existingWish.id}/`, {
                         method: 'DELETE',
                         headers: getHeaders(),
                     }).catch(() => null);
@@ -153,7 +152,7 @@ const EmployeeCourseCatalog = () => {
         const existing = wishlist.find((w) => w.course === courseId);
         if (existing) {
             try {
-                const response = await fetch(`${WISHLISTS_API}${existing.id}/`, {
+                const response = await authFetch(`${WISHLISTS_API}${existing.id}/`, {
                     method: 'DELETE',
                     headers: getHeaders(),
                 });
@@ -165,7 +164,7 @@ const EmployeeCourseCatalog = () => {
             }
         } else {
             try {
-                const response = await fetch(WISHLISTS_API, {
+                const response = await authFetch(WISHLISTS_API, {
                     method: 'POST',
                     headers: getHeaders(),
                     body: JSON.stringify({ course: courseId }),
@@ -311,7 +310,7 @@ const EmployeeCourseCatalog = () => {
 
                                     <div className="border-t border-[#f1f2f3] dark:border-[#191e3a] pt-4 mt-auto">
                                         <div className="flex items-center justify-between text-xs text-gray-400 mb-4">
-                                            <span>Trainer: <strong className="text-gray-700 dark:text-gray-200">{c.trainer_name || 'System Coordinator'}</strong></span>
+                                            <span>Self-Paced Learning</span>
                                             <span>Est: <strong className="text-gray-700 dark:text-gray-200">{c.estimated_hours || 0} Hours</strong></span>
                                         </div>
 

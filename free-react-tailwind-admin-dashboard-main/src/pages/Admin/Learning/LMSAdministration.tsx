@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useDispatch } from 'react-redux';
 import { setPageTitle } from '../../../store/themeConfigSlice';
-import TrainerProfile from './TrainerProfile';
 import CourseCategory from './CourseCategory';
 import LearningPath from './LearningPath';
 import LearningPathAssignment from './LearningPathAssignment';
@@ -10,7 +9,7 @@ import AssignmentManager from './AssignmentManager';
 
 const LMSAdministration = () => {
     const dispatch = useDispatch();
-    const [activeTab, setActiveTab] = useState<'trainers' | 'categories' | 'paths' | 'assignments' | 'quizzes' | 'assignments_list'>('trainers');
+    const [activeTab, setActiveTab] = useState<'categories' | 'paths' | 'assignments' | 'quizzes' | 'assignments_list'>('categories');
 
     useEffect(() => {
         dispatch(setPageTitle('LMS Administration'));
@@ -23,7 +22,7 @@ const LMSAdministration = () => {
                 <div className="relative z-10">
                     <h1 className="text-3xl font-extrabold text-white tracking-tight">LMS Administration</h1>
                     <p className="text-white/80 mt-1 text-sm font-medium">
-                        Configure learning options, manage trainers, organise course categories, set learning paths, assign paths to employees, and evaluate quizzes and homework assignments.
+                        Configure learning options, organise course categories, set learning paths, assign paths to employees, and evaluate quizzes and homework assignments.
                     </p>
                 </div>
                 <div className="absolute top-0 right-0 -mt-10 -mr-10 w-48 h-48 bg-white opacity-5 rounded-full blur-2xl"></div>
@@ -31,17 +30,6 @@ const LMSAdministration = () => {
 
             {/* Tabbed Navigation */}
             <div className="flex border-b border-[#ebedf2] dark:border-[#1b2e4b] mb-6 overflow-x-auto">
-                <button
-                    type="button"
-                    onClick={() => setActiveTab('trainers')}
-                    className={`py-3 px-6 font-semibold text-sm border-b-2 whitespace-nowrap transition-all duration-300 ${
-                        activeTab === 'trainers'
-                            ? 'border-primary text-primary'
-                            : 'border-transparent text-gray-500 hover:text-primary'
-                    }`}
-                >
-                    Trainer Profiles
-                </button>
                 <button
                     type="button"
                     onClick={() => setActiveTab('categories')}
@@ -101,7 +89,6 @@ const LMSAdministration = () => {
 
             {/* Render Tab Contents */}
             <div className="animate-fade-in">
-                {activeTab === 'trainers' && <TrainerProfile />}
                 {activeTab === 'categories' && <CourseCategory />}
                 {activeTab === 'paths' && <LearningPath />}
                 {activeTab === 'assignments' && <LearningPathAssignment />}

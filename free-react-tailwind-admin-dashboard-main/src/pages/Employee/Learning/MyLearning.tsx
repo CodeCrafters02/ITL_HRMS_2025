@@ -3,6 +3,7 @@ import { useDispatch } from 'react-redux';
 import { Link, useLocation } from 'react-router-dom';
 import Swal from 'sweetalert2';
 import { setPageTitle } from '../../../store/themeConfigSlice';
+import { authFetch } from '../../../utils/authFetch';
 import IconMenuCalendar from '../../../components/Icon/Menu/IconMenuCalendar';
 import IconMenuDocumentation from '../../../components/Icon/Menu/IconMenuDocumentation';
 import IconMenuInvoice from '../../../components/Icon/Menu/IconMenuInvoice';
@@ -90,11 +91,11 @@ const MyLearning = () => {
         setLoading(true);
         try {
             const [enrRes, compRes, certRes, wishRes, pathsRes] = await Promise.all([
-                fetch(ENROLLMENTS_API, { headers: getHeaders() }),
-                fetch(COMPLIANCE_API, { headers: getHeaders() }),
-                fetch(CERTIFICATES_API, { headers: getHeaders() }),
-                fetch(WISHLISTS_API, { headers: getHeaders() }),
-                fetch(PATHS_API, { headers: getHeaders() }),
+                authFetch(ENROLLMENTS_API, { headers: getHeaders() }),
+                authFetch(COMPLIANCE_API, { headers: getHeaders() }),
+                authFetch(CERTIFICATES_API, { headers: getHeaders() }),
+                authFetch(WISHLISTS_API, { headers: getHeaders() }),
+                authFetch(PATHS_API, { headers: getHeaders() }),
             ]);
 
             if (enrRes.ok) {
@@ -127,7 +128,7 @@ const MyLearning = () => {
     const handleEnrollFromWishlist = async (courseId: number) => {
         setEnrollingId(courseId);
         try {
-            const response = await fetch(ENROLLMENTS_API, {
+            const response = await authFetch(ENROLLMENTS_API, {
                 method: 'POST',
                 headers: getHeaders(),
                 body: JSON.stringify({ course: courseId }),
@@ -145,7 +146,7 @@ const MyLearning = () => {
                 // Clear from wishlist
                 const existingWish = wishlist.find((w) => w.course === courseId);
                 if (existingWish) {
-                    await fetch(`${WISHLISTS_API}${existingWish.id}/`, {
+                    await authFetch(`${WISHLISTS_API}${existingWish.id}/`, {
                         method: 'DELETE',
                         headers: getHeaders(),
                     });
@@ -165,7 +166,7 @@ const MyLearning = () => {
 
     const handleRemoveWishlist = async (wishId: number) => {
         try {
-            const response = await fetch(`${WISHLISTS_API}${wishId}/`, {
+            const response = await authFetch(`${WISHLISTS_API}${wishId}/`, {
                 method: 'DELETE',
                 headers: getHeaders(),
             });

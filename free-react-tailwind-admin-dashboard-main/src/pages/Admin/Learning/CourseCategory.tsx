@@ -3,6 +3,7 @@ import { useDispatch } from 'react-redux';
 import { Dialog, Transition } from '@headlessui/react';
 import Swal from 'sweetalert2';
 import { setPageTitle } from '../../../store/themeConfigSlice';
+import { authFetch } from '../../../utils/authFetch';
 import IconPlus from '../../../components/Icon/IconPlus';
 import IconSearch from '../../../components/Icon/IconSearch';
 import IconPencil from '../../../components/Icon/IconPencil';
@@ -49,7 +50,7 @@ const CourseCategory = () => {
     const fetchCategories = async () => {
         setLoading(true);
         try {
-            const response = await fetch(API_URL, { headers: getHeaders() });
+            const response = await authFetch(API_URL, { headers: getHeaders() });
             if (response.ok) {
                 const data = await response.json();
                 // ModelViewSet returns simple list or paginated list.
@@ -104,7 +105,7 @@ const CourseCategory = () => {
             const url = editingCategory ? `${API_URL}${editingCategory.id}/` : API_URL;
             const method = editingCategory ? 'PUT' : 'POST';
 
-            const response = await fetch(url, {
+            const response = await authFetch(url, {
                 method: method,
                 headers: getHeaders(),
                 body: JSON.stringify(formData),
@@ -155,7 +156,7 @@ const CourseCategory = () => {
         if (!result.isConfirmed) return;
 
         try {
-            const response = await fetch(`${API_URL}${cat.id}/`, {
+            const response = await authFetch(`${API_URL}${cat.id}/`, {
                 method: 'DELETE',
                 headers: getHeaders(),
             });

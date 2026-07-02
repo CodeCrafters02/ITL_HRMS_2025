@@ -3,6 +3,7 @@ import { useDispatch } from 'react-redux';
 import { Dialog, Transition } from '@headlessui/react';
 import Swal from 'sweetalert2';
 import { setPageTitle } from '../../../store/themeConfigSlice';
+import { authFetch } from '../../../utils/authFetch';
 import IconSearch from '../../../components/Icon/IconSearch';
 import IconPencil from '../../../components/Icon/IconPencil';
 import IconTrashLines from '../../../components/Icon/IconTrashLines';
@@ -68,7 +69,7 @@ const TrainingRequest = () => {
     const fetchRequests = async () => {
         setLoading(true);
         try {
-            const response = await fetch(REQUESTS_API, { headers: getHeaders() });
+            const response = await authFetch(REQUESTS_API, { headers: getHeaders() });
             if (response.ok) {
                 const data = await response.json();
                 setRequests(data.results || data || []);
@@ -120,7 +121,7 @@ const TrainingRequest = () => {
         };
 
         try {
-            const response = await fetch(`${REQUESTS_API}${selectedRequest.id}/`, {
+            const response = await authFetch(`${REQUESTS_API}${selectedRequest.id}/`, {
                 method: 'PATCH',
                 headers: getHeaders(),
                 body: JSON.stringify(payload),
@@ -159,7 +160,7 @@ const TrainingRequest = () => {
         if (!result.isConfirmed) return;
 
         try {
-            const response = await fetch(`${REQUESTS_API}${req.id}/`, {
+            const response = await authFetch(`${REQUESTS_API}${req.id}/`, {
                 method: 'DELETE',
                 headers: getHeaders(),
             });

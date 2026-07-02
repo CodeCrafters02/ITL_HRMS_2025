@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useDispatch } from 'react-redux';
 import { setPageTitle } from '../../../store/themeConfigSlice';
+import { authFetch } from '../../../utils/authFetch';
 import IconSearch from '../../../components/Icon/IconSearch';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000';
@@ -10,7 +11,6 @@ type SessionType = {
     id: number;
     title: string;
     course_title?: string | null;
-    trainer_name?: string | null;
     session_type: 'classroom' | 'online' | 'webinar';
     scheduled_date: string;
     start_time: string;
@@ -44,7 +44,7 @@ const EmployeeTrainingCalendar = () => {
     const fetchSessions = async () => {
         setLoading(true);
         try {
-            const response = await fetch(SESSIONS_API, { headers: getHeaders() });
+            const response = await authFetch(SESSIONS_API, { headers: getHeaders() });
             if (response.ok) {
                 const data = await response.json();
                 setSessions(data.results || data || []);
@@ -144,9 +144,6 @@ const EmployeeTrainingCalendar = () => {
                                     </span>
                                 )}
                                 <div className="text-xs text-gray-500 mt-3 font-medium">
-                                    Trainer: <strong className="text-gray-700 dark:text-gray-250">{session.trainer_name || 'Expert Panel'}</strong>
-                                </div>
-                                <div className="text-xs text-gray-500 mt-1.5 font-medium">
                                     Date: <strong>{new Date(session.scheduled_date).toLocaleDateString()}</strong>
                                 </div>
                                 <div className="text-xs text-gray-500 mt-1 font-medium">

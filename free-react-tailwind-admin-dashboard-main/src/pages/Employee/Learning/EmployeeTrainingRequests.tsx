@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useDispatch } from 'react-redux';
 import Swal from 'sweetalert2';
 import { setPageTitle } from '../../../store/themeConfigSlice';
+import { authFetch } from '../../../utils/authFetch';
 import IconPlus from '../../../components/Icon/IconPlus';
 import IconSearch from '../../../components/Icon/IconSearch';
 
@@ -65,7 +66,7 @@ const EmployeeTrainingRequests = () => {
     const fetchRequests = async () => {
         setLoading(true);
         try {
-            const response = await fetch(REQUESTS_API, { headers: getHeaders() });
+            const response = await authFetch(REQUESTS_API, { headers: getHeaders() });
             if (response.ok) {
                 const data = await response.json();
                 setRequests(data.results || data || []);
@@ -79,7 +80,7 @@ const EmployeeTrainingRequests = () => {
 
     const fetchCourses = async () => {
         try {
-            const response = await fetch(COURSES_API, { headers: getHeaders() });
+            const response = await authFetch(COURSES_API, { headers: getHeaders() });
             if (response.ok) {
                 const data = await response.json();
                 setCourses((data.results || data || []).filter((c: any) => c.status === 'published'));
@@ -98,7 +99,7 @@ const EmployeeTrainingRequests = () => {
 
         setSaving(true);
         try {
-            const response = await fetch(REQUESTS_API, {
+            const response = await authFetch(REQUESTS_API, {
                 method: 'POST',
                 headers: getHeaders(),
                 body: JSON.stringify({

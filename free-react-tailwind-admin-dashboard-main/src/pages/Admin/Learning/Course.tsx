@@ -3,20 +3,19 @@ import { useDispatch } from 'react-redux';
 import { Dialog, Transition } from '@headlessui/react';
 import Swal from 'sweetalert2';
 import { setPageTitle } from '../../../store/themeConfigSlice';
+import { authFetch } from '../../../utils/authFetch';
 import IconPlus from '../../../components/Icon/IconPlus';
 import IconSearch from '../../../components/Icon/IconSearch';
 import IconPencil from '../../../components/Icon/IconPencil';
 import IconTrashLines from '../../../components/Icon/IconTrashLines';
 import IconEye from '../../../components/Icon/IconEye';
 import IconX from '../../../components/Icon/IconX';
-import { CourseCategoryType } from './CourseCategory';
-import { TrainerType } from './TrainerProfile';
+import CourseCategory, { CourseCategoryType } from './CourseCategory';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000';
 const COURSES_API = `${API_BASE_URL}/employee/courses/`;
 const CONTENTS_API = `${API_BASE_URL}/employee/course-contents/`;
 const CATEGORIES_API = `${API_BASE_URL}/employee/course-categories/`;
-const TRAINERS_API = `${API_BASE_URL}/employee/trainer-profiles/`;
 const REVIEWS_API = `${API_BASE_URL}/employee/course-reviews/`;
 
 type CourseContentType = {
@@ -38,8 +37,6 @@ type CourseType = {
     description: string;
     category?: number | null;
     category_name?: string | null;
-    trainer?: number | null;
-    trainer_name?: string | null;
     difficulty_level: 'beginner' | 'intermediate' | 'advanced';
     duration_hours: number;
     language: string;
@@ -54,13 +51,13 @@ type CourseType = {
 
 const Course = () => {
     const dispatch = useDispatch();
+    const [activeTab, setActiveTab] = useState<'courses' | 'categories'>('courses');
     const [courses, setCourses] = useState<CourseType[]>([]);
     const [categories, setCategories] = useState<CourseCategoryType[]>([]);
-    const [trainers, setTrainers] = useState<TrainerType[]>([]);
-    
+
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
-    
+
     // Filters & Search
     const [search, setSearch] = useState('');
     const [filterCategory, setFilterCategory] = useState<string>('all');
@@ -74,7 +71,6 @@ const Course = () => {
         title: '',
         description: '',
         category: '',
-        trainer: '',
         difficulty_level: 'beginner' as 'beginner' | 'intermediate' | 'advanced',
         duration_hours: 0,
         language: 'English',
@@ -111,7 +107,7 @@ const Course = () => {
         setReviewsModalOpen(true);
         setReviewsLoading(true);
         try {
-            const response = await fetch(`${REVIEWS_API}?course_id=${course.id}`, {
+            const response = await authFetch(`${REVIEWS_API}?course_id=${course.id}`, {
                 headers: getHeaders(),
             });
             if (response.ok) {
@@ -129,7 +125,6 @@ const Course = () => {
         dispatch(setPageTitle('Courses Catalog'));
         fetchCourses();
         fetchCategories();
-        fetchTrainers();
     }, [dispatch]);
 
     const getHeaders = (multipart = false) => {
@@ -145,7 +140,7 @@ const Course = () => {
     const fetchCourses = async () => {
         setLoading(true);
         try {
-            const response = await fetch(COURSES_API, { headers: getHeaders() });
+            const response = await authFetch(COURSES_API, { headers: getHeaders() });
             if (response.ok) {
                 const data = await response.json();
                 setCourses(data.results || data || []);
@@ -159,7 +154,7 @@ const Course = () => {
 
     const fetchCategories = async () => {
         try {
-            const response = await fetch(CATEGORIES_API, { headers: getHeaders() });
+            const response = await authFetch(CATEGORIES_API, { headers: getHeaders() });
             if (response.ok) {
                 const data = await response.json();
                 setCategories(data.results || data || []);
@@ -169,22 +164,10 @@ const Course = () => {
         }
     };
 
-    const fetchTrainers = async () => {
-        try {
-            const response = await fetch(TRAINERS_API, { headers: getHeaders() });
-            if (response.ok) {
-                const data = await response.json();
-                setTrainers(data.results || data || []);
-            }
-        } catch (error) {
-            console.error('Error fetching trainers:', error);
-        }
-    };
-
     const fetchCourseContents = async (courseId: number) => {
         setContentsLoading(true);
         try {
-            const response = await fetch(`${CONTENTS_API}?course_id=${courseId}`, { headers: getHeaders() });
+            const response = await authFetch(`${CONTENTS_API}?course_id=${courseId}`, { headers: getHeaders() });
             if (response.ok) {
                 const data = await response.json();
                 setCourseContents(data.results || data || []);
@@ -225,7 +208,6 @@ const Course = () => {
             title: '',
             description: '',
             category: '',
-            trainer: '',
             difficulty_level: 'beginner',
             duration_hours: 0,
             language: 'English',
@@ -248,7 +230,6 @@ const Course = () => {
             title: course.title,
             description: course.description || '',
             category: course.category ? String(course.category) : '',
-            trainer: course.trainer ? String(course.trainer) : '',
             difficulty_level: course.difficulty_level,
             duration_hours: Number(course.duration_hours),
             language: course.language || 'English',
@@ -274,7 +255,6 @@ const Course = () => {
         formData.append('status', courseForm.status);
 
         if (courseForm.category) formData.append('category', courseForm.category);
-        if (courseForm.trainer) formData.append('trainer', courseForm.trainer);
         if (courseForm.is_compliance && courseForm.compliance_due_days) {
             formData.append('compliance_due_days', String(courseForm.compliance_due_days));
         }
@@ -286,7 +266,7 @@ const Course = () => {
             const url = editingCourse ? `${COURSES_API}${editingCourse.id}/` : COURSES_API;
             const method = editingCourse ? 'PATCH' : 'POST';
 
-            const response = await fetch(url, {
+            const response = await authFetch(url, {
                 method: method,
                 headers: getHeaders(true),
                 body: formData,
@@ -336,7 +316,7 @@ const Course = () => {
         if (!result.isConfirmed) return;
 
         try {
-            const response = await fetch(`${COURSES_API}${course.id}/`, {
+            const response = await authFetch(`${COURSES_API}${course.id}/`, {
                 method: 'DELETE',
                 headers: getHeaders(),
             });
@@ -389,7 +369,7 @@ const Course = () => {
         }
 
         try {
-            const response = await fetch(CONTENTS_API, {
+            const response = await authFetch(CONTENTS_API, {
                 method: 'POST',
                 headers: getHeaders(true),
                 body: formData,
@@ -431,7 +411,7 @@ const Course = () => {
         if (!result.isConfirmed) return;
 
         try {
-            const response = await fetch(`${CONTENTS_API}${content.id}/`, {
+            const response = await authFetch(`${CONTENTS_API}${content.id}/`, {
                 method: 'DELETE',
                 headers: getHeaders(),
             });
@@ -459,6 +439,36 @@ const Course = () => {
                 <div className="absolute top-0 right-0 -mt-10 -mr-10 w-48 h-48 bg-white opacity-5 rounded-full blur-2xl"></div>
             </div>
 
+            {/* Tabbed Navigation */}
+            <div className="flex border-b border-[#ebedf2] dark:border-[#1b2e4b] mb-6 overflow-x-auto">
+                <button
+                    type="button"
+                    onClick={() => setActiveTab('courses')}
+                    className={`py-3 px-6 font-semibold text-sm border-b-2 whitespace-nowrap transition-all duration-300 ${
+                        activeTab === 'courses'
+                            ? 'border-primary text-primary'
+                            : 'border-transparent text-gray-500 hover:text-primary'
+                    }`}
+                >
+                    Courses
+                </button>
+                <button
+                    type="button"
+                    onClick={() => setActiveTab('categories')}
+                    className={`py-3 px-6 font-semibold text-sm border-b-2 whitespace-nowrap transition-all duration-300 ${
+                        activeTab === 'categories'
+                            ? 'border-primary text-primary'
+                            : 'border-transparent text-gray-500 hover:text-primary'
+                    }`}
+                >
+                    Course Categories
+                </button>
+            </div>
+
+            {activeTab === 'categories' ? (
+                <CourseCategory />
+            ) : (
+            <>
             {/* Quick Stats Grid */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
                 <div className="panel bg-gradient-to-br from-blue-500/10 to-indigo-500/10 border-blue-500/20 p-4 rounded-xl flex flex-col justify-between">
@@ -608,12 +618,6 @@ const Course = () => {
 
                                 <div className="space-y-2 border-t border-[#f1f2f3] dark:border-[#191e3a] pt-4 mt-auto">
                                     <div className="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
-                                        <span className="font-semibold">Instructor:</span>
-                                        <span className="font-bold text-gray-700 dark:text-gray-300">
-                                            {course.trainer_name || 'Unassigned'}
-                                        </span>
-                                    </div>
-                                    <div className="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
                                         <span className="font-semibold">Duration & Language:</span>
                                         <span>
                                             {course.duration_hours} hrs • {course.language}
@@ -663,6 +667,8 @@ const Course = () => {
                     ))}
                 </div>
             )}
+            </>
+            )}
 
             {/* Course Modal (Create & Edit) */}
             <Transition appear show={courseModalOpen} as={Fragment}>
@@ -698,24 +704,13 @@ const Course = () => {
                                                 <textarea className="form-textarea min-h-[100px] rounded-lg" placeholder="Enter course description and syllabus summary..." value={courseForm.description} onChange={(e) => setCourseForm({ ...courseForm, description: e.target.value })} />
                                             </div>
 
-                                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                                 <div>
                                                     <label className="font-semibold mb-1 block">Category</label>
                                                     <select className="form-select rounded-lg" value={courseForm.category} onChange={(e) => setCourseForm({ ...courseForm, category: e.target.value })}>
                                                         <option value="">-- Choose Category --</option>
                                                         {categories.map(c => (
                                                             <option key={c.id} value={c.id}>{c.name}</option>
-                                                        ))}
-                                                    </select>
-                                                </div>
-                                                <div>
-                                                    <label className="font-semibold mb-1 block">Instructor</label>
-                                                    <select className="form-select rounded-lg" value={courseForm.trainer} onChange={(e) => setCourseForm({ ...courseForm, trainer: e.target.value })}>
-                                                        <option value="">-- Choose Instructor --</option>
-                                                        {trainers.map(t => (
-                                                            <option key={t.id} value={t.id}>
-                                                                {t.trainer_type === 'internal' ? t.employee_name : t.full_name} ({t.specialization})
-                                                            </option>
                                                         ))}
                                                     </select>
                                                 </div>

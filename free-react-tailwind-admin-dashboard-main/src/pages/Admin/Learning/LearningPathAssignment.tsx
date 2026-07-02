@@ -3,6 +3,7 @@ import { useDispatch } from 'react-redux';
 import { Dialog, Transition } from '@headlessui/react';
 import Swal from 'sweetalert2';
 import { setPageTitle } from '../../../store/themeConfigSlice';
+import { authFetch } from '../../../utils/authFetch';
 import IconPlus from '../../../components/Icon/IconPlus';
 import IconSearch from '../../../components/Icon/IconSearch';
 import IconTrashLines from '../../../components/Icon/IconTrashLines';
@@ -12,7 +13,7 @@ import { LearningPathType } from './LearningPath';
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000';
 const ASSIGNMENTS_API = `${API_BASE_URL}/employee/learning-path-assignments/`;
 const PATHS_API = `${API_BASE_URL}/employee/learning-paths/`;
-const EMPLOYEES_API = `${API_BASE_URL}/employee/trainer-profiles/employee-options/`;
+const EMPLOYEES_API = `${API_BASE_URL}/employee/employee-options/`;
 
 type AssignmentType = {
     id: number;
@@ -72,7 +73,7 @@ const LearningPathAssignment = () => {
     const fetchAssignments = async () => {
         setLoading(true);
         try {
-            const response = await fetch(ASSIGNMENTS_API, { headers: getHeaders() });
+            const response = await authFetch(ASSIGNMENTS_API, { headers: getHeaders() });
             if (response.ok) {
                 const data = await response.json();
                 setAssignments(data.results || data || []);
@@ -86,7 +87,7 @@ const LearningPathAssignment = () => {
 
     const fetchPaths = async () => {
         try {
-            const response = await fetch(PATHS_API, { headers: getHeaders() });
+            const response = await authFetch(PATHS_API, { headers: getHeaders() });
             if (response.ok) {
                 const data = await response.json();
                 setPaths(data.results || data || []);
@@ -98,7 +99,7 @@ const LearningPathAssignment = () => {
 
     const fetchEmployees = async () => {
         try {
-            const response = await fetch(EMPLOYEES_API, { headers: getHeaders() });
+            const response = await authFetch(EMPLOYEES_API, { headers: getHeaders() });
             if (response.ok) {
                 const data = await response.json();
                 setEmployees(data || []);
@@ -181,7 +182,7 @@ const LearningPathAssignment = () => {
                     employee: empId,
                 };
 
-                const response = await fetch(ASSIGNMENTS_API, {
+                const response = await authFetch(ASSIGNMENTS_API, {
                     method: 'POST',
                     headers: getHeaders(),
                     body: JSON.stringify(payload),
@@ -235,7 +236,7 @@ const LearningPathAssignment = () => {
         if (!result.isConfirmed) return;
 
         try {
-            const response = await fetch(`${ASSIGNMENTS_API}${assignment.id}/`, {
+            const response = await authFetch(`${ASSIGNMENTS_API}${assignment.id}/`, {
                 method: 'DELETE',
                 headers: getHeaders(),
             });

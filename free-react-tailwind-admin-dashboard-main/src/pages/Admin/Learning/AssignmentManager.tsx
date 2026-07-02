@@ -3,6 +3,7 @@ import { useDispatch } from 'react-redux';
 import { Dialog, Transition } from '@headlessui/react';
 import Swal from 'sweetalert2';
 import { setPageTitle } from '../../../store/themeConfigSlice';
+import { authFetch } from '../../../utils/authFetch';
 import IconPlus from '../../../components/Icon/IconPlus';
 import IconSearch from '../../../components/Icon/IconSearch';
 import IconPencil from '../../../components/Icon/IconPencil';
@@ -98,7 +99,7 @@ const AssignmentManager = () => {
     const fetchAssignments = async () => {
         setLoading(true);
         try {
-            const response = await fetch(ASSIGNMENTS_API, { headers: getHeaders() });
+            const response = await authFetch(ASSIGNMENTS_API, { headers: getHeaders() });
             if (response.ok) {
                 const data = await response.json();
                 setAssignments(data.results || data || []);
@@ -112,7 +113,7 @@ const AssignmentManager = () => {
 
     const fetchCourses = async () => {
         try {
-            const response = await fetch(COURSES_API, { headers: getHeaders() });
+            const response = await authFetch(COURSES_API, { headers: getHeaders() });
             if (response.ok) {
                 const data = await response.json();
                 setCourses(data.results || data || []);
@@ -125,7 +126,7 @@ const AssignmentManager = () => {
     const fetchSubmissions = async (assignmentId: number) => {
         setSubmissionsLoading(true);
         try {
-            const response = await fetch(`${SUBMISSIONS_API}?assignment_id=${assignmentId}`, { headers: getHeaders() });
+            const response = await authFetch(`${SUBMISSIONS_API}?assignment_id=${assignmentId}`, { headers: getHeaders() });
             if (response.ok) {
                 const data = await response.json();
                 setSubmissions(data.results || data || []);
@@ -190,7 +191,7 @@ const AssignmentManager = () => {
             const url = editingAssignment ? `${ASSIGNMENTS_API}${editingAssignment.id}/` : ASSIGNMENTS_API;
             const method = editingAssignment ? 'PUT' : 'POST';
 
-            const response = await fetch(url, {
+            const response = await authFetch(url, {
                 method: method,
                 headers: getHeaders(),
                 body: JSON.stringify(payload),
@@ -229,7 +230,7 @@ const AssignmentManager = () => {
         if (!result.isConfirmed) return;
 
         try {
-            const response = await fetch(`${ASSIGNMENTS_API}${a.id}/`, {
+            const response = await authFetch(`${ASSIGNMENTS_API}${a.id}/`, {
                 method: 'DELETE',
                 headers: getHeaders(),
             });
@@ -278,7 +279,7 @@ const AssignmentManager = () => {
         };
 
         try {
-            const response = await fetch(`${SUBMISSIONS_API}${selectedSubmission.id}/`, {
+            const response = await authFetch(`${SUBMISSIONS_API}${selectedSubmission.id}/`, {
                 method: 'PATCH',
                 headers: getHeaders(),
                 body: JSON.stringify(payload),

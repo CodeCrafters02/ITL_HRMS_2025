@@ -18,7 +18,6 @@ router.register('appraisal-cycles', AppraisalCycleViewSet, basename='appraisal-c
 router.register('appraisal-questions', AppraisalQuestionViewSet, basename='appraisal-questions')
 router.register('appraisal-evaluations', AppraisalEvaluationViewSet, basename='appraisal-evaluations')
 router.register('course-categories', CourseCategoryViewSet, basename='course-categories')
-router.register('trainer-profiles', TrainerProfileViewSet, basename='trainer-profiles')
 router.register('courses', CourseViewSet, basename='courses')
 router.register('course-contents', CourseContentViewSet, basename='course-contents')
 router.register('learning-paths', LearningPathViewSet, basename='learning-paths')
@@ -81,6 +80,7 @@ urlpatterns = [
     path('performance-profile/<int:emp_id>/', EmployeePerformanceProfileAPIView.as_view(), name='employee-performance-profile'),
     path('performance-dashboard/', PerformanceDashboardAPIView.as_view(), name='performance-dashboard'),
     path('lms-dashboard/', LMSDashboardAPIView.as_view(), name='lms-dashboard'),
+    path('employee-options/', EmployeeOptionsAPIView.as_view(), name='employee-options'),
     path('performance-dashboard/my/', MyPerformanceDashboardAPIView.as_view(), name='my-performance-dashboard'),
     path('kra-tasks/', EmployeeKRATasksAPIView.as_view(), name='kra-tasks'),
 

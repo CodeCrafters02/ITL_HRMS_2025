@@ -6,7 +6,7 @@ from django.utils import timezone
 
 from app.models import Employee
 from employee.models import (
-    CourseCategory, TrainerProfile, Course, CourseReview,
+    CourseCategory, Course, CourseReview,
     Enrollment, Certificate, ComplianceAssignment, TrainingRequest,
     TrainingSession, SessionAttendance,
 )
@@ -55,20 +55,6 @@ class Command(BaseCommand):
 
         categories = {name: CourseCategory.objects.get_or_create(name=name)[0] for name in CATEGORIES}
 
-        trainers = []
-        for emp in random.sample(employees, min(4, len(employees))):
-            trainers.append(TrainerProfile.objects.create(
-                employee=emp, trainer_type='internal',
-                full_name=emp.full_name, email=emp.email or '',
-                specialization=random.choice(CATEGORIES),
-            ))
-        for name in ['Aditi Sharma (External)', 'Michael Chen (External)']:
-            trainers.append(TrainerProfile.objects.create(
-                trainer_type='external', full_name=name,
-                email=f"{name.split()[0].lower()}@external-training.com",
-                specialization=random.choice(CATEGORIES),
-            ))
-
         courses = []
         for title, cat, level, hours, is_compliance in COURSES:
             status = 'published' if random.random() > 0.15 else 'draft'
@@ -76,7 +62,7 @@ class Command(BaseCommand):
                 title=title, category=categories[cat], difficulty_level=level,
                 duration_hours=hours, is_compliance=is_compliance,
                 compliance_due_days=30 if is_compliance else None,
-                status=status, trainer=random.choice(trainers),
+                status=status,
                 created_by=random.choice(employees),
                 description=f'A {level} level course covering {title.lower()}.',
             ))
@@ -155,7 +141,7 @@ class Command(BaseCommand):
             session = TrainingSession.objects.create(
                 course=course, title=f'{course.title} - Live Session',
                 session_type=random.choice(['classroom', 'online', 'webinar']),
-                trainer=course.trainer, start_datetime=start,
+                start_datetime=start,
                 end_datetime=start + timedelta(hours=2),
                 location='ITL Training Room' if random.random() > 0.5 else '',
                 meeting_link='https://meet.itl.com/session' if random.random() > 0.5 else '',

@@ -3,6 +3,7 @@ import { useDispatch } from 'react-redux';
 import { Dialog, Transition } from '@headlessui/react';
 import Swal from 'sweetalert2';
 import { setPageTitle } from '../../../store/themeConfigSlice';
+import { authFetch } from '../../../utils/authFetch';
 import IconPlus from '../../../components/Icon/IconPlus';
 import IconSearch from '../../../components/Icon/IconSearch';
 import IconPencil from '../../../components/Icon/IconPencil';
@@ -121,7 +122,7 @@ const AssessmentManager = () => {
     const fetchAssessments = async () => {
         setLoading(true);
         try {
-            const response = await fetch(ASSESSMENTS_API, { headers: getHeaders() });
+            const response = await authFetch(ASSESSMENTS_API, { headers: getHeaders() });
             if (response.ok) {
                 const data = await response.json();
                 setAssessments(data.results || data || []);
@@ -135,7 +136,7 @@ const AssessmentManager = () => {
 
     const fetchCourses = async () => {
         try {
-            const response = await fetch(COURSES_API, { headers: getHeaders() });
+            const response = await authFetch(COURSES_API, { headers: getHeaders() });
             if (response.ok) {
                 const data = await response.json();
                 setCourses(data.results || data || []);
@@ -148,7 +149,7 @@ const AssessmentManager = () => {
     const fetchQuestions = async (assessmentId: number) => {
         setQuestionsLoading(true);
         try {
-            const response = await fetch(`${QUESTIONS_API}?assessment_id=${assessmentId}`, { headers: getHeaders() });
+            const response = await authFetch(`${QUESTIONS_API}?assessment_id=${assessmentId}`, { headers: getHeaders() });
             if (response.ok) {
                 const data = await response.json();
                 setQuestions(data.results || data || []);
@@ -163,7 +164,7 @@ const AssessmentManager = () => {
     const fetchAttempts = async (assessmentId: number) => {
         setAttemptsLoading(true);
         try {
-            const response = await fetch(`${ATTEMPTS_API}?assessment_id=${assessmentId}`, { headers: getHeaders() });
+            const response = await authFetch(`${ATTEMPTS_API}?assessment_id=${assessmentId}`, { headers: getHeaders() });
             if (response.ok) {
                 const data = await response.json();
                 setAttempts(data.results || data || []);
@@ -231,7 +232,7 @@ const AssessmentManager = () => {
             const url = editingAssessment ? `${ASSESSMENTS_API}${editingAssessment.id}/` : ASSESSMENTS_API;
             const method = editingAssessment ? 'PUT' : 'POST';
 
-            const response = await fetch(url, {
+            const response = await authFetch(url, {
                 method: method,
                 headers: getHeaders(),
                 body: JSON.stringify(payload),
@@ -270,7 +271,7 @@ const AssessmentManager = () => {
         if (!result.isConfirmed) return;
 
         try {
-            const response = await fetch(`${ASSESSMENTS_API}${a.id}/`, {
+            const response = await authFetch(`${ASSESSMENTS_API}${a.id}/`, {
                 method: 'DELETE',
                 headers: getHeaders(),
             });
@@ -341,7 +342,7 @@ const AssessmentManager = () => {
             const url = editingQuestion ? `${QUESTIONS_API}${editingQuestion.id}/` : QUESTIONS_API;
             const method = editingQuestion ? 'PUT' : 'POST';
 
-            const response = await fetch(url, {
+            const response = await authFetch(url, {
                 method: method,
                 headers: getHeaders(),
                 body: JSON.stringify(payload),
@@ -380,7 +381,7 @@ const AssessmentManager = () => {
         if (!result.isConfirmed) return;
 
         try {
-            const response = await fetch(`${QUESTIONS_API}${q.id}/`, {
+            const response = await authFetch(`${QUESTIONS_API}${q.id}/`, {
                 method: 'DELETE',
                 headers: getHeaders(),
             });
