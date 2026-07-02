@@ -1033,3 +1033,51 @@ class CourseSerializer(serializers.ModelSerializer):
     def get_enrollments_count(self, obj):
         return obj.enrollments.count()
 
+
+class LearningPathCourseSerializer(serializers.ModelSerializer):
+    course_title = serializers.CharField(source='course.title', read_only=True)
+    course_difficulty = serializers.CharField(source='course.difficulty_level', read_only=True)
+    course_duration = serializers.DecimalField(source='course.duration_hours', max_digits=6, decimal_places=2, read_only=True)
+
+    class Meta:
+        model = LearningPathCourse
+        fields = ['id', 'learning_path', 'course', 'course_title', 'course_difficulty', 'course_duration', 'sequence', 'is_mandatory']
+
+
+class LearningPathSerializer(serializers.ModelSerializer):
+    created_by_name = serializers.CharField(source='created_by.full_name', read_only=True)
+    courses_count = serializers.SerializerMethodField(read_only=True)
+    assignments_count = serializers.SerializerMethodField(read_only=True)
+    path_courses = LearningPathCourseSerializer(many=True, read_only=True)
+
+    class Meta:
+        model = LearningPath
+        fields = ['id', 'title', 'description', 'created_by', 'created_by_name', 'created_at', 'courses_count', 'assignments_count', 'path_courses']
+        read_only_fields = ['created_by', 'created_at']
+
+    def get_courses_count(self, obj):
+        return obj.path_courses.count()
+
+    def get_assignments_count(self, obj):
+        return obj.assignments.count()
+
+
+class LearningPathAssignmentSerializer(serializers.ModelSerializer):
+    employee_name = serializers.CharField(source='employee.full_name', read_only=True)
+    employee_id = serializers.CharField(source='employee.employee_id', read_only=True)
+    employee_email = serializers.CharField(source='employee.email', read_only=True)
+    employee_designation = serializers.CharField(source='employee.designation.designation_name', read_only=True, default=None)
+    employee_department = serializers.CharField(source='employee.department.department_name', read_only=True, default=None)
+    learning_path_title = serializers.CharField(source='learning_path.title', read_only=True)
+    assigned_by_name = serializers.CharField(source='assigned_by.full_name', read_only=True)
+
+    class Meta:
+        model = LearningPathAssignment
+        fields = [
+            'id', 'learning_path', 'learning_path_title', 'employee', 'employee_name',
+            'employee_id', 'employee_email', 'employee_designation', 'employee_department',
+            'assigned_by', 'assigned_by_name', 'assigned_at'
+        ]
+        read_only_fields = ['assigned_by', 'assigned_at']
+
+

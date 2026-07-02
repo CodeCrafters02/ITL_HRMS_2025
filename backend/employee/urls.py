@@ -21,6 +21,9 @@ router.register('course-categories', CourseCategoryViewSet, basename='course-cat
 router.register('trainer-profiles', TrainerProfileViewSet, basename='trainer-profiles')
 router.register('courses', CourseViewSet, basename='courses')
 router.register('course-contents', CourseContentViewSet, basename='course-contents')
+router.register('learning-paths', LearningPathViewSet, basename='learning-paths')
+router.register('learning-path-courses', LearningPathCourseViewSet, basename='learning-path-courses')
+router.register('learning-path-assignments', LearningPathAssignmentViewSet, basename='learning-path-assignments')
 
 urlpatterns = [
     path('all-employees-list/', AllEmployeesAPIView.as_view(), name='all-employees-list'),

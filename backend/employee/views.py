@@ -3699,3 +3699,53 @@ class CourseContentViewSet(viewsets.ModelViewSet):
             return CourseContent.objects.filter(course_id=course_id).order_by('sequence', 'id')
         return CourseContent.objects.all().order_by('sequence', 'id')
 
+
+class LearningPathViewSet(viewsets.ModelViewSet):
+    queryset = LearningPath.objects.all()
+    serializer_class = LearningPathSerializer
+    permission_classes = [IsAuthenticated]
+    filter_backends = [filters.SearchFilter]
+    search_fields = ['title', 'description']
+
+    def get_queryset(self):
+        user_emp = getattr(self.request.user, 'employee_profile', None)
+        if not user_emp:
+            return LearningPath.objects.none()
+        return LearningPath.objects.filter(created_by__company=user_emp.company).order_by('-id')
+
+    def perform_create(self, serializer):
+        user_emp = getattr(self.request.user, 'employee_profile', None)
+        serializer.save(created_by=user_emp)
+
+
+class LearningPathCourseViewSet(viewsets.ModelViewSet):
+    queryset = LearningPathCourse.objects.all()
+    serializer_class = LearningPathCourseSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        learning_path_id = self.request.query_params.get('learning_path_id')
+        if learning_path_id:
+            return LearningPathCourse.objects.filter(learning_path_id=learning_path_id).order_by('sequence', 'id')
+        return LearningPathCourse.objects.all().order_by('sequence', 'id')
+
+
+class LearningPathAssignmentViewSet(viewsets.ModelViewSet):
+    queryset = LearningPathAssignment.objects.all()
+    serializer_class = LearningPathAssignmentSerializer
+    permission_classes = [IsAuthenticated]
+    filter_backends = [filters.SearchFilter, DjangoFilterBackend]
+    search_fields = ['employee__first_name', 'employee__last_name', 'learning_path__title']
+    filterset_fields = ['learning_path', 'employee']
+
+    def get_queryset(self):
+        user_emp = getattr(self.request.user, 'employee_profile', None)
+        if not user_emp:
+            return LearningPathAssignment.objects.none()
+        return LearningPathAssignment.objects.filter(employee__company=user_emp.company).order_by('-id')
+
+    def perform_create(self, serializer):
+        user_emp = getattr(self.request.user, 'employee_profile', None)
+        serializer.save(assigned_by=user_emp)
+
+
