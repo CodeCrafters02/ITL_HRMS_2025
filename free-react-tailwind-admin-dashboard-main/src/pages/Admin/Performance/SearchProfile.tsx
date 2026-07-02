@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import axios from 'axios';
 import IconSearch from '../../../components/Icon/IconSearch';
 import IconUsers from '../../../components/Icon/IconUsers';
@@ -92,6 +93,8 @@ interface PerformanceProfile {
 }
 
 const SearchProfile = () => {
+    const [searchParams] = useSearchParams();
+
     // State lists
     const [employees, setEmployees] = useState<Employee[]>([]);
     const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
@@ -133,6 +136,15 @@ const SearchProfile = () => {
         };
         fetchEmployees();
     }, []);
+
+    // 1b. Auto-open profile when navigated here with ?id=
+    useEffect(() => {
+        const id = searchParams.get('id');
+        if (!id || employees.length === 0) return;
+        const emp = employees.find(e => String(e.id) === id);
+        if (emp) loadPerformanceProfile(emp);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [employees, searchParams]);
 
     // 2. Fetch employee performance details when clicked
     const loadPerformanceProfile = async (emp: Employee) => {

@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useDispatch } from 'react-redux';
-import { NavLink } from 'react-router-dom';
+import { NavLink, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { setPageTitle } from '../../../store/themeConfigSlice';
 import IconTrendingUp from '../../../components/Icon/IconTrendingUp';
@@ -97,6 +97,7 @@ const boxCells: BoxCell[] = [
 
 const AdminPerformanceDashboard = () => {
     const dispatch = useDispatch();
+    const navigate = useNavigate();
     const [activeTab, setActiveTab] = useState<'matrix'>('matrix');
 
     const [employees, setEmployees] = useState<Employee[]>([]);
@@ -373,7 +374,9 @@ const AdminPerformanceDashboard = () => {
                                     {getCellEmployees(selectedCell).map((emp) => (
                                         <div 
                                             key={emp.id} 
-                                            className="bg-gray-50 dark:bg-gray-800/40 border border-gray-100 dark:border-gray-800/50 p-3 rounded-xl flex items-center justify-between hover:scale-[1.01] transition-all duration-300"
+                                            onClick={() => navigate(`/admin/performance/search-profile?id=${emp.id}`)}
+                                            className="bg-gray-50 dark:bg-gray-800/40 border border-gray-100 dark:border-gray-800/50 p-3 rounded-xl flex items-center justify-between hover:scale-[1.01] hover:bg-teal-500/5 dark:hover:bg-teal-500/10 hover:border-teal-500/25 dark:hover:border-teal-500/35 cursor-pointer transition-all duration-300"
+                                            title="Click to view detailed employee performance profile"
                                         >
                                             <div className="flex items-center gap-3">
                                                 {/* Initials Avatar */}
@@ -382,7 +385,7 @@ const AdminPerformanceDashboard = () => {
                                                 </div>
                                                 
                                                 <div>
-                                                    <span className="block text-xs font-bold text-gray-800 dark:text-white leading-tight">
+                                                    <span className="block text-xs font-bold text-gray-800 dark:text-white leading-tight hover:text-teal-500 transition-colors duration-200">
                                                         {emp.name}
                                                     </span>
                                                     <span className="block text-[9px] text-gray-400 dark:text-gray-500 mt-0.5">

@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { setPageTitle } from '../../store/themeConfigSlice';
 import IconUsersGroup from '../../components/Icon/IconUsersGroup';
 import IconTrendingUp from '../../components/Icon/IconTrendingUp';
+import IconOpenBook from '../../components/Icon/IconOpenBook';
 
 interface HubCard {
     label: string;
@@ -48,6 +49,20 @@ const cards: HubCard[] = [
         route: '/employee/performance',
         available: false,
         features: ['My OKRs & KPIs', 'Self-Appraisal Forms', 'Manager Review feedback', 'Training recommendations'],
+    },
+    {
+        label: 'Learning Management',
+        subtitle: 'Training & Skill Dev',
+        description: 'Browse assigned training courses, watch video and document lessons, attempt quizzes, and download your earned completion certificates.',
+        icon: <IconOpenBook className="w-10 h-10" />,
+        gradient: 'from-violet-500 to-purple-600',
+        hoverGradient: 'group-hover:from-violet-600 group-hover:to-purple-700',
+        glowColor: 'shadow-violet-500/20 dark:shadow-violet-500/10',
+        iconBg: 'bg-gradient-to-br from-violet-500 to-purple-600',
+        borderColor: 'border-violet-100 dark:border-violet-900/30',
+        route: '/employee/learning-corner',
+        available: true,
+        features: ['Assigned Courses', 'Quizzes & Grading', 'Progress Tracking', 'PDF Certificates'],
     },
 ];
 
@@ -124,7 +139,7 @@ const EmployeeHub = () => {
                 </div>
 
                 {/* ── Wide Grid Section ── */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-8 w-full max-w-5xl mx-auto">
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 w-full">
                     {cards.map((card) => (
                         <button
                             key={card.label}
