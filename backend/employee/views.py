@@ -3910,6 +3910,16 @@ class AssessmentAttemptViewSet(viewsets.ModelViewSet):
 
         return AssessmentAttempt.objects.filter(employee__company=user_emp.company).order_by('-started_at')
 
+    def perform_create(self, serializer):
+        user_emp = getattr(self.request.user, 'employee_profile', None)
+        if not user_emp:
+            raise serializers.ValidationError("No active employee profile associated with this user account.")
+        assessment = serializer.validated_data.get('assessment')
+        existing_attempts = AssessmentAttempt.objects.filter(employee=user_emp, assessment=assessment).count()
+        attempt_number = existing_attempts + 1
+        serializer.save(employee=user_emp, attempt_number=attempt_number)
+
+
 
 class AssessmentAnswerViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = AssessmentAnswer.objects.all()
@@ -3959,6 +3969,12 @@ class AssignmentSubmissionViewSet(viewsets.ModelViewSet):
             ).order_by('-submitted_at')
 
         return AssignmentSubmission.objects.filter(employee__company=user_emp.company).order_by('-submitted_at')
+
+    def perform_create(self, serializer):
+        user_emp = getattr(self.request.user, 'employee_profile', None)
+        if not user_emp:
+            raise serializers.ValidationError("No active employee profile associated with this user account.")
+        serializer.save(employee=user_emp)
 
     def perform_update(self, serializer):
         from django.utils import timezone

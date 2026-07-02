@@ -1211,7 +1211,7 @@ class AssessmentAttemptSerializer(serializers.ModelSerializer):
             'enrollment', 'attempt_number', 'score', 'is_passed', 'started_at', 'submitted_at',
             'answers'
         ]
-        read_only_fields = ['attempt_number', 'score', 'is_passed', 'started_at', 'submitted_at']
+        read_only_fields = ['employee', 'attempt_number', 'score', 'is_passed', 'started_at', 'submitted_at']
 
 
 class AssessmentSerializer(serializers.ModelSerializer):
@@ -1257,7 +1257,7 @@ class AssignmentSubmissionSerializer(serializers.ModelSerializer):
             'employee_email', 'submitted_file', 'submitted_file_url', 'status',
             'marks_obtained', 'trainer_comments', 'submitted_at', 'graded_at'
         ]
-        read_only_fields = ['submitted_at', 'graded_at']
+        read_only_fields = ['employee', 'submitted_at', 'graded_at']
 
     def get_submitted_file_url(self, obj):
         request = self.context.get('request')

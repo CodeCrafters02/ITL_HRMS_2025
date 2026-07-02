@@ -143,10 +143,19 @@ const CourseSyllabusPlayer = () => {
                 fetch(SUBMISSIONS_API, { headers }),
                 fetch(`${REVIEWS_API}?course_id=${courseId}`, { headers }),
             ]);
-
             if (contentsRes.ok) {
                 const contentsData = await contentsRes.json();
-                const sorted = (contentsData.results || contentsData || []).sort((a: ContentType, b: ContentType) => a.order - b.order);
+                const mappedContents = (contentsData.results || contentsData || []).map((c: any) => ({
+                    id: c.id,
+                    title: c.title,
+                    description: c.description,
+                    content_type: c.content_type,
+                    file_path: c.file || null,
+                    file_path_url: c.file_url || c.file || null,
+                    external_url: c.external_url,
+                    order: c.sequence || 0,
+                }));
+                const sorted = mappedContents.sort((a: any, b: any) => a.order - b.order);
                 setContents(sorted);
                 // Pre-select first syllabus item
                 if (sorted.length > 0) {
@@ -606,9 +615,22 @@ const CourseSyllabusPlayer = () => {
                         {/* Lecture Player */}
                         {activeItem.type === 'lecture' && activeLecture && (
                             <div className="flex flex-col h-full flex-grow">
-                                <div className="border-b border-[#ebedf2] dark:border-[#1b2e4b] pb-4 mb-4">
-                                    <h2 className="text-xl font-extrabold text-gray-800 dark:text-white-light">{activeLecture.title}</h2>
-                                    <p className="text-xs text-gray-400 mt-1">{activeLecture.description || 'Watch or read the uploaded training documentation.'}</p>
+                                <div className="border-b border-[#ebedf2] dark:border-[#1b2e4b] pb-4 mb-4 flex flex-wrap justify-between items-center gap-4">
+                                    <div>
+                                        <h2 className="text-xl font-extrabold text-gray-800 dark:text-white-light">{activeLecture.title}</h2>
+                                        <p className="text-xs text-gray-400 mt-1">{activeLecture.description || 'Watch or read the uploaded training documentation.'}</p>
+                                    </div>
+                                    {activeLecture.file_path_url && (
+                                        <a
+                                            href={activeLecture.file_path_url}
+                                            target="_blank"
+                                            rel="noreferrer"
+                                            download
+                                            className="btn btn-outline-primary btn-sm rounded-lg text-xs py-1.5 px-3 font-bold gap-1.5 flex items-center"
+                                        >
+                                            📥 Download / Open Resource
+                                        </a>
+                                    )}
                                 </div>
 
                                 <div className="flex-grow bg-gray-900/5 dark:bg-black/30 rounded-xl overflow-hidden flex items-center justify-center p-4 border border-gray-100 dark:border-gray-800 min-h-[300px]">
