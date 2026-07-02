@@ -3640,3 +3640,62 @@ class HRDirectAppraisalAPIView(APIView):
         evaluation.save()
         
         return Response({"success": True})
+
+
+class CourseCategoryViewSet(viewsets.ModelViewSet):
+    queryset = CourseCategory.objects.all()
+    serializer_class = CourseCategorySerializer
+    permission_classes = [IsAuthenticated]
+    filter_backends = [filters.SearchFilter]
+    search_fields = ['name', 'description']
+
+
+class TrainerProfileViewSet(viewsets.ModelViewSet):
+    queryset = TrainerProfile.objects.all()
+    serializer_class = TrainerProfileSerializer
+    permission_classes = [IsAuthenticated]
+    filter_backends = [filters.SearchFilter, DjangoFilterBackend]
+    search_fields = ['full_name', 'specialization', 'employee__first_name', 'employee__last_name']
+    filterset_fields = ['trainer_type', 'is_active']
+
+    @action(detail=False, methods=['get'], url_path='employee-options')
+    def employee_options(self, request):
+        user_emp = getattr(request.user, 'employee_profile', None)
+        if user_emp and user_emp.company:
+            employees = Employee.objects.filter(company=user_emp.company, is_active=True)
+        else:
+            employees = Employee.objects.filter(is_active=True)
+        serializer = ReportingManagerSerializer(employees, many=True)
+        return Response(serializer.data)
+
+
+class CourseViewSet(viewsets.ModelViewSet):
+    queryset = Course.objects.all()
+    serializer_class = CourseSerializer
+    permission_classes = [IsAuthenticated]
+    filter_backends = [filters.SearchFilter, DjangoFilterBackend]
+    search_fields = ['title', 'description']
+    filterset_fields = ['category', 'trainer', 'difficulty_level', 'status', 'is_compliance']
+
+    def get_queryset(self):
+        user_emp = getattr(self.request.user, 'employee_profile', None)
+        if not user_emp:
+            return Course.objects.none()
+        return Course.objects.filter(created_by__company=user_emp.company)
+
+    def perform_create(self, serializer):
+        user_emp = getattr(self.request.user, 'employee_profile', None)
+        serializer.save(created_by=user_emp)
+
+
+class CourseContentViewSet(viewsets.ModelViewSet):
+    queryset = CourseContent.objects.all()
+    serializer_class = CourseContentSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        course_id = self.request.query_params.get('course_id')
+        if course_id:
+            return CourseContent.objects.filter(course_id=course_id).order_by('sequence', 'id')
+        return CourseContent.objects.all().order_by('sequence', 'id')
+

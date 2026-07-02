@@ -17,6 +17,10 @@ router.register('salary-hike-config', SalaryHikeConfigViewSet, basename='salary-
 router.register('appraisal-cycles', AppraisalCycleViewSet, basename='appraisal-cycles')
 router.register('appraisal-questions', AppraisalQuestionViewSet, basename='appraisal-questions')
 router.register('appraisal-evaluations', AppraisalEvaluationViewSet, basename='appraisal-evaluations')
+router.register('course-categories', CourseCategoryViewSet, basename='course-categories')
+router.register('trainer-profiles', TrainerProfileViewSet, basename='trainer-profiles')
+router.register('courses', CourseViewSet, basename='courses')
+router.register('course-contents', CourseContentViewSet, basename='course-contents')
 
 urlpatterns = [
     path('all-employees-list/', AllEmployeesAPIView.as_view(), name='all-employees-list'),

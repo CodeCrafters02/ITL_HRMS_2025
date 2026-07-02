@@ -140,6 +140,8 @@ const AdminRelievedEmployees = lazy(() => import('../pages/Admin/RelievedEmploye
 const AdminLetterTemplates = lazy(() => import('../pages/Admin/LetterTemplates'));
 const AdminEmployeeReferences = lazy(() => import('../pages/Admin/EmployeeReferences'));
 const AdminLearningCorner = lazy(() => import('../pages/Admin/LearningCorner'));
+const AdminCourse = lazy(() => import('../pages/Admin/Learning/Course'));
+const LMSAdministration = lazy(() => import('../pages/Admin/Learning/LMSAdministration'));
 const AdminChat = lazy(() => import('../pages/Admin/Chat'));
 const AdminLeaveApproval = lazy(() => import('../pages/Admin/LeaveApproval'));
 const AdminLeaveHistory = lazy(() => import('../pages/Admin/LeaveHistory'));
@@ -774,11 +776,11 @@ const routes = [
     },
     {
         path: '/admin/learning-management',
-        element: <LMSComingSoon />,
+        element: <AdminCourse />,
     },
     {
         path: '/admin/learning-management/course-catalog',
-        element: <LMSComingSoon />,
+        element: <AdminCourse />,
     },
     {
         path: '/admin/learning-management/training-calendar',
@@ -802,7 +804,7 @@ const routes = [
     },
     {
         path: '/admin/learning-management/administration',
-        element: <LMSComingSoon />,
+        element: <LMSAdministration />,
     },
     {
         path: '/employee/learning-management',
