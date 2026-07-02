@@ -152,6 +152,8 @@ const AssignmentManager = lazy(() => import('../pages/Admin/Learning/AssignmentM
 const EmployeeMyLearning = lazy(() => import('../pages/Employee/Learning/MyLearning'));
 const EmployeeCourseCatalog = lazy(() => import('../pages/Employee/Learning/EmployeeCourseCatalog'));
 const CourseSyllabusPlayer = lazy(() => import('../pages/Employee/Learning/CourseSyllabusPlayer'));
+const EmployeeTrainingCalendar = lazy(() => import('../pages/Employee/Learning/EmployeeTrainingCalendar'));
+const EmployeeTrainingRequests = lazy(() => import('../pages/Employee/Learning/EmployeeTrainingRequests'));
 const AdminChat = lazy(() => import('../pages/Admin/Chat'));
 const AdminLeaveApproval = lazy(() => import('../pages/Admin/LeaveApproval'));
 const AdminLeaveHistory = lazy(() => import('../pages/Admin/LeaveHistory'));
@@ -842,19 +844,19 @@ const routes = [
     },
     {
         path: '/employee/learning-management/training-calendar',
-        element: <LMSComingSoon />,
+        element: <EmployeeTrainingCalendar />,
     },
     {
         path: '/employee/learning-management/compliance-training',
-        element: <LMSComingSoon />,
+        element: <EmployeeMyLearning />,
     },
     {
         path: '/employee/learning-management/certifications',
-        element: <LMSComingSoon />,
+        element: <EmployeeMyLearning />,
     },
     {
         path: '/employee/learning-management/training-requests',
-        element: <LMSComingSoon />,
+        element: <EmployeeTrainingRequests />,
     },
     {
         path: '/employee/learning-management/reports',

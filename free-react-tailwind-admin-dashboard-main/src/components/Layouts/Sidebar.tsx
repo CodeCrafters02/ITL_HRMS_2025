@@ -687,6 +687,8 @@ const Sidebar = () => {
                                             <ul className="sub-menu text-gray-500">
                                                 <li><NavLink to="/employee/learning-management/my-learning">{t('My Learning')}</NavLink></li>
                                                 <li><NavLink to="/employee/learning-management/course-catalog">{t('Course Catalog')}</NavLink></li>
+                                                <li><NavLink to="/employee/learning-management/training-calendar">{t('Training Calendar')}</NavLink></li>
+                                                <li><NavLink to="/employee/learning-management/training-requests">{t('Training Requests')}</NavLink></li>
                                             </ul>
                                         </AnimateHeight>
                                     </li>

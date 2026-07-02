@@ -1211,7 +1211,7 @@ class AssessmentAttemptSerializer(serializers.ModelSerializer):
             'enrollment', 'attempt_number', 'score', 'is_passed', 'started_at', 'submitted_at',
             'answers'
         ]
-        read_only_fields = ['attempt_number', 'score', 'is_passed', 'started_at', 'submitted_at']
+        read_only_fields = ['employee', 'attempt_number', 'score', 'is_passed', 'started_at', 'submitted_at']
 
 
 class AssessmentSerializer(serializers.ModelSerializer):
@@ -1257,7 +1257,7 @@ class AssignmentSubmissionSerializer(serializers.ModelSerializer):
             'employee_email', 'submitted_file', 'submitted_file_url', 'status',
             'marks_obtained', 'trainer_comments', 'submitted_at', 'graded_at'
         ]
-        read_only_fields = ['submitted_at', 'graded_at']
+        read_only_fields = ['employee', 'submitted_at', 'graded_at']
 
     def get_submitted_file_url(self, obj):
         request = self.context.get('request')
@@ -1272,8 +1272,8 @@ class EnrollmentSerializer(serializers.ModelSerializer):
     course_title = serializers.CharField(source='course.title', read_only=True)
     course_description = serializers.CharField(source='course.description', read_only=True)
     course_image_url = serializers.SerializerMethodField(read_only=True)
-    course_difficulty = serializers.CharField(source='course.difficulty', read_only=True)
-    course_estimated_hours = serializers.IntegerField(source='course.estimated_hours', read_only=True)
+    course_difficulty = serializers.CharField(source='course.difficulty_level', read_only=True)
+    course_estimated_hours = serializers.DecimalField(source='course.duration_hours', max_digits=6, decimal_places=2, read_only=True)
     progress_percentage = serializers.SerializerMethodField(read_only=True)
     employee_name = serializers.CharField(source='employee.full_name', read_only=True)
 
@@ -1284,14 +1284,14 @@ class EnrollmentSerializer(serializers.ModelSerializer):
             'course_difficulty', 'course_estimated_hours', 'employee', 'employee_name',
             'enrolled_at', 'status', 'enrolled_by', 'progress_percentage', 'completed_at'
         ]
-        read_only_fields = ['enrolled_at', 'completed_at', 'enrolled_by']
+        read_only_fields = ['employee', 'enrolled_at', 'completed_at', 'enrolled_by']
 
     def get_course_image_url(self, obj):
         request = self.context.get('request')
-        if obj.course.course_image:
+        if obj.course.thumbnail:
             if request:
-                return request.build_absolute_uri(obj.course.course_image.url)
-            return obj.course.course_image.url
+                return request.build_absolute_uri(obj.course.thumbnail.url)
+            return obj.course.thumbnail.url
         return None
 
     def get_progress_percentage(self, obj):
@@ -1316,7 +1316,7 @@ class CourseReviewSerializer(serializers.ModelSerializer):
     class Meta:
         model = CourseReview
         fields = ['id', 'course', 'course_title', 'employee', 'employee_name', 'rating', 'review_text', 'created_at']
-        read_only_fields = ['created_at']
+        read_only_fields = ['employee', 'created_at']
 
 
 class CourseWishlistSerializer(serializers.ModelSerializer):
@@ -1327,14 +1327,14 @@ class CourseWishlistSerializer(serializers.ModelSerializer):
     class Meta:
         model = CourseWishlist
         fields = ['id', 'course', 'course_title', 'course_image_url', 'employee', 'employee_name', 'added_at']
-        read_only_fields = ['added_at']
+        read_only_fields = ['employee', 'added_at']
 
     def get_course_image_url(self, obj):
         request = self.context.get('request')
-        if obj.course.course_image:
+        if obj.course.thumbnail:
             if request:
-                return request.build_absolute_uri(obj.course.course_image.url)
-            return obj.course.course_image.url
+                return request.build_absolute_uri(obj.course.thumbnail.url)
+            return obj.course.thumbnail.url
         return None
 
 

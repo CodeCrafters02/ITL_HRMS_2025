@@ -82,7 +82,7 @@ const EmployeeTrainingRequests = () => {
             const response = await fetch(COURSES_API, { headers: getHeaders() });
             if (response.ok) {
                 const data = await response.json();
-                setCourses((data.results || data || []).filter((c: any) => c.is_published));
+                setCourses((data.results || data || []).filter((c: any) => c.status === 'published'));
             }
         } catch (error) {
             console.error('Error fetching catalog courses:', error);

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useDispatch } from 'react-redux';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import Swal from 'sweetalert2';
 import { setPageTitle } from '../../../store/themeConfigSlice';
 import IconMenuCalendar from '../../../components/Icon/Menu/IconMenuCalendar';
@@ -13,6 +13,7 @@ const ENROLLMENTS_API = `${API_BASE_URL}/employee/enrollments/`;
 const COMPLIANCE_API = `${API_BASE_URL}/employee/compliance-assignments/`;
 const CERTIFICATES_API = `${API_BASE_URL}/employee/certificates/`;
 const WISHLISTS_API = `${API_BASE_URL}/employee/course-wishlists/`;
+const PATHS_API = `${API_BASE_URL}/employee/learning-path-assignments/`;
 
 type EnrollmentType = {
     id: number;
@@ -51,19 +52,30 @@ type WishlistItem = {
 
 const MyLearning = () => {
     const dispatch = useDispatch();
+    const location = useLocation();
     const [enrollments, setEnrollments] = useState<EnrollmentType[]>([]);
     const [compliances, setCompliances] = useState<ComplianceType[]>([]);
     const [certificates, setCertificates] = useState<CertificateType[]>([]);
     const [wishlist, setWishlist] = useState<WishlistItem[]>([]);
+    const [learningPaths, setLearningPaths] = useState<any[]>([]);
     
     const [loading, setLoading] = useState(true);
-    const [activeTab, setActiveTab] = useState<'courses' | 'compliance' | 'certificates' | 'wishlist'>('courses');
+    const [activeTab, setActiveTab] = useState<'courses' | 'compliance' | 'certificates' | 'wishlist' | 'paths'>('courses');
     const [enrollingId, setEnrollingId] = useState<number | null>(null);
 
     useEffect(() => {
         dispatch(setPageTitle('My Learning'));
         fetchDashboardData();
-    }, [dispatch]);
+
+        if (location.pathname.includes('compliance-training')) {
+            setActiveTab('compliance');
+        } else if (location.pathname.includes('certifications')) {
+            setActiveTab('certificates');
+        } else {
+            setActiveTab('courses');
+        }
+    }, [dispatch, location.pathname]);
+
 
     const getHeaders = () => {
         const token = localStorage.getItem('access_token');
@@ -77,11 +89,12 @@ const MyLearning = () => {
     const fetchDashboardData = async () => {
         setLoading(true);
         try {
-            const [enrRes, compRes, certRes, wishRes] = await Promise.all([
+            const [enrRes, compRes, certRes, wishRes, pathsRes] = await Promise.all([
                 fetch(ENROLLMENTS_API, { headers: getHeaders() }),
                 fetch(COMPLIANCE_API, { headers: getHeaders() }),
                 fetch(CERTIFICATES_API, { headers: getHeaders() }),
                 fetch(WISHLISTS_API, { headers: getHeaders() }),
+                fetch(PATHS_API, { headers: getHeaders() }),
             ]);
 
             if (enrRes.ok) {
@@ -99,6 +112,10 @@ const MyLearning = () => {
             if (wishRes.ok) {
                 const wishData = await wishRes.json();
                 setWishlist(wishData.results || wishData || []);
+            }
+            if (pathsRes.ok) {
+                const pathsData = await pathsRes.json();
+                setLearningPaths(pathsData.results || pathsData || []);
             }
         } catch (error) {
             console.error('Error fetching dashboard content:', error);
@@ -265,6 +282,17 @@ const MyLearning = () => {
                     }`}
                 >
                     My Wishlist ({wishlist.length})
+                </button>
+                <button
+                    type="button"
+                    onClick={() => setActiveTab('paths')}
+                    className={`py-3 px-6 font-semibold text-sm border-b-2 whitespace-nowrap transition-all duration-300 ${
+                        activeTab === 'paths'
+                            ? 'border-primary text-primary'
+                            : 'border-transparent text-gray-500 hover:text-primary'
+                    }`}
+                >
+                    Learning Paths ({learningPaths.length})
                 </button>
             </div>
 
@@ -477,6 +505,44 @@ const MyLearning = () => {
                                                 >
                                                     Remove
                                                 </button>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                    )}
+
+                    {/* Learning Paths Tab */}
+                    {activeTab === 'paths' && (
+                        <div>
+                            {learningPaths.length === 0 ? (
+                                <div className="panel text-center py-10 text-gray-500 italic">
+                                    No learning paths assigned to you.
+                                </div>
+                            ) : (
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    {learningPaths.map((path: any) => (
+                                        <div
+                                            key={path.id}
+                                            className="panel border border-[#e0e6ed] dark:border-[#1b2e4b] rounded-xl p-5 bg-white dark:bg-[#0e1726]/40 shadow-sm flex flex-col justify-between"
+                                        >
+                                            <div className="flex justify-between items-start mb-4">
+                                                <div>
+                                                    <span className="text-2xl block mb-1">🗺️</span>
+                                                    <h4 className="text-base font-extrabold text-gray-800 dark:text-white-light">
+                                                        {path.learning_path_title}
+                                                    </h4>
+                                                    <p className="text-[10px] text-gray-400 mt-0.5">
+                                                        Assigned by: <strong>{path.assigned_by_name || 'HR Team'}</strong>
+                                                    </p>
+                                                </div>
+                                                <span className="text-[10px] text-gray-400 font-medium">
+                                                    {new Date(path.assigned_at).toLocaleDateString()}
+                                                </span>
+                                            </div>
+                                            <div className="text-xs text-gray-500 dark:text-gray-400 pt-3 border-t border-gray-100 dark:border-gray-800">
+                                                Please visit the Course Catalog to enroll in courses assigned to this pathway.
                                             </div>
                                         </div>
                                     ))}

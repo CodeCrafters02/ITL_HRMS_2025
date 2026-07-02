@@ -3743,7 +3743,10 @@ class LearningPathAssignmentViewSet(viewsets.ModelViewSet):
         user_emp = getattr(self.request.user, 'employee_profile', None)
         if not user_emp:
             return LearningPathAssignment.objects.none()
-        return LearningPathAssignment.objects.filter(employee__company=user_emp.company).order_by('-id')
+        is_admin_or_manager = self.request.user.is_superuser or getattr(self.request.user, 'role', '') in ['admin', 'manager']
+        if is_admin_or_manager:
+            return LearningPathAssignment.objects.filter(employee__company=user_emp.company).order_by('-id')
+        return LearningPathAssignment.objects.filter(employee=user_emp).order_by('-id')
 
     def perform_create(self, serializer):
         user_emp = getattr(self.request.user, 'employee_profile', None)
@@ -3771,7 +3774,10 @@ class ComplianceAssignmentViewSet(viewsets.ModelViewSet):
             due_date__lt=date.today()
         ).update(status='overdue')
 
-        return ComplianceAssignment.objects.filter(employee__company=user_emp.company).order_by('-id')
+        is_admin_or_manager = self.request.user.is_superuser or getattr(self.request.user, 'role', '') in ['admin', 'manager']
+        if is_admin_or_manager:
+            return ComplianceAssignment.objects.filter(employee__company=user_emp.company).order_by('-id')
+        return ComplianceAssignment.objects.filter(employee=user_emp).order_by('-id')
 
 
 class CertificateViewSet(viewsets.ModelViewSet):
@@ -3781,12 +3787,15 @@ class CertificateViewSet(viewsets.ModelViewSet):
     filter_backends = [filters.SearchFilter, DjangoFilterBackend]
     search_fields = ['certificate_name', 'certificate_number', 'employee__first_name', 'employee__last_name']
     filterset_fields = ['employee', 'course', 'status', 'source']
-
     def get_queryset(self):
         user_emp = getattr(self.request.user, 'employee_profile', None)
         if not user_emp:
             return Certificate.objects.none()
-        return Certificate.objects.filter(employee__company=user_emp.company).order_by('-issue_date')
+        is_admin_or_manager = self.request.user.is_superuser or getattr(self.request.user, 'role', '') in ['admin', 'manager']
+        if is_admin_or_manager:
+            return Certificate.objects.filter(employee__company=user_emp.company).order_by('-issue_date')
+        return Certificate.objects.filter(employee=user_emp).order_by('-issue_date')
+
 
 
 class TrainingRequestViewSet(viewsets.ModelViewSet):
@@ -3902,6 +3911,16 @@ class AssessmentAttemptViewSet(viewsets.ModelViewSet):
 
         return AssessmentAttempt.objects.filter(employee__company=user_emp.company).order_by('-started_at')
 
+    def perform_create(self, serializer):
+        user_emp = getattr(self.request.user, 'employee_profile', None)
+        if not user_emp:
+            raise serializers.ValidationError("No active employee profile associated with this user account.")
+        assessment = serializer.validated_data.get('assessment')
+        existing_attempts = AssessmentAttempt.objects.filter(employee=user_emp, assessment=assessment).count()
+        attempt_number = existing_attempts + 1
+        serializer.save(employee=user_emp, attempt_number=attempt_number)
+
+
 
 class AssessmentAnswerViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = AssessmentAnswer.objects.all()
@@ -3951,6 +3970,12 @@ class AssignmentSubmissionViewSet(viewsets.ModelViewSet):
             ).order_by('-submitted_at')
 
         return AssignmentSubmission.objects.filter(employee__company=user_emp.company).order_by('-submitted_at')
+
+    def perform_create(self, serializer):
+        user_emp = getattr(self.request.user, 'employee_profile', None)
+        if not user_emp:
+            raise serializers.ValidationError("No active employee profile associated with this user account.")
+        serializer.save(employee=user_emp)
 
     def perform_update(self, serializer):
         from django.utils import timezone
