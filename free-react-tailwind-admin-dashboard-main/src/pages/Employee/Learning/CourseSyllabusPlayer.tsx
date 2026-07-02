@@ -294,7 +294,7 @@ const CourseSyllabusPlayer = () => {
 
     const fetchAttempts = async () => {
         try {
-            const response = await fetch(ATTEMPTS_API, { headers: getHeaders() });
+            const response = await authFetch(ATTEMPTS_API, { headers: getHeaders() });
             if (response.ok) {
                 const data = await response.json();
                 setAttempts(data.results || data || []);
