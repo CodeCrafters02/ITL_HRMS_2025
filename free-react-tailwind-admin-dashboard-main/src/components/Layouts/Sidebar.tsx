@@ -364,6 +364,22 @@ const Sidebar = () => {
                                                 </NavLink>
                                             </li>
                                             <li className="menu nav-item">
+                                                <NavLink to="/employee/learning-management/wishlist" className="group">
+                                                    <div className="flex items-center">
+                                                        <IconMenuContacts className="group-hover:!text-primary shrink-0" />
+                                                        <span className="ltr:pl-3 rtl:pr-3 text-black dark:text-[#506690] dark:group-hover:text-white-dark">{t('Course Wishlist')}</span>
+                                                    </div>
+                                                </NavLink>
+                                            </li>
+                                            <li className="menu nav-item">
+                                                <NavLink to="/employee/learning-management/reviews" className="group">
+                                                    <div className="flex items-center">
+                                                        <IconMenuNotes className="group-hover:!text-primary shrink-0" />
+                                                        <span className="ltr:pl-3 rtl:pr-3 text-black dark:text-[#506690] dark:group-hover:text-white-dark">{t('Course Reviews')}</span>
+                                                    </div>
+                                                </NavLink>
+                                            </li>
+                                            <li className="menu nav-item">
                                                 <NavLink to="/employee/learning-management/reports" className="group">
                                                     <div className="flex items-center">
                                                         <IconMenuPages className="group-hover:!text-primary shrink-0" />
@@ -689,6 +705,8 @@ const Sidebar = () => {
                                                 <li><NavLink to="/employee/learning-management/course-catalog">{t('Course Catalog')}</NavLink></li>
                                                 <li><NavLink to="/employee/learning-management/training-calendar">{t('Training Calendar')}</NavLink></li>
                                                 <li><NavLink to="/employee/learning-management/training-requests">{t('Training Requests')}</NavLink></li>
+                                                <li><NavLink to="/employee/learning-management/wishlist">{t('Course Wishlist')}</NavLink></li>
+                                                <li><NavLink to="/employee/learning-management/reviews">{t('Course Reviews')}</NavLink></li>
                                             </ul>
                                         </AnimateHeight>
                                     </li>
