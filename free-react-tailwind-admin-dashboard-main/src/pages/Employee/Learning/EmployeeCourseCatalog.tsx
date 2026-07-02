@@ -126,15 +126,15 @@ const EmployeeCourseCatalog = () => {
                     timer: 1500,
                     showConfirmButton: false,
                 });
-                
                 // Remove from wishlist automatically if it was there
                 const existingWish = wishlist.find((w) => w.course === courseId);
                 if (existingWish) {
-                    authFetch(`${WISHLISTS_API}${existingWish.id}/`, {
+                    await authFetch(`${WISHLISTS_API}${existingWish.id}/`, {
                         method: 'DELETE',
                         headers: getHeaders(),
                     }).catch(() => null);
                 }
+                fetchCatalogData();
 
                 navigate(`/employee/learning-management/course-player/${newEnrollment.id}`);
             } else {
@@ -323,12 +323,25 @@ const EmployeeCourseCatalog = () => {
                                                 <div className="w-full bg-gray-100 dark:bg-gray-800 rounded-full h-1.5 mb-3">
                                                     <div className="bg-primary h-1.5 rounded-full" style={{ width: `${enr.progress_percentage}%` }}></div>
                                                 </div>
-                                                <Link
-                                                    to={`/employee/learning-management/course-player/${enr.id}`}
-                                                    className="btn btn-outline-primary btn-sm w-full rounded-lg text-xs py-1.5 font-bold"
-                                                >
-                                                    Go to Syllabus
-                                                </Link>
+                                                <div className="flex items-center gap-2">
+                                                    <Link
+                                                        to={`/employee/learning-management/course-player/${enr.id}`}
+                                                        className="btn btn-outline-primary btn-sm flex-grow rounded-lg text-xs py-1.5 font-bold"
+                                                    >
+                                                        Go to Syllabus
+                                                    </Link>
+                                                    <button
+                                                        type="button"
+                                                        className={`btn btn-sm rounded-lg py-1.5 px-2.5 font-bold border transition-all duration-300 ${
+                                                            isWishlisted
+                                                                ? 'border-danger bg-danger/5 text-danger'
+                                                                : 'border-gray-200 dark:border-gray-800 text-gray-400 hover:text-danger'
+                                                        }`}
+                                                        onClick={() => handleToggleWishlist(c.id)}
+                                                    >
+                                                        ♥
+                                                    </button>
+                                                </div>
                                             </div>
                                         ) : (
                                             <div className="flex items-center gap-2">

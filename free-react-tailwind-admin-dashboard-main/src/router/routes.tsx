@@ -154,6 +154,8 @@ const EmployeeCourseCatalog = lazy(() => import('../pages/Employee/Learning/Empl
 const CourseSyllabusPlayer = lazy(() => import('../pages/Employee/Learning/CourseSyllabusPlayer'));
 const EmployeeTrainingCalendar = lazy(() => import('../pages/Employee/Learning/EmployeeTrainingCalendar'));
 const EmployeeTrainingRequests = lazy(() => import('../pages/Employee/Learning/EmployeeTrainingRequests'));
+const EmployeeCourseWishlist = lazy(() => import('../pages/Employee/Learning/EmployeeCourseWishlist'));
+const EmployeeCourseReviews = lazy(() => import('../pages/Employee/Learning/EmployeeCourseReviews'));
 const AdminChat = lazy(() => import('../pages/Admin/Chat'));
 const AdminLeaveApproval = lazy(() => import('../pages/Admin/LeaveApproval'));
 const AdminLeaveHistory = lazy(() => import('../pages/Admin/LeaveHistory'));
@@ -857,6 +859,14 @@ const routes = [
     {
         path: '/employee/learning-management/training-requests',
         element: <EmployeeTrainingRequests />,
+    },
+    {
+        path: '/employee/learning-management/wishlist',
+        element: <EmployeeCourseWishlist />,
+    },
+    {
+        path: '/employee/learning-management/reviews',
+        element: <EmployeeCourseReviews />,
     },
     {
         path: '/employee/learning-management/reports',
