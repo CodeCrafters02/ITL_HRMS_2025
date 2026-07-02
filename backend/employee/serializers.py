@@ -1183,4 +1183,90 @@ class SessionAttendanceSerializer(serializers.ModelSerializer):
         ]
 
 
+class AssessmentQuestionSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = AssessmentQuestion
+        fields = ['id', 'assessment', 'question_text', 'question_type', 'options', 'correct_answer', 'marks']
+
+
+class AssessmentAnswerSerializer(serializers.ModelSerializer):
+    question_text = serializers.CharField(source='question.question_text', read_only=True)
+    question_type = serializers.CharField(source='question.question_type', read_only=True)
+
+    class Meta:
+        model = AssessmentAnswer
+        fields = ['id', 'attempt', 'question', 'question_text', 'question_type', 'answer_text', 'is_correct', 'marks_awarded']
+
+
+class AssessmentAttemptSerializer(serializers.ModelSerializer):
+    employee_name = serializers.CharField(source='employee.full_name', read_only=True)
+    employee_id = serializers.CharField(source='employee.employee_id', read_only=True)
+    assessment_title = serializers.CharField(source='assessment.title', read_only=True)
+    answers = AssessmentAnswerSerializer(many=True, read_only=True)
+
+    class Meta:
+        model = AssessmentAttempt
+        fields = [
+            'id', 'assessment', 'assessment_title', 'employee', 'employee_name', 'employee_id',
+            'enrollment', 'attempt_number', 'score', 'is_passed', 'started_at', 'submitted_at',
+            'answers'
+        ]
+        read_only_fields = ['attempt_number', 'score', 'is_passed', 'started_at', 'submitted_at']
+
+
+class AssessmentSerializer(serializers.ModelSerializer):
+    course_title = serializers.CharField(source='course.title', read_only=True)
+    questions_count = serializers.SerializerMethodField(read_only=True)
+
+    class Meta:
+        model = Assessment
+        fields = [
+            'id', 'course', 'course_title', 'title', 'assessment_type', 'pass_marks',
+            'time_limit_minutes', 'max_attempts', 'created_at', 'questions_count'
+        ]
+        read_only_fields = ['created_at']
+
+    def get_questions_count(self, obj):
+        return obj.questions.count()
+
+
+class AssignmentSerializer(serializers.ModelSerializer):
+    course_title = serializers.CharField(source='course.title', read_only=True)
+    submissions_count = serializers.SerializerMethodField(read_only=True)
+
+    class Meta:
+        model = Assignment
+        fields = ['id', 'course', 'course_title', 'title', 'description', 'due_date', 'max_marks', 'created_at', 'submissions_count']
+        read_only_fields = ['created_at']
+
+    def get_submissions_count(self, obj):
+        return obj.submissions.count()
+
+
+class AssignmentSubmissionSerializer(serializers.ModelSerializer):
+    employee_name = serializers.CharField(source='employee.full_name', read_only=True)
+    employee_id = serializers.CharField(source='employee.employee_id', read_only=True)
+    employee_email = serializers.CharField(source='employee.email', read_only=True)
+    assignment_title = serializers.CharField(source='assignment.title', read_only=True)
+    submitted_file_url = serializers.SerializerMethodField(read_only=True)
+
+    class Meta:
+        model = AssignmentSubmission
+        fields = [
+            'id', 'assignment', 'assignment_title', 'employee', 'employee_name', 'employee_id',
+            'employee_email', 'submitted_file', 'submitted_file_url', 'status',
+            'marks_obtained', 'trainer_comments', 'submitted_at', 'graded_at'
+        ]
+        read_only_fields = ['submitted_at', 'graded_at']
+
+    def get_submitted_file_url(self, obj):
+        request = self.context.get('request')
+        if obj.submitted_file:
+            if request:
+                return request.build_absolute_uri(obj.submitted_file.url)
+            return obj.submitted_file.url
+        return None
+
+
+
 

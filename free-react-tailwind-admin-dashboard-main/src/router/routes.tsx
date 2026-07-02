@@ -146,6 +146,8 @@ const AdminCompliance = lazy(() => import('../pages/Admin/Learning/Compliance'))
 const AdminCertifications = lazy(() => import('../pages/Admin/Learning/Certifications'));
 const AdminTrainingRequest = lazy(() => import('../pages/Admin/Learning/TrainingRequest'));
 const AdminTrainingCalendar = lazy(() => import('../pages/Admin/Learning/TrainingCalendar'));
+const AssessmentManager = lazy(() => import('../pages/Admin/Learning/AssessmentManager'));
+const AssignmentManager = lazy(() => import('../pages/Admin/Learning/AssignmentManager'));
 const AdminChat = lazy(() => import('../pages/Admin/Chat'));
 const AdminLeaveApproval = lazy(() => import('../pages/Admin/LeaveApproval'));
 const AdminLeaveHistory = lazy(() => import('../pages/Admin/LeaveHistory'));
@@ -801,6 +803,14 @@ const routes = [
     {
         path: '/admin/learning-management/training-requests',
         element: <AdminTrainingRequest />,
+    },
+    {
+        path: '/admin/learning-management/quizzes',
+        element: <AssessmentManager />,
+    },
+    {
+        path: '/admin/learning-management/assignments',
+        element: <AssignmentManager />,
     },
     {
         path: '/admin/learning-management/reports',

@@ -29,6 +29,12 @@ router.register('certificates', CertificateViewSet, basename='certificates')
 router.register('training-requests', TrainingRequestViewSet, basename='training-requests')
 router.register('training-sessions', TrainingSessionViewSet, basename='training-sessions')
 router.register('session-attendances', SessionAttendanceViewSet, basename='session-attendances')
+router.register('assessments', AssessmentViewSet, basename='assessments')
+router.register('assessment-questions', AssessmentQuestionViewSet, basename='assessment-questions')
+router.register('assessment-attempts', AssessmentAttemptViewSet, basename='assessment-attempts')
+router.register('assessment-answers', AssessmentAnswerViewSet, basename='assessment-answers')
+router.register('assignments', AssignmentViewSet, basename='assignments')
+router.register('assignment-submissions', AssignmentSubmissionViewSet, basename='assignment-submissions')
 
 urlpatterns = [
     path('all-employees-list/', AllEmployeesAPIView.as_view(), name='all-employees-list'),

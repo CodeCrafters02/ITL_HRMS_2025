@@ -3850,4 +3850,112 @@ class SessionAttendanceViewSet(viewsets.ModelViewSet):
         return SessionAttendance.objects.filter(employee__company=user_emp.company).order_by('-id')
 
 
+class AssessmentViewSet(viewsets.ModelViewSet):
+    queryset = Assessment.objects.all()
+    serializer_class = AssessmentSerializer
+    permission_classes = [IsAuthenticated]
+    filter_backends = [filters.SearchFilter, DjangoFilterBackend]
+    search_fields = ['title', 'course__title']
+    filterset_fields = ['course', 'assessment_type']
+
+    def get_queryset(self):
+        user_emp = getattr(self.request.user, 'employee_profile', None)
+        if not user_emp:
+            return Assessment.objects.none()
+        return Assessment.objects.filter(course__created_by__company=user_emp.company).order_by('-id')
+
+
+class AssessmentQuestionViewSet(viewsets.ModelViewSet):
+    queryset = AssessmentQuestion.objects.all()
+    serializer_class = AssessmentQuestionSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        assessment_id = self.request.query_params.get('assessment_id')
+        if assessment_id:
+            return AssessmentQuestion.objects.filter(assessment_id=assessment_id).order_by('id')
+        return AssessmentQuestion.objects.all().order_by('id')
+
+
+class AssessmentAttemptViewSet(viewsets.ModelViewSet):
+    queryset = AssessmentAttempt.objects.all()
+    serializer_class = AssessmentAttemptSerializer
+    permission_classes = [IsAuthenticated]
+    filter_backends = [filters.SearchFilter, DjangoFilterBackend]
+    search_fields = ['employee__first_name', 'employee__last_name', 'assessment__title']
+    filterset_fields = ['assessment', 'employee', 'is_passed']
+
+    def get_queryset(self):
+        user_emp = getattr(self.request.user, 'employee_profile', None)
+        if not user_emp:
+            return AssessmentAttempt.objects.none()
+        
+        assessment_id = self.request.query_params.get('assessment_id')
+        if assessment_id:
+            return AssessmentAttempt.objects.filter(
+                assessment_id=assessment_id,
+                employee__company=user_emp.company
+            ).order_by('-started_at')
+
+        return AssessmentAttempt.objects.filter(employee__company=user_emp.company).order_by('-started_at')
+
+
+class AssessmentAnswerViewSet(viewsets.ReadOnlyModelViewSet):
+    queryset = AssessmentAnswer.objects.all()
+    serializer_class = AssessmentAnswerSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        attempt_id = self.request.query_params.get('attempt_id')
+        if attempt_id:
+            return AssessmentAnswer.objects.filter(attempt_id=attempt_id).order_by('id')
+        return AssessmentAnswer.objects.all().order_by('id')
+
+
+class AssignmentViewSet(viewsets.ModelViewSet):
+    queryset = Assignment.objects.all()
+    serializer_class = AssignmentSerializer
+    permission_classes = [IsAuthenticated]
+    filter_backends = [filters.SearchFilter, DjangoFilterBackend]
+    search_fields = ['title', 'course__title']
+    filterset_fields = ['course']
+
+    def get_queryset(self):
+        user_emp = getattr(self.request.user, 'employee_profile', None)
+        if not user_emp:
+            return Assignment.objects.none()
+        return Assignment.objects.filter(course__created_by__company=user_emp.company).order_by('-id')
+
+
+class AssignmentSubmissionViewSet(viewsets.ModelViewSet):
+    queryset = AssignmentSubmission.objects.all()
+    serializer_class = AssignmentSubmissionSerializer
+    permission_classes = [IsAuthenticated]
+    filter_backends = [filters.SearchFilter, DjangoFilterBackend]
+    search_fields = ['employee__first_name', 'employee__last_name', 'assignment__title']
+    filterset_fields = ['assignment', 'employee', 'status']
+
+    def get_queryset(self):
+        user_emp = getattr(self.request.user, 'employee_profile', None)
+        if not user_emp:
+            return AssignmentSubmission.objects.none()
+
+        assignment_id = self.request.query_params.get('assignment_id')
+        if assignment_id:
+            return AssignmentSubmission.objects.filter(
+                assignment_id=assignment_id,
+                employee__company=user_emp.company
+            ).order_by('-submitted_at')
+
+        return AssignmentSubmission.objects.filter(employee__company=user_emp.company).order_by('-submitted_at')
+
+    def perform_update(self, serializer):
+        from django.utils import timezone
+        serializer.save(
+            status='graded',
+            graded_at=timezone.now()
+        )
+
+
+
 

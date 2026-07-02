@@ -1,4 +1,4 @@
-﻿import PerfectScrollbar from 'react-perfect-scrollbar';
+import PerfectScrollbar from 'react-perfect-scrollbar';
 import { useTranslation } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
 import { NavLink, useLocation } from 'react-router-dom';
@@ -737,6 +737,22 @@ const Sidebar = () => {
                                                         <div className="flex items-center">
                                                             <IconMenuInvoice className="group-hover:!text-primary shrink-0" />
                                                             <span className="ltr:pl-3 rtl:pr-3 text-black dark:text-[#506690] dark:group-hover:text-white-dark">{t('Training Requests')}</span>
+                                                        </div>
+                                                    </NavLink>
+                                                </li>
+                                                <li className="menu nav-item">
+                                                    <NavLink to="/admin/learning-management/quizzes" className="group">
+                                                        <div className="flex items-center">
+                                                            <IconMenuNotes className="group-hover:!text-primary shrink-0" />
+                                                            <span className="ltr:pl-3 rtl:pr-3 text-black dark:text-[#506690] dark:group-hover:text-white-dark">{t('Course Quizzes')}</span>
+                                                        </div>
+                                                    </NavLink>
+                                                </li>
+                                                <li className="menu nav-item">
+                                                    <NavLink to="/admin/learning-management/assignments" className="group">
+                                                        <div className="flex items-center">
+                                                            <IconMenuComponents className="group-hover:!text-primary shrink-0" />
+                                                            <span className="ltr:pl-3 rtl:pr-3 text-black dark:text-[#506690] dark:group-hover:text-white-dark">{t('Course Assignments')}</span>
                                                         </div>
                                                     </NavLink>
                                                 </li>
