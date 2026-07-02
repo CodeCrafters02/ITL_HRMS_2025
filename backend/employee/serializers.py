@@ -1081,3 +1081,106 @@ class LearningPathAssignmentSerializer(serializers.ModelSerializer):
         read_only_fields = ['assigned_by', 'assigned_at']
 
 
+class ComplianceAssignmentSerializer(serializers.ModelSerializer):
+    course_title = serializers.CharField(source='course.title', read_only=True)
+    employee_name = serializers.CharField(source='employee.full_name', read_only=True)
+    employee_id = serializers.CharField(source='employee.employee_id', read_only=True)
+    employee_email = serializers.CharField(source='employee.email', read_only=True)
+    employee_designation = serializers.CharField(source='employee.designation.designation_name', read_only=True, default=None)
+    employee_department = serializers.CharField(source='employee.department.department_name', read_only=True, default=None)
+
+    class Meta:
+        model = ComplianceAssignment
+        fields = [
+            'id', 'course', 'course_title', 'employee', 'employee_name', 'employee_id',
+            'employee_email', 'employee_designation', 'employee_department', 'due_date',
+            'status', 'completed_at', 'reminder_sent_at', 'assigned_at'
+        ]
+        read_only_fields = ['completed_at', 'reminder_sent_at', 'assigned_at']
+
+
+class CertificateSerializer(serializers.ModelSerializer):
+    employee_name = serializers.CharField(source='employee.full_name', read_only=True)
+    employee_id = serializers.CharField(source='employee.employee_id', read_only=True)
+    employee_email = serializers.CharField(source='employee.email', read_only=True)
+    course_title = serializers.CharField(source='course.title', read_only=True, default=None)
+    certificate_file_url = serializers.SerializerMethodField(read_only=True)
+
+    class Meta:
+        model = Certificate
+        fields = [
+            'id', 'employee', 'employee_name', 'employee_id', 'employee_email', 'course',
+            'course_title', 'certificate_name', 'issuing_authority', 'source',
+            'certificate_number', 'certificate_file', 'certificate_file_url',
+            'issue_date', 'expiry_date', 'status', 'created_at'
+        ]
+        read_only_fields = ['created_at']
+
+    def get_certificate_file_url(self, obj):
+        request = self.context.get('request')
+        if obj.certificate_file:
+            if request:
+                return request.build_absolute_uri(obj.certificate_file.url)
+            return obj.certificate_file.url
+        return None
+
+
+class TrainingRequestSerializer(serializers.ModelSerializer):
+    employee_name = serializers.CharField(source='employee.full_name', read_only=True)
+    employee_id = serializers.CharField(source='employee.employee_id', read_only=True)
+    employee_email = serializers.CharField(source='employee.email', read_only=True)
+    course_title = serializers.CharField(source='course.title', read_only=True, default=None)
+    manager_name = serializers.CharField(source='manager.full_name', read_only=True, default=None)
+
+    class Meta:
+        model = TrainingRequest
+        fields = [
+            'id', 'employee', 'employee_name', 'employee_id', 'employee_email', 'course',
+            'course_title', 'custom_course_title', 'reason', 'manager', 'manager_name',
+            'manager_status', 'manager_remarks', 'admin_status', 'admin_remarks',
+            'budget_required', 'budget_status', 'created_at', 'updated_at'
+        ]
+        read_only_fields = ['created_at', 'updated_at']
+
+
+class TrainingSessionSerializer(serializers.ModelSerializer):
+    course_title = serializers.CharField(source='course.title', read_only=True, default=None)
+    trainer_name = serializers.SerializerMethodField(read_only=True)
+    attendees_count = serializers.SerializerMethodField(read_only=True)
+
+    class Meta:
+        model = TrainingSession
+        fields = [
+            'id', 'course', 'course_title', 'title', 'session_type', 'trainer',
+            'trainer_name', 'start_datetime', 'end_datetime', 'location',
+            'meeting_link', 'max_seats', 'created_by', 'created_at', 'attendees_count'
+        ]
+        read_only_fields = ['created_by', 'created_at']
+
+    def get_trainer_name(self, obj):
+        if obj.trainer:
+            return obj.trainer.full_name or (obj.trainer.employee.full_name if obj.trainer.employee else f"Trainer {obj.trainer.id}")
+        return None
+
+    def get_attendees_count(self, obj):
+        return obj.attendance.count()
+
+
+class SessionAttendanceSerializer(serializers.ModelSerializer):
+    employee_name = serializers.CharField(source='employee.full_name', read_only=True)
+    employee_id = serializers.CharField(source='employee.employee_id', read_only=True)
+    employee_email = serializers.CharField(source='employee.email', read_only=True)
+    employee_designation = serializers.CharField(source='employee.designation.designation_name', read_only=True, default=None)
+    employee_department = serializers.CharField(source='employee.department.department_name', read_only=True, default=None)
+    session_title = serializers.CharField(source='session.title', read_only=True)
+
+    class Meta:
+        model = SessionAttendance
+        fields = [
+            'id', 'session', 'session_title', 'employee', 'employee_name', 'employee_id',
+            'employee_email', 'employee_designation', 'employee_department', 'status',
+            'feedback_rating', 'feedback_text'
+        ]
+
+
+

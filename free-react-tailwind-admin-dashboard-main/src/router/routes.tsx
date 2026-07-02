@@ -142,6 +142,10 @@ const AdminEmployeeReferences = lazy(() => import('../pages/Admin/EmployeeRefere
 const AdminLearningCorner = lazy(() => import('../pages/Admin/LearningCorner'));
 const AdminCourse = lazy(() => import('../pages/Admin/Learning/Course'));
 const LMSAdministration = lazy(() => import('../pages/Admin/Learning/LMSAdministration'));
+const AdminCompliance = lazy(() => import('../pages/Admin/Learning/Compliance'));
+const AdminCertifications = lazy(() => import('../pages/Admin/Learning/Certifications'));
+const AdminTrainingRequest = lazy(() => import('../pages/Admin/Learning/TrainingRequest'));
+const AdminTrainingCalendar = lazy(() => import('../pages/Admin/Learning/TrainingCalendar'));
 const AdminChat = lazy(() => import('../pages/Admin/Chat'));
 const AdminLeaveApproval = lazy(() => import('../pages/Admin/LeaveApproval'));
 const AdminLeaveHistory = lazy(() => import('../pages/Admin/LeaveHistory'));
@@ -784,19 +788,19 @@ const routes = [
     },
     {
         path: '/admin/learning-management/training-calendar',
-        element: <LMSComingSoon />,
+        element: <AdminTrainingCalendar />,
     },
     {
         path: '/admin/learning-management/compliance-training',
-        element: <LMSComingSoon />,
+        element: <AdminCompliance />,
     },
     {
         path: '/admin/learning-management/certifications',
-        element: <LMSComingSoon />,
+        element: <AdminCertifications />,
     },
     {
         path: '/admin/learning-management/training-requests',
-        element: <LMSComingSoon />,
+        element: <AdminTrainingRequest />,
     },
     {
         path: '/admin/learning-management/reports',

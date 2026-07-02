@@ -3749,3 +3749,105 @@ class LearningPathAssignmentViewSet(viewsets.ModelViewSet):
         serializer.save(assigned_by=user_emp)
 
 
+class ComplianceAssignmentViewSet(viewsets.ModelViewSet):
+    queryset = ComplianceAssignment.objects.all()
+    serializer_class = ComplianceAssignmentSerializer
+    permission_classes = [IsAuthenticated]
+    filter_backends = [filters.SearchFilter, DjangoFilterBackend]
+    search_fields = ['employee__first_name', 'employee__last_name', 'course__title']
+    filterset_fields = ['course', 'employee', 'status']
+
+    def get_queryset(self):
+        user_emp = getattr(self.request.user, 'employee_profile', None)
+        if not user_emp:
+            return ComplianceAssignment.objects.none()
+        
+        # Auto-update overdue records
+        from datetime import date
+        ComplianceAssignment.objects.filter(
+            employee__company=user_emp.company,
+            status='pending',
+            due_date__lt=date.today()
+        ).update(status='overdue')
+
+        return ComplianceAssignment.objects.filter(employee__company=user_emp.company).order_by('-id')
+
+
+class CertificateViewSet(viewsets.ModelViewSet):
+    queryset = Certificate.objects.all()
+    serializer_class = CertificateSerializer
+    permission_classes = [IsAuthenticated]
+    filter_backends = [filters.SearchFilter, DjangoFilterBackend]
+    search_fields = ['certificate_name', 'certificate_number', 'employee__first_name', 'employee__last_name']
+    filterset_fields = ['employee', 'course', 'status', 'source']
+
+    def get_queryset(self):
+        user_emp = getattr(self.request.user, 'employee_profile', None)
+        if not user_emp:
+            return Certificate.objects.none()
+        return Certificate.objects.filter(employee__company=user_emp.company).order_by('-issue_date')
+
+
+class TrainingRequestViewSet(viewsets.ModelViewSet):
+    queryset = TrainingRequest.objects.all()
+    serializer_class = TrainingRequestSerializer
+    permission_classes = [IsAuthenticated]
+    filter_backends = [filters.SearchFilter, DjangoFilterBackend]
+    search_fields = ['employee__first_name', 'employee__last_name', 'course__title', 'custom_course_title']
+    filterset_fields = ['employee', 'course', 'manager_status', 'admin_status']
+
+    def get_queryset(self):
+        user_emp = getattr(self.request.user, 'employee_profile', None)
+        if not user_emp:
+            return TrainingRequest.objects.none()
+        return TrainingRequest.objects.filter(employee__company=user_emp.company).order_by('-created_at')
+
+    def perform_create(self, serializer):
+        user_emp = getattr(self.request.user, 'employee_profile', None)
+        serializer.save(employee=user_emp)
+
+
+class TrainingSessionViewSet(viewsets.ModelViewSet):
+    queryset = TrainingSession.objects.all()
+    serializer_class = TrainingSessionSerializer
+    permission_classes = [IsAuthenticated]
+    filter_backends = [filters.SearchFilter, DjangoFilterBackend]
+    search_fields = ['title', 'location', 'meeting_link', 'course__title']
+    filterset_fields = ['course', 'trainer', 'session_type']
+
+    def get_queryset(self):
+        user_emp = getattr(self.request.user, 'employee_profile', None)
+        if not user_emp:
+            return TrainingSession.objects.none()
+        # Fallback to all sessions under matching company
+        return TrainingSession.objects.filter(course__created_by__company=user_emp.company).order_by('start_datetime')
+
+    def perform_create(self, serializer):
+        user_emp = getattr(self.request.user, 'employee_profile', None)
+        serializer.save(created_by=user_emp)
+
+
+class SessionAttendanceViewSet(viewsets.ModelViewSet):
+    queryset = SessionAttendance.objects.all()
+    serializer_class = SessionAttendanceSerializer
+    permission_classes = [IsAuthenticated]
+    filter_backends = [filters.SearchFilter, DjangoFilterBackend]
+    search_fields = ['employee__first_name', 'employee__last_name', 'session__title']
+    filterset_fields = ['session', 'employee', 'status']
+
+    def get_queryset(self):
+        user_emp = getattr(self.request.user, 'employee_profile', None)
+        if not user_emp:
+            return SessionAttendance.objects.none()
+        
+        session_id = self.request.query_params.get('session_id')
+        if session_id:
+            return SessionAttendance.objects.filter(
+                session_id=session_id,
+                employee__company=user_emp.company
+            ).order_by('employee__first_name')
+            
+        return SessionAttendance.objects.filter(employee__company=user_emp.company).order_by('-id')
+
+
+
