@@ -1268,5 +1268,77 @@ class AssignmentSubmissionSerializer(serializers.ModelSerializer):
         return None
 
 
+class EnrollmentSerializer(serializers.ModelSerializer):
+    course_title = serializers.CharField(source='course.title', read_only=True)
+    course_description = serializers.CharField(source='course.description', read_only=True)
+    course_image_url = serializers.SerializerMethodField(read_only=True)
+    course_difficulty = serializers.CharField(source='course.difficulty', read_only=True)
+    course_estimated_hours = serializers.IntegerField(source='course.estimated_hours', read_only=True)
+    progress_percentage = serializers.SerializerMethodField(read_only=True)
+    employee_name = serializers.CharField(source='employee.full_name', read_only=True)
+
+    class Meta:
+        model = Enrollment
+        fields = [
+            'id', 'course', 'course_title', 'course_description', 'course_image_url',
+            'course_difficulty', 'course_estimated_hours', 'employee', 'employee_name',
+            'enrolled_at', 'status', 'enrolled_by', 'progress_percentage', 'completed_at'
+        ]
+        read_only_fields = ['enrolled_at', 'completed_at', 'enrolled_by']
+
+    def get_course_image_url(self, obj):
+        request = self.context.get('request')
+        if obj.course.course_image:
+            if request:
+                return request.build_absolute_uri(obj.course.course_image.url)
+            return obj.course.course_image.url
+        return None
+
+    def get_progress_percentage(self, obj):
+        total_contents = obj.course.contents.count()
+        if total_contents == 0:
+            return 0
+        completed = LessonProgress.objects.filter(enrollment=obj, is_completed=True).count()
+        return round((completed / total_contents) * 100, 2)
+
+
+class LessonProgressSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = LessonProgress
+        fields = ['id', 'enrollment', 'content', 'is_completed', 'completed_at']
+        read_only_fields = ['completed_at']
+
+
+class CourseReviewSerializer(serializers.ModelSerializer):
+    course_title = serializers.CharField(source='course.title', read_only=True)
+    employee_name = serializers.CharField(source='employee.full_name', read_only=True)
+
+    class Meta:
+        model = CourseReview
+        fields = ['id', 'course', 'course_title', 'employee', 'employee_name', 'rating', 'review_text', 'created_at']
+        read_only_fields = ['created_at']
+
+
+class CourseWishlistSerializer(serializers.ModelSerializer):
+    course_title = serializers.CharField(source='course.title', read_only=True)
+    course_image_url = serializers.SerializerMethodField(read_only=True)
+    employee_name = serializers.CharField(source='employee.full_name', read_only=True)
+
+    class Meta:
+        model = CourseWishlist
+        fields = ['id', 'course', 'course_title', 'course_image_url', 'employee', 'employee_name', 'added_at']
+        read_only_fields = ['added_at']
+
+    def get_course_image_url(self, obj):
+        request = self.context.get('request')
+        if obj.course.course_image:
+            if request:
+                return request.build_absolute_uri(obj.course.course_image.url)
+            return obj.course.course_image.url
+        return None
+
+
+
+
 
 

@@ -3804,7 +3804,9 @@ class TrainingRequestViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         user_emp = getattr(self.request.user, 'employee_profile', None)
-        serializer.save(employee=user_emp)
+        manager = getattr(user_emp, 'reporting_manager', None)
+        serializer.save(employee=user_emp, manager=manager)
+
 
 
 class TrainingSessionViewSet(viewsets.ModelViewSet):
@@ -3955,6 +3957,109 @@ class AssignmentSubmissionViewSet(viewsets.ModelViewSet):
             status='graded',
             graded_at=timezone.now()
         )
+
+
+class EnrollmentViewSet(viewsets.ModelViewSet):
+    queryset = Enrollment.objects.all()
+    serializer_class = EnrollmentSerializer
+    permission_classes = [IsAuthenticated]
+    filter_backends = [DjangoFilterBackend]
+    filterset_fields = ['course', 'status']
+
+    def get_queryset(self):
+        user_emp = getattr(self.request.user, 'employee_profile', None)
+        if not user_emp:
+            return Enrollment.objects.none()
+        # Admin can view all, employee can only view their own
+        if getattr(self.request.user, 'user_role', '') == 'admin':
+            return Enrollment.objects.filter(employee__company=user_emp.company).order_by('-enrolled_at')
+        return Enrollment.objects.filter(employee=user_emp).order_by('-enrolled_at')
+
+    def perform_create(self, serializer):
+        user_emp = getattr(self.request.user, 'employee_profile', None)
+        if not user_emp:
+            raise serializers.ValidationError("No active employee profile associated with this user account.")
+        course_id = serializer.validated_data.get('course')
+        if Enrollment.objects.filter(employee=user_emp, course=course_id).exists():
+            raise serializers.ValidationError({"course": "You are already enrolled in this course."})
+        
+        serializer.save(
+            employee=user_emp,
+            status='enrolled',
+            enrolled_by='self'
+        )
+
+
+class LessonProgressViewSet(viewsets.ModelViewSet):
+    queryset = LessonProgress.objects.all()
+    serializer_class = LessonProgressSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        user_emp = getattr(self.request.user, 'employee_profile', None)
+        if not user_emp:
+            return LessonProgress.objects.none()
+        return LessonProgress.objects.filter(enrollment__employee=user_emp).order_by('-id')
+
+    def perform_create(self, serializer):
+        from django.utils import timezone
+        serializer.save(
+            is_completed=True,
+            completed_at=timezone.now()
+        )
+
+
+class CourseReviewViewSet(viewsets.ModelViewSet):
+    queryset = CourseReview.objects.all()
+    serializer_class = CourseReviewSerializer
+    permission_classes = [IsAuthenticated]
+    filter_backends = [DjangoFilterBackend]
+    filterset_fields = ['course', 'rating']
+
+    def get_queryset(self):
+        user_emp = getattr(self.request.user, 'employee_profile', None)
+        if not user_emp:
+            return CourseReview.objects.none()
+        
+        course_id = self.request.query_params.get('course_id')
+        if course_id:
+            return CourseReview.objects.filter(course_id=course_id, employee__company=user_emp.company).order_by('-created_at')
+
+        return CourseReview.objects.filter(employee__company=user_emp.company).order_by('-created_at')
+
+    def perform_create(self, serializer):
+        user_emp = getattr(self.request.user, 'employee_profile', None)
+        if not user_emp:
+            raise serializers.ValidationError("No active employee profile associated with this user account.")
+        course_id = serializer.validated_data.get('course')
+        if CourseReview.objects.filter(employee=user_emp, course=course_id).exists():
+            raise serializers.ValidationError({"course": "You have already reviewed this course."})
+        serializer.save(employee=user_emp)
+
+
+class CourseWishlistViewSet(viewsets.ModelViewSet):
+    queryset = CourseWishlist.objects.all()
+    serializer_class = CourseWishlistSerializer
+    permission_classes = [IsAuthenticated]
+    filter_backends = [DjangoFilterBackend]
+    filterset_fields = ['course']
+
+    def get_queryset(self):
+        user_emp = getattr(self.request.user, 'employee_profile', None)
+        if not user_emp:
+            return CourseWishlist.objects.none()
+        return CourseWishlist.objects.filter(employee=user_emp).order_by('-added_at')
+
+    def perform_create(self, serializer):
+        user_emp = getattr(self.request.user, 'employee_profile', None)
+        if not user_emp:
+            raise serializers.ValidationError("No active employee profile associated with this user account.")
+        course_id = serializer.validated_data.get('course')
+        if CourseWishlist.objects.filter(employee=user_emp, course=course_id).exists():
+            raise serializers.ValidationError({"course": "This course is already in your wishlist."})
+        serializer.save(employee=user_emp)
+
+
 
 
 

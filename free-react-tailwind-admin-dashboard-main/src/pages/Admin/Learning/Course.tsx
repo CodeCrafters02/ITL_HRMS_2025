@@ -17,6 +17,7 @@ const COURSES_API = `${API_BASE_URL}/employee/courses/`;
 const CONTENTS_API = `${API_BASE_URL}/employee/course-contents/`;
 const CATEGORIES_API = `${API_BASE_URL}/employee/course-categories/`;
 const TRAINERS_API = `${API_BASE_URL}/employee/trainer-profiles/`;
+const REVIEWS_API = `${API_BASE_URL}/employee/course-reviews/`;
 
 type CourseContentType = {
     id: number;
@@ -98,6 +99,31 @@ const Course = () => {
         sequence: 1,
     });
     const [contentFile, setContentFile] = useState<File | null>(null);
+
+    // Reviews State
+    const [reviewsModalOpen, setReviewsModalOpen] = useState(false);
+    const [selectedCourseForReviews, setSelectedCourseForReviews] = useState<CourseType | null>(null);
+    const [reviewsList, setReviewsList] = useState<any[]>([]);
+    const [reviewsLoading, setReviewsLoading] = useState(false);
+
+    const openReviewsPanel = async (course: CourseType) => {
+        setSelectedCourseForReviews(course);
+        setReviewsModalOpen(true);
+        setReviewsLoading(true);
+        try {
+            const response = await fetch(`${REVIEWS_API}?course_id=${course.id}`, {
+                headers: getHeaders(),
+            });
+            if (response.ok) {
+                const data = await response.json();
+                setReviewsList(data.results || data || []);
+            }
+        } catch (error) {
+            console.error('Error fetching course reviews:', error);
+        } finally {
+            setReviewsLoading(false);
+        }
+    };
 
     useEffect(() => {
         dispatch(setPageTitle('Courses Catalog'));
@@ -612,6 +638,13 @@ const Course = () => {
                                     </button>
                                     <button
                                         type="button"
+                                        className="btn btn-outline-warning btn-sm flex-1 flex items-center justify-center gap-1 rounded-lg"
+                                        onClick={() => openReviewsPanel(course)}
+                                    >
+                                        ★ Reviews
+                                    </button>
+                                    <button
+                                        type="button"
                                         className="btn btn-outline-secondary btn-sm p-2 rounded-lg"
                                         onClick={() => openEditCourseModal(course)}
                                     >
@@ -898,6 +931,79 @@ const Course = () => {
                                                 </button>
                                             </div>
                                         </form>
+                                    </div>
+                                </Dialog.Panel>
+                            </Transition.Child>
+                        </div>
+                    </div>
+                </Dialog>
+            </Transition>
+            {/* Reviews Dialog Modal */}
+            <Transition appear show={reviewsModalOpen} as={Fragment}>
+                <Dialog as="div" open={reviewsModalOpen} onClose={() => setReviewsModalOpen(false)} className="relative z-50">
+                    <Transition.Child as={Fragment} enter="ease-out duration-300" enterFrom="opacity-0" enterTo="opacity-100" leave="ease-in duration-200" leaveFrom="opacity-100" leaveTo="opacity-0">
+                        <div className="fixed inset-0 bg-[black]/65 backdrop-blur-sm" />
+                    </Transition.Child>
+                    <div className="fixed inset-0 overflow-y-auto">
+                        <div className="flex min-h-full items-center justify-center px-4 py-8">
+                            <Transition.Child as={Fragment} enter="ease-out duration-300" enterFrom="opacity-0 scale-95" enterTo="opacity-100 scale-100" leave="ease-in duration-200" leaveFrom="opacity-100 scale-100" leaveTo="opacity-0 scale-95">
+                                <Dialog.Panel className="panel border-0 p-0 rounded-xl overflow-hidden w-full max-w-2xl text-black dark:text-white-dark shadow-2xl relative">
+                                    <button type="button" onClick={() => setReviewsModalOpen(false)} className="absolute top-4 right-4 text-gray-400 hover:text-gray-800 dark:hover:text-gray-250 outline-none">
+                                        <IconX className="w-5 h-5" />
+                                    </button>
+                                    <div className="text-lg font-bold bg-[#fbfbfb] dark:bg-[#121c2c] py-4 px-6 border-b border-[#ebedf2] dark:border-[#1b2e4b]">
+                                        Feedback Reviews: {selectedCourseForReviews?.title}
+                                    </div>
+                                    <div className="p-6">
+                                        {reviewsLoading ? (
+                                            <div className="py-10 text-center text-gray-400 animate-pulse">Loading feedback reviews...</div>
+                                        ) : reviewsList.length === 0 ? (
+                                            <div className="py-10 text-center text-gray-400 italic bg-gray-50 dark:bg-[#0e1726]/20 border border-dashed rounded-lg border-gray-200 dark:border-gray-800">
+                                                No feedback reviews submitted yet by employees.
+                                            </div>
+                                        ) : (
+                                            <div className="space-y-4 max-h-[400px] overflow-y-auto pr-2">
+                                                <div className="bg-[#8b5cf6]/5 border border-[#8b5cf6]/20 rounded-xl p-4 flex items-center justify-between">
+                                                    <span className="text-xs font-bold text-gray-500">Average Rating:</span>
+                                                    <div className="flex items-center gap-2">
+                                                        <span className="text-xl font-extrabold text-amber-500">
+                                                            {(reviewsList.reduce((acc, r) => acc + r.rating, 0) / reviewsList.length).toFixed(1)} ★
+                                                        </span>
+                                                        <span className="text-[10px] text-gray-400">({reviewsList.length} reviews)</span>
+                                                    </div>
+                                                </div>
+
+                                                {reviewsList.map((review) => (
+                                                    <div key={review.id} className="p-4 border border-[#e0e6ed] dark:border-[#1b2e4b] rounded-xl bg-white dark:bg-[#0e1726]/20 shadow-sm">
+                                                        <div className="flex justify-between items-start mb-2">
+                                                            <div>
+                                                                <h5 className="font-extrabold text-xs text-gray-800 dark:text-white-light">{review.employee_name}</h5>
+                                                                <span className="text-[10px] text-gray-400">{new Date(review.created_at).toLocaleDateString()}</span>
+                                                            </div>
+                                                            <div className="flex gap-0.5">
+                                                                {[1, 2, 3, 4, 5].map((star) => (
+                                                                    <span
+                                                                        key={star}
+                                                                        className={`text-sm ${
+                                                                            review.rating >= star ? 'text-amber-400' : 'text-gray-200 dark:text-gray-700'
+                                                                        }`}
+                                                                    >
+                                                                        ★
+                                                                    </span>
+                                                                ))}
+                                                            </div>
+                                                        </div>
+                                                        <p className="text-xs text-gray-655 dark:text-gray-355 leading-relaxed italic mt-2">
+                                                            "{review.review_text}"
+                                                        </p>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        )}
+
+                                        <div className="flex justify-end pt-6 border-t border-[#ebedf2] dark:border-[#1b2e4b] mt-6">
+                                            <button type="button" className="btn btn-outline-danger rounded-lg" onClick={() => setReviewsModalOpen(false)}>Close Reviews</button>
+                                        </div>
                                     </div>
                                 </Dialog.Panel>
                             </Transition.Child>

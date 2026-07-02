@@ -671,6 +671,25 @@ const Sidebar = () => {
                                             </div>
                                         </NavLink>
                                     </li>
+
+                                    {/* Learning Corner in main sidebar */}
+                                    <li className="menu nav-item">
+                                        <button type="button" className={`${currentMenu === 'emp-learning' ? 'active' : ''} nav-link group w-full`} onClick={() => toggleMenu('emp-learning')}>
+                                            <div className="flex items-center">
+                                                <IconOpenBook className="group-hover:!text-primary shrink-0" />
+                                                <span className="ltr:pl-3 rtl:pr-3 text-black dark:text-[#506690] dark:group-hover:text-white-dark">{t('Learning')}</span>
+                                            </div>
+                                            <div className={currentMenu !== 'emp-learning' ? 'rtl:rotate-90 -rotate-90' : ''}>
+                                                <IconCaretDown />
+                                            </div>
+                                        </button>
+                                        <AnimateHeight duration={300} height={currentMenu === 'emp-learning' ? 'auto' : 0}>
+                                            <ul className="sub-menu text-gray-500">
+                                                <li><NavLink to="/employee/learning-management/my-learning">{t('My Learning')}</NavLink></li>
+                                                <li><NavLink to="/employee/learning-management/course-catalog">{t('Course Catalog')}</NavLink></li>
+                                            </ul>
+                                        </AnimateHeight>
+                                    </li>
                                     </>
                                     )}
                                 </>

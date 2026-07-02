@@ -35,6 +35,10 @@ router.register('assessment-attempts', AssessmentAttemptViewSet, basename='asses
 router.register('assessment-answers', AssessmentAnswerViewSet, basename='assessment-answers')
 router.register('assignments', AssignmentViewSet, basename='assignments')
 router.register('assignment-submissions', AssignmentSubmissionViewSet, basename='assignment-submissions')
+router.register('enrollments', EnrollmentViewSet, basename='enrollments')
+router.register('lesson-progresses', LessonProgressViewSet, basename='lesson-progresses')
+router.register('course-reviews', CourseReviewViewSet, basename='course-reviews')
+router.register('course-wishlists', CourseWishlistViewSet, basename='course-wishlists')
 
 urlpatterns = [
     path('all-employees-list/', AllEmployeesAPIView.as_view(), name='all-employees-list'),
