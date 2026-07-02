@@ -129,6 +129,7 @@ const ExportModule = lazy(() => import('../pages/Admin/Performance/ExportModule'
 const MultiRaterLog = lazy(() => import('../pages/Admin/Performance/MultiRaterLog'));
 const AdminDashboard = lazy(() => import('../pages/Admin/Dashboard'));
 const AdminComingSoon = lazy(() => import('../pages/Admin/ComingSoon'));
+const LMSComingSoon = lazy(() => import('../pages/Admin/ComingSoon'));
 const AdminDepartment = lazy(() => import('../pages/Admin/Department'));
 const AdminLevel = lazy(() => import('../pages/Admin/Level'));
 const AdminDesignation = lazy(() => import('../pages/Admin/Designation'));
@@ -712,6 +713,10 @@ const routes = [
         element: <HRAppraisalDirect />,
     },
     {
+        path: '/admin/performance/appraisal',
+        element: <HRAppraisalDirect />,
+    },
+    {
         path: '/admin/performance/assign-kras',
         element: <KRAsAssign />,
     },
@@ -766,6 +771,70 @@ const routes = [
     {
         path: '/admin/learning',
         element: <AdminComingSoon />,
+    },
+    {
+        path: '/admin/learning-management',
+        element: <LMSComingSoon />,
+    },
+    {
+        path: '/admin/learning-management/course-catalog',
+        element: <LMSComingSoon />,
+    },
+    {
+        path: '/admin/learning-management/training-calendar',
+        element: <LMSComingSoon />,
+    },
+    {
+        path: '/admin/learning-management/compliance-training',
+        element: <LMSComingSoon />,
+    },
+    {
+        path: '/admin/learning-management/certifications',
+        element: <LMSComingSoon />,
+    },
+    {
+        path: '/admin/learning-management/training-requests',
+        element: <LMSComingSoon />,
+    },
+    {
+        path: '/admin/learning-management/reports',
+        element: <LMSComingSoon />,
+    },
+    {
+        path: '/admin/learning-management/administration',
+        element: <LMSComingSoon />,
+    },
+    {
+        path: '/employee/learning-management',
+        element: <LMSComingSoon />,
+    },
+    {
+        path: '/employee/learning-management/my-learning',
+        element: <LMSComingSoon />,
+    },
+    {
+        path: '/employee/learning-management/course-catalog',
+        element: <LMSComingSoon />,
+    },
+    {
+        path: '/employee/learning-management/training-calendar',
+        element: <LMSComingSoon />,
+    },
+    {
+        path: '/employee/learning-management/compliance-training',
+        element: <LMSComingSoon />,
+    },
+    {
+        path: '/employee/learning-management/certifications',
+        element: <LMSComingSoon />,
+    },
+    {
+        path: '/employee/learning-management/training-requests',
+        element: <LMSComingSoon />,
+    },
+    {
+        path: '/employee/learning-management/reports',
+        element: <LMSComingSoon />,
     },
     {
         path: '/admin/branch-mgt/department',

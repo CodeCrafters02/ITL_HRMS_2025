@@ -60,7 +60,7 @@ const cards: HubCard[] = [
         glowColor: 'shadow-violet-500/20 dark:shadow-violet-500/10',
         iconBg: 'bg-gradient-to-br from-violet-500 to-purple-600',
         borderColor: 'border-violet-100 dark:border-violet-900/30',
-        route: '/admin/learning',
+        route: '/admin/learning-management',
         available: false,
         features: ['Structured Courses', 'Quizzes & Grading', 'Progress Reports', 'PDF Certificates'],
     },

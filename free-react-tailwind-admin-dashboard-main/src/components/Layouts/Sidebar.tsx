@@ -25,6 +25,7 @@ import IconMenuComponents from '../Icon/Menu/IconMenuComponents';
 import IconMenuElements from '../Icon/Menu/IconMenuElements';
 import IconMenuInvoice from '../Icon/Menu/IconMenuInvoice';
 import IconMenuNotes from '../Icon/Menu/IconMenuNotes';
+import IconOpenBook from '../Icon/IconOpenBook';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000';
 
@@ -296,14 +297,82 @@ const Sidebar = () => {
                             {/* ===== EMPLOYEE SIDEBAR ===== */}
                             {userRole === 'employee' && (() => {
                                 const isPerfPage = location.pathname.startsWith('/employee/performance');
+                                const isLmsPage = location.pathname.startsWith('/employee/learning-management');
                                 return (
                                 <>
                                     <h2 className="py-3 px-7 flex items-center uppercase font-extrabold bg-white-light/30 dark:bg-dark dark:bg-opacity-[0.08] -mx-4 mb-1">
                                         <IconMinus className="w-4 h-5 flex-none hidden" />
-                                        <span>{isPerfPage ? t('Performance') : t('Employee Dashboard')}</span>
+                                        <span>{isPerfPage ? t('Performance') : isLmsPage ? t('Learning Management') : t('Employee Dashboard')}</span>
                                     </h2>
 
-                                    {isPerfPage ? (
+                                    {isLmsPage ? (
+                                        <>
+                                            <li className="menu nav-item">
+                                                <NavLink to="/employee/learning-management" end className="group">
+                                                    <div className="flex items-center">
+                                                        <IconMenuCharts className="group-hover:!text-primary shrink-0" />
+                                                        <span className="ltr:pl-3 rtl:pr-3 text-black dark:text-[#506690] dark:group-hover:text-white-dark">{t('Dashboard')}</span>
+                                                    </div>
+                                                </NavLink>
+                                            </li>
+                                            <li className="menu nav-item">
+                                                <NavLink to="/employee/learning-management/my-learning" className="group">
+                                                    <div className="flex items-center">
+                                                        <IconMenuNotes className="group-hover:!text-primary shrink-0" />
+                                                        <span className="ltr:pl-3 rtl:pr-3 text-black dark:text-[#506690] dark:group-hover:text-white-dark">{t('My Learning')}</span>
+                                                    </div>
+                                                </NavLink>
+                                            </li>
+                                            <li className="menu nav-item">
+                                                <NavLink to="/employee/learning-management/course-catalog" className="group">
+                                                    <div className="flex items-center">
+                                                        <IconMenuTables className="group-hover:!text-primary shrink-0" />
+                                                        <span className="ltr:pl-3 rtl:pr-3 text-black dark:text-[#506690] dark:group-hover:text-white-dark">{t('Course Catalog')}</span>
+                                                    </div>
+                                                </NavLink>
+                                            </li>
+                                            <li className="menu nav-item">
+                                                <NavLink to="/employee/learning-management/training-calendar" className="group">
+                                                    <div className="flex items-center">
+                                                        <IconMenuCalendar className="group-hover:!text-primary shrink-0" />
+                                                        <span className="ltr:pl-3 rtl:pr-3 text-black dark:text-[#506690] dark:group-hover:text-white-dark">{t('Training Calendar')}</span>
+                                                    </div>
+                                                </NavLink>
+                                            </li>
+                                            <li className="menu nav-item">
+                                                <NavLink to="/employee/learning-management/compliance-training" className="group">
+                                                    <div className="flex items-center">
+                                                        <IconMenuForms className="group-hover:!text-primary shrink-0" />
+                                                        <span className="ltr:pl-3 rtl:pr-3 text-black dark:text-[#506690] dark:group-hover:text-white-dark">{t('Compliance Training')}</span>
+                                                    </div>
+                                                </NavLink>
+                                            </li>
+                                            <li className="menu nav-item">
+                                                <NavLink to="/employee/learning-management/certifications" className="group">
+                                                    <div className="flex items-center">
+                                                        <IconMenuDocumentation className="group-hover:!text-primary shrink-0" />
+                                                        <span className="ltr:pl-3 rtl:pr-3 text-black dark:text-[#506690] dark:group-hover:text-white-dark">{t('Certifications')}</span>
+                                                    </div>
+                                                </NavLink>
+                                            </li>
+                                            <li className="menu nav-item">
+                                                <NavLink to="/employee/learning-management/training-requests" className="group">
+                                                    <div className="flex items-center">
+                                                        <IconMenuInvoice className="group-hover:!text-primary shrink-0" />
+                                                        <span className="ltr:pl-3 rtl:pr-3 text-black dark:text-[#506690] dark:group-hover:text-white-dark">{t('Training Requests')}</span>
+                                                    </div>
+                                                </NavLink>
+                                            </li>
+                                            <li className="menu nav-item">
+                                                <NavLink to="/employee/learning-management/reports" className="group">
+                                                    <div className="flex items-center">
+                                                        <IconMenuPages className="group-hover:!text-primary shrink-0" />
+                                                        <span className="ltr:pl-3 rtl:pr-3 text-black dark:text-[#506690] dark:group-hover:text-white-dark">{t('Reports')}</span>
+                                                    </div>
+                                                </NavLink>
+                                            </li>
+                                        </>
+                                    ) : isPerfPage ? (
                                         <>
                                             {/* Performance Dashboard */}
                                             <li className="menu nav-item">
@@ -451,7 +520,17 @@ const Sidebar = () => {
                                         </NavLink>
                                     </li>
 
-                                    
+                                    {/* Learning Management link in main sidebar */}
+                                    <li className="menu nav-item">
+                                        <NavLink to="/employee/learning-management" className="group">
+                                            <div className="flex items-center">
+                                                <IconOpenBook className="group-hover:!text-primary shrink-0 w-[18px] h-[18px]" />
+                                                <span className="ltr:pl-3 rtl:pr-3 text-black dark:text-[#506690] dark:group-hover:text-white-dark">{t('Learning Management')}</span>
+                                            </div>
+                                        </NavLink>
+                                    </li>
+
+
                                     <li className="menu nav-item">
                                         <NavLink to="/employee/reportees" className="group">
                                             <div className="flex items-center">
@@ -602,15 +681,83 @@ const Sidebar = () => {
                             {userRole === 'admin' && (() => {
                                 const isHubPage = ['/admin/hub', '/admin/learning'].includes(location.pathname);
                                 const isPerfPage = location.pathname.startsWith('/admin/performance');
+                                const isLmsPage = location.pathname.startsWith('/admin/learning-management');
                                 return (
                                 <>
                                     <h2 className="py-3 px-7 flex items-center uppercase font-extrabold bg-white-light/30 dark:bg-dark dark:bg-opacity-[0.08] -mx-4 mb-1">
                                         <IconMinus className="w-4 h-5 flex-none hidden" />
-                                        <span>{isPerfPage ? t('Performance Management Systems') : t('Admin Dashboard')}</span>
+                                        <span>{isPerfPage ? t('Performance Management Systems') : isLmsPage ? t('Learning Management') : t('Admin Dashboard')}</span>
                                     </h2>
 
                                     {!isHubPage && (<>
-                                        {isPerfPage ? (
+                                        {isLmsPage ? (
+                                            <>
+                                                <li className="menu nav-item">
+                                                    <NavLink to="/admin/learning-management" end className="group">
+                                                        <div className="flex items-center">
+                                                            <IconMenuCharts className="group-hover:!text-primary shrink-0" />
+                                                            <span className="ltr:pl-3 rtl:pr-3 text-black dark:text-[#506690] dark:group-hover:text-white-dark">{t('Dashboard')}</span>
+                                                        </div>
+                                                    </NavLink>
+                                                </li>
+                                                <li className="menu nav-item">
+                                                    <NavLink to="/admin/learning-management/course-catalog" className="group">
+                                                        <div className="flex items-center">
+                                                            <IconMenuTables className="group-hover:!text-primary shrink-0" />
+                                                            <span className="ltr:pl-3 rtl:pr-3 text-black dark:text-[#506690] dark:group-hover:text-white-dark">{t('Course Catalog')}</span>
+                                                        </div>
+                                                    </NavLink>
+                                                </li>
+                                                <li className="menu nav-item">
+                                                    <NavLink to="/admin/learning-management/training-calendar" className="group">
+                                                        <div className="flex items-center">
+                                                            <IconMenuCalendar className="group-hover:!text-primary shrink-0" />
+                                                            <span className="ltr:pl-3 rtl:pr-3 text-black dark:text-[#506690] dark:group-hover:text-white-dark">{t('Training Calendar')}</span>
+                                                        </div>
+                                                    </NavLink>
+                                                </li>
+                                                <li className="menu nav-item">
+                                                    <NavLink to="/admin/learning-management/compliance-training" className="group">
+                                                        <div className="flex items-center">
+                                                            <IconMenuForms className="group-hover:!text-primary shrink-0" />
+                                                            <span className="ltr:pl-3 rtl:pr-3 text-black dark:text-[#506690] dark:group-hover:text-white-dark">{t('Compliance Training')}</span>
+                                                        </div>
+                                                    </NavLink>
+                                                </li>
+                                                <li className="menu nav-item">
+                                                    <NavLink to="/admin/learning-management/certifications" className="group">
+                                                        <div className="flex items-center">
+                                                            <IconMenuDocumentation className="group-hover:!text-primary shrink-0" />
+                                                            <span className="ltr:pl-3 rtl:pr-3 text-black dark:text-[#506690] dark:group-hover:text-white-dark">{t('Certifications')}</span>
+                                                        </div>
+                                                    </NavLink>
+                                                </li>
+                                                <li className="menu nav-item">
+                                                    <NavLink to="/admin/learning-management/training-requests" className="group">
+                                                        <div className="flex items-center">
+                                                            <IconMenuInvoice className="group-hover:!text-primary shrink-0" />
+                                                            <span className="ltr:pl-3 rtl:pr-3 text-black dark:text-[#506690] dark:group-hover:text-white-dark">{t('Training Requests')}</span>
+                                                        </div>
+                                                    </NavLink>
+                                                </li>
+                                                <li className="menu nav-item">
+                                                    <NavLink to="/admin/learning-management/reports" className="group">
+                                                        <div className="flex items-center">
+                                                            <IconMenuPages className="group-hover:!text-primary shrink-0" />
+                                                            <span className="ltr:pl-3 rtl:pr-3 text-black dark:text-[#506690] dark:group-hover:text-white-dark">{t('Reports')}</span>
+                                                        </div>
+                                                    </NavLink>
+                                                </li>
+                                                <li className="menu nav-item">
+                                                    <NavLink to="/admin/learning-management/administration" className="group">
+                                                        <div className="flex items-center">
+                                                            <IconMenuElements className="group-hover:!text-primary shrink-0" />
+                                                            <span className="ltr:pl-3 rtl:pr-3 text-black dark:text-[#506690] dark:group-hover:text-white-dark">{t('Administration')}</span>
+                                                        </div>
+                                                    </NavLink>
+                                                </li>
+                                            </>
+                                        ) : isPerfPage ? (
                                             <>
                                                 {/* Return to Performance Dashboard */}
                                                 <li className="menu nav-item">
@@ -922,6 +1069,16 @@ const Sidebar = () => {
                                             <div className="flex items-center">
                                                 <IconMenuTables className="group-hover:!text-primary shrink-0" />
                                                 <span className="ltr:pl-3 rtl:pr-3 text-black dark:text-[#506690] dark:group-hover:text-white-dark">{t('Learning Corner')}</span>
+                                            </div>
+                                        </NavLink>
+                                    </li>
+
+                                    {/* Learning Management link in main sidebar */}
+                                    <li className="menu nav-item">
+                                        <NavLink to="/admin/learning-management" className="group">
+                                            <div className="flex items-center">
+                                                <IconOpenBook className="group-hover:!text-primary shrink-0 w-[18px] h-[18px]" />
+                                                <span className="ltr:pl-3 rtl:pr-3 text-black dark:text-[#506690] dark:group-hover:text-white-dark">{t('Learning Management')}</span>
                                             </div>
                                         </NavLink>
                                     </li>
