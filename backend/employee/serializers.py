@@ -1211,7 +1211,7 @@ class AssessmentAttemptSerializer(serializers.ModelSerializer):
             'enrollment', 'attempt_number', 'score', 'is_passed', 'started_at', 'submitted_at',
             'answers'
         ]
-        read_only_fields = ['employee', 'attempt_number', 'score', 'is_passed', 'started_at', 'submitted_at']
+        read_only_fields = ['employee', 'attempt_number', 'started_at', 'submitted_at']
 
 
 class AssessmentSerializer(serializers.ModelSerializer):

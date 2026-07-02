@@ -67,7 +67,7 @@ type SubmissionType = {
     assignment: number;
     submitted_file?: string | null;
     submitted_file_url?: string | null;
-    status: 'submitted' | 'late' | 'graded';
+    status: 'submitted' | 'late' | 'graded' | 'resubmit_requested';
     marks_obtained?: number | null;
     trainer_comments?: string;
 };
@@ -81,6 +81,7 @@ const CourseSyllabusPlayer = () => {
     const [completedLessons, setCompletedLessons] = useState<number[]>([]);
     const [quizzes, setQuizzes] = useState<AssessmentType[]>([]);
     const [assignments, setAssignments] = useState<AssignmentType[]>([]);
+    const [attempts, setAttempts] = useState<any[]>([]);
     
     // Submissions map
     const [submissions, setSubmissions] = useState<Record<number, SubmissionType>>({});
@@ -135,13 +136,14 @@ const CourseSyllabusPlayer = () => {
 
             // 2. Fetch course contents, progress logs, assessments, assignments, active submissions, and reviews in parallel
             const headers = getHeaders();
-            const [contentsRes, progressRes, quizRes, assRes, subRes, reviewsRes] = await Promise.all([
+            const [contentsRes, progressRes, quizRes, assRes, subRes, reviewsRes, attemptsRes] = await Promise.all([
                 fetch(`${CONTENTS_API}?course_id=${courseId}`, { headers }),
                 fetch(`${PROGRESS_API}?enrollment_id=${enrollmentId}`, { headers }),
                 fetch(`${ASSESSMENTS_API}?course_id=${courseId}`, { headers }),
                 fetch(`${ASSIGNMENTS_API}?course_id=${courseId}`, { headers }),
                 fetch(SUBMISSIONS_API, { headers }),
                 fetch(`${REVIEWS_API}?course_id=${courseId}`, { headers }),
+                fetch(ATTEMPTS_API, { headers }),
             ]);
             if (contentsRes.ok) {
                 const contentsData = await contentsRes.json();
@@ -193,6 +195,11 @@ const CourseSyllabusPlayer = () => {
                 if (myReview) {
                     setReviewed(true);
                 }
+            }
+
+            if (attemptsRes.ok) {
+                const attemptsData = await attemptsRes.json();
+                setAttempts(attemptsData.results || attemptsData || []);
             }
 
         } catch (error) {
@@ -284,6 +291,18 @@ const CourseSyllabusPlayer = () => {
         }
     };
 
+    const fetchAttempts = async () => {
+        try {
+            const response = await fetch(ATTEMPTS_API, { headers: getHeaders() });
+            if (response.ok) {
+                const data = await response.json();
+                setAttempts(data.results || data || []);
+            }
+        } catch (error) {
+            console.error('Error refreshing attempts:', error);
+        }
+    };
+
     // Evaluation sheet submit
     const handleSubmitQuiz = async () => {
         if (!activeQuiz) return;
@@ -330,6 +349,7 @@ const CourseSyllabusPlayer = () => {
             if (response.ok) {
                 setQuizResult({ score: pct, passed });
                 setQuizSubmitted(true);
+                fetchAttempts();
 
                 Swal.fire({
                     title: passed ? 'Passed!' : 'Failed!',
@@ -696,77 +716,161 @@ const CourseSyllabusPlayer = () => {
                                         <span>Questions count: <strong>{quizQuestions.length} Qs</strong></span>
                                     </div>
                                 </div>
+                                {(() => {
+                                    const quizAttempts = attempts.filter((att: any) => att.assessment === activeQuiz.id);
+                                    const attemptCount = quizAttempts.length;
+                                    const maxAttempts = activeQuiz.max_attempts || 1;
+                                    const hasReachedMax = attemptCount >= maxAttempts;
+                                    
+                                    if (quizSubmitted) {
+                                        return (
+                                            <div className="space-y-6 overflow-y-auto max-h-[400px] pr-2">
+                                                <div className="text-center p-6 bg-[#fcfcfc] dark:bg-black/25 rounded-xl border border-gray-150">
+                                                    <span className="text-4xl block mb-2">{quizResult?.passed ? '🎉' : '⚠️'}</span>
+                                                    <h3 className="text-lg font-extrabold text-gray-800 dark:text-white">
+                                                        {quizResult?.passed ? 'Passed successfully!' : 'Score below passing criteria'}
+                                                    </h3>
+                                                    <p className="text-sm text-gray-500 mt-2">You achieved a score of <strong>{quizResult?.score}%</strong>.</p>
+                                                    {!hasReachedMax ? (
+                                                        <button
+                                                            type="button"
+                                                            className="btn btn-outline-primary btn-sm rounded-lg mt-5 mx-auto"
+                                                            onClick={() => { setQuizSubmitted(false); setQuizAnswers({}); setQuizResult(null); }}
+                                                        >
+                                                            Retake Assessment
+                                                        </button>
+                                                    ) : (
+                                                        <div className="mt-4 text-xs text-danger font-bold">
+                                                            🚫 Maximum allowed attempts ({maxAttempts}) reached for this quiz.
+                                                        </div>
+                                                    )}
+                                                </div>
 
-                                {quizSubmitted ? (
-                                    <div className="m-auto text-center max-w-sm p-6 bg-gray-55 dark:bg-black/25 rounded-xl border border-gray-150">
-                                        <span className="text-4xl block mb-2">{quizResult?.passed ? '🎉' : '⚠️'}</span>
-                                        <h3 className="text-lg font-extrabold text-gray-800 dark:text-white">
-                                            {quizResult?.passed ? 'Passed successfully!' : 'Score below passing criteria'}
-                                        </h3>
-                                        <p className="text-sm text-gray-500 mt-2">You achieved a score of <strong>{quizResult?.score}%</strong>.</p>
-                                        <button
-                                            type="button"
-                                            className="btn btn-outline-primary btn-sm rounded-lg mt-5 mx-auto"
-                                            onClick={() => { setQuizSubmitted(false); setQuizAnswers({}); setQuizResult(null); }}
-                                        >
-                                            Retake Assessment
-                                        </button>
-                                    </div>
-                                ) : quizQuestions.length === 0 ? (
-                                    <div className="m-auto text-center text-gray-400 italic">No questions mapped for this quiz.</div>
-                                ) : (
-                                    <div className="space-y-6 overflow-y-auto max-h-[400px] pr-2">
-                                        {quizQuestions.map((q, idx) => (
-                                            <div key={q.id} className="p-4 border border-[#e0e6ed] dark:border-[#1b2e4b] rounded-xl bg-gray-50 dark:bg-black/10">
-                                                <div className="text-xs font-bold text-gray-450 uppercase mb-2">Question {idx + 1} ({q.marks} Marks)</div>
-                                                <p className="text-sm font-bold text-gray-850 dark:text-gray-250 mb-3">{q.question_text}</p>
-                                                {q.question_type === 'mcq' || q.question_type === 'true_false' ? (
-                                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                                                        {q.options.map((opt) => (
-                                                            <label
-                                                                key={opt}
-                                                                className={`p-3 rounded-lg border text-xs cursor-pointer transition-all duration-300 flex items-center gap-2.5 font-medium ${
-                                                                    quizAnswers[q.id] === opt
-                                                                        ? 'border-primary bg-primary/5 text-primary'
-                                                                        : 'border-gray-200 dark:border-gray-800 hover:bg-white dark:hover:bg-gray-800 bg-white/40 dark:bg-[#0e1726]/10'
-                                                                }`}
-                                                            >
-                                                                <input
-                                                                    type="radio"
-                                                                    name={`q-${q.id}`}
-                                                                    value={opt}
-                                                                    checked={quizAnswers[q.id] === opt}
-                                                                    onChange={() => setQuizAnswers((prev) => ({ ...prev, [q.id]: opt }))}
-                                                                    className="text-primary focus:ring-primary h-3.5 w-3.5"
-                                                                />
-                                                                <span>{opt}</span>
-                                                            </label>
-                                                        ))}
+                                                <div className="panel border border-[#e0e6ed] dark:border-[#1b2e4b] rounded-xl p-5 bg-white dark:bg-[#0e1726]/40">
+                                                    <h4 className="font-bold text-xs mb-4 uppercase text-gray-650 dark:text-gray-400">Review Submitted Answers:</h4>
+                                                    <div className="space-y-4">
+                                                        {quizQuestions.map((q, idx) => {
+                                                            const chosen = quizAnswers[q.id] || 'No Answer';
+                                                            const isCorrect = chosen.trim().toLowerCase() === q.correct_answer.trim().toLowerCase();
+                                                            return (
+                                                                <div key={q.id} className={`p-4 rounded-lg border ${isCorrect ? 'border-success/20 bg-success/5' : 'border-danger/20 bg-danger/5'}`}>
+                                                                    <div className="font-semibold text-xs text-gray-500 mb-1">Question {idx + 1}:</div>
+                                                                    <div className="font-bold text-sm text-gray-800 dark:text-gray-250 mb-2">{q.question_text}</div>
+                                                                    <div className="text-xs space-y-1">
+                                                                        <div>Your Answer: <strong className={isCorrect ? 'text-success' : 'text-danger'}>{chosen}</strong></div>
+                                                                        <div>Correct Answer: <strong className="text-success">{q.correct_answer}</strong></div>
+                                                                    </div>
+                                                                </div>
+                                                            );
+                                                        })}
                                                     </div>
-                                                ) : (
-                                                    <input
-                                                        type="text"
-                                                        className="form-input rounded-lg text-xs"
-                                                        placeholder="Write your short answer key here..."
-                                                        value={quizAnswers[q.id] || ''}
-                                                        onChange={(e) => setQuizAnswers((prev) => ({ ...prev, [q.id]: e.target.value }))}
-                                                    />
+                                                </div>
+                                            </div>
+                                        );
+                                    }
+
+                                    if (hasReachedMax && !quizSubmitted) {
+                                        return (
+                                            <div className="m-auto text-center max-w-md p-6 bg-white dark:bg-[#0e1726]/30 rounded-xl border border-gray-150 dark:border-gray-800 shadow-sm">
+                                                <span className="text-4xl block mb-2">🚫</span>
+                                                <h3 className="text-lg font-extrabold text-gray-800 dark:text-white-light">
+                                                    Attempts Limit Reached
+                                                </h3>
+                                                <p className="text-xs text-gray-500 mt-2">
+                                                    You have completed the maximum allowed <strong>{maxAttempts}</strong> attempts for this assessment.
+                                                </p>
+
+                                                {quizAttempts.length > 0 && (
+                                                    <div className="mt-6 bg-[#fbfbfb] dark:bg-black/10 p-4 rounded-xl border border-gray-100 dark:border-gray-850 text-left text-xs">
+                                                        <div className="font-bold mb-2 text-gray-700 dark:text-gray-300">Your Attempt History:</div>
+                                                        <div className="space-y-2">
+                                                            {quizAttempts.map((att: any, idx: number) => (
+                                                                <div key={att.id} className="flex justify-between items-center border-b border-gray-100 dark:border-gray-800 pb-2 last:border-0 last:pb-0">
+                                                                    <span>Attempt #{att.attempt_number || (idx + 1)}</span>
+                                                                    <span className="font-bold">
+                                                                        Score: <span className="text-primary">{att.score}%</span> (
+                                                                        <span className={att.is_passed ? 'text-success' : 'text-danger'}>
+                                                                            {att.is_passed ? 'Passed' : 'Failed'}
+                                                                        </span>)
+                                                                    </span>
+                                                                </div>
+                                                            ))}
+                                                        </div>
+                                                    </div>
                                                 )}
                                             </div>
-                                        ))}
+                                        );
+                                    }
 
-                                        <div className="flex justify-end pt-4 border-t border-[#ebedf2] dark:border-[#1b2e4b]">
-                                            <button
-                                                type="button"
-                                                className="btn btn-primary rounded-lg font-bold text-xs py-2 px-6"
-                                                onClick={handleSubmitQuiz}
-                                                disabled={saving}
-                                            >
-                                                Submit Evaluation Sheets
-                                            </button>
+                                    if (quizQuestions.length === 0) {
+                                        return <div className="m-auto text-center text-gray-400 italic">No questions mapped for this quiz.</div>;
+                                    }
+
+                                    return (
+                                        <div className="space-y-6 overflow-y-auto max-h-[400px] pr-2">
+                                            {quizAttempts.length > 0 && (
+                                                <div className="bg-primary/5 border border-primary/20 p-3 rounded-xl text-xs flex justify-between items-center mb-2">
+                                                    <div>
+                                                        Attempts Made: <strong>{attemptCount} / {maxAttempts}</strong>
+                                                    </div>
+                                                    <div>
+                                                        Best Score: <strong>{Math.max(...quizAttempts.map((a: any) => Number(a.score)))}%</strong>
+                                                    </div>
+                                                </div>
+                                            )}
+
+                                            {quizQuestions.map((q, idx) => (
+                                                <div key={q.id} className="p-4 border border-[#e0e6ed] dark:border-[#1b2e4b] rounded-xl bg-gray-50 dark:bg-black/10">
+                                                    <div className="text-xs font-bold text-gray-450 uppercase mb-2">Question {idx + 1} ({q.marks} Marks)</div>
+                                                    <p className="text-sm font-bold text-gray-850 dark:text-gray-250 mb-3">{q.question_text}</p>
+                                                    {q.question_type === 'mcq' || q.question_type === 'true_false' ? (
+                                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                                            {q.options.map((opt) => (
+                                                                <label
+                                                                    key={opt}
+                                                                    className={`p-3 rounded-lg border text-xs cursor-pointer transition-all duration-300 flex items-center gap-2.5 font-medium ${
+                                                                        quizAnswers[q.id] === opt
+                                                                            ? 'border-primary bg-primary/5 text-primary'
+                                                                            : 'border-gray-200 dark:border-gray-800 hover:bg-white dark:hover:bg-gray-800 bg-white/40 dark:bg-[#0e1726]/10'
+                                                                    }`}
+                                                                >
+                                                                    <input
+                                                                        type="radio"
+                                                                        name={`q-${q.id}`}
+                                                                        value={opt}
+                                                                        checked={quizAnswers[q.id] === opt}
+                                                                        onChange={() => setQuizAnswers((prev) => ({ ...prev, [q.id]: opt }))}
+                                                                        className="text-primary focus:ring-primary h-3.5 w-3.5"
+                                                                    />
+                                                                    <span>{opt}</span>
+                                                                </label>
+                                                            ))}
+                                                        </div>
+                                                    ) : (
+                                                        <input
+                                                            type="text"
+                                                            className="form-input rounded-lg text-xs"
+                                                            placeholder="Write your short answer key here..."
+                                                            value={quizAnswers[q.id] || ''}
+                                                            onChange={(e) => setQuizAnswers((prev) => ({ ...prev, [q.id]: e.target.value }))}
+                                                        />
+                                                    )}
+                                                </div>
+                                            ))}
+
+                                            <div className="flex justify-end pt-4 border-t border-[#ebedf2] dark:border-[#1b2e4b]">
+                                                <button
+                                                    type="button"
+                                                    className="btn btn-primary rounded-lg font-bold text-xs py-2 px-6"
+                                                    onClick={handleSubmitQuiz}
+                                                    disabled={saving}
+                                                >
+                                                    Submit Evaluation Sheets
+                                                </button>
+                                            </div>
                                         </div>
-                                    </div>
-                                )}
+                                    );
+                                })()}
                             </div>
                         )}
 
@@ -791,24 +895,44 @@ const CourseSyllabusPlayer = () => {
                                     </div>
 
                                     {/* Submission status and review */}
-                                    {sub && (
-                                        <div className="p-4 bg-success-light/10 dark:bg-success-dark/10 border border-success/15 rounded-xl mb-6 space-y-2">
-                                            <div className="flex items-center justify-between text-xs">
-                                                <span className="font-bold text-success">Submission Status:</span>
-                                                <span className="badge badge-success capitalize">{sub.status}</span>
+                                    {sub && (() => {
+                                        let containerBg = 'bg-blue-500/5 dark:bg-blue-500/10 border-blue-500/20';
+                                        let textColor = 'text-blue-600 dark:text-blue-400';
+                                        let badgeColor = 'bg-blue-500 text-white';
+
+                                        if (sub.status === 'graded') {
+                                            containerBg = 'bg-success/5 dark:bg-success/10 border-success/20';
+                                            textColor = 'text-success';
+                                            badgeColor = 'bg-success text-white';
+                                        } else if (sub.status === 'late') {
+                                            containerBg = 'bg-amber-500/5 dark:bg-amber-500/10 border-amber-500/20';
+                                            textColor = 'text-amber-600 dark:text-amber-400';
+                                            badgeColor = 'bg-amber-500 text-white';
+                                        } else if (sub.status === 'resubmit_requested') {
+                                            containerBg = 'bg-danger/5 dark:bg-danger/10 border-danger/20';
+                                            textColor = 'text-danger';
+                                            badgeColor = 'bg-danger text-white';
+                                        }
+
+                                        return (
+                                            <div className={`p-4 ${containerBg} border rounded-xl mb-6 space-y-2`}>
+                                                <div className="flex items-center justify-between text-xs">
+                                                    <span className={`font-bold ${textColor}`}>Submission Status:</span>
+                                                    <span className={`badge ${badgeColor} text-[9px] uppercase px-2 py-0.5 rounded font-bold`}>{sub.status}</span>
+                                                </div>
+                                                {sub.marks_obtained !== null && (
+                                                    <div className="text-xs text-gray-700 dark:text-gray-300 font-medium">
+                                                        Score: <strong className="text-success">{sub.marks_obtained}</strong> / {activeAssignment.max_marks} Pts
+                                                    </div>
+                                                )}
+                                                {sub.trainer_comments && (
+                                                    <div className="text-xs bg-white dark:bg-black/10 p-3 rounded-lg border border-success/10 text-gray-500 dark:text-gray-400 mt-2 font-medium">
+                                                        <strong>Instructor Feedback comments:</strong> {sub.trainer_comments}
+                                                    </div>
+                                                )}
                                             </div>
-                                            {sub.marks_obtained !== null && (
-                                                <div className="text-xs text-gray-700 dark:text-gray-300 font-medium">
-                                                    Score: <strong className="text-success">{sub.marks_obtained}</strong> / {activeAssignment.max_marks} Pts
-                                                </div>
-                                            )}
-                                            {sub.trainer_comments && (
-                                                <div className="text-xs bg-white dark:bg-black/10 p-3 rounded-lg border border-success/10 text-gray-500 dark:text-gray-400 mt-2 font-medium">
-                                                    <strong>Instructor Feedback comments:</strong> {sub.trainer_comments}
-                                                </div>
-                                            )}
-                                        </div>
-                                    )}
+                                        );
+                                    })()}
 
                                     {/* Submission uploader */}
                                     {(!sub || sub.status !== 'graded') && (
@@ -826,7 +950,7 @@ const CourseSyllabusPlayer = () => {
                                                 <button
                                                     type="submit"
                                                     disabled={saving || !uploadFile}
-                                                    className="btn btn-primary rounded-lg text-xs py-2 px-6 shadow-md"
+                                                    className={`btn ${sub ? 'btn-outline-warning' : 'btn-primary'} rounded-lg text-xs py-2 px-6 shadow-md`}
                                                 >
                                                     {saving ? 'Uploading...' : sub ? 'Update Submission' : 'Submit Assignment'}
                                                 </button>
