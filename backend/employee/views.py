@@ -3742,7 +3742,10 @@ class LearningPathAssignmentViewSet(viewsets.ModelViewSet):
         user_emp = getattr(self.request.user, 'employee_profile', None)
         if not user_emp:
             return LearningPathAssignment.objects.none()
-        return LearningPathAssignment.objects.filter(employee__company=user_emp.company).order_by('-id')
+        is_admin_or_manager = self.request.user.is_superuser or getattr(self.request.user, 'role', '') in ['admin', 'manager']
+        if is_admin_or_manager:
+            return LearningPathAssignment.objects.filter(employee__company=user_emp.company).order_by('-id')
+        return LearningPathAssignment.objects.filter(employee=user_emp).order_by('-id')
 
     def perform_create(self, serializer):
         user_emp = getattr(self.request.user, 'employee_profile', None)
@@ -3770,7 +3773,10 @@ class ComplianceAssignmentViewSet(viewsets.ModelViewSet):
             due_date__lt=date.today()
         ).update(status='overdue')
 
-        return ComplianceAssignment.objects.filter(employee__company=user_emp.company).order_by('-id')
+        is_admin_or_manager = self.request.user.is_superuser or getattr(self.request.user, 'role', '') in ['admin', 'manager']
+        if is_admin_or_manager:
+            return ComplianceAssignment.objects.filter(employee__company=user_emp.company).order_by('-id')
+        return ComplianceAssignment.objects.filter(employee=user_emp).order_by('-id')
 
 
 class CertificateViewSet(viewsets.ModelViewSet):
@@ -3780,12 +3786,15 @@ class CertificateViewSet(viewsets.ModelViewSet):
     filter_backends = [filters.SearchFilter, DjangoFilterBackend]
     search_fields = ['certificate_name', 'certificate_number', 'employee__first_name', 'employee__last_name']
     filterset_fields = ['employee', 'course', 'status', 'source']
-
     def get_queryset(self):
         user_emp = getattr(self.request.user, 'employee_profile', None)
         if not user_emp:
             return Certificate.objects.none()
-        return Certificate.objects.filter(employee__company=user_emp.company).order_by('-issue_date')
+        is_admin_or_manager = self.request.user.is_superuser or getattr(self.request.user, 'role', '') in ['admin', 'manager']
+        if is_admin_or_manager:
+            return Certificate.objects.filter(employee__company=user_emp.company).order_by('-issue_date')
+        return Certificate.objects.filter(employee=user_emp).order_by('-issue_date')
+
 
 
 class TrainingRequestViewSet(viewsets.ModelViewSet):

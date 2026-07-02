@@ -75,7 +75,19 @@ const EmployeeCourseCatalog = () => {
                 const enrollmentsData = await enrollmentsRes.json();
                 const wishlistsData = await wishlistsRes.json();
 
-                setCourses((coursesData.results || coursesData || []).filter((c: CourseType) => c.is_published));
+                const coursesList = (coursesData.results || coursesData || []).map((c: any) => ({
+                    id: c.id,
+                    title: c.title,
+                    description: c.description,
+                    category: c.category,
+                    category_name: c.category_name,
+                    difficulty: c.difficulty_level || 'beginner',
+                    estimated_hours: Number(c.duration_hours) || 0,
+                    is_published: c.status === 'published',
+                    course_image: c.thumbnail_url || c.thumbnail || null,
+                    trainer_name: c.trainer_name,
+                }));
+                setCourses(coursesList.filter((c: any) => c.is_published));
                 setEnrollments(enrollmentsData.results || enrollmentsData || []);
                 setWishlist(wishlistsData.results || wishlistsData || []);
             }
