@@ -9,7 +9,8 @@ from datetime import datetime, timedelta
 import pytz
 import calendar
 from datetime import date
-from django.db.models import Q, Prefetch, Max, Exists, OuterRef
+from django.db.models import Q, Prefetch, Max, Exists, OuterRef, Count, Avg
+from django.db.models.functions import TruncMonth
 from rest_framework.views import APIView
 from calendar import month_name
 from django_filters.rest_framework import DjangoFilterBackend
@@ -4084,6 +4085,183 @@ class CourseWishlistViewSet(viewsets.ModelViewSet):
         if CourseWishlist.objects.filter(employee=user_emp, course=course_id).exists():
             raise serializers.ValidationError({"course": "This course is already in your wishlist."})
         serializer.save(employee=user_emp)
+
+
+class LMSDashboardAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        now = timezone.now()
+
+        # ---- Core counts ----
+        courses_qs = Course.objects.all()
+        total_courses = courses_qs.count()
+        published_courses = courses_qs.filter(status='published').count()
+
+        enrollments_qs = Enrollment.objects.all()
+        total_enrollments = enrollments_qs.count()
+        completed_enrollments = enrollments_qs.filter(status='completed').count()
+        active_learners = enrollments_qs.values('employee_id').distinct().count()
+        avg_progress = enrollments_qs.aggregate(avg=Avg('progress_percentage'))['avg'] or 0
+
+        total_certificates = Certificate.objects.count()
+        valid_certificates = Certificate.objects.filter(status='valid').count()
+
+        compliance_qs = ComplianceAssignment.objects.all()
+        compliance_total = compliance_qs.count()
+        compliance_completed = compliance_qs.filter(status='completed').count()
+        compliance_completion_rate = round((compliance_completed / compliance_total) * 100, 1) if compliance_total else 0
+
+        avg_course_rating = CourseReview.objects.aggregate(avg=Avg('rating'))['avg'] or 0
+
+        pending_training_requests = TrainingRequest.objects.filter(
+            Q(manager_status='pending') | Q(admin_status='pending')
+        ).count()
+
+        completion_rate = round((completed_enrollments / total_enrollments) * 100, 1) if total_enrollments else 0
+
+        summary = {
+            'total_courses': total_courses,
+            'published_courses': published_courses,
+            'total_enrollments': total_enrollments,
+            'completed_enrollments': completed_enrollments,
+            'completion_rate': completion_rate,
+            'avg_progress': round(avg_progress, 1),
+            'active_learners': active_learners,
+            'total_certificates': total_certificates,
+            'valid_certificates': valid_certificates,
+            'compliance_completion_rate': compliance_completion_rate,
+            'avg_course_rating': round(avg_course_rating, 2),
+            'pending_training_requests': pending_training_requests,
+        }
+
+        # ---- Courses by category ----
+        courses_by_category = [
+            {'name': row['category__name'] or 'Uncategorized', 'count': row['count']}
+            for row in courses_qs.values('category__name').annotate(count=Count('id')).order_by('-count')
+        ]
+
+        # ---- Courses by difficulty ----
+        difficulty_labels = dict(Course.DIFFICULTY_CHOICES)
+        courses_by_difficulty = [
+            {'level': difficulty_labels.get(row['difficulty_level'], row['difficulty_level']), 'count': row['count']}
+            for row in courses_qs.values('difficulty_level').annotate(count=Count('id')).order_by('-count')
+        ]
+
+        # ---- Enrollment status breakdown ----
+        status_labels = dict(Enrollment.STATUS_CHOICES)
+        enrollment_status_breakdown = [
+            {'status': status_labels.get(row['status'], row['status']), 'count': row['count']}
+            for row in enrollments_qs.values('status').annotate(count=Count('id')).order_by('-count')
+        ]
+
+        # ---- Monthly enrollment / completion trend (last 6 months) ----
+        months = []
+        cursor = now.replace(day=1)
+        for _ in range(6):
+            months.append(cursor)
+            cursor = (cursor - timedelta(days=1)).replace(day=1)
+        months.reverse()
+
+        enrolled_by_month = {
+            row['m'].strftime('%Y-%m'): row['count']
+            for row in enrollments_qs.annotate(m=TruncMonth('enrolled_at')).values('m').annotate(count=Count('id'))
+        }
+        completed_by_month = {
+            row['m'].strftime('%Y-%m'): row['count']
+            for row in enrollments_qs.filter(completed_at__isnull=False).annotate(m=TruncMonth('completed_at')).values('m').annotate(count=Count('id'))
+        }
+        monthly_enrollment_trend = [
+            {
+                'month': m.strftime('%b %Y'),
+                'enrollments': enrolled_by_month.get(m.strftime('%Y-%m'), 0),
+                'completions': completed_by_month.get(m.strftime('%Y-%m'), 0),
+            }
+            for m in months
+        ]
+
+        # ---- Top courses by enrollment ----
+        top_courses = []
+        for course in courses_qs.annotate(enrollment_count=Count('enrollments')).order_by('-enrollment_count')[:6]:
+            if course.enrollment_count == 0:
+                continue
+            course_enrollments = course.enrollments.all()
+            course_completed = course_enrollments.filter(status='completed').count()
+            rating = course.reviews.aggregate(avg=Avg('rating'))['avg'] or 0
+            top_courses.append({
+                'id': course.id,
+                'title': course.title,
+                'category': course.category.name if course.category else 'Uncategorized',
+                'enrollments': course.enrollment_count,
+                'completion_rate': round((course_completed / course.enrollment_count) * 100, 1),
+                'avg_rating': round(rating, 2),
+            })
+
+        # ---- Department-wise completion ----
+        dept_rows = {}
+        for enr in enrollments_qs.select_related('employee__department'):
+            dept = enr.employee.department.department_name if enr.employee and enr.employee.department else 'Unassigned'
+            row = dept_rows.setdefault(dept, {'department': dept, 'enrolled': 0, 'completed': 0})
+            row['enrolled'] += 1
+            if enr.status == 'completed':
+                row['completed'] += 1
+        department_completion = []
+        for row in sorted(dept_rows.values(), key=lambda r: -r['enrolled'])[:8]:
+            row['completion_rate'] = round((row['completed'] / row['enrolled']) * 100, 1) if row['enrolled'] else 0
+            department_completion.append(row)
+
+        # ---- Compliance status split ----
+        compliance_labels = dict(ComplianceAssignment.STATUS_CHOICES)
+        compliance_status = [
+            {'status': compliance_labels.get(row['status'], row['status']), 'count': row['count']}
+            for row in compliance_qs.values('status').annotate(count=Count('id')).order_by('-count')
+        ]
+
+        # ---- Certificate issuance trend (last 6 months) ----
+        cert_by_month = {
+            row['m'].strftime('%Y-%m'): row['count']
+            for row in Certificate.objects.annotate(m=TruncMonth('created_at')).values('m').annotate(count=Count('id'))
+        }
+        certificate_trend = [
+            {'month': m.strftime('%b %Y'), 'count': cert_by_month.get(m.strftime('%Y-%m'), 0)}
+            for m in months
+        ]
+
+        # ---- Training request funnel ----
+        tr_qs = TrainingRequest.objects.all()
+        training_request_funnel = [
+            {'stage': 'Submitted', 'count': tr_qs.count()},
+            {'stage': 'Manager Approved', 'count': tr_qs.filter(manager_status='approved').count()},
+            {'stage': 'Admin Approved', 'count': tr_qs.filter(admin_status='approved').count()},
+            {'stage': 'Rejected', 'count': tr_qs.filter(Q(manager_status='rejected') | Q(admin_status='rejected')).count()},
+        ]
+
+        # ---- Upcoming training sessions ----
+        upcoming_sessions = [
+            {
+                'id': s.id,
+                'title': s.title,
+                'session_type': s.session_type,
+                'start_datetime': s.start_datetime,
+                'trainer': s.trainer.full_name if s.trainer else None,
+                'registered_count': s.attendance.count(),
+            }
+            for s in TrainingSession.objects.filter(start_datetime__gte=now).order_by('start_datetime')[:5]
+        ]
+
+        return Response({
+            'summary': summary,
+            'courses_by_category': courses_by_category,
+            'courses_by_difficulty': courses_by_difficulty,
+            'enrollment_status_breakdown': enrollment_status_breakdown,
+            'monthly_enrollment_trend': monthly_enrollment_trend,
+            'top_courses': top_courses,
+            'department_completion': department_completion,
+            'compliance_status': compliance_status,
+            'certificate_trend': certificate_trend,
+            'training_request_funnel': training_request_funnel,
+            'upcoming_sessions': upcoming_sessions,
+        })
 
 
 

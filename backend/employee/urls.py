@@ -80,6 +80,7 @@ urlpatterns = [
     path('attendance-chart/', AttendanceChartDataAPIView.as_view(), name='attendance-chart'),
     path('performance-profile/<int:emp_id>/', EmployeePerformanceProfileAPIView.as_view(), name='employee-performance-profile'),
     path('performance-dashboard/', PerformanceDashboardAPIView.as_view(), name='performance-dashboard'),
+    path('lms-dashboard/', LMSDashboardAPIView.as_view(), name='lms-dashboard'),
     path('performance-dashboard/my/', MyPerformanceDashboardAPIView.as_view(), name='my-performance-dashboard'),
     path('kra-tasks/', EmployeeKRATasksAPIView.as_view(), name='kra-tasks'),
 
