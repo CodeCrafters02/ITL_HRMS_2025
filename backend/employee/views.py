@@ -3902,14 +3902,18 @@ class AssessmentAttemptViewSet(viewsets.ModelViewSet):
         if not user_emp:
             return AssessmentAttempt.objects.none()
         
+        user = self.request.user
+        is_admin_or_manager = user.is_superuser or getattr(user, 'role', '') in ['admin', 'manager']
+        
+        qs = AssessmentAttempt.objects.filter(employee__company=user_emp.company)
+        if not is_admin_or_manager:
+            qs = qs.filter(employee=user_emp)
+
         assessment_id = self.request.query_params.get('assessment_id')
         if assessment_id:
-            return AssessmentAttempt.objects.filter(
-                assessment_id=assessment_id,
-                employee__company=user_emp.company
-            ).order_by('-started_at')
+            qs = qs.filter(assessment_id=assessment_id)
 
-        return AssessmentAttempt.objects.filter(employee__company=user_emp.company).order_by('-started_at')
+        return qs.order_by('-started_at')
 
     def perform_create(self, serializer):
         from django.utils import timezone
@@ -3963,14 +3967,18 @@ class AssignmentSubmissionViewSet(viewsets.ModelViewSet):
         if not user_emp:
             return AssignmentSubmission.objects.none()
 
+        user = self.request.user
+        is_admin_or_manager = user.is_superuser or getattr(user, 'role', '') in ['admin', 'manager']
+
+        qs = AssignmentSubmission.objects.filter(employee__company=user_emp.company)
+        if not is_admin_or_manager:
+            qs = qs.filter(employee=user_emp)
+
         assignment_id = self.request.query_params.get('assignment_id')
         if assignment_id:
-            return AssignmentSubmission.objects.filter(
-                assignment_id=assignment_id,
-                employee__company=user_emp.company
-            ).order_by('-submitted_at')
+            qs = qs.filter(assignment_id=assignment_id)
 
-        return AssignmentSubmission.objects.filter(employee__company=user_emp.company).order_by('-submitted_at')
+        return qs.order_by('-submitted_at')
 
     def perform_create(self, serializer):
         user_emp = getattr(self.request.user, 'employee_profile', None)
