@@ -107,3 +107,58 @@ def calculate_effective_time(check_in, break_minutes=0, check_out=None, now=None
         "formatted": f"{hours}h {minutes}m",
         "seconds": effective_seconds
     }
+
+
+def issue_certificate_if_eligible(enrollment, request=None):
+    """
+    Auto-issue a course-completion Certificate once an employee has finished
+    every syllabus item and passed every quiz/assessment attached to the
+    course. Idempotent — a Certificate is only ever created once per
+    (employee, course).
+    """
+    import uuid
+    from django.core.files.base import ContentFile
+    from django.utils import timezone
+    from .models import CourseContent, LessonProgress, Assessment, AssessmentAttempt, Certificate
+
+    course = enrollment.course
+    employee = enrollment.employee
+
+    total_contents = CourseContent.objects.filter(course=course).count()
+    if total_contents == 0:
+        return
+    completed = LessonProgress.objects.filter(enrollment=enrollment, is_completed=True).count()
+    if completed < total_contents:
+        return
+
+    for assessment in Assessment.objects.filter(course=course):
+        if not AssessmentAttempt.objects.filter(employee=employee, assessment=assessment, is_passed=True).exists():
+            return
+
+    if Certificate.objects.filter(employee=employee, course=course).exists():
+        return
+
+    if enrollment.status != 'completed':
+        enrollment.status = 'completed'
+        enrollment.completed_at = timezone.now()
+        enrollment.save(update_fields=['status', 'completed_at'])
+
+    from app.utils import generate_certificate_pdf
+
+    company = getattr(employee, 'company', None)
+    certificate_number = f"CERT-{course.id}-{employee.id}-{uuid.uuid4().hex[:8].upper()}"
+    issue_date = timezone.now().date()
+    pdf_buffer = generate_certificate_pdf(employee, course, certificate_number, issue_date, request=request)
+
+    certificate = Certificate.objects.create(
+        employee=employee,
+        course=course,
+        certificate_name=f"{course.title} - Certificate of Completion",
+        issuing_authority=company.name if company and getattr(company, 'name', None) else '',
+        source='internal',
+        certificate_number=certificate_number,
+        issue_date=issue_date,
+        status='valid',
+    )
+    certificate.certificate_file.save(f"certificate_{certificate_number}.pdf", ContentFile(pdf_buffer.read()), save=True)
+    return certificate

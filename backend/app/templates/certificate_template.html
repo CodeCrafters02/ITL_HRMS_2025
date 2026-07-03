@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Certificate of Completion</title>
+    <style>
+        @page {
+            size: A4 landscape;
+            margin: 0;
+        }
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        html, body {
+            width: 297mm;
+            height: 210mm;
+            overflow: hidden;
+        }
+        body {
+            font-family: 'Georgia', 'Times New Roman', serif;
+        }
+        .frame {
+            width: 100%;
+            height: 100%;
+            padding: 8mm;
+            border: 2px solid #8b5cf6;
+            overflow: hidden;
+        }
+        .inner {
+            width: 100%;
+            height: 100%;
+            border: 1px solid #c4b5fd;
+            padding: 6mm 16mm;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            overflow: hidden;
+        }
+        .logo {
+            display: block;
+            max-height: 14mm;
+            max-width: 45mm;
+            margin: 0 auto 3mm auto;
+        }
+        .company-name {
+            font-size: 11pt;
+            line-height: 1.2;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            color: #4c1d95;
+            margin-bottom: 4mm;
+            max-width: 220mm;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .title {
+            font-size: 22pt;
+            line-height: 1.2;
+            color: #1f2937;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            margin-bottom: 3mm;
+        }
+        .subtitle {
+            font-size: 10pt;
+            line-height: 1.2;
+            color: #6b7280;
+            margin-bottom: 4mm;
+        }
+        .employee-name {
+            font-size: 20pt;
+            line-height: 1.2;
+            color: #8b5cf6;
+            font-weight: bold;
+            border-bottom: 1px solid #c4b5fd;
+            padding-bottom: 2mm;
+            margin-bottom: 4mm;
+            min-width: 110mm;
+            max-width: 220mm;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .completion-text {
+            font-size: 10.5pt;
+            color: #374151;
+            max-width: 180mm;
+            line-height: 1.35;
+            margin-bottom: 5mm;
+        }
+        .course-title {
+            font-weight: bold;
+            color: #1f2937;
+        }
+        .footer {
+            width: 100%;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+            margin-top: 6mm;
+        }
+        .footer-block {
+            text-align: center;
+            min-width: 55mm;
+        }
+        .footer-line {
+            border-top: 1px solid #9ca3af;
+            padding-top: 1.5mm;
+            font-size: 8.5pt;
+            line-height: 1.2;
+            color: #6b7280;
+        }
+        .cert-number {
+            font-size: 8.5pt;
+            line-height: 1.2;
+            color: #9ca3af;
+            margin-top: 3mm;
+        }
+        .signature-img {
+            display: block;
+            max-height: 10mm;
+            max-width: 38mm;
+            margin: 0 auto 1mm auto;
+        }
+    </style>
+</head>
+<body>
+    <div class="frame">
+        <div class="inner">
+            {% if company_logo_url %}
+            <img class="logo" src="{{ company_logo_url }}" alt="logo" />
+            {% endif %}
+            {% if company_name %}
+            <div class="company-name">{{ company_name }}</div>
+            {% endif %}
+
+            <div class="title">Certificate of Completion</div>
+            <div class="subtitle">This certificate is proudly presented to</div>
+
+            <div class="employee-name">{{ employee_name }}</div>
+
+            <div class="completion-text">
+                for successfully completing all the requirements of the course
+                <span class="course-title">"{{ course_title }}"</span>,
+                including all lesson materials and the final assessment, demonstrating
+                commitment to continuous learning and professional development.
+            </div>
+
+            <div class="footer">
+                <div class="footer-block">
+                    <div class="footer-line">Issue Date: {{ issue_date }}</div>
+                </div>
+                <div class="footer-block">
+                    {% if signature_image_url %}
+                    <img class="signature-img" src="{{ signature_image_url }}" alt="signature" />
+                    {% endif %}
+                    <div class="footer-line">{% if signatory_name %}{{ signatory_name }}{% else %}Authorized Signatory{% endif %}{% if signatory_title %} &mdash; {{ signatory_title }}{% endif %}</div>
+                </div>
+            </div>
+
+            <div class="cert-number">Certificate No: {{ certificate_number }}</div>
+        </div>
+    </div>
+</body>
+</html>

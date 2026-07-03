@@ -45,8 +45,7 @@ interface LMSDashboardData {
 
 const NAV_LINKS = [
     { to: '/admin/learning-management/course-catalog', label: 'Course Catalog' },
-    { to: '/admin/learning-management/training-calendar', label: 'Training Calendar' },
-    { to: '/admin/learning-management/compliance-training', label: 'Compliance Training' },
+    { to: '/admin/learning-management/compliance-training', label: 'Employee Course Activity' },
     { to: '/admin/learning-management/certifications', label: 'Certifications' },
     { to: '/admin/learning-management/training-requests', label: 'Training Requests' },
     { to: '/admin/learning-management/administration', label: 'Administration' },

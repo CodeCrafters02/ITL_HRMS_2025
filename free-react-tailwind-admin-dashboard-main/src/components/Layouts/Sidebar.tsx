@@ -748,18 +748,10 @@ const Sidebar = () => {
                                                     </NavLink>
                                                 </li>
                                                 <li className="menu nav-item">
-                                                    <NavLink to="/admin/learning-management/training-calendar" className="group">
-                                                        <div className="flex items-center">
-                                                            <IconMenuCalendar className="group-hover:!text-primary shrink-0" />
-                                                            <span className="ltr:pl-3 rtl:pr-3 text-black dark:text-[#506690] dark:group-hover:text-white-dark">{t('Training Calendar')}</span>
-                                                        </div>
-                                                    </NavLink>
-                                                </li>
-                                                <li className="menu nav-item">
                                                     <NavLink to="/admin/learning-management/compliance-training" className="group">
                                                         <div className="flex items-center">
                                                             <IconMenuForms className="group-hover:!text-primary shrink-0" />
-                                                            <span className="ltr:pl-3 rtl:pr-3 text-black dark:text-[#506690] dark:group-hover:text-white-dark">{t('Compliance Training')}</span>
+                                                            <span className="ltr:pl-3 rtl:pr-3 text-black dark:text-[#506690] dark:group-hover:text-white-dark">{t('Employee Course Activity')}</span>
                                                         </div>
                                                     </NavLink>
                                                 </li>
@@ -784,22 +776,6 @@ const Sidebar = () => {
                                                         <div className="flex items-center">
                                                             <IconMenuNotes className="group-hover:!text-primary shrink-0" />
                                                             <span className="ltr:pl-3 rtl:pr-3 text-black dark:text-[#506690] dark:group-hover:text-white-dark">{t('Course Quizzes')}</span>
-                                                        </div>
-                                                    </NavLink>
-                                                </li>
-                                                <li className="menu nav-item">
-                                                    <NavLink to="/admin/learning-management/assignments" className="group">
-                                                        <div className="flex items-center">
-                                                            <IconMenuComponents className="group-hover:!text-primary shrink-0" />
-                                                            <span className="ltr:pl-3 rtl:pr-3 text-black dark:text-[#506690] dark:group-hover:text-white-dark">{t('Course Assignments')}</span>
-                                                        </div>
-                                                    </NavLink>
-                                                </li>
-                                                <li className="menu nav-item">
-                                                    <NavLink to="/admin/learning-management/reports" className="group">
-                                                        <div className="flex items-center">
-                                                            <IconMenuPages className="group-hover:!text-primary shrink-0" />
-                                                            <span className="ltr:pl-3 rtl:pr-3 text-black dark:text-[#506690] dark:group-hover:text-white-dark">{t('Reports')}</span>
                                                         </div>
                                                     </NavLink>
                                                 </li>

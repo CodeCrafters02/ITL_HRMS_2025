@@ -1096,12 +1096,34 @@ class CertificateSerializer(serializers.ModelSerializer):
         return None
 
 
+class CertificateSignatureSerializer(serializers.ModelSerializer):
+    signature_image_url = serializers.SerializerMethodField()
+
+    class Meta:
+        model = CertificateSignature
+        fields = [
+            'id', 'company', 'signature_image', 'signature_image_url',
+            'signatory_name', 'signatory_title', 'uploaded_by', 'created_at', 'updated_at'
+        ]
+        read_only_fields = ['company', 'uploaded_by', 'created_at', 'updated_at']
+
+    def get_signature_image_url(self, obj):
+        request = self.context.get('request')
+        if obj.signature_image:
+            if request:
+                return request.build_absolute_uri(obj.signature_image.url)
+            return obj.signature_image.url
+        return None
+
+
 class TrainingRequestSerializer(serializers.ModelSerializer):
     employee_name = serializers.CharField(source='employee.full_name', read_only=True)
     employee_id = serializers.CharField(source='employee.employee_id', read_only=True)
     employee_email = serializers.CharField(source='employee.email', read_only=True)
     course_title = serializers.CharField(source='course.title', read_only=True, default=None)
     manager_name = serializers.CharField(source='manager.full_name', read_only=True, default=None)
+    final_status = serializers.SerializerMethodField()
+    decided_by = serializers.SerializerMethodField()
 
     class Meta:
         model = TrainingRequest
@@ -1109,9 +1131,26 @@ class TrainingRequestSerializer(serializers.ModelSerializer):
             'id', 'employee', 'employee_name', 'employee_id', 'employee_email', 'course',
             'course_title', 'custom_course_title', 'reason', 'manager', 'manager_name',
             'manager_status', 'manager_remarks', 'admin_status', 'admin_remarks',
+            'final_status', 'decided_by',
             'budget_required', 'budget_status', 'created_at', 'updated_at'
         ]
         read_only_fields = ['created_at', 'updated_at']
+
+    def get_final_status(self, obj):
+        # Only one approval is required - whichever of manager/admin decided
+        # (approved or rejected) first is the final outcome.
+        if obj.manager_status in ('approved', 'rejected'):
+            return obj.manager_status
+        if obj.admin_status in ('approved', 'rejected'):
+            return obj.admin_status
+        return 'pending'
+
+    def get_decided_by(self, obj):
+        if obj.manager_status in ('approved', 'rejected'):
+            return 'manager'
+        if obj.admin_status in ('approved', 'rejected'):
+            return 'admin'
+        return None
 
 
 class TrainingSessionSerializer(serializers.ModelSerializer):
@@ -1241,15 +1280,21 @@ class EnrollmentSerializer(serializers.ModelSerializer):
     course_estimated_hours = serializers.DecimalField(source='course.duration_hours', max_digits=6, decimal_places=2, read_only=True)
     progress_percentage = serializers.SerializerMethodField(read_only=True)
     employee_name = serializers.CharField(source='employee.full_name', read_only=True)
+    employee_code = serializers.CharField(source='employee.employee_id', read_only=True)
+    department_name = serializers.SerializerMethodField(read_only=True)
 
     class Meta:
         model = Enrollment
         fields = [
             'id', 'course', 'course_title', 'course_description', 'course_image_url',
             'course_difficulty', 'course_estimated_hours', 'employee', 'employee_name',
+            'employee_code', 'department_name',
             'enrolled_at', 'status', 'enrolled_by', 'progress_percentage', 'completed_at'
         ]
         read_only_fields = ['employee', 'enrolled_at', 'completed_at', 'enrolled_by']
+
+    def get_department_name(self, obj):
+        return obj.employee.department.department_name if obj.employee.department else None
 
     def get_course_image_url(self, obj):
         request = self.context.get('request')

@@ -28,6 +28,8 @@ type TrainingRequestType = {
     manager_remarks: string;
     admin_status: 'pending' | 'approved' | 'rejected' | 'not_required';
     admin_remarks: string;
+    final_status: 'pending' | 'approved' | 'rejected';
+    decided_by: 'manager' | 'admin' | null;
     budget_required: boolean;
     budget_status: 'pending' | 'approved' | 'rejected' | 'not_required';
     created_at: string;
@@ -91,11 +93,18 @@ const TrainingRequest = () => {
                 email.toLowerCase().includes(search.toLowerCase()) ||
                 courseTitle.toLowerCase().includes(search.toLowerCase());
 
-            const matchesStatus = filterStatus === 'all' || r.admin_status === filterStatus;
+            const matchesStatus = filterStatus === 'all' || r.final_status === filterStatus;
 
             return matchesSearch && matchesStatus;
         });
     }, [requests, search, filterStatus]);
+
+    const tabCounts = useMemo(() => ({
+        all: requests.length,
+        approved: requests.filter((r) => r.final_status === 'approved').length,
+        pending: requests.filter((r) => r.final_status === 'pending').length,
+        rejected: requests.filter((r) => r.final_status === 'rejected').length,
+    }), [requests]);
 
     const openReviewModal = (req: TrainingRequestType) => {
         setSelectedRequest(req);
@@ -189,6 +198,34 @@ const TrainingRequest = () => {
                 <div className="absolute top-0 right-0 -mt-10 -mr-10 w-48 h-48 bg-white opacity-5 rounded-full blur-2xl"></div>
             </div>
 
+            {/* Status Tabs */}
+            <div className="flex border-b border-[#ebedf2] dark:border-[#1b2e4b] mb-5 overflow-x-auto">
+                {([
+                    { key: 'all', label: 'All' },
+                    { key: 'approved', label: 'Approved' },
+                    { key: 'pending', label: 'Pending' },
+                    { key: 'rejected', label: 'Rejected' },
+                ] as const).map((tab) => (
+                    <button
+                        key={tab.key}
+                        type="button"
+                        onClick={() => setFilterStatus(tab.key)}
+                        className={`py-3 px-6 font-semibold text-sm border-b-2 whitespace-nowrap transition-all duration-300 flex items-center gap-2 ${
+                            filterStatus === tab.key
+                                ? 'border-primary text-primary'
+                                : 'border-transparent text-gray-500 hover:text-primary'
+                        }`}
+                    >
+                        {tab.label}
+                        <span className={`badge rounded-full text-[10px] font-bold px-2 py-0.5 ${
+                            filterStatus === tab.key ? 'bg-primary text-white' : 'bg-gray-100 dark:bg-gray-800 text-gray-500'
+                        }`}>
+                            {tabCounts[tab.key]}
+                        </span>
+                    </button>
+                ))}
+            </div>
+
             {/* Top Toolbar */}
             <div className="flex flex-wrap items-center justify-between gap-4 mb-5">
                 <div className="flex flex-wrap items-center gap-3">
@@ -204,16 +241,6 @@ const TrainingRequest = () => {
                             <IconSearch className="w-4 h-4" />
                         </span>
                     </div>
-                    <select
-                        className="form-select w-44"
-                        value={filterStatus}
-                        onChange={(e) => setFilterStatus(e.target.value)}
-                    >
-                        <option value="all">Admin Status (All)</option>
-                        <option value="pending">Pending</option>
-                        <option value="approved">Approved</option>
-                        <option value="rejected">Rejected</option>
-                    </select>
                 </div>
             </div>
 
@@ -233,8 +260,7 @@ const TrainingRequest = () => {
                                     <th>Employee</th>
                                     <th>Requested Program</th>
                                     <th>Reason</th>
-                                    <th>Manager Status</th>
-                                    <th>Admin Status</th>
+                                    <th>Status</th>
                                     <th>Budget Status</th>
                                     <th>Submitted Date</th>
                                     <th className="text-center">Action</th>
@@ -258,25 +284,17 @@ const TrainingRequest = () => {
                                         <td className="text-xs max-w-[200px] truncate" title={r.reason}>{r.reason}</td>
                                         <td>
                                             <span className={`badge uppercase text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                                                r.manager_status === 'approved' 
-                                                    ? 'bg-success text-white' 
-                                                    : r.manager_status === 'rejected' 
-                                                    ? 'bg-danger text-white' 
+                                                r.final_status === 'approved'
+                                                    ? 'bg-success text-white'
+                                                    : r.final_status === 'rejected'
+                                                    ? 'bg-danger text-white'
                                                     : 'bg-amber-500 text-white'
                                             }`}>
-                                                {r.manager_status}
+                                                {r.final_status}
                                             </span>
-                                        </td>
-                                        <td>
-                                            <span className={`badge uppercase text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                                                r.admin_status === 'approved' 
-                                                    ? 'bg-success text-white' 
-                                                    : r.admin_status === 'rejected' 
-                                                    ? 'bg-danger text-white' 
-                                                    : 'bg-amber-500 text-white'
-                                            }`}>
-                                                {r.admin_status}
-                                            </span>
+                                            {r.decided_by && (
+                                                <span className="text-[9px] text-gray-400 block mt-1 capitalize">by {r.decided_by}</span>
+                                            )}
                                         </td>
                                         <td>
                                             {r.budget_required ? (
@@ -302,9 +320,11 @@ const TrainingRequest = () => {
                                         </td>
                                         <td className="text-center">
                                             <div className="flex items-center justify-center gap-1">
-                                                <button type="button" className="text-primary hover:text-primary-dark p-2" onClick={() => openReviewModal(r)}>
-                                                    <IconPencil className="w-4.5 h-4.5" />
-                                                </button>
+                                                {r.final_status === 'pending' && (
+                                                    <button type="button" className="text-primary hover:text-primary-dark p-2" onClick={() => openReviewModal(r)}>
+                                                        <IconPencil className="w-4.5 h-4.5" />
+                                                    </button>
+                                                )}
                                                 <button type="button" className="text-danger hover:text-danger-dark p-2" onClick={() => handleDelete(r)}>
                                                     <IconTrashLines className="w-4.5 h-4.5" />
                                                 </button>
@@ -352,10 +372,16 @@ const TrainingRequest = () => {
                                                     )}
                                                 </div>
 
+                                                {selectedRequest.decided_by === 'manager' && (
+                                                    <div className="text-xs bg-amber-500/10 text-amber-600 border border-amber-500/30 rounded-lg px-3 py-2">
+                                                        This request was already <strong className="uppercase">{selectedRequest.manager_status}</strong> by the manager. Only one approval is required — no further action is needed unless you want to override it.
+                                                    </div>
+                                                )}
+
                                                 <form onSubmit={handleSaveReview} className="space-y-4">
                                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                                         <div>
-                                                            <label className="font-semibold mb-1 block text-xs">Admin Approval Status</label>
+                                                            <label className="font-semibold mb-1 block text-xs">Approval Decision</label>
                                                             <select className="form-select rounded-lg" value={reviewForm.admin_status} onChange={(e) => setReviewForm({ ...reviewForm, admin_status: e.target.value as any })}>
                                                                 <option value="pending">Pending Review</option>
                                                                 <option value="approved">Approve Request</option>

@@ -20,6 +20,7 @@ const ASSIGNMENTS_API = `${API_BASE_URL}/employee/assignments/`;
 const SUBMISSIONS_API = `${API_BASE_URL}/employee/assignment-submissions/`;
 
 const REVIEWS_API = `${API_BASE_URL}/employee/course-reviews/`;
+const CERTIFICATES_API = `${API_BASE_URL}/employee/certificates/`;
 
 type ContentType = {
     id: number;
@@ -109,6 +110,9 @@ const CourseSyllabusPlayer = () => {
     const [reviewed, setReviewed] = useState(false);
     const [reviewRating, setReviewRating] = useState(5);
     const [reviewComments, setReviewComments] = useState('');
+
+    // Auto-generated completion certificate
+    const [certificate, setCertificate] = useState<{ id: number; certificate_file_url: string | null } | null>(null);
 
     useEffect(() => {
         dispatch(setPageTitle('Course Syllabus Player'));
@@ -217,6 +221,27 @@ const CourseSyllabusPlayer = () => {
         return Math.round((completedLessons.length / contents.length) * 100);
     }, [contents, completedLessons]);
 
+    // Quiz unlocks only once every lecture/document/link is marked complete
+    const allLessonsDone = contents.length > 0 && completedLessons.length === contents.length;
+
+    // Certificate is auto-generated server-side once the course is fully complete
+    // (all lessons + quiz, if any) — check for it once progress hits 100%.
+    useEffect(() => {
+        if (computedProgress !== 100 || !enrollment?.course || certificate) return;
+        (async () => {
+            try {
+                const response = await authFetch(`${CERTIFICATES_API}?course=${enrollment.course}`, { headers: getHeaders() });
+                if (response.ok) {
+                    const data = await response.json();
+                    const list = data.results || data || [];
+                    if (list.length > 0) setCertificate(list[0]);
+                }
+            } catch (error) {
+                console.error('Error checking for completion certificate:', error);
+            }
+        })();
+    }, [computedProgress, enrollment, certificate]);
+
     // Active item objects
     const activeLecture = useMemo(() => {
         if (activeItem?.type !== 'lecture') return null;
@@ -235,6 +260,7 @@ const CourseSyllabusPlayer = () => {
 
     // Triggers when a lecture/quiz/assignment is clicked in sidebar
     const handleSelectNavItem = (type: 'lecture' | 'quiz' | 'assignment', id: number) => {
+        if (type === 'quiz' && !allLessonsDone) return;
         setActiveItem({ type, id });
         if (type === 'quiz') {
             // Load questions
@@ -500,6 +526,9 @@ const CourseSyllabusPlayer = () => {
                             {quizzes.length > 0 && (
                                 <div>
                                     <h4 className="font-extrabold text-[10px] uppercase text-gray-400 tracking-wider mb-2">Assessments & Quizzes</h4>
+                                    {!allLessonsDone && (
+                                        <div className="text-[10px] text-gray-400 italic mb-2">Unlocks after all lectures are completed.</div>
+                                    )}
                                     <ul className="space-y-1.5 text-xs">
                                         {quizzes.map((q) => {
                                             const active = activeItem?.type === 'quiz' && activeItem.id === q.id;
@@ -507,15 +536,19 @@ const CourseSyllabusPlayer = () => {
                                                 <li key={q.id}>
                                                     <button
                                                         type="button"
+                                                        disabled={!allLessonsDone}
+                                                        title={!allLessonsDone ? 'Complete all lectures to unlock this quiz' : undefined}
                                                         className={`w-full text-left p-2.5 rounded-lg border transition-all duration-300 flex items-center justify-between ${
-                                                            active
+                                                            !allLessonsDone
+                                                                ? 'border-transparent opacity-50 cursor-not-allowed text-gray-400'
+                                                                : active
                                                                 ? 'border-primary bg-primary/5 text-primary font-bold'
                                                                 : 'border-transparent hover:bg-gray-50 dark:hover:bg-gray-850 text-gray-650 dark:text-gray-355'
                                                         }`}
                                                         onClick={() => handleSelectNavItem('quiz', q.id)}
                                                     >
                                                         <div className="flex items-center gap-2 truncate">
-                                                            <span>📝</span>
+                                                            <span>{allLessonsDone ? '📝' : '🔒'}</span>
                                                             <span className="truncate">{q.title}</span>
                                                         </div>
                                                     </button>
@@ -578,6 +611,18 @@ const CourseSyllabusPlayer = () => {
                             <p className="text-xs text-gray-500 mt-2 mb-6 leading-relaxed">
                                 You have successfully completed 100% of the syllabus contents for this course.
                             </p>
+
+                            {certificate?.certificate_file_url && (
+                                <a
+                                    href={certificate.certificate_file_url}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    download
+                                    className="btn btn-primary rounded-lg text-xs py-2 px-6 inline-flex items-center gap-2 mb-6"
+                                >
+                                    🎓 Download Certificate
+                                </a>
+                            )}
 
                             {reviewed ? (
                                 <div className="bg-white/40 dark:bg-black/10 p-3 rounded-lg text-xs text-success font-bold">

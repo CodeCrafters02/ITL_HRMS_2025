@@ -25,6 +25,7 @@ router.register('learning-path-courses', LearningPathCourseViewSet, basename='le
 router.register('learning-path-assignments', LearningPathAssignmentViewSet, basename='learning-path-assignments')
 router.register('compliance-assignments', ComplianceAssignmentViewSet, basename='compliance-assignments')
 router.register('certificates', CertificateViewSet, basename='certificates')
+router.register('certificate-signatures', CertificateSignatureViewSet, basename='certificate-signatures')
 router.register('training-requests', TrainingRequestViewSet, basename='training-requests')
 router.register('training-sessions', TrainingSessionViewSet, basename='training-sessions')
 router.register('session-attendances', SessionAttendanceViewSet, basename='session-attendances')

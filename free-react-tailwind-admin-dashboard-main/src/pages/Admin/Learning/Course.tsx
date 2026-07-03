@@ -11,12 +11,16 @@ import IconTrashLines from '../../../components/Icon/IconTrashLines';
 import IconEye from '../../../components/Icon/IconEye';
 import IconX from '../../../components/Icon/IconX';
 import CourseCategory, { CourseCategoryType } from './CourseCategory';
+import CertificateSignature from './CertificateSignature';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000';
 const COURSES_API = `${API_BASE_URL}/employee/courses/`;
 const CONTENTS_API = `${API_BASE_URL}/employee/course-contents/`;
 const CATEGORIES_API = `${API_BASE_URL}/employee/course-categories/`;
 const REVIEWS_API = `${API_BASE_URL}/employee/course-reviews/`;
+const ASSESSMENTS_API = `${API_BASE_URL}/employee/assessments/`;
+const QUESTIONS_API = `${API_BASE_URL}/employee/assessment-questions/`;
+const ENROLLMENTS_API = `${API_BASE_URL}/employee/enrollments/`;
 
 type CourseContentType = {
     id: number;
@@ -29,6 +33,38 @@ type CourseContentType = {
     external_url?: string | null;
     duration_minutes: number;
     sequence: number;
+};
+
+type AssessmentType = {
+    id: number;
+    course: number;
+    title: string;
+    assessment_type: string;
+    pass_marks: number;
+    time_limit_minutes?: number | null;
+    max_attempts: number;
+    questions_count: number;
+};
+
+type QuestionType = {
+    id: number;
+    assessment: number;
+    question_text: string;
+    question_type: 'mcq' | 'true_false' | 'short_answer' | 'coding';
+    options: string[];
+    correct_answer: string;
+    marks: number;
+};
+
+type EnrollmentType = {
+    id: number;
+    employee: number;
+    employee_name: string;
+    employee_code: string | null;
+    department_name: string | null;
+    status: string;
+    progress_percentage: number;
+    enrolled_at: string;
 };
 
 type CourseType = {
@@ -51,7 +87,7 @@ type CourseType = {
 
 const Course = () => {
     const dispatch = useDispatch();
-    const [activeTab, setActiveTab] = useState<'courses' | 'categories'>('courses');
+    const [activeTab, setActiveTab] = useState<'courses' | 'categories' | 'signature'>('courses');
     const [courses, setCourses] = useState<CourseType[]>([]);
     const [categories, setCategories] = useState<CourseCategoryType[]>([]);
 
@@ -80,6 +116,30 @@ const Course = () => {
     });
     const [thumbnailFile, setThumbnailFile] = useState<File | null>(null);
 
+    // Certificate Preview State (auto-generated certificate, no manual template)
+    const [certModalOpen, setCertModalOpen] = useState(false);
+    const [selectedCourseForCert, setSelectedCourseForCert] = useState<CourseType | null>(null);
+    const [certPreviewUrl, setCertPreviewUrl] = useState<string | null>(null);
+    const [certPreviewLoading, setCertPreviewLoading] = useState(false);
+
+    const openCertModal = async (course: CourseType) => {
+        setSelectedCourseForCert(course);
+        setCertModalOpen(true);
+        setCertPreviewUrl(null);
+        setCertPreviewLoading(true);
+        try {
+            const response = await authFetch(`${COURSES_API}${course.id}/certificate-preview/`, { headers: getHeaders() });
+            if (response.ok) {
+                const blob = await response.blob();
+                setCertPreviewUrl(URL.createObjectURL(blob));
+            }
+        } catch (error) {
+            console.error('Error generating certificate preview:', error);
+        } finally {
+            setCertPreviewLoading(false);
+        }
+    };
+
     // Content Manager Modals / State
     const [contentModalOpen, setContentModalOpen] = useState(false);
     const [selectedCourse, setSelectedCourse] = useState<CourseType | null>(null);
@@ -95,6 +155,55 @@ const Course = () => {
         sequence: 1,
     });
     const [contentFile, setContentFile] = useState<File | null>(null);
+
+    // Quiz / Assessment State (managed inline during course creation)
+    const [courseAssessments, setCourseAssessments] = useState<AssessmentType[]>([]);
+    const [assessmentsLoading, setAssessmentsLoading] = useState(false);
+    const [addQuizOpen, setAddQuizOpen] = useState(false);
+    const [editingQuiz, setEditingQuiz] = useState<AssessmentType | null>(null);
+    const [quizForm, setQuizForm] = useState({
+        title: '',
+        pass_marks: 50,
+        time_limit_minutes: '' as string | number,
+        max_attempts: 1,
+    });
+
+    const [questionsModalOpen, setQuestionsModalOpen] = useState(false);
+    const [selectedAssessment, setSelectedAssessment] = useState<AssessmentType | null>(null);
+    const [questions, setQuestions] = useState<QuestionType[]>([]);
+    const [questionsLoading, setQuestionsLoading] = useState(false);
+    const [addQuestionOpen, setAddQuestionOpen] = useState(false);
+    const [editingQuestion, setEditingQuestion] = useState<QuestionType | null>(null);
+    const [questionForm, setQuestionForm] = useState({
+        question_text: '',
+        question_type: 'mcq' as 'mcq' | 'true_false' | 'short_answer' | 'coding',
+        optionsRaw: '',
+        correct_answer: '',
+        marks: 5,
+    });
+
+    // Enrolled Students State
+    const [enrolledModalOpen, setEnrolledModalOpen] = useState(false);
+    const [selectedCourseForEnrollment, setSelectedCourseForEnrollment] = useState<CourseType | null>(null);
+    const [enrolledList, setEnrolledList] = useState<EnrollmentType[]>([]);
+    const [enrolledLoading, setEnrolledLoading] = useState(false);
+
+    const openEnrolledModal = async (course: CourseType) => {
+        setSelectedCourseForEnrollment(course);
+        setEnrolledModalOpen(true);
+        setEnrolledLoading(true);
+        try {
+            const response = await authFetch(`${ENROLLMENTS_API}?course=${course.id}`, { headers: getHeaders() });
+            if (response.ok) {
+                const data = await response.json();
+                setEnrolledList(data.results || data || []);
+            }
+        } catch (error) {
+            console.error('Error fetching enrolled students:', error);
+        } finally {
+            setEnrolledLoading(false);
+        }
+    };
 
     // Reviews State
     const [reviewsModalOpen, setReviewsModalOpen] = useState(false);
@@ -176,6 +285,21 @@ const Course = () => {
             console.error('Error fetching course contents:', error);
         } finally {
             setContentsLoading(false);
+        }
+    };
+
+    const fetchCourseAssessments = async (courseId: number) => {
+        setAssessmentsLoading(true);
+        try {
+            const response = await authFetch(`${ASSESSMENTS_API}?course=${courseId}`, { headers: getHeaders() });
+            if (response.ok) {
+                const data = await response.json();
+                setCourseAssessments(data.results || data || []);
+            }
+        } catch (error) {
+            console.error('Error fetching course quizzes:', error);
+        } finally {
+            setAssessmentsLoading(false);
         }
     };
 
@@ -336,6 +460,7 @@ const Course = () => {
     const openManageContent = (course: CourseType) => {
         setSelectedCourse(course);
         fetchCourseContents(course.id);
+        fetchCourseAssessments(course.id);
         setContentModalOpen(true);
     };
 
@@ -426,6 +551,207 @@ const Course = () => {
         }
     };
 
+    const handleMoveContent = async (content: CourseContentType, direction: 'up' | 'down') => {
+        const sorted = [...courseContents].sort((a, b) => a.sequence - b.sequence || a.id - b.id);
+        const index = sorted.findIndex((c) => c.id === content.id);
+        const swapIndex = direction === 'up' ? index - 1 : index + 1;
+        if (swapIndex < 0 || swapIndex >= sorted.length) return;
+
+        const neighbor = sorted[swapIndex];
+        try {
+            await Promise.all([
+                authFetch(`${CONTENTS_API}${content.id}/`, {
+                    method: 'PATCH',
+                    headers: getHeaders(),
+                    body: JSON.stringify({ sequence: neighbor.sequence }),
+                }),
+                authFetch(`${CONTENTS_API}${neighbor.id}/`, {
+                    method: 'PATCH',
+                    headers: getHeaders(),
+                    body: JSON.stringify({ sequence: content.sequence }),
+                }),
+            ]);
+            if (selectedCourse) fetchCourseContents(selectedCourse.id);
+        } catch {
+            Swal.fire('Error!', 'Could not reorder content.', 'error');
+        }
+    };
+
+    // Quiz operations
+    const resetQuizForm = () => {
+        setEditingQuiz(null);
+        setQuizForm({ title: '', pass_marks: 50, time_limit_minutes: '', max_attempts: 1 });
+    };
+
+    const openEditQuizModal = (a: AssessmentType) => {
+        setEditingQuiz(a);
+        setQuizForm({
+            title: a.title,
+            pass_marks: a.pass_marks,
+            time_limit_minutes: a.time_limit_minutes ? String(a.time_limit_minutes) : '',
+            max_attempts: a.max_attempts,
+        });
+        setAddQuizOpen(true);
+    };
+
+    const handleSaveQuiz = async (e: React.FormEvent<HTMLFormElement>) => {
+        e.preventDefault();
+        if (!selectedCourse) return;
+        setSaving(true);
+
+        const payload = {
+            course: selectedCourse.id,
+            title: quizForm.title,
+            assessment_type: 'quiz',
+            pass_marks: Number(quizForm.pass_marks),
+            time_limit_minutes: quizForm.time_limit_minutes ? Number(quizForm.time_limit_minutes) : null,
+            max_attempts: Number(quizForm.max_attempts),
+        };
+
+        try {
+            const url = editingQuiz ? `${ASSESSMENTS_API}${editingQuiz.id}/` : ASSESSMENTS_API;
+            const method = editingQuiz ? 'PUT' : 'POST';
+            const response = await authFetch(url, {
+                method,
+                headers: getHeaders(),
+                body: JSON.stringify(payload),
+            });
+
+            if (response.ok) {
+                Swal.fire({ title: editingQuiz ? 'Updated!' : 'Added!', text: editingQuiz ? 'Quiz updated.' : 'Quiz created.', icon: 'success', timer: 1500, showConfirmButton: false, customClass: { popup: 'sweet-alerts' } });
+                setAddQuizOpen(false);
+                resetQuizForm();
+                fetchCourseAssessments(selectedCourse.id);
+            } else {
+                const err = await response.json().catch(() => null);
+                Swal.fire('Error!', err ? Object.values(err).flat().join(' ') : 'Failed to save quiz.', 'error');
+            }
+        } catch {
+            Swal.fire('Error!', 'Server connection error.', 'error');
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    const handleDeleteQuiz = async (a: AssessmentType) => {
+        const result = await Swal.fire({
+            title: 'Delete Quiz?',
+            text: `Delete "${a.title}"? All its questions will be removed too.`,
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonText: 'Delete',
+            customClass: { popup: 'sweet-alerts' },
+        });
+        if (!result.isConfirmed) return;
+
+        try {
+            const response = await authFetch(`${ASSESSMENTS_API}${a.id}/`, { method: 'DELETE', headers: getHeaders() });
+            if (response.ok || response.status === 204) {
+                if (selectedCourse) fetchCourseAssessments(selectedCourse.id);
+            } else {
+                Swal.fire('Error!', 'Could not delete quiz.', 'error');
+            }
+        } catch {
+            Swal.fire('Error!', 'Server issue.', 'error');
+        }
+    };
+
+    // Question operations
+    const fetchQuestions = async (assessmentId: number) => {
+        setQuestionsLoading(true);
+        try {
+            const response = await authFetch(`${QUESTIONS_API}?assessment_id=${assessmentId}`, { headers: getHeaders() });
+            if (response.ok) {
+                const data = await response.json();
+                setQuestions(data.results || data || []);
+            }
+        } catch (error) {
+            console.error('Error fetching questions:', error);
+        } finally {
+            setQuestionsLoading(false);
+        }
+    };
+
+    const openQuestionsModal = (a: AssessmentType) => {
+        setSelectedAssessment(a);
+        fetchQuestions(a.id);
+        setQuestionsModalOpen(true);
+    };
+
+    const resetQuestionForm = () => {
+        setEditingQuestion(null);
+        setQuestionForm({ question_text: '', question_type: 'mcq', optionsRaw: 'Option A, Option B, Option C, Option D', correct_answer: '', marks: 5 });
+    };
+
+    const handleSaveQuestion = async (e: React.FormEvent<HTMLFormElement>) => {
+        e.preventDefault();
+        if (!selectedAssessment) return;
+        setSaving(true);
+
+        const optionsArr = questionForm.question_type === 'mcq'
+            ? questionForm.optionsRaw.split(',').map((s) => s.trim()).filter(Boolean)
+            : questionForm.question_type === 'true_false'
+            ? ['True', 'False']
+            : [];
+
+        const payload = {
+            assessment: selectedAssessment.id,
+            question_text: questionForm.question_text,
+            question_type: questionForm.question_type,
+            options: optionsArr,
+            correct_answer: questionForm.correct_answer,
+            marks: Number(questionForm.marks),
+        };
+
+        try {
+            const url = editingQuestion ? `${QUESTIONS_API}${editingQuestion.id}/` : QUESTIONS_API;
+            const method = editingQuestion ? 'PUT' : 'POST';
+            const response = await authFetch(url, {
+                method,
+                headers: getHeaders(),
+                body: JSON.stringify(payload),
+            });
+
+            if (response.ok) {
+                Swal.fire({ title: 'Saved!', text: 'Question saved.', icon: 'success', timer: 1500, showConfirmButton: false, customClass: { popup: 'sweet-alerts' } });
+                setAddQuestionOpen(false);
+                resetQuestionForm();
+                fetchQuestions(selectedAssessment.id);
+                if (selectedCourse) fetchCourseAssessments(selectedCourse.id);
+            } else {
+                Swal.fire('Error!', 'Failed to save question.', 'error');
+            }
+        } catch {
+            Swal.fire('Error!', 'Server connection failed.', 'error');
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    const handleDeleteQuestion = async (q: QuestionType) => {
+        const result = await Swal.fire({
+            title: 'Delete Question?',
+            text: 'Are you sure you want to remove this question?',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonText: 'Delete',
+            customClass: { popup: 'sweet-alerts' },
+        });
+        if (!result.isConfirmed) return;
+
+        try {
+            const response = await authFetch(`${QUESTIONS_API}${q.id}/`, { method: 'DELETE', headers: getHeaders() });
+            if (response.ok || response.status === 204) {
+                if (selectedAssessment) {
+                    fetchQuestions(selectedAssessment.id);
+                    if (selectedCourse) fetchCourseAssessments(selectedCourse.id);
+                }
+            }
+        } catch {
+            Swal.fire('Error!', 'Could not delete question.', 'error');
+        }
+    };
+
     return (
         <div>
             {/* Header / Banner */}
@@ -463,10 +789,23 @@ const Course = () => {
                 >
                     Course Categories
                 </button>
+                <button
+                    type="button"
+                    onClick={() => setActiveTab('signature')}
+                    className={`py-3 px-6 font-semibold text-sm border-b-2 whitespace-nowrap transition-all duration-300 ${
+                        activeTab === 'signature'
+                            ? 'border-primary text-primary'
+                            : 'border-transparent text-gray-500 hover:text-primary'
+                    }`}
+                >
+                    Certificate Signature
+                </button>
             </div>
 
             {activeTab === 'categories' ? (
                 <CourseCategory />
+            ) : activeTab === 'signature' ? (
+                <CertificateSignature />
             ) : (
             <>
             {/* Quick Stats Grid */}
@@ -625,9 +964,23 @@ const Course = () => {
                                     </div>
                                     <div className="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400 pb-2">
                                         <span className="font-semibold">Total Students:</span>
-                                        <span className="badge badge-outline-primary py-0.5 px-2 rounded-full font-bold">
+                                        <button
+                                            type="button"
+                                            className="badge badge-outline-primary py-0.5 px-2 rounded-full font-bold hover:bg-primary hover:text-white transition-colors"
+                                            onClick={() => openEnrolledModal(course)}
+                                        >
                                             {course.enrollments_count || 0} enrolled
-                                        </span>
+                                        </button>
+                                    </div>
+                                    <div className="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400 pb-2">
+                                        <span className="font-semibold">Completion Certificate:</span>
+                                        <button
+                                            type="button"
+                                            className="badge badge-outline-success py-0.5 px-2 rounded-full font-bold hover:bg-success hover:text-white transition-colors"
+                                            onClick={() => openCertModal(course)}
+                                        >
+                                            Preview
+                                        </button>
                                     </div>
                                 </div>
 
@@ -817,9 +1170,17 @@ const Course = () => {
                                                         </tr>
                                                     </thead>
                                                     <tbody>
-                                                        {courseContents.map((content) => (
+                                                        {[...courseContents].sort((a, b) => a.sequence - b.sequence || a.id - b.id).map((content, idx) => (
                                                             <tr key={content.id}>
-                                                                <td className="font-bold text-primary">{content.sequence}</td>
+                                                                <td>
+                                                                    <div className="flex items-center gap-1.5">
+                                                                        <span className="font-bold text-primary">{content.sequence}</span>
+                                                                        <div className="flex flex-col">
+                                                                            <button type="button" disabled={idx === 0} className="disabled:opacity-25 disabled:cursor-not-allowed text-gray-400 hover:text-primary leading-none" title="Move up" onClick={() => handleMoveContent(content, 'up')}>▲</button>
+                                                                            <button type="button" disabled={idx === courseContents.length - 1} className="disabled:opacity-25 disabled:cursor-not-allowed text-gray-400 hover:text-primary leading-none" title="Move down" onClick={() => handleMoveContent(content, 'down')}>▼</button>
+                                                                        </div>
+                                                                    </div>
+                                                                </td>
                                                                 <td className="font-semibold text-gray-800 dark:text-gray-200">{content.title}</td>
                                                                 <td>
                                                                     <span className="badge badge-outline-primary text-[10px] font-bold uppercase rounded px-1.5 py-0.5">
@@ -842,6 +1203,63 @@ const Course = () => {
                                                                     <button type="button" className="text-danger hover:text-danger-dark" onClick={() => handleDeleteContent(content)}>
                                                                         <IconTrashLines className="w-4.5 h-4.5" />
                                                                     </button>
+                                                                </td>
+                                                            </tr>
+                                                        ))}
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        )}
+
+                                        <div className="flex justify-between items-center mb-4 mt-8 pt-6 border-t border-[#ebedf2] dark:border-[#1b2e4b]">
+                                            <div>
+                                                <h4 className="font-extrabold text-sm uppercase text-gray-400 tracking-wider">Quiz / Assessment</h4>
+                                                <p className="text-[11px] text-gray-400 mt-0.5">Unlocks for learners only after all lesson materials above are marked complete.</p>
+                                            </div>
+                                            <button type="button" className="btn btn-primary btn-sm gap-1" onClick={() => { resetQuizForm(); setAddQuizOpen(true); }}>
+                                                <IconPlus className="w-3.5 h-3.5" /> Add Quiz
+                                            </button>
+                                        </div>
+
+                                        {assessmentsLoading ? (
+                                            <div className="py-6 text-center text-gray-400 animate-pulse">Loading quizzes...</div>
+                                        ) : courseAssessments.length === 0 ? (
+                                            <div className="py-6 text-center text-gray-400 italic bg-gray-50 dark:bg-[#0e1726]/20 border border-dashed rounded-lg border-gray-200 dark:border-gray-800">
+                                                No quiz added for this course yet.
+                                            </div>
+                                        ) : (
+                                            <div className="table-responsive border border-[#e0e6ed] dark:border-[#1b2e4b] rounded-lg">
+                                                <table className="table-hover">
+                                                    <thead>
+                                                        <tr>
+                                                            <th>Quiz Title</th>
+                                                            <th>Pass %</th>
+                                                            <th>Time Limit</th>
+                                                            <th>Max Attempts</th>
+                                                            <th>Questions</th>
+                                                            <th className="text-center">Action</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        {courseAssessments.map((a) => (
+                                                            <tr key={a.id}>
+                                                                <td className="font-semibold text-gray-800 dark:text-gray-200">{a.title}</td>
+                                                                <td>{a.pass_marks}%</td>
+                                                                <td>{a.time_limit_minutes ? `${a.time_limit_minutes} mins` : '—'}</td>
+                                                                <td>{a.max_attempts}</td>
+                                                                <td>{a.questions_count}</td>
+                                                                <td className="text-center">
+                                                                    <div className="flex items-center justify-center gap-3">
+                                                                        <button type="button" className="text-primary hover:underline text-xs font-bold" onClick={() => openQuestionsModal(a)}>
+                                                                            Questions
+                                                                        </button>
+                                                                        <button type="button" className="text-primary hover:text-primary-dark" onClick={() => openEditQuizModal(a)}>
+                                                                            <IconPencil className="w-4 h-4" />
+                                                                        </button>
+                                                                        <button type="button" className="text-danger hover:text-danger-dark" onClick={() => handleDeleteQuiz(a)}>
+                                                                            <IconTrashLines className="w-4.5 h-4.5" />
+                                                                        </button>
+                                                                    </div>
                                                                 </td>
                                                             </tr>
                                                         ))}
@@ -933,6 +1351,195 @@ const Course = () => {
                     </div>
                 </Dialog>
             </Transition>
+
+            {/* Add Quiz Modal */}
+            <Transition appear show={addQuizOpen} as={Fragment}>
+                <Dialog as="div" open={addQuizOpen} onClose={() => setAddQuizOpen(false)} className="relative z-[60]">
+                    <Transition.Child as={Fragment} enter="ease-out duration-300" enterFrom="opacity-0" enterTo="opacity-100" leave="ease-in duration-200" leaveFrom="opacity-100" leaveTo="opacity-0">
+                        <div className="fixed inset-0 bg-[black]/65 backdrop-blur-sm" />
+                    </Transition.Child>
+                    <div className="fixed inset-0 overflow-y-auto">
+                        <div className="flex min-h-full items-center justify-center px-4 py-8">
+                            <Transition.Child as={Fragment} enter="ease-out duration-300" enterFrom="opacity-0 scale-95" enterTo="opacity-100 scale-100" leave="ease-in duration-200" leaveFrom="opacity-100 scale-100" leaveTo="opacity-0 scale-95">
+                                <Dialog.Panel className="panel border-0 p-0 rounded-xl overflow-hidden w-full max-w-lg text-black dark:text-white-dark shadow-2xl relative">
+                                    <button type="button" onClick={() => setAddQuizOpen(false)} className="absolute top-4 right-4 text-gray-400 hover:text-gray-800 dark:hover:text-gray-250 outline-none">
+                                        <IconX className="w-5 h-5" />
+                                    </button>
+                                    <div className="text-lg font-bold bg-[#fbfbfb] dark:bg-[#121c2c] py-4 px-6 border-b border-[#ebedf2] dark:border-[#1b2e4b]">
+                                        {editingQuiz ? 'Edit Quiz' : 'Add Quiz'}
+                                    </div>
+                                    <div className="p-6">
+                                        <form onSubmit={handleSaveQuiz} className="space-y-4">
+                                            <div>
+                                                <label className="font-semibold mb-1 block">Quiz Title <span className="text-danger">*</span></label>
+                                                <input className="form-input rounded-lg" required placeholder="e.g. Module 1 Assessment" value={quizForm.title} onChange={(e) => setQuizForm({ ...quizForm, title: e.target.value })} />
+                                            </div>
+
+                                            <div className="grid grid-cols-2 gap-4">
+                                                <div>
+                                                    <label className="font-semibold mb-1 block">Pass Marks (%)</label>
+                                                    <input type="number" className="form-input rounded-lg" min="0" max="100" value={quizForm.pass_marks} onChange={(e) => setQuizForm({ ...quizForm, pass_marks: Number(e.target.value) })} />
+                                                </div>
+                                                <div>
+                                                    <label className="font-semibold mb-1 block">Time Limit (Minutes)</label>
+                                                    <input type="number" className="form-input rounded-lg" min="0" placeholder="No limit" value={quizForm.time_limit_minutes} onChange={(e) => setQuizForm({ ...quizForm, time_limit_minutes: e.target.value })} />
+                                                </div>
+                                            </div>
+
+                                            <div>
+                                                <label className="font-semibold mb-1 block">Max Attempts</label>
+                                                <input type="number" className="form-input rounded-lg" min="1" value={quizForm.max_attempts} onChange={(e) => setQuizForm({ ...quizForm, max_attempts: Number(e.target.value) })} />
+                                            </div>
+
+                                            <div className="flex justify-end gap-3 pt-4 border-t border-[#ebedf2] dark:border-[#1b2e4b] mt-6">
+                                                <button type="button" className="btn btn-outline-danger rounded-lg" onClick={() => setAddQuizOpen(false)}>Cancel</button>
+                                                <button type="submit" className="btn btn-primary rounded-lg px-5 shadow-md" disabled={saving}>
+                                                    {saving ? 'Saving...' : editingQuiz ? 'Update Quiz' : 'Add Quiz'}
+                                                </button>
+                                            </div>
+                                        </form>
+                                    </div>
+                                </Dialog.Panel>
+                            </Transition.Child>
+                        </div>
+                    </div>
+                </Dialog>
+            </Transition>
+
+            {/* Manage Questions Modal */}
+            <Transition appear show={questionsModalOpen} as={Fragment}>
+                <Dialog as="div" open={questionsModalOpen} onClose={() => setQuestionsModalOpen(false)} className="relative z-[60]">
+                    <Transition.Child as={Fragment} enter="ease-out duration-300" enterFrom="opacity-0" enterTo="opacity-100" leave="ease-in duration-200" leaveFrom="opacity-100" leaveTo="opacity-0">
+                        <div className="fixed inset-0 bg-[black]/65 backdrop-blur-sm" />
+                    </Transition.Child>
+                    <div className="fixed inset-0 overflow-y-auto">
+                        <div className="flex min-h-full items-center justify-center px-4 py-8">
+                            <Transition.Child as={Fragment} enter="ease-out duration-300" enterFrom="opacity-0 scale-95" enterTo="opacity-100 scale-100" leave="ease-in duration-200" leaveFrom="opacity-100 scale-100" leaveTo="opacity-0 scale-95">
+                                <Dialog.Panel className="panel border-0 p-0 rounded-xl overflow-hidden w-full max-w-2xl text-black dark:text-white-dark shadow-2xl relative">
+                                    <button type="button" onClick={() => setQuestionsModalOpen(false)} className="absolute top-4 right-4 text-gray-400 hover:text-gray-800 dark:hover:text-gray-250 outline-none">
+                                        <IconX className="w-5 h-5" />
+                                    </button>
+                                    <div className="text-lg font-bold bg-[#fbfbfb] dark:bg-[#121c2c] py-4 px-6 border-b border-[#ebedf2] dark:border-[#1b2e4b]">
+                                        Questions: {selectedAssessment?.title}
+                                    </div>
+                                    <div className="p-6">
+                                        <div className="flex justify-between items-center mb-4">
+                                            <h4 className="font-extrabold text-sm uppercase text-gray-400 tracking-wider">Question Bank</h4>
+                                            <button type="button" className="btn btn-primary btn-sm gap-1" onClick={() => { resetQuestionForm(); setAddQuestionOpen(true); }}>
+                                                <IconPlus className="w-3.5 h-3.5" /> Add Question
+                                            </button>
+                                        </div>
+
+                                        {questionsLoading ? (
+                                            <div className="py-10 text-center text-gray-400 animate-pulse">Loading questions...</div>
+                                        ) : questions.length === 0 ? (
+                                            <div className="py-10 text-center text-gray-400 italic bg-gray-50 dark:bg-[#0e1726]/20 border border-dashed rounded-lg border-gray-200 dark:border-gray-800">
+                                                No questions added yet.
+                                            </div>
+                                        ) : (
+                                            <div className="space-y-3 max-h-[400px] overflow-y-auto pr-1">
+                                                {questions.map((q, idx) => (
+                                                    <div key={q.id} className="p-3 border border-[#e0e6ed] dark:border-[#1b2e4b] rounded-lg">
+                                                        <div className="flex justify-between items-start gap-3">
+                                                            <div className="text-sm font-semibold text-gray-800 dark:text-gray-200">
+                                                                {idx + 1}. {q.question_text}
+                                                                <span className="ml-2 badge badge-outline-primary text-[10px] font-bold uppercase rounded px-1.5 py-0.5">{q.question_type}</span>
+                                                                <span className="ml-1 text-[10px] text-gray-400">({q.marks} marks)</span>
+                                                            </div>
+                                                            <div className="flex items-center gap-3 shrink-0">
+                                                                <button type="button" className="text-primary hover:text-primary-dark" onClick={() => { setEditingQuestion(q); setQuestionForm({ question_text: q.question_text, question_type: q.question_type, optionsRaw: q.options ? q.options.join(', ') : '', correct_answer: q.correct_answer, marks: q.marks }); setAddQuestionOpen(true); }}>
+                                                                    <IconPencil className="w-4 h-4" />
+                                                                </button>
+                                                                <button type="button" className="text-danger hover:text-danger-dark" onClick={() => handleDeleteQuestion(q)}>
+                                                                    <IconTrashLines className="w-4.5 h-4.5" />
+                                                                </button>
+                                                            </div>
+                                                        </div>
+                                                        {q.options && q.options.length > 0 && (
+                                                            <div className="text-xs text-gray-500 mt-1.5">Options: {q.options.join(' | ')}</div>
+                                                        )}
+                                                        <div className="text-xs font-bold text-success mt-1.5">Correct: {q.correct_answer}</div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        )}
+
+                                        <div className="flex justify-end pt-6 border-t border-[#ebedf2] dark:border-[#1b2e4b] mt-6">
+                                            <button type="button" className="btn btn-outline-danger rounded-lg" onClick={() => setQuestionsModalOpen(false)}>Close</button>
+                                        </div>
+                                    </div>
+                                </Dialog.Panel>
+                            </Transition.Child>
+                        </div>
+                    </div>
+                </Dialog>
+            </Transition>
+
+            {/* Add/Edit Question Modal */}
+            <Transition appear show={addQuestionOpen} as={Fragment}>
+                <Dialog as="div" open={addQuestionOpen} onClose={() => setAddQuestionOpen(false)} className="relative z-[70]">
+                    <Transition.Child as={Fragment} enter="ease-out duration-300" enterFrom="opacity-0" enterTo="opacity-100" leave="ease-in duration-200" leaveFrom="opacity-100" leaveTo="opacity-0">
+                        <div className="fixed inset-0 bg-[black]/65 backdrop-blur-sm" />
+                    </Transition.Child>
+                    <div className="fixed inset-0 overflow-y-auto">
+                        <div className="flex min-h-full items-center justify-center px-4 py-8">
+                            <Transition.Child as={Fragment} enter="ease-out duration-300" enterFrom="opacity-0 scale-95" enterTo="opacity-100 scale-100" leave="ease-in duration-200" leaveFrom="opacity-100 scale-100" leaveTo="opacity-0 scale-95">
+                                <Dialog.Panel className="panel border-0 p-0 rounded-xl overflow-hidden w-full max-w-lg text-black dark:text-white-dark shadow-2xl relative">
+                                    <button type="button" onClick={() => setAddQuestionOpen(false)} className="absolute top-4 right-4 text-gray-400 hover:text-gray-800 dark:hover:text-gray-250 outline-none">
+                                        <IconX className="w-5 h-5" />
+                                    </button>
+                                    <div className="text-lg font-bold bg-[#fbfbfb] dark:bg-[#121c2c] py-4 px-6 border-b border-[#ebedf2] dark:border-[#1b2e4b]">
+                                        {editingQuestion ? 'Edit Question' : 'Add Question'}
+                                    </div>
+                                    <div className="p-6">
+                                        <form onSubmit={handleSaveQuestion} className="space-y-4">
+                                            <div>
+                                                <label className="font-semibold mb-1 block">Question Text <span className="text-danger">*</span></label>
+                                                <textarea className="form-textarea rounded-lg" required value={questionForm.question_text} onChange={(e) => setQuestionForm({ ...questionForm, question_text: e.target.value })} />
+                                            </div>
+
+                                            <div className="grid grid-cols-2 gap-4">
+                                                <div>
+                                                    <label className="font-semibold mb-1 block">Question Type</label>
+                                                    <select className="form-select rounded-lg" value={questionForm.question_type} onChange={(e) => setQuestionForm({ ...questionForm, question_type: e.target.value as any })}>
+                                                        <option value="mcq">Multiple Choice</option>
+                                                        <option value="true_false">True / False</option>
+                                                        <option value="short_answer">Short Answer</option>
+                                                        <option value="coding">Coding</option>
+                                                    </select>
+                                                </div>
+                                                <div>
+                                                    <label className="font-semibold mb-1 block">Marks</label>
+                                                    <input type="number" className="form-input rounded-lg" min="1" value={questionForm.marks} onChange={(e) => setQuestionForm({ ...questionForm, marks: Number(e.target.value) })} />
+                                                </div>
+                                            </div>
+
+                                            {questionForm.question_type === 'mcq' && (
+                                                <div>
+                                                    <label className="font-semibold mb-1 block">Options (comma-separated)</label>
+                                                    <input className="form-input rounded-lg" placeholder="Option A, Option B, Option C, Option D" value={questionForm.optionsRaw} onChange={(e) => setQuestionForm({ ...questionForm, optionsRaw: e.target.value })} />
+                                                </div>
+                                            )}
+
+                                            <div>
+                                                <label className="font-semibold mb-1 block">Correct Answer <span className="text-danger">*</span></label>
+                                                <input className="form-input rounded-lg" required placeholder={questionForm.question_type === 'true_false' ? 'True or False' : 'e.g. Option A'} value={questionForm.correct_answer} onChange={(e) => setQuestionForm({ ...questionForm, correct_answer: e.target.value })} />
+                                            </div>
+
+                                            <div className="flex justify-end gap-3 pt-4 border-t border-[#ebedf2] dark:border-[#1b2e4b] mt-6">
+                                                <button type="button" className="btn btn-outline-danger rounded-lg" onClick={() => setAddQuestionOpen(false)}>Cancel</button>
+                                                <button type="submit" className="btn btn-primary rounded-lg px-5 shadow-md" disabled={saving}>
+                                                    {saving ? 'Saving...' : 'Save Question'}
+                                                </button>
+                                            </div>
+                                        </form>
+                                    </div>
+                                </Dialog.Panel>
+                            </Transition.Child>
+                        </div>
+                    </div>
+                </Dialog>
+            </Transition>
             {/* Reviews Dialog Modal */}
             <Transition appear show={reviewsModalOpen} as={Fragment}>
                 <Dialog as="div" open={reviewsModalOpen} onClose={() => setReviewsModalOpen(false)} className="relative z-50">
@@ -998,6 +1605,116 @@ const Course = () => {
 
                                         <div className="flex justify-end pt-6 border-t border-[#ebedf2] dark:border-[#1b2e4b] mt-6">
                                             <button type="button" className="btn btn-outline-danger rounded-lg" onClick={() => setReviewsModalOpen(false)}>Close Reviews</button>
+                                        </div>
+                                    </div>
+                                </Dialog.Panel>
+                            </Transition.Child>
+                        </div>
+                    </div>
+                </Dialog>
+            </Transition>
+
+            {/* Enrolled Students Modal */}
+            <Transition appear show={enrolledModalOpen} as={Fragment}>
+                <Dialog as="div" open={enrolledModalOpen} onClose={() => setEnrolledModalOpen(false)} className="relative z-50">
+                    <Transition.Child as={Fragment} enter="ease-out duration-300" enterFrom="opacity-0" enterTo="opacity-100" leave="ease-in duration-200" leaveFrom="opacity-100" leaveTo="opacity-0">
+                        <div className="fixed inset-0 bg-[black]/65 backdrop-blur-sm" />
+                    </Transition.Child>
+                    <div className="fixed inset-0 overflow-y-auto">
+                        <div className="flex min-h-full items-center justify-center px-4 py-8">
+                            <Transition.Child as={Fragment} enter="ease-out duration-300" enterFrom="opacity-0 scale-95" enterTo="opacity-100 scale-100" leave="ease-in duration-200" leaveFrom="opacity-100 scale-100" leaveTo="opacity-0 scale-95">
+                                <Dialog.Panel className="panel border-0 p-0 rounded-xl overflow-hidden w-full max-w-3xl text-black dark:text-white-dark shadow-2xl relative">
+                                    <button type="button" onClick={() => setEnrolledModalOpen(false)} className="absolute top-4 right-4 text-gray-400 hover:text-gray-800 dark:hover:text-gray-250 outline-none">
+                                        <IconX className="w-5 h-5" />
+                                    </button>
+                                    <div className="text-lg font-bold bg-[#fbfbfb] dark:bg-[#121c2c] py-4 px-6 border-b border-[#ebedf2] dark:border-[#1b2e4b]">
+                                        Enrolled Students: {selectedCourseForEnrollment?.title}
+                                    </div>
+                                    <div className="p-6">
+                                        {enrolledLoading ? (
+                                            <div className="py-10 text-center text-gray-400 animate-pulse">Loading enrolled students...</div>
+                                        ) : enrolledList.length === 0 ? (
+                                            <div className="py-10 text-center text-gray-400 italic bg-gray-50 dark:bg-[#0e1726]/20 border border-dashed rounded-lg border-gray-200 dark:border-gray-800">
+                                                No students enrolled in this course yet.
+                                            </div>
+                                        ) : (
+                                            <div className="table-responsive border border-[#e0e6ed] dark:border-[#1b2e4b] rounded-lg max-h-[420px] overflow-y-auto">
+                                                <table className="table-hover">
+                                                    <thead>
+                                                        <tr>
+                                                            <th>Employee ID</th>
+                                                            <th>Name</th>
+                                                            <th>Department</th>
+                                                            <th>Status</th>
+                                                            <th>Progress</th>
+                                                            <th>Enrolled On</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        {enrolledList.map((en) => (
+                                                            <tr key={en.id}>
+                                                                <td className="font-bold text-primary">{en.employee_code || '—'}</td>
+                                                                <td className="font-semibold text-gray-800 dark:text-gray-200">{en.employee_name}</td>
+                                                                <td>{en.department_name || '—'}</td>
+                                                                <td>
+                                                                    <span className="badge badge-outline-primary text-[10px] font-bold uppercase rounded px-1.5 py-0.5">
+                                                                        {en.status.replace('_', ' ')}
+                                                                    </span>
+                                                                </td>
+                                                                <td>{en.progress_percentage}%</td>
+                                                                <td className="text-xs text-gray-500">{new Date(en.enrolled_at).toLocaleDateString()}</td>
+                                                            </tr>
+                                                        ))}
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        )}
+
+                                        <div className="flex justify-end pt-6 border-t border-[#ebedf2] dark:border-[#1b2e4b] mt-6">
+                                            <button type="button" className="btn btn-outline-danger rounded-lg" onClick={() => setEnrolledModalOpen(false)}>Close</button>
+                                        </div>
+                                    </div>
+                                </Dialog.Panel>
+                            </Transition.Child>
+                        </div>
+                    </div>
+                </Dialog>
+            </Transition>
+
+            {/* Certificate Preview Modal (auto-generated on course completion) */}
+            <Transition appear show={certModalOpen} as={Fragment}>
+                <Dialog as="div" open={certModalOpen} onClose={() => setCertModalOpen(false)} className="relative z-50">
+                    <Transition.Child as={Fragment} enter="ease-out duration-300" enterFrom="opacity-0" enterTo="opacity-100" leave="ease-in duration-200" leaveFrom="opacity-100" leaveTo="opacity-0">
+                        <div className="fixed inset-0 bg-[black]/65 backdrop-blur-sm" />
+                    </Transition.Child>
+                    <div className="fixed inset-0 overflow-y-auto">
+                        <div className="flex min-h-full items-center justify-center px-4 py-8">
+                            <Transition.Child as={Fragment} enter="ease-out duration-300" enterFrom="opacity-0 scale-95" enterTo="opacity-100 scale-100" leave="ease-in duration-200" leaveFrom="opacity-100 scale-100" leaveTo="opacity-0 scale-95">
+                                <Dialog.Panel className="panel border-0 p-0 rounded-xl overflow-hidden w-full max-w-3xl text-black dark:text-white-dark shadow-2xl relative">
+                                    <button type="button" onClick={() => setCertModalOpen(false)} className="absolute top-4 right-4 text-gray-400 hover:text-gray-800 dark:hover:text-gray-250 outline-none">
+                                        <IconX className="w-5 h-5" />
+                                    </button>
+                                    <div className="text-lg font-bold bg-[#fbfbfb] dark:bg-[#121c2c] py-4 px-6 border-b border-[#ebedf2] dark:border-[#1b2e4b]">
+                                        Certificate Preview: {selectedCourseForCert?.title}
+                                    </div>
+                                    <div className="p-6">
+                                        <p className="text-[11px] text-gray-400 mb-4">
+                                            Auto-generated when a learner completes every lesson and passes the course quiz — this is a sample using placeholder data.
+                                        </p>
+                                        {certPreviewLoading ? (
+                                            <div className="py-16 text-center text-gray-400 animate-pulse">Generating certificate preview...</div>
+                                        ) : certPreviewUrl ? (
+                                            <div className="border border-[#e0e6ed] dark:border-[#1b2e4b] rounded-lg overflow-hidden bg-gray-50 dark:bg-[#0e1726]/20">
+                                                <iframe src={certPreviewUrl} title="Certificate Preview" className="w-full h-[450px] border-0"></iframe>
+                                            </div>
+                                        ) : (
+                                            <div className="py-10 text-center text-gray-400 italic bg-gray-50 dark:bg-[#0e1726]/20 border border-dashed rounded-lg border-gray-200 dark:border-gray-800">
+                                                Could not generate certificate preview.
+                                            </div>
+                                        )}
+
+                                        <div className="flex justify-end pt-6 border-t border-[#ebedf2] dark:border-[#1b2e4b] mt-6">
+                                            <button type="button" className="btn btn-outline-danger rounded-lg" onClick={() => setCertModalOpen(false)}>Close</button>
                                         </div>
                                     </div>
                                 </Dialog.Panel>

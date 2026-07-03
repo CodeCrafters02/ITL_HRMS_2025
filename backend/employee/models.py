@@ -758,6 +758,25 @@ class Certificate(models.Model):
         return f'{self.employee} - {self.certificate_name}'
 
 
+class CertificateSignature(models.Model):
+    """
+    The authorized-signatory digital signature used on auto-generated
+    certificates. One per company — enforced via OneToOneField so a company
+    can only ever have a single active signature at a time (edit/delete it
+    to replace it, rather than adding another).
+    """
+    company = models.OneToOneField('app.Company', on_delete=models.CASCADE, related_name='certificate_signature')
+    signature_image = models.ImageField(upload_to='lms/certificate_signatures')
+    signatory_name = models.CharField(max_length=255, blank=True)
+    signatory_title = models.CharField(max_length=255, blank=True)
+    uploaded_by = models.ForeignKey('app.Employee', on_delete=models.SET_NULL, null=True, blank=True, related_name='certificate_signatures_uploaded')
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f'{self.company.name} - Authorized Signature'
+
+
 class ComplianceAssignment(models.Model):
     STATUS_CHOICES = [
         ('pending', 'Pending'),

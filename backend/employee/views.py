@@ -3682,6 +3682,26 @@ class CourseViewSet(viewsets.ModelViewSet):
         user_emp = getattr(self.request.user, 'employee_profile', None)
         serializer.save(created_by=user_emp)
 
+    @action(detail=True, methods=['get'], url_path='certificate-preview')
+    def certificate_preview(self, request, pk=None):
+        from types import SimpleNamespace
+        from django.http import HttpResponse
+        from django.utils import timezone
+        from app.utils import generate_certificate_pdf
+
+        course = self.get_object()
+        user_emp = getattr(request.user, 'employee_profile', None)
+        sample_employee = SimpleNamespace(
+            full_name='Sample Employee',
+            company=getattr(user_emp, 'company', None),
+        )
+        pdf_buffer = generate_certificate_pdf(
+            sample_employee, course, 'CERT-SAMPLE-00000000', timezone.now().date(), request=request
+        )
+        response = HttpResponse(pdf_buffer.read(), content_type='application/pdf')
+        response['Content-Disposition'] = f'inline; filename="certificate_preview_{course.id}.pdf"'
+        return response
+
 
 class CourseContentViewSet(viewsets.ModelViewSet):
     queryset = CourseContent.objects.all()
@@ -3790,6 +3810,25 @@ class CertificateViewSet(viewsets.ModelViewSet):
             return Certificate.objects.filter(employee__company=user_emp.company).order_by('-issue_date')
         return Certificate.objects.filter(employee=user_emp).order_by('-issue_date')
 
+
+class CertificateSignatureViewSet(viewsets.ModelViewSet):
+    queryset = CertificateSignature.objects.all()
+    serializer_class = CertificateSignatureSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        user_emp = getattr(self.request.user, 'employee_profile', None)
+        if not user_emp:
+            return CertificateSignature.objects.none()
+        return CertificateSignature.objects.filter(company=user_emp.company)
+
+    def perform_create(self, serializer):
+        user_emp = getattr(self.request.user, 'employee_profile', None)
+        if not user_emp:
+            raise serializers.ValidationError("No active employee profile associated with this user account.")
+        if CertificateSignature.objects.filter(company=user_emp.company).exists():
+            raise serializers.ValidationError("A signature already exists for your company. Edit or delete it first.")
+        serializer.save(company=user_emp.company, uploaded_by=user_emp)
 
 
 class TrainingRequestViewSet(viewsets.ModelViewSet):
@@ -3915,9 +3954,19 @@ class AssessmentAttemptViewSet(viewsets.ModelViewSet):
         if not user_emp:
             raise serializers.ValidationError("No active employee profile associated with this user account.")
         assessment = serializer.validated_data.get('assessment')
+        enrollment = serializer.validated_data.get('enrollment')
+        if enrollment is not None:
+            total_contents = CourseContent.objects.filter(course=enrollment.course).count()
+            if total_contents:
+                completed = LessonProgress.objects.filter(enrollment=enrollment, is_completed=True).count()
+                if completed < total_contents:
+                    raise serializers.ValidationError("Complete all lessons before attempting this quiz.")
         existing_attempts = AssessmentAttempt.objects.filter(employee=user_emp, assessment=assessment).count()
         attempt_number = existing_attempts + 1
-        serializer.save(employee=user_emp, attempt_number=attempt_number, submitted_at=timezone.now())
+        instance = serializer.save(employee=user_emp, attempt_number=attempt_number, submitted_at=timezone.now())
+        if instance.is_passed and instance.enrollment is not None:
+            from .utils import issue_certificate_if_eligible
+            issue_certificate_if_eligible(instance.enrollment, request=self.request)
 
 
 
@@ -3993,14 +4042,15 @@ class EnrollmentViewSet(viewsets.ModelViewSet):
     serializer_class = EnrollmentSerializer
     permission_classes = [IsAuthenticated]
     filter_backends = [DjangoFilterBackend]
-    filterset_fields = ['course', 'status']
+    filterset_fields = ['course', 'status', 'employee']
 
     def get_queryset(self):
         user_emp = getattr(self.request.user, 'employee_profile', None)
         if not user_emp:
             return Enrollment.objects.none()
         # Admin can view all, employee can only view their own
-        if getattr(self.request.user, 'user_role', '') == 'admin':
+        user = self.request.user
+        if user.is_superuser or getattr(user, 'role', '') in ['admin', 'manager']:
             return Enrollment.objects.filter(employee__company=user_emp.company).order_by('-enrolled_at')
         return Enrollment.objects.filter(employee=user_emp).order_by('-enrolled_at')
 
@@ -4023,19 +4073,26 @@ class LessonProgressViewSet(viewsets.ModelViewSet):
     queryset = LessonProgress.objects.all()
     serializer_class = LessonProgressSerializer
     permission_classes = [IsAuthenticated]
+    filter_backends = [DjangoFilterBackend]
+    filterset_fields = ['enrollment']
 
     def get_queryset(self):
         user_emp = getattr(self.request.user, 'employee_profile', None)
         if not user_emp:
             return LessonProgress.objects.none()
+        user = self.request.user
+        if user.is_superuser or getattr(user, 'role', '') in ['admin', 'manager']:
+            return LessonProgress.objects.filter(enrollment__employee__company=user_emp.company).order_by('-id')
         return LessonProgress.objects.filter(enrollment__employee=user_emp).order_by('-id')
 
     def perform_create(self, serializer):
         from django.utils import timezone
-        serializer.save(
+        from .utils import issue_certificate_if_eligible
+        instance = serializer.save(
             is_completed=True,
             completed_at=timezone.now()
         )
+        issue_certificate_if_eligible(instance.enrollment, request=self.request)
 
 
 class CourseReviewViewSet(viewsets.ModelViewSet):
@@ -4116,8 +4173,10 @@ class LMSDashboardAPIView(APIView):
 
         avg_course_rating = CourseReview.objects.aggregate(avg=Avg('rating'))['avg'] or 0
 
+        # A request is still "pending" only until either the manager or admin
+        # makes a decision - only one approval is required, not both.
         pending_training_requests = TrainingRequest.objects.filter(
-            Q(manager_status='pending') | Q(admin_status='pending')
+            manager_status='pending', admin_status='pending'
         ).count()
 
         completion_rate = round((completed_enrollments / total_enrollments) * 100, 1) if total_enrollments else 0
@@ -4230,11 +4289,12 @@ class LMSDashboardAPIView(APIView):
         ]
 
         # ---- Training request funnel ----
+        # Only one approval (manager OR admin) is required, so "Approved"/
+        # "Rejected" reflect whichever of the two made the decision first.
         tr_qs = TrainingRequest.objects.all()
         training_request_funnel = [
             {'stage': 'Submitted', 'count': tr_qs.count()},
-            {'stage': 'Manager Approved', 'count': tr_qs.filter(manager_status='approved').count()},
-            {'stage': 'Admin Approved', 'count': tr_qs.filter(admin_status='approved').count()},
+            {'stage': 'Approved', 'count': tr_qs.filter(Q(manager_status='approved') | Q(admin_status='approved')).count()},
             {'stage': 'Rejected', 'count': tr_qs.filter(Q(manager_status='rejected') | Q(admin_status='rejected')).count()},
         ]
 

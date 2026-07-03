@@ -544,6 +544,71 @@ def generate_letter_pdf(company, letter_title, letter_content, request=None):
     return pdf_file.getvalue()
 
 
+def _resolve_media_file_url(file_field, request=None):
+    """
+    Resolve a FileField/ImageField to a URL weasyprint can actually load:
+    local file path first (read directly off disk, no network round-trip),
+    then an absolute URL built from the request, then SITE_URL as a last resort.
+    """
+    if not file_field:
+        return None
+    try:
+        if hasattr(file_field, 'path') and os.path.exists(file_field.path):
+            return 'file:///' + file_field.path.replace('\\', '/').replace(os.sep, '/')
+    except (ValueError, NotImplementedError):
+        pass
+    if hasattr(file_field, 'url'):
+        if request:
+            return request.build_absolute_uri(file_field.url)
+        domain = getattr(settings, 'SITE_URL', 'http://localhost:8000')
+        return f"{domain}{file_field.url}"
+    return None
+
+
+def _truncate(text, max_len):
+    text = (text or "").strip()
+    if len(text) <= max_len:
+        return text
+    return text[:max_len - 1].rstrip() + "…"
+
+
+def generate_certificate_pdf(employee, course, certificate_number, issue_date, request=None):
+    """
+    Generate a course-completion certificate PDF for an employee, using the
+    same context-building/weasyprint pattern as generate_letter_pdf.
+
+    Text fields are truncated to fixed lengths so the fixed single-page
+    layout never overflows into a second page — weasyprint paginates
+    overflowing content regardless of CSS `overflow: hidden`, so length has
+    to be capped here rather than clipped visually.
+    """
+    company = getattr(employee, 'company', None)
+    logo_url = _resolve_media_file_url(getattr(company, 'logo', None), request) if company else None
+
+    signature = None
+    if company:
+        from employee.models import CertificateSignature
+        signature = CertificateSignature.objects.filter(company=company).first()
+    signature_image_url = _resolve_media_file_url(signature.signature_image, request) if signature else None
+
+    context = {
+        "company_logo_url": logo_url,
+        "company_name": _truncate(company.name if company and getattr(company, 'name', None) else "", 60),
+        "employee_name": _truncate(employee.full_name if getattr(employee, 'full_name', None) else "", 45),
+        "course_title": _truncate(course.title, 90),
+        "certificate_number": certificate_number,
+        "issue_date": issue_date.strftime("%B %d, %Y"),
+        "signature_image_url": signature_image_url,
+        "signatory_name": _truncate(signature.signatory_name if signature else "", 45),
+        "signatory_title": _truncate(signature.signatory_title if signature else "", 45),
+    }
+    html_string = render_to_string('certificate_template.html', context)
+    pdf_file = BytesIO()
+    HTML(string=html_string).write_pdf(pdf_file)
+    pdf_file.seek(0)
+    return pdf_file
+
+
 def fill_placeholders(text, data):
     import re
     def replacer(match):

@@ -22,6 +22,8 @@ type RequestType = {
     manager_remarks?: string;
     admin_status: string;
     admin_remarks?: string;
+    final_status: 'pending' | 'approved' | 'rejected';
+    decided_by: 'manager' | 'admin' | null;
     budget_required: boolean;
     budget_status: string;
     created_at: string;
@@ -198,8 +200,7 @@ const EmployeeTrainingRequests = () => {
                                     <th>Course Requested</th>
                                     <th>Reason / Remarks</th>
                                     <th>Budget Required</th>
-                                    <th>Manager Status</th>
-                                    <th>Admin Status</th>
+                                    <th>Status</th>
                                     <th>Requested On</th>
                                 </tr>
                             </thead>
@@ -232,15 +233,14 @@ const EmployeeTrainingRequests = () => {
                                             </span>
                                         </td>
                                         <td>
-                                            <span className={`badge text-[9px] uppercase font-bold px-2 py-0.5 rounded ${getStatusBadge(req.manager_status)}`}>
-                                                {req.manager_status}
+                                            <span className={`badge text-[9px] uppercase font-bold px-2 py-0.5 rounded ${getStatusBadge(req.final_status)}`}>
+                                                {req.final_status}
                                             </span>
-                                            {req.manager_name && <span className="block text-[9px] text-gray-400 mt-1">{req.manager_name}</span>}
-                                        </td>
-                                        <td>
-                                            <span className={`badge text-[9px] uppercase font-bold px-2 py-0.5 rounded ${getStatusBadge(req.admin_status)}`}>
-                                                {req.admin_status}
-                                            </span>
+                                            {req.decided_by && (
+                                                <span className="block text-[9px] text-gray-400 mt-1 capitalize">
+                                                    by {req.decided_by}{req.decided_by === 'manager' && req.manager_name ? ` (${req.manager_name})` : ''}
+                                                </span>
+                                            )}
                                         </td>
                                         <td>{new Date(req.created_at).toLocaleDateString()}</td>
                                     </tr>
