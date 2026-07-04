@@ -3890,11 +3890,12 @@ class TrainingRequestViewSet(viewsets.ModelViewSet):
             return TrainingRequest.objects.none()
 
         role = getattr(self.request.user, 'role', '')
+        is_manager = bool(user_emp.reportees.exists()) or role == 'manager'
         qs = TrainingRequest.objects.filter(employee__company=user_emp.company).order_by('-created_at')
 
         if role == 'admin' or self.request.user.is_superuser:
             qs = qs
-        elif role == 'manager':
+        elif is_manager:
             qs = qs.filter(Q(employee=user_emp) | Q(employee__reporting_manager=user_emp) | Q(manager=user_emp))
         else:
             qs = qs.filter(employee=user_emp)

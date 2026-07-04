@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import { useDispatch } from 'react-redux';
 import Swal from 'sweetalert2';
+import IconChecks from '../../../components/Icon/IconChecks';
+import IconX from '../../../components/Icon/IconX';
 import { setPageTitle } from '../../../store/themeConfigSlice';
 import { authFetch } from '../../../utils/authFetch';
 import IconPlus from '../../../components/Icon/IconPlus';
@@ -48,6 +50,10 @@ const EmployeeTrainingRequests = () => {
     const [totalCount, setTotalCount] = useState(0);
     const [totalPages, setTotalPages] = useState(1);
     const [pageInput, setPageInput] = useState('1');
+    const [isReportingManager, setIsReportingManager] = useState(false);
+    const [managerDecision, setManagerDecision] = useState<Record<number, 'approved' | 'rejected' | 'pending'>>({});
+    const [managerRemarks, setManagerRemarks] = useState<Record<number, string>>({});
+    const [savingDecisionId, setSavingDecisionId] = useState<number | null>(null);
 
     const [form, setForm] = useState({
         course: '',
@@ -58,6 +64,7 @@ const EmployeeTrainingRequests = () => {
 
     useEffect(() => {
         dispatch(setPageTitle('Training Requests'));
+        setIsReportingManager(localStorage.getItem('is_reporting_manager') === 'true');
         fetchRequests();
         fetchCourses();
     }, [dispatch]);
@@ -151,6 +158,41 @@ const EmployeeTrainingRequests = () => {
             Swal.fire('Error!', 'Connection failure.', 'error');
         } finally {
             setSaving(false);
+        }
+    };
+
+    const handleManagerDecision = async (requestId: number) => {
+        const decision = managerDecision[requestId] || 'approved';
+        const remarks = managerRemarks[requestId] || '';
+
+        if (!decision) {
+            Swal.fire('Error!', 'Choose an approval decision first.', 'error');
+            return;
+        }
+
+        setSavingDecisionId(requestId);
+        try {
+            const response = await authFetch(`${REQUESTS_API}${requestId}/`, {
+                method: 'PATCH',
+                headers: getHeaders(),
+                body: JSON.stringify({
+                    manager_status: decision,
+                    manager_remarks: remarks,
+                }),
+            });
+
+            if (response.ok) {
+                Swal.fire('Updated!', 'Manager decision saved.', 'success');
+                setManagerDecision((prev) => ({ ...prev, [requestId]: 'pending' }));
+                setManagerRemarks((prev) => ({ ...prev, [requestId]: '' }));
+                fetchRequests(1);
+            } else {
+                Swal.fire('Error!', 'Failed to update decision.', 'error');
+            }
+        } catch {
+            Swal.fire('Error!', 'Connection failure.', 'error');
+        } finally {
+            setSavingDecisionId(null);
         }
     };
 
@@ -296,7 +338,37 @@ const EmployeeTrainingRequests = () => {
                                                 </span>
                                             )}
                                         </td>
-                                        <td>{new Date(req.created_at).toLocaleDateString()}</td>
+                                        <td>
+                                            <div className="space-y-2">
+                                                <div>{new Date(req.created_at).toLocaleDateString()}</div>
+                                                {isReportingManager && req.manager_status === 'pending' && (
+                                                    <div className="flex flex-col gap-2">
+                                                        <select
+                                                            className="form-select rounded-lg text-[10px]"
+                                                            value={managerDecision[req.id] || 'approved'}
+                                                            onChange={(e) => setManagerDecision((prev) => ({ ...prev, [req.id]: e.target.value as 'approved' | 'rejected' }))}
+                                                        >
+                                                            <option value="approved">Approve</option>
+                                                            <option value="rejected">Reject</option>
+                                                        </select>
+                                                        <textarea
+                                                            className="form-textarea min-h-[60px] rounded-lg text-[10px]"
+                                                            placeholder="Manager remarks"
+                                                            value={managerRemarks[req.id] || ''}
+                                                            onChange={(e) => setManagerRemarks((prev) => ({ ...prev, [req.id]: e.target.value }))}
+                                                        />
+                                                        <button
+                                                            type="button"
+                                                            className="btn btn-primary btn-sm rounded-lg"
+                                                            onClick={() => handleManagerDecision(req.id)}
+                                                            disabled={savingDecisionId === req.id}
+                                                        >
+                                                            {savingDecisionId === req.id ? 'Saving...' : 'Submit'}
+                                                        </button>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </td>
                                     </tr>
                                 ))}
                             </tbody>
