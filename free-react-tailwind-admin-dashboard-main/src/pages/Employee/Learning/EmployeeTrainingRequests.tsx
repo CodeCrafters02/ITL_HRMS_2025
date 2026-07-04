@@ -15,6 +15,7 @@ const EMP_INFO_API = `${API_BASE_URL}/employee/company-info/`;
 
 type RequestType = {
     id: number;
+    employee_id?: number; // Added to identify request owner
     course?: number | null;
     course_title?: string | null;
     custom_course_title: string;
@@ -37,6 +38,9 @@ type CourseType = {
 };
 
 const EmployeeTrainingRequests = () => {
+    // Determine user role and ID from localStorage
+    const userRole = localStorage.getItem('user_role') || '';
+    const userId = Number(localStorage.getItem('user_id')) || null;
     const dispatch = useDispatch();
     const [requests, setRequests] = useState<RequestType[]>([]);
     const [courses, setCourses] = useState<CourseType[]>([]);
@@ -332,7 +336,8 @@ const EmployeeTrainingRequests = () => {
                                             <span className={`badge text-[9px] uppercase font-bold px-2 py-0.5 rounded ${getStatusBadge(req.final_status)}`}>
                                                 {req.final_status}
                                             </span>
-                                            {req.decided_by && (
+                                            {/* Show manager decision only for managers */}
+                                            {isReportingManager && req.decided_by && (
                                                 <span className="block text-[9px] text-gray-400 mt-1 capitalize">
                                                     by {req.decided_by}{req.decided_by === 'manager' && req.manager_name ? ` (${req.manager_name})` : ''}
                                                 </span>
