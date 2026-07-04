@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useDispatch } from 'react-redux';
 import { useParams, Link } from 'react-router-dom';
 import Swal from 'sweetalert2';
-import { setPageTitle } from '../../../store/themeConfigSlice';
+import { setPageTitle, setQuizActive } from '../../../store/themeConfigSlice';
 import { authFetch } from '../../../utils/authFetch';
 import IconPlus from '../../../components/Icon/IconPlus';
 import IconOpenBook from '../../../components/Icon/IconOpenBook';
@@ -26,7 +26,7 @@ type ContentType = {
     id: number;
     title: string;
     description?: string;
-    content_type: 'video' | 'pdf' | 'document' | 'link';
+    content_type: 'video' | 'pdf' | 'ppt' | 'audio' | 'scorm' | 'link' | 'document';
     file_path?: string | null;
     file_path_url?: string | null;
     external_url?: string;
@@ -152,16 +152,23 @@ const CourseSyllabusPlayer = () => {
             ]);
             if (contentsRes.ok) {
                 const contentsData = await contentsRes.json();
-                const mappedContents = (contentsData.results || contentsData || []).map((c: any) => ({
-                    id: c.id,
-                    title: c.title,
-                    description: c.description,
-                    content_type: c.content_type,
-                    file_path: c.file || null,
-                    file_path_url: c.file_url || c.file || null,
-                    external_url: c.external_url,
-                    order: c.sequence || 0,
-                }));
+                const mappedContents = (contentsData.results || contentsData || []).map((c: any) => {
+                    let fileUrl = c.file_url || c.file || null;
+                    // Ensure absolute URL for media files served from Django backend
+                    if (fileUrl && !fileUrl.startsWith('http')) {
+                        fileUrl = `${API_BASE_URL}${fileUrl.startsWith('/') ? '' : '/'}${fileUrl}`;
+                    }
+                    return {
+                        id: c.id,
+                        title: c.title,
+                        description: c.description,
+                        content_type: c.content_type,
+                        file_path: c.file || null,
+                        file_path_url: fileUrl,
+                        external_url: c.external_url,
+                        order: c.sequence || 0,
+                    };
+                });
                 const sorted = mappedContents.sort((a: any, b: any) => a.order - b.order);
                 setContents(sorted);
                 // Pre-select first syllabus item
@@ -224,22 +231,27 @@ const CourseSyllabusPlayer = () => {
     // Quiz unlocks only once every lecture/document/link is marked complete
     const allLessonsDone = contents.length > 0 && completedLessons.length === contents.length;
 
+    const fetchCertificateData = async () => {
+        if (!enrollment?.course) return;
+        try {
+            const headers = { Authorization: `Bearer ${localStorage.getItem('access_token')}` };
+            const response = await authFetch(`${CERTIFICATES_API}?course=${enrollment.course}&mine=true`, { headers });
+            if (response.ok) {
+                const data = await response.json();
+                const list = data.results || data || [];
+                if (list.length > 0) setCertificate(list[0]);
+            }
+        } catch (error) {
+            console.error('Error checking for completion certificate:', error);
+        }
+    };
+
     // Certificate is auto-generated server-side once the course is fully complete
     // (all lessons + quiz, if any) — check for it once progress hits 100%.
     useEffect(() => {
-        if (computedProgress !== 100 || !enrollment?.course || certificate) return;
-        (async () => {
-            try {
-                const response = await authFetch(`${CERTIFICATES_API}?course=${enrollment.course}`, { headers: getHeaders() });
-                if (response.ok) {
-                    const data = await response.json();
-                    const list = data.results || data || [];
-                    if (list.length > 0) setCertificate(list[0]);
-                }
-            } catch (error) {
-                console.error('Error checking for completion certificate:', error);
-            }
-        })();
+        if (computedProgress === 100 && enrollment?.course && !certificate) {
+            fetchCertificateData();
+        }
     }, [computedProgress, enrollment, certificate]);
 
     // Active item objects
@@ -257,6 +269,24 @@ const CourseSyllabusPlayer = () => {
         if (activeItem?.type !== 'assignment') return null;
         return assignments.find((a) => a.id === activeItem.id) || null;
     }, [assignments, activeItem]);
+
+    const isQuizInProgress = useMemo(() => {
+        if (activeItem?.type !== 'quiz' || !activeQuiz) return false;
+        const quizAttempts = attempts.filter((att: any) => att.assessment === activeQuiz.id);
+        const attemptCount = quizAttempts.length;
+        const maxAttempts = activeQuiz.max_attempts || 1;
+        const hasReachedMax = attemptCount >= maxAttempts;
+        const hasPassed = quizAttempts.some((att: any) => att.is_passed);
+        
+        return !quizSubmitted && !hasReachedMax && !hasPassed && quizQuestions.length > 0;
+    }, [activeItem, activeQuiz, quizSubmitted, attempts, quizQuestions]);
+
+    useEffect(() => {
+        dispatch(setQuizActive(isQuizInProgress));
+        return () => {
+            dispatch(setQuizActive(false));
+        };
+    }, [isQuizInProgress, dispatch]);
 
     // Triggers when a lecture/quiz/assignment is clicked in sidebar
     const handleSelectNavItem = (type: 'lecture' | 'quiz' | 'assignment', id: number) => {
@@ -377,6 +407,9 @@ const CourseSyllabusPlayer = () => {
                 setQuizResult({ score: pct, passed });
                 setQuizSubmitted(true);
                 fetchAttempts();
+                if (passed) {
+                    fetchCertificateData();
+                }
 
                 Swal.fire({
                     title: passed ? 'Passed!' : 'Failed!',
@@ -469,9 +502,15 @@ const CourseSyllabusPlayer = () => {
             <div className="w-full lg:w-80 panel border border-[#e0e6ed] dark:border-[#1b2e4b] p-4 flex flex-col justify-between h-auto lg:h-[calc(100vh-160px)] overflow-y-auto bg-white dark:bg-[#0e1726]/40">
                 <div>
                     <div className="pb-4 border-b border-[#ebedf2] dark:border-[#1b2e4b] mb-4">
-                        <Link to="/employee/learning-management/my-learning" className="text-xs text-primary hover:underline font-bold block mb-2">
-                            ← Back to Dashboard
-                        </Link>
+                        {isQuizInProgress ? (
+                            <span className="text-xs text-gray-400 font-bold block mb-2 cursor-not-allowed" title="Finish the quiz to navigate back">
+                                ← Back to Dashboard (Locked)
+                            </span>
+                        ) : (
+                            <Link to="/employee/learning-management/my-learning" className="text-xs text-primary hover:underline font-bold block mb-2">
+                                ← Back to Dashboard
+                            </Link>
+                        )}
                         <h2 className="text-base font-extrabold text-gray-800 dark:text-white-light leading-snug line-clamp-2">
                             {enrollment?.course_title || 'Course Player'}
                         </h2>
@@ -482,6 +521,17 @@ const CourseSyllabusPlayer = () => {
                         <div className="w-full bg-gray-100 dark:bg-gray-850 rounded-full h-1.5">
                             <div className="bg-primary h-1.5 rounded-full" style={{ width: `${computedProgress}%` }}></div>
                         </div>
+                        {certificate && (
+                            <a
+                                href={certificate.certificate_file_url || '#'}
+                                target="_blank"
+                                rel="noreferrer"
+                                download
+                                className="btn btn-success btn-sm w-full rounded-lg text-xs py-2 mt-4 font-bold flex items-center justify-center gap-1.5 shadow-md hover:scale-102 transition-all duration-300"
+                            >
+                                🎓 Download Certificate
+                            </a>
+                        )}
                     </div>
 
                     {loading ? (
@@ -502,15 +552,18 @@ const CourseSyllabusPlayer = () => {
                                                 <li key={item.id}>
                                                     <button
                                                         type="button"
+                                                        disabled={isQuizInProgress}
                                                         className={`w-full text-left p-2.5 rounded-lg border transition-all duration-300 flex items-center justify-between ${
-                                                            active
+                                                            isQuizInProgress
+                                                                ? 'border-transparent opacity-50 cursor-not-allowed text-gray-400'
+                                                                : active
                                                                 ? 'border-primary bg-primary/5 text-primary font-bold'
                                                                 : 'border-transparent hover:bg-gray-50 dark:hover:bg-gray-850 text-gray-650 dark:text-gray-355'
                                                         }`}
                                                         onClick={() => handleSelectNavItem('lecture', item.id)}
                                                     >
                                                         <div className="flex items-center gap-2 truncate">
-                                                            <span>{item.content_type === 'video' ? '🎥' : item.content_type === 'pdf' ? '📄' : '🔗'}</span>
+                                                            <span>{item.content_type === 'video' ? '🎥' : (item.content_type === 'pdf' || item.content_type === 'ppt') ? '📄' : '🔗'}</span>
                                                             <span className="truncate">{item.title}</span>
                                                         </div>
                                                         {done && <span className="text-success font-bold">✓</span>}
@@ -532,14 +585,15 @@ const CourseSyllabusPlayer = () => {
                                     <ul className="space-y-1.5 text-xs">
                                         {quizzes.map((q) => {
                                             const active = activeItem?.type === 'quiz' && activeItem.id === q.id;
+                                            const disabledOption = !allLessonsDone || (isQuizInProgress && !active);
                                             return (
                                                 <li key={q.id}>
                                                     <button
                                                         type="button"
-                                                        disabled={!allLessonsDone}
+                                                        disabled={disabledOption}
                                                         title={!allLessonsDone ? 'Complete all lectures to unlock this quiz' : undefined}
                                                         className={`w-full text-left p-2.5 rounded-lg border transition-all duration-300 flex items-center justify-between ${
-                                                            !allLessonsDone
+                                                            disabledOption
                                                                 ? 'border-transparent opacity-50 cursor-not-allowed text-gray-400'
                                                                 : active
                                                                 ? 'border-primary bg-primary/5 text-primary font-bold'
@@ -571,8 +625,11 @@ const CourseSyllabusPlayer = () => {
                                                 <li key={a.id}>
                                                     <button
                                                         type="button"
+                                                        disabled={isQuizInProgress}
                                                         className={`w-full text-left p-2.5 rounded-lg border transition-all duration-300 flex items-center justify-between ${
-                                                            active
+                                                            isQuizInProgress
+                                                                ? 'border-transparent opacity-50 cursor-not-allowed text-gray-400'
+                                                                : active
                                                                 ? 'border-primary bg-primary/5 text-primary font-bold'
                                                                 : 'border-transparent hover:bg-gray-50 dark:hover:bg-gray-850 text-gray-650 dark:text-gray-355'
                                                         }`}
@@ -601,6 +658,26 @@ const CourseSyllabusPlayer = () => {
 
             {/* Right Panel: Content Interactive Viewer / Test Box */}
             <div className="flex-1 panel border border-[#e0e6ed] dark:border-[#1b2e4b] p-6 min-h-[450px] bg-white dark:bg-[#0e1726]/40 flex flex-col">
+                {!loading && certificate && (
+                    <div className="bg-gradient-to-r from-success/15 to-primary/10 border border-success/30 rounded-xl p-4 mb-6 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-sm animate__animated animate__fadeIn">
+                        <div className="flex items-center gap-3">
+                            <span className="text-3xl">🎓</span>
+                            <div>
+                                <h4 className="font-extrabold text-sm text-gray-800 dark:text-white leading-snug">Course Completed Successfully!</h4>
+                                <p className="text-[11px] text-gray-500 font-medium">Your official completion certificate has been generated.</p>
+                            </div>
+                        </div>
+                        <a
+                            href={certificate.certificate_file_url || '#'}
+                            target="_blank"
+                            rel="noreferrer"
+                            download
+                            className="btn btn-success rounded-lg text-xs py-2 px-5 font-bold shadow-md hover:scale-105 transition-all duration-300 flex items-center gap-1.5"
+                        >
+                            📥 Download PDF Certificate
+                        </a>
+                    </div>
+                )}
                 {loading ? (
                     <div className="m-auto text-center text-gray-400 font-semibold animate-pulse">Loading active media...</div>
                 ) : activeItem === null ? (
@@ -686,7 +763,7 @@ const CourseSyllabusPlayer = () => {
                                         <h2 className="text-xl font-extrabold text-gray-800 dark:text-white-light">{activeLecture.title}</h2>
                                         <p className="text-xs text-gray-400 mt-1">{activeLecture.description || 'Watch or read the uploaded training documentation.'}</p>
                                     </div>
-                                    {activeLecture.file_path_url && (
+                                    {activeLecture.file_path_url && activeLecture.content_type !== 'pdf' && (
                                         <a
                                             href={activeLecture.file_path_url}
                                             target="_blank"
@@ -699,28 +776,103 @@ const CourseSyllabusPlayer = () => {
                                     )}
                                 </div>
 
-                                <div className="flex-grow bg-gray-900/5 dark:bg-black/30 rounded-xl overflow-hidden flex items-center justify-center p-4 border border-gray-100 dark:border-gray-800 min-h-[300px]">
+                                <div className="flex-grow rounded-xl overflow-hidden border border-gray-100 dark:border-gray-800 min-h-[350px]">
                                     {activeLecture.content_type === 'video' ? (
                                         activeLecture.file_path_url ? (
-                                            <video controls className="w-full max-h-[400px] bg-black" src={activeLecture.file_path_url}></video>
+                                            <div className="w-full bg-black rounded-xl overflow-hidden">
+                                                <video
+                                                    key={activeLecture.id}
+                                                    src={activeLecture.file_path_url}
+                                                    controls
+                                                    preload="auto"
+                                                    playsInline
+                                                    className="w-full rounded-xl"
+                                                    style={{ maxHeight: 'calc(100vh - 340px)' }}
+                                                >
+                                                    Your browser does not support the video tag.
+                                                </video>
+                                            </div>
                                         ) : (
-                                            <div className="text-center p-10 max-w-md">
+                                            <div className="text-center p-10 max-w-md mx-auto bg-gray-900/5 dark:bg-black/30 rounded-xl flex flex-col items-center justify-center min-h-[300px]">
                                                 <span className="text-5xl block mb-3">🎥</span>
                                                 <div className="font-bold text-gray-700 dark:text-gray-250">Virtual Video Tutorial</div>
-                                                <p className="text-xs text-gray-400 mt-1">Video stream is ready for review.</p>
+                                                <p className="text-xs text-gray-400 mt-1">No video file has been uploaded for this lesson.</p>
                                             </div>
                                         )
-                                    ) : activeLecture.content_type === 'pdf' ? (
+                                    ) : (activeLecture.content_type === 'pdf' || activeLecture.content_type === 'ppt') ? (
                                         activeLecture.file_path_url ? (
-                                            <iframe src={activeLecture.file_path_url} title={activeLecture.title} className="w-full h-[450px] border-0 rounded-lg"></iframe>
+                                            (() => {
+                                                const fileUrl = activeLecture.file_path_url;
+                                                console.log("DEBUG: activeLecture:", activeLecture);
+                                                console.log("DEBUG: fileUrl:", fileUrl);
+                                                const lowercaseUrl = (fileUrl || '').toLowerCase();
+                                                const isOfficeDoc = lowercaseUrl.endsWith('.ppt') || 
+                                                                    lowercaseUrl.endsWith('.pptx') || 
+                                                                    lowercaseUrl.endsWith('.doc') || 
+                                                                    lowercaseUrl.endsWith('.docx') ||
+                                                                    lowercaseUrl.endsWith('.xls') ||
+                                                                    lowercaseUrl.endsWith('.xlsx');
+
+                                                if (isOfficeDoc) {
+                                                    return (
+                                                        <div className="text-center p-10 max-w-md mx-auto bg-gray-900/5 dark:bg-black/30 rounded-xl flex flex-col items-center justify-center min-h-[350px]">
+                                                            <span className="text-5xl block mb-4">📊</span>
+                                                            <div className="font-extrabold text-base text-gray-800 dark:text-white mb-2">Office Presentation / Document</div>
+                                                            <p className="text-xs text-gray-500 dark:text-gray-400 mb-6 leading-relaxed">
+                                                                PowerPoint and Word files cannot be previewed directly inside the browser. Please open or download the document to view it.
+                                                            </p>
+                                                            <div className="flex gap-3">
+                                                                <a
+                                                                    href={fileUrl}
+                                                                    target="_blank"
+                                                                    rel="noreferrer"
+                                                                    className="btn btn-primary rounded-lg text-xs py-2 px-5 font-bold shadow-md"
+                                                                >
+                                                                    🗂️ Open Document
+                                                                </a>
+                                                                <a
+                                                                    href={fileUrl}
+                                                                    download
+                                                                    className="btn btn-outline-primary rounded-lg text-xs py-2 px-5 font-bold"
+                                                                >
+                                                                    📥 Download File
+                                                                </a>
+                                                            </div>
+                                                        </div>
+                                                    );
+                                                }
+
+                                                return (
+                                                    <div className="flex flex-col w-full h-full flex-grow">
+                                                        <div className="bg-primary/5 border border-primary/20 p-3 rounded-lg flex items-center justify-between text-xs mb-3 text-primary-dark font-medium">
+                                                            <span>📄 Document previewing inline. Having trouble viewing it?</span>
+                                                            <a
+                                                                href={`${fileUrl}?t=${new Date().getTime()}`}
+                                                                target="_blank"
+                                                                rel="noreferrer"
+                                                                className="btn btn-sm btn-primary rounded-md text-[10px] font-bold py-1 px-3"
+                                                            >
+                                                                🌐 Open in New Tab
+                                                            </a>
+                                                        </div>
+                                                        <iframe
+                                                            src={`${fileUrl}?t=${new Date().getTime()}`}
+                                                            title={activeLecture.title}
+                                                            className="w-full border-0 rounded-xl flex-grow"
+                                                            style={{ height: 'calc(100vh - 400px)', minHeight: '450px' }}
+                                                        ></iframe>
+                                                    </div>
+                                                );
+                                            })()
                                         ) : (
-                                            <div className="text-center p-10">
+                                            <div className="text-center p-10 bg-gray-900/5 dark:bg-black/30 rounded-xl flex flex-col items-center justify-center min-h-[300px]">
                                                 <span className="text-5xl block mb-3">📄</span>
                                                 <div className="font-bold text-gray-700 dark:text-gray-250">Document File Ready</div>
+                                                <p className="text-xs text-gray-400 mt-1">No document file has been uploaded for this lesson.</p>
                                             </div>
                                         )
                                     ) : (
-                                        <div className="text-center p-10 max-w-sm">
+                                        <div className="text-center p-10 max-w-sm mx-auto bg-gray-900/5 dark:bg-black/30 rounded-xl flex flex-col items-center justify-center min-h-[300px]">
                                             <span className="text-5xl block mb-3">🔗</span>
                                             <div className="font-bold text-gray-800 dark:text-white mb-2">External Study Link</div>
                                             <p className="text-xs text-gray-400 mb-4 leading-relaxed">
@@ -767,6 +919,7 @@ const CourseSyllabusPlayer = () => {
                                     const attemptCount = quizAttempts.length;
                                     const maxAttempts = activeQuiz.max_attempts || 1;
                                     const hasReachedMax = attemptCount >= maxAttempts;
+                                    const hasPassed = quizAttempts.some((att: any) => att.is_passed);
                                     
                                     if (quizSubmitted) {
                                         return (
@@ -777,7 +930,11 @@ const CourseSyllabusPlayer = () => {
                                                         {quizResult?.passed ? 'Passed successfully!' : 'Score below passing criteria'}
                                                     </h3>
                                                     <p className="text-sm text-gray-500 mt-2">You achieved a score of <strong>{quizResult?.score}%</strong>.</p>
-                                                    {!hasReachedMax ? (
+                                                    {quizResult?.passed ? (
+                                                        <div className="mt-4 text-xs text-success font-bold">
+                                                            ✓ You have successfully passed this assessment.
+                                                        </div>
+                                                    ) : !hasReachedMax ? (
                                                         <button
                                                             type="button"
                                                             className="btn btn-outline-primary btn-sm rounded-lg mt-5 mx-auto"
@@ -811,6 +968,39 @@ const CourseSyllabusPlayer = () => {
                                                         })}
                                                     </div>
                                                 </div>
+                                            </div>
+                                        );
+                                    }
+
+                                    if (hasPassed) {
+                                        return (
+                                            <div className="m-auto text-center max-w-md p-6 bg-white dark:bg-[#0e1726]/30 rounded-xl border border-gray-150 dark:border-gray-800 shadow-sm">
+                                                <span className="text-4xl block mb-2">🎉</span>
+                                                <h3 className="text-lg font-extrabold text-success">
+                                                    Assessment Passed!
+                                                </h3>
+                                                <p className="text-xs text-gray-500 mt-2">
+                                                    You have already successfully passed this assessment criteria. Previews and attempts are listed below.
+                                                </p>
+
+                                                {quizAttempts.length > 0 && (
+                                                    <div className="mt-6 bg-[#fbfbfb] dark:bg-black/10 p-4 rounded-xl border border-gray-100 dark:border-gray-850 text-left text-xs">
+                                                        <div className="font-bold mb-2 text-gray-700 dark:text-gray-300">Your Attempt History:</div>
+                                                        <div className="space-y-2">
+                                                            {quizAttempts.map((att: any, idx: number) => (
+                                                                <div key={att.id} className="flex justify-between items-center border-b border-gray-100 dark:border-gray-800 pb-2 last:border-0 last:pb-0">
+                                                                    <span>Attempt #{att.attempt_number || (idx + 1)}</span>
+                                                                    <span className="font-bold">
+                                                                        Score: <span className="text-primary">{att.score}%</span> (
+                                                                        <span className={att.is_passed ? 'text-success' : 'text-danger'}>
+                                                                            {att.is_passed ? 'Passed' : 'Failed'}
+                                                                        </span>)
+                                                                    </span>
+                                                                </div>
+                                                            ))}
+                                                        </div>
+                                                    </div>
+                                                )}
                                             </div>
                                         );
                                     }

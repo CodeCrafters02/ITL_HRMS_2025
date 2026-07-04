@@ -45,6 +45,7 @@ const initialState = {
     isDarkMode: false,
     sidebar: localStorage.getItem('sidebar') || defaultState.sidebar,
     semidark: localStorage.getItem('semidark') || themeConfig.semidark,
+    isQuizActive: false,
     languageList: [
         { code: 'zh', name: 'Chinese' },
         { code: 'da', name: 'Danish' },
@@ -132,6 +133,9 @@ const themeConfigSlice = createSlice({
         toggleSidebar(state) {
             state.sidebar = !state.sidebar;
         },
+        setQuizActive(state, { payload }) {
+            state.isQuizActive = payload;
+        },
 
         setPageTitle(state, { payload }) {
             document.title = `${payload} | HRMS`;
@@ -139,6 +143,6 @@ const themeConfigSlice = createSlice({
     },
 });
 
-export const { toggleTheme, toggleMenu, toggleLayout, toggleRTL, toggleAnimation, toggleNavbar, toggleSemidark, toggleLocale, toggleSidebar, setPageTitle } = themeConfigSlice.actions;
+export const { toggleTheme, toggleMenu, toggleLayout, toggleRTL, toggleAnimation, toggleNavbar, toggleSemidark, toggleLocale, toggleSidebar, setQuizActive, setPageTitle } = themeConfigSlice.actions;
 
 export default themeConfigSlice.reducer;

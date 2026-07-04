@@ -113,20 +113,26 @@ const DefaultLayout = ({ children }: PropsWithChildren) => {
                     )}
                 </div>
 
-                <ChatFloatingButton />
+                {!themeConfig.isQuizActive && <ChatFloatingButton />}
 
                 {/* BEGIN APP SETTING LAUNCHER */}
-                <Setting />
+                {!themeConfig.isQuizActive && <Setting />}
                 {/* END APP SETTING LAUNCHER */}
 
                 <div className={`${themeConfig.navbar} main-container text-black dark:text-white-dark min-h-screen`}>
                     {/* BEGIN SIDEBAR */}
-                    {!isHubPage && <Sidebar />}
+                    {!isHubPage && (
+                        <div className={themeConfig.isQuizActive ? 'pointer-events-none opacity-50 select-none' : ''}>
+                            <Sidebar />
+                        </div>
+                    )}
                     {/* END SIDEBAR */}
 
                     <div className={`main-content flex flex-col min-h-screen ${isHubPage ? '!pl-0 !pr-0 ltr:xl:!pl-0 rtl:xl:!pr-0' : ''}`}>
                         {/* BEGIN TOP NAVBAR */}
-                        <Header />
+                        <div className={themeConfig.isQuizActive ? 'pointer-events-none opacity-50 select-none' : ''}>
+                            <Header />
+                        </div>
                         {/* END TOP NAVBAR */}
 
                         {/* BEGIN CONTENT AREA */}

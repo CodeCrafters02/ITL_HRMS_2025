@@ -1134,7 +1134,7 @@ class TrainingRequestSerializer(serializers.ModelSerializer):
             'final_status', 'decided_by',
             'budget_required', 'budget_status', 'created_at', 'updated_at'
         ]
-        read_only_fields = ['created_at', 'updated_at']
+        read_only_fields = ['employee', 'manager', 'created_at', 'updated_at']
 
     def get_final_status(self, obj):
         # Only one approval is required - whichever of manager/admin decided

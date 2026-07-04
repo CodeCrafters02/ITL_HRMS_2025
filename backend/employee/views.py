@@ -3805,6 +3805,8 @@ class CertificateViewSet(viewsets.ModelViewSet):
         user_emp = getattr(self.request.user, 'employee_profile', None)
         if not user_emp:
             return Certificate.objects.none()
+        if self.request.query_params.get('mine') == 'true':
+            return Certificate.objects.filter(employee=user_emp).order_by('-issue_date')
         is_admin_or_manager = self.request.user.is_superuser or getattr(self.request.user, 'role', '') in ['admin', 'manager']
         if is_admin_or_manager:
             return Certificate.objects.filter(employee__company=user_emp.company).order_by('-issue_date')
@@ -3846,9 +3848,117 @@ class TrainingRequestViewSet(viewsets.ModelViewSet):
         return TrainingRequest.objects.filter(employee__company=user_emp.company).order_by('-created_at')
 
     def perform_create(self, serializer):
+        from notifications.models import UserNotification
+        from app.models import UserRegister
+
         user_emp = getattr(self.request.user, 'employee_profile', None)
         manager = getattr(user_emp, 'reporting_manager', None)
-        serializer.save(employee=user_emp, manager=manager)
+        instance = serializer.save(employee=user_emp, manager=manager)
+
+        course_title = instance.course.title if instance.course else instance.custom_course_title
+        emp_name = user_emp.full_name
+        default_sender = UserRegister.objects.filter(role='admin', company=user_emp.company).first()
+
+        # Notify the reporting manager
+        if manager and getattr(manager, 'user', None):
+            try:
+                UserNotification.objects.create(
+                    recipient=manager,
+                    title="📚 New Enrollment Request",
+                    message=f"{emp_name} has requested enrollment in \"{course_title}\". Please review and approve or reject.",
+                    related_object_id=instance.id,
+                    sender=default_sender,
+                )
+            except Exception:
+                pass
+
+        # Notify all company admins
+        admin_users = UserRegister.objects.filter(company=user_emp.company, role='admin')
+        for admin_user in admin_users:
+            admin_emp = getattr(admin_user, 'employee_profile', None)
+            if admin_emp and admin_emp != manager:
+                try:
+                    UserNotification.objects.create(
+                        recipient=admin_emp,
+                        title="📚 New Enrollment Request",
+                        message=f"{emp_name} has requested enrollment in \"{course_title}\". Please review and approve or reject.",
+                        related_object_id=instance.id,
+                        sender=default_sender,
+                    )
+                except Exception:
+                    pass
+
+    def perform_update(self, serializer):
+        from notifications.models import UserNotification
+        from app.models import UserRegister
+
+        # Read old values directly from the database to avoid in-memory reference issues
+        old_values = TrainingRequest.objects.filter(pk=serializer.instance.pk).values('manager_status', 'admin_status').first()
+        old_manager_status = old_values['manager_status'] if old_values else 'pending'
+        old_admin_status = old_values['admin_status'] if old_values else 'pending'
+
+        instance = serializer.save()
+
+        new_manager_status = instance.manager_status
+        new_admin_status = instance.admin_status
+
+        # Determine if a new decision was just made
+        manager_just_decided = (old_manager_status == 'pending' and new_manager_status in ('approved', 'rejected'))
+        admin_just_decided = (old_admin_status == 'pending' and new_admin_status in ('approved', 'rejected'))
+
+        if not manager_just_decided and not admin_just_decided:
+            return
+
+        # Compute final status using the same logic as the serializer
+        if new_manager_status in ('approved', 'rejected'):
+            final_status = new_manager_status
+            decided_by = 'manager'
+        elif new_admin_status in ('approved', 'rejected'):
+            final_status = new_admin_status
+            decided_by = 'admin'
+        else:
+            return
+
+        employee = instance.employee
+        course_title = instance.course.title if instance.course else instance.custom_course_title
+        default_sender = UserRegister.objects.filter(role='admin', company=employee.company).first()
+
+        if final_status == 'approved':
+            # Auto-create enrollment if linked to a catalog course
+            if instance.course:
+                if not Enrollment.objects.filter(employee=employee, course=instance.course).exists():
+                    Enrollment.objects.create(
+                        employee=employee,
+                        course=instance.course,
+                        enrolled_by=decided_by,
+                        enrolled_by_employee=getattr(self.request.user, 'employee_profile', None),
+                        status='enrolled',
+                    )
+
+            # Notify the employee
+            try:
+                UserNotification.objects.create(
+                    recipient=employee,
+                    title="✅ Enrollment Approved",
+                    message=f"Your enrollment request for \"{course_title}\" has been approved by {decided_by}. You can now access the course.",
+                    related_object_id=instance.id,
+                    sender=default_sender,
+                )
+            except Exception:
+                pass
+
+        elif final_status == 'rejected':
+            # Notify the employee
+            try:
+                UserNotification.objects.create(
+                    recipient=employee,
+                    title="❌ Enrollment Rejected",
+                    message=f"Your enrollment request for \"{course_title}\" has been rejected by {decided_by}. You may submit a new request if needed.",
+                    related_object_id=instance.id,
+                    sender=default_sender,
+                )
+            except Exception:
+                pass
 
 
 

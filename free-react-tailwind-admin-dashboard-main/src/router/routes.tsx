@@ -831,14 +831,6 @@ const routes = [
         element: <CourseSyllabusPlayer />,
     },
     {
-        path: '/employee/learning-management/training-calendar',
-        element: <EmployeeTrainingCalendar />,
-    },
-    {
-        path: '/employee/learning-management/compliance-training',
-        element: <EmployeeMyLearning />,
-    },
-    {
         path: '/employee/learning-management/certifications',
         element: <EmployeeMyLearning />,
     },
@@ -847,16 +839,8 @@ const routes = [
         element: <EmployeeTrainingRequests />,
     },
     {
-        path: '/employee/learning-management/wishlist',
-        element: <EmployeeCourseWishlist />,
-    },
-    {
         path: '/employee/learning-management/reviews',
         element: <EmployeeCourseReviews />,
-    },
-    {
-        path: '/employee/learning-management/reports',
-        element: <LMSComingSoon />,
     },
     {
         path: '/admin/branch-mgt/department',

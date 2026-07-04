@@ -93,7 +93,7 @@ const MyLearning = () => {
             const [enrRes, compRes, certRes, wishRes, pathsRes] = await Promise.all([
                 authFetch(ENROLLMENTS_API, { headers: getHeaders() }),
                 authFetch(COMPLIANCE_API, { headers: getHeaders() }),
-                authFetch(CERTIFICATES_API, { headers: getHeaders() }),
+                authFetch(`${CERTIFICATES_API}?mine=true`, { headers: getHeaders() }),
                 authFetch(WISHLISTS_API, { headers: getHeaders() }),
                 authFetch(PATHS_API, { headers: getHeaders() }),
             ]);
@@ -215,51 +215,53 @@ const MyLearning = () => {
             </div>
 
             {/* Quick stats banner */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 mb-6">
-                {[
-                    {
-                        label: 'Active Enrollments', value: activeCount, suffix: activeCount === 1 ? 'Course' : 'Courses',
-                        icon: <IconMenuCalendar className="w-6 h-6" />,
-                        bar: 'bg-primary', text: 'text-primary', iconWrap: 'bg-primary/10 text-primary',
-                    },
-                    {
-                        label: 'Completed Courses', value: completedCount, suffix: completedCount === 1 ? 'Module' : 'Modules',
-                        icon: <IconMenuDocumentation className="w-6 h-6" />,
-                        bar: 'bg-success', text: 'text-success', iconWrap: 'bg-success/10 text-success',
-                    },
-                    {
-                        label: 'Compliance Tasks', value: pendingCompliance, suffix: 'Pending',
-                        icon: <IconMenuInvoice className="w-6 h-6" />,
-                        bar: 'bg-danger', text: 'text-danger', iconWrap: 'bg-danger/10 text-danger',
-                    },
-                    {
-                        label: 'Course Wishlist', value: wishlist.length, suffix: 'Starred',
-                        icon: <IconOpenBook className="w-6 h-6" />,
-                        bar: 'bg-amber-500', text: 'text-amber-500', iconWrap: 'bg-amber-500/10 text-amber-500',
-                    },
-                ].map((stat) => (
-                    <div
-                        key={stat.label}
-                        className="group relative overflow-hidden border border-[#e0e6ed] dark:border-[#1b2e4b] p-5 rounded-xl bg-white dark:bg-[#0e1726]/40 shadow-sm hover:shadow-lg hover:-translate-y-0.5 transition-all duration-300"
-                    >
-                        <div className={`absolute top-0 left-0 w-full h-1 ${stat.bar}`}></div>
-                        <div className="flex items-center justify-between">
-                            <div>
-                                <span className="text-gray-400 text-[11px] font-bold uppercase tracking-wider block">{stat.label}</span>
-                                <span className={`text-2xl font-extrabold ${stat.text} block mt-1`}>
-                                    {stat.value} <span className="text-sm font-semibold text-gray-400">{stat.suffix}</span>
-                                </span>
-                            </div>
-                            <div className={`p-3 rounded-xl group-hover:scale-110 transition-transform duration-300 ${stat.iconWrap}`}>
-                                {stat.icon}
+            {!location.pathname.includes('certifications') && (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 mb-6">
+                    {[
+                        {
+                            label: 'Active Enrollments', value: activeCount, suffix: activeCount === 1 ? 'Course' : 'Courses',
+                            icon: <IconMenuCalendar className="w-6 h-6" />,
+                            bar: 'bg-primary', text: 'text-primary', iconWrap: 'bg-primary/10 text-primary',
+                        },
+                        {
+                            label: 'Completed Courses', value: completedCount, suffix: completedCount === 1 ? 'Module' : 'Modules',
+                            icon: <IconMenuDocumentation className="w-6 h-6" />,
+                            bar: 'bg-success', text: 'text-success', iconWrap: 'bg-success/10 text-success',
+                        },
+                        {
+                            label: 'Compliance Tasks', value: pendingCompliance, suffix: 'Pending',
+                            icon: <IconMenuInvoice className="w-6 h-6" />,
+                            bar: 'bg-danger', text: 'text-danger', iconWrap: 'bg-danger/10 text-danger',
+                        },
+                        {
+                            label: 'Course Wishlist', value: wishlist.length, suffix: 'Starred',
+                            icon: <IconOpenBook className="w-6 h-6" />,
+                            bar: 'bg-amber-500', text: 'text-amber-500', iconWrap: 'bg-amber-500/10 text-amber-500',
+                        },
+                    ].map((stat) => (
+                        <div
+                            key={stat.label}
+                            className="group relative overflow-hidden border border-[#e0e6ed] dark:border-[#1b2e4b] p-5 rounded-xl bg-white dark:bg-[#0e1726]/40 shadow-sm hover:shadow-lg hover:-translate-y-0.5 transition-all duration-300"
+                        >
+                            <div className={`absolute top-0 left-0 w-full h-1 ${stat.bar}`}></div>
+                            <div className="flex items-center justify-between">
+                                <div>
+                                    <span className="text-gray-400 text-[11px] font-bold uppercase tracking-wider block">{stat.label}</span>
+                                    <span className={`text-2xl font-extrabold ${stat.text} block mt-1`}>
+                                        {stat.value} <span className="text-sm font-semibold text-gray-400">{stat.suffix}</span>
+                                    </span>
+                                </div>
+                                <div className={`p-3 rounded-xl group-hover:scale-110 transition-transform duration-300 ${stat.iconWrap}`}>
+                                    {stat.icon}
+                                </div>
                             </div>
                         </div>
-                    </div>
-                ))}
-            </div>
+                    ))}
+                </div>
+            )}
 
             {/* Continue Learning spotlight */}
-            {!loading && continueLearning && (
+            {!location.pathname.includes('certifications') && !loading && continueLearning && (
                 <div className="panel border border-[#e0e6ed] dark:border-[#1b2e4b] rounded-xl mb-6 overflow-hidden bg-gradient-to-r from-primary/5 to-transparent dark:from-primary/10 shadow-sm">
                     <div className="flex flex-col sm:flex-row items-stretch">
                         <div className="w-full sm:w-56 h-32 sm:h-auto bg-gradient-to-br from-[#8b5cf6]/25 to-[#0e1726]/10 flex items-center justify-center shrink-0">
@@ -292,34 +294,36 @@ const MyLearning = () => {
             )}
 
             {/* Tab links */}
-            <div className="flex border-b border-[#ebedf2] dark:border-[#1b2e4b] mb-6 overflow-x-auto">
-                {[
-                    { key: 'courses' as const, label: 'My Enrolled Courses', icon: '📚', count: enrollments.length },
-                    { key: 'compliance' as const, label: 'Compliance Assignments', icon: '⚠️', count: pendingCompliance },
-                    { key: 'certificates' as const, label: 'Certificates Archive', icon: '🎓', count: certificates.length },
-                    { key: 'wishlist' as const, label: 'My Wishlist', icon: '⭐', count: wishlist.length },
-                    { key: 'paths' as const, label: 'Learning Paths', icon: '🗺️', count: learningPaths.length },
-                ].map((tab) => (
-                    <button
-                        key={tab.key}
-                        type="button"
-                        onClick={() => setActiveTab(tab.key)}
-                        className={`py-3 px-5 font-semibold text-sm border-b-2 whitespace-nowrap transition-all duration-300 flex items-center gap-1.5 ${
-                            activeTab === tab.key
-                                ? 'border-primary text-primary'
-                                : 'border-transparent text-gray-500 hover:text-primary'
-                        }`}
-                    >
-                        <span>{tab.icon}</span>
-                        {tab.label}
-                        <span className={`text-[10px] font-bold rounded-full px-1.5 py-0.5 ${
-                            activeTab === tab.key ? 'bg-primary text-white' : 'bg-gray-100 dark:bg-gray-800 text-gray-500'
-                        }`}>
-                            {tab.count}
-                        </span>
-                    </button>
-                ))}
-            </div>
+            {!location.pathname.includes('certifications') && (
+                <div className="flex border-b border-[#ebedf2] dark:border-[#1b2e4b] mb-6 overflow-x-auto">
+                    {[
+                        { key: 'courses' as const, label: 'My Enrolled Courses', icon: '📚', count: enrollments.length },
+                        { key: 'compliance' as const, label: 'Compliance Assignments', icon: '⚠️', count: pendingCompliance },
+                        { key: 'certificates' as const, label: 'Certificates Archive', icon: '🎓', count: certificates.length },
+                        { key: 'wishlist' as const, label: 'My Wishlist', icon: '⭐', count: wishlist.length },
+                        { key: 'paths' as const, label: 'Learning Paths', icon: '🗺️', count: learningPaths.length },
+                    ].map((tab) => (
+                        <button
+                            key={tab.key}
+                            type="button"
+                            onClick={() => setActiveTab(tab.key)}
+                            className={`py-3 px-5 font-semibold text-sm border-b-2 whitespace-nowrap transition-all duration-300 flex items-center gap-1.5 ${
+                                activeTab === tab.key
+                                    ? 'border-primary text-primary'
+                                    : 'border-transparent text-gray-500 hover:text-primary'
+                            }`}
+                        >
+                            <span>{tab.icon}</span>
+                            {tab.label}
+                            <span className={`text-[10px] font-bold rounded-full px-1.5 py-0.5 ${
+                                activeTab === tab.key ? 'bg-primary text-white' : 'bg-gray-100 dark:bg-gray-800 text-gray-500'
+                            }`}>
+                                {tab.count}
+                            </span>
+                        </button>
+                    ))}
+                </div>
+            )}
 
             {/* Content rendering */}
             {loading ? (
@@ -336,6 +340,55 @@ const MyLearning = () => {
                             </div>
                         </div>
                     ))}
+                </div>
+            ) : location.pathname.includes('certifications') ? (
+                <div className="animate-fade-in">
+                    <div>
+                        {certificates.length === 0 ? (
+                            <div className="panel text-center py-14 text-gray-500 border border-dashed border-[#e0e6ed] dark:border-[#1b2e4b] rounded-xl">
+                                <span className="text-4xl block mb-3">🎓</span>
+                                <p className="font-semibold">You have not achieved any course credentials yet. Keep studying!</p>
+                            </div>
+                        ) : (
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                                {certificates.map((cert) => (
+                                    <div
+                                        key={cert.id}
+                                        className="group relative panel border border-dashed border-[#8b5cf6]/50 bg-gradient-to-br from-[#8b5cf6]/10 to-transparent dark:from-[#8b5cf6]/10 p-5 rounded-xl hover:shadow-lg hover:border-[#8b5cf6] transition-all duration-300 flex flex-col justify-between overflow-hidden"
+                                    >
+                                        <div className="absolute -right-4 -top-4 text-7xl opacity-5 group-hover:opacity-10 transition-opacity">🎓</div>
+                                        <div className="relative">
+                                            <span className="text-2xl mb-2 block">🎓</span>
+                                            <h4 className="text-sm font-extrabold text-gray-800 dark:text-white-light leading-tight">
+                                                {cert.course_title || cert.certificate_name}
+                                            </h4>
+                                            <div className="text-[10px] text-gray-400 font-bold mt-1 uppercase tracking-wider">
+                                                Certificate No: {cert.certificate_number || 'ITL-LMS-2025'}
+                                            </div>
+                                            <div className="text-xs text-gray-500 mt-2">
+                                                Achieved: {new Date(cert.issue_date).toLocaleDateString()}
+                                            </div>
+                                        </div>
+
+                                        <div className="relative mt-4 pt-3 border-t border-[#8b5cf6]/10">
+                                            {cert.certificate_file_url ? (
+                                                <a
+                                                    href={cert.certificate_file_url}
+                                                    target="_blank"
+                                                    rel="noreferrer"
+                                                    className="btn btn-primary btn-sm w-full text-[11px] py-1.5 font-bold block text-center rounded-lg"
+                                                >
+                                                    ⬇ Download Credential
+                                                </a>
+                                            ) : (
+                                                <span className="text-xs text-gray-400 italic block text-center">Digitally verified on LMS</span>
+                                            )}
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </div>
                 </div>
             ) : (
                 <div className="animate-fade-in">
