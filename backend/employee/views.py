@@ -3889,7 +3889,15 @@ class TrainingRequestViewSet(viewsets.ModelViewSet):
         if not user_emp:
             return TrainingRequest.objects.none()
 
+        role = getattr(self.request.user, 'role', '')
         qs = TrainingRequest.objects.filter(employee__company=user_emp.company).order_by('-created_at')
+
+        if role == 'admin' or self.request.user.is_superuser:
+            qs = qs
+        elif role == 'manager':
+            qs = qs.filter(Q(employee=user_emp) | Q(employee__reporting_manager=user_emp) | Q(manager=user_emp))
+        else:
+            qs = qs.filter(employee=user_emp)
 
         status_param = self.request.query_params.get('status') or self.request.query_params.get('final_status')
         if status_param:
@@ -3973,13 +3981,13 @@ class TrainingRequestViewSet(viewsets.ModelViewSet):
         if not manager_just_decided and not admin_just_decided:
             return
 
-        # Compute final status using the same logic as the serializer
-        if new_manager_status in ('approved', 'rejected'):
-            final_status = new_manager_status
-            decided_by = 'manager'
-        elif new_admin_status in ('approved', 'rejected'):
+        # Admin approval is final; manager approval is optional and only applies when admin has not decided.
+        if new_admin_status in ('approved', 'rejected'):
             final_status = new_admin_status
             decided_by = 'admin'
+        elif new_manager_status in ('approved', 'rejected'):
+            final_status = new_manager_status
+            decided_by = 'manager'
         else:
             return
 
