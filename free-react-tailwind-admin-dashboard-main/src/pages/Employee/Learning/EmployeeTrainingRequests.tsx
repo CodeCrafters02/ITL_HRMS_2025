@@ -5,6 +5,7 @@ import { setPageTitle } from '../../../store/themeConfigSlice';
 import { authFetch } from '../../../utils/authFetch';
 import IconPlus from '../../../components/Icon/IconPlus';
 import IconSearch from '../../../components/Icon/IconSearch';
+import { url } from 'inspector';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000';
 const REQUESTS_API = `${API_BASE_URL}/employee/training-requests/`;
@@ -43,6 +44,10 @@ const EmployeeTrainingRequests = () => {
     const [modalOpen, setModalOpen] = useState(false);
     const [search, setSearch] = useState('');
     const [statusTab, setStatusTab] = useState<'all' | 'pending' | 'approved' | 'rejected'>('all');
+    const [page, setPage] = useState(1);
+    const [limit, setLimit] = useState(10);
+    const [totalCount, setTotalCount] = useState(0);
+    const [totalPages, setTotalPages] = useState(1);
 
     const [form, setForm] = useState({
         course: '',
@@ -69,10 +74,17 @@ const EmployeeTrainingRequests = () => {
     const fetchRequests = async () => {
         setLoading(true);
         try {
-            const response = await authFetch(REQUESTS_API, { headers: getHeaders() });
+            const url = new URL(REQUESTS_API);
+            url.searchParams.append('status', statusTab);
+            url.searchParams.append('page', page.toString());
+            url.searchParams.append('limit', limit.toString());
+            if (search) url.searchParams.append('search', search);
+            const response = await authFetch(url.toString(), { headers: getHeaders() });
             if (response.ok) {
                 const data = await response.json();
                 setRequests(data.results || data || []);
+                setTotalCount(data.count);
+                setTotalPages(data.total_pages);
             }
         } catch (error) {
             console.error('Error fetching training requests:', error);
@@ -83,7 +95,11 @@ const EmployeeTrainingRequests = () => {
 
     const fetchCourses = async () => {
         try {
-            const response = await authFetch(COURSES_API, { headers: getHeaders() });
+            const url = new URL(COURSES_API);
+            url.searchParams.append('page', page.toString());
+            url.searchParams.append('limit', limit.toString());
+            if (search) url.searchParams.append('search', search);
+            const response = await authFetch(url.toString(), { headers: getHeaders() });
             if (response.ok) {
                 const data = await response.json();
                 setCourses((data.results || data || []).filter((c: any) => c.status === 'published'));
@@ -201,14 +217,12 @@ const EmployeeTrainingRequests = () => {
                         key={tab.key}
                         type="button"
                         onClick={() => setStatusTab(tab.key)}
-                        className={`py-3 px-5 font-semibold text-sm border-b-2 whitespace-nowrap transition-all duration-300 flex items-center gap-1.5 ${
-                            statusTab === tab.key ? 'border-primary text-primary' : 'border-transparent text-gray-500 hover:text-primary'
-                        }`}
+                        className={`py-3 px-5 font-semibold text-sm border-b-2 whitespace-nowrap transition-all duration-300 flex items-center gap-1.5 ${statusTab === tab.key ? 'border-primary text-primary' : 'border-transparent text-gray-500 hover:text-primary'
+                            }`}
                     >
                         {tab.label}
-                        <span className={`text-[10px] font-bold rounded-full px-1.5 py-0.5 ${
-                            statusTab === tab.key ? 'bg-primary text-white' : 'bg-gray-100 dark:bg-gray-800 text-gray-500'
-                        }`}>
+                        <span className={`text-[10px] font-bold rounded-full px-1.5 py-0.5 ${statusTab === tab.key ? 'bg-primary text-white' : 'bg-gray-100 dark:bg-gray-800 text-gray-500'
+                            }`}>
                             {tab.count}
                         </span>
                     </button>
