@@ -3778,6 +3778,7 @@ class LearningPathAssignmentViewSet(viewsets.ModelViewSet):
     queryset = LearningPathAssignment.objects.all()
     serializer_class = LearningPathAssignmentSerializer
     permission_classes = [IsAuthenticated]
+    pagination_class = Pagination
     filter_backends = [filters.SearchFilter, DjangoFilterBackend]
     search_fields = ['employee__first_name', 'employee__last_name', 'learning_path__title']
     filterset_fields = ['learning_path', 'employee']
@@ -3788,8 +3789,13 @@ class LearningPathAssignmentViewSet(viewsets.ModelViewSet):
             return LearningPathAssignment.objects.none()
         is_admin_or_manager = self.request.user.is_superuser or getattr(self.request.user, 'role', '') in ['admin', 'manager']
         if is_admin_or_manager:
-            return LearningPathAssignment.objects.filter(employee__company=user_emp.company).order_by('-id')
-        return LearningPathAssignment.objects.filter(employee=user_emp).order_by('-id')
+            qs = LearningPathAssignment.objects.filter(employee__company=user_emp.company).order_by('-id')
+        else:
+            qs = LearningPathAssignment.objects.filter(employee=user_emp).order_by('-id')
+        status_filter = self.request.query_params.get('status')
+        if status_filter:
+            qs = qs.filter(status=status_filter)
+        return qs
 
     def perform_create(self, serializer):
         user_emp = getattr(self.request.user, 'employee_profile', None)
@@ -3800,6 +3806,7 @@ class ComplianceAssignmentViewSet(viewsets.ModelViewSet):
     queryset = ComplianceAssignment.objects.all()
     serializer_class = ComplianceAssignmentSerializer
     permission_classes = [IsAuthenticated]
+    pagination_class = Pagination
     filter_backends = [filters.SearchFilter, DjangoFilterBackend]
     search_fields = ['employee__first_name', 'employee__last_name', 'course__title']
     filterset_fields = ['course', 'employee', 'status']
@@ -3808,7 +3815,7 @@ class ComplianceAssignmentViewSet(viewsets.ModelViewSet):
         user_emp = getattr(self.request.user, 'employee_profile', None)
         if not user_emp:
             return ComplianceAssignment.objects.none()
-        
+
         # Auto-update overdue records
         from datetime import date
         ComplianceAssignment.objects.filter(
@@ -3819,8 +3826,13 @@ class ComplianceAssignmentViewSet(viewsets.ModelViewSet):
 
         is_admin_or_manager = self.request.user.is_superuser or getattr(self.request.user, 'role', '') in ['admin', 'manager']
         if is_admin_or_manager:
-            return ComplianceAssignment.objects.filter(employee__company=user_emp.company).order_by('-id')
-        return ComplianceAssignment.objects.filter(employee=user_emp).order_by('-id')
+            qs = ComplianceAssignment.objects.filter(employee__company=user_emp.company).order_by('-id')
+        else:
+            qs = ComplianceAssignment.objects.filter(employee=user_emp).order_by('-id')
+        status_filter = self.request.query_params.get('status')
+        if status_filter:
+            qs = qs.filter(status=status_filter)
+        return qs
 
 
 class CertificateViewSet(viewsets.ModelViewSet):
@@ -4006,6 +4018,7 @@ class TrainingSessionViewSet(viewsets.ModelViewSet):
     queryset = TrainingSession.objects.all()
     serializer_class = TrainingSessionSerializer
     permission_classes = [IsAuthenticated]
+    pagination_class = Pagination
     filter_backends = [filters.SearchFilter, DjangoFilterBackend]
     search_fields = ['title', 'location', 'meeting_link', 'course__title']
     filterset_fields = ['course', 'session_type']
@@ -4014,8 +4027,14 @@ class TrainingSessionViewSet(viewsets.ModelViewSet):
         user_emp = getattr(self.request.user, 'employee_profile', None)
         if not user_emp:
             return TrainingSession.objects.none()
-        # Fallback to all sessions under matching company
-        return TrainingSession.objects.filter(course__created_by__company=user_emp.company).order_by('start_datetime')
+        qs = TrainingSession.objects.filter(course__created_by__company=user_emp.company).order_by('start_datetime')
+        session_type = self.request.query_params.get('session_type')
+        if session_type:
+            qs = qs.filter(session_type=session_type)
+        status_filter = self.request.query_params.get('status')
+        if status_filter:
+            qs = qs.filter(status=status_filter)
+        return qs
 
     def perform_create(self, serializer):
         user_emp = getattr(self.request.user, 'employee_profile', None)
@@ -4259,19 +4278,28 @@ class CourseReviewViewSet(viewsets.ModelViewSet):
     queryset = CourseReview.objects.all()
     serializer_class = CourseReviewSerializer
     permission_classes = [IsAuthenticated]
-    filter_backends = [DjangoFilterBackend]
+    pagination_class = Pagination
+    filter_backends = [filters.SearchFilter, DjangoFilterBackend]
+    search_fields = ['course__title', 'review_text']
     filterset_fields = ['course', 'rating']
 
     def get_queryset(self):
         user_emp = getattr(self.request.user, 'employee_profile', None)
         if not user_emp:
             return CourseReview.objects.none()
-        
+        # Employee sees only their own reviews; admin/manager sees all in company
+        is_admin_or_manager = self.request.user.is_superuser or getattr(self.request.user, 'role', '') in ['admin', 'manager']
+        if is_admin_or_manager:
+            qs = CourseReview.objects.filter(employee__company=user_emp.company).order_by('-created_at')
+        else:
+            qs = CourseReview.objects.filter(employee=user_emp).order_by('-created_at')
         course_id = self.request.query_params.get('course_id')
         if course_id:
-            return CourseReview.objects.filter(course_id=course_id, employee__company=user_emp.company).order_by('-created_at')
-
-        return CourseReview.objects.filter(employee__company=user_emp.company).order_by('-created_at')
+            qs = qs.filter(course_id=course_id)
+        rating_filter = self.request.query_params.get('rating')
+        if rating_filter:
+            qs = qs.filter(rating=rating_filter)
+        return qs
 
     def perform_create(self, serializer):
         user_emp = getattr(self.request.user, 'employee_profile', None)
@@ -4289,14 +4317,20 @@ class CourseWishlistViewSet(viewsets.ModelViewSet):
     queryset = CourseWishlist.objects.all()
     serializer_class = CourseWishlistSerializer
     permission_classes = [IsAuthenticated]
-    filter_backends = [DjangoFilterBackend]
+    pagination_class = Pagination
+    filter_backends = [filters.SearchFilter, DjangoFilterBackend]
+    search_fields = ['course__title', 'course__description', 'course__category__name']
     filterset_fields = ['course']
 
     def get_queryset(self):
         user_emp = getattr(self.request.user, 'employee_profile', None)
         if not user_emp:
             return CourseWishlist.objects.none()
-        return CourseWishlist.objects.filter(employee=user_emp).order_by('-added_at')
+        qs = CourseWishlist.objects.filter(employee=user_emp).order_by('-added_at')
+        category = self.request.query_params.get('category')
+        if category:
+            qs = qs.filter(course__category__name__iexact=category)
+        return qs
 
     def perform_create(self, serializer):
         user_emp = getattr(self.request.user, 'employee_profile', None)
