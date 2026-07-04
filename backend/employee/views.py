@@ -3881,22 +3881,34 @@ class TrainingRequestViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
     pagination_class = Pagination
     filter_backends = [filters.SearchFilter, DjangoFilterBackend]
-    search_fields = ['employee__first_name', 'employee__last_name', 'course__title', 'custom_course_title']
+    search_fields = ['employee__first_name', 'employee__last_name', 'course__title', 'custom_course_title', 'reason']
     filterset_fields = ['employee', 'course', 'manager_status', 'admin_status']
 
     def get_queryset(self):
         user_emp = getattr(self.request.user, 'employee_profile', None)
         if not user_emp:
             return TrainingRequest.objects.none()
+
         qs = TrainingRequest.objects.filter(employee__company=user_emp.company).order_by('-created_at')
-        final_status = self.request.query_params.get('final_status')
-        if final_status:
-            if final_status == 'approved':
+
+        status_param = self.request.query_params.get('status') or self.request.query_params.get('final_status')
+        if status_param:
+            if status_param == 'approved':
                 qs = qs.filter(Q(manager_status='approved') | Q(admin_status='approved'))
-            elif final_status == 'rejected':
+            elif status_param == 'rejected':
                 qs = qs.filter(Q(manager_status='rejected') | Q(admin_status='rejected'))
-            elif final_status == 'pending':
+            elif status_param == 'pending':
                 qs = qs.filter(manager_status='pending', admin_status='pending')
+            elif status_param == 'all':
+                qs = qs
+
+        budget_param = self.request.query_params.get('budget_required')
+        if budget_param is not None:
+            if budget_param.lower() in {'true', '1', 'yes'}:
+                qs = qs.filter(budget_required=True)
+            elif budget_param.lower() in {'false', '0', 'no'}:
+                qs = qs.filter(budget_required=False)
+
         return qs
 
     def perform_create(self, serializer):

@@ -5,7 +5,6 @@ import { setPageTitle } from '../../../store/themeConfigSlice';
 import { authFetch } from '../../../utils/authFetch';
 import IconPlus from '../../../components/Icon/IconPlus';
 import IconSearch from '../../../components/Icon/IconSearch';
-import { url } from 'inspector';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000';
 const REQUESTS_API = `${API_BASE_URL}/employee/training-requests/`;
@@ -48,6 +47,7 @@ const EmployeeTrainingRequests = () => {
     const [limit, setLimit] = useState(10);
     const [totalCount, setTotalCount] = useState(0);
     const [totalPages, setTotalPages] = useState(1);
+    const [pageInput, setPageInput] = useState('1');
 
     const [form, setForm] = useState({
         course: '',
@@ -62,6 +62,12 @@ const EmployeeTrainingRequests = () => {
         fetchCourses();
     }, [dispatch]);
 
+    useEffect(() => {
+        setPage(1);
+        setPageInput('1');
+        fetchRequests(1);
+    }, [statusTab, search]);
+
     const getHeaders = () => {
         const token = localStorage.getItem('access_token');
         const headers: Record<string, string> = {
@@ -71,20 +77,25 @@ const EmployeeTrainingRequests = () => {
         return headers;
     };
 
-    const fetchRequests = async () => {
+    const fetchRequests = async (requestedPage = page) => {
         setLoading(true);
         try {
             const url = new URL(REQUESTS_API);
-            url.searchParams.append('status', statusTab);
-            url.searchParams.append('page', page.toString());
+            if (statusTab !== 'all') {
+                url.searchParams.append('status', statusTab);
+            }
+            url.searchParams.append('page', requestedPage.toString());
             url.searchParams.append('limit', limit.toString());
-            if (search) url.searchParams.append('search', search);
+            if (search.trim()) {
+                url.searchParams.append('search', search.trim());
+            }
             const response = await authFetch(url.toString(), { headers: getHeaders() });
             if (response.ok) {
                 const data = await response.json();
                 setRequests(data.results || data || []);
-                setTotalCount(data.count);
-                setTotalPages(data.total_pages);
+                setTotalCount(data.count || 0);
+                setTotalPages(data.total_pages || 1);
+                setPageInput(String(requestedPage));
             }
         } catch (error) {
             console.error('Error fetching training requests:', error);
@@ -96,9 +107,8 @@ const EmployeeTrainingRequests = () => {
     const fetchCourses = async () => {
         try {
             const url = new URL(COURSES_API);
-            url.searchParams.append('page', page.toString());
-            url.searchParams.append('limit', limit.toString());
-            if (search) url.searchParams.append('search', search);
+            url.searchParams.append('page', '1');
+            url.searchParams.append('limit', '100');
             const response = await authFetch(url.toString(), { headers: getHeaders() });
             if (response.ok) {
                 const data = await response.json();
@@ -133,7 +143,7 @@ const EmployeeTrainingRequests = () => {
                 Swal.fire('Submitted!', 'Your training request has been recorded.', 'success');
                 setModalOpen(false);
                 setForm({ course: '', custom_course_title: '', reason: '', budget_required: false });
-                fetchRequests();
+                fetchRequests(1);
             } else {
                 Swal.fire('Error!', 'Failed to submit request.', 'error');
             }
@@ -144,21 +154,11 @@ const EmployeeTrainingRequests = () => {
         }
     };
 
-    const statusFilteredRequests = requests.filter((r) => statusTab === 'all' || r.final_status === statusTab);
-
-    const filteredRequests = statusFilteredRequests.filter((r) => {
-        const query = search.toLowerCase();
-        const courseMatch = (r.course_title || '').toLowerCase().includes(query);
-        const customMatch = r.custom_course_title.toLowerCase().includes(query);
-        const reasonMatch = r.reason.toLowerCase().includes(query);
-        return courseMatch || customMatch || reasonMatch;
-    });
-
     const statusTabs = [
-        { key: 'all' as const, label: 'All', count: requests.length },
-        { key: 'pending' as const, label: 'Pending', count: requests.filter((r) => r.final_status === 'pending').length },
-        { key: 'approved' as const, label: 'Approved', count: requests.filter((r) => r.final_status === 'approved').length },
-        { key: 'rejected' as const, label: 'Rejected', count: requests.filter((r) => r.final_status === 'rejected').length },
+        { key: 'all' as const, label: 'All' },
+        { key: 'pending' as const, label: 'Pending' },
+        { key: 'approved' as const, label: 'Approved' },
+        { key: 'rejected' as const, label: 'Rejected' },
     ];
 
     const getStatusBadge = (status: string) => {
@@ -189,17 +189,28 @@ const EmployeeTrainingRequests = () => {
 
             {/* Actions Bar */}
             <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
-                <div className="relative w-72">
-                    <input
-                        type="text"
-                        className="form-input pr-10 rounded-lg text-xs"
-                        placeholder="Search requests..."
-                        value={search}
-                        onChange={(e) => setSearch(e.target.value)}
-                    />
-                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400">
-                        <IconSearch className="w-4 h-4" />
-                    </span>
+                <div className="flex flex-wrap items-center gap-3">
+                    <div className="relative w-72">
+                        <input
+                            type="text"
+                            className="form-input pr-10 rounded-lg text-xs"
+                            placeholder="Search requests..."
+                            value={search}
+                            onChange={(e) => setSearch(e.target.value)}
+                        />
+                        <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400">
+                            <IconSearch className="w-4 h-4" />
+                        </span>
+                    </div>
+                    <select
+                        className="form-select rounded-lg text-xs w-36"
+                        value={statusTab}
+                        onChange={(e) => setStatusTab(e.target.value as 'all' | 'pending' | 'approved' | 'rejected')}
+                    >
+                        {statusTabs.map((tab) => (
+                            <option key={tab.key} value={tab.key}>{tab.label}</option>
+                        ))}
+                    </select>
                 </div>
                 <button
                     type="button"
@@ -221,10 +232,6 @@ const EmployeeTrainingRequests = () => {
                             }`}
                     >
                         {tab.label}
-                        <span className={`text-[10px] font-bold rounded-full px-1.5 py-0.5 ${statusTab === tab.key ? 'bg-primary text-white' : 'bg-gray-100 dark:bg-gray-800 text-gray-500'
-                            }`}>
-                            {tab.count}
-                        </span>
                     </button>
                 ))}
             </div>
@@ -234,7 +241,7 @@ const EmployeeTrainingRequests = () => {
                 <div className="panel text-center py-10">
                     <span className="animate-pulse text-gray-400 font-semibold">Loading request lifecycle logs...</span>
                 </div>
-            ) : filteredRequests.length === 0 ? (
+            ) : requests.length === 0 ? (
                 <div className="panel text-center py-10 text-gray-500 font-medium">
                     {statusTab === 'all' ? 'No training requests submitted yet.' : `No ${statusTab} training requests.`}
                 </div>
@@ -252,7 +259,7 @@ const EmployeeTrainingRequests = () => {
                                 </tr>
                             </thead>
                             <tbody>
-                                {filteredRequests.map((req) => (
+                                {requests.map((req) => (
                                     <tr key={req.id}>
                                         <td className="font-bold text-gray-800 dark:text-gray-250">
                                             {req.course_title || req.custom_course_title}
@@ -294,6 +301,49 @@ const EmployeeTrainingRequests = () => {
                                 ))}
                             </tbody>
                         </table>
+                    </div>
+                </div>
+            )}
+
+            {totalPages > 1 && (
+                <div className="flex flex-wrap items-center justify-between gap-3 mt-4">
+                    <div className="text-xs text-gray-500">
+                        Showing {requests.length} of {totalCount} requests
+                    </div>
+                    <div className="flex items-center gap-2">
+                        <button
+                            type="button"
+                            className="btn btn-outline-primary btn-sm rounded-lg"
+                            onClick={() => {
+                                const nextPage = Math.max(1, page - 1);
+                                setPage(nextPage);
+                                fetchRequests(nextPage);
+                            }}
+                            disabled={page <= 1}
+                        >
+                            Previous
+                        </button>
+                        <input
+                            type="number"
+                            min="1"
+                            max={totalPages}
+                            value={pageInput}
+                            onChange={(e) => setPageInput(e.target.value)}
+                            className="form-input w-16 rounded-lg text-xs"
+                        />
+                        <span className="text-xs text-gray-500">/ {totalPages}</span>
+                        <button
+                            type="button"
+                            className="btn btn-outline-primary btn-sm rounded-lg"
+                            onClick={() => {
+                                const nextPage = Math.min(totalPages, page + 1);
+                                setPage(nextPage);
+                                fetchRequests(nextPage);
+                            }}
+                            disabled={page >= totalPages}
+                        >
+                            Next
+                        </button>
                     </div>
                 </div>
             )}
