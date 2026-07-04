@@ -8,6 +8,7 @@ import IconPlus from '../../../components/Icon/IconPlus';
 import IconSearch from '../../../components/Icon/IconSearch';
 import IconTrashLines from '../../../components/Icon/IconTrashLines';
 import IconX from '../../../components/Icon/IconX';
+import SearchableSelect from '../../Elements/SearchableSelect';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000';
 const CERTIFICATES_API = `${API_BASE_URL}/employee/certificates/`;
@@ -276,15 +277,17 @@ const Certifications = () => {
                             <IconSearch className="w-4 h-4" />
                         </span>
                     </div>
-                    <select
-                        className="form-select w-44"
+                    <SearchableSelect
+                        className="w-44"
+                        options={[
+                            { value: 'all', label: 'All Sources' },
+                            { value: 'internal', label: 'Internal Course' },
+                            { value: 'external', label: 'External Upload' },
+                        ]}
                         value={filterSource}
-                        onChange={(e) => { setFilterSource(e.target.value); setPage(1); }}
-                    >
-                        <option value="all">All Sources</option>
-                        <option value="internal">Internal Course</option>
-                        <option value="external">External Upload</option>
-                    </select>
+                        onChange={(val) => { setFilterSource(String(val)); setPage(1); }}
+                        placeholder="Filter by Source"
+                    />
                 </div>
                 <button type="button" className="btn btn-primary gap-2" onClick={openUploadModal}>
                     <IconPlus /> Upload Certificate
@@ -447,23 +450,31 @@ const Certifications = () => {
                                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                                 <div>
                                                     <label className="font-semibold mb-1 block">Employee <span className="text-danger">*</span></label>
-                                                    <select className="form-select rounded-lg" required value={certForm.employee} onChange={(e) => setCertForm({ ...certForm, employee: e.target.value })}>
-                                                        <option value="">-- Choose Employee --</option>
-                                                        {employees.map(emp => (
-                                                            <option key={emp.id} value={emp.id}>
-                                                                {emp.full_name} ({emp.designation_name || 'No Dept'})
-                                                            </option>
-                                                        ))}
-                                                    </select>
+                                                    <SearchableSelect
+                                                        options={employees.map(emp => ({
+                                                            value: String(emp.id),
+                                                            label: `${emp.full_name} (${emp.designation_name || 'No Dept'})`,
+                                                        }))}
+                                                        value={certForm.employee}
+                                                        onChange={(val) => setCertForm({ ...certForm, employee: String(val) })}
+                                                        placeholder="Search & select employee..."
+                                                        required
+                                                    />
                                                 </div>
                                                 <div>
                                                     <label className="font-semibold mb-1 block">Related Course (Optional)</label>
-                                                    <select className="form-select rounded-lg" value={certForm.course} onChange={(e) => setCertForm({ ...certForm, course: e.target.value })}>
-                                                        <option value="">-- Choose Course --</option>
-                                                        {courses.map(course => (
-                                                            <option key={course.id} value={course.id}>{course.title}</option>
-                                                        ))}
-                                                    </select>
+                                                    <SearchableSelect
+                                                        options={[
+                                                            { value: '', label: '-- No Course --' },
+                                                            ...courses.map(course => ({
+                                                                value: String(course.id),
+                                                                label: course.title,
+                                                            }))
+                                                        ]}
+                                                        value={certForm.course}
+                                                        onChange={(val) => setCertForm({ ...certForm, course: String(val) })}
+                                                        placeholder="Search & select course..."
+                                                    />
                                                 </div>
                                             </div>
 
@@ -496,11 +507,16 @@ const Certifications = () => {
                                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                                 <div>
                                                     <label className="font-semibold mb-1 block">Status</label>
-                                                    <select className="form-select rounded-lg" value={certForm.status} onChange={(e) => setCertForm({ ...certForm, status: e.target.value as any })}>
-                                                        <option value="valid">Valid</option>
-                                                        <option value="expired">Expired</option>
-                                                        <option value="revoked">Revoked</option>
-                                                    </select>
+                                                    <SearchableSelect
+                                                        options={[
+                                                            { value: 'valid', label: 'Valid' },
+                                                            { value: 'expired', label: 'Expired' },
+                                                            { value: 'revoked', label: 'Revoked' },
+                                                        ]}
+                                                        value={certForm.status}
+                                                        onChange={(val) => setCertForm({ ...certForm, status: val as any })}
+                                                        placeholder="Select status"
+                                                    />
                                                 </div>
                                                 <div>
                                                     <label className="font-semibold mb-1 block">Certificate File Document <span className="text-danger">*</span></label>

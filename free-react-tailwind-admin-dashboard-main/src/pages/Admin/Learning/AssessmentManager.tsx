@@ -10,6 +10,7 @@ import IconPencil from '../../../components/Icon/IconPencil';
 import IconTrashLines from '../../../components/Icon/IconTrashLines';
 import IconEye from '../../../components/Icon/IconEye';
 import IconX from '../../../components/Icon/IconX';
+import SearchableSelect from '../../Elements/SearchableSelect';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000';
 const ASSESSMENTS_API = `${API_BASE_URL}/employee/assessments/`;
@@ -603,12 +604,13 @@ const AssessmentManager = () => {
                                         <form onSubmit={handleSaveAssessment} className="space-y-4">
                                             <div>
                                                 <label className="font-semibold mb-1 block text-xs">Choose Catalog Course <span className="text-danger">*</span></label>
-                                                <select className="form-select rounded-lg" required value={assessmentForm.course} onChange={(e) => setAssessmentForm({ ...assessmentForm, course: e.target.value })}>
-                                                    <option value="">-- Choose Course --</option>
-                                                    {courses.map(c => (
-                                                        <option key={c.id} value={c.id}>{c.title}</option>
-                                                    ))}
-                                                </select>
+                                                <SearchableSelect
+                                                    options={courses.map(c => ({ value: String(c.id), label: c.title }))}
+                                                    value={assessmentForm.course}
+                                                    onChange={(val) => setAssessmentForm({ ...assessmentForm, course: String(val) })}
+                                                    placeholder="Search & select course..."
+                                                    required
+                                                />
                                             </div>
 
                                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -618,14 +620,19 @@ const AssessmentManager = () => {
                                                 </div>
                                                 <div>
                                                     <label className="font-semibold mb-1 block text-xs">Assessment Type</label>
-                                                    <select className="form-select rounded-lg" value={assessmentForm.assessment_type} onChange={(e) => setAssessmentForm({ ...assessmentForm, assessment_type: e.target.value as any })}>
-                                                        <option value="quiz">Quiz</option>
-                                                        <option value="mcq">MCQ Test</option>
-                                                        <option value="coding">Coding Assessment</option>
-                                                        <option value="practical">Practical Assignment</option>
-                                                        <option value="viva">Viva</option>
-                                                        <option value="survey">Survey</option>
-                                                    </select>
+                                                    <SearchableSelect
+                                                        options={[
+                                                            { value: 'quiz', label: 'Quiz' },
+                                                            { value: 'mcq', label: 'MCQ Test' },
+                                                            { value: 'coding', label: 'Coding Assessment' },
+                                                            { value: 'practical', label: 'Practical Assignment' },
+                                                            { value: 'viva', label: 'Viva' },
+                                                            { value: 'survey', label: 'Survey' },
+                                                        ]}
+                                                        value={assessmentForm.assessment_type}
+                                                        onChange={(val) => setAssessmentForm({ ...assessmentForm, assessment_type: val as any })}
+                                                        placeholder="Select assessment type"
+                                                    />
                                                 </div>
                                             </div>
 
@@ -753,12 +760,17 @@ const AssessmentManager = () => {
                                             <div className="grid grid-cols-2 gap-4">
                                                 <div>
                                                     <label className="font-semibold mb-1 block text-xs">Question Type</label>
-                                                    <select className="form-select rounded-lg text-xs" value={questionForm.question_type} onChange={(e) => setQuestionForm({ ...questionForm, question_type: e.target.value as any })}>
-                                                        <option value="mcq">Multiple Choice</option>
-                                                        <option value="true_false">True / False</option>
-                                                        <option value="short_answer">Short Answer</option>
-                                                        <option value="coding">Coding</option>
-                                                    </select>
+                                                    <SearchableSelect
+                                                        options={[
+                                                            { value: 'mcq', label: 'Multiple Choice' },
+                                                            { value: 'true_false', label: 'True / False' },
+                                                            { value: 'short_answer', label: 'Short Answer' },
+                                                            { value: 'coding', label: 'Coding' },
+                                                        ]}
+                                                        value={questionForm.question_type}
+                                                        onChange={(val) => setQuestionForm({ ...questionForm, question_type: val as any })}
+                                                        placeholder="Select question type"
+                                                    />
                                                 </div>
                                                 <div>
                                                     <label className="font-semibold mb-1 block text-xs">Marks weight <span className="text-danger">*</span></label>
