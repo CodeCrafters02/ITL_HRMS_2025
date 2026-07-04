@@ -23,6 +23,11 @@ const EmployeeCourseReviews = () => {
     const [courses, setCourses] = useState<any[]>([]);
     const [search, setSearch] = useState('');
     const [loading, setLoading] = useState(true);
+    const [page, setPage] = useState(1);
+    const [limit] = useState(10);
+    const [totalCount, setTotalCount] = useState(0);
+    const [totalPages, setTotalPages] = useState(1);
+    const [pageInput, setPageInput] = useState('1');
 
     // Modal state variables
     const [showModal, setShowModal] = useState(false);
@@ -33,9 +38,15 @@ const EmployeeCourseReviews = () => {
 
     useEffect(() => {
         dispatch(setPageTitle('My Course Reviews'));
-        fetchReviews();
+        fetchReviews(1);
         fetchCourses();
     }, [dispatch]);
+
+    useEffect(() => {
+        setPage(1);
+        setPageInput('1');
+        fetchReviews(1);
+    }, [search]);
 
     const getHeaders = () => {
         const token = localStorage.getItem('access_token');
@@ -44,13 +55,22 @@ const EmployeeCourseReviews = () => {
         return headers;
     };
 
-    const fetchReviews = async () => {
+    const fetchReviews = async (requestedPage = page) => {
         setLoading(true);
         try {
-            const res = await fetch(REVIEWS_API, { headers: getHeaders() });
+            const params = new URLSearchParams({
+                page: requestedPage.toString(),
+                limit: limit.toString(),
+            });
+            if (search.trim()) params.set('search', search.trim());
+
+            const res = await fetch(`${REVIEWS_API}?${params.toString()}`, { headers: getHeaders() });
             if (res.ok) {
                 const data = await res.json();
                 setReviews(data.results || data || []);
+                setTotalCount(data.count || 0);
+                setTotalPages(data.total_pages || 1);
+                setPageInput(String(requestedPage));
             }
         } catch (error) {
             console.error('Error fetching reviews:', error);
@@ -133,7 +153,7 @@ const EmployeeCourseReviews = () => {
                 setSelectedCourse('');
                 setRating(5);
                 setReviewText('');
-                fetchReviews();
+                fetchReviews(1);
             } else {
                 const err = await res.json();
                 Swal.fire('Error!', err.detail || err.non_field_errors?.[0] || 'You have already submitted a review for this course.', 'error');
@@ -162,11 +182,6 @@ const EmployeeCourseReviews = () => {
     };
 
     const availableCourses = courses.filter((c: any) => !reviews.some((r) => r.course === c.id));
-
-    const filteredReviews = reviews.filter((r) =>
-        r.course_title.toLowerCase().includes(search.toLowerCase()) ||
-        r.review_text.toLowerCase().includes(search.toLowerCase())
-    );
 
     return (
         <div className="space-y-6">
@@ -205,7 +220,7 @@ const EmployeeCourseReviews = () => {
                 <div className="flex items-center justify-center py-20">
                     <span className="animate-spin border-4 border-primary border-l-transparent w-9 h-9 rounded-full inline-block"></span>
                 </div>
-            ) : filteredReviews.length === 0 ? (
+            ) : reviews.length === 0 ? (
                 <div className="panel text-center py-16 bg-white dark:bg-[#0e1726] border-0 shadow-sm rounded-xl">
                     <span className="text-5xl block mb-3">💬</span>
                     <h3 className="text-lg font-bold text-gray-800 dark:text-white">No course reviews submitted</h3>
@@ -215,7 +230,7 @@ const EmployeeCourseReviews = () => {
                 </div>
             ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    {filteredReviews.map((r) => (
+                    {reviews.map((r) => (
                         <div key={r.id} className="panel bg-white dark:bg-[#0e1726] border-0 shadow-sm rounded-xl p-5 hover:shadow-md transition-all duration-300 flex flex-col justify-between">
                             <div className="space-y-3">
                                 <div className="flex justify-between items-start">
@@ -247,6 +262,46 @@ const EmployeeCourseReviews = () => {
                             </div>
                         </div>
                     ))}
+                </div>
+            )}
+
+            {totalPages > 1 && (
+                <div className="flex flex-wrap items-center justify-between gap-3 mt-4">
+                    <div className="text-xs text-gray-500">Showing {reviews.length} of {totalCount} reviews</div>
+                    <div className="flex items-center gap-2">
+                        <button
+                            type="button"
+                            className="btn btn-outline-primary btn-sm rounded-lg"
+                            onClick={() => {
+                                const nextPage = Math.max(1, page - 1);
+                                setPage(nextPage);
+                                fetchReviews(nextPage);
+                            }}
+                            disabled={page <= 1}
+                        >
+                            Previous
+                        </button>
+                        <input
+                            type="number"
+                            min="1"
+                            max={totalPages}
+                            value={pageInput}
+                            onChange={(e) => setPageInput(e.target.value)}
+                            className="form-input w-16 rounded-lg text-xs"
+                        />
+                        <button
+                            type="button"
+                            className="btn btn-outline-primary btn-sm rounded-lg"
+                            onClick={() => {
+                                const nextPage = Math.min(totalPages, page + 1);
+                                setPage(nextPage);
+                                fetchReviews(nextPage);
+                            }}
+                            disabled={page >= totalPages}
+                        >
+                            Next
+                        </button>
+                    </div>
                 </div>
             )}
 

@@ -59,14 +59,24 @@ const MyLearning = () => {
     const [certificates, setCertificates] = useState<CertificateType[]>([]);
     const [wishlist, setWishlist] = useState<WishlistItem[]>([]);
     const [learningPaths, setLearningPaths] = useState<any[]>([]);
-    
+    const [searchQuery, setSearchQuery] = useState('');
     const [loading, setLoading] = useState(true);
     const [activeTab, setActiveTab] = useState<'courses' | 'compliance' | 'certificates' | 'wishlist' | 'paths'>('courses');
     const [enrollingId, setEnrollingId] = useState<number | null>(null);
+    const [enrollmentPage, setEnrollmentPage] = useState(1);
+    const [wishlistPage, setWishlistPage] = useState(1);
+    const [enrollmentLimit] = useState(6);
+    const [wishlistLimit] = useState(6);
+    const [enrollmentTotalCount, setEnrollmentTotalCount] = useState(0);
+    const [wishlistTotalCount, setWishlistTotalCount] = useState(0);
+    const [enrollmentTotalPages, setEnrollmentTotalPages] = useState(1);
+    const [wishlistTotalPages, setWishlistTotalPages] = useState(1);
+    const [enrollmentPageInput, setEnrollmentPageInput] = useState('1');
+    const [wishlistPageInput, setWishlistPageInput] = useState('1');
 
     useEffect(() => {
         dispatch(setPageTitle('My Learning'));
-        fetchDashboardData();
+        fetchDashboardData(1, 1);
 
         if (location.pathname.includes('compliance-training')) {
             setActiveTab('compliance');
@@ -76,6 +86,14 @@ const MyLearning = () => {
             setActiveTab('courses');
         }
     }, [dispatch, location.pathname]);
+
+    useEffect(() => {
+        setEnrollmentPage(1);
+        setWishlistPage(1);
+        setEnrollmentPageInput('1');
+        setWishlistPageInput('1');
+        fetchDashboardData(1, 1);
+    }, [searchQuery]);
 
 
     const getHeaders = () => {
@@ -87,20 +105,37 @@ const MyLearning = () => {
         return headers;
     };
 
-    const fetchDashboardData = async () => {
+    const fetchDashboardData = async (enrollmentRequestedPage = enrollmentPage, wishlistRequestedPage = wishlistPage) => {
         setLoading(true);
         try {
+            const enrollmentParams = new URLSearchParams({
+                page: enrollmentRequestedPage.toString(),
+                limit: enrollmentLimit.toString(),
+            });
+            const wishlistParams = new URLSearchParams({
+                page: wishlistRequestedPage.toString(),
+                limit: wishlistLimit.toString(),
+            });
+
+            if (searchQuery.trim()) {
+                enrollmentParams.set('search', searchQuery.trim());
+                wishlistParams.set('search', searchQuery.trim());
+            }
+
             const [enrRes, compRes, certRes, wishRes, pathsRes] = await Promise.all([
-                authFetch(ENROLLMENTS_API, { headers: getHeaders() }),
+                authFetch(`${ENROLLMENTS_API}?${enrollmentParams.toString()}`, { headers: getHeaders() }),
                 authFetch(COMPLIANCE_API, { headers: getHeaders() }),
                 authFetch(`${CERTIFICATES_API}?mine=true`, { headers: getHeaders() }),
-                authFetch(WISHLISTS_API, { headers: getHeaders() }),
+                authFetch(`${WISHLISTS_API}?${wishlistParams.toString()}`, { headers: getHeaders() }),
                 authFetch(PATHS_API, { headers: getHeaders() }),
             ]);
 
             if (enrRes.ok) {
                 const enrData = await enrRes.json();
                 setEnrollments(enrData.results || enrData || []);
+                setEnrollmentTotalCount(enrData.count || 0);
+                setEnrollmentTotalPages(enrData.total_pages || 1);
+                setEnrollmentPageInput(String(enrollmentRequestedPage));
             }
             if (compRes.ok) {
                 const compData = await compRes.json();
@@ -113,6 +148,9 @@ const MyLearning = () => {
             if (wishRes.ok) {
                 const wishData = await wishRes.json();
                 setWishlist(wishData.results || wishData || []);
+                setWishlistTotalCount(wishData.count || 0);
+                setWishlistTotalPages(wishData.total_pages || 1);
+                setWishlistPageInput(String(wishlistRequestedPage));
             }
             if (pathsRes.ok) {
                 const pathsData = await pathsRes.json();
@@ -152,7 +190,7 @@ const MyLearning = () => {
                     });
                 }
                 
-                fetchDashboardData();
+                fetchDashboardData(1, 1);
                 setActiveTab('courses');
             } else {
                 Swal.fire('Error!', 'Enrollment failed.', 'error');
@@ -297,10 +335,10 @@ const MyLearning = () => {
             {!location.pathname.includes('certifications') && (
                 <div className="flex border-b border-[#ebedf2] dark:border-[#1b2e4b] mb-6 overflow-x-auto">
                     {[
-                        { key: 'courses' as const, label: 'My Enrolled Courses', icon: '📚', count: enrollments.length },
+                        { key: 'courses' as const, label: 'My Enrolled Courses', icon: '📚', count: enrollmentTotalCount },
                         { key: 'compliance' as const, label: 'Compliance Assignments', icon: '⚠️', count: pendingCompliance },
                         { key: 'certificates' as const, label: 'Certificates Archive', icon: '🎓', count: certificates.length },
-                        { key: 'wishlist' as const, label: 'My Wishlist', icon: '⭐', count: wishlist.length },
+                        { key: 'wishlist' as const, label: 'My Wishlist', icon: '⭐', count: wishlistTotalCount },
                         { key: 'paths' as const, label: 'Learning Paths', icon: '🗺️', count: learningPaths.length },
                     ].map((tab) => (
                         <button
@@ -322,6 +360,18 @@ const MyLearning = () => {
                             </span>
                         </button>
                     ))}
+                </div>
+            )}
+
+            {!location.pathname.includes('certifications') && (
+                <div className="mb-6">
+                    <input
+                        type="text"
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        placeholder={activeTab === 'wishlist' ? 'Search wishlist courses...' : 'Search enrolled courses...'}
+                        className="form-input rounded-lg text-sm w-full sm:w-80"
+                    />
                 </div>
             )}
 
@@ -470,6 +520,46 @@ const MyLearning = () => {
                                             </div>
                                         );
                                     })}
+                                </div>
+                            )}
+
+                            {enrollmentTotalPages > 1 && (
+                                <div className="flex flex-wrap items-center justify-between gap-3 mt-6">
+                                    <div className="text-xs text-gray-500">Showing {enrollments.length} of {enrollmentTotalCount} courses</div>
+                                    <div className="flex items-center gap-2">
+                                        <button
+                                            type="button"
+                                            className="btn btn-outline-primary btn-sm rounded-lg"
+                                            onClick={() => {
+                                                const nextPage = Math.max(1, enrollmentPage - 1);
+                                                setEnrollmentPage(nextPage);
+                                                fetchDashboardData(nextPage, wishlistPage);
+                                            }}
+                                            disabled={enrollmentPage <= 1}
+                                        >
+                                            Previous
+                                        </button>
+                                        <input
+                                            type="number"
+                                            min="1"
+                                            max={enrollmentTotalPages}
+                                            value={enrollmentPageInput}
+                                            onChange={(e) => setEnrollmentPageInput(e.target.value)}
+                                            className="form-input w-16 rounded-lg text-xs"
+                                        />
+                                        <button
+                                            type="button"
+                                            className="btn btn-outline-primary btn-sm rounded-lg"
+                                            onClick={() => {
+                                                const nextPage = Math.min(enrollmentTotalPages, enrollmentPage + 1);
+                                                setEnrollmentPage(nextPage);
+                                                fetchDashboardData(nextPage, wishlistPage);
+                                            }}
+                                            disabled={enrollmentPage >= enrollmentTotalPages}
+                                        >
+                                            Next
+                                        </button>
+                                    </div>
                                 </div>
                             )}
                         </div>
@@ -627,6 +717,46 @@ const MyLearning = () => {
                                             </div>
                                         </div>
                                     ))}
+                                </div>
+                            )}
+
+                            {wishlistTotalPages > 1 && (
+                                <div className="flex flex-wrap items-center justify-between gap-3 mt-6">
+                                    <div className="text-xs text-gray-500">Showing {wishlist.length} of {wishlistTotalCount} wishlisted courses</div>
+                                    <div className="flex items-center gap-2">
+                                        <button
+                                            type="button"
+                                            className="btn btn-outline-primary btn-sm rounded-lg"
+                                            onClick={() => {
+                                                const nextPage = Math.max(1, wishlistPage - 1);
+                                                setWishlistPage(nextPage);
+                                                fetchDashboardData(enrollmentPage, nextPage);
+                                            }}
+                                            disabled={wishlistPage <= 1}
+                                        >
+                                            Previous
+                                        </button>
+                                        <input
+                                            type="number"
+                                            min="1"
+                                            max={wishlistTotalPages}
+                                            value={wishlistPageInput}
+                                            onChange={(e) => setWishlistPageInput(e.target.value)}
+                                            className="form-input w-16 rounded-lg text-xs"
+                                        />
+                                        <button
+                                            type="button"
+                                            className="btn btn-outline-primary btn-sm rounded-lg"
+                                            onClick={() => {
+                                                const nextPage = Math.min(wishlistTotalPages, wishlistPage + 1);
+                                                setWishlistPage(nextPage);
+                                                fetchDashboardData(enrollmentPage, nextPage);
+                                            }}
+                                            disabled={wishlistPage >= wishlistTotalPages}
+                                        >
+                                            Next
+                                        </button>
+                                    </div>
                                 </div>
                             )}
                         </div>

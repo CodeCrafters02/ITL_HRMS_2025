@@ -24,11 +24,22 @@ const EmployeeCourseWishlist = () => {
     const [enrollments, setEnrollments] = useState<any[]>([]);
     const [search, setSearch] = useState('');
     const [loading, setLoading] = useState(true);
+    const [page, setPage] = useState(1);
+    const [limit] = useState(9);
+    const [totalCount, setTotalCount] = useState(0);
+    const [totalPages, setTotalPages] = useState(1);
+    const [pageInput, setPageInput] = useState('1');
 
     useEffect(() => {
         dispatch(setPageTitle('My Wishlist'));
-        fetchData();
+        fetchData(1);
     }, [dispatch]);
+
+    useEffect(() => {
+        setPage(1);
+        setPageInput('1');
+        fetchData(1);
+    }, [search]);
 
     const getHeaders = () => {
         const token = localStorage.getItem('access_token');
@@ -37,11 +48,17 @@ const EmployeeCourseWishlist = () => {
         return headers;
     };
 
-    const fetchData = async () => {
+    const fetchData = async (requestedPage = page) => {
         setLoading(true);
         try {
+            const params = new URLSearchParams({
+                page: requestedPage.toString(),
+                limit: limit.toString(),
+            });
+            if (search.trim()) params.set('search', search.trim());
+
             const [wishRes, enrollRes] = await Promise.all([
-                fetch(WISHLISTS_API, { headers: getHeaders() }),
+                fetch(`${WISHLISTS_API}?${params.toString()}`, { headers: getHeaders() }),
                 fetch(ENROLLMENTS_API, { headers: getHeaders() }),
             ]);
 
@@ -49,6 +66,9 @@ const EmployeeCourseWishlist = () => {
                 const wishData = await wishRes.json();
                 const enrollData = await enrollRes.json();
                 setWishlist(wishData.results || wishData || []);
+                setTotalCount(wishData.count || 0);
+                setTotalPages(wishData.total_pages || 1);
+                setPageInput(String(requestedPage));
                 setEnrollments(enrollData.results || enrollData || []);
             }
         } catch (error) {
@@ -89,7 +109,7 @@ const EmployeeCourseWishlist = () => {
 
             if (res.ok) {
                 Swal.fire('Success!', 'Successfully enrolled in course.', 'success');
-                fetchData();
+                fetchData(1);
             } else {
                 const err = await res.json();
                 Swal.fire('Error!', err.detail || 'Could not complete enrollment.', 'error');
@@ -98,11 +118,6 @@ const EmployeeCourseWishlist = () => {
             Swal.fire('Error!', 'Connection error.', 'error');
         }
     };
-
-    const filteredWishlist = wishlist.filter((item) =>
-        item.course_title.toLowerCase().includes(search.toLowerCase()) ||
-        item.course_category.toLowerCase().includes(search.toLowerCase())
-    );
 
     return (
         <div className="space-y-6">
@@ -128,7 +143,7 @@ const EmployeeCourseWishlist = () => {
                 <div className="flex items-center justify-center py-20">
                     <span className="animate-spin border-4 border-primary border-l-transparent w-9 h-9 rounded-full inline-block"></span>
                 </div>
-            ) : filteredWishlist.length === 0 ? (
+            ) : wishlist.length === 0 ? (
                 <div className="panel text-center py-16 bg-white dark:bg-[#0e1726] border-0 shadow-sm rounded-xl">
                     <span className="text-5xl block mb-3">⭐</span>
                     <h3 className="text-lg font-bold text-gray-800 dark:text-white">No wishlisted courses found</h3>
@@ -138,7 +153,7 @@ const EmployeeCourseWishlist = () => {
                 </div>
             ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {filteredWishlist.map((item) => {
+                    {wishlist.map((item) => {
                         const isEnrolled = enrollments.some((e: any) => e.course === item.course);
                         return (
                             <div key={item.id} className="panel bg-white dark:bg-[#0e1726] border-0 shadow-sm rounded-xl overflow-hidden hover:shadow-md transition-all duration-300 flex flex-col justify-between p-0">
@@ -190,6 +205,46 @@ const EmployeeCourseWishlist = () => {
                             </div>
                         );
                     })}
+                </div>
+            )}
+
+            {totalPages > 1 && (
+                <div className="flex flex-wrap items-center justify-between gap-3 mt-4">
+                    <div className="text-xs text-gray-500">Showing {wishlist.length} of {totalCount} wishlisted courses</div>
+                    <div className="flex items-center gap-2">
+                        <button
+                            type="button"
+                            className="btn btn-outline-primary btn-sm rounded-lg"
+                            onClick={() => {
+                                const nextPage = Math.max(1, page - 1);
+                                setPage(nextPage);
+                                fetchData(nextPage);
+                            }}
+                            disabled={page <= 1}
+                        >
+                            Previous
+                        </button>
+                        <input
+                            type="number"
+                            min="1"
+                            max={totalPages}
+                            value={pageInput}
+                            onChange={(e) => setPageInput(e.target.value)}
+                            className="form-input w-16 rounded-lg text-xs"
+                        />
+                        <button
+                            type="button"
+                            className="btn btn-outline-primary btn-sm rounded-lg"
+                            onClick={() => {
+                                const nextPage = Math.min(totalPages, page + 1);
+                                setPage(nextPage);
+                                fetchData(nextPage);
+                            }}
+                            disabled={page >= totalPages}
+                        >
+                            Next
+                        </button>
+                    </div>
                 </div>
             )}
         </div>
