@@ -7,6 +7,7 @@ import { setPageTitle } from '../../../store/themeConfigSlice';
 import { authFetch } from '../../../utils/authFetch';
 import IconPlus from '../../../components/Icon/IconPlus';
 import IconSearch from '../../../components/Icon/IconSearch';
+import SearchableSelect from '../../Elements/SearchableSelect';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000';
 const REQUESTS_API = `${API_BASE_URL}/employee/training-requests/`;
@@ -442,18 +443,13 @@ const EmployeeTrainingRequests = () => {
                         <form onSubmit={handleSubmitRequest} className="p-6 space-y-4">
                             <div>
                                 <label className="font-bold text-xs mb-1 block">Catalog Course</label>
-                                <select
-                                    className="form-select rounded-lg text-xs"
+                                <SearchableSelect
+                                    options={courses.map((c) => ({ label: c.title, value: String(c.id) }))}
                                     value={form.course}
-                                    onChange={(e) => setForm({ ...form, course: e.target.value })}
-                                >
-                                    <option value="">-- Choose Existing Course (Optional) --</option>
-                                    {courses.map((c) => (
-                                        <option key={c.id} value={c.id}>
-                                            {c.title}
-                                        </option>
-                                    ))}
-                                </select>
+                                    onChange={(value) => setForm({ ...form, course: String(value) })}
+                                    placeholder="Select a course"
+                                    className="rounded-lg text-xs"
+                                />
                             </div>
 
                             {!form.course && (

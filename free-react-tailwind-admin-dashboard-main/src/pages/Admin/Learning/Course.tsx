@@ -869,30 +869,28 @@ const Course = () => {
                                 onChange={(val) => { setFilterCategory(String(val)); setPage(1); }}
                                 placeholder="Filter by Category"
                             />
-                            <SearchableSelect
-                                className="w-40"
-                                options={[
-                                    { value: 'all', label: 'All Levels' },
-                                    { value: 'beginner', label: 'Beginner' },
-                                    { value: 'intermediate', label: 'Intermediate' },
-                                    { value: 'advanced', label: 'Advanced' },
-                                ]}
+                            <select
+                                className="form-select w-40"
                                 value={filterDifficulty}
-                                onChange={(val) => { setFilterDifficulty(String(val)); setPage(1); }}
-                                placeholder="Filter by Level"
-                            />
-                            <SearchableSelect
-                                className="w-40"
-                                options={[
-                                    { value: 'all', label: 'All Statuses' },
-                                    { value: 'draft', label: 'Draft' },
-                                    { value: 'published', label: 'Published' },
-                                    { value: 'archived', label: 'Archived' },
-                                ]}
+                                onChange={(e) => { setFilterDifficulty(e.target.value); setPage(1); }}
+                            >
+                                <option value="all">All Levels</option>
+                                <option value="beginner">Beginner</option>
+                                <option value="intermediate">Intermediate</option>
+                                <option value="advanced">Advanced</option>
+                            </select>
+
+                            <select
+                                className="form-select w-40"
                                 value={filterStatus}
-                                onChange={(val) => { setFilterStatus(String(val)); setPage(1); }}
-                                placeholder="Filter by Status"
-                            />
+                                onChange={(e) => { setFilterStatus(e.target.value); setPage(1); }}
+                            >
+                                <option value="all">All Statuses</option>
+                                <option value="draft">Draft</option>
+                                <option value="published">Published</option>
+                                <option value="archived">Archived</option>
+                            </select>
+
                         </div>
                         <button type="button" className="btn btn-primary gap-2" onClick={openCreateCourseModal}>
                             <IconPlus /> Add Course
@@ -1141,16 +1139,11 @@ const Course = () => {
                                                 </div>
                                                 <div>
                                                     <label className="font-semibold mb-1 block">Difficulty Level</label>
-                                                    <SearchableSelect
-                                                        options={[
-                                                            { value: 'beginner', label: 'Beginner' },
-                                                            { value: 'intermediate', label: 'Intermediate' },
-                                                            { value: 'advanced', label: 'Advanced' },
-                                                        ]}
-                                                        value={courseForm.difficulty_level}
-                                                        onChange={(val) => setCourseForm({ ...courseForm, difficulty_level: val as any })}
-                                                        placeholder="Select difficulty"
-                                                    />
+                                                    <select className="form-select rounded-lg" value={courseForm.difficulty_level} onChange={(e) => setCourseForm({ ...courseForm, difficulty_level: e.target.value as any })}>
+                                                        <option value="beginner">Beginner</option>
+                                                        <option value="intermediate">Intermediate</option>
+                                                        <option value="advanced">Advanced</option>
+                                                    </select>
                                                 </div>
                                             </div>
 
@@ -1165,16 +1158,11 @@ const Course = () => {
                                                 </div>
                                                 <div>
                                                     <label className="font-semibold mb-1 block">Status</label>
-                                                    <SearchableSelect
-                                                        options={[
-                                                            { value: 'draft', label: 'Draft' },
-                                                            { value: 'published', label: 'Published' },
-                                                            { value: 'archived', label: 'Archived' },
-                                                        ]}
-                                                        value={courseForm.status}
-                                                        onChange={(val) => setCourseForm({ ...courseForm, status: val as any })}
-                                                        placeholder="Select status"
-                                                    />
+                                                    <select className="form-select rounded-lg" value={courseForm.status} onChange={(e) => setCourseForm({ ...courseForm, status: e.target.value as any })}>
+                                                        <option value="draft">Draft</option>
+                                                        <option value="published">Published</option>
+                                                        <option value="archived">Archived</option>
+                                                    </select>
                                                 </div>
                                             </div>
 
