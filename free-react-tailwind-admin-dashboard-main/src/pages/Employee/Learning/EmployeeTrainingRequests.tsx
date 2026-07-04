@@ -42,6 +42,7 @@ const EmployeeTrainingRequests = () => {
     const [saving, setSaving] = useState(false);
     const [modalOpen, setModalOpen] = useState(false);
     const [search, setSearch] = useState('');
+    const [statusTab, setStatusTab] = useState<'all' | 'pending' | 'approved' | 'rejected'>('all');
 
     const [form, setForm] = useState({
         course: '',
@@ -127,13 +128,22 @@ const EmployeeTrainingRequests = () => {
         }
     };
 
-    const filteredRequests = requests.filter((r) => {
+    const statusFilteredRequests = requests.filter((r) => statusTab === 'all' || r.final_status === statusTab);
+
+    const filteredRequests = statusFilteredRequests.filter((r) => {
         const query = search.toLowerCase();
         const courseMatch = (r.course_title || '').toLowerCase().includes(query);
         const customMatch = r.custom_course_title.toLowerCase().includes(query);
         const reasonMatch = r.reason.toLowerCase().includes(query);
         return courseMatch || customMatch || reasonMatch;
     });
+
+    const statusTabs = [
+        { key: 'all' as const, label: 'All', count: requests.length },
+        { key: 'pending' as const, label: 'Pending', count: requests.filter((r) => r.final_status === 'pending').length },
+        { key: 'approved' as const, label: 'Approved', count: requests.filter((r) => r.final_status === 'approved').length },
+        { key: 'rejected' as const, label: 'Rejected', count: requests.filter((r) => r.final_status === 'rejected').length },
+    ];
 
     const getStatusBadge = (status: string) => {
         switch (status) {
@@ -184,13 +194,36 @@ const EmployeeTrainingRequests = () => {
                 </button>
             </div>
 
+            {/* Status Tabs */}
+            <div className="flex border-b border-[#ebedf2] dark:border-[#1b2e4b] mb-6 overflow-x-auto">
+                {statusTabs.map((tab) => (
+                    <button
+                        key={tab.key}
+                        type="button"
+                        onClick={() => setStatusTab(tab.key)}
+                        className={`py-3 px-5 font-semibold text-sm border-b-2 whitespace-nowrap transition-all duration-300 flex items-center gap-1.5 ${
+                            statusTab === tab.key ? 'border-primary text-primary' : 'border-transparent text-gray-500 hover:text-primary'
+                        }`}
+                    >
+                        {tab.label}
+                        <span className={`text-[10px] font-bold rounded-full px-1.5 py-0.5 ${
+                            statusTab === tab.key ? 'bg-primary text-white' : 'bg-gray-100 dark:bg-gray-800 text-gray-500'
+                        }`}>
+                            {tab.count}
+                        </span>
+                    </button>
+                ))}
+            </div>
+
             {/* List Table */}
             {loading ? (
                 <div className="panel text-center py-10">
                     <span className="animate-pulse text-gray-400 font-semibold">Loading request lifecycle logs...</span>
                 </div>
             ) : filteredRequests.length === 0 ? (
-                <div className="panel text-center py-10 text-gray-500 font-medium">No training requests submitted yet.</div>
+                <div className="panel text-center py-10 text-gray-500 font-medium">
+                    {statusTab === 'all' ? 'No training requests submitted yet.' : `No ${statusTab} training requests.`}
+                </div>
             ) : (
                 <div className="panel border border-[#e0e6ed] dark:border-[#1b2e4b] rounded-xl p-0 overflow-hidden bg-white dark:bg-[#0e1726]/40">
                     <div className="table-responsive">

@@ -4230,6 +4230,8 @@ class CourseReviewViewSet(viewsets.ModelViewSet):
         course_id = serializer.validated_data.get('course')
         if CourseReview.objects.filter(employee=user_emp, course=course_id).exists():
             raise serializers.ValidationError({"course": "You have already reviewed this course."})
+        if not Certificate.objects.filter(employee=user_emp, course_id=course_id).exists():
+            raise serializers.ValidationError({"course": "You can only review courses you have completed and earned a certificate for."})
         serializer.save(employee=user_emp)
 
 

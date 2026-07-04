@@ -5,7 +5,7 @@ import Swal from 'sweetalert2';
 
 const API_BASE_URL = 'http://localhost:8000';
 const REVIEWS_API = `${API_BASE_URL}/employee/course-reviews/`;
-const COURSES_API = `${API_BASE_URL}/employee/courses/`;
+const CERTIFICATES_API = `${API_BASE_URL}/employee/certificates/`;
 
 interface ReviewItem {
     id: number;
@@ -62,13 +62,18 @@ const EmployeeCourseReviews = () => {
 
     const fetchCourses = async () => {
         try {
-            const res = await fetch(COURSES_API, { headers: getHeaders() });
+            const res = await fetch(`${CERTIFICATES_API}?mine=true`, { headers: getHeaders() });
             if (res.ok) {
                 const data = await res.json();
-                setCourses(data.results || data || []);
+                const certs = data.results || data || [];
+                const seen = new Set<number>();
+                const completedCourses = certs
+                    .filter((c: any) => c.course != null && !seen.has(c.course) && seen.add(c.course))
+                    .map((c: any) => ({ id: c.course, title: c.course_title }));
+                setCourses(completedCourses);
             }
         } catch (error) {
-            console.error('Error fetching courses list:', error);
+            console.error('Error fetching completed courses:', error);
         }
     };
 
@@ -156,6 +161,8 @@ const EmployeeCourseReviews = () => {
         );
     };
 
+    const availableCourses = courses.filter((c: any) => !reviews.some((r) => r.course === c.id));
+
     const filteredReviews = reviews.filter((r) =>
         r.course_title.toLowerCase().includes(search.toLowerCase()) ||
         r.review_text.toLowerCase().includes(search.toLowerCase())
@@ -179,7 +186,13 @@ const EmployeeCourseReviews = () => {
                         />
                         <button
                             type="button"
-                            onClick={() => setShowModal(true)}
+                            onClick={() => {
+                                if (availableCourses.length === 0) {
+                                    Swal.fire('No Courses to Review', 'You can only review courses you have completed and earned a certificate for.', 'info');
+                                    return;
+                                }
+                                setShowModal(true);
+                            }}
                             className="btn btn-primary rounded-lg text-xs py-2 px-4 shadow-sm w-full sm:w-auto"
                         >
                             + Write a Review
@@ -255,10 +268,11 @@ const EmployeeCourseReviews = () => {
                                     className="form-select text-xs rounded-lg w-full"
                                 >
                                     <option value="">-- Choose Course --</option>
-                                    {courses.map((c: any) => (
+                                    {availableCourses.map((c: any) => (
                                         <option key={c.id} value={c.id}>{c.title}</option>
                                     ))}
                                 </select>
+                                <p className="text-[10px] text-gray-400 mt-1.5">Only courses you've completed and earned a certificate for are listed.</p>
                             </div>
                             <div>
                                 <label className="block text-xs font-bold mb-2">Rating Star <span className="text-danger">*</span></label>

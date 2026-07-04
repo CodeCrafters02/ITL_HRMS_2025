@@ -147,6 +147,7 @@ const AdminCompliance = lazy(() => import('../pages/Admin/Learning/Compliance'))
 const AdminCertifications = lazy(() => import('../pages/Admin/Learning/Certifications'));
 const AdminTrainingRequest = lazy(() => import('../pages/Admin/Learning/TrainingRequest'));
 const AssessmentManager = lazy(() => import('../pages/Admin/Learning/AssessmentManager'));
+const EmployeeLearningDashboard = lazy(() => import('../pages/Employee/Learning/Dashboard'));
 const EmployeeMyLearning = lazy(() => import('../pages/Employee/Learning/MyLearning'));
 const EmployeeCourseCatalog = lazy(() => import('../pages/Employee/Learning/EmployeeCourseCatalog'));
 const CourseSyllabusPlayer = lazy(() => import('../pages/Employee/Learning/CourseSyllabusPlayer'));
@@ -816,7 +817,7 @@ const routes = [
     },
     {
         path: '/employee/learning-management',
-        element: <EmployeeMyLearning />,
+        element: <EmployeeLearningDashboard />,
     },
     {
         path: '/employee/learning-management/my-learning',
