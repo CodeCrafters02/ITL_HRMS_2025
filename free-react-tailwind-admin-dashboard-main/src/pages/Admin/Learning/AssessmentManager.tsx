@@ -67,6 +67,12 @@ const AssessmentManager = () => {
     const [saving, setSaving] = useState(false);
     const [search, setSearch] = useState('');
 
+    // Pagination & Search States
+    const [page, setPage] = useState(1);
+    const [limit, setLimit] = useState(10);
+    const [totalCount, setTotalCount] = useState(0);
+    const [totalPages, setTotalPages] = useState(1);
+
     // Assessment Modal
     const [assessmentModalOpen, setAssessmentModalOpen] = useState(false);
     const [editingAssessment, setEditingAssessment] = useState<AssessmentType | null>(null);
@@ -106,9 +112,15 @@ const AssessmentManager = () => {
 
     useEffect(() => {
         dispatch(setPageTitle('Assessments Manager'));
-        fetchAssessments();
         fetchCourses();
     }, [dispatch]);
+
+    useEffect(() => {
+        const handler = setTimeout(() => {
+            fetchAssessments();
+        }, 500); // 500ms debounce
+        return () => clearTimeout(handler);
+    }, [search, page, limit]);
 
     const getHeaders = () => {
         const token = localStorage.getItem('access_token');
@@ -122,10 +134,27 @@ const AssessmentManager = () => {
     const fetchAssessments = async () => {
         setLoading(true);
         try {
-            const response = await authFetch(ASSESSMENTS_API, { headers: getHeaders() });
+            const url = new URL(ASSESSMENTS_API);
+            url.searchParams.append('page', page.toString());
+            url.searchParams.append('limit', limit.toString());
+            if (search) url.searchParams.append('search', search);
+
+            const response = await authFetch(url.toString(), { headers: getHeaders() });
             if (response.ok) {
                 const data = await response.json();
-                setAssessments(data.results || data || []);
+                if (data.results) {
+                    setAssessments(data.results);
+                    setTotalCount(data.count);
+                    setTotalPages(data.total_pages || Math.ceil(data.count / limit));
+                } else if (Array.isArray(data)) {
+                    setAssessments(data);
+                    setTotalCount(data.length);
+                    setTotalPages(1);
+                } else {
+                    setAssessments([]);
+                    setTotalCount(0);
+                    setTotalPages(1);
+                }
             }
         } catch (error) {
             console.error('Error fetching assessments:', error);
@@ -175,15 +204,6 @@ const AssessmentManager = () => {
             setAttemptsLoading(false);
         }
     };
-
-    const filteredAssessments = useMemo(() => {
-        return assessments.filter((a) => {
-            return (
-                a.title.toLowerCase().includes(search.toLowerCase()) ||
-                (a.course_title || '').toLowerCase().includes(search.toLowerCase())
-            );
-        });
-    }, [assessments, search]);
 
     const resetAssessmentForm = () => {
         setAssessmentForm({
@@ -432,76 +452,134 @@ const AssessmentManager = () => {
                 <div className="panel text-center py-10">
                     <span className="animate-pulse text-gray-400">Loading quiz directories...</span>
                 </div>
-            ) : filteredAssessments.length === 0 ? (
+            ) : assessments.length === 0 ? (
                 <div className="panel text-center py-10 text-gray-500 font-medium">No quiz sheets mapped.</div>
             ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {filteredAssessments.map((a) => (
-                        <div
-                            key={a.id}
-                            className="panel border border-[#e0e6ed] dark:border-[#1b2e4b] rounded-xl hover:shadow-lg transition-all duration-300 flex flex-col justify-between"
-                        >
-                            <div>
-                                <div className="flex items-start justify-between mb-3">
-                                    <div>
-                                        <span className="badge badge-outline-secondary text-[9px] uppercase font-bold rounded">
-                                            {a.assessment_type}
-                                        </span>
-                                        <h3 className="text-base font-bold text-gray-800 dark:text-white-light mt-1.5 line-clamp-1">
-                                            {a.title}
-                                        </h3>
+                <div className="space-y-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        {assessments.map((a) => (
+                            <div
+                                key={a.id}
+                                className="panel border border-[#e0e6ed] dark:border-[#1b2e4b] rounded-xl hover:shadow-lg transition-all duration-300 flex flex-col justify-between"
+                            >
+                                <div>
+                                    <div className="flex items-start justify-between mb-3">
+                                        <div>
+                                            <span className="badge badge-outline-secondary text-[9px] uppercase font-bold rounded">
+                                                {a.assessment_type}
+                                            </span>
+                                            <h3 className="text-base font-bold text-gray-800 dark:text-white-light mt-1.5 line-clamp-1">
+                                                {a.title}
+                                            </h3>
+                                        </div>
+                                        <div className="flex items-center gap-1.5">
+                                            <button type="button" className="text-primary hover:text-primary-dark p-1" onClick={() => openEditAssessmentModal(a)}>
+                                                <IconPencil className="w-4 h-4" />
+                                            </button>
+                                            <button type="button" className="text-danger hover:text-danger-dark p-1" onClick={() => handleDeleteAssessment(a)}>
+                                                <IconTrashLines className="w-4.5 h-4.5" />
+                                            </button>
+                                        </div>
                                     </div>
-                                    <div className="flex items-center gap-1.5">
-                                        <button type="button" className="text-primary hover:text-primary-dark p-1" onClick={() => openEditAssessmentModal(a)}>
-                                            <IconPencil className="w-4 h-4" />
-                                        </button>
-                                        <button type="button" className="text-danger hover:text-danger-dark p-1" onClick={() => handleDeleteAssessment(a)}>
-                                            <IconTrashLines className="w-4.5 h-4.5" />
-                                        </button>
+
+                                    <div className="space-y-1 text-xs text-gray-500 mb-4 pt-1">
+                                        <div>
+                                            <span className="font-semibold text-gray-400 mr-1">Linked Course:</span>
+                                            <span className="font-bold text-gray-700 dark:text-gray-300">{a.course_title || 'General'}</span>
+                                        </div>
+                                        <div>
+                                            <span className="font-semibold text-gray-400 mr-1">Time Limit:</span>
+                                            <span>{a.time_limit_minutes ? `${a.time_limit_minutes} mins` : 'No Limit'}</span>
+                                        </div>
+                                        <div>
+                                            <span className="font-semibold text-gray-400 mr-1">Passing Mark:</span>
+                                            <span>{a.pass_marks} %</span>
+                                        </div>
                                     </div>
                                 </div>
 
-                                <div className="space-y-1 text-xs text-gray-500 mb-4 pt-1">
-                                    <div>
-                                        <span className="font-semibold text-gray-400 mr-1">Linked Course:</span>
-                                        <span className="font-bold text-gray-700 dark:text-gray-300">{a.course_title || 'General'}</span>
+                                <div className="border-t border-[#f1f2f3] dark:border-[#191e3a] pt-4 mt-auto space-y-2">
+                                    <div className="flex items-center justify-between text-xs">
+                                        <span className="font-semibold text-gray-400">Total Questions:</span>
+                                        <span className="badge badge-outline-primary rounded-full px-2 font-bold">{a.questions_count} Qs</span>
                                     </div>
-                                    <div>
-                                        <span className="font-semibold text-gray-400 mr-1">Time Limit:</span>
-                                        <span>{a.time_limit_minutes ? `${a.time_limit_minutes} mins` : 'No Limit'}</span>
-                                    </div>
-                                    <div>
-                                        <span className="font-semibold text-gray-400 mr-1">Passing Mark:</span>
-                                        <span>{a.pass_marks} %</span>
+
+                                    <div className="flex gap-2">
+                                        <button
+                                            type="button"
+                                            className="btn btn-outline-primary btn-sm flex-1 rounded-lg text-xs py-1.5 flex items-center justify-center gap-1"
+                                            onClick={() => openQuestionsModal(a)}
+                                        >
+                                            <IconEye className="w-3.5 h-3.5" /> Question Sheet
+                                        </button>
+                                        <button
+                                            type="button"
+                                            className="btn btn-outline-secondary btn-sm flex-1 rounded-lg text-xs py-1.5 flex items-center justify-center gap-1"
+                                            onClick={() => openAttemptsModal(a)}
+                                        >
+                                            Attempts Log
+                                        </button>
                                     </div>
                                 </div>
                             </div>
+                        ))}
+                    </div>
 
-                            <div className="border-t border-[#f1f2f3] dark:border-[#191e3a] pt-4 mt-auto space-y-2">
-                                <div className="flex items-center justify-between text-xs">
-                                    <span className="font-semibold text-gray-400">Total Questions:</span>
-                                    <span className="badge badge-outline-primary rounded-full px-2 font-bold">{a.questions_count} Qs</span>
+                    {totalCount > 0 && (
+                        <div className="flex flex-col sm:flex-row justify-between items-center gap-4 p-4 panel border border-[#e0e6ed] dark:border-[#1b2e4b] rounded-xl mt-6">
+                            <div className="flex items-center gap-4">
+                                <div className="text-sm text-gray-500 font-semibold dark:text-gray-400">
+                                    Showing <span className="text-primary">{((page - 1) * limit) + 1}</span> to <span className="text-primary">{Math.min(page * limit, totalCount)}</span> of <span className="text-primary">{totalCount}</span> entries
                                 </div>
-
-                                <div className="flex gap-2">
-                                    <button
-                                        type="button"
-                                        className="btn btn-outline-primary btn-sm flex-1 rounded-lg text-xs py-1.5 flex items-center justify-center gap-1"
-                                        onClick={() => openQuestionsModal(a)}
+                                <div className="flex items-center gap-2">
+                                    <span className="text-sm font-semibold">Per page:</span>
+                                    <select
+                                        className="form-select w-20 text-sm font-semibold py-1"
+                                        value={limit}
+                                        onChange={(e) => { setLimit(Number(e.target.value)); setPage(1); }}
                                     >
-                                        <IconEye className="w-3.5 h-3.5" /> Question Sheet
-                                    </button>
-                                    <button
-                                        type="button"
-                                        className="btn btn-outline-secondary btn-sm flex-1 rounded-lg text-xs py-1.5 flex items-center justify-center gap-1"
-                                        onClick={() => openAttemptsModal(a)}
-                                    >
-                                        Attempts Log
-                                    </button>
+                                        <option value="5">5</option>
+                                        <option value="10">10</option>
+                                        <option value="20">20</option>
+                                        <option value="50">50</option>
+                                    </select>
                                 </div>
                             </div>
+                            <ul className="inline-flex items-center space-x-1 font-semibold">
+                                <li>
+                                    <button
+                                        type="button"
+                                        className="flex justify-center font-semibold px-3 py-1.5 rounded-lg transition bg-white-light text-dark hover:text-white hover:bg-primary dark:text-white-light dark:bg-[#191e3a] dark:hover:bg-primary disabled:opacity-50 disabled:cursor-not-allowed text-xs"
+                                        onClick={() => setPage(page > 1 ? page - 1 : 1)}
+                                        disabled={page === 1}
+                                    >
+                                        Prev
+                                    </button>
+                                </li>
+                                {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
+                                    <li key={p}>
+                                        <button
+                                            type="button"
+                                            className={`flex justify-center font-semibold px-3 py-1.5 rounded-lg transition text-xs ${page === p ? 'bg-primary text-white shadow-md' : 'bg-white-light text-dark hover:text-white hover:bg-primary dark:text-white-light dark:bg-[#191e3a] dark:hover:bg-primary'}`}
+                                            onClick={() => setPage(p)}
+                                        >
+                                            {p}
+                                        </button>
+                                    </li>
+                                ))}
+                                <li>
+                                    <button
+                                        type="button"
+                                        className="flex justify-center font-semibold px-3 py-1.5 rounded-lg transition bg-white-light text-dark hover:text-white hover:bg-primary dark:text-white-light dark:bg-[#191e3a] dark:hover:bg-primary disabled:opacity-50 disabled:cursor-not-allowed text-xs"
+                                        onClick={() => setPage(page < totalPages ? page + 1 : totalPages)}
+                                        disabled={page === totalPages || totalPages === 0}
+                                    >
+                                        Next
+                                    </button>
+                                </li>
+                            </ul>
                         </div>
-                    ))}
+                    )}
                 </div>
             )}
 

@@ -17,6 +17,33 @@ from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import filters
 from rest_framework.pagination import PageNumberPagination
 
+
+
+
+class Pagination(PageNumberPagination):
+    page_query_param = "page"
+    page_size_query_param = "limit"
+    page_size = 10
+    max_page_size = 100
+
+    def get_paginated_response(self, data):
+        current_page = self.page.number
+        total_pages = self.page.paginator.num_pages
+
+        next_page = self.page.next_page_number() if self.page.has_next() else None
+        previous_page = self.page.previous_page_number() if self.page.has_previous() else None
+
+        return Response({
+            "count": self.page.paginator.count,
+            "next": next_page,            # ✅ numeric next
+            "previous": previous_page,    # ✅ numeric previous
+            "current_page": current_page,
+            "total_pages": total_pages,
+            "results": data,
+        })
+
+
+
 class EmployeePagination(PageNumberPagination):
     page_size = 10
     page_size_query_param = 'page_size'
@@ -3647,6 +3674,7 @@ class CourseCategoryViewSet(viewsets.ModelViewSet):
     queryset = CourseCategory.objects.all()
     serializer_class = CourseCategorySerializer
     permission_classes = [IsAuthenticated]
+    pagination_class = Pagination
     filter_backends = [filters.SearchFilter]
     search_fields = ['name', 'description']
 
@@ -3668,6 +3696,7 @@ class CourseViewSet(viewsets.ModelViewSet):
     queryset = Course.objects.all()
     serializer_class = CourseSerializer
     permission_classes = [IsAuthenticated]
+    pagination_class = Pagination
     filter_backends = [filters.SearchFilter, DjangoFilterBackend]
     search_fields = ['title', 'description']
     filterset_fields = ['category', 'difficulty_level', 'status', 'is_compliance']
@@ -3798,6 +3827,7 @@ class CertificateViewSet(viewsets.ModelViewSet):
     queryset = Certificate.objects.all()
     serializer_class = CertificateSerializer
     permission_classes = [IsAuthenticated]
+    pagination_class = Pagination
     filter_backends = [filters.SearchFilter, DjangoFilterBackend]
     search_fields = ['certificate_name', 'certificate_number', 'employee__first_name', 'employee__last_name']
     filterset_fields = ['employee', 'course', 'status', 'source']
@@ -3837,6 +3867,7 @@ class TrainingRequestViewSet(viewsets.ModelViewSet):
     queryset = TrainingRequest.objects.all()
     serializer_class = TrainingRequestSerializer
     permission_classes = [IsAuthenticated]
+    pagination_class = Pagination
     filter_backends = [filters.SearchFilter, DjangoFilterBackend]
     search_fields = ['employee__first_name', 'employee__last_name', 'course__title', 'custom_course_title']
     filterset_fields = ['employee', 'course', 'manager_status', 'admin_status']
@@ -3845,7 +3876,16 @@ class TrainingRequestViewSet(viewsets.ModelViewSet):
         user_emp = getattr(self.request.user, 'employee_profile', None)
         if not user_emp:
             return TrainingRequest.objects.none()
-        return TrainingRequest.objects.filter(employee__company=user_emp.company).order_by('-created_at')
+        qs = TrainingRequest.objects.filter(employee__company=user_emp.company).order_by('-created_at')
+        final_status = self.request.query_params.get('final_status')
+        if final_status:
+            if final_status == 'approved':
+                qs = qs.filter(Q(manager_status='approved') | Q(admin_status='approved'))
+            elif final_status == 'rejected':
+                qs = qs.filter(Q(manager_status='rejected') | Q(admin_status='rejected'))
+            elif final_status == 'pending':
+                qs = qs.filter(manager_status='pending', admin_status='pending')
+        return qs
 
     def perform_create(self, serializer):
         from notifications.models import UserNotification
@@ -4009,6 +4049,7 @@ class AssessmentViewSet(viewsets.ModelViewSet):
     queryset = Assessment.objects.all()
     serializer_class = AssessmentSerializer
     permission_classes = [IsAuthenticated]
+    pagination_class = Pagination
     filter_backends = [filters.SearchFilter, DjangoFilterBackend]
     search_fields = ['title', 'course__title']
     filterset_fields = ['course', 'assessment_type']
@@ -4151,7 +4192,16 @@ class EnrollmentViewSet(viewsets.ModelViewSet):
     queryset = Enrollment.objects.all()
     serializer_class = EnrollmentSerializer
     permission_classes = [IsAuthenticated]
-    filter_backends = [DjangoFilterBackend]
+    pagination_class = Pagination
+    filter_backends = [filters.SearchFilter, DjangoFilterBackend]
+    search_fields = [
+        'employee__first_name',
+        'employee__last_name',
+        'employee__employee_id',
+        'employee__email',
+        'employee__department__department_name',
+        'course__title'
+    ]
     filterset_fields = ['course', 'status', 'employee']
 
     def get_queryset(self):
