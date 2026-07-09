@@ -289,9 +289,9 @@ const Certifications = () => {
                         placeholder="Filter by Source"
                     />
                 </div>
-                <button type="button" className="btn btn-primary gap-2" onClick={openUploadModal}>
+                {/* <button type="button" className="btn btn-primary gap-2" onClick={openUploadModal}>
                     <IconPlus /> Upload Certificate
-                </button>
+                </button> */}
             </div>
 
             {/* List Table */}
