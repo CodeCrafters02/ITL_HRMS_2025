@@ -225,18 +225,13 @@ const Status = () => {
                                 if (totalPages <= 3) {
                                     for (let i = 1; i <= totalPages; i++) pages.push(i);
                                 } else {
-                                    pages.push(1);
-                                    let start = Math.max(2, page - 1);
-                                    let end = Math.min(totalPages - 1, page + 1);
                                     if (page <= 2) {
-                                        end = Math.min(totalPages - 1, 3);
+                                        pages.push(1, 2, 3, 'right-ellipsis', totalPages);
                                     } else if (page >= totalPages - 1) {
-                                        start = Math.max(2, totalPages - 2);
+                                        pages.push(1, 'left-ellipsis', totalPages - 2, totalPages - 1, totalPages);
+                                    } else {
+                                        pages.push(1, 'left-ellipsis', page, 'right-ellipsis', totalPages);
                                     }
-                                    if (start > 2) pages.push('left-ellipsis');
-                                    for (let i = start; i <= end; i++) pages.push(i);
-                                    if (end < totalPages - 1) pages.push('right-ellipsis');
-                                    pages.push(totalPages);
                                 }
                                 return pages.map((p, idx) => {
                                     if (p === 'left-ellipsis' || p === 'right-ellipsis') {
