@@ -58,11 +58,22 @@ const EmployeeCourseCatalog = () => {
     const [requestingId, setRequestingId] = useState<number | null>(null);
     const [search, setSearch] = useState('');
     const [selectedCategory, setSelectedCategory] = useState<string>('all');
+    const [selectedDifficulty, setSelectedDifficulty] = useState<'all' | 'beginner' | 'intermediate' | 'advanced'>('all');
+    const [page, setPage] = useState(1);
+    const [limit] = useState(9);
+    const [totalCount, setTotalCount] = useState(0);
+    const [totalPages, setTotalPages] = useState(1);
+    const [pageInput, setPageInput] = useState('1');
 
     useEffect(() => {
         dispatch(setPageTitle('Course Catalog'));
-        fetchCatalogData();
-    }, [dispatch]);
+        fetchCatalogData(page);
+    }, [dispatch, page, search, selectedCategory, selectedDifficulty]);
+
+    useEffect(() => {
+        setPage(1);
+        setPageInput('1');
+    }, [search, selectedCategory, selectedDifficulty]);
 
     const getHeaders = () => {
         const token = localStorage.getItem('access_token');
@@ -73,11 +84,20 @@ const EmployeeCourseCatalog = () => {
         return headers;
     };
 
-    const fetchCatalogData = async () => {
+    const fetchCatalogData = async (requestedPage = page) => {
         setLoading(true);
         try {
+            const params = new URLSearchParams({
+                page: requestedPage.toString(),
+                limit: limit.toString(),
+                status: 'published',
+            });
+            if (search.trim()) params.set('search', search.trim());
+            if (selectedDifficulty !== 'all') params.set('difficulty_level', selectedDifficulty);
+            if (selectedCategory !== 'all') params.set('category', selectedCategory);
+
             const [coursesRes, enrollmentsRes, wishlistsRes, requestsRes] = await Promise.all([
-                authFetch(COURSES_API, { headers: getHeaders() }),
+                authFetch(`${COURSES_API}?${params.toString()}`, { headers: getHeaders() }),
                 authFetch(ENROLLMENTS_API, { headers: getHeaders() }),
                 authFetch(WISHLISTS_API, { headers: getHeaders() }),
                 authFetch(TRAINING_REQUESTS_API, { headers: getHeaders() }),
@@ -100,6 +120,9 @@ const EmployeeCourseCatalog = () => {
                     course_image: c.thumbnail_url || c.thumbnail || null,
                 }));
                 setCourses(coursesList.filter((c: any) => c.is_published));
+                setTotalCount(coursesData.count || coursesList.length || 0);
+                setTotalPages(coursesData.total_pages || 1);
+                setPageInput(String(requestedPage));
                 setEnrollments(enrollmentsData.results || enrollmentsData || []);
                 setWishlist(wishlistsData.results || wishlistsData || []);
             }
@@ -154,7 +177,7 @@ const EmployeeCourseCatalog = () => {
                     timer: 2500,
                     showConfirmButton: false,
                 });
-                fetchCatalogData();
+                fetchCatalogData(1);
             } else {
                 const err = await response.json().catch(() => null);
                 const errMsg = err?.course?.[0] || err?.detail || err?.non_field_errors?.[0] || 'Failed to submit enrollment request.';
@@ -226,23 +249,23 @@ const EmployeeCourseCatalog = () => {
 
     // Categories
     const categories = useMemo(() => {
-        const set = new Set<string>();
+        const categoryMap = new Map<string, { value: string; label: string }>();
         courses.forEach((c) => {
-            if (c.category_name) set.add(c.category_name);
+            if (!c.category_name) return;
+            const value = c.category != null ? String(c.category) : c.category_name;
+            if (!categoryMap.has(value)) {
+                categoryMap.set(value, { value, label: c.category_name });
+            }
         });
-        return ['all', ...Array.from(set)];
+        return [{ value: 'all', label: 'All' }, ...Array.from(categoryMap.values())];
     }, [courses]);
 
     const filteredCourses = useMemo(() => {
         return courses.filter((c) => {
-            const matchesSearch = c.title.toLowerCase().includes(search.toLowerCase()) ||
-                (c.description || '').toLowerCase().includes(search.toLowerCase());
-            
-            const matchesCategory = selectedCategory === 'all' || c.category_name === selectedCategory;
-
-            return matchesSearch && matchesCategory;
+            if (selectedCategory === 'all') return true;
+            return String(c.category) === selectedCategory || c.category_name === selectedCategory;
         });
-    }, [courses, search, selectedCategory]);
+    }, [courses, selectedCategory]);
 
     // Render the action section for a course card
     const renderCourseAction = (course: CourseType) => {
@@ -395,30 +418,42 @@ const EmployeeCourseCatalog = () => {
                 <div className="flex items-center gap-2 overflow-x-auto pb-1 max-w-full">
                     {categories.map((cat) => (
                         <button
-                            key={cat}
+                            key={cat.value}
                             type="button"
                             className={`btn btn-sm rounded-lg text-xs py-1.5 px-3 uppercase font-bold tracking-wider transition-all duration-300 ${
-                                selectedCategory === cat
+                                selectedCategory === cat.value
                                     ? 'btn-primary'
                                     : 'btn-outline-primary bg-white dark:bg-[#0e1726]/40'
                             }`}
-                            onClick={() => setSelectedCategory(cat)}
+                            onClick={() => setSelectedCategory(cat.value)}
                         >
-                            {cat}
+                            {cat.label}
                         </button>
                     ))}
                 </div>
-                <div className="relative w-72">
-                    <input
-                        type="text"
-                        className="form-input pr-10 rounded-lg text-xs"
-                        placeholder="Search courses..."
-                        value={search}
-                        onChange={(e) => setSearch(e.target.value)}
-                    />
-                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400">
-                        <IconSearch className="w-4 h-4" />
-                    </span>
+                <div className="flex flex-wrap items-center gap-2">
+                    <select
+                        className="form-select rounded-lg text-xs w-36"
+                        value={selectedDifficulty}
+                        onChange={(e) => setSelectedDifficulty(e.target.value as 'all' | 'beginner' | 'intermediate' | 'advanced')}
+                    >
+                        <option value="all">All Levels</option>
+                        <option value="beginner">Beginner</option>
+                        <option value="intermediate">Intermediate</option>
+                        <option value="advanced">Advanced</option>
+                    </select>
+                    <div className="relative w-72">
+                        <input
+                            type="text"
+                            className="form-input pr-10 rounded-lg text-xs"
+                            placeholder="Search courses..."
+                            value={search}
+                            onChange={(e) => setSearch(e.target.value)}
+                        />
+                        <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400">
+                            <IconSearch className="w-4 h-4" />
+                        </span>
+                    </div>
                 </div>
             </div>
 
@@ -430,8 +465,12 @@ const EmployeeCourseCatalog = () => {
             ) : filteredCourses.length === 0 ? (
                 <div className="panel text-center py-10 text-gray-500 font-medium">No published courses found.</div>
             ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {filteredCourses.map((c) => (
+                <>
+                    <div className="mb-4 text-xs text-gray-500">
+                        Showing {filteredCourses.length} of {totalCount} courses
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        {filteredCourses.map((c) => (
                         <div
                             key={c.id}
                             className="panel border border-[#e0e6ed] dark:border-[#1b2e4b] rounded-xl hover:shadow-lg transition-all duration-300 flex flex-col justify-between overflow-hidden p-0 bg-white dark:bg-[#0e1726]/40"
@@ -480,8 +519,46 @@ const EmployeeCourseCatalog = () => {
                                 </div>
                             </div>
                         </div>
-                    ))}
-                </div>
+                        ))}
+                    </div>
+                    {totalPages > 1 && (
+                        <div className="flex flex-wrap items-center justify-between gap-3 mt-6">
+                            <div className="text-xs text-gray-500">Page {page} of {totalPages}</div>
+                            <div className="flex items-center gap-2">
+                                <button
+                                    type="button"
+                                    className="btn btn-outline-primary btn-sm rounded-lg"
+                                    onClick={() => {
+                                        const nextPage = Math.max(1, page - 1);
+                                        setPage(nextPage);
+                                    }}
+                                    disabled={page <= 1}
+                                >
+                                    Previous
+                                </button>
+                                <input
+                                    type="number"
+                                    min="1"
+                                    max={totalPages}
+                                    value={pageInput}
+                                    onChange={(e) => setPageInput(e.target.value)}
+                                    className="form-input w-16 rounded-lg text-xs"
+                                />
+                                <button
+                                    type="button"
+                                    className="btn btn-outline-primary btn-sm rounded-lg"
+                                    onClick={() => {
+                                        const nextPage = Math.min(totalPages, page + 1);
+                                        setPage(nextPage);
+                                    }}
+                                    disabled={page >= totalPages}
+                                >
+                                    Next
+                                </button>
+                            </div>
+                        </div>
+                    )}
+                </>
             )}
         </div>
     );

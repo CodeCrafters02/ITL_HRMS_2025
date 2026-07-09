@@ -48,6 +48,12 @@ const Compliance = () => {
     const [enrollmentsLoading, setEnrollmentsLoading] = useState(true);
     const [activitySearch, setActivitySearch] = useState('');
 
+    // Pagination states
+    const [page, setPage] = useState(1);
+    const [limit, setLimit] = useState(10);
+    const [totalCount, setTotalCount] = useState(0);
+    const [totalPages, setTotalPages] = useState(1);
+
     const [activityModalOpen, setActivityModalOpen] = useState(false);
     const [activeEmployeeId, setActiveEmployeeId] = useState<number | null>(null);
     const [expandedEnrollmentId, setExpandedEnrollmentId] = useState<number | null>(null);
@@ -57,8 +63,14 @@ const Compliance = () => {
 
     useEffect(() => {
         dispatch(setPageTitle('Employee Course Activity'));
-        fetchEnrollments();
     }, [dispatch]);
+
+    useEffect(() => {
+        const handler = setTimeout(() => {
+            fetchEnrollments();
+        }, 500); // 500ms debounce
+        return () => clearTimeout(handler);
+    }, [activitySearch, page, limit]);
 
     const getHeaders = () => {
         const token = localStorage.getItem('access_token');
@@ -72,10 +84,27 @@ const Compliance = () => {
     const fetchEnrollments = async () => {
         setEnrollmentsLoading(true);
         try {
-            const response = await authFetch(ENROLLMENTS_API, { headers: getHeaders() });
+            const url = new URL(ENROLLMENTS_API);
+            url.searchParams.append('page', page.toString());
+            url.searchParams.append('limit', limit.toString());
+            if (activitySearch) url.searchParams.append('search', activitySearch);
+
+            const response = await authFetch(url.toString(), { headers: getHeaders() });
             if (response.ok) {
                 const data = await response.json();
-                setEnrollments(data.results || data || []);
+                if (data.results) {
+                    setEnrollments(data.results);
+                    setTotalCount(data.count);
+                    setTotalPages(data.total_pages || Math.ceil(data.count / limit));
+                } else if (Array.isArray(data)) {
+                    setEnrollments(data);
+                    setTotalCount(data.length);
+                    setTotalPages(1);
+                } else {
+                    setEnrollments([]);
+                    setTotalCount(0);
+                    setTotalPages(1);
+                }
             }
         } catch (error) {
             console.error('Error fetching enrollments:', error);
@@ -195,13 +224,13 @@ const Compliance = () => {
                         className="form-input pr-10 w-80"
                         placeholder="Search employee, ID, or department..."
                         value={activitySearch}
-                        onChange={(e) => setActivitySearch(e.target.value)}
+                        onChange={(e) => { setActivitySearch(e.target.value); setPage(1); }}
                     />
                     <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400">
                         <IconSearch className="w-4 h-4" />
                     </span>
                 </div>
-                <span className="text-xs text-gray-400 font-semibold">{employeeActivitySummaries.length} employee(s) with course activity</span>
+                <span className="text-xs text-gray-400 font-semibold">{employeeActivitySummaries.length} employee(s) showing on page</span>
             </div>
 
             {enrollmentsLoading ? (
@@ -211,28 +240,86 @@ const Compliance = () => {
             ) : employeeActivitySummaries.length === 0 ? (
                 <div className="panel text-center py-10 text-gray-500 font-medium">No employees have enrolled in any course yet.</div>
             ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-                    {employeeActivitySummaries.map((s) => (
-                        <button
-                            key={s.employee}
-                            type="button"
-                            onClick={() => openActivityModal(s.employee)}
-                            className="panel text-left border border-[#e0e6ed] dark:border-[#1b2e4b] hover:shadow-lg hover:border-primary/40 transition-all duration-300 rounded-xl p-5"
-                        >
-                            <div className="flex items-start justify-between mb-3">
-                                <div>
-                                    <div className="font-bold text-gray-800 dark:text-white-light">{s.employee_name}</div>
-                                    <div className="text-xs text-gray-400">{s.employee_code || '—'} • {s.department_name || 'No Dept'}</div>
+                <div className="space-y-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+                        {employeeActivitySummaries.map((s) => (
+                            <button
+                                key={s.employee}
+                                type="button"
+                                onClick={() => openActivityModal(s.employee)}
+                                className="panel text-left border border-[#e0e6ed] dark:border-[#1b2e4b] hover:shadow-lg hover:border-primary/40 transition-all duration-300 rounded-xl p-5"
+                            >
+                                <div className="flex items-start justify-between mb-3">
+                                    <div>
+                                        <div className="font-bold text-gray-800 dark:text-white-light">{s.employee_name}</div>
+                                        <div className="text-xs text-gray-400">{s.employee_code || '—'} • {s.department_name || 'No Dept'}</div>
+                                    </div>
+                                    <span className="badge badge-outline-primary rounded-full px-2.5 py-0.5 text-[11px] font-bold">{s.total} course{s.total === 1 ? '' : 's'}</span>
                                 </div>
-                                <span className="badge badge-outline-primary rounded-full px-2.5 py-0.5 text-[11px] font-bold">{s.total} course{s.total === 1 ? '' : 's'}</span>
+                                <div className="flex items-center gap-2 text-[10px] font-bold uppercase">
+                                    <span className="badge bg-success text-white rounded-full px-2 py-0.5">{s.completed} Completed</span>
+                                    <span className="badge bg-primary text-white rounded-full px-2 py-0.5">{s.inProgress} In Progress</span>
+                                    <span className="badge bg-amber-500 text-white rounded-full px-2 py-0.5">{s.pending} Pending</span>
+                                </div>
+                            </button>
+                        ))}
+                    </div>
+
+                    {totalCount > 0 && (
+                        <div className="flex flex-col sm:flex-row justify-between items-center gap-4 p-4 panel border border-[#e0e6ed] dark:border-[#1b2e4b] rounded-xl mt-6">
+                            <div className="flex items-center gap-4">
+                                <div className="text-sm text-gray-500 font-semibold dark:text-gray-400">
+                                    Showing <span className="text-primary">{((page - 1) * limit) + 1}</span> to <span className="text-primary">{Math.min(page * limit, totalCount)}</span> of <span className="text-primary">{totalCount}</span> enrollment records
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    <span className="text-sm font-semibold">Per page:</span>
+                                    <select
+                                        className="form-select w-20 text-sm font-semibold py-1"
+                                        value={limit}
+                                        onChange={(e) => { setLimit(Number(e.target.value)); setPage(1); }}
+                                    >
+                                        <option value="5">5</option>
+                                        <option value="10">10</option>
+                                        <option value="20">20</option>
+                                        <option value="50">50</option>
+                                    </select>
+                                </div>
                             </div>
-                            <div className="flex items-center gap-2 text-[10px] font-bold uppercase">
-                                <span className="badge bg-success text-white rounded-full px-2 py-0.5">{s.completed} Completed</span>
-                                <span className="badge bg-primary text-white rounded-full px-2 py-0.5">{s.inProgress} In Progress</span>
-                                <span className="badge bg-amber-500 text-white rounded-full px-2 py-0.5">{s.pending} Pending</span>
-                            </div>
-                        </button>
-                    ))}
+                            <ul className="inline-flex items-center space-x-1 font-semibold">
+                                <li>
+                                    <button
+                                        type="button"
+                                        className="flex justify-center font-semibold px-3 py-1.5 rounded-lg transition bg-white-light text-dark hover:text-white hover:bg-primary dark:text-white-light dark:bg-[#191e3a] dark:hover:bg-primary disabled:opacity-50 disabled:cursor-not-allowed text-xs"
+                                        onClick={() => setPage(page > 1 ? page - 1 : 1)}
+                                        disabled={page === 1}
+                                    >
+                                        Prev
+                                    </button>
+                                </li>
+                                {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
+                                    <li key={p}>
+                                        <button
+                                            type="button"
+                                            className={`flex justify-center font-semibold px-3 py-1.5 rounded-lg transition text-xs ${page === p ? 'bg-primary text-white shadow-md' : 'bg-white-light text-dark hover:text-white hover:bg-primary dark:text-white-light dark:bg-[#191e3a] dark:hover:bg-primary'}`}
+                                            onClick={() => setPage(p)}
+                                        >
+                                            {p}
+                                        </button>
+                                    </li>
+                                ))}
+                                <li>
+                                    <button
+                                        type="button"
+                                        className="flex justify-center font-semibold px-3 py-1.5 rounded-lg transition bg-white-light text-dark hover:text-white hover:bg-primary dark:text-white-light dark:bg-[#191e3a] dark:hover:bg-primary disabled:opacity-50 disabled:cursor-not-allowed text-xs"
+                                        onClick={() => setPage(page < totalPages ? page + 1 : totalPages)}
+                                        disabled={page === totalPages || totalPages === 0}
+                                    >
+                                        Next
+                                    </button>
+                                </li>
+                            </ul>
+                        </div>
+                    )}
                 </div>
             )}
 

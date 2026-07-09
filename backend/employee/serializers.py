@@ -1137,19 +1137,17 @@ class TrainingRequestSerializer(serializers.ModelSerializer):
         read_only_fields = ['employee', 'manager', 'created_at', 'updated_at']
 
     def get_final_status(self, obj):
-        # Only one approval is required - whichever of manager/admin decided
-        # (approved or rejected) first is the final outcome.
-        if obj.manager_status in ('approved', 'rejected'):
-            return obj.manager_status
         if obj.admin_status in ('approved', 'rejected'):
             return obj.admin_status
+        if obj.manager_status in ('approved', 'rejected'):
+            return obj.manager_status
         return 'pending'
 
     def get_decided_by(self, obj):
-        if obj.manager_status in ('approved', 'rejected'):
-            return 'manager'
         if obj.admin_status in ('approved', 'rejected'):
             return 'admin'
+        if obj.manager_status in ('approved', 'rejected'):
+            return 'manager'
         return None
 
 

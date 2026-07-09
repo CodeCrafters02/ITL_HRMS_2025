@@ -1,10 +1,13 @@
 import { useEffect, useState } from 'react';
 import { useDispatch } from 'react-redux';
 import Swal from 'sweetalert2';
+import IconChecks from '../../../components/Icon/IconChecks';
+import IconX from '../../../components/Icon/IconX';
 import { setPageTitle } from '../../../store/themeConfigSlice';
 import { authFetch } from '../../../utils/authFetch';
 import IconPlus from '../../../components/Icon/IconPlus';
 import IconSearch from '../../../components/Icon/IconSearch';
+import SearchableSelect from '../../Elements/SearchableSelect';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000';
 const REQUESTS_API = `${API_BASE_URL}/employee/training-requests/`;
@@ -13,6 +16,7 @@ const EMP_INFO_API = `${API_BASE_URL}/employee/company-info/`;
 
 type RequestType = {
     id: number;
+    employee_id?: number; // Added to identify request owner
     course?: number | null;
     course_title?: string | null;
     custom_course_title: string;
@@ -35,6 +39,9 @@ type CourseType = {
 };
 
 const EmployeeTrainingRequests = () => {
+    // Determine user role and ID from localStorage
+    const userRole = localStorage.getItem('user_role') || '';
+    const userId = Number(localStorage.getItem('user_id')) || null;
     const dispatch = useDispatch();
     const [requests, setRequests] = useState<RequestType[]>([]);
     const [courses, setCourses] = useState<CourseType[]>([]);
@@ -43,6 +50,15 @@ const EmployeeTrainingRequests = () => {
     const [modalOpen, setModalOpen] = useState(false);
     const [search, setSearch] = useState('');
     const [statusTab, setStatusTab] = useState<'all' | 'pending' | 'approved' | 'rejected'>('all');
+    const [page, setPage] = useState(1);
+    const [limit, setLimit] = useState(10);
+    const [totalCount, setTotalCount] = useState(0);
+    const [totalPages, setTotalPages] = useState(1);
+    const [pageInput, setPageInput] = useState('1');
+    const [isReportingManager, setIsReportingManager] = useState(false);
+    const [managerDecision, setManagerDecision] = useState<Record<number, 'approved' | 'rejected' | 'pending'>>({});
+    const [managerRemarks, setManagerRemarks] = useState<Record<number, string>>({});
+    const [savingDecisionId, setSavingDecisionId] = useState<number | null>(null);
 
     const [form, setForm] = useState({
         course: '',
@@ -53,9 +69,16 @@ const EmployeeTrainingRequests = () => {
 
     useEffect(() => {
         dispatch(setPageTitle('Training Requests'));
+        setIsReportingManager(localStorage.getItem('is_reporting_manager') === 'true');
         fetchRequests();
         fetchCourses();
     }, [dispatch]);
+
+    useEffect(() => {
+        setPage(1);
+        setPageInput('1');
+        fetchRequests(1);
+    }, [statusTab, search]);
 
     const getHeaders = () => {
         const token = localStorage.getItem('access_token');
@@ -66,13 +89,25 @@ const EmployeeTrainingRequests = () => {
         return headers;
     };
 
-    const fetchRequests = async () => {
+    const fetchRequests = async (requestedPage = page) => {
         setLoading(true);
         try {
-            const response = await authFetch(REQUESTS_API, { headers: getHeaders() });
+            const url = new URL(REQUESTS_API);
+            if (statusTab !== 'all') {
+                url.searchParams.append('status', statusTab);
+            }
+            url.searchParams.append('page', requestedPage.toString());
+            url.searchParams.append('limit', limit.toString());
+            if (search.trim()) {
+                url.searchParams.append('search', search.trim());
+            }
+            const response = await authFetch(url.toString(), { headers: getHeaders() });
             if (response.ok) {
                 const data = await response.json();
                 setRequests(data.results || data || []);
+                setTotalCount(data.count || 0);
+                setTotalPages(data.total_pages || 1);
+                setPageInput(String(requestedPage));
             }
         } catch (error) {
             console.error('Error fetching training requests:', error);
@@ -83,7 +118,10 @@ const EmployeeTrainingRequests = () => {
 
     const fetchCourses = async () => {
         try {
-            const response = await authFetch(COURSES_API, { headers: getHeaders() });
+            const url = new URL(COURSES_API);
+            url.searchParams.append('page', '1');
+            url.searchParams.append('limit', '100');
+            const response = await authFetch(url.toString(), { headers: getHeaders() });
             if (response.ok) {
                 const data = await response.json();
                 setCourses((data.results || data || []).filter((c: any) => c.status === 'published'));
@@ -117,7 +155,7 @@ const EmployeeTrainingRequests = () => {
                 Swal.fire('Submitted!', 'Your training request has been recorded.', 'success');
                 setModalOpen(false);
                 setForm({ course: '', custom_course_title: '', reason: '', budget_required: false });
-                fetchRequests();
+                fetchRequests(1);
             } else {
                 Swal.fire('Error!', 'Failed to submit request.', 'error');
             }
@@ -128,21 +166,46 @@ const EmployeeTrainingRequests = () => {
         }
     };
 
-    const statusFilteredRequests = requests.filter((r) => statusTab === 'all' || r.final_status === statusTab);
+    const handleManagerDecision = async (requestId: number) => {
+        const decision = managerDecision[requestId] || 'approved';
+        const remarks = managerRemarks[requestId] || '';
 
-    const filteredRequests = statusFilteredRequests.filter((r) => {
-        const query = search.toLowerCase();
-        const courseMatch = (r.course_title || '').toLowerCase().includes(query);
-        const customMatch = r.custom_course_title.toLowerCase().includes(query);
-        const reasonMatch = r.reason.toLowerCase().includes(query);
-        return courseMatch || customMatch || reasonMatch;
-    });
+        if (!decision) {
+            Swal.fire('Error!', 'Choose an approval decision first.', 'error');
+            return;
+        }
+
+        setSavingDecisionId(requestId);
+        try {
+            const response = await authFetch(`${REQUESTS_API}${requestId}/`, {
+                method: 'PATCH',
+                headers: getHeaders(),
+                body: JSON.stringify({
+                    manager_status: decision,
+                    manager_remarks: remarks,
+                }),
+            });
+
+            if (response.ok) {
+                Swal.fire('Updated!', 'Manager decision saved.', 'success');
+                setManagerDecision((prev) => ({ ...prev, [requestId]: 'pending' }));
+                setManagerRemarks((prev) => ({ ...prev, [requestId]: '' }));
+                fetchRequests(1);
+            } else {
+                Swal.fire('Error!', 'Failed to update decision.', 'error');
+            }
+        } catch {
+            Swal.fire('Error!', 'Connection failure.', 'error');
+        } finally {
+            setSavingDecisionId(null);
+        }
+    };
 
     const statusTabs = [
-        { key: 'all' as const, label: 'All', count: requests.length },
-        { key: 'pending' as const, label: 'Pending', count: requests.filter((r) => r.final_status === 'pending').length },
-        { key: 'approved' as const, label: 'Approved', count: requests.filter((r) => r.final_status === 'approved').length },
-        { key: 'rejected' as const, label: 'Rejected', count: requests.filter((r) => r.final_status === 'rejected').length },
+        { key: 'all' as const, label: 'All' },
+        { key: 'pending' as const, label: 'Pending' },
+        { key: 'approved' as const, label: 'Approved' },
+        { key: 'rejected' as const, label: 'Rejected' },
     ];
 
     const getStatusBadge = (status: string) => {
@@ -173,17 +236,28 @@ const EmployeeTrainingRequests = () => {
 
             {/* Actions Bar */}
             <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
-                <div className="relative w-72">
-                    <input
-                        type="text"
-                        className="form-input pr-10 rounded-lg text-xs"
-                        placeholder="Search requests..."
-                        value={search}
-                        onChange={(e) => setSearch(e.target.value)}
-                    />
-                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400">
-                        <IconSearch className="w-4 h-4" />
-                    </span>
+                <div className="flex flex-wrap items-center gap-3">
+                    <div className="relative w-72">
+                        <input
+                            type="text"
+                            className="form-input pr-10 rounded-lg text-xs"
+                            placeholder="Search requests..."
+                            value={search}
+                            onChange={(e) => setSearch(e.target.value)}
+                        />
+                        <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400">
+                            <IconSearch className="w-4 h-4" />
+                        </span>
+                    </div>
+                    <select
+                        className="form-select rounded-lg text-xs w-36"
+                        value={statusTab}
+                        onChange={(e) => setStatusTab(e.target.value as 'all' | 'pending' | 'approved' | 'rejected')}
+                    >
+                        {statusTabs.map((tab) => (
+                            <option key={tab.key} value={tab.key}>{tab.label}</option>
+                        ))}
+                    </select>
                 </div>
                 <button
                     type="button"
@@ -201,16 +275,10 @@ const EmployeeTrainingRequests = () => {
                         key={tab.key}
                         type="button"
                         onClick={() => setStatusTab(tab.key)}
-                        className={`py-3 px-5 font-semibold text-sm border-b-2 whitespace-nowrap transition-all duration-300 flex items-center gap-1.5 ${
-                            statusTab === tab.key ? 'border-primary text-primary' : 'border-transparent text-gray-500 hover:text-primary'
-                        }`}
+                        className={`py-3 px-5 font-semibold text-sm border-b-2 whitespace-nowrap transition-all duration-300 flex items-center gap-1.5 ${statusTab === tab.key ? 'border-primary text-primary' : 'border-transparent text-gray-500 hover:text-primary'
+                            }`}
                     >
                         {tab.label}
-                        <span className={`text-[10px] font-bold rounded-full px-1.5 py-0.5 ${
-                            statusTab === tab.key ? 'bg-primary text-white' : 'bg-gray-100 dark:bg-gray-800 text-gray-500'
-                        }`}>
-                            {tab.count}
-                        </span>
                     </button>
                 ))}
             </div>
@@ -220,7 +288,7 @@ const EmployeeTrainingRequests = () => {
                 <div className="panel text-center py-10">
                     <span className="animate-pulse text-gray-400 font-semibold">Loading request lifecycle logs...</span>
                 </div>
-            ) : filteredRequests.length === 0 ? (
+            ) : requests.length === 0 ? (
                 <div className="panel text-center py-10 text-gray-500 font-medium">
                     {statusTab === 'all' ? 'No training requests submitted yet.' : `No ${statusTab} training requests.`}
                 </div>
@@ -238,7 +306,7 @@ const EmployeeTrainingRequests = () => {
                                 </tr>
                             </thead>
                             <tbody>
-                                {filteredRequests.map((req) => (
+                                {requests.map((req) => (
                                     <tr key={req.id}>
                                         <td className="font-bold text-gray-800 dark:text-gray-250">
                                             {req.course_title || req.custom_course_title}
@@ -269,17 +337,91 @@ const EmployeeTrainingRequests = () => {
                                             <span className={`badge text-[9px] uppercase font-bold px-2 py-0.5 rounded ${getStatusBadge(req.final_status)}`}>
                                                 {req.final_status}
                                             </span>
-                                            {req.decided_by && (
+                                            {/* Show manager decision only for managers */}
+                                            {isReportingManager && req.decided_by && (
                                                 <span className="block text-[9px] text-gray-400 mt-1 capitalize">
                                                     by {req.decided_by}{req.decided_by === 'manager' && req.manager_name ? ` (${req.manager_name})` : ''}
                                                 </span>
                                             )}
                                         </td>
-                                        <td>{new Date(req.created_at).toLocaleDateString()}</td>
+                                        <td>
+                                            <div className="space-y-2">
+                                                <div>{new Date(req.created_at).toLocaleDateString()}</div>
+                                                {isReportingManager && req.manager_status === 'pending' && (
+                                                    <div className="flex flex-col gap-2">
+                                                        <select
+                                                            className="form-select rounded-lg text-[10px]"
+                                                            value={managerDecision[req.id] || 'approved'}
+                                                            onChange={(e) => setManagerDecision((prev) => ({ ...prev, [req.id]: e.target.value as 'approved' | 'rejected' }))}
+                                                        >
+                                                            <option value="approved">Approve</option>
+                                                            <option value="rejected">Reject</option>
+                                                        </select>
+                                                        <textarea
+                                                            className="form-textarea min-h-[60px] rounded-lg text-[10px]"
+                                                            placeholder="Manager remarks"
+                                                            value={managerRemarks[req.id] || ''}
+                                                            onChange={(e) => setManagerRemarks((prev) => ({ ...prev, [req.id]: e.target.value }))}
+                                                        />
+                                                        <button
+                                                            type="button"
+                                                            className="btn btn-primary btn-sm rounded-lg"
+                                                            onClick={() => handleManagerDecision(req.id)}
+                                                            disabled={savingDecisionId === req.id}
+                                                        >
+                                                            {savingDecisionId === req.id ? 'Saving...' : 'Submit'}
+                                                        </button>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </td>
                                     </tr>
                                 ))}
                             </tbody>
                         </table>
+                    </div>
+                </div>
+            )}
+
+            {totalPages > 1 && (
+                <div className="flex flex-wrap items-center justify-between gap-3 mt-4">
+                    <div className="text-xs text-gray-500">
+                        Showing {requests.length} of {totalCount} requests
+                    </div>
+                    <div className="flex items-center gap-2">
+                        <button
+                            type="button"
+                            className="btn btn-outline-primary btn-sm rounded-lg"
+                            onClick={() => {
+                                const nextPage = Math.max(1, page - 1);
+                                setPage(nextPage);
+                                fetchRequests(nextPage);
+                            }}
+                            disabled={page <= 1}
+                        >
+                            Previous
+                        </button>
+                        <input
+                            type="number"
+                            min="1"
+                            max={totalPages}
+                            value={pageInput}
+                            onChange={(e) => setPageInput(e.target.value)}
+                            className="form-input w-16 rounded-lg text-xs"
+                        />
+                        <span className="text-xs text-gray-500">/ {totalPages}</span>
+                        <button
+                            type="button"
+                            className="btn btn-outline-primary btn-sm rounded-lg"
+                            onClick={() => {
+                                const nextPage = Math.min(totalPages, page + 1);
+                                setPage(nextPage);
+                                fetchRequests(nextPage);
+                            }}
+                            disabled={page >= totalPages}
+                        >
+                            Next
+                        </button>
                     </div>
                 </div>
             )}
@@ -301,18 +443,13 @@ const EmployeeTrainingRequests = () => {
                         <form onSubmit={handleSubmitRequest} className="p-6 space-y-4">
                             <div>
                                 <label className="font-bold text-xs mb-1 block">Catalog Course</label>
-                                <select
-                                    className="form-select rounded-lg text-xs"
+                                <SearchableSelect
+                                    options={courses.map((c) => ({ label: c.title, value: String(c.id) }))}
                                     value={form.course}
-                                    onChange={(e) => setForm({ ...form, course: e.target.value })}
-                                >
-                                    <option value="">-- Choose Existing Course (Optional) --</option>
-                                    {courses.map((c) => (
-                                        <option key={c.id} value={c.id}>
-                                            {c.title}
-                                        </option>
-                                    ))}
-                                </select>
+                                    onChange={(value) => setForm({ ...form, course: String(value) })}
+                                    placeholder="Select a course"
+                                    className="rounded-lg text-xs"
+                                />
                             </div>
 
                             {!form.course && (

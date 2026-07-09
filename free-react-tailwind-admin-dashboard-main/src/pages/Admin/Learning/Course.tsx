@@ -12,6 +12,7 @@ import IconEye from '../../../components/Icon/IconEye';
 import IconX from '../../../components/Icon/IconX';
 import CourseCategory, { CourseCategoryType } from './CourseCategory';
 import CertificateSignature from './CertificateSignature';
+import SearchableSelect from '../../Elements/SearchableSelect';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000';
 const COURSES_API = `${API_BASE_URL}/employee/courses/`;
@@ -100,6 +101,12 @@ const Course = () => {
     const [filterDifficulty, setFilterDifficulty] = useState<string>('all');
     const [filterStatus, setFilterStatus] = useState<string>('all');
 
+    // Pagination states
+    const [page, setPage] = useState(1);
+    const [limit, setLimit] = useState(10);
+    const [totalCount, setTotalCount] = useState(0);
+    const [totalPages, setTotalPages] = useState(1);
+
     // Course Modals
     const [courseModalOpen, setCourseModalOpen] = useState(false);
     const [editingCourse, setEditingCourse] = useState<CourseType | null>(null);
@@ -145,7 +152,7 @@ const Course = () => {
     const [selectedCourse, setSelectedCourse] = useState<CourseType | null>(null);
     const [courseContents, setCourseContents] = useState<CourseContentType[]>([]);
     const [contentsLoading, setContentsLoading] = useState(false);
-    
+
     const [addContentOpen, setAddContentOpen] = useState(false);
     const [contentForm, setContentForm] = useState({
         title: '',
@@ -232,9 +239,15 @@ const Course = () => {
 
     useEffect(() => {
         dispatch(setPageTitle('Courses Catalog'));
-        fetchCourses();
         fetchCategories();
     }, [dispatch]);
+
+    useEffect(() => {
+        const handler = setTimeout(() => {
+            fetchCourses();
+        }, 500); // 500ms debounce
+        return () => clearTimeout(handler);
+    }, [search, filterCategory, filterDifficulty, filterStatus, page, limit]);
 
     const getHeaders = (multipart = false) => {
         const token = localStorage.getItem('access_token');
@@ -249,10 +262,30 @@ const Course = () => {
     const fetchCourses = async () => {
         setLoading(true);
         try {
-            const response = await authFetch(COURSES_API, { headers: getHeaders() });
+            const url = new URL(COURSES_API);
+            url.searchParams.append('page', page.toString());
+            url.searchParams.append('limit', limit.toString());
+            if (search) url.searchParams.append('search', search);
+            if (filterCategory !== 'all') url.searchParams.append('category', filterCategory);
+            if (filterDifficulty !== 'all') url.searchParams.append('difficulty_level', filterDifficulty);
+            if (filterStatus !== 'all') url.searchParams.append('status', filterStatus);
+
+            const response = await authFetch(url.toString(), { headers: getHeaders() });
             if (response.ok) {
                 const data = await response.json();
-                setCourses(data.results || data || []);
+                if (data.results) {
+                    setCourses(data.results);
+                    setTotalCount(data.count);
+                    setTotalPages(data.total_pages || Math.ceil(data.count / limit));
+                } else if (Array.isArray(data)) {
+                    setCourses(data);
+                    setTotalCount(data.length);
+                    setTotalPages(1);
+                } else {
+                    setCourses([]);
+                    setTotalCount(0);
+                    setTotalPages(1);
+                }
             }
         } catch (error) {
             console.error('Error fetching courses:', error);
@@ -302,20 +335,6 @@ const Course = () => {
             setAssessmentsLoading(false);
         }
     };
-
-    const filteredCourses = useMemo(() => {
-        return courses.filter((c) => {
-            const matchesSearch =
-                c.title.toLowerCase().includes(search.toLowerCase()) ||
-                c.description.toLowerCase().includes(search.toLowerCase());
-
-            const matchesCategory = filterCategory === 'all' || String(c.category) === filterCategory;
-            const matchesDifficulty = filterDifficulty === 'all' || c.difficulty_level === filterDifficulty;
-            const matchesStatus = filterStatus === 'all' || c.status === filterStatus;
-
-            return matchesSearch && matchesCategory && matchesDifficulty && matchesStatus;
-        });
-    }, [courses, search, filterCategory, filterDifficulty, filterStatus]);
 
     // Statistics Rollup
     const stats = useMemo(() => {
@@ -691,8 +710,8 @@ const Course = () => {
         const optionsArr = questionForm.question_type === 'mcq'
             ? questionForm.optionsRaw.split(',').map((s) => s.trim()).filter(Boolean)
             : questionForm.question_type === 'true_false'
-            ? ['True', 'False']
-            : [];
+                ? ['True', 'False']
+                : [];
 
         const payload = {
             assessment: selectedAssessment.id,
@@ -770,33 +789,30 @@ const Course = () => {
                 <button
                     type="button"
                     onClick={() => setActiveTab('courses')}
-                    className={`py-3 px-6 font-semibold text-sm border-b-2 whitespace-nowrap transition-all duration-300 ${
-                        activeTab === 'courses'
-                            ? 'border-primary text-primary'
-                            : 'border-transparent text-gray-500 hover:text-primary'
-                    }`}
+                    className={`py-3 px-6 font-semibold text-sm border-b-2 whitespace-nowrap transition-all duration-300 ${activeTab === 'courses'
+                        ? 'border-primary text-primary'
+                        : 'border-transparent text-gray-500 hover:text-primary'
+                        }`}
                 >
                     Courses
                 </button>
                 <button
                     type="button"
                     onClick={() => setActiveTab('categories')}
-                    className={`py-3 px-6 font-semibold text-sm border-b-2 whitespace-nowrap transition-all duration-300 ${
-                        activeTab === 'categories'
-                            ? 'border-primary text-primary'
-                            : 'border-transparent text-gray-500 hover:text-primary'
-                    }`}
+                    className={`py-3 px-6 font-semibold text-sm border-b-2 whitespace-nowrap transition-all duration-300 ${activeTab === 'categories'
+                        ? 'border-primary text-primary'
+                        : 'border-transparent text-gray-500 hover:text-primary'
+                        }`}
                 >
                     Course Categories
                 </button>
                 <button
                     type="button"
                     onClick={() => setActiveTab('signature')}
-                    className={`py-3 px-6 font-semibold text-sm border-b-2 whitespace-nowrap transition-all duration-300 ${
-                        activeTab === 'signature'
-                            ? 'border-primary text-primary'
-                            : 'border-transparent text-gray-500 hover:text-primary'
-                    }`}
+                    className={`py-3 px-6 font-semibold text-sm border-b-2 whitespace-nowrap transition-all duration-300 ${activeTab === 'signature'
+                        ? 'border-primary text-primary'
+                        : 'border-transparent text-gray-500 hover:text-primary'
+                        }`}
                 >
                     Certificate Signature
                 </button>
@@ -807,220 +823,271 @@ const Course = () => {
             ) : activeTab === 'signature' ? (
                 <CertificateSignature />
             ) : (
-            <>
-            {/* Quick Stats Grid */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-                <div className="panel bg-gradient-to-br from-blue-500/10 to-indigo-500/10 border-blue-500/20 p-4 rounded-xl flex flex-col justify-between">
-                    <span className="text-xs font-bold text-blue-600 dark:text-blue-400 uppercase tracking-wide">Total Courses</span>
-                    <span className="text-3xl font-black text-blue-800 dark:text-white-light mt-1">{stats.total}</span>
-                </div>
-                <div className="panel bg-gradient-to-br from-emerald-500/10 to-teal-500/10 border-emerald-500/20 p-4 rounded-xl flex flex-col justify-between">
-                    <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wide">Published</span>
-                    <span className="text-3xl font-black text-emerald-800 dark:text-white-light mt-1">{stats.published}</span>
-                </div>
-                <div className="panel bg-gradient-to-br from-amber-500/10 to-orange-500/10 border-amber-500/20 p-4 rounded-xl flex flex-col justify-between">
-                    <span className="text-xs font-bold text-amber-600 dark:text-amber-400 uppercase tracking-wide">Drafts</span>
-                    <span className="text-3xl font-black text-amber-800 dark:text-white-light mt-1">{stats.draft}</span>
-                </div>
-                <div className="panel bg-gradient-to-br from-purple-500/10 to-pink-500/10 border-purple-500/20 p-4 rounded-xl flex flex-col justify-between">
-                    <span className="text-xs font-bold text-purple-600 dark:text-purple-400 uppercase tracking-wide">Compliance</span>
-                    <span className="text-3xl font-black text-purple-800 dark:text-white-light mt-1">{stats.compliance}</span>
-                </div>
-            </div>
-
-            {/* Filters panel */}
-            <div className="flex flex-wrap items-center justify-between gap-4 mb-5">
-                <div className="flex flex-wrap items-center gap-3">
-                    <div className="relative">
-                        <input
-                            type="text"
-                            className="form-input pr-10 w-72"
-                            placeholder="Search courses..."
-                            value={search}
-                            onChange={(e) => setSearch(e.target.value)}
-                        />
-                        <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400">
-                            <IconSearch className="w-4 h-4" />
-                        </span>
-                    </div>
-                    <select
-                        className="form-select w-44"
-                        value={filterCategory}
-                        onChange={(e) => setFilterCategory(e.target.value)}
-                    >
-                        <option value="all">All Categories</option>
-                        {categories.map(c => (
-                            <option key={c.id} value={c.id}>{c.name}</option>
-                        ))}
-                    </select>
-                    <select
-                        className="form-select w-40"
-                        value={filterDifficulty}
-                        onChange={(e) => setFilterDifficulty(e.target.value)}
-                    >
-                        <option value="all">All Levels</option>
-                        <option value="beginner">Beginner</option>
-                        <option value="intermediate">Intermediate</option>
-                        <option value="advanced">Advanced</option>
-                    </select>
-                    <select
-                        className="form-select w-40"
-                        value={filterStatus}
-                        onChange={(e) => setFilterStatus(e.target.value)}
-                    >
-                        <option value="all">All Statuses</option>
-                        <option value="draft">Draft</option>
-                        <option value="published">Published</option>
-                        <option value="archived">Archived</option>
-                    </select>
-                </div>
-                <button type="button" className="btn btn-primary gap-2" onClick={openCreateCourseModal}>
-                    <IconPlus /> Add Course
-                </button>
-            </div>
-
-            {/* Course Cards Grid */}
-            {loading ? (
-                <div className="panel text-center py-10">
-                    <span className="animate-pulse text-gray-400">Loading courses catalog...</span>
-                </div>
-            ) : filteredCourses.length === 0 ? (
-                <div className="panel text-center py-10 text-gray-500">No courses registered yet.</div>
-            ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {filteredCourses.map((course) => (
-                        <div
-                            key={course.id}
-                            className="panel border border-[#e0e6ed] dark:border-[#1b2e4b] hover:shadow-lg transition-all duration-300 rounded-xl overflow-hidden flex flex-col justify-between"
-                        >
-                            {/* Course Thumbnail */}
-                            <div className="relative h-44 bg-gray-150 dark:bg-gray-800 flex items-center justify-center overflow-hidden border-b border-[#e0e6ed] dark:border-[#1b2e4b]">
-                                {course.thumbnail_url ? (
-                                    <img
-                                        src={course.thumbnail_url}
-                                        alt={course.title}
-                                        className="w-full h-full object-cover"
-                                    />
-                                ) : (
-                                    <div className="w-full h-full bg-gradient-to-tr from-primary/10 to-purple-500/10 flex flex-col items-center justify-center p-4 text-center">
-                                        <span className="font-extrabold text-primary text-xl uppercase tracking-wide">
-                                            {course.title.slice(0, 15)}...
-                                        </span>
-                                        <span className="text-xs text-gray-400 font-semibold mt-1">No Image Attachment</span>
-                                    </div>
-                                )}
-                                
-                                {/* Difficulty and Status tags overlay */}
-                                <div className="absolute top-3 left-3 flex flex-col gap-1.5 z-10">
-                                    <span className={`badge capitalize text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                                        course.difficulty_level === 'advanced'
-                                            ? 'badge-outline-danger'
-                                            : course.difficulty_level === 'intermediate'
-                                            ? 'badge-outline-warning'
-                                            : 'badge-outline-success'
-                                    }`}>
-                                        {course.difficulty_level}
-                                    </span>
-                                    {course.is_compliance && (
-                                        <span className="badge badge-outline-secondary text-[10px] font-bold px-2 py-0.5 rounded-full">
-                                            Compliance
-                                        </span>
-                                    )}
-                                </div>
-
-                                <div className="absolute top-3 right-3 z-10">
-                                    <span className={`badge text-[10px] uppercase font-bold px-2 py-0.5 rounded-full ${
-                                        course.status === 'published'
-                                            ? 'bg-success text-white'
-                                            : course.status === 'archived'
-                                            ? 'bg-gray-500 text-white'
-                                            : 'bg-amber-500 text-white'
-                                    }`}>
-                                        {course.status}
-                                    </span>
-                                </div>
-                            </div>
-
-                            {/* Card Content */}
-                            <div className="p-5 flex-1 flex flex-col justify-between">
-                                <div>
-                                    <div className="text-xs font-bold text-primary mb-1 uppercase tracking-wider">
-                                        {course.category_name || 'General Category'}
-                                    </div>
-                                    <h3 className="text-lg font-bold text-gray-800 dark:text-white-light mb-2 line-clamp-1">
-                                        {course.title}
-                                    </h3>
-                                    <p className="text-sm text-gray-500 dark:text-gray-400 line-clamp-3 mb-4 leading-relaxed">
-                                        {course.description || 'No course syllabus overview.'}
-                                    </p>
-                                </div>
-
-                                <div className="space-y-2 border-t border-[#f1f2f3] dark:border-[#191e3a] pt-4 mt-auto">
-                                    <div className="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
-                                        <span className="font-semibold">Duration & Language:</span>
-                                        <span>
-                                            {course.duration_hours} hrs • {course.language}
-                                        </span>
-                                    </div>
-                                    <div className="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400 pb-2">
-                                        <span className="font-semibold">Total Students:</span>
-                                        <button
-                                            type="button"
-                                            className="badge badge-outline-primary py-0.5 px-2 rounded-full font-bold hover:bg-primary hover:text-white transition-colors"
-                                            onClick={() => openEnrolledModal(course)}
-                                        >
-                                            {course.enrollments_count || 0} enrolled
-                                        </button>
-                                    </div>
-                                    <div className="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400 pb-2">
-                                        <span className="font-semibold">Completion Certificate:</span>
-                                        <button
-                                            type="button"
-                                            className="badge badge-outline-success py-0.5 px-2 rounded-full font-bold hover:bg-success hover:text-white transition-colors"
-                                            onClick={() => openCertModal(course)}
-                                        >
-                                            Preview
-                                        </button>
-                                    </div>
-                                </div>
-
-                                {/* Actions */}
-                                <div className="flex gap-2 border-t border-[#f1f2f3] dark:border-[#191e3a] pt-4 mt-2">
-                                    <button
-                                        type="button"
-                                        className="btn btn-outline-primary btn-sm flex-1 flex items-center justify-center gap-1 rounded-lg"
-                                        onClick={() => openManageContent(course)}
-                                    >
-                                        <IconEye className="w-4 h-4" /> Curriculum
-                                    </button>
-                                    <button
-                                        type="button"
-                                        className="btn btn-outline-warning btn-sm flex-1 flex items-center justify-center gap-1 rounded-lg"
-                                        onClick={() => openReviewsPanel(course)}
-                                    >
-                                        ★ Reviews
-                                    </button>
-                                    <button
-                                        type="button"
-                                        className="btn btn-outline-secondary btn-sm p-2 rounded-lg"
-                                        onClick={() => openEditCourseModal(course)}
-                                    >
-                                        <IconPencil className="w-4.5 h-4.5" />
-                                    </button>
-                                    <button
-                                        type="button"
-                                        className="btn btn-outline-danger btn-sm p-2 rounded-lg"
-                                        onClick={() => handleDeleteCourse(course)}
-                                    >
-                                        <IconTrashLines className="w-4.5 h-4.5" />
-                                    </button>
-                                </div>
-                            </div>
+                <>
+                    {/* Quick Stats Grid */}
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                        <div className="panel bg-gradient-to-br from-blue-500/10 to-indigo-500/10 border-blue-500/20 p-4 rounded-xl flex flex-col justify-between">
+                            <span className="text-xs font-bold text-blue-600 dark:text-blue-400 uppercase tracking-wide">Total Courses</span>
+                            <span className="text-3xl font-black text-blue-800 dark:text-white-light mt-1">{stats.total}</span>
                         </div>
-                    ))}
-                </div>
-            )}
-            </>
+                        <div className="panel bg-gradient-to-br from-emerald-500/10 to-teal-500/10 border-emerald-500/20 p-4 rounded-xl flex flex-col justify-between">
+                            <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wide">Published</span>
+                            <span className="text-3xl font-black text-emerald-800 dark:text-white-light mt-1">{stats.published}</span>
+                        </div>
+                        <div className="panel bg-gradient-to-br from-amber-500/10 to-orange-500/10 border-amber-500/20 p-4 rounded-xl flex flex-col justify-between">
+                            <span className="text-xs font-bold text-amber-600 dark:text-amber-400 uppercase tracking-wide">Drafts</span>
+                            <span className="text-3xl font-black text-amber-800 dark:text-white-light mt-1">{stats.draft}</span>
+                        </div>
+                        <div className="panel bg-gradient-to-br from-purple-500/10 to-pink-500/10 border-purple-500/20 p-4 rounded-xl flex flex-col justify-between">
+                            <span className="text-xs font-bold text-purple-600 dark:text-purple-400 uppercase tracking-wide">Compliance</span>
+                            <span className="text-3xl font-black text-purple-800 dark:text-white-light mt-1">{stats.compliance}</span>
+                        </div>
+                    </div>
+
+                    {/* Filters panel */}
+                    <div className="flex flex-wrap items-center justify-between gap-4 mb-5">
+                        <div className="flex flex-wrap items-center gap-3">
+                            <div className="relative">
+                                <input
+                                    type="text"
+                                    className="form-input pr-10 w-72"
+                                    placeholder="Search courses..."
+                                    value={search}
+                                    onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+                                />
+                                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400">
+                                    <IconSearch className="w-4 h-4" />
+                                </span>
+                            </div>
+                            <SearchableSelect
+                                className="w-44"
+                                options={[
+                                    { value: 'all', label: 'All Categories' },
+                                    ...categories.map(c => ({ value: String(c.id), label: c.name }))
+                                ]}
+                                value={filterCategory}
+                                onChange={(val) => { setFilterCategory(String(val)); setPage(1); }}
+                                placeholder="Filter by Category"
+                            />
+                            <select
+                                className="form-select w-40"
+                                value={filterDifficulty}
+                                onChange={(e) => { setFilterDifficulty(e.target.value); setPage(1); }}
+                            >
+                                <option value="all">All Levels</option>
+                                <option value="beginner">Beginner</option>
+                                <option value="intermediate">Intermediate</option>
+                                <option value="advanced">Advanced</option>
+                            </select>
+
+                            <select
+                                className="form-select w-40"
+                                value={filterStatus}
+                                onChange={(e) => { setFilterStatus(e.target.value); setPage(1); }}
+                            >
+                                <option value="all">All Statuses</option>
+                                <option value="draft">Draft</option>
+                                <option value="published">Published</option>
+                                <option value="archived">Archived</option>
+                            </select>
+
+                        </div>
+                        <button type="button" className="btn btn-primary gap-2" onClick={openCreateCourseModal}>
+                            <IconPlus /> Add Course
+                        </button>
+                    </div>
+
+                    {/* Course Cards Grid */}
+                    {loading ? (
+                        <div className="panel text-center py-10">
+                            <span className="animate-pulse text-gray-400">Loading courses catalog...</span>
+                        </div>
+                    ) : courses.length === 0 ? (
+                        <div className="panel text-center py-10 text-gray-500">No courses registered yet.</div>
+                    ) : (
+                        <div className="space-y-6">
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                                {courses.map((course) => (
+                                    <div
+                                        key={course.id}
+                                        className="panel border border-[#e0e6ed] dark:border-[#1b2e4b] hover:shadow-lg transition-all duration-300 rounded-xl overflow-hidden flex flex-col justify-between"
+                                    >
+                                        {/* Course Thumbnail */}
+                                        <div className="relative h-44 bg-gray-150 dark:bg-gray-800 flex items-center justify-center overflow-hidden border-b border-[#e0e6ed] dark:border-[#1b2e4b]">
+                                            {course.thumbnail_url ? (
+                                                <img
+                                                    src={course.thumbnail_url}
+                                                    alt={course.title}
+                                                    className="w-full h-full object-cover"
+                                                />
+                                            ) : (
+                                                <div className="w-full h-full bg-gradient-to-tr from-primary/10 to-purple-500/10 flex flex-col items-center justify-center p-4 text-center">
+                                                    <span className="font-extrabold text-primary text-xl uppercase tracking-wide">
+                                                        {course.title.slice(0, 15)}...
+                                                    </span>
+                                                    <span className="text-xs text-gray-400 font-semibold mt-1">No Image Attachment</span>
+                                                </div>
+                                            )}
+
+                                            {/* Difficulty and Status tags overlay */}
+                                            <div className="absolute top-3 left-3 flex flex-col gap-1.5 z-10">
+                                                <span className={`badge capitalize text-[10px] font-bold px-2 py-0.5 rounded-full ${course.difficulty_level === 'advanced'
+                                                    ? 'badge-outline-danger'
+                                                    : course.difficulty_level === 'intermediate'
+                                                        ? 'badge-outline-warning'
+                                                        : 'badge-outline-success'
+                                                    }`}>
+                                                    {course.difficulty_level}
+                                                </span>
+                                                <span className={`badge capitalize text-[10px] font-bold px-2 py-0.5 rounded-full ${course.status === 'published'
+                                                    ? 'bg-success text-white'
+                                                    : course.status === 'archived'
+                                                        ? 'bg-danger text-white'
+                                                        : 'bg-amber-500 text-white'
+                                                    }`}>
+                                                    {course.status}
+                                                </span>
+                                            </div>
+                                        </div>
+
+                                        <div className="p-5 flex-1 flex flex-col justify-between">
+                                            <div>
+                                                {course.category_name && (
+                                                    <span className="text-[10px] text-primary uppercase font-bold tracking-wider block mb-1">
+                                                        {course.category_name}
+                                                    </span>
+                                                )}
+                                                <h3 className="text-lg font-bold text-gray-800 dark:text-white-light mb-2 line-clamp-1">
+                                                    {course.title}
+                                                </h3>
+                                                <p className="text-sm text-gray-500 dark:text-gray-400 line-clamp-3 mb-4 leading-relaxed">
+                                                    {course.description || 'No course syllabus overview.'}
+                                                </p>
+                                            </div>
+
+                                            <div className="space-y-2 border-t border-[#f1f2f3] dark:border-[#191e3a] pt-4 mt-auto">
+                                                <div className="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
+                                                    <span className="font-semibold">Duration & Language:</span>
+                                                    <span>
+                                                        {course.duration_hours} hrs • {course.language}
+                                                    </span>
+                                                </div>
+                                                <div className="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400 pb-2">
+                                                    <span className="font-semibold">Total Students:</span>
+                                                    <button
+                                                        type="button"
+                                                        className="badge badge-outline-primary py-0.5 px-2 rounded-full font-bold hover:bg-primary hover:text-white transition-colors"
+                                                        onClick={() => openEnrolledModal(course)}
+                                                    >
+                                                        {course.enrollments_count || 0} enrolled
+                                                    </button>
+                                                </div>
+                                                <div className="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400 pb-2">
+                                                    <span className="font-semibold">Completion Certificate:</span>
+                                                    <button
+                                                        type="button"
+                                                        className="badge badge-outline-success py-0.5 px-2 rounded-full font-bold hover:bg-success hover:text-white transition-colors"
+                                                        onClick={() => openCertModal(course)}
+                                                    >
+                                                        Preview
+                                                    </button>
+                                                </div>
+                                            </div>
+
+                                            {/* Actions */}
+                                            <div className="flex gap-2 border-t border-[#f1f2f3] dark:border-[#191e3a] pt-4 mt-2">
+                                                <button
+                                                    type="button"
+                                                    className="btn btn-outline-primary btn-sm flex-1 flex items-center justify-center gap-1 rounded-lg"
+                                                    onClick={() => openManageContent(course)}
+                                                >
+                                                    <IconEye className="w-4 h-4" /> Curriculum
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    className="btn btn-outline-warning btn-sm flex-1 flex items-center justify-center gap-1 rounded-lg"
+                                                    onClick={() => openReviewsPanel(course)}
+                                                >
+                                                    ★ Reviews
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    className="btn btn-outline-secondary btn-sm p-2 rounded-lg"
+                                                    onClick={() => openEditCourseModal(course)}
+                                                >
+                                                    <IconPencil className="w-4.5 h-4.5" />
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    className="btn btn-outline-danger btn-sm p-2 rounded-lg"
+                                                    onClick={() => handleDeleteCourse(course)}
+                                                >
+                                                    <IconTrashLines className="w-4.5 h-4.5" />
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+
+                            {totalCount > 0 && (
+                                <div className="flex flex-col sm:flex-row justify-between items-center gap-4 p-4 panel border border-[#e0e6ed] dark:border-[#1b2e4b] rounded-xl mt-6">
+                                    <div className="flex items-center gap-4">
+                                        <div className="text-sm text-gray-500 font-semibold dark:text-gray-400">
+                                            Showing <span className="text-primary">{((page - 1) * limit) + 1}</span> to <span className="text-primary">{Math.min(page * limit, totalCount)}</span> of <span className="text-primary">{totalCount}</span> entries
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                            <span className="text-sm font-semibold">Per page:</span>
+                                            <select
+                                                className="form-select w-20 text-sm font-semibold py-1"
+                                                value={limit}
+                                                onChange={(e) => { setLimit(Number(e.target.value)); setPage(1); }}
+                                            >
+                                                <option value="5">5</option>
+                                                <option value="10">10</option>
+                                                <option value="20">20</option>
+                                                <option value="50">50</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <ul className="inline-flex items-center space-x-1 font-semibold">
+                                        <li>
+                                            <button
+                                                type="button"
+                                                className="flex justify-center font-semibold px-3 py-1.5 rounded-lg transition bg-white-light text-dark hover:text-white hover:bg-primary dark:text-white-light dark:bg-[#191e3a] dark:hover:bg-primary disabled:opacity-50 disabled:cursor-not-allowed text-xs"
+                                                onClick={() => setPage(page > 1 ? page - 1 : 1)}
+                                                disabled={page === 1}
+                                            >
+                                                Prev
+                                            </button>
+                                        </li>
+                                        {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
+                                            <li key={p}>
+                                                <button
+                                                    type="button"
+                                                    className={`flex justify-center font-semibold px-3 py-1.5 rounded-lg transition text-xs ${page === p ? 'bg-primary text-white shadow-md' : 'bg-white-light text-dark hover:text-white hover:bg-primary dark:text-white-light dark:bg-[#191e3a] dark:hover:bg-primary'}`}
+                                                    onClick={() => setPage(p)}
+                                                >
+                                                    {p}
+                                                </button>
+                                            </li>
+                                        ))}
+                                        <li>
+                                            <button
+                                                type="button"
+                                                className="flex justify-center font-semibold px-3 py-1.5 rounded-lg transition bg-white-light text-dark hover:text-white hover:bg-primary dark:text-white-light dark:bg-[#191e3a] dark:hover:bg-primary disabled:opacity-50 disabled:cursor-not-allowed text-xs"
+                                                onClick={() => setPage(page < totalPages ? page + 1 : totalPages)}
+                                                disabled={page === totalPages || totalPages === 0}
+                                            >
+                                                Next
+                                            </button>
+                                        </li>
+                                    </ul>
+                                </div>
+                            )}
+                        </div>
+                    )}
+                </>
             )}
 
             {/* Course Modal (Create & Edit) */}
@@ -1060,12 +1127,15 @@ const Course = () => {
                                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                                 <div>
                                                     <label className="font-semibold mb-1 block">Category</label>
-                                                    <select className="form-select rounded-lg" value={courseForm.category} onChange={(e) => setCourseForm({ ...courseForm, category: e.target.value })}>
-                                                        <option value="">-- Choose Category --</option>
-                                                        {categories.map(c => (
-                                                            <option key={c.id} value={c.id}>{c.name}</option>
-                                                        ))}
-                                                    </select>
+                                                    <SearchableSelect
+                                                        options={[
+                                                            { value: '', label: '-- No Category --' },
+                                                            ...categories.map(c => ({ value: String(c.id), label: c.name }))
+                                                        ]}
+                                                        value={courseForm.category}
+                                                        onChange={(val) => setCourseForm({ ...courseForm, category: String(val) })}
+                                                        placeholder="Search & select category..."
+                                                    />
                                                 </div>
                                                 <div>
                                                     <label className="font-semibold mb-1 block">Difficulty Level</label>
@@ -1586,9 +1656,8 @@ const Course = () => {
                                                                 {[1, 2, 3, 4, 5].map((star) => (
                                                                     <span
                                                                         key={star}
-                                                                        className={`text-sm ${
-                                                                            review.rating >= star ? 'text-amber-400' : 'text-gray-200 dark:text-gray-700'
-                                                                        }`}
+                                                                        className={`text-sm ${review.rating >= star ? 'text-amber-400' : 'text-gray-200 dark:text-gray-700'
+                                                                            }`}
                                                                     >
                                                                         ★
                                                                     </span>

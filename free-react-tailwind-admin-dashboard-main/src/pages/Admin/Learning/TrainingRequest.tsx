@@ -44,6 +44,12 @@ const TrainingRequest = () => {
     const [search, setSearch] = useState('');
     const [filterStatus, setFilterStatus] = useState('all');
 
+    // Pagination states
+    const [page, setPage] = useState(1);
+    const [limit, setLimit] = useState(10);
+    const [totalCount, setTotalCount] = useState(0);
+    const [totalPages, setTotalPages] = useState(1);
+
     // Review Modal
     const [modalOpen, setModalOpen] = useState(false);
     const [selectedRequest, setSelectedRequest] = useState<TrainingRequestType | null>(null);
@@ -56,8 +62,14 @@ const TrainingRequest = () => {
 
     useEffect(() => {
         dispatch(setPageTitle('Training Requests'));
-        fetchRequests();
     }, [dispatch]);
+
+    useEffect(() => {
+        const handler = setTimeout(() => {
+            fetchRequests();
+        }, 500); // 500ms debounce
+        return () => clearTimeout(handler);
+    }, [search, filterStatus, page, limit]);
 
     const getHeaders = () => {
         const token = localStorage.getItem('access_token');
@@ -71,10 +83,28 @@ const TrainingRequest = () => {
     const fetchRequests = async () => {
         setLoading(true);
         try {
-            const response = await authFetch(REQUESTS_API, { headers: getHeaders() });
+            const url = new URL(REQUESTS_API);
+            url.searchParams.append('page', page.toString());
+            url.searchParams.append('limit', limit.toString());
+            if (search) url.searchParams.append('search', search);
+            if (filterStatus !== 'all') url.searchParams.append('final_status', filterStatus);
+
+            const response = await authFetch(url.toString(), { headers: getHeaders() });
             if (response.ok) {
                 const data = await response.json();
-                setRequests(data.results || data || []);
+                if (data.results) {
+                    setRequests(data.results);
+                    setTotalCount(data.count);
+                    setTotalPages(data.total_pages || Math.ceil(data.count / limit));
+                } else if (Array.isArray(data)) {
+                    setRequests(data);
+                    setTotalCount(data.length);
+                    setTotalPages(1);
+                } else {
+                    setRequests([]);
+                    setTotalCount(0);
+                    setTotalPages(1);
+                }
             }
         } catch (error) {
             console.error('Error fetching training requests:', error);
@@ -83,28 +113,12 @@ const TrainingRequest = () => {
         }
     };
 
-    const filteredRequests = useMemo(() => {
-        return requests.filter((r) => {
-            const name = r.employee_name || '';
-            const email = r.employee_email || '';
-            const courseTitle = r.course_title || r.custom_course_title || '';
-            const matchesSearch =
-                name.toLowerCase().includes(search.toLowerCase()) ||
-                email.toLowerCase().includes(search.toLowerCase()) ||
-                courseTitle.toLowerCase().includes(search.toLowerCase());
-
-            const matchesStatus = filterStatus === 'all' || r.final_status === filterStatus;
-
-            return matchesSearch && matchesStatus;
-        });
-    }, [requests, search, filterStatus]);
-
     const tabCounts = useMemo(() => ({
-        all: requests.length,
-        approved: requests.filter((r) => r.final_status === 'approved').length,
-        pending: requests.filter((r) => r.final_status === 'pending').length,
-        rejected: requests.filter((r) => r.final_status === 'rejected').length,
-    }), [requests]);
+        all: totalCount,
+        approved: filterStatus === 'approved' ? totalCount : 0,
+        pending: filterStatus === 'pending' ? totalCount : 0,
+        rejected: filterStatus === 'rejected' ? totalCount : 0,
+    }), [totalCount, filterStatus]);
 
     const openReviewModal = (req: TrainingRequestType) => {
         setSelectedRequest(req);
@@ -209,17 +223,15 @@ const TrainingRequest = () => {
                     <button
                         key={tab.key}
                         type="button"
-                        onClick={() => setFilterStatus(tab.key)}
-                        className={`py-3 px-6 font-semibold text-sm border-b-2 whitespace-nowrap transition-all duration-300 flex items-center gap-2 ${
-                            filterStatus === tab.key
-                                ? 'border-primary text-primary'
-                                : 'border-transparent text-gray-500 hover:text-primary'
-                        }`}
+                        onClick={() => { setFilterStatus(tab.key); setPage(1); }}
+                        className={`py-3 px-6 font-semibold text-sm border-b-2 whitespace-nowrap transition-all duration-300 flex items-center gap-2 ${filterStatus === tab.key
+                            ? 'border-primary text-primary'
+                            : 'border-transparent text-gray-500 hover:text-primary'
+                            }`}
                     >
                         {tab.label}
-                        <span className={`badge rounded-full text-[10px] font-bold px-2 py-0.5 ${
-                            filterStatus === tab.key ? 'bg-primary text-white' : 'bg-gray-100 dark:bg-gray-800 text-gray-500'
-                        }`}>
+                        <span className={`badge rounded-full text-[10px] font-bold px-2 py-0.5 ${filterStatus === tab.key ? 'bg-primary text-white' : 'bg-gray-100 dark:bg-gray-800 text-gray-500'
+                            }`}>
                             {tabCounts[tab.key]}
                         </span>
                     </button>
@@ -235,7 +247,7 @@ const TrainingRequest = () => {
                             className="form-input pr-10 w-72"
                             placeholder="Search employee or course..."
                             value={search}
-                            onChange={(e) => setSearch(e.target.value)}
+                            onChange={(e) => { setSearch(e.target.value); setPage(1); }}
                         />
                         <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400">
                             <IconSearch className="w-4 h-4" />
@@ -249,92 +261,164 @@ const TrainingRequest = () => {
                 <div className="panel text-center py-10">
                     <span className="animate-pulse text-gray-400">Loading training requests...</span>
                 </div>
-            ) : filteredRequests.length === 0 ? (
+            ) : requests.length === 0 ? (
                 <div className="panel text-center py-10 text-gray-500 font-medium">No training requests submitted yet.</div>
             ) : (
-                <div className="panel p-0 border-0 overflow-hidden shadow-md">
-                    <div className="table-responsive">
-                        <table className="table-hover">
-                            <thead>
-                                <tr>
-                                    <th>Employee</th>
-                                    <th>Requested Program</th>
-                                    <th>Reason</th>
-                                    <th>Status</th>
-                                    <th>Budget Status</th>
-                                    <th>Submitted Date</th>
-                                    <th className="text-center">Action</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {filteredRequests.map((r) => (
-                                    <tr key={r.id}>
-                                        <td>
-                                            <div className="font-semibold text-gray-800 dark:text-gray-200">{r.employee_name}</div>
-                                            <span className="text-xs text-gray-450 block truncate max-w-[150px]">{r.employee_email}</span>
-                                        </td>
-                                        <td className="font-bold text-primary">
-                                            {r.course_title || r.custom_course_title}
-                                            {r.course_title ? (
-                                                <span className="badge badge-outline-primary text-[9px] block mt-1 w-max">Catalog Course</span>
-                                            ) : (
-                                                <span className="badge badge-outline-secondary text-[9px] block mt-1 w-max font-semibold">Custom request</span>
-                                            )}
-                                        </td>
-                                        <td className="text-xs max-w-[200px] truncate" title={r.reason}>{r.reason}</td>
-                                        <td>
-                                            <span className={`badge uppercase text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                                                r.final_status === 'approved'
-                                                    ? 'bg-success text-white'
-                                                    : r.final_status === 'rejected'
-                                                    ? 'bg-danger text-white'
-                                                    : 'bg-amber-500 text-white'
-                                            }`}>
-                                                {r.final_status}
-                                            </span>
-                                            {r.decided_by && (
-                                                <span className="text-[9px] text-gray-400 block mt-1 capitalize">by {r.decided_by}</span>
-                                            )}
-                                        </td>
-                                        <td>
-                                            {r.budget_required ? (
-                                                <span className={`badge uppercase text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                                                    r.budget_status === 'approved' 
-                                                        ? 'bg-success text-white' 
-                                                        : r.budget_status === 'rejected' 
-                                                        ? 'bg-danger text-white' 
-                                                        : 'bg-amber-500 text-white'
-                                                }`}>
-                                                    Budget: {r.budget_status}
-                                                </span>
-                                            ) : (
-                                                <span className="text-gray-400 text-xs italic">Not Required</span>
-                                            )}
-                                        </td>
-                                        <td className="text-xs">
-                                            {new Date(r.created_at).toLocaleDateString('en-US', {
-                                                month: 'short',
-                                                day: 'numeric',
-                                                year: 'numeric',
-                                            })}
-                                        </td>
-                                        <td className="text-center">
-                                            <div className="flex items-center justify-center gap-1">
-                                                {r.final_status === 'pending' && (
-                                                    <button type="button" className="text-primary hover:text-primary-dark p-2" onClick={() => openReviewModal(r)}>
-                                                        <IconPencil className="w-4.5 h-4.5" />
-                                                    </button>
-                                                )}
-                                                <button type="button" className="text-danger hover:text-danger-dark p-2" onClick={() => handleDelete(r)}>
-                                                    <IconTrashLines className="w-4.5 h-4.5" />
-                                                </button>
-                                            </div>
-                                        </td>
+                <div className="space-y-6">
+                    <div className="panel p-0 border-0 overflow-hidden shadow-md">
+                        <div className="table-responsive">
+                            <table className="table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Employee</th>
+                                        <th>Requested Training</th>
+                                        <th>Reason / Business Case</th>
+                                        <th>Manager Decision</th>
+                                        <th>Admin Decision</th>
+                                        <th>Final Outcome</th>
+                                        <th>Budget Allocation</th>
+                                        <th>Request Date</th>
+                                        <th className="text-center">Action</th>
                                     </tr>
-                                ))}
-                            </tbody>
-                        </table>
+                                </thead>
+                                <tbody>
+                                    {requests.map((r) => (
+                                        <tr key={r.id}>
+                                            <td>
+                                                <div className="font-semibold text-gray-800 dark:text-gray-200">{r.employee_name}</div>
+                                                <span className="text-xs text-gray-450 block truncate max-w-[150px]">{r.employee_email}</span>
+                                            </td>
+                                            <td>
+                                                {r.course_title ? (
+                                                    <div className="font-bold text-primary">{r.course_title}</div>
+                                                ) : (
+                                                    <div className="font-bold text-gray-700 dark:text-gray-300">{r.custom_course_title}</div>
+                                                )}
+                                                <span className="text-[10px] text-gray-400 uppercase font-semibold">
+                                                    {r.course_title ? 'Catalog Course' : 'Custom Request'}
+                                                </span>
+                                            </td>
+                                            <td>
+                                                <div className="text-xs max-w-[200px] truncate" title={r.reason}>
+                                                    {r.reason || '—'}
+                                                </div>
+                                            </td>
+                                            <td>
+                                                <div className="flex flex-col gap-0.5">
+                                                    <span className={`badge text-[9px] font-bold uppercase w-max px-2 rounded-full ${r.manager_status === 'approved' ? 'bg-success text-white' : r.manager_status === 'rejected' ? 'bg-danger text-white' : 'bg-amber-500 text-white'
+                                                        }`}>
+                                                        {r.manager_status}
+                                                    </span>
+                                                    {r.manager_name && <span className="text-[9px] text-gray-400 block">By: {r.manager_name}</span>}
+                                                </div>
+                                            </td>
+                                            <td>
+                                                <span className={`badge text-[9px] font-bold uppercase w-max px-2 rounded-full ${r.admin_status === 'approved' ? 'bg-success text-white' : r.admin_status === 'rejected' ? 'bg-danger text-white' : 'bg-amber-500 text-white'
+                                                    }`}>
+                                                    {r.admin_status}
+                                                </span>
+                                            </td>
+                                            <td>
+                                                <span className={`badge text-[10px] font-bold px-2 py-0.5 rounded-full ${r.final_status === 'approved' ? 'bg-success text-white' : r.final_status === 'rejected' ? 'bg-danger text-white' : 'bg-amber-500 text-white'
+                                                    }`}>
+                                                    {r.final_status}
+                                                </span>
+                                            </td>
+                                            <td>
+                                                {r.budget_required ? (
+                                                    <div className="flex flex-col gap-0.5">
+                                                        <span className="text-xs font-mono font-bold text-gray-800 dark:text-gray-200">
+                                                            {r.budget_required ? 'Required' : 'None'}
+                                                        </span>
+                                                        <span className="text-[9px] capitalize text-gray-400">
+                                                            Status: {r.budget_status.replace('_', ' ')}
+                                                        </span>
+                                                    </div>
+                                                ) : (
+                                                    <span className="text-gray-400 text-xs italic">Not Required</span>
+                                                )}
+                                            </td>
+                                            <td className="text-xs">
+                                                {new Date(r.created_at).toLocaleDateString('en-US', {
+                                                    month: 'short',
+                                                    day: 'numeric',
+                                                    year: 'numeric',
+                                                })}
+                                            </td>
+                                            <td className="text-center">
+                                                <div className="flex items-center justify-center gap-1">
+                                                    {r.final_status === 'pending' && (
+                                                        <button type="button" className="text-primary hover:text-primary-dark p-2" onClick={() => openReviewModal(r)}>
+                                                            <IconPencil className="w-4.5 h-4.5" />
+                                                        </button>
+                                                    )}
+                                                    <button type="button" className="text-danger hover:text-danger-dark p-2" onClick={() => handleDelete(r)}>
+                                                        <IconTrashLines className="w-4.5 h-4.5" />
+                                                    </button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
+
+                    {totalCount > 0 && (
+                        <div className="flex flex-col sm:flex-row justify-between items-center gap-4 p-4 panel border border-[#e0e6ed] dark:border-[#1b2e4b] rounded-xl mt-6">
+                            <div className="flex items-center gap-4">
+                                <div className="text-sm text-gray-500 font-semibold dark:text-gray-400">
+                                    Showing <span className="text-primary">{((page - 1) * limit) + 1}</span> to <span className="text-primary">{Math.min(page * limit, totalCount)}</span> of <span className="text-primary">{totalCount}</span> entries
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    <span className="text-sm font-semibold">Per page:</span>
+                                    <select
+                                        className="form-select w-20 text-sm font-semibold py-1"
+                                        value={limit}
+                                        onChange={(e) => { setLimit(Number(e.target.value)); setPage(1); }}
+                                    >
+                                        <option value="5">5</option>
+                                        <option value="10">10</option>
+                                        <option value="20">20</option>
+                                        <option value="50">50</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <ul className="inline-flex items-center space-x-1 font-semibold">
+                                <li>
+                                    <button
+                                        type="button"
+                                        className="flex justify-center font-semibold px-3 py-1.5 rounded-lg transition bg-white-light text-dark hover:text-white hover:bg-primary dark:text-white-light dark:bg-[#191e3a] dark:hover:bg-primary disabled:opacity-50 disabled:cursor-not-allowed text-xs"
+                                        onClick={() => setPage(page > 1 ? page - 1 : 1)}
+                                        disabled={page === 1}
+                                    >
+                                        Prev
+                                    </button>
+                                </li>
+                                {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
+                                    <li key={p}>
+                                        <button
+                                            type="button"
+                                            className={`flex justify-center font-semibold px-3 py-1.5 rounded-lg transition text-xs ${page === p ? 'bg-primary text-white shadow-md' : 'bg-white-light text-dark hover:text-white hover:bg-primary dark:text-white-light dark:bg-[#191e3a] dark:hover:bg-primary'}`}
+                                            onClick={() => setPage(p)}
+                                        >
+                                            {p}
+                                        </button>
+                                    </li>
+                                ))}
+                                <li>
+                                    <button
+                                        type="button"
+                                        className="flex justify-center font-semibold px-3 py-1.5 rounded-lg transition bg-white-light text-dark hover:text-white hover:bg-primary dark:text-white-light dark:bg-[#191e3a] dark:hover:bg-primary disabled:opacity-50 disabled:cursor-not-allowed text-xs"
+                                        onClick={() => setPage(page < totalPages ? page + 1 : totalPages)}
+                                        disabled={page === totalPages || totalPages === 0}
+                                    >
+                                        Next
+                                    </button>
+                                </li>
+                            </ul>
+                        </div>
+                    )}
                 </div>
             )}
 
@@ -360,7 +444,7 @@ const TrainingRequest = () => {
                                                 <div className="bg-gray-50 dark:bg-[#0e1726]/40 p-4 border border-[#e0e6ed] dark:border-[#1b2e4b] rounded-lg">
                                                     <div className="text-xs font-bold text-primary mb-1 uppercase">Syllabus Requested</div>
                                                     <div className="font-extrabold text-sm">{selectedRequest.course_title || selectedRequest.custom_course_title}</div>
-                                                    
+
                                                     <div className="text-xs font-bold text-gray-400 mt-3 mb-1 uppercase">Employee Statement</div>
                                                     <div className="text-xs leading-relaxed text-gray-600 dark:text-gray-300 italic">"{selectedRequest.reason}"</div>
 
