@@ -65,18 +65,20 @@ const MyLearning = () => {
     const [enrollingId, setEnrollingId] = useState<number | null>(null);
     const [enrollmentPage, setEnrollmentPage] = useState(1);
     const [wishlistPage, setWishlistPage] = useState(1);
-    const [enrollmentLimit] = useState(6);
-    const [wishlistLimit] = useState(6);
+    const [certificatePage, setCertificatePage] = useState(1);
+    const [enrollmentLimit] = useState(2);
+    const [wishlistLimit] = useState(2);
+    const [certificateLimit] = useState(2);
     const [enrollmentTotalCount, setEnrollmentTotalCount] = useState(0);
     const [wishlistTotalCount, setWishlistTotalCount] = useState(0);
+    const [certificateTotalCount, setCertificateTotalCount] = useState(0);
     const [enrollmentTotalPages, setEnrollmentTotalPages] = useState(1);
     const [wishlistTotalPages, setWishlistTotalPages] = useState(1);
-    const [enrollmentPageInput, setEnrollmentPageInput] = useState('1');
-    const [wishlistPageInput, setWishlistPageInput] = useState('1');
+    const [certificateTotalPages, setCertificateTotalPages] = useState(1);
 
     useEffect(() => {
         dispatch(setPageTitle('My Learning'));
-        fetchDashboardData(1, 1);
+        fetchDashboardData(1, 1, 1);
 
         if (location.pathname.includes('compliance-training')) {
             setActiveTab('compliance');
@@ -90,9 +92,8 @@ const MyLearning = () => {
     useEffect(() => {
         setEnrollmentPage(1);
         setWishlistPage(1);
-        setEnrollmentPageInput('1');
-        setWishlistPageInput('1');
-        fetchDashboardData(1, 1);
+        setCertificatePage(1);
+        fetchDashboardData(1, 1, 1);
     }, [searchQuery]);
 
 
@@ -105,7 +106,11 @@ const MyLearning = () => {
         return headers;
     };
 
-    const fetchDashboardData = async (enrollmentRequestedPage = enrollmentPage, wishlistRequestedPage = wishlistPage) => {
+    const fetchDashboardData = async (
+        enrollmentRequestedPage = enrollmentPage,
+        wishlistRequestedPage = wishlistPage,
+        certificateRequestedPage = certificatePage
+    ) => {
         setLoading(true);
         try {
             const enrollmentParams = new URLSearchParams({
@@ -116,16 +121,22 @@ const MyLearning = () => {
                 page: wishlistRequestedPage.toString(),
                 limit: wishlistLimit.toString(),
             });
+            const certificateParams = new URLSearchParams({
+                mine: 'true',
+                page: certificateRequestedPage.toString(),
+                limit: certificateLimit.toString(),
+            });
 
             if (searchQuery.trim()) {
                 enrollmentParams.set('search', searchQuery.trim());
                 wishlistParams.set('search', searchQuery.trim());
+                certificateParams.set('search', searchQuery.trim());
             }
 
             const [enrRes, compRes, certRes, wishRes, pathsRes] = await Promise.all([
                 authFetch(`${ENROLLMENTS_API}?${enrollmentParams.toString()}`, { headers: getHeaders() }),
                 authFetch(COMPLIANCE_API, { headers: getHeaders() }),
-                authFetch(`${CERTIFICATES_API}?mine=true`, { headers: getHeaders() }),
+                authFetch(`${CERTIFICATES_API}?${certificateParams.toString()}`, { headers: getHeaders() }),
                 authFetch(`${WISHLISTS_API}?${wishlistParams.toString()}`, { headers: getHeaders() }),
                 authFetch(PATHS_API, { headers: getHeaders() }),
             ]);
@@ -135,7 +146,6 @@ const MyLearning = () => {
                 setEnrollments(enrData.results || enrData || []);
                 setEnrollmentTotalCount(enrData.count || 0);
                 setEnrollmentTotalPages(enrData.total_pages || 1);
-                setEnrollmentPageInput(String(enrollmentRequestedPage));
             }
             if (compRes.ok) {
                 const compData = await compRes.json();
@@ -144,13 +154,14 @@ const MyLearning = () => {
             if (certRes.ok) {
                 const certData = await certRes.json();
                 setCertificates(certData.results || certData || []);
+                setCertificateTotalCount(certData.count || 0);
+                setCertificateTotalPages(certData.total_pages || 1);
             }
             if (wishRes.ok) {
                 const wishData = await wishRes.json();
                 setWishlist(wishData.results || wishData || []);
                 setWishlistTotalCount(wishData.count || 0);
                 setWishlistTotalPages(wishData.total_pages || 1);
-                setWishlistPageInput(String(wishlistRequestedPage));
             }
             if (pathsRes.ok) {
                 const pathsData = await pathsRes.json();
@@ -523,43 +534,91 @@ const MyLearning = () => {
                                 </div>
                             )}
 
-                            {enrollmentTotalPages > 1 && (
+                            {enrollmentTotalPages >= 1 && (
                                 <div className="flex flex-wrap items-center justify-between gap-3 mt-6">
                                     <div className="text-xs text-gray-500">Showing {enrollments.length} of {enrollmentTotalCount} courses</div>
-                                    <div className="flex items-center gap-2">
-                                        <button
-                                            type="button"
-                                            className="btn btn-outline-primary btn-sm rounded-lg"
-                                            onClick={() => {
-                                                const nextPage = Math.max(1, enrollmentPage - 1);
-                                                setEnrollmentPage(nextPage);
-                                                fetchDashboardData(nextPage, wishlistPage);
-                                            }}
-                                            disabled={enrollmentPage <= 1}
-                                        >
-                                            Previous
-                                        </button>
-                                        <input
-                                            type="number"
-                                            min="1"
-                                            max={enrollmentTotalPages}
-                                            value={enrollmentPageInput}
-                                            onChange={(e) => setEnrollmentPageInput(e.target.value)}
-                                            className="form-input w-16 rounded-lg text-xs"
-                                        />
-                                        <button
-                                            type="button"
-                                            className="btn btn-outline-primary btn-sm rounded-lg"
-                                            onClick={() => {
-                                                const nextPage = Math.min(enrollmentTotalPages, enrollmentPage + 1);
-                                                setEnrollmentPage(nextPage);
-                                                fetchDashboardData(nextPage, wishlistPage);
-                                            }}
-                                            disabled={enrollmentPage >= enrollmentTotalPages}
-                                        >
-                                            Next
-                                        </button>
-                                    </div>
+                                    <ul className="inline-flex items-center space-x-1 font-semibold">
+                                        <li>
+                                            <button
+                                                type="button"
+                                                className="flex justify-center font-semibold px-3 py-1.5 rounded-lg transition bg-white-light text-dark hover:text-white hover:bg-primary dark:text-white-light dark:bg-[#191e3a] dark:hover:bg-primary disabled:opacity-50 disabled:cursor-not-allowed text-xs"
+                                                onClick={() => {
+                                                    const prevPage = enrollmentPage > 1 ? enrollmentPage - 1 : 1;
+                                                    setEnrollmentPage(prevPage);
+                                                    fetchDashboardData(prevPage, wishlistPage, certificatePage);
+                                                }}
+                                                disabled={enrollmentPage === 1}
+                                            >
+                                                Prev
+                                            </button>
+                                        </li>
+                                        {(() => {
+                                            const pages: (number | string)[] = [];
+                                            if (enrollmentTotalPages <= 3) {
+                                                for (let i = 1; i <= enrollmentTotalPages; i++) pages.push(i);
+                                            } else {
+                                                if (enrollmentPage <= 2) {
+                                                    pages.push(1, 2, 3, 'right-ellipsis', enrollmentTotalPages);
+                                                } else if (enrollmentPage >= enrollmentTotalPages - 1) {
+                                                    pages.push(1, 'left-ellipsis', enrollmentTotalPages - 2, enrollmentTotalPages - 1, enrollmentTotalPages);
+                                                } else {
+                                                    pages.push(1, 'left-ellipsis', enrollmentPage, 'right-ellipsis', enrollmentTotalPages);
+                                                }
+                                            }
+                                            return pages.map((p, idx) => {
+                                                if (p === 'left-ellipsis' || p === 'right-ellipsis') {
+                                                    const jumpPage = p === 'left-ellipsis' ? Math.max(1, enrollmentPage - 3) : Math.min(enrollmentTotalPages, enrollmentPage + 3);
+                                                    return (
+                                                        <li key={`${p}-${idx}`}>
+                                                            <button
+                                                                type="button"
+                                                                title={p === 'left-ellipsis' ? "Previous 3 pages" : "Next 3 pages"}
+                                                                className="flex justify-center font-semibold px-3 py-1.5 rounded-lg transition bg-white-light text-dark hover:text-white hover:bg-primary dark:text-white-light dark:bg-[#191e3a] dark:hover:bg-primary cursor-pointer text-xs"
+                                                                onClick={() => {
+                                                                    setEnrollmentPage(jumpPage);
+                                                                    fetchDashboardData(jumpPage, wishlistPage, certificatePage);
+                                                                }}
+                                                            >
+                                                                ...
+                                                            </button>
+                                                        </li>
+                                                    );
+                                                }
+                                                return (
+                                                    <li key={p}>
+                                                        <button
+                                                            type="button"
+                                                            className={`flex justify-center font-semibold px-3 py-1.5 rounded-lg transition text-xs ${
+                                                                enrollmentPage === p
+                                                                    ? 'bg-primary text-white shadow-md'
+                                                                    : 'bg-white-light text-dark hover:text-white hover:bg-primary dark:text-white-light dark:bg-[#191e3a] dark:hover:bg-primary'
+                                                            }`}
+                                                            onClick={() => {
+                                                                setEnrollmentPage(p as number);
+                                                                fetchDashboardData(p as number, wishlistPage, certificatePage);
+                                                            }}
+                                                        >
+                                                            {p}
+                                                        </button>
+                                                    </li>
+                                                );
+                                            });
+                                        })()}
+                                        <li>
+                                            <button
+                                                type="button"
+                                                className="flex justify-center font-semibold px-3 py-1.5 rounded-lg transition bg-white-light text-dark hover:text-white hover:bg-primary dark:text-white-light dark:bg-[#191e3a] dark:hover:bg-primary disabled:opacity-50 disabled:cursor-not-allowed text-xs"
+                                                onClick={() => {
+                                                    const nextPage = enrollmentPage < enrollmentTotalPages ? enrollmentPage + 1 : enrollmentTotalPages;
+                                                    setEnrollmentPage(nextPage);
+                                                    fetchDashboardData(nextPage, wishlistPage, certificatePage);
+                                                }}
+                                                disabled={enrollmentPage === enrollmentTotalPages || enrollmentTotalPages === 0}
+                                            >
+                                                Next
+                                            </button>
+                                        </li>
+                                    </ul>
                                 </div>
                             )}
                         </div>
@@ -664,6 +723,93 @@ const MyLearning = () => {
                                     ))}
                                 </div>
                             )}
+                            {certificateTotalPages >= 1 && (
+                                <div className="flex flex-wrap items-center justify-between gap-3 mt-6">
+                                    <div className="text-xs text-gray-500">Showing {certificates.length} of {certificateTotalCount} credentials</div>
+                                    <ul className="inline-flex items-center space-x-1 font-semibold">
+                                        <li>
+                                            <button
+                                                type="button"
+                                                className="flex justify-center font-semibold px-3 py-1.5 rounded-lg transition bg-white-light text-dark hover:text-white hover:bg-primary dark:text-white-light dark:bg-[#191e3a] dark:hover:bg-primary disabled:opacity-50 disabled:cursor-not-allowed text-xs"
+                                                onClick={() => {
+                                                    const prevPage = certificatePage > 1 ? certificatePage - 1 : 1;
+                                                    setCertificatePage(prevPage);
+                                                    fetchDashboardData(enrollmentPage, wishlistPage, prevPage);
+                                                }}
+                                                disabled={certificatePage === 1}
+                                            >
+                                                Prev
+                                            </button>
+                                        </li>
+                                        {(() => {
+                                            const pages: (number | string)[] = [];
+                                            if (certificateTotalPages <= 3) {
+                                                for (let i = 1; i <= certificateTotalPages; i++) pages.push(i);
+                                            } else {
+                                                if (certificatePage <= 2) {
+                                                    pages.push(1, 2, 3, 'right-ellipsis', certificateTotalPages);
+                                                } else if (certificatePage >= certificateTotalPages - 1) {
+                                                    pages.push(1, 'left-ellipsis', certificateTotalPages - 2, certificateTotalPages - 1, certificateTotalPages);
+                                                } else {
+                                                    pages.push(1, 'left-ellipsis', certificatePage, 'right-ellipsis', certificateTotalPages);
+                                                }
+                                            }
+                                            return pages.map((p, idx) => {
+                                                if (p === 'left-ellipsis' || p === 'right-ellipsis') {
+                                                    const jumpPage = p === 'left-ellipsis' ? Math.max(1, certificatePage - 3) : Math.min(certificateTotalPages, certificatePage + 3);
+                                                    return (
+                                                        <li key={`${p}-${idx}`}>
+                                                            <button
+                                                                type="button"
+                                                                title={p === 'left-ellipsis' ? "Previous 3 pages" : "Next 3 pages"}
+                                                                className="flex justify-center font-semibold px-3 py-1.5 rounded-lg transition bg-white-light text-dark hover:text-white hover:bg-primary dark:text-white-light dark:bg-[#191e3a] dark:hover:bg-primary cursor-pointer text-xs"
+                                                                onClick={() => {
+                                                                    setCertificatePage(jumpPage);
+                                                                    fetchDashboardData(enrollmentPage, wishlistPage, jumpPage);
+                                                                }}
+                                                            >
+                                                                ...
+                                                            </button>
+                                                        </li>
+                                                    );
+                                                }
+                                                return (
+                                                    <li key={p}>
+                                                        <button
+                                                            type="button"
+                                                            className={`flex justify-center font-semibold px-3 py-1.5 rounded-lg transition text-xs ${
+                                                                certificatePage === p
+                                                                    ? 'bg-primary text-white shadow-md'
+                                                                    : 'bg-white-light text-dark hover:text-white hover:bg-primary dark:text-white-light dark:bg-[#191e3a] dark:hover:bg-primary'
+                                                            }`}
+                                                            onClick={() => {
+                                                                setCertificatePage(p as number);
+                                                                fetchDashboardData(enrollmentPage, wishlistPage, p as number);
+                                                            }}
+                                                        >
+                                                            {p}
+                                                        </button>
+                                                    </li>
+                                                );
+                                            });
+                                        })()}
+                                        <li>
+                                            <button
+                                                type="button"
+                                                className="flex justify-center font-semibold px-3 py-1.5 rounded-lg transition bg-white-light text-dark hover:text-white hover:bg-primary dark:text-white-light dark:bg-[#191e3a] dark:hover:bg-primary disabled:opacity-50 disabled:cursor-not-allowed text-xs"
+                                                onClick={() => {
+                                                    const nextPage = certificatePage < certificateTotalPages ? certificatePage + 1 : certificateTotalPages;
+                                                    setCertificatePage(nextPage);
+                                                    fetchDashboardData(enrollmentPage, wishlistPage, nextPage);
+                                                }}
+                                                disabled={certificatePage === certificateTotalPages || certificateTotalPages === 0}
+                                            >
+                                                Next
+                                            </button>
+                                        </li>
+                                    </ul>
+                                </div>
+                            )}
                         </div>
                     )}
 
@@ -720,43 +866,91 @@ const MyLearning = () => {
                                 </div>
                             )}
 
-                            {wishlistTotalPages > 1 && (
+                            {wishlistTotalPages >= 1 && (
                                 <div className="flex flex-wrap items-center justify-between gap-3 mt-6">
                                     <div className="text-xs text-gray-500">Showing {wishlist.length} of {wishlistTotalCount} wishlisted courses</div>
-                                    <div className="flex items-center gap-2">
-                                        <button
-                                            type="button"
-                                            className="btn btn-outline-primary btn-sm rounded-lg"
-                                            onClick={() => {
-                                                const nextPage = Math.max(1, wishlistPage - 1);
-                                                setWishlistPage(nextPage);
-                                                fetchDashboardData(enrollmentPage, nextPage);
-                                            }}
-                                            disabled={wishlistPage <= 1}
-                                        >
-                                            Previous
-                                        </button>
-                                        <input
-                                            type="number"
-                                            min="1"
-                                            max={wishlistTotalPages}
-                                            value={wishlistPageInput}
-                                            onChange={(e) => setWishlistPageInput(e.target.value)}
-                                            className="form-input w-16 rounded-lg text-xs"
-                                        />
-                                        <button
-                                            type="button"
-                                            className="btn btn-outline-primary btn-sm rounded-lg"
-                                            onClick={() => {
-                                                const nextPage = Math.min(wishlistTotalPages, wishlistPage + 1);
-                                                setWishlistPage(nextPage);
-                                                fetchDashboardData(enrollmentPage, nextPage);
-                                            }}
-                                            disabled={wishlistPage >= wishlistTotalPages}
-                                        >
-                                            Next
-                                        </button>
-                                    </div>
+                                    <ul className="inline-flex items-center space-x-1 font-semibold">
+                                        <li>
+                                            <button
+                                                type="button"
+                                                className="flex justify-center font-semibold px-3 py-1.5 rounded-lg transition bg-white-light text-dark hover:text-white hover:bg-primary dark:text-white-light dark:bg-[#191e3a] dark:hover:bg-primary disabled:opacity-50 disabled:cursor-not-allowed text-xs"
+                                                onClick={() => {
+                                                    const prevPage = wishlistPage > 1 ? wishlistPage - 1 : 1;
+                                                    setWishlistPage(prevPage);
+                                                    fetchDashboardData(enrollmentPage, prevPage, certificatePage);
+                                                }}
+                                                disabled={wishlistPage === 1}
+                                            >
+                                                Prev
+                                            </button>
+                                        </li>
+                                        {(() => {
+                                            const pages: (number | string)[] = [];
+                                            if (wishlistTotalPages <= 3) {
+                                                for (let i = 1; i <= wishlistTotalPages; i++) pages.push(i);
+                                            } else {
+                                                if (wishlistPage <= 2) {
+                                                    pages.push(1, 2, 3, 'right-ellipsis', wishlistTotalPages);
+                                                } else if (wishlistPage >= wishlistTotalPages - 1) {
+                                                    pages.push(1, 'left-ellipsis', wishlistTotalPages - 2, wishlistTotalPages - 1, wishlistTotalPages);
+                                                } else {
+                                                    pages.push(1, 'left-ellipsis', wishlistPage, 'right-ellipsis', wishlistTotalPages);
+                                                }
+                                            }
+                                            return pages.map((p, idx) => {
+                                                if (p === 'left-ellipsis' || p === 'right-ellipsis') {
+                                                    const jumpPage = p === 'left-ellipsis' ? Math.max(1, wishlistPage - 3) : Math.min(wishlistTotalPages, wishlistPage + 3);
+                                                    return (
+                                                        <li key={`${p}-${idx}`}>
+                                                            <button
+                                                                type="button"
+                                                                title={p === 'left-ellipsis' ? "Previous 3 pages" : "Next 3 pages"}
+                                                                className="flex justify-center font-semibold px-3 py-1.5 rounded-lg transition bg-white-light text-dark hover:text-white hover:bg-primary dark:text-white-light dark:bg-[#191e3a] dark:hover:bg-primary cursor-pointer text-xs"
+                                                                onClick={() => {
+                                                                    setWishlistPage(jumpPage);
+                                                                    fetchDashboardData(enrollmentPage, jumpPage, certificatePage);
+                                                                }}
+                                                            >
+                                                                ...
+                                                            </button>
+                                                        </li>
+                                                    );
+                                                }
+                                                return (
+                                                    <li key={p}>
+                                                        <button
+                                                            type="button"
+                                                            className={`flex justify-center font-semibold px-3 py-1.5 rounded-lg transition text-xs ${
+                                                                wishlistPage === p
+                                                                    ? 'bg-primary text-white shadow-md'
+                                                                    : 'bg-white-light text-dark hover:text-white hover:bg-primary dark:text-white-light dark:bg-[#191e3a] dark:hover:bg-primary'
+                                                            }`}
+                                                            onClick={() => {
+                                                                setWishlistPage(p as number);
+                                                                fetchDashboardData(enrollmentPage, p as number, certificatePage);
+                                                            }}
+                                                        >
+                                                            {p}
+                                                        </button>
+                                                    </li>
+                                                );
+                                            });
+                                        })()}
+                                        <li>
+                                            <button
+                                                type="button"
+                                                className="flex justify-center font-semibold px-3 py-1.5 rounded-lg transition bg-white-light text-dark hover:text-white hover:bg-primary dark:text-white-light dark:bg-[#191e3a] dark:hover:bg-primary disabled:opacity-50 disabled:cursor-not-allowed text-xs"
+                                                onClick={() => {
+                                                    const nextPage = wishlistPage < wishlistTotalPages ? wishlistPage + 1 : wishlistTotalPages;
+                                                    setWishlistPage(nextPage);
+                                                    fetchDashboardData(enrollmentPage, nextPage, certificatePage);
+                                                }}
+                                                disabled={wishlistPage === wishlistTotalPages || wishlistTotalPages === 0}
+                                            >
+                                                Next
+                                            </button>
+                                        </li>
+                                    </ul>
                                 </div>
                             )}
                         </div>

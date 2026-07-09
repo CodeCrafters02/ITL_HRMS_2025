@@ -269,17 +269,53 @@ const Approvals = () => {
                                     Prev
                                 </button>
                             </li>
-                            {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
-                                <li key={p}>
-                                    <button
-                                        type="button"
-                                        className={`flex items-center justify-center w-10 h-10 rounded-xl transition text-xs ${page === p ? 'bg-primary text-white shadow-lg shadow-primary/30 border-primary' : 'bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-600 hover:text-white hover:bg-primary'}`}
-                                        onClick={() => setPage(p)}
-                                    >
-                                        {p}
-                                    </button>
-                                </li>
-                            ))}
+                            {(() => {
+                                const pages: (number | string)[] = [];
+                                if (totalPages <= 3) {
+                                    for (let i = 1; i <= totalPages; i++) pages.push(i);
+                                } else {
+                                    pages.push(1);
+                                    let start = Math.max(2, page - 1);
+                                    let end = Math.min(totalPages - 1, page + 1);
+                                    if (page <= 2) {
+                                        end = Math.min(totalPages - 1, 3);
+                                    } else if (page >= totalPages - 1) {
+                                        start = Math.max(2, totalPages - 2);
+                                    }
+                                    if (start > 2) pages.push('left-ellipsis');
+                                    for (let i = start; i <= end; i++) pages.push(i);
+                                    if (end < totalPages - 1) pages.push('right-ellipsis');
+                                    pages.push(totalPages);
+                                }
+                                return pages.map((p, idx) => {
+                                    if (p === 'left-ellipsis' || p === 'right-ellipsis') {
+                                        const jumpPage = p === 'left-ellipsis' ? Math.max(1, page - 3) : Math.min(totalPages, page + 3);
+                                        return (
+                                            <li key={`${p}-${idx}`}>
+                                                <button
+                                                    type="button"
+                                                    title={p === 'left-ellipsis' ? "Previous 3 pages" : "Next 3 pages"}
+                                                    className="flex items-center justify-center w-10 h-10 rounded-xl transition text-xs bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-600 hover:text-white hover:bg-primary cursor-pointer"
+                                                    onClick={() => setPage(jumpPage)}
+                                                >
+                                                    ...
+                                                </button>
+                                            </li>
+                                        );
+                                    }
+                                    return (
+                                        <li key={p}>
+                                            <button
+                                                type="button"
+                                                className={`flex items-center justify-center w-10 h-10 rounded-xl transition text-xs ${page === p ? 'bg-primary text-white shadow-lg shadow-primary/30 border-primary' : 'bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-600 hover:text-white hover:bg-primary'}`}
+                                                onClick={() => setPage(p as number)}
+                                            >
+                                                {p}
+                                            </button>
+                                        </li>
+                                    );
+                                });
+                            })()}
                             <li>
                                 <button
                                     type="button"

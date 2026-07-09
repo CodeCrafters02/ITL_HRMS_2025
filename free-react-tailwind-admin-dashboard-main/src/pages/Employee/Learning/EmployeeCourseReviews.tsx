@@ -24,7 +24,7 @@ const EmployeeCourseReviews = () => {
     const [search, setSearch] = useState('');
     const [loading, setLoading] = useState(true);
     const [page, setPage] = useState(1);
-    const [limit] = useState(10);
+    const [limit] = useState(1);
     const [totalCount, setTotalCount] = useState(0);
     const [totalPages, setTotalPages] = useState(1);
     const [pageInput, setPageInput] = useState('1');
@@ -265,43 +265,91 @@ const EmployeeCourseReviews = () => {
                 </div>
             )}
 
-            {totalPages > 1 && (
+            {totalPages >= 1 && (
                 <div className="flex flex-wrap items-center justify-between gap-3 mt-4">
                     <div className="text-xs text-gray-500">Showing {reviews.length} of {totalCount} reviews</div>
-                    <div className="flex items-center gap-2">
-                        <button
-                            type="button"
-                            className="btn btn-outline-primary btn-sm rounded-lg"
-                            onClick={() => {
-                                const nextPage = Math.max(1, page - 1);
-                                setPage(nextPage);
-                                fetchReviews(nextPage);
-                            }}
-                            disabled={page <= 1}
-                        >
-                            Previous
-                        </button>
-                        <input
-                            type="number"
-                            min="1"
-                            max={totalPages}
-                            value={pageInput}
-                            onChange={(e) => setPageInput(e.target.value)}
-                            className="form-input w-16 rounded-lg text-xs"
-                        />
-                        <button
-                            type="button"
-                            className="btn btn-outline-primary btn-sm rounded-lg"
-                            onClick={() => {
-                                const nextPage = Math.min(totalPages, page + 1);
-                                setPage(nextPage);
-                                fetchReviews(nextPage);
-                            }}
-                            disabled={page >= totalPages}
-                        >
-                            Next
-                        </button>
-                    </div>
+                    <ul className="inline-flex items-center space-x-1 font-semibold">
+                        <li>
+                            <button
+                                type="button"
+                                className="flex justify-center font-semibold px-3 py-1.5 rounded-lg transition bg-white-light text-dark hover:text-white hover:bg-primary dark:text-white-light dark:bg-[#191e3a] dark:hover:bg-primary disabled:opacity-50 disabled:cursor-not-allowed text-xs"
+                                onClick={() => {
+                                    const prevPage = page > 1 ? page - 1 : 1;
+                                    setPage(prevPage);
+                                    fetchReviews(prevPage);
+                                }}
+                                disabled={page === 1}
+                            >
+                                Prev
+                            </button>
+                        </li>
+                        {(() => {
+                            const pages: (number | string)[] = [];
+                            if (totalPages <= 3) {
+                                for (let i = 1; i <= totalPages; i++) pages.push(i);
+                            } else {
+                                if (page <= 2) {
+                                    pages.push(1, 2, 3, 'right-ellipsis', totalPages);
+                                } else if (page >= totalPages - 1) {
+                                    pages.push(1, 'left-ellipsis', totalPages - 2, totalPages - 1, totalPages);
+                                } else {
+                                    pages.push(1, 'left-ellipsis', page, 'right-ellipsis', totalPages);
+                                }
+                            }
+                            return pages.map((p, idx) => {
+                                if (p === 'left-ellipsis' || p === 'right-ellipsis') {
+                                    const jumpPage = p === 'left-ellipsis' ? Math.max(1, page - 3) : Math.min(totalPages, page + 3);
+                                    return (
+                                        <li key={`${p}-${idx}`}>
+                                            <button
+                                                type="button"
+                                                title={p === 'left-ellipsis' ? "Previous 3 pages" : "Next 3 pages"}
+                                                className="flex justify-center font-semibold px-3 py-1.5 rounded-lg transition bg-white-light text-dark hover:text-white hover:bg-primary dark:text-white-light dark:bg-[#191e3a] dark:hover:bg-primary cursor-pointer text-xs"
+                                                onClick={() => {
+                                                    setPage(jumpPage);
+                                                    fetchReviews(jumpPage);
+                                                }}
+                                            >
+                                                ...
+                                            </button>
+                                        </li>
+                                    );
+                                }
+                                return (
+                                    <li key={p}>
+                                        <button
+                                            type="button"
+                                            className={`flex justify-center font-semibold px-3 py-1.5 rounded-lg transition text-xs ${
+                                                page === p
+                                                    ? 'bg-primary text-white shadow-md'
+                                                    : 'bg-white-light text-dark hover:text-white hover:bg-primary dark:text-white-light dark:bg-[#191e3a] dark:hover:bg-primary'
+                                            }`}
+                                            onClick={() => {
+                                                setPage(p as number);
+                                                fetchReviews(p as number);
+                                            }}
+                                        >
+                                            {p}
+                                        </button>
+                                    </li>
+                                );
+                            });
+                        })()}
+                        <li>
+                            <button
+                                type="button"
+                                className="flex justify-center font-semibold px-3 py-1.5 rounded-lg transition bg-white-light text-dark hover:text-white hover:bg-primary dark:text-white-light dark:bg-[#191e3a] dark:hover:bg-primary disabled:opacity-50 disabled:cursor-not-allowed text-xs"
+                                onClick={() => {
+                                    const nextPage = page < totalPages ? page + 1 : totalPages;
+                                    setPage(nextPage);
+                                    fetchReviews(nextPage);
+                                }}
+                                disabled={page === totalPages || totalPages === 0}
+                            >
+                                Next
+                            </button>
+                        </li>
+                    </ul>
                 </div>
             )}
 

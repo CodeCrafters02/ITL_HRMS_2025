@@ -204,7 +204,17 @@ const CertificateSignature = () => {
                                             <div>
                                                 <label className="font-semibold mb-1 block">Signature Image {!signature && <span className="text-danger">*</span>}</label>
                                                 <input type="file" accept="image/*" required={!signature} className="form-input rounded-lg text-xs" onChange={(e) => setSignatureFile(e.target.files ? e.target.files[0] : null)} />
-                                                {signature && <p className="text-[11px] text-gray-400 mt-1">Leave empty to keep the current image.</p>}
+                                                {signature && (
+                                                    <>
+                                                        {signature.signature_image_url && (
+                                                            <div className="mt-2 p-2 border border-gray-200 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-800 flex items-center gap-3">
+                                                                <span className="text-[11px] font-semibold text-gray-500 uppercase">Current:</span>
+                                                                <img src={signature.signature_image_url} alt="Current Signature" className="max-h-[50px] max-w-[150px] object-contain border border-dashed border-gray-300 dark:border-gray-600 p-1 bg-white" />
+                                                            </div>
+                                                        )}
+                                                        <p className="text-[11px] text-gray-400 mt-1">Leave empty to keep the current image.</p>
+                                                    </>
+                                                )}
                                             </div>
                                             <div>
                                                 <label className="font-semibold mb-1 block">Signatory Name</label>

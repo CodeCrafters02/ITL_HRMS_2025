@@ -266,17 +266,48 @@ const AdminLetterTemplates = () => {
                                     Prev
                                 </button>
                             </li>
-                            {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
-                                <li key={p}>
-                                    <button
-                                        type="button"
-                                        className={`flex justify-center font-semibold px-3.5 py-2 rounded-full transition ${page === p ? 'bg-primary text-white shadow-[0_10px_20px_-10px_rgba(67,97,238,0.44)]' : 'bg-white-light text-dark hover:text-white hover:bg-primary dark:text-white-light dark:bg-[#191e3a] dark:hover:bg-primary'}`}
-                                        onClick={() => setPage(p)}
-                                    >
-                                        {p}
-                                    </button>
-                                </li>
-                            ))}
+                            {(() => {
+                                const pages: (number | string)[] = [];
+                                if (totalPages <= 3) {
+                                    for (let i = 1; i <= totalPages; i++) pages.push(i);
+                                } else {
+                                    if (page <= 2) {
+                                        pages.push(1, 2, 3, 'right-ellipsis', totalPages);
+                                    } else if (page >= totalPages - 1) {
+                                        pages.push(1, 'left-ellipsis', totalPages - 2, totalPages - 1, totalPages);
+                                    } else {
+                                        pages.push(1, 'left-ellipsis', page, 'right-ellipsis', totalPages);
+                                    }
+                                }
+                                return pages.map((p, idx) => {
+                                    if (p === 'left-ellipsis' || p === 'right-ellipsis') {
+                                        const jumpPage = p === 'left-ellipsis' ? Math.max(1, page - 3) : Math.min(totalPages, page + 3);
+                                        return (
+                                            <li key={`${p}-${idx}`}>
+                                                <button
+                                                    type="button"
+                                                    title={p === 'left-ellipsis' ? "Previous 3 pages" : "Next 3 pages"}
+                                                    className="flex justify-center font-semibold px-3 py-2 rounded-full transition bg-white-light text-dark hover:text-white hover:bg-primary dark:text-white-light dark:bg-[#191e3a] dark:hover:bg-primary cursor-pointer"
+                                                    onClick={() => setPage(jumpPage)}
+                                                >
+                                                    ...
+                                                </button>
+                                            </li>
+                                        );
+                                    }
+                                    return (
+                                        <li key={p}>
+                                            <button
+                                                type="button"
+                                                className={`flex justify-center font-semibold px-3.5 py-2 rounded-full transition ${page === p ? 'bg-primary text-white shadow-[0_10px_20px_-10px_rgba(67,97,238,0.44)]' : 'bg-white-light text-dark hover:text-white hover:bg-primary dark:text-white-light dark:bg-[#191e3a] dark:hover:bg-primary'}`}
+                                                onClick={() => setPage(p as number)}
+                                            >
+                                                {p}
+                                            </button>
+                                        </li>
+                                    );
+                                });
+                            })()}
                             <li>
                                 <button
                                     type="button"
