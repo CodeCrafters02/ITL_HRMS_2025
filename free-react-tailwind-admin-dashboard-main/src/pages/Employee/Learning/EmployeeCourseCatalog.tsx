@@ -5,12 +5,19 @@ import Swal from 'sweetalert2';
 import { setPageTitle } from '../../../store/themeConfigSlice';
 import { authFetch } from '../../../utils/authFetch';
 import IconSearch from '../../../components/Icon/IconSearch';
+import IconClock from '../../../components/Icon/IconClock';
+import IconOpenBook from '../../../components/Icon/IconOpenBook';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000';
 const COURSES_API = `${API_BASE_URL}/employee/courses/`;
 const ENROLLMENTS_API = `${API_BASE_URL}/employee/enrollments/`;
-const WISHLISTS_API = `${API_BASE_URL}/employee/course-wishlists/`;
 const TRAINING_REQUESTS_API = `${API_BASE_URL}/employee/training-requests/`;
+const CATEGORIES_API = `${API_BASE_URL}/employee/course-categories/`;
+
+type CategoryType = {
+    id: number;
+    name: string;
+};
 
 type CourseType = {
     id: number;
@@ -31,12 +38,6 @@ type EnrollmentType = {
     progress_percentage: number;
 };
 
-type WishlistItem = {
-    id: number;
-    course: number;
-    course_title: string;
-};
-
 type TrainingRequestType = {
     id: number;
     course?: number | null;
@@ -51,8 +52,8 @@ const EmployeeCourseCatalog = () => {
     const dispatch = useDispatch();
     const navigate = useNavigate();
     const [courses, setCourses] = useState<CourseType[]>([]);
+    const [categories, setCategories] = useState<CategoryType[]>([]);
     const [enrollments, setEnrollments] = useState<EnrollmentType[]>([]);
-    const [wishlist, setWishlist] = useState<WishlistItem[]>([]);
     const [trainingRequests, setTrainingRequests] = useState<TrainingRequestType[]>([]);
     const [loading, setLoading] = useState(true);
     const [requestingId, setRequestingId] = useState<number | null>(null);
@@ -60,15 +61,16 @@ const EmployeeCourseCatalog = () => {
     const [selectedCategory, setSelectedCategory] = useState<string>('all');
     const [selectedDifficulty, setSelectedDifficulty] = useState<'all' | 'beginner' | 'intermediate' | 'advanced'>('all');
     const [page, setPage] = useState(1);
-    const [limit] = useState(3);
+    const [limit, setLimit] = useState(9);
     const [totalCount, setTotalCount] = useState(0);
     const [totalPages, setTotalPages] = useState(1);
     const [pageInput, setPageInput] = useState('1');
 
     useEffect(() => {
         dispatch(setPageTitle('Course Catalog'));
+        fetchCategories();
         fetchCatalogData(page);
-    }, [dispatch, page, search, selectedCategory, selectedDifficulty]);
+    }, [dispatch, page, limit, search, selectedCategory, selectedDifficulty]);
 
     useEffect(() => {
         setPage(1);
@@ -84,6 +86,18 @@ const EmployeeCourseCatalog = () => {
         return headers;
     };
 
+    const fetchCategories = async () => {
+        try {
+            const response = await authFetch(`${CATEGORIES_API}?limit=100`, { headers: getHeaders() });
+            if (response.ok) {
+                const data = await response.json();
+                setCategories(data.results || data || []);
+            }
+        } catch (error) {
+            console.error('Error fetching categories:', error);
+        }
+    };
+
     const fetchCatalogData = async (requestedPage = page) => {
         setLoading(true);
         try {
@@ -96,17 +110,15 @@ const EmployeeCourseCatalog = () => {
             if (selectedDifficulty !== 'all') params.set('difficulty_level', selectedDifficulty);
             if (selectedCategory !== 'all') params.set('category', selectedCategory);
 
-            const [coursesRes, enrollmentsRes, wishlistsRes, requestsRes] = await Promise.all([
+            const [coursesRes, enrollmentsRes, requestsRes] = await Promise.all([
                 authFetch(`${COURSES_API}?${params.toString()}`, { headers: getHeaders() }),
                 authFetch(ENROLLMENTS_API, { headers: getHeaders() }),
-                authFetch(WISHLISTS_API, { headers: getHeaders() }),
                 authFetch(TRAINING_REQUESTS_API, { headers: getHeaders() }),
             ]);
 
-            if (coursesRes.ok && enrollmentsRes.ok && wishlistsRes.ok) {
+            if (coursesRes.ok && enrollmentsRes.ok) {
                 const coursesData = await coursesRes.json();
                 const enrollmentsData = await enrollmentsRes.json();
-                const wishlistsData = await wishlistsRes.json();
 
                 const coursesList = (coursesData.results || coursesData || []).map((c: any) => ({
                     id: c.id,
@@ -124,7 +136,6 @@ const EmployeeCourseCatalog = () => {
                 setTotalPages(coursesData.total_pages || 1);
                 setPageInput(String(requestedPage));
                 setEnrollments(enrollmentsData.results || enrollmentsData || []);
-                setWishlist(wishlistsData.results || wishlistsData || []);
             }
 
             if (requestsRes.ok) {
@@ -190,37 +201,6 @@ const EmployeeCourseCatalog = () => {
         }
     };
 
-    const handleToggleWishlist = async (courseId: number) => {
-        const existing = wishlist.find((w) => w.course === courseId);
-        if (existing) {
-            try {
-                const response = await authFetch(`${WISHLISTS_API}${existing.id}/`, {
-                    method: 'DELETE',
-                    headers: getHeaders(),
-                });
-                if (response.ok || response.status === 204) {
-                    setWishlist((prev) => prev.filter((w) => w.id !== existing.id));
-                }
-            } catch (error) {
-                console.error('Error removing from wishlist:', error);
-            }
-        } else {
-            try {
-                const response = await authFetch(WISHLISTS_API, {
-                    method: 'POST',
-                    headers: getHeaders(),
-                    body: JSON.stringify({ course: courseId }),
-                });
-                if (response.ok) {
-                    const data = await response.json();
-                    setWishlist((prev) => [...prev, data]);
-                }
-            } catch (error) {
-                console.error('Error adding to wishlist:', error);
-            }
-        }
-    };
-
     // Map enrollments for rapid checkups
     const enrollmentMap = useMemo(() => {
         const map = new Map<number, EnrollmentType>();
@@ -243,23 +223,6 @@ const EmployeeCourseCatalog = () => {
         return map;
     }, [trainingRequests]);
 
-    const wishlistSet = useMemo(() => {
-        return new Set(wishlist.map((w) => w.course));
-    }, [wishlist]);
-
-    // Categories
-    const categories = useMemo(() => {
-        const categoryMap = new Map<string, { value: string; label: string }>();
-        courses.forEach((c) => {
-            if (!c.category_name) return;
-            const value = c.category != null ? String(c.category) : c.category_name;
-            if (!categoryMap.has(value)) {
-                categoryMap.set(value, { value, label: c.category_name });
-            }
-        });
-        return [{ value: 'all', label: 'All' }, ...Array.from(categoryMap.values())];
-    }, [courses]);
-
     const filteredCourses = useMemo(() => {
         return courses.filter((c) => {
             if (selectedCategory === 'all') return true;
@@ -272,7 +235,6 @@ const EmployeeCourseCatalog = () => {
         const isEnrolled = enrollmentMap.has(course.id);
         const enr = enrollmentMap.get(course.id);
         const request = requestMap.get(course.id);
-        const isWishlisted = wishlistSet.has(course.id);
 
         // Already enrolled — show progress & syllabus link
         if (isEnrolled && enr) {
@@ -285,25 +247,12 @@ const EmployeeCourseCatalog = () => {
                     <div className="w-full bg-gray-100 dark:bg-gray-800 rounded-full h-1.5 mb-3">
                         <div className="bg-primary h-1.5 rounded-full" style={{ width: `${enr.progress_percentage}%` }}></div>
                     </div>
-                    <div className="flex items-center gap-2">
-                        <Link
-                            to={`/employee/learning-management/course-player/${enr.id}`}
-                            className="btn btn-outline-primary btn-sm flex-grow rounded-lg text-xs py-1.5 font-bold"
-                        >
-                            Go to Syllabus
-                        </Link>
-                        <button
-                            type="button"
-                            className={`btn btn-sm rounded-lg py-1.5 px-2.5 font-bold border transition-all duration-300 ${
-                                isWishlisted
-                                    ? 'border-danger bg-danger/5 text-danger'
-                                    : 'border-gray-200 dark:border-gray-800 text-gray-400 hover:text-danger'
-                            }`}
-                            onClick={() => handleToggleWishlist(course.id)}
-                        >
-                            ♥
-                        </button>
-                    </div>
+                    <Link
+                        to={`/employee/learning-management/course-player/${enr.id}`}
+                        className="btn btn-outline-primary btn-sm w-full rounded-lg text-xs py-1.5 font-bold"
+                    >
+                        Go to Syllabus
+                    </Link>
                 </div>
             );
         }
@@ -311,24 +260,11 @@ const EmployeeCourseCatalog = () => {
         // Pending approval request
         if (request && request.final_status === 'pending') {
             return (
-                <div className="flex items-center gap-2">
-                    <div className="flex-grow">
-                        <div className="btn btn-outline-warning btn-sm w-full rounded-lg text-xs py-1.5 font-bold cursor-default opacity-90 flex items-center justify-center gap-1.5">
-                            <span className="animate-pulse">⏳</span> Pending Approval
-                        </div>
-                        <p className="text-[9px] text-gray-400 mt-1 text-center">Awaiting manager/admin review</p>
+                <div>
+                    <div className="btn btn-outline-warning btn-sm w-full rounded-lg text-xs py-1.5 font-bold cursor-default opacity-90 flex items-center justify-center gap-1.5">
+                        <span className="animate-pulse">⏳</span> Pending Approval
                     </div>
-                    <button
-                        type="button"
-                        className={`btn btn-sm rounded-lg py-1.5 px-2.5 font-bold border transition-all duration-300 ${
-                            isWishlisted
-                                ? 'border-danger bg-danger/5 text-danger'
-                                : 'border-gray-200 dark:border-gray-800 text-gray-400 hover:text-danger'
-                        }`}
-                        onClick={() => handleToggleWishlist(course.id)}
-                    >
-                        ♥
-                    </button>
+                    <p className="text-[9px] text-gray-400 mt-1 text-center">Awaiting manager/admin review</p>
                 </div>
             );
         }
@@ -349,54 +285,28 @@ const EmployeeCourseCatalog = () => {
                             "{rejectionRemark}"
                         </p>
                     )}
-                    <div className="flex items-center gap-2">
-                        <button
-                            type="button"
-                            className="btn btn-primary btn-sm flex-grow rounded-lg text-xs py-1.5 font-bold"
-                            onClick={() => handleRequestEnrollment(course.id)}
-                            disabled={requestingId === course.id}
-                        >
-                            {requestingId === course.id ? 'Submitting...' : '🔄 Re-request Enrollment'}
-                        </button>
-                        <button
-                            type="button"
-                            className={`btn btn-sm rounded-lg py-1.5 px-2.5 font-bold border transition-all duration-300 ${
-                                isWishlisted
-                                    ? 'border-danger bg-danger/5 text-danger'
-                                    : 'border-gray-200 dark:border-gray-800 text-gray-400 hover:text-danger'
-                            }`}
-                            onClick={() => handleToggleWishlist(course.id)}
-                        >
-                            ♥
-                        </button>
-                    </div>
+                    <button
+                        type="button"
+                        className="btn btn-primary btn-sm w-full rounded-lg text-xs py-1.5 font-bold"
+                        onClick={() => handleRequestEnrollment(course.id)}
+                        disabled={requestingId === course.id}
+                    >
+                        {requestingId === course.id ? 'Submitting...' : '🔄 Re-request Enrollment'}
+                    </button>
                 </div>
             );
         }
 
         // No request yet — show "Request Enrollment" button
         return (
-            <div className="flex items-center gap-2">
-                <button
-                    type="button"
-                    className="btn btn-primary btn-sm flex-grow rounded-lg text-xs py-1.5 font-bold"
-                    onClick={() => handleRequestEnrollment(course.id)}
-                    disabled={requestingId === course.id}
-                >
-                    {requestingId === course.id ? 'Submitting...' : '📩 Request Enrollment'}
-                </button>
-                <button
-                    type="button"
-                    className={`btn btn-sm rounded-lg py-1.5 px-2.5 font-bold border transition-all duration-300 ${
-                        isWishlisted
-                            ? 'border-danger bg-danger/5 text-danger'
-                            : 'border-gray-200 dark:border-gray-800 text-gray-400 hover:text-danger'
-                    }`}
-                    onClick={() => handleToggleWishlist(course.id)}
-                >
-                    ♥
-                </button>
-            </div>
+            <button
+                type="button"
+                className="btn btn-primary btn-sm w-full rounded-lg text-xs py-1.5 font-bold"
+                onClick={() => handleRequestEnrollment(course.id)}
+                disabled={requestingId === course.id}
+            >
+                {requestingId === course.id ? 'Submitting...' : '📩 Request Enrollment'}
+            </button>
         );
     };
 
@@ -416,18 +326,29 @@ const EmployeeCourseCatalog = () => {
             {/* Filter and search controls */}
             <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
                 <div className="flex items-center gap-2 overflow-x-auto pb-1 max-w-full">
+                    <button
+                        type="button"
+                        className={`btn btn-sm rounded-lg text-xs py-1.5 px-3 uppercase font-bold tracking-wider transition-all duration-300 ${
+                            selectedCategory === 'all'
+                                ? 'btn-primary'
+                                : 'btn-outline-primary bg-white dark:bg-[#0e1726]/40'
+                        }`}
+                        onClick={() => setSelectedCategory('all')}
+                    >
+                        All
+                    </button>
                     {categories.map((cat) => (
                         <button
-                            key={cat.value}
+                            key={cat.id}
                             type="button"
                             className={`btn btn-sm rounded-lg text-xs py-1.5 px-3 uppercase font-bold tracking-wider transition-all duration-300 ${
-                                selectedCategory === cat.value
+                                selectedCategory === String(cat.id)
                                     ? 'btn-primary'
                                     : 'btn-outline-primary bg-white dark:bg-[#0e1726]/40'
                             }`}
-                            onClick={() => setSelectedCategory(cat.value)}
+                            onClick={() => setSelectedCategory(String(cat.id))}
                         >
-                            {cat.label}
+                            {cat.name}
                         </button>
                     ))}
                 </div>
@@ -467,54 +388,59 @@ const EmployeeCourseCatalog = () => {
             ) : (
                 <>
                     <div className="mb-4 text-xs text-gray-500">
-                        Showing {filteredCourses.length} of {totalCount} courses
+                        Showing <span className="text-primary font-semibold">{totalCount === 0 ? 0 : ((page - 1) * limit) + 1}</span> to <span className="text-primary font-semibold">{Math.min(page * limit, totalCount)}</span> of <span className="text-primary font-semibold">{totalCount}</span> courses
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                         {filteredCourses.map((c) => (
                         <div
                             key={c.id}
-                            className="panel border border-[#e0e6ed] dark:border-[#1b2e4b] rounded-xl hover:shadow-lg transition-all duration-300 flex flex-col justify-between overflow-hidden p-0 bg-white dark:bg-[#0e1726]/40"
+                            className="group relative rounded-2xl overflow-hidden flex flex-col justify-between bg-white dark:bg-[#0e1726] shadow-[0_1px_2px_rgba(0,0,0,0.04)] dark:shadow-none ring-1 ring-[#e0e6ed] dark:ring-[#1b2e4b] transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_20px_40px_-12px_rgba(139,92,246,0.25)] hover:ring-[#8b5cf6]/40"
                         >
-                            <div className="h-40 bg-gradient-to-br from-[#8b5cf6]/20 to-[#0e1726]/10 relative flex items-center justify-center border-b border-gray-150 dark:border-gray-800">
+                            <div className="h-44 relative overflow-hidden bg-gradient-to-br from-[#8b5cf6]/25 via-[#6366f1]/15 to-[#0e1726]/10">
                                 {c.course_image ? (
                                     <img
                                         src={c.course_image.startsWith('http') ? c.course_image : `${API_BASE_URL}${c.course_image}`}
                                         alt={c.title}
-                                        className="w-full h-full object-cover"
+                                        className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
                                     />
                                 ) : (
-                                    <span className="text-4xl">📚</span>
+                                    <div className="w-full h-full flex items-center justify-center">
+                                        <IconOpenBook className="w-12 h-12 text-white/70" />
+                                    </div>
                                 )}
-                                <span className="absolute top-3 left-3 badge badge-primary text-[9px] uppercase font-bold px-2 py-0.5 rounded shadow">
+                                {/* Gradient scrim for badge/text legibility */}
+                                <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/0 to-black/20 pointer-events-none" />
+
+                                <span className="absolute top-3 left-3 backdrop-blur-md bg-white/15 border border-white/25 text-white text-[9px] uppercase font-bold tracking-wider px-2.5 py-1 rounded-full shadow-sm">
                                     {c.category_name || 'General'}
                                 </span>
-                                <span className={`absolute top-3 right-3 badge text-[9px] uppercase font-bold px-2 py-0.5 rounded shadow ${
+                                <span className={`absolute top-3 right-3 text-[9px] uppercase font-bold tracking-wider px-2.5 py-1 rounded-full shadow-sm ring-1 ring-white/20 ${
                                     c.difficulty === 'beginner'
-                                        ? 'bg-success text-white'
+                                        ? 'bg-success/90 text-white'
                                         : c.difficulty === 'intermediate'
-                                        ? 'bg-amber-500 text-white'
-                                        : 'bg-danger text-white'
+                                        ? 'bg-amber-500/90 text-white'
+                                        : 'bg-danger/90 text-white'
                                 }`}>
                                     {c.difficulty}
                                 </span>
+
+                                <div className="absolute bottom-3 left-4 right-4 flex items-center gap-1.5 text-white/90 text-[11px] font-semibold drop-shadow">
+                                    <IconClock className="w-3.5 h-3.5" />
+                                    <span>{c.estimated_hours || 0} hrs &middot; Self-paced</span>
+                                </div>
                             </div>
 
                             <div className="p-5 flex flex-col justify-between flex-grow">
                                 <div>
-                                    <h3 className="text-base font-bold text-gray-800 dark:text-white-light line-clamp-1 mb-1">
+                                    <h3 className="text-base font-bold text-gray-800 dark:text-white-light line-clamp-1 mb-1.5 group-hover:text-primary transition-colors duration-300">
                                         {c.title}
                                     </h3>
-                                    <p className="text-xs text-gray-500 dark:text-gray-400 line-clamp-2 leading-relaxed mb-4">
+                                    <p className="text-xs text-gray-500 dark:text-gray-400 line-clamp-2 leading-relaxed mb-4 min-h-[2rem]">
                                         {c.description || 'No description available for this course.'}
                                     </p>
                                 </div>
 
-                                <div className="border-t border-[#f1f2f3] dark:border-[#191e3a] pt-4 mt-auto">
-                                    <div className="flex items-center justify-between text-xs text-gray-400 mb-4">
-                                        <span>Self-Paced Learning</span>
-                                        <span>Est: <strong className="text-gray-700 dark:text-gray-200">{c.estimated_hours || 0} Hours</strong></span>
-                                    </div>
-
+                                <div className="border-t border-dashed border-[#e0e6ed] dark:border-[#1b2e4b] pt-4 mt-auto">
                                     {renderCourseAction(c)}
                                 </div>
                             </div>
@@ -523,7 +449,22 @@ const EmployeeCourseCatalog = () => {
                     </div>
                     {totalPages >= 1 && (
                         <div className="flex flex-wrap items-center justify-between gap-3 mt-6">
-                            <div className="text-xs text-gray-500">Page {page} of {totalPages}</div>
+                            <div className="flex items-center gap-4">
+                                <div className="text-xs text-gray-500">Page {page} of {totalPages}</div>
+                                <div className="flex items-center gap-2">
+                                    <span className="text-xs font-semibold text-gray-500">Per page:</span>
+                                    <select
+                                        className="form-select w-20 text-xs font-semibold py-1"
+                                        value={limit}
+                                        onChange={(e) => { setLimit(Number(e.target.value)); setPage(1); }}
+                                    >
+                                        <option value="3">3</option>
+                                        <option value="6">6</option>
+                                        <option value="9">9</option>
+                                        <option value="12">12</option>
+                                    </select>
+                                </div>
+                            </div>
                             <ul className="inline-flex items-center space-x-1 font-semibold">
                                 <li>
                                     <button

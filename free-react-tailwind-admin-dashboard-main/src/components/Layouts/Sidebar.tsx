@@ -26,6 +26,13 @@ import IconMenuElements from '../Icon/Menu/IconMenuElements';
 import IconMenuInvoice from '../Icon/Menu/IconMenuInvoice';
 import IconMenuNotes from '../Icon/Menu/IconMenuNotes';
 import IconOpenBook from '../Icon/IconOpenBook';
+import IconBook from '../Icon/IconBook';
+import IconAward from '../Icon/IconAward';
+import IconSend from '../Icon/IconSend';
+import IconStar from '../Icon/IconStar';
+import IconUsersGroup from '../Icon/IconUsersGroup';
+import IconListCheck from '../Icon/IconListCheck';
+import IconSettings from '../Icon/IconSettings';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000';
 
@@ -318,7 +325,7 @@ const Sidebar = () => {
                                             <li className="menu nav-item">
                                                 <NavLink to="/employee/learning-management/my-learning" className="group">
                                                     <div className="flex items-center">
-                                                        <IconMenuNotes className="group-hover:!text-primary shrink-0" />
+                                                        <IconOpenBook className="group-hover:!text-primary shrink-0" />
                                                         <span className="ltr:pl-3 rtl:pr-3 text-black dark:text-[#506690] dark:group-hover:text-white-dark">{t('My Learning')}</span>
                                                     </div>
                                                 </NavLink>
@@ -326,7 +333,7 @@ const Sidebar = () => {
                                             <li className="menu nav-item">
                                                 <NavLink to="/employee/learning-management/course-catalog" className="group">
                                                     <div className="flex items-center">
-                                                        <IconMenuTables className="group-hover:!text-primary shrink-0" />
+                                                        <IconBook className="group-hover:!text-primary shrink-0" />
                                                         <span className="ltr:pl-3 rtl:pr-3 text-black dark:text-[#506690] dark:group-hover:text-white-dark">{t('Course Catalog')}</span>
                                                     </div>
                                                 </NavLink>
@@ -334,7 +341,7 @@ const Sidebar = () => {
                                             <li className="menu nav-item">
                                                 <NavLink to="/employee/learning-management/certifications" className="group">
                                                     <div className="flex items-center">
-                                                        <IconMenuDocumentation className="group-hover:!text-primary shrink-0" />
+                                                        <IconAward className="group-hover:!text-primary shrink-0" />
                                                         <span className="ltr:pl-3 rtl:pr-3 text-black dark:text-[#506690] dark:group-hover:text-white-dark">{t('Certifications')}</span>
                                                     </div>
                                                 </NavLink>
@@ -342,7 +349,7 @@ const Sidebar = () => {
                                             <li className="menu nav-item">
                                                 <NavLink to="/employee/learning-management/training-requests" className="group">
                                                     <div className="flex items-center">
-                                                        <IconMenuInvoice className="group-hover:!text-primary shrink-0" />
+                                                        <IconSend className="group-hover:!text-primary shrink-0" />
                                                         <span className="ltr:pl-3 rtl:pr-3 text-black dark:text-[#506690] dark:group-hover:text-white-dark">{t('Training Requests')}</span>
                                                     </div>
                                                 </NavLink>
@@ -350,7 +357,7 @@ const Sidebar = () => {
                                             <li className="menu nav-item">
                                                 <NavLink to="/employee/learning-management/reviews" className="group">
                                                     <div className="flex items-center">
-                                                        <IconMenuNotes className="group-hover:!text-primary shrink-0" />
+                                                        <IconStar className="group-hover:!text-primary shrink-0" />
                                                         <span className="ltr:pl-3 rtl:pr-3 text-black dark:text-[#506690] dark:group-hover:text-white-dark">{t('Course Reviews')}</span>
                                                     </div>
                                                 </NavLink>
@@ -708,7 +715,7 @@ const Sidebar = () => {
                                                 <li className="menu nav-item">
                                                     <NavLink to="/admin/learning-management/course-catalog" className="group">
                                                         <div className="flex items-center">
-                                                            <IconMenuTables className="group-hover:!text-primary shrink-0" />
+                                                            <IconBook className="group-hover:!text-primary shrink-0" />
                                                             <span className="ltr:pl-3 rtl:pr-3 text-black dark:text-[#506690] dark:group-hover:text-white-dark">{t('Course Catalog')}</span>
                                                         </div>
                                                     </NavLink>
@@ -716,7 +723,7 @@ const Sidebar = () => {
                                                 <li className="menu nav-item">
                                                     <NavLink to="/admin/learning-management/compliance-training" className="group">
                                                         <div className="flex items-center">
-                                                            <IconMenuForms className="group-hover:!text-primary shrink-0" />
+                                                            <IconUsersGroup className="group-hover:!text-primary shrink-0" />
                                                             <span className="ltr:pl-3 rtl:pr-3 text-black dark:text-[#506690] dark:group-hover:text-white-dark">{t('Employee Course Activity')}</span>
                                                         </div>
                                                     </NavLink>
@@ -724,7 +731,7 @@ const Sidebar = () => {
                                                 <li className="menu nav-item">
                                                     <NavLink to="/admin/learning-management/certifications" className="group">
                                                         <div className="flex items-center">
-                                                            <IconMenuDocumentation className="group-hover:!text-primary shrink-0" />
+                                                            <IconAward className="group-hover:!text-primary shrink-0" />
                                                             <span className="ltr:pl-3 rtl:pr-3 text-black dark:text-[#506690] dark:group-hover:text-white-dark">{t('Certifications')}</span>
                                                         </div>
                                                     </NavLink>
@@ -732,7 +739,7 @@ const Sidebar = () => {
                                                 <li className="menu nav-item">
                                                     <NavLink to="/admin/learning-management/training-requests" className="group">
                                                         <div className="flex items-center">
-                                                            <IconMenuInvoice className="group-hover:!text-primary shrink-0" />
+                                                            <IconSend className="group-hover:!text-primary shrink-0" />
                                                             <span className="ltr:pl-3 rtl:pr-3 text-black dark:text-[#506690] dark:group-hover:text-white-dark">{t('Training Requests')}</span>
                                                         </div>
                                                     </NavLink>
@@ -740,7 +747,7 @@ const Sidebar = () => {
                                                 <li className="menu nav-item">
                                                     <NavLink to="/admin/learning-management/quizzes" className="group">
                                                         <div className="flex items-center">
-                                                            <IconMenuNotes className="group-hover:!text-primary shrink-0" />
+                                                            <IconListCheck className="group-hover:!text-primary shrink-0" />
                                                             <span className="ltr:pl-3 rtl:pr-3 text-black dark:text-[#506690] dark:group-hover:text-white-dark">{t('Course Quizzes')}</span>
                                                         </div>
                                                     </NavLink>
@@ -748,7 +755,7 @@ const Sidebar = () => {
                                                 <li className="menu nav-item">
                                                     <NavLink to="/admin/learning-management/administration" className="group">
                                                         <div className="flex items-center">
-                                                            <IconMenuElements className="group-hover:!text-primary shrink-0" />
+                                                            <IconSettings className="group-hover:!text-primary shrink-0" />
                                                             <span className="ltr:pl-3 rtl:pr-3 text-black dark:text-[#506690] dark:group-hover:text-white-dark">{t('Administration')}</span>
                                                         </div>
                                                     </NavLink>

@@ -24,7 +24,7 @@ const EmployeeCourseReviews = () => {
     const [search, setSearch] = useState('');
     const [loading, setLoading] = useState(true);
     const [page, setPage] = useState(1);
-    const [limit] = useState(1);
+    const [limit, setLimit] = useState(10);
     const [totalCount, setTotalCount] = useState(0);
     const [totalPages, setTotalPages] = useState(1);
     const [pageInput, setPageInput] = useState('1');
@@ -55,12 +55,12 @@ const EmployeeCourseReviews = () => {
         return headers;
     };
 
-    const fetchReviews = async (requestedPage = page) => {
+    const fetchReviews = async (requestedPage = page, requestedLimit = limit) => {
         setLoading(true);
         try {
             const params = new URLSearchParams({
                 page: requestedPage.toString(),
-                limit: limit.toString(),
+                limit: requestedLimit.toString(),
             });
             if (search.trim()) params.set('search', search.trim());
 
@@ -267,7 +267,30 @@ const EmployeeCourseReviews = () => {
 
             {totalPages >= 1 && (
                 <div className="flex flex-wrap items-center justify-between gap-3 mt-4">
-                    <div className="text-xs text-gray-500">Showing {reviews.length} of {totalCount} reviews</div>
+                    <div className="flex items-center gap-4">
+                        <div className="text-xs text-gray-500">
+                            Showing <span className="text-primary font-semibold">{totalCount === 0 ? 0 : ((page - 1) * limit) + 1}</span> to <span className="text-primary font-semibold">{Math.min(page * limit, totalCount)}</span> of <span className="text-primary font-semibold">{totalCount}</span> reviews
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <span className="text-xs font-semibold text-gray-500">Per page:</span>
+                            <select
+                                className="form-select w-20 text-xs font-semibold py-1"
+                                value={limit}
+                                onChange={(e) => {
+                                    const newLimit = Number(e.target.value);
+                                    setLimit(newLimit);
+                                    setPage(1);
+                                    setPageInput('1');
+                                    fetchReviews(1, newLimit);
+                                }}
+                            >
+                                <option value="4">4</option>
+                                <option value="10">10</option>
+                                <option value="20">20</option>
+                                <option value="50">50</option>
+                            </select>
+                        </div>
+                    </div>
                     <ul className="inline-flex items-center space-x-1 font-semibold">
                         <li>
                             <button

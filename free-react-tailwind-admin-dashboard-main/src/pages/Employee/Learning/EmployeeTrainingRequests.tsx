@@ -12,6 +12,7 @@ import SearchableSelect from '../../Elements/SearchableSelect';
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000';
 const REQUESTS_API = `${API_BASE_URL}/employee/training-requests/`;
 const COURSES_API = `${API_BASE_URL}/employee/courses/`;
+const ENROLLMENTS_API = `${API_BASE_URL}/employee/enrollments/`;
 const EMP_INFO_API = `${API_BASE_URL}/employee/company-info/`;
 
 type RequestType = {
@@ -45,13 +46,14 @@ const EmployeeTrainingRequests = () => {
     const dispatch = useDispatch();
     const [requests, setRequests] = useState<RequestType[]>([]);
     const [courses, setCourses] = useState<CourseType[]>([]);
+    const [enrolledCourseIds, setEnrolledCourseIds] = useState<Set<number>>(new Set());
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [modalOpen, setModalOpen] = useState(false);
     const [search, setSearch] = useState('');
     const [statusTab, setStatusTab] = useState<'all' | 'pending' | 'approved' | 'rejected'>('all');
     const [page, setPage] = useState(1);
-    const [limit, setLimit] = useState(1);
+    const [limit, setLimit] = useState(10);
     const [totalCount, setTotalCount] = useState(0);
     const [totalPages, setTotalPages] = useState(1);
     const [pageInput, setPageInput] = useState('1');
@@ -72,6 +74,7 @@ const EmployeeTrainingRequests = () => {
         setIsReportingManager(localStorage.getItem('is_reporting_manager') === 'true');
         fetchRequests();
         fetchCourses();
+        fetchEnrollments();
     }, [dispatch]);
 
     useEffect(() => {
@@ -89,7 +92,7 @@ const EmployeeTrainingRequests = () => {
         return headers;
     };
 
-    const fetchRequests = async (requestedPage = page) => {
+    const fetchRequests = async (requestedPage = page, requestedLimit = limit) => {
         setLoading(true);
         try {
             const url = new URL(REQUESTS_API);
@@ -97,7 +100,7 @@ const EmployeeTrainingRequests = () => {
                 url.searchParams.append('status', statusTab);
             }
             url.searchParams.append('page', requestedPage.toString());
-            url.searchParams.append('limit', limit.toString());
+            url.searchParams.append('limit', requestedLimit.toString());
             if (search.trim()) {
                 url.searchParams.append('search', search.trim());
             }
@@ -128,6 +131,21 @@ const EmployeeTrainingRequests = () => {
             }
         } catch (error) {
             console.error('Error fetching catalog courses:', error);
+        }
+    };
+
+    const fetchEnrollments = async () => {
+        try {
+            const url = new URL(ENROLLMENTS_API);
+            url.searchParams.append('limit', '100');
+            const response = await authFetch(url.toString(), { headers: getHeaders() });
+            if (response.ok) {
+                const data = await response.json();
+                const enrollments = data.results || data || [];
+                setEnrolledCourseIds(new Set(enrollments.map((e: any) => e.course)));
+            }
+        } catch (error) {
+            console.error('Error fetching enrollments:', error);
         }
     };
 
@@ -385,8 +403,29 @@ const EmployeeTrainingRequests = () => {
 
             {totalPages >= 1 && (
                 <div className="flex flex-wrap items-center justify-between gap-3 mt-4">
-                    <div className="text-xs text-gray-500">
-                        Showing {requests.length} of {totalCount} requests
+                    <div className="flex items-center gap-4">
+                        <div className="text-xs text-gray-500">
+                            Showing <span className="text-primary font-semibold">{totalCount === 0 ? 0 : ((page - 1) * limit) + 1}</span> to <span className="text-primary font-semibold">{Math.min(page * limit, totalCount)}</span> of <span className="text-primary font-semibold">{totalCount}</span> requests
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <span className="text-xs font-semibold text-gray-500">Per page:</span>
+                            <select
+                                className="form-select w-20 text-xs font-semibold py-1"
+                                value={limit}
+                                onChange={(e) => {
+                                    const newLimit = Number(e.target.value);
+                                    setLimit(newLimit);
+                                    setPage(1);
+                                    setPageInput('1');
+                                    fetchRequests(1, newLimit);
+                                }}
+                            >
+                                <option value="5">5</option>
+                                <option value="10">10</option>
+                                <option value="20">20</option>
+                                <option value="50">50</option>
+                            </select>
+                        </div>
                     </div>
                     <ul className="inline-flex items-center space-x-1 font-semibold">
                         <li>
@@ -491,7 +530,7 @@ const EmployeeTrainingRequests = () => {
                             <div>
                                 <label className="font-bold text-xs mb-1 block">Catalog Course</label>
                                 <SearchableSelect
-                                    options={courses.map((c) => ({ label: c.title, value: String(c.id) }))}
+                                    options={courses.filter((c) => !enrolledCourseIds.has(c.id)).map((c) => ({ label: c.title, value: String(c.id) }))}
                                     value={form.course}
                                     onChange={(value) => setForm({ ...form, course: String(value) })}
                                     placeholder="Select a course"

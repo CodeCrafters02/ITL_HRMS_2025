@@ -1146,6 +1146,12 @@ const Course = () => {
                                                 </div>
                                                 <div>
                                                     <label className="font-semibold mb-1 block">Course Thumbnail</label>
+                                                    {!thumbnailFile && editingCourse?.thumbnail_url && (
+                                                        <div className="flex items-center gap-2 mb-2">
+                                                            <img src={editingCourse.thumbnail_url} alt="Current thumbnail" className="w-12 h-12 object-cover rounded-lg border border-white-light dark:border-[#1b2e4b]" />
+                                                            <span className="text-xs text-gray-400">Current image (choose a file to replace)</span>
+                                                        </div>
+                                                    )}
                                                     <input type="file" accept="image/*" className="form-input rounded-lg text-xs" onChange={(e) => setThumbnailFile(e.target.files ? e.target.files[0] : null)} />
                                                 </div>
                                             </div>

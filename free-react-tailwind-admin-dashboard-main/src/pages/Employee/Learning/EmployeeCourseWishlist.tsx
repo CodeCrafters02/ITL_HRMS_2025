@@ -25,7 +25,7 @@ const EmployeeCourseWishlist = () => {
     const [search, setSearch] = useState('');
     const [loading, setLoading] = useState(true);
     const [page, setPage] = useState(1);
-    const [limit] = useState(9);
+    const [limit, setLimit] = useState(9);
     const [totalCount, setTotalCount] = useState(0);
     const [totalPages, setTotalPages] = useState(1);
     const [pageInput, setPageInput] = useState('1');
@@ -48,12 +48,12 @@ const EmployeeCourseWishlist = () => {
         return headers;
     };
 
-    const fetchData = async (requestedPage = page) => {
+    const fetchData = async (requestedPage = page, requestedLimit = limit) => {
         setLoading(true);
         try {
             const params = new URLSearchParams({
                 page: requestedPage.toString(),
-                limit: limit.toString(),
+                limit: requestedLimit.toString(),
             });
             if (search.trim()) params.set('search', search.trim());
 
@@ -208,9 +208,32 @@ const EmployeeCourseWishlist = () => {
                 </div>
             )}
 
-            {totalPages > 1 && (
+            {totalCount > 0 && (
                 <div className="flex flex-wrap items-center justify-between gap-3 mt-4">
-                    <div className="text-xs text-gray-500">Showing {wishlist.length} of {totalCount} wishlisted courses</div>
+                    <div className="flex items-center gap-4">
+                        <div className="text-xs text-gray-500">
+                            Showing <span className="text-primary font-semibold">{totalCount === 0 ? 0 : ((page - 1) * limit) + 1}</span> to <span className="text-primary font-semibold">{Math.min(page * limit, totalCount)}</span> of <span className="text-primary font-semibold">{totalCount}</span> wishlisted courses
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <span className="text-xs font-semibold text-gray-500">Per page:</span>
+                            <select
+                                className="form-select w-20 text-xs font-semibold py-1"
+                                value={limit}
+                                onChange={(e) => {
+                                    const newLimit = Number(e.target.value);
+                                    setLimit(newLimit);
+                                    setPage(1);
+                                    setPageInput('1');
+                                    fetchData(1, newLimit);
+                                }}
+                            >
+                                <option value="3">3</option>
+                                <option value="6">6</option>
+                                <option value="9">9</option>
+                                <option value="12">12</option>
+                            </select>
+                        </div>
+                    </div>
                     <div className="flex items-center gap-2">
                         <button
                             type="button"
