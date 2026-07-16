@@ -25,6 +25,7 @@ interface Evaluation {
     perf_score: number | null;
     status: string;
     answers: RawAnswer[];
+    recommended_hike?: number | null;
 }
 
 type RoleKey = 'self' | 'manager' | 'peer' | 'hr';
@@ -209,6 +210,15 @@ const AppraisalHistory = () => {
                                                         </div>
                                                     );
                                                 })}
+                                                {ev.recommended_hike !== undefined && ev.recommended_hike !== null && (
+                                                    <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-emerald-200 bg-emerald-50 dark:border-emerald-900/40 dark:bg-emerald-950/20">
+                                                        <span className="text-sm">📈</span>
+                                                        <div>
+                                                            <p className="text-xs font-black leading-none text-emerald-600 dark:text-emerald-400">+{ev.recommended_hike}%</p>
+                                                            <p className="text-[8px] text-gray-400 uppercase tracking-wide">Salary Hike</p>
+                                                        </div>
+                                                    </div>
+                                                )}
                                             </div>
                                         </div>
                                     </div>

@@ -9,7 +9,7 @@ const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
 const getHeaders = () => ({ Authorization: `Bearer ${localStorage.getItem('access_token')}` });
 
 interface KRA { id: number; kra_name: string; weightage: number; target_description: string; created_at: string | null; }
-interface Skill { id: number; skill_name: string; proficiency_level: string; approval_status: string; }
+interface Skill { id: number; skill_name: string; proficiency_level: string; approval_status: string; source?: string; }
 interface Evaluation { id: number; cycle_name: string; cycle_start: string | null; cycle_end: string | null; self_rating: number | null; manager_rating: number | null; final_rating: number | null; status: string; }
 interface Feedback { id: number; feedback_type: string; feedback_text: string; rating: number | null; given_by_name: string; created_at: string; }
 interface NineBox { performance_score: number; potential_score: number; performance_label: string; potential_label: string; box_title: string; }
@@ -381,12 +381,17 @@ const PerformanceDashboard = () => {
                     {(data?.skills.length ?? 0) > 0 ? (
                         <>
                             <ReactApexChart options={radarOptions} series={radarSeries} type="radar" height={260} />
-                            <div className="flex flex-wrap gap-2 mt-2">
-                                {data?.skills.map(s => (
+                            <div className="flex flex-wrap gap-2 mt-2 items-center">
+                                {data?.skills.slice(0, 2).map(s => (
                                     <span key={s.id} className={`text-[9px] font-black px-2 py-0.5 rounded-full text-white ${PROF_COLOR[s.proficiency_level?.toLowerCase()] ?? 'bg-gray-400'}`}>
-                                        {s.skill_name} · {s.proficiency_level}
+                                        {s.source === 'certificate' && '🎓 '}{s.skill_name} · {s.proficiency_level}
                                     </span>
                                 ))}
+                                {data && data.skills.length > 2 && (
+                                    <NavLink to="/employee/performance/skill-upgrades" className="text-[9px] font-black px-2 py-0.5 rounded-full bg-primary text-white hover:bg-opacity-95 hover:shadow transition-all cursor-pointer">
+                                        More +
+                                    </NavLink>
+                                )}
                             </div>
                         </>
                     ) : (

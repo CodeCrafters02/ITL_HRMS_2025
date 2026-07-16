@@ -393,23 +393,15 @@ const Sidebar = () => {
                                                 </AnimateHeight>
                                             </li>
 
-                                            {/* Skills */}
-                                            <li className="menu nav-item">
-                                                <button type="button" className={`${currentMenu === 'emp-perf-skills' ? 'active' : ''} nav-link group w-full`} onClick={() => toggleMenu('emp-perf-skills')}>
-                                                    <div className="flex items-center">
-                                                        <IconMenuTables className="group-hover:!text-primary shrink-0" />
-                                                        <span className="ltr:pl-3 rtl:pr-3 text-black dark:text-[#506690] dark:group-hover:text-white-dark">{t('Skills')}</span>
-                                                    </div>
-                                                    <div className={currentMenu !== 'emp-perf-skills' ? 'rtl:rotate-90 -rotate-90' : ''}><IconCaretDown /></div>
-                                                </button>
-                                                <AnimateHeight duration={300} height={currentMenu === 'emp-perf-skills' ? 'auto' : 0}>
-                                                    <ul className="sub-menu text-gray-500">
-                                                        <li><NavLink to="/employee/performance/competencies">{t('Competencies')}</NavLink></li>
-                                                        <li><NavLink to="/employee/performance/skills-inventory">{t('Skills Inventory')}</NavLink></li>
-                                                        <li><NavLink to="/employee/performance/skill-upgrades">{t('Skill Upgrades')}</NavLink></li>
-                                                    </ul>
-                                                </AnimateHeight>
-                                            </li>
+                                             {/* Skills */}
+                                             <li className="menu nav-item">
+                                                 <NavLink to="/employee/performance/skill-upgrades" className="nav-link group w-full">
+                                                     <div className="flex items-center">
+                                                         <IconMenuTables className="group-hover:!text-primary shrink-0" />
+                                                         <span className="ltr:pl-3 rtl:pr-3 text-black dark:text-[#506690] dark:group-hover:text-white-dark">{t('Skill Upgrades')}</span>
+                                                     </div>
+                                                 </NavLink>
+                                             </li>
 
                                             {/* Feedback */}
                                             <li className="menu nav-item">
@@ -788,7 +780,6 @@ const Sidebar = () => {
                                                         <ul className="sub-menu text-gray-500">
                                                             <li><NavLink to="/admin/performance/search-profile">{t('Search Profile')}</NavLink></li>
                                                             <li><NavLink to="/admin/performance/appraisal">{t('Admin/HR Appraisal')}</NavLink></li>
-                                                            <li><NavLink to="/admin/performance/hr-appraisal-direct">{t('HR Appraisal Direct')}</NavLink></li>
                                                             <li><NavLink to="/admin/performance/assign-kras">{t('Assign KRAs/Goals')}</NavLink></li>
                                                             <li><NavLink to="/admin/performance/kra-review">{t('KRA Review')}</NavLink></li>
                                                             <li><NavLink to="/admin/performance/track-feedback">{t('Track Feedback')}</NavLink></li>

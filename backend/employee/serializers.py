@@ -905,17 +905,30 @@ class AppraisalEvaluationSerializer(serializers.ModelSerializer):
     employee_name = serializers.SerializerMethodField()
     perf_score = serializers.SerializerMethodField()
     peer_overall_rating = serializers.SerializerMethodField()
+    recommended_hike = serializers.SerializerMethodField()
 
     class Meta:
         model = AppraisalEvaluation
         fields = ['id', 'employee', 'employee_name', 'manager', 'cycle', 'cycle_name',
                   'self_overall_rating', 'manager_overall_rating', 'hr_overall_rating',
-                  'peer_overall_rating', 'perf_score', 'status', 'answers']
+                  'peer_overall_rating', 'perf_score', 'status', 'answers', 'recommended_hike']
         read_only_fields = ['employee', 'manager', 'self_overall_rating',
                             'manager_overall_rating', 'hr_overall_rating']
 
     def get_employee_name(self, obj):
         return f"{obj.employee.first_name} {obj.employee.last_name}".strip() if obj.employee else ""
+
+    def get_recommended_hike(self, obj):
+        rating = self.get_perf_score(obj)
+        if rating is not None and obj.status == 'completed':
+            config = SalaryHikeConfig.objects.filter(
+                cycle=obj.cycle,
+                min_rating__lte=rating,
+                max_rating__gte=rating
+            ).first()
+            if config:
+                return float(config.recommended_hike_percentage)
+        return None
 
     def _role_avg(self, answers, role_type):
         """Raw score average for a given role_type (same scale as self/manager/hr fields)."""

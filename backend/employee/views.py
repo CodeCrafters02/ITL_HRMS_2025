@@ -65,6 +65,7 @@ from app.models import (
     Level,
     Designation,
     DepartmentWiseWorkingDays,
+    Department,
 )
 from .models import *
 from .serializers import *
@@ -2272,11 +2273,73 @@ class AllEmployeesAPIView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        employees = Employee.objects.filter(is_active=True, user__role='employee').select_related(
+        search = request.query_params.get('search', '').strip()
+        dept = request.query_params.get('department', '').strip()
+        page_num = request.query_params.get('page')
+        page_size_val = request.query_params.get('page_size')
+
+        base_qs = Employee.objects.filter(is_active=True, user__role='employee').select_related(
             'department', 'designation', 'reporting_manager'
         )
+
+        # Get all unique departments for the dropdown list before applying filters
+        all_departments = list(base_qs.exclude(department__isnull=True).values_list('department__department_name', flat=True).distinct().order_by('department__department_name'))
+
+        # Apply filters
+        if search:
+            from django.db.models import Q
+            base_qs = base_qs.filter(
+                Q(first_name__icontains=search) |
+                Q(last_name__icontains=search) |
+                Q(employee_id__icontains=search) |
+                Q(designation__designation_name__icontains=search)
+            )
+        if dept:
+            base_qs = base_qs.filter(department__department_name__iexact=dept)
+
+        # If neither page nor page_size is supplied, return full non-paginated list (backwards compatibility)
+        if page_num is None and page_size_val is None:
+            data = []
+            for emp in base_qs.order_by('id'):
+                photo_url = None
+                if emp.photo:
+                    try:
+                        photo_url = request.build_absolute_uri(emp.photo.url)
+                    except Exception:
+                        photo_url = emp.photo.name
+                
+                data.append({
+                    'id': emp.id,
+                    'employee_id': emp.employee_id,
+                    'first_name': emp.first_name,
+                    'last_name': emp.last_name,
+                    'full_name': f"{emp.first_name} {emp.last_name}".strip(),
+                    'department': emp.department_id,
+                    'department_name': emp.department.department_name if emp.department else '—',
+                    'designation_name': emp.designation.designation_name if emp.designation else '—',
+                    'photo': photo_url,
+                    'avatarBg': 'bg-teal-500',
+                    'initials': ((emp.first_name or '')[:1] + (emp.last_name or '')[:1]).upper(),
+                })
+            return Response(data)
+
+        # Paginate
+        page = int(page_num) if page_num else 1
+        page_size = int(page_size_val) if page_size_val else 10
+
+        from django.core.paginator import Paginator
+        paginator = Paginator(base_qs.order_by('id'), page_size)
+        total_records = paginator.count
+        total_pages = paginator.num_pages
+
+        try:
+            employees_page = paginator.page(page)
+        except Exception:
+            employees_page = paginator.page(1)
+            page = 1
+
         data = []
-        for emp in employees:
+        for emp in employees_page:
             photo_url = None
             if emp.photo:
                 try:
@@ -2291,14 +2354,19 @@ class AllEmployeesAPIView(APIView):
                 'last_name': emp.last_name,
                 'full_name': f"{emp.first_name} {emp.last_name}".strip(),
                 'department': emp.department_id,
-                'department_name': emp.department.department_name if emp.department else None,
-                'designation_name': emp.designation.designation_name if emp.designation else None,
-                'reporting_manager_name': f"{emp.reporting_manager.first_name} {emp.reporting_manager.last_name}".strip() if emp.reporting_manager else None,
+                'department_name': emp.department.department_name if emp.department else '—',
+                'designation_name': emp.designation.designation_name if emp.designation else '—',
                 'photo': photo_url,
                 'avatarBg': 'bg-teal-500',
                 'initials': ((emp.first_name or '')[:1] + (emp.last_name or '')[:1]).upper(),
             })
-        return Response(data)
+
+        return Response({
+            'results': data,
+            'total_pages': total_pages,
+            'total_records': total_records,
+            'departments': all_departments,
+        })
 
 
 class MultiRaterMappingViewSet(viewsets.ModelViewSet):
@@ -2364,7 +2432,30 @@ class EmployeePerformanceProfileAPIView(APIView):
             'skill_name': s.skill.name if s.skill else None,
             'proficiency_level': s.proficiency_level,
             'approval_status': s.approval_status,
+            'source': 'manual',
         } for s in skills]
+
+        # 2b. Inject certificate-derived skills into the radar
+        existing_skill_names = {d['skill_name'].lower() for d in skills_data if d['skill_name']}
+        difficulty_to_prof = {'beginner': 'beginner', 'intermediate': 'intermediate', 'advanced': 'expert'}
+        cert_skills = Certificate.objects.filter(
+            employee=employee, status='valid'
+        ).select_related('course')
+        for idx, cert in enumerate(cert_skills, start=1):
+            cert_label = cert.certificate_name or (cert.course.title if cert.course else None)
+            if not cert_label or cert_label.lower() in existing_skill_names:
+                continue
+            existing_skill_names.add(cert_label.lower())
+            prof = 'intermediate'  # default
+            if cert.course and cert.course.difficulty_level:
+                prof = difficulty_to_prof.get(cert.course.difficulty_level, 'intermediate')
+            skills_data.append({
+                'id': -(1000 + idx),  # negative id to distinguish from real EmployeeSkill
+                'skill_name': cert_label,
+                'proficiency_level': prof,
+                'approval_status': 'approved',
+                'source': 'certificate',
+            })
 
         # 3. Evaluations — filter by appraisal cycle start_date
         eval_qs = AppraisalEvaluation.objects.filter(employee=employee).select_related('cycle')
@@ -2444,7 +2535,7 @@ class EmployeePerformanceProfileAPIView(APIView):
         else:
             perf_score = 0.0
 
-        # Potential = Skills(50%) + Self-appraisal(30%) + Self-feedback(20%) fallback chain
+        # Potential score: Skills(40%) + Self-Signals(20%) + Manager-Feedback(20%) + KRA-Review(20%)
         prof_map = {'beginner': 2.0, 'intermediate': 3.5, 'expert': 5.0}
         skill_avg = (sum(prof_map.get((s.proficiency_level or '').lower(), 3.0) for s in skills) / skills.count()) if skills.exists() else None
 
@@ -2464,7 +2555,19 @@ class EmployeePerformanceProfileAPIView(APIView):
         else:
             combined_self = None
 
-        pot_sources = [(skill_avg, 0.6), (combined_self, 0.4)]
+        # Manager's direct feedback rating
+        mgr_fb_avg = None
+        if employee.reporting_manager:
+            mgr_fb_qs = ContinuousFeedback.objects.filter(sender=employee.reporting_manager, receiver=employee, rating__isnull=False)
+            mgr_fb_ratings = [f.rating for f in mgr_fb_qs]
+            mgr_fb_avg = sum(mgr_fb_ratings) / len(mgr_fb_ratings) if mgr_fb_ratings else None
+
+        pot_sources = [
+            (skill_avg, 0.4),
+            (combined_self, 0.2),
+            (mgr_fb_avg, 0.2),
+            (kra_score, 0.2)
+        ]
         pot_available = [(s, w) for s, w in pot_sources if s is not None]
         if pot_available:
             tw = sum(w for _, w in pot_available)
@@ -2493,19 +2596,29 @@ class EmployeePerformanceProfileAPIView(APIView):
         pot_breakdown = {
             'skills': {
                 'score': round(skill_avg, 2) if skill_avg is not None else None,
-                'weight': 60,
+                'weight': 40,
                 'items': [{'name': s.skill.name if s.skill else '', 'level': s.proficiency_level, 'mapped': prof_map.get((s.proficiency_level or '').lower(), 3.0)} for s in skills],
             },
             'self_appraisal': {
                 'score': round(self_appraisal_avg, 2) if self_appraisal_avg is not None else None,
-                'weight': 24,
+                'weight': 12,
                 'items': [{'cycle': ev.cycle.name if ev.cycle else 'General', 'rating': float(ev.self_overall_rating)} for ev in all_evals if ev.self_overall_rating],
             },
             'self_feedback': {
                 'score': round(self_fb_avg, 2) if self_fb_avg is not None else None,
-                'weight': 16,
+                'weight': 8,
                 'items': [{'type': f.get_category_display(), 'rating': f.rating, 'text': f.feedback_text[:80]} for f in self_fb_qs if f.rating],
             },
+            'manager_feedback': {
+                'score': round(mgr_fb_avg, 2) if mgr_fb_avg is not None else None,
+                'weight': 20,
+                'items': [{'type': f.get_category_display(), 'rating': f.rating, 'text': f.feedback_text[:80]} for f in mgr_fb_qs] if employee.reporting_manager else [],
+            },
+            'kra_review': {
+                'score': round(kra_score, 2) if kra_score is not None else None,
+                'weight': 20,
+                'items': [{'title': ev.employee_kra.kra_master.title, 'score': float(ev.score)} for ev in kra_evals],
+            }
         }
 
         def label(score):
@@ -2521,9 +2634,48 @@ class EmployeePerformanceProfileAPIView(APIView):
             ('High', 'Low'): 'Solid Performer', ('High', 'Medium'): 'High Performer', ('High', 'High'): 'Star Performer',
         }
 
+        certs = Certificate.objects.filter(employee=employee).select_related('course')
+        certs_data = []
+        for c in certs:
+            certs_data.append({
+                'id': c.id,
+                'certificate_name': c.certificate_name,
+                'course_name': c.course.title if c.course else None,
+                'issuing_authority': c.issuing_authority,
+                'source': c.get_source_display(),
+                'certificate_number': c.certificate_number,
+                'certificate_file': c.certificate_file.url if c.certificate_file else None,
+                'issue_date': c.issue_date.strftime('%Y-%m-%d') if c.issue_date else None,
+                'expiry_date': c.expiry_date.strftime('%Y-%m-%d') if c.expiry_date else None,
+                'status': c.get_status_display(),
+            })
+
+        photo_url = None
+        if employee.photo:
+            try:
+                photo_url = request.build_absolute_uri(employee.photo.url)
+            except Exception:
+                photo_url = employee.photo.name
+
+        emp_details = {
+            'id': employee.id,
+            'employee_id': employee.employee_id,
+            'first_name': employee.first_name,
+            'last_name': employee.last_name,
+            'full_name': f"{employee.first_name} {employee.last_name}".strip(),
+            'department_name': employee.department.department_name if employee.department else None,
+            'designation_name': employee.designation.designation_name if employee.designation else None,
+            'reporting_manager_name': f"{employee.reporting_manager.first_name} {employee.reporting_manager.last_name}".strip() if employee.reporting_manager else None,
+            'photo': photo_url,
+            'initials': ((employee.first_name or '')[:1] + (employee.last_name or '')[:1]).upper(),
+            'avatarBg': 'bg-teal-500',
+        }
+
         return Response({
+            'employee_details': emp_details,
             'kras': kras_data,
             'skills': skills_data,
+            'certificates': certs_data,
             'evaluations': evals_data,
             'feedbacks': feedback_data,
             'date_range': {'start': raw_start or None, 'end': raw_end or None},
@@ -2568,7 +2720,31 @@ class MyPerformanceDashboardAPIView(APIView):
                 'skill_name': s.skill.name if s.skill else None,
                 'category': s.skill.category if s.skill else '',
                 'proficiency_level': s.proficiency_level,
-                'approval_status': s.approval_status
+                'approval_status': s.approval_status,
+                'source': 'manual',
+            })
+
+        # 2b. Inject certificate-derived skills into the radar
+        existing_skill_names = {d['skill_name'].lower() for d in skills_data if d['skill_name']}
+        difficulty_to_prof = {'beginner': 'beginner', 'intermediate': 'intermediate', 'advanced': 'expert'}
+        cert_skills = Certificate.objects.filter(
+            employee=employee, status='valid'
+        ).select_related('course')
+        for idx, cert in enumerate(cert_skills, start=1):
+            cert_label = cert.certificate_name or (cert.course.title if cert.course else None)
+            if not cert_label or cert_label.lower() in existing_skill_names:
+                continue
+            existing_skill_names.add(cert_label.lower())
+            prof = 'intermediate'
+            if cert.course and cert.course.difficulty_level:
+                prof = difficulty_to_prof.get(cert.course.difficulty_level, 'intermediate')
+            skills_data.append({
+                'id': -(1000 + idx),
+                'skill_name': cert_label,
+                'category': cert.course.category.name if cert.course and cert.course.category else 'Certificate',
+                'proficiency_level': prof,
+                'approval_status': 'approved',
+                'source': 'certificate',
             })
 
         # 3. Fetch Appraisals & Evaluations
@@ -2643,12 +2819,22 @@ class MyPerformanceDashboardAPIView(APIView):
         self_ratings = [float(ev.self_overall_rating) for ev in evals if ev.self_overall_rating]
         self_avg = sum(self_ratings) / len(self_ratings) if self_ratings else None
 
-        if skill_avg is not None and self_avg is not None:
-            pot_score = skill_avg * 0.6 + self_avg * 0.4
-        elif skill_avg is not None:
-            pot_score = skill_avg
-        elif self_avg is not None:
-            pot_score = self_avg
+        mgr_fb_avg = None
+        if employee.reporting_manager:
+            mgr_fb_qs = ContinuousFeedback.objects.filter(sender=employee.reporting_manager, receiver=employee, rating__isnull=False)
+            mgr_fb_ratings = [f.rating for f in mgr_fb_qs]
+            mgr_fb_avg = sum(mgr_fb_ratings) / len(mgr_fb_ratings) if mgr_fb_ratings else None
+
+        pot_sources = [
+            (skill_avg, 0.4),
+            (self_avg, 0.2),
+            (mgr_fb_avg, 0.2),
+            (kra_score, 0.2)
+        ]
+        pot_available = [(s, w) for s, w in pot_sources if s is not None]
+        if pot_available:
+            tw = sum(w for _, w in pot_available)
+            pot_score = sum(s * w for s, w in pot_available) / tw
         else:
             pot_score = 0.0
 
@@ -2779,6 +2965,8 @@ class PerformanceDashboardAPIView(APIView):
         ).values('receiver_id', 'sender_id', 'rating')
         peer_fb_map  = {}  # employee_id -> [rating, ...]
         self_fb_map  = {}  # employee_id -> [rating, ...]
+        manager_map  = {emp.id: emp.reporting_manager_id for emp in qs}
+        manager_fb_map = {} # employee_id -> [rating, ...]
         for fb in fb_qs:
             if fb['rating'] is None:
                 continue
@@ -2786,6 +2974,8 @@ class PerformanceDashboardAPIView(APIView):
                 self_fb_map.setdefault(fb['receiver_id'], []).append(float(fb['rating']))
             else:
                 peer_fb_map.setdefault(fb['receiver_id'], []).append(float(fb['rating']))
+                if fb['sender_id'] == manager_map.get(fb['receiver_id']):
+                    manager_fb_map.setdefault(fb['receiver_id'], []).append(float(fb['rating']))
 
         # Skills
         skills_qs = EmployeeSkill.objects.filter(employee_id__in=emp_ids).values('employee_id', 'proficiency_level')
@@ -2822,7 +3012,7 @@ class PerformanceDashboardAPIView(APIView):
 
             perf_score = _blend([(kra_score, 0.5), (appraisal_score, 0.3), (peer_score, 0.2)])
 
-            # Potential score: Skills(60%) + [Self-appraisal(60%) + Self-feedback(40%)](40%)
+            # Potential score: Skills(40%) + Self-Signals(20%) + Manager-Feedback(20%) + KRA-Review(20%)
             pot_scores = skill_map.get(emp.id, [])
             skill_avg = sum(pot_scores) / len(pot_scores) if pot_scores else None
 
@@ -2834,7 +3024,16 @@ class PerformanceDashboardAPIView(APIView):
 
             combined_self = _blend([(self_appr_avg, 0.6), (self_fb_avg, 0.4)])
             combined_self_val = combined_self if (self_appr_avg is not None or self_fb_avg is not None) else None
-            pot_score = _blend([(skill_avg, 0.6), (combined_self_val, 0.4)])
+
+            mgr_list = manager_fb_map.get(emp.id, [])
+            mgr_fb_avg = sum(mgr_list) / len(mgr_list) if mgr_list else None
+
+            pot_score = _blend([
+                (skill_avg, 0.4),
+                (combined_self_val, 0.2),
+                (mgr_fb_avg, 0.2),
+                (kra_score, 0.2)
+            ])
 
             initials = ((emp.first_name or '')[:1] + (emp.last_name or '')[:1]).upper()
             data.append({

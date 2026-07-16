@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import axios from 'axios';
 import IconSearch from '../../../components/Icon/IconSearch';
@@ -74,11 +74,27 @@ interface PotBreakdown {
     skills:        { score: number | null; weight: number; items: { name: string; level: string; mapped: number }[] };
     self_appraisal:{ score: number | null; weight: number; items: { cycle: string; rating: number }[] };
     self_feedback: { score: number | null; weight: number; items: { type: string; rating: number; text: string }[] };
+    manager_feedback?: { score: number | null; weight: number; items: { type: string; rating: number; text: string }[] };
+    kra_review?:       { score: number | null; weight: number; items: { title: string; score: number }[] };
+}
+
+interface Certificate {
+    id: number;
+    certificate_name: string;
+    course_name: string | null;
+    issuing_authority: string;
+    source: string;
+    certificate_number: string;
+    certificate_file: string | null;
+    issue_date: string | null;
+    expiry_date: string | null;
+    status: string;
 }
 
 interface PerformanceProfile {
     kras: KRA[];
     skills: Skill[];
+    certificates?: Certificate[];
     evaluations: Evaluation[];
     feedbacks: Feedback[];
     nine_box: {
@@ -104,6 +120,13 @@ const SearchProfile = () => {
     const [searchQuery, setSearchQuery] = useState('');
     const [selectedDept, setSelectedDept] = useState('');
 
+    // Pagination
+    const [page, setPage] = useState(1);
+    const [pageSize, setPageSize] = useState(10);
+    const [totalPages, setTotalPages] = useState(1);
+    const [totalRecords, setTotalRecords] = useState(0);
+    const [departmentsList, setDepartmentsList] = useState<string[]>([]);
+
     // UI Loading & Errors
     const [loadingList, setLoadingList] = useState(true);
     const [loadingProfile, setLoadingProfile] = useState(false);
@@ -113,48 +136,89 @@ const SearchProfile = () => {
     const [evalActiveTab, setEvalActiveTab] = useState<'self' | 'manager' | 'peer' | 'hr'>('self');
 
     const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
+    const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
     const getHeaders = () => {
         const token = localStorage.getItem('access_token');
         return { Authorization: `Bearer ${token}` };
     };
 
-    // 1. Fetch employee list on mount
+    // 1. Fetch employee list
+    const fetchEmployees = async (search: string, dept: string, pageNum: number, limit: number) => {
+        try {
+            setLoadingList(true);
+            const response = await axios.get(`${API_BASE}/employee/all-employees-list/`, {
+                headers: getHeaders(),
+                params: {
+                    search: search,
+                    department: dept,
+                    page: pageNum,
+                    page_size: limit,
+                },
+            });
+            setEmployees(response.data.results || []);
+            setTotalPages(response.data.total_pages || 1);
+            setTotalRecords(response.data.total_records || 0);
+            setDepartmentsList(response.data.departments || []);
+        } catch (err) {
+            console.error('Error loading employees:', err);
+        } finally {
+            setLoadingList(false);
+        }
+    };
+
+    // Fetch on mount or page changes
     useEffect(() => {
-        const fetchEmployees = async () => {
-            try {
-                setLoadingList(true);
-                const response = await axios.get(`${API_BASE}/employee/all-employees-list/`, {
-                    headers: getHeaders(),
-                });
-                setEmployees(response.data);
-            } catch (err) {
-                console.error('Error loading employees:', err);
-            } finally {
-                setLoadingList(false);
-            }
-        };
-        fetchEmployees();
-    }, []);
+        fetchEmployees(searchQuery, selectedDept, page, pageSize);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [page, pageSize]);
+
+    // Handle Search / Filter inputs with debounce / reset page
+    const handleSearchChange = (val: string) => {
+        setSearchQuery(val);
+        setPage(1);
+        if (debounceRef.current) clearTimeout(debounceRef.current);
+        debounceRef.current = setTimeout(() => {
+            fetchEmployees(val, selectedDept, 1, pageSize);
+        }, 400);
+    };
+
+    const handleDeptChange = (val: string) => {
+        setSelectedDept(val);
+        setPage(1);
+        fetchEmployees(searchQuery, val, 1, pageSize);
+    };
+
+    const handlePageChange = (pageNum: number) => {
+        setPage(pageNum);
+    };
+
+    const handlePageSizeChange = (limit: number) => {
+        setPageSize(limit);
+        setPage(1);
+    };
 
     // 1b. Auto-open profile when navigated here with ?id=
     useEffect(() => {
         const id = searchParams.get('id');
-        if (!id || employees.length === 0) return;
-        const emp = employees.find(e => String(e.id) === id);
-        if (emp) loadPerformanceProfile(emp);
+        if (id) {
+            loadPerformanceProfile({ id: Number(id) });
+        }
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [employees, searchParams]);
+    }, [searchParams]);
 
     // 2. Fetch employee performance details when clicked
-    const loadPerformanceProfile = async (emp: Employee) => {
+    const loadPerformanceProfile = async (emp: Employee | { id: number }) => {
         try {
             setLoadingProfile(true);
-            setSelectedEmployee(emp);
+            setSelectedEmployee(emp as Employee);
             const response = await axios.get(`${API_BASE}/employee/performance-profile/${emp.id}/`, {
                 headers: getHeaders(),
             });
             setProfile(response.data);
+            if (response.data.employee_details) {
+                setSelectedEmployee(response.data.employee_details);
+            }
             setActiveTab('matrix');
             setBreakdownOpen(null);
         } catch (err) {
@@ -164,16 +228,33 @@ const SearchProfile = () => {
         }
     };
 
-    // Filters
-    const departments = Array.from(new Set(employees.map(e => e.department_name).filter(Boolean)));
-    
-    const filteredEmployees = employees.filter(emp => {
-        const matchesSearch = emp.full_name.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                             emp.employee_id.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                             (emp.designation_name && emp.designation_name.toLowerCase().includes(searchQuery.toLowerCase()));
-        const matchesDept = selectedDept === '' || emp.department_name === selectedDept;
-        return matchesSearch && matchesDept;
-    });
+    const getPageNumbers = () => {
+        const pages: (number | string)[] = [];
+        if (totalPages <= 5) {
+            for (let i = 1; i <= totalPages; i++) {
+                pages.push(i);
+            }
+        } else {
+            if (page <= 3) {
+                for (let i = 1; i <= 3; i++) pages.push(i);
+                pages.push('right-ellipsis');
+                pages.push(totalPages);
+            } else if (page >= totalPages - 2) {
+                pages.push(1);
+                pages.push('left-ellipsis');
+                for (let i = totalPages - 2; i <= totalPages; i++) pages.push(i);
+            } else {
+                pages.push(1);
+                pages.push('left-ellipsis');
+                pages.push(page - 1);
+                pages.push(page);
+                pages.push(page + 1);
+                pages.push('right-ellipsis');
+                pages.push(totalPages);
+            }
+        }
+        return pages;
+    };
 
     // 9-Box Grid Layout Mappings
     const gridCells = [
@@ -221,7 +302,7 @@ const SearchProfile = () => {
                                 type="text" 
                                 placeholder="Search by name, ID, or designation..." 
                                 value={searchQuery}
-                                onChange={(e) => setSearchQuery(e.target.value)}
+                                onChange={(e) => handleSearchChange(e.target.value)}
                                 className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 pl-9 pr-4 py-2.5 rounded-xl text-xs font-semibold text-gray-800 dark:text-white focus:outline-none"
                             />
                             <IconSearch className="w-4 h-4 text-gray-400 absolute left-3 top-3" />
@@ -230,11 +311,11 @@ const SearchProfile = () => {
                         <div className="w-full md:w-64">
                             <select
                                 value={selectedDept}
-                                onChange={(e) => setSelectedDept(e.target.value)}
-                                className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 px-4 py-2.5 rounded-xl text-xs font-bold text-gray-800 dark:text-white focus:outline-none"
+                                onChange={(e) => handleDeptChange(e.target.value)}
+                                className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 px-4 py-2.5 rounded-xl text-xs font-bold text-gray-800 dark:text-white focus:outline-none cursor-pointer"
                             >
                                 <option value="">All Departments</option>
-                                {departments.map(d => (
+                                {departmentsList.map(d => (
                                     <option key={d} value={d || ''}>{d}</option>
                                 ))}
                             </select>
@@ -245,60 +326,134 @@ const SearchProfile = () => {
                     {loadingList ? (
                         <div className="text-center py-20 text-xs text-gray-400">Loading workspace directory...</div>
                     ) : (
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                            {filteredEmployees.map(emp => (
-                                <div
-                                    key={emp.id}
-                                    onClick={() => loadPerformanceProfile(emp)}
-                                    className="bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 p-5 rounded-3xl shadow-sm hover:shadow-md hover:border-teal-500/20 cursor-pointer transition duration-300 flex flex-col justify-between"
-                                >
-                                    <div className="space-y-4">
-                                        {/* Avatar / Photo */}
-                                        <div className="flex items-center gap-3.5">
-                                            {emp.photo ? (
-                                                <img 
-                                                    src={emp.photo} 
-                                                    alt={emp.full_name} 
-                                                    className="w-12 h-12 rounded-2xl object-cover shadow-sm border border-gray-100 dark:border-gray-850"
-                                                />
-                                            ) : (
-                                                <div className="w-12 h-12 rounded-2xl bg-teal-500 text-white font-black text-sm flex items-center justify-center shadow-sm">
-                                                    {emp.initials}
+                        <>
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                                {employees.map(emp => (
+                                    <div
+                                        key={emp.id}
+                                        onClick={() => loadPerformanceProfile(emp)}
+                                        className="bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 p-5 rounded-3xl shadow-sm hover:shadow-md hover:border-teal-500/20 cursor-pointer transition duration-300 flex flex-col justify-between"
+                                    >
+                                        <div className="space-y-4">
+                                            {/* Avatar / Photo */}
+                                            <div className="flex items-center gap-3.5">
+                                                {emp.photo ? (
+                                                    <img 
+                                                        src={emp.photo} 
+                                                        alt={emp.full_name} 
+                                                        className="w-12 h-12 rounded-2xl object-cover shadow-sm border border-gray-100 dark:border-gray-850"
+                                                    />
+                                                ) : (
+                                                    <div className="w-12 h-12 rounded-2xl bg-teal-500 text-white font-black text-sm flex items-center justify-center shadow-sm">
+                                                        {emp.initials}
+                                                    </div>
+                                                )}
+                                                <div>
+                                                    <span className="block font-bold text-sm text-gray-800 dark:text-white leading-snug">{emp.full_name}</span>
+                                                    <span className="block text-[10px] text-gray-400 dark:text-gray-500 mt-0.5">{emp.designation_name || 'Designation Not Set'}</span>
                                                 </div>
-                                            )}
-                                            <div>
-                                                <span className="block font-bold text-sm text-gray-800 dark:text-white leading-snug">{emp.full_name}</span>
-                                                <span className="block text-[10px] text-gray-400 dark:text-gray-500 mt-0.5">{emp.designation_name || 'Designation Not Set'}</span>
+                                            </div>
+
+                                            {/* Meta badges */}
+                                            <div className="flex flex-wrap gap-2">
+                                                <span className="bg-gray-100 dark:bg-gray-850 text-gray-600 dark:text-gray-400 text-[9px] font-black uppercase tracking-wider px-2.5 py-1 rounded-lg">
+                                                    ID: {emp.employee_id}
+                                                </span>
+                                                <span className="bg-teal-500/10 text-teal-600 dark:text-teal-400 text-[9px] font-black uppercase tracking-wider px-2.5 py-1 rounded-lg">
+                                                    {emp.department_name || 'No Dept'}
+                                                </span>
                                             </div>
                                         </div>
 
-                                        {/* Meta badges */}
-                                        <div className="flex flex-wrap gap-2">
-                                            <span className="bg-gray-100 dark:bg-gray-850 text-gray-600 dark:text-gray-400 text-[9px] font-black uppercase tracking-wider px-2.5 py-1 rounded-lg">
-                                                ID: {emp.employee_id}
-                                            </span>
-                                            <span className="bg-teal-500/10 text-teal-600 dark:text-teal-400 text-[9px] font-black uppercase tracking-wider px-2.5 py-1 rounded-lg">
-                                                {emp.department_name || 'No Dept'}
+                                        {/* Reporting Manager */}
+                                        <div className="border-t border-gray-100 dark:border-gray-850 pt-3 mt-4 flex items-center justify-between text-[10px] font-bold text-gray-400 dark:text-gray-500">
+                                            <span>Reporting Mgr:</span>
+                                            <span className="text-gray-700 dark:text-gray-300">
+                                                {emp.reporting_manager_name || 'Not Mapped'}
                                             </span>
                                         </div>
                                     </div>
+                                ))}
 
-                                    {/* Reporting Manager */}
-                                    <div className="border-t border-gray-100 dark:border-gray-850 pt-3 mt-4 flex items-center justify-between text-[10px] font-bold text-gray-400 dark:text-gray-500">
-                                        <span>Reporting Mgr:</span>
-                                        <span className="text-gray-700 dark:text-gray-300">
-                                            {emp.reporting_manager_name || 'Not Mapped'}
-                                        </span>
+                                {employees.length === 0 && (
+                                    <div className="col-span-full bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 p-12 rounded-3xl text-center text-gray-400 italic">
+                                        No employees match the filter criteria.
                                     </div>
-                                </div>
-                            ))}
+                                )}
+                            </div>
 
-                            {filteredEmployees.length === 0 && (
-                                <div className="col-span-full bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 p-12 rounded-3xl text-center text-gray-400 italic">
-                                    No employees match the filter criteria.
+                            {/* Pagination Controls */}
+                            <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mt-6 bg-white dark:bg-gray-900 p-4 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm">
+                                <div className="flex items-center gap-2 text-xs font-bold text-gray-500 dark:text-gray-400">
+                                    <span>Show</span>
+                                    <select
+                                        value={pageSize}
+                                        onChange={(e) => handlePageSizeChange(Number(e.target.value))}
+                                        className="bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 px-3 py-1.5 rounded-lg text-xs font-bold text-gray-800 dark:text-white focus:outline-none cursor-pointer"
+                                    >
+                                        <option value={5}>5</option>
+                                        <option value={10}>10</option>
+                                        <option value={20}>20</option>
+                                        <option value={50}>50</option>
+                                    </select>
+                                    <span>records per page</span>
+                                    <span className="ml-2 text-gray-400">| Total: {totalRecords} records</span>
                                 </div>
-                            )}
-                        </div>
+
+                                {totalPages > 1 && (
+                                    <ul className="flex items-center gap-2">
+                                        <li>
+                                            <button
+                                                type="button"
+                                                disabled={page === 1}
+                                                onClick={() => handlePageChange(page - 1)}
+                                                className="flex justify-center font-bold px-3 py-2 rounded-xl transition bg-white-light text-dark hover:text-white hover:bg-teal-500 dark:text-white-light dark:bg-[#191e3a] dark:hover:bg-teal-500 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                                            >
+                                                Prev
+                                            </button>
+                                        </li>
+                                        {getPageNumbers().map((p, idx) => {
+                                            if (p === 'left-ellipsis' || p === 'right-ellipsis') {
+                                                const jumpPage = p === 'left-ellipsis' ? Math.max(1, page - 5) : Math.min(totalPages, page + 5);
+                                                return (
+                                                    <li key={`${p}-${idx}`}>
+                                                        <button
+                                                            type="button"
+                                                            title={p === 'left-ellipsis' ? "Previous 5 pages" : "Next 5 pages"}
+                                                            className="flex justify-center font-bold px-3 py-2 rounded-xl transition bg-white-light text-dark hover:text-white hover:bg-teal-500 dark:text-white-light dark:bg-[#191e3a] dark:hover:bg-teal-500 cursor-pointer"
+                                                            onClick={() => handlePageChange(jumpPage)}
+                                                        >
+                                                            ...
+                                                        </button>
+                                                    </li>
+                                                );
+                                            }
+                                            return (
+                                                <li key={p}>
+                                                    <button
+                                                        type="button"
+                                                        className={`flex justify-center font-bold px-3.5 py-2 rounded-xl transition ${page === p ? 'bg-teal-500 text-white shadow-[0_10px_20px_-10px_rgba(20,184,166,0.44)]' : 'bg-white-light text-dark hover:text-white hover:bg-teal-500 dark:text-white-light dark:bg-[#191e3a] dark:hover:bg-teal-500 cursor-pointer'}`}
+                                                        onClick={() => handlePageChange(p as number)}
+                                                    >
+                                                        {p}
+                                                    </button>
+                                                </li>
+                                            );
+                                        })}
+                                        <li>
+                                            <button
+                                                type="button"
+                                                disabled={page === totalPages}
+                                                onClick={() => handlePageChange(page + 1)}
+                                                className="flex justify-center font-bold px-3 py-2 rounded-xl transition bg-white-light text-dark hover:text-white hover:bg-teal-500 dark:text-white-light dark:bg-[#191e3a] dark:hover:bg-teal-500 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                                            >
+                                                Next
+                                            </button>
+                                        </li>
+                                    </ul>
+                                )}
+                            </div>
+                        </>
                     )}
                 </div>
             ) : (
@@ -453,7 +608,7 @@ const SearchProfile = () => {
                                                             className={`flex-1 flex items-center justify-between px-4 py-3 rounded-2xl border text-xs font-bold transition ${breakdownOpen === 'pot' ? 'bg-indigo-500 text-white border-indigo-500 shadow-md' : 'bg-gray-50 dark:bg-gray-850 border-gray-200 dark:border-gray-800 text-gray-700 dark:text-gray-300 hover:border-indigo-400'}`}>
                                                             <div>
                                                                 <span className="block">Potential Score</span>
-                                                                <span className={`text-[9px] font-bold ${breakdownOpen === 'pot' ? 'text-indigo-100' : 'text-gray-400'}`}>Skills · Self-Rating</span>
+                                                                <span className={`text-[9px] font-bold ${breakdownOpen === 'pot' ? 'text-indigo-100' : 'text-gray-400'}`}>Skills · Self-Rating · Mgr Feedback · KRA Review</span>
                                                             </div>
                                                             <span className="flex items-center gap-1.5">
                                                                 <span className={`text-base font-black ${breakdownOpen === 'pot' ? 'text-white' : 'text-indigo-600 dark:text-indigo-400'}`}>{profile.nine_box.potential_score.toFixed(1)}</span>
@@ -535,7 +690,11 @@ const SearchProfile = () => {
                                                         <div className="border border-indigo-200 dark:border-indigo-900/50 rounded-2xl overflow-hidden text-xs">
                                                             <div className="bg-indigo-50 dark:bg-indigo-950/30 px-4 py-2.5 flex items-center justify-between">
                                                                 <span className="text-[10px] font-black uppercase tracking-widest text-indigo-700 dark:text-indigo-400">Potential Score Breakdown</span>
-                                                                <span className="text-[10px] text-indigo-500 font-bold">Skills 60% · Self-Appraisal 24% · Self-Feedback 16%</span>
+                                                                <span className="text-[10px] text-indigo-500 font-bold">
+                                                                    Skills {potb.skills.weight}% · Self-Appraisal {potb.self_appraisal.weight}% · Self-Feedback {potb.self_feedback.weight}%
+                                                                    {potb.manager_feedback && ` · Mgr Feedback ${potb.manager_feedback.weight}%`}
+                                                                    {potb.kra_review && ` · KRA Review ${potb.kra_review.weight}%`}
+                                                                </span>
                                                             </div>
 
                                                             {/* Skills */}
@@ -588,6 +747,47 @@ const SearchProfile = () => {
                                                                     </div>
                                                                 ))}
                                                             </div>
+
+                                                            {/* Manager Feedback */}
+                                                            {potb.manager_feedback && (
+                                                                <>
+                                                                    <SectionHeader label="Manager Feedback" weight={potb.manager_feedback.weight} score={potb.manager_feedback.score} color="emerald" />
+                                                                    <div className="divide-y divide-gray-50 dark:divide-gray-800/60 px-4">
+                                                                        {potb.manager_feedback.items.length === 0 ? (
+                                                                            <p className="text-[11px] text-gray-400 italic py-3">No direct feedback from manager received yet.</p>
+                                                                        ) : potb.manager_feedback.items.map((f, i) => (
+                                                                            <div key={i} className="py-2.5">
+                                                                                <div className="flex items-center gap-3 mb-1">
+                                                                                    <span className="flex-1 font-semibold text-gray-700 dark:text-gray-300 text-[10px] uppercase tracking-wider">{f.type}</span>
+                                                                                    <span className="text-amber-400 text-[10px]">{'★'.repeat(f.rating)}{'☆'.repeat(5 - f.rating)}</span>
+                                                                                    <span className="font-black text-emerald-600 dark:text-emerald-400 w-8 text-right shrink-0">{f.rating}.0</span>
+                                                                                </div>
+                                                                                {f.text && <p className="text-[10px] text-gray-400 italic truncate">"{f.text}"</p>}
+                                                                            </div>
+                                                                        ))}
+                                                                    </div>
+                                                                </>
+                                                            )}
+
+                                                            {/* KRA Review */}
+                                                            {potb.kra_review && (
+                                                                <>
+                                                                    <SectionHeader label="KRA Review" weight={potb.kra_review.weight} score={potb.kra_review.score} color="teal" />
+                                                                    <div className="divide-y divide-gray-50 dark:divide-gray-800/60 px-4">
+                                                                        {potb.kra_review.items.length === 0 ? (
+                                                                            <p className="text-[11px] text-gray-400 italic py-3">No KRA review scores recorded yet.</p>
+                                                                        ) : potb.kra_review.items.map((k, i) => (
+                                                                            <div key={i} className="flex items-center gap-3 py-2.5">
+                                                                                <span className="flex-1 font-semibold text-gray-700 dark:text-gray-300 text-[11px] font-bold">{k.title}</span>
+                                                                                <div className="w-16 h-1 bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden shrink-0">
+                                                                                    <div className="h-full bg-teal-500 rounded-full" style={{ width: `${(k.score / 5) * 100}%` }} />
+                                                                                </div>
+                                                                                <span className="font-black text-teal-600 dark:text-teal-400 w-8 text-right shrink-0">{k.score.toFixed(1)}</span>
+                                                                            </div>
+                                                                        ))}
+                                                                    </div>
+                                                                </>
+                                                            )}
 
                                                             <div className="px-4 py-3 bg-indigo-50/50 dark:bg-indigo-950/20 flex items-center justify-between border-t border-indigo-100 dark:border-indigo-900/30">
                                                                 <span className="text-[10px] font-black uppercase tracking-wider text-indigo-700 dark:text-indigo-400">Blended Potential Score</span>
@@ -677,6 +877,45 @@ const SearchProfile = () => {
                                             ))}
                                             {profile.skills.length === 0 && (
                                                 <div className="col-span-full text-center py-8 text-gray-400 italic">No skills inventory recorded.</div>
+                                            )}
+                                        </div>
+
+                                        {/* Earned Certificates Section */}
+                                        <h3 className="text-sm font-black text-gray-800 dark:text-white pt-6 pb-3 border-b border-gray-100 dark:border-gray-800 mt-8">
+                                            Earned Certificates (LMS)
+                                        </h3>
+
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                            {profile.certificates && profile.certificates.map(c => (
+                                                <div key={c.id} className="border border-emerald-100 dark:border-emerald-900/40 p-4 rounded-2xl flex justify-between items-start bg-emerald-50/10 dark:bg-emerald-950/5 shadow-sm">
+                                                    <div className="flex-1 min-w-0">
+                                                        <span className="block font-black text-gray-800 dark:text-white text-xs truncate">{c.certificate_name}</span>
+                                                        {c.course_name && (
+                                                            <span className="block text-[10px] text-gray-500 mt-0.5">Course: {c.course_name}</span>
+                                                        )}
+                                                        <span className="block text-[9px] text-gray-400 mt-2 font-mono uppercase tracking-wide">ID: {c.certificate_number}</span>
+                                                        <span className="block text-[9px] text-gray-400 mt-0.5">Issued: {c.issue_date || '—'}</span>
+                                                    </div>
+                                                    <div className="flex flex-col items-end gap-2 shrink-0">
+                                                        <span className={`px-2 py-0.5 rounded-full text-[8px] font-black uppercase tracking-wider ${
+                                                            c.status?.toLowerCase() === 'valid' || c.status?.toLowerCase() === 'internal (course completion)'
+                                                            ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-400'
+                                                            : 'bg-rose-100 text-rose-800 dark:bg-rose-950/40 dark:text-rose-400'
+                                                        }`}>
+                                                            {c.status || 'Valid'}
+                                                        </span>
+                                                        {c.certificate_file && (
+                                                            <a href={c.certificate_file.startsWith('http') ? c.certificate_file : `http://localhost:8000${c.certificate_file}`}
+                                                                target="_blank" rel="noopener noreferrer"
+                                                                className="text-[9px] font-black text-indigo-600 dark:text-indigo-400 hover:underline flex items-center gap-1 mt-2">
+                                                                 <span>📄 View PDF</span>
+                                                             </a>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            ))}
+                                            {(!profile.certificates || profile.certificates.length === 0) && (
+                                                <div className="col-span-full text-center py-8 text-gray-400 italic">No certificates earned yet.</div>
                                             )}
                                         </div>
                                     </div>
