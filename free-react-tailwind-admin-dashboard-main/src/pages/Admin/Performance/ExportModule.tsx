@@ -1,4 +1,5 @@
 import { useEffect, useState, useMemo, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { Link } from 'react-router-dom';
 import axios from 'axios';
@@ -549,8 +550,8 @@ const ExportModule = () => {
                 </div>
             </div>
 
-            {/* Re-apply confirmation modal */}
-            {reapplyTarget && (
+            {/* Re-apply confirmation modal — rendered via Portal to escape sidebar/navbar stacking contexts */}
+            {reapplyTarget && createPortal(
                 <div className="fixed inset-0 z-[99999] flex items-center justify-center p-4">
                     {/* Full-screen backdrop — covers sidebar + navbar */}
                     <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setReapplyTarget(null)} />
@@ -587,7 +588,8 @@ const ExportModule = () => {
                             </button>
                         </div>
                     </div>
-                </div>
+                </div>,
+                document.body
             )}
         </div>
     );
