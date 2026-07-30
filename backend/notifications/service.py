@@ -1,5 +1,7 @@
 from django.conf import settings
-from app.models import UserRegister
+from django.utils import timezone
+from datetime import time as _time
+from app.models import UserRegister, Attendance
 import json
 import requests
 import logging
@@ -251,3 +253,123 @@ def send_fcm_to_users(
 def send_push_notification_to_all(title, message):
     user_ids = list(UserRegister.objects.values_list('id', flat=True))
     send_fcm_to_users(user_ids, "general", message, sender=None, title=title)  # sender can be None for general announcements
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Checkout reminder service
+# ─────────────────────────────────────────────────────────────────────────────
+
+CHECKOUT_REMINDER_TITLE = "⏰ Checkout Reminder"
+
+# Fallback shift-end hour (6:00 PM) used when an employee has no shift assigned
+_DEFAULT_SHIFT_END_HOUR = 18
+
+
+def send_checkout_reminders(today=None, now_local=None, dry_run=False):
+    """
+    Find employees who checked in today but have not yet checked out, and whose
+    shift end time has already passed.  For each such employee, create a
+    UserNotification record and send an FCM push — unless a checkout-reminder
+    notification was already sent to them today (deduplication).
+
+    Returns a dict with keys: notified (int), skipped (int), errors (int).
+
+    This function is called by both the management command
+    (send_checkout_reminders) and the admin API endpoint
+    (TriggerCheckoutReminderView).
+    """
+    if now_local is None:
+        now_local = timezone.localtime(timezone.now())
+    if today is None:
+        today = now_local.date()
+
+    current_time = now_local.time()
+
+    # Default fallback shift-end time object
+    default_shift_end = _time(_DEFAULT_SHIFT_END_HOUR, 0)
+
+    # All attendance records for today where check-in exists but check-out is missing
+    pending_qs = (
+        Attendance.objects.filter(
+            date=today,
+            check_in__isnull=False,
+            check_out__isnull=True,
+        )
+        .select_related("employee__shift_assigned", "employee__user")
+    )
+
+    # Pre-fetch IDs of employees already notified today — 1 query instead of N
+    already_notified_ids = set(
+        UserNotification.objects.filter(
+            title=CHECKOUT_REMINDER_TITLE,
+            created_at__date=today,
+        ).values_list("recipient_id", flat=True)
+    )
+
+    default_sender = UserRegister.objects.filter(role="admin").first()
+    if default_sender is None:
+        logger.warning("send_checkout_reminders: no admin user found; notifications will have no sender.")
+
+    notified = 0
+    skipped = 0
+    errors = 0
+
+    for attendance in pending_qs:
+        employee = attendance.employee
+
+        # ── Determine the shift's checkout time ──────────────────────────────
+        shift = getattr(employee, "shift_assigned", None)
+        shift_end = shift.checkout if (shift and shift.checkout) else default_shift_end
+
+        # ── Only notify if the shift end time has already passed ─────────────
+        if current_time < shift_end:
+            skipped += 1
+            continue
+
+        # ── Deduplication check (uses pre-fetched set) ───────────────────────
+        if employee.pk in already_notified_ids:
+            skipped += 1
+            continue
+
+        # ── Build notification content ────────────────────────────────────────
+        employee_name = employee.full_name or "Employee"
+        shift_end_str = shift_end.strftime("%I:%M %p")
+        message = (
+            f"Hi {employee_name}, your shift ended at {shift_end_str} but you haven't "
+            f"checked out yet. Please check out to keep your attendance record accurate."
+        )
+
+        if dry_run:
+            logger.info("[DRY RUN] Checkout reminder would be sent (attendance_id=%s)", attendance.pk)
+            notified += 1
+            continue
+
+        # ── Persist in-app notification and send FCM push ────────────────────
+        try:
+            if employee.user:
+                send_fcm_to_users(
+                    user_ids=[employee.user.id],
+                    notif_type="checkout_reminder",
+                    message=message,
+                    sender=default_sender,
+                    title=CHECKOUT_REMINDER_TITLE,
+                    extra_data={"attendance_id": str(attendance.pk)},
+                    create_user_notifications=True,
+                )
+            else:
+                # No linked user account — create in-app notification only
+                UserNotification.objects.create(
+                    recipient=employee,
+                    sender=default_sender,
+                    title=CHECKOUT_REMINDER_TITLE,
+                    message=message,
+                )
+            # Track in local set to prevent double-sending within same run
+            already_notified_ids.add(employee.pk)
+            notified += 1
+            logger.info("Checkout reminder sent (attendance_id=%s)", attendance.pk)
+        except Exception as exc:
+            errors += 1
+            logger.error("Failed to send checkout reminder (attendance_id=%s): %s", attendance.pk, exc)
+
+    return {"notified": notified, "skipped": skipped, "errors": errors}
