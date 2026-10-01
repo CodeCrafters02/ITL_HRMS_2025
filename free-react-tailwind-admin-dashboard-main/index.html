@@ -23,6 +23,55 @@
     -->
         <title>HRMS</title>
 
+        <!-- Instant Microsoft OAuth Popup Callback Relay (zero-delay popup handoff & close) -->
+        <script>
+            (function() {
+                try {
+                    if (window.location.pathname.startsWith('/auth/callback/microsoft')) {
+                        var params = new URLSearchParams(window.location.search);
+                        var code = params.get('code');
+                        var err = params.get('error') || params.get('error_description');
+                        var state = params.get('state');
+
+                        // Detect popup using state query param, window name, opener, or popup dimensions
+                        var isPopup = state === 'ms_popup' ||
+                                      window.name === 'ms_login_popup' ||
+                                      !!window.opener ||
+                                      localStorage.getItem('ms_auth_in_progress') === 'true' ||
+                                      (window.outerWidth > 0 && window.outerWidth < 800) ||
+                                      (window.innerWidth > 0 && window.innerWidth < 800);
+
+                        if (code || err) {
+                            var payload = { code: code || undefined, error: err || undefined, timestamp: Date.now() };
+                            try { localStorage.setItem('ms_auth_result', JSON.stringify(payload)); } catch(e) {}
+                            try {
+                                var ch = new BroadcastChannel('ms_auth_channel');
+                                ch.postMessage(payload);
+                            } catch(e) {}
+                            try {
+                                if (window.opener && !window.opener.closed) {
+                                    window.opener.postMessage({ type: err ? 'MS_AUTH_ERROR' : 'MS_AUTH_CODE', code: code, error: err }, window.location.origin);
+                                }
+                            } catch(e) {}
+                        }
+
+                        if (isPopup) {
+                            // Close popup immediately so main window can resume
+                            try { window.close(); } catch(e) {}
+
+                            // Retry close repeatedly in case browser was handling the cross-origin transition
+                            var closeAttempts = 0;
+                            var closeInterval = setInterval(function() {
+                                closeAttempts++;
+                                try { window.close(); } catch(e) {}
+                                if (closeAttempts >= 30) clearInterval(closeInterval);
+                            }, 50);
+                        }
+                    }
+                } catch(e) {}
+            })();
+        </script>
+
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 

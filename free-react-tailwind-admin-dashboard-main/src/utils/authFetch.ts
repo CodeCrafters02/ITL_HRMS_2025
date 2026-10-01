@@ -1,4 +1,5 @@
 import axios, { AxiosError, InternalAxiosRequestConfig } from 'axios';
+import { clearAllSessionData } from './sessionManager';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000';
 const REFRESH_URL = `${API_BASE_URL}/app/token/refresh/`;
@@ -24,10 +25,7 @@ const decodeJwtExpiryMs = (token: string | null): number | null => {
 };
 
 const clearAuthStorage = () => {
-    ['access_token', 'refresh_token', 'user_role', 'user_id', 'username', 'user_email', 'first_name', 'last_name', 'is_reporting_manager', 'remember_me'].forEach((k) =>
-        localStorage.removeItem(k)
-    );
-    document.cookie = 'session_active=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
+    clearAllSessionData();
 };
 
 const redirectToLogin = () => {

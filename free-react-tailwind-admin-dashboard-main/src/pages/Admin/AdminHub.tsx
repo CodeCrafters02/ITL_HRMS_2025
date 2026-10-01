@@ -5,6 +5,7 @@ import { setPageTitle } from '../../store/themeConfigSlice';
 import IconUsersGroup from '../../components/Icon/IconUsersGroup';
 import IconTrendingUp from '../../components/Icon/IconTrendingUp';
 import IconOpenBook from '../../components/Icon/IconOpenBook';
+import { touchHeartbeat } from '../../utils/sessionManager';
 
 interface HubCard {
     label: string;
@@ -79,6 +80,45 @@ const AdminHub = () => {
         const timer = setInterval(() => setCurrentTime(new Date()), 1000);
         return () => clearInterval(timer);
     }, [dispatch]);
+
+    // Back-button behavior: refresh this page itself instead of navigating back or signing out
+    useEffect(() => {
+        try {
+            sessionStorage.setItem('tab_session_active', 'true');
+            touchHeartbeat();
+        } catch {}
+
+        // Push barrier state so going back in history stays on /admin/hub
+        window.history.pushState({ hubBarrier: true, page: 'admin-hub' }, '', '/admin/hub');
+
+        let isReloading = false;
+        const handlePopState = () => {
+            // Immediately restore the barrier so URL and history stay locked on /admin/hub
+            window.history.pushState({ hubBarrier: true, page: 'admin-hub' }, '', '/admin/hub');
+
+            try {
+                sessionStorage.setItem('tab_session_active', 'true');
+                touchHeartbeat();
+            } catch {}
+
+            if (isReloading) return;
+            isReloading = true;
+
+            // Refresh this page itself safely
+            setTimeout(() => {
+                if (window.location.pathname !== '/admin/hub') {
+                    window.location.replace('/admin/hub');
+                } else {
+                    window.location.reload();
+                }
+            }, 50);
+        };
+
+        window.addEventListener('popstate', handlePopState);
+        return () => {
+            window.removeEventListener('popstate', handlePopState);
+        };
+    }, []);
 
     const activeHour = currentTime.getHours();
     let greeting = 'Good Evening';

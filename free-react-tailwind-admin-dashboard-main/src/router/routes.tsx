@@ -74,6 +74,7 @@ const ERROR500 = lazy(() => import('../pages/Pages/Error500'));
 const ERROR503 = lazy(() => import('../pages/Pages/Error503'));
 const Maintenence = lazy(() => import('../pages/Pages/Maintenence'));
 const LoginBoxed = lazy(() => import('../pages/Authentication/LoginBoxed'));
+const MicrosoftCallback = lazy(() => import('../pages/Authentication/MicrosoftCallback'));
 const RegisterBoxed = lazy(() => import('../pages/Authentication/RegisterBoxed'));
 const UnlockBoxed = lazy(() => import('../pages/Authentication/UnlockBox'));
 const RecoverIdBoxed = lazy(() => import('../pages/Authentication/RecoverIdBox'));
@@ -582,6 +583,11 @@ const routes = [
     {
         path: '/auth/boxed-signin',
         element: <LoginBoxed />,
+        layout: 'blank',
+    },
+    {
+        path: '/auth/callback/microsoft',
+        element: <MicrosoftCallback />,
         layout: 'blank',
     },
     {

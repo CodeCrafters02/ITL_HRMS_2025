@@ -25,6 +25,8 @@ import uuid
 from rest_framework.views import APIView
 from rest_framework.response import Response
 import re
+import urllib.parse
+import requests
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from .permissions import IsMaster, IsAdminUser, IsCompanyChatUser, CanReadCompanyCalendar
 from .serializers import *
@@ -6162,16 +6164,19 @@ def _ensure_employee_for_company_user(*, user: UserRegister, email: str, first_n
     )
 
 
-def _sso_login(email, first_name="", last_name=""):
-    """Shared Google/Microsoft SSO: activation checks, user provisioning, company domain rules, JWT tokens."""
+def _process_sso_user_login(*, email: str, first_name: str = "", last_name: str = ""):
+    email = (email or "").strip().lower()
+    if not email:
+        return Response({"detail": "Valid email address is required for SSO."}, status=status.HTTP_400_BAD_REQUEST)
+
     # --- Activation check (Early check via Email) ---
     emp = Employee.objects.filter(email__iexact=email).first()
     if emp and not emp.is_active:
-         return Response(
+        return Response(
             {"detail": "Your employee profile is inactive. Please contact your HR administrator."},
             status=status.HTTP_403_FORBIDDEN
         )
-    
+
     # Determine role for new user:
     # If NO users exist on the platform yet, the first SSO user becomes 'master'.
     # All subsequent users default to 'employee'.
@@ -6185,8 +6190,8 @@ def _sso_login(email, first_name="", last_name=""):
         email=email,
         defaults={
             "username": email,
-            "first_name": first_name,
-            "last_name": last_name,
+            "first_name": first_name or "",
+            "last_name": last_name or "",
             "role": default_role,
             "is_active": True
         }
@@ -6202,23 +6207,27 @@ def _sso_login(email, first_name="", last_name=""):
             status=status.HTTP_403_FORBIDDEN
         )
 
+    print(f"[SSO] Authenticating Microsoft user: '{email}' (role={user.role}, created={created})")
+
     # ── Domain / Company validation ──
     # Master and admin users always bypass domain checks
     if user.role not in ('master', 'admin'):
         # Check if email domain matches any company
         matched_company = _company_for_email_domain(email)
         user_has_company = getattr(user, 'company_id', None)
-        
+
         # For brand-new users with no matching company → reject & cleanup
         if created and not matched_company:
             user.delete()
+            print(f"[SSO] 403 Forbidden: Email domain '{email.split('@')[-1] if '@' in email else email}' is not authorized for any registered company.")
             return Response(
                 {"detail": "Your email domain is not authorized for any registered company. Please contact your HR administrator."},
                 status=status.HTTP_403_FORBIDDEN
             )
-        
+
         # For existing users with no company association and no matching domain → reject
         if not created and not user_has_company and not matched_company:
+            print(f"[SSO] 403 Forbidden: User '{email}' has no company association.")
             return Response(
                 {"detail": "Your account is not associated with any company. Please contact your HR administrator."},
                 status=status.HTTP_403_FORBIDDEN
@@ -6243,6 +6252,11 @@ def _sso_login(email, first_name="", last_name=""):
             # If no Employee profile yet, try auto-link via company domain
             _ensure_employee_for_company_user(user=user, email=email, first_name=first_name, last_name=last_name)
 
+    # Update status to online
+    if hasattr(user, 'employee'):
+        user.employee.status = 'online'
+        user.employee.save(update_fields=['status'])
+
     # Return tokens
     refresh = RefreshToken.for_user(user)
     return Response({
@@ -6264,21 +6278,21 @@ class GoogleLoginAPIView(APIView):
         token = request.data.get("credential")
         if not token:
             return Response({"detail": "Credential missing"}, status=status.HTTP_400_BAD_REQUEST)
-        
+
         try:
             # Verify Google Token
             idinfo = id_token.verify_oauth2_token(
-                token, 
-                google_requests.Request(), 
+                token,
+                google_requests.Request(),
                 settings.GOOGLE_CLIENT_ID,
                 clock_skew_in_seconds=10
             )
-            
+
             email = (idinfo.get("email") or "").strip().lower()
             first_name = idinfo.get("given_name", "")
             last_name = idinfo.get("family_name", "")
 
-            return _sso_login(email, first_name, last_name)
+            return _process_sso_user_login(email=email, first_name=first_name, last_name=last_name)
 
         except ValueError as e:
             print("Google verify error:", str(e))
@@ -6286,43 +6300,74 @@ class GoogleLoginAPIView(APIView):
         except Exception as e:
             return Response({"detail": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-class MicrosoftLoginAPIView(APIView):
-    """Microsoft Entra ID (Azure AD) SSO for the mobile app.
 
-    Body: {"id_token": "<Entra ID token>"} — verified against Microsoft's signing keys,
-    audience = MS_CLIENT_ID, issuer = the token's tenant (restricted to MS_TENANT_ID unless it is
-    'common'/'organizations').
+class MicrosoftAuthURLAPIView(APIView):
+    permission_classes = [AllowAny]
+
+    def get(self, request):
+        client_id = getattr(settings, 'MICROSOFT_CLIENT_ID', '')
+        if not client_id:
+            return Response(
+                {"detail": "Microsoft Client ID (MICROSOFT_CLIENT_ID) is not configured in backend .env."},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+        tenant_id = getattr(settings, 'MICROSOFT_TENANT_ID', 'common') or 'common'
+        redirect_uri = request.query_params.get('redirect_uri') or getattr(settings, 'MICROSOFT_REDIRECT_URI', '')
+        state = request.query_params.get('state') or 'ms_login'
+
+        scopes = "openid profile email User.Read"
+        auth_url = (
+            f"https://login.microsoftonline.com/{tenant_id}/oauth2/v2.0/authorize?"
+            f"client_id={urllib.parse.quote(client_id)}&"
+            f"response_type=code&"
+            f"redirect_uri={urllib.parse.quote(redirect_uri)}&"
+            f"response_mode=query&"
+            f"scope={urllib.parse.quote(scopes)}&"
+            f"state={urllib.parse.quote(state)}&"
+            f"prompt=select_account"
+        )
+        return Response({
+            "auth_url": auth_url,
+            "client_id": client_id,
+            "tenant_id": tenant_id,
+            "redirect_uri": redirect_uri
+        }, status=status.HTTP_200_OK)
+
+
+class MicrosoftLoginAPIView(APIView):
+    """Microsoft Entra ID SSO.
+
+    * Web:    {"code", "redirect_uri"} — authorization code exchanged server-side (client secret).
+    * Mobile: {"id_token"} — public-client PKCE flow; the ID token is verified against Microsoft's
+      signing keys (audience = client ID, issuer = configured tenant).
     """
     permission_classes = [AllowAny]
-    _jwks_cache = {"at": 0, "certs": {}}
+    _jwks_cache = {"at": 0, "tenant": None, "certs": {}}
 
     @classmethod
-    def _certs(cls, tenant):
+    def _signing_certs(cls, tenant):
         import time
-        import requests as http
-        if time.time() - cls._jwks_cache["at"] < 3600 and cls._jwks_cache["certs"]:
-            return cls._jwks_cache["certs"]
-        keys = http.get(f"https://login.microsoftonline.com/{tenant}/discovery/v2.0/keys", timeout=10).json().get("keys", [])
+        cache = cls._jwks_cache
+        if cache["certs"] and cache["tenant"] == tenant and time.time() - cache["at"] < 3600:
+            return cache["certs"]
+        keys = requests.get(f"https://login.microsoftonline.com/{tenant}/discovery/v2.0/keys", timeout=10).json().get("keys", [])
         certs = {
             k["kid"]: f"-----BEGIN CERTIFICATE-----{chr(10)}{k['x5c'][0]}{chr(10)}-----END CERTIFICATE-----{chr(10)}"
             for k in keys if k.get("kid") and k.get("x5c")
         }
-        cls._jwks_cache = {"at": time.time(), "certs": certs}
+        cls._jwks_cache = {"at": time.time(), "tenant": tenant, "certs": certs}
         return certs
 
-    def post(self, request):
+    def _login_with_id_token(self, token):
         from google.auth import jwt as gjwt
 
-        token = request.data.get("id_token") or request.data.get("credential")
-        if not token:
-            return Response({"detail": "id_token missing"}, status=status.HTTP_400_BAD_REQUEST)
-        client_id = getattr(settings, "MS_CLIENT_ID", "")
-        tenant = getattr(settings, "MS_TENANT_ID", "") or "organizations"
+        client_id = getattr(settings, 'MICROSOFT_CLIENT_ID', '')
+        tenant = getattr(settings, 'MICROSOFT_TENANT_ID', '') or 'organizations'
         if not client_id:
-            return Response({"detail": "Microsoft sign-in is not configured on the server (MS_CLIENT_ID)."},
+            return Response({"detail": "Microsoft sign-in is not configured on the server (MICROSOFT_CLIENT_ID)."},
                             status=status.HTTP_503_SERVICE_UNAVAILABLE)
         try:
-            claims = gjwt.decode(token, certs=self._certs(tenant), audience=client_id, clock_skew_in_seconds=10)
+            claims = gjwt.decode(token, certs=self._signing_certs(tenant), audience=client_id, clock_skew_in_seconds=10)
             tid = claims.get("tid", "")
             if claims.get("iss") != f"https://login.microsoftonline.com/{tid}/v2.0":
                 raise ValueError("unexpected issuer")
@@ -6340,10 +6385,107 @@ class MicrosoftLoginAPIView(APIView):
         last_name = claims.get("family_name") or ""
         if not first_name and claims.get("name"):
             first_name, _, last_name = claims["name"].partition(" ")
+        return _process_sso_user_login(email=email, first_name=first_name, last_name=last_name)
+
+    def post(self, request):
+        code = request.data.get("code")
+        mobile_id_token = request.data.get("id_token")
+        if not code and mobile_id_token:
+            return self._login_with_id_token(mobile_id_token)
+        if not code:
+            return Response({"detail": "Authorization code is required."}, status=status.HTTP_400_BAD_REQUEST)
+
+        client_id = getattr(settings, 'MICROSOFT_CLIENT_ID', '')
+        client_secret = getattr(settings, 'MICROSOFT_CLIENT_SECRET', '')
+        tenant_id = getattr(settings, 'MICROSOFT_TENANT_ID', 'common') or 'common'
+        redirect_uri = request.data.get("redirect_uri") or getattr(settings, 'MICROSOFT_REDIRECT_URI', '')
+
+        if not client_id or not client_secret:
+            return Response(
+                {"detail": "Microsoft Entra ID credentials (MICROSOFT_CLIENT_ID or MICROSOFT_CLIENT_SECRET) are not configured in backend .env."},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+        token_url = f"https://login.microsoftonline.com/{tenant_id}/oauth2/v2.0/token"
+        data = {
+            "client_id": client_id,
+            "client_secret": client_secret,
+            "grant_type": "authorization_code",
+            "code": code,
+            "redirect_uri": redirect_uri,
+        }
+
         try:
-            return _sso_login(email, first_name, last_name)
-        except Exception as e:
-            return Response({"detail": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            token_resp = requests.post(token_url, data=data, timeout=15)
+            token_data = token_resp.json()
+        except requests.RequestException as e:
+            return Response({"detail": f"Failed to connect to Microsoft token service: {str(e)}"}, status=status.HTTP_502_BAD_GATEWAY)
+
+        if token_resp.status_code != 200 or "access_token" not in token_data:
+            err_msg = token_data.get("error_description") or token_data.get("error") or "Token exchange failed"
+            return Response({"detail": f"Microsoft authentication error: {err_msg}"}, status=status.HTTP_400_BAD_REQUEST)
+
+        access_token = token_data.get("access_token")
+        id_token_raw = token_data.get("id_token")
+
+        email = ""
+        first_name = ""
+        last_name = ""
+
+        # 1. Fast-path: Decode user identity directly from id_token in memory (instant, eliminates extra network call)
+        if id_token_raw:
+            try:
+                import base64
+                import json
+                parts = id_token_raw.split(".")
+                if len(parts) >= 2:
+                    payload_b64 = parts[1]
+                    rem = len(payload_b64) % 4
+                    if rem > 0:
+                        payload_b64 += "=" * (4 - rem)
+                    claims = json.loads(base64.urlsafe_b64decode(payload_b64).decode("utf-8"))
+                    email = claims.get("email") or claims.get("preferred_username") or claims.get("upn") or ""
+                    first_name = claims.get("given_name") or ""
+                    last_name = claims.get("family_name") or ""
+                    if not first_name and not last_name:
+                        display_name = claims.get("name") or ""
+                        parts_name = display_name.split(maxsplit=1)
+                        first_name = parts_name[0] if parts_name else ""
+                        last_name = parts_name[1] if len(parts_name) > 1 else ""
+            except Exception as e:
+                print(f"[SSO] id_token decode notice: {e}")
+
+        # 2. Fallback: Only call Microsoft Graph /v1.0/me if email was not available in id_token
+        if not email and access_token:
+            try:
+                graph_resp = requests.get(
+                    "https://graph.microsoft.com/v1.0/me",
+                    headers={"Authorization": f"Bearer {access_token}"},
+                    timeout=5
+                )
+                if graph_resp.status_code == 200:
+                    profile = graph_resp.json()
+                    email = profile.get("mail") or profile.get("userPrincipalName") or ""
+                    if not first_name:
+                        first_name = profile.get("givenName") or ""
+                    if not last_name:
+                        last_name = profile.get("surname") or ""
+                    if not first_name and not last_name:
+                        display_name = profile.get("displayName") or ""
+                        parts_name = display_name.split(maxsplit=1)
+                        first_name = parts_name[0] if parts_name else ""
+                        last_name = parts_name[1] if len(parts_name) > 1 else ""
+            except requests.RequestException:
+                pass
+
+        email = (email or "").strip().lower()
+        if not email:
+            return Response(
+                {"detail": "Unable to retrieve verified email from your Microsoft account."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        return _process_sso_user_login(email=email, first_name=first_name, last_name=last_name)
 
 class LoanCategoryViewSet(viewsets.ModelViewSet):
     serializer_class = LoanCategorySerializer

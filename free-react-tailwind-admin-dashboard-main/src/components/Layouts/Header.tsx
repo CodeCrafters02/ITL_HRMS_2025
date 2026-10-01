@@ -25,6 +25,7 @@ import IconUser from '../Icon/IconUser';
 import IconMail from '../Icon/IconMail';
 import IconLockDots from '../Icon/IconLockDots';
 import IconLogout from '../Icon/IconLogout';
+import { clearAllSessionData } from '../../utils/sessionManager';
 import IconMenuDashboard from '../Icon/Menu/IconMenuDashboard';
 import IconHome from '../Icon/IconHome';
 import IconCaretDown from '../Icon/IconCaretDown';
@@ -564,6 +565,7 @@ const Header = () => {
                                 <li>
                                     <Link 
                                         to="/admin/hub" 
+                                        replace={true}
                                         className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-primary/20 bg-primary/10 text-primary hover:bg-primary hover:text-white transition-all duration-300 shadow-sm hover:shadow-md text-xs font-bold"
                                         title="Workspace Home"
                                     >
@@ -576,6 +578,7 @@ const Header = () => {
                                 <li>
                                     <Link 
                                         to="/employee/hub" 
+                                        replace={true}
                                         className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-primary/20 bg-primary/10 text-primary hover:bg-primary hover:text-white transition-all duration-300 shadow-sm hover:shadow-md text-xs font-bold"
                                         title="Workspace Home"
                                     >
@@ -829,10 +832,7 @@ const Header = () => {
                                         // </li>
                                     )} */}
                                     <li className="border-t border-white-light dark:border-white-light/10">
-                                        <Link to="/auth/boxed-signin" className="text-danger !py-3 flex items-center" onClick={() => {
-                                            ['access_token', 'refresh_token', 'user_role', 'user_id', 'username', 'is_reporting_manager', 'user_email', 'first_name', 'last_name', 'remember_me'].forEach(k => localStorage.removeItem(k));
-                                            document.cookie = "session_active=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
-                                        }}>
+                                        <Link to="/auth/boxed-signin" className="text-danger !py-3 flex items-center" onClick={() => clearAllSessionData()}>
                                             <IconLogout className="w-4.5 h-4.5 ltr:mr-2 rtl:ml-2 rotate-90 shrink-0" />
                                             Sign Out
                                         </Link>
