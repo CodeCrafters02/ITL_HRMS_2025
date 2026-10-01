@@ -36,6 +36,7 @@ class _LearningCornerPageState extends State<LearningCornerPage> {
     });
 
     final response = await EmployeeService.getLearningCornerItems();
+    if (!mounted) return;
 
     if (response.success && response.data != null) {
       setState(() {

@@ -68,6 +68,18 @@ from app.models import (
     Department,
 )
 from .models import *
+
+
+def _employee_access_denied(user):
+    """True if user may not use employee endpoints. In DEBUG, an admin who has an
+    Employee profile is allowed (dev convenience); production stays employee-only."""
+    from django.conf import settings
+    from app.models import Employee as _Emp
+    if getattr(user, 'role', None) == 'employee':
+        return False
+    if settings.DEBUG and getattr(user, 'is_authenticated', False):
+        return not _Emp.objects.filter(email=user.email).exists()
+    return True
 from .serializers import *
 
 def get_short_break_daily_quota_minutes(company):
@@ -249,7 +261,7 @@ class CheckInAPIView(APIView):
 
     def post(self, request):
         user = request.user
-        if not hasattr(user, 'role') or user.role != 'employee':
+        if _employee_access_denied(user):
             return Response({"detail": "Unauthorized."}, status=403)
 
         try:
@@ -379,7 +391,7 @@ class CheckOutAPIView(APIView):
 
     def post(self, request):
         user = request.user
-        if not hasattr(user, 'role') or user.role != 'employee':
+        if _employee_access_denied(user):
             return Response({"detail": "Unauthorized."}, status=403)
 
         try:
@@ -442,7 +454,7 @@ class CheckOutAPIView(APIView):
 
 #     def get(self, request):
 #         user = request.user
-#         if not hasattr(user, 'role') or user.role != 'employee':
+#         if _employee_access_denied(user):
 #             return Response({"detail": "Unauthorized. Employee role required."}, status=403)
 
 #         try:
@@ -586,7 +598,7 @@ class DashboardAPIView(APIView):
 
     def get(self, request):
         user = request.user
-        if not hasattr(user, 'role') or user.role != 'employee':
+        if _employee_access_denied(user):
             return Response({"detail": "Unauthorized. Employee role required."}, status=403)
 
         try:

@@ -18,7 +18,10 @@ def get_missing_checkout(employee, today):
     """
     # Remarks substrings that indicate a system-generated placeholder row,
     # NOT a real employee check-in.
-    SKIP_REMARKS = ('off day', 'no attendance record', 'auto', 'holiday')
+    # Only skip explicit non-working-day markers. A row is already required to
+    # have a real check_in below, so stale 'no attendance record' / 'auto'
+    # remarks on a genuine check-in must NOT suppress the missing-checkout alert.
+    SKIP_REMARKS = ('off day', 'holiday')
 
     try:
         from app.models import CalendarEvent, DepartmentWiseWorkingDays, Attendance
@@ -57,9 +60,9 @@ def get_missing_checkout(employee, today):
                 employee=employee,
                 date=check_date,
                 check_in__isnull=False,   # must have genuinely checked in
-                check_out__isnull=True,
             ).first()
 
+            # No real check-in that day (absent / leave): look at the day before.
             if not att:
                 continue
 
@@ -68,7 +71,12 @@ def get_missing_checkout(employee, today):
             if any(kw in remarks_lower for kw in SKIP_REMARKS):
                 continue
 
-            return att, check_date
+            # This is the most recent previous working day with a real check-in.
+            # Alert only if it was left without a check-out; if it was completed
+            # normally, stop here so an older miss is not re-reported every day.
+            if att.check_out is None:
+                return att, check_date
+            return None, None
 
         return None, None
     except Exception:

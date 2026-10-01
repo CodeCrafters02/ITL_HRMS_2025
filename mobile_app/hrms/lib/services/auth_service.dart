@@ -151,6 +151,40 @@ class AuthService {
     }
   }
 
+  /// Debug-only: username/email + password login via backend `/app/login/`.
+  static Future<ApiResponse<LoginResponse>> loginWithPassword({
+    required String username,
+    required String password,
+  }) async {
+    try {
+      final response = await http.post(
+        Uri.parse(ApiConfig.loginUrl),
+        headers: ApiConfig.headers,
+        body: jsonEncode({'username': username, 'password': password}),
+      );
+      final data = jsonDecode(response.body);
+      if (response.statusCode != 200 || data is! Map<String, dynamic>) {
+        return ApiResponse(
+          success: false,
+          message: data is Map ? '${data['detail'] ?? 'Login failed'}' : 'Login failed',
+        );
+      }
+      final loginResponse = LoginResponse.fromJson(data);
+      await StorageService.saveTokens(
+        accessToken: loginResponse.accessToken,
+        refreshToken: loginResponse.refreshToken,
+        role: loginResponse.role,
+        username: (data['username'] as String?)?.trim() ?? username,
+        userEmail: username.contains('@') ? username : null,
+        firstName: (data['first_name'] as String?)?.trim(),
+        lastName: (data['last_name'] as String?)?.trim(),
+      );
+      return ApiResponse(success: true, message: 'Login successful', data: loginResponse);
+    } catch (e) {
+      return ApiResponse(success: false, message: 'Network error: $e');
+    }
+  }
+
   /// Check if demo mode is enabled on the backend
   static Future<bool> checkDemoModeStatus() async {
     try {

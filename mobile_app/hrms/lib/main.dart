@@ -6,11 +6,14 @@ import 'utils/performance_helper.dart';
 import 'pages/auth/login_page.dart';
 import 'pages/auth/signup_page.dart';
 import 'pages/employee/employee_layout.dart';
+import 'pages/employee/employee_hub_page.dart';
+import 'pages/employee/pms/pms_home_page.dart';
 import 'pages/employee/my_tasks_page.dart';
 import 'pages/employee/attendance_history_page.dart';
 import 'pages/employee/leave_application_page.dart';
 import 'pages/employee/notifications_page.dart';
 import 'pages/employee/learning_corner_page.dart';
+import 'pages/employee/lms/lms_home_page.dart';
 import 'pages/employee/personal_calendar_page.dart';
 import 'pages/employee/company_policy_page.dart';
 import 'pages/employee/references_page.dart';
@@ -95,13 +98,15 @@ class _MyAppState extends State<MyApp> {
         theme: AppStitchTheme.lightTheme(),
         themeMode: ThemeMode.light,
         home: AuthWrapper(
-          authenticatedChild: const EmployeeLayout(),
+          authenticatedChild: const EmployeeHubPage(),
           unauthenticatedChild: const LoginPage(),
         ),
         routes: {
           '/login': (context) => const LoginPage(),
           '/signup': (context) => const SignupPage(),
-          '/employee': (context) => const AuthGuard(child: EmployeeLayout()),
+          '/employee': (context) => const AuthGuard(child: EmployeeHubPage()),
+          '/employee/hub': (context) => const AuthGuard(child: EmployeeHubPage()),
+          '/employee/performance': (context) => const AuthGuard(child: PmsHomePage()),
           '/employee/dashboard': (context) =>
               const AuthGuard(child: EmployeeLayout()),
           '/employee/my-tasks': (context) =>
@@ -130,6 +135,8 @@ class _MyAppState extends State<MyApp> {
             final id = (args['conversationId'] as num?)?.toInt() ?? 0;
             return AuthGuard(child: ManageGroupPage(conversationId: id));
           },
+          '/employee/learning-management': (context) =>
+              const AuthGuard(child: LmsHomePage()),
           '/employee/learning-corner': (context) =>
               const AuthGuard(child: LearningCornerPage()),
           '/employee/personal-calendar': (context) =>

@@ -377,6 +377,26 @@ class _EmployeeDashboardPageState extends State<EmployeeDashboardPage> {
             );
             return;
           }
+          if (GeofenceService.isReducedAccuracy) {
+            setState(() => _checkInOutLoading = false);
+            if (!mounted) return;
+            final open = await showDialog<bool>(
+              context: context,
+              builder: (ctx) => AlertDialog(
+                title: const Text('Enable precise location'),
+                content: const Text(
+                  'Approximate location is on, so your position may differ from the real GPS spot. '
+                  'Turn on "Use precise location" for this app, then retry check-in.',
+                ),
+                actions: [
+                  TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+                  FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Open settings')),
+                ],
+              ),
+            );
+            if (open == true) await GeofenceService.openAppSettings();
+            return;
+          }
           final locStatus = GeofenceService.checkStatus(position, config);
           if (mounted) setState(() => _locationStatus = locStatus);
           if (!locStatus.isAtOffice) {

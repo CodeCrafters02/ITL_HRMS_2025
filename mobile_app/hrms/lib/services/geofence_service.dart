@@ -87,6 +87,15 @@ class GeofenceService {
 
   static GeofenceConfig? get cachedConfig => _cachedConfig;
 
+  /// True when the last fix came from approximate (WiFi/cell) location.
+  static bool isReducedAccuracy = false;
+
+  /// Fixes with an uncertainty radius larger than this are treated as coarse.
+  static const double _maxAcceptableAccuracyMeters = 100;
+
+  /// Opens the OS app-settings page so the user can enable "Precise location".
+  static Future<bool> openAppSettings() => Geolocator.openAppSettings();
+
   static Future<Position?> getCurrentPosition() async {
     try {
       bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
@@ -99,21 +108,31 @@ class GeofenceService {
       }
       if (permission == LocationPermission.deniedForever) return null;
 
+      // Android 12+ / iOS 14+: user may grant only "Approximate" location, which
+      // returns a WiFi/cell fix far from the real GPS position (differs from web).
+      isReducedAccuracy =
+          (await Geolocator.getLocationAccuracy()) == LocationAccuracyStatus.reduced;
+
       try {
         // Request the best accuracy possible and allow more warm-up time
-        return await Geolocator.getCurrentPosition(
+        final pos = await Geolocator.getCurrentPosition(
           locationSettings: const LocationSettings(
             accuracy: LocationAccuracy.best,
             timeLimit: Duration(seconds: 15),
           ),
         );
+        // Reject coarse fixes (large uncertainty radius) so geofence isn't
+        // evaluated against a WiFi/cell estimate.
+        if (pos.accuracy > _maxAcceptableAccuracyMeters) {
+          isReducedAccuracy = true;
+        }
+        return pos;
       } catch (e) {
         // Fallback to last known position if active scan fails/times out (e.g. indoors)
         final lastKnown = await Geolocator.getLastKnownPosition();
         if (lastKnown != null) {
-          // Only use if the cached coordinates are fresh (less than 5 minutes old)
           final age = DateTime.now().difference(lastKnown.timestamp);
-          if (age.inMinutes < 5) {
+          if (age.inMinutes < 5 && lastKnown.accuracy <= _maxAcceptableAccuracyMeters) {
             return lastKnown;
           }
         }

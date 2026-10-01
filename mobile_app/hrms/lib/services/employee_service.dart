@@ -156,6 +156,32 @@ class EmployeeService {
     }
   }
 
+  // My Performance dashboard (KRAs, skills, appraisals, feedback, 9-box)
+  static Future<ApiResponse<Map<String, dynamic>>> getMyPerformanceDashboard() async {
+    try {
+      final token = await StorageService.getAccessToken();
+      if (token == null) {
+        return ApiResponse(success: false, message: 'No access token found');
+      }
+      final response = await _makeAuthenticatedRequest(
+        () async => await http.get(
+          Uri.parse(ApiConfig.myPerformanceDashboardUrl),
+          headers: await _getAuthHeaders(),
+        ),
+      );
+      final data = jsonDecode(response.body);
+      if (response.statusCode == 200 && data is Map<String, dynamic>) {
+        return ApiResponse(success: true, message: 'ok', data: data);
+      }
+      return ApiResponse(
+        success: false,
+        message: data is Map ? (data['detail'] ?? 'Failed to load performance') : 'Failed to load performance',
+      );
+    } catch (e) {
+      return ApiResponse(success: false, message: 'Network error: $e');
+    }
+  }
+
   // Check-in
   static Future<ApiResponse<Map<String, dynamic>>> checkIn({
     double? lat,

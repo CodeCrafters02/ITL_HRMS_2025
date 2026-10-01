@@ -18,6 +18,10 @@ import router from './router/index';
 import { Provider } from 'react-redux';
 import store from './store/index';
 
+// Keep the session alive: refresh expired access tokens for every fetch/axios call
+import { installAuthInterceptors } from './utils/authFetch';
+installAuthInterceptors();
+
 // Notifications
 import { notificationService } from './services/notificationService';
 

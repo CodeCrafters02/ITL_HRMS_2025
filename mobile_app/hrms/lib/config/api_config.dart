@@ -3,12 +3,13 @@ class ApiConfig {
   ///
   /// Override at build time:
   /// `--dart-define=API_BASE_URL=https://apihrms.innovyxtechlabs.com`
+  /// or from `.env`: `flutter run --dart-define-from-file=.env`
   ///
   /// Keep a sensible dev default for local/LAN testing.
   static const String baseUrl = String.fromEnvironment(
     'API_BASE_URL',
     // defaultValue: 'https://apihrms.innovyxtechlabs.com',
-    defaultValue: 'http://10.20.71.41:8000',
+    defaultValue: 'http://10.240.21.242:8000',
   );
 
   /// Login footer "Contact IT Support" mailto. Override at build:
@@ -85,6 +86,7 @@ class ApiConfig {
   static const String dismissAnnouncementEndpoint = '/notifications/dismiss-announcement/';
   static const String dismissedAnnouncementsEndpoint = '/notifications/dismissed-announcements/';
   static const String learningCornerEndpoint = '/employee/emp-learning-corner/';
+  static const String myPerformanceDashboardEndpoint = '/employee/performance-dashboard/my/';
   static const String announcementsEndpoint = '/employee/announcements/';
   static const String timeLogMetaEndpoint = '/employee/time-log/meta/';
   static const String timeLogEndpoint = '/employee/time-log/';
@@ -217,6 +219,7 @@ class ApiConfig {
   static String get dismissAnnouncementUrl => '$baseUrl$dismissAnnouncementEndpoint';
   static String get dismissedAnnouncementsUrl => '$baseUrl$dismissedAnnouncementsEndpoint';
   static String get learningCornerUrl => '$baseUrl$learningCornerEndpoint';
+  static String get myPerformanceDashboardUrl => '$baseUrl$myPerformanceDashboardEndpoint';
   static String get announcementsUrl => '$baseUrl$announcementsEndpoint';
   static String get timeLogMetaUrl => '$baseUrl$timeLogMetaEndpoint';
   static String get timeLogUrl => '$baseUrl$timeLogEndpoint';
@@ -251,8 +254,9 @@ class ApiConfig {
     if (floorId != null) qp['floor'] = floorId.toString();
     if (startTime != null && startTime.isNotEmpty) qp['start_time'] = startTime;
     if (endTime != null && endTime.isNotEmpty) qp['end_time'] = endTime;
-    if (seatNumber != null && seatNumber.isNotEmpty)
+    if (seatNumber != null && seatNumber.isNotEmpty) {
       qp['seat_number'] = seatNumber;
+    }
     if (status != null && status.isNotEmpty) qp['status'] = status;
     if (history != null) qp['history'] = history ? 'true' : 'false';
 

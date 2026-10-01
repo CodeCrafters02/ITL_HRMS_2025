@@ -9,6 +9,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../config/api_config.dart';
 import '../../services/biometric_service.dart';
 import '../../services/auth_service.dart';
+import '../../models/user_model.dart';
 import '../../theme/app_stitch_theme.dart';
 import 'demo_login_page.dart';
 
@@ -163,13 +164,16 @@ class _LoginPageState extends State<LoginPage> {
     }
   }
 
-  Future<void> _handleGoogleSignIn() async {
+  Future<void> _handleGoogleSignIn({
+    Future<ApiResponse<LoginResponse>> Function()? login,
+    bool enforceEmployeeRole = true,
+  }) async {
     setState(() {
       _isLoading = true;
     });
 
     try {
-      final response = await AuthService.loginWithGoogle();
+      final response = await (login ?? AuthService.loginWithGoogle)();
 
       if (mounted) {
         setState(() {
@@ -178,7 +182,7 @@ class _LoginPageState extends State<LoginPage> {
 
         if (response.success) {
           final role = response.data?.role.trim().toLowerCase();
-          if (role != null && role.isNotEmpty && role != 'employee') {
+          if (enforceEmployeeRole && role != null && role.isNotEmpty && role != 'employee') {
             await AuthService.logout();
             _showErrorDialog(
               'This account type ($role) isn’t supported in the mobile app yet. Please use the web app.',
@@ -186,6 +190,7 @@ class _LoginPageState extends State<LoginPage> {
             return;
           }
           await _promptBiometricEnrollment();
+          if (!mounted) return;
           Navigator.pushNamedAndRemoveUntil(
             context,
             '/employee',
@@ -215,6 +220,50 @@ class _LoginPageState extends State<LoginPage> {
 
   void _showBiometricSoon() {
     _promptBiometricEnrollment();
+  }
+
+  Future<void> _handleDebugLogin() async {
+    // Debug-only stand-in for Google SSO (which needs a registered SHA-1).
+    // Lets any employee/admin account be tested with username + password.
+    final userCtrl = TextEditingController(text: 'vivek');
+    final passCtrl = TextEditingController(text: 'User@123');
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Debug login'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: userCtrl,
+              autofillHints: const [AutofillHints.username],
+              decoration: const InputDecoration(labelText: 'Username or email'),
+            ),
+            TextField(
+              controller: passCtrl,
+              obscureText: true,
+              decoration: const InputDecoration(labelText: 'Password'),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+          FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Login')),
+        ],
+      ),
+    );
+    final username = userCtrl.text.trim();
+    final password = passCtrl.text;
+    // Dispose after the dialog's exit animation; disposing immediately crashes the tree.
+    Future.delayed(const Duration(milliseconds: 400), () {
+      userCtrl.dispose();
+      passCtrl.dispose();
+    });
+    if (ok != true || username.isEmpty || password.isEmpty) return;
+    await _handleGoogleSignIn(
+      login: () => AuthService.loginWithPassword(username: username, password: password),
+      enforceEmployeeRole: false,
+    );
   }
 
   void _showErrorDialog(String message) {
@@ -496,6 +545,16 @@ class _LoginPageState extends State<LoginPage> {
                       ),
                     ),
                   ),
+                  if (kDebugMode) ...[
+                    const SizedBox(height: 12),
+                    Center(
+                      child: TextButton.icon(
+                        onPressed: _isLoading ? null : _handleDebugLogin,
+                        icon: const Icon(Icons.developer_mode_rounded),
+                        label: const Text('Debug login (vivek)'),
+                      ),
+                    ),
+                  ],
                   // Demo Mode Link (only shown when demo mode is enabled)
                   if (!_isCheckingDemoStatus && _demoModeEnabled) ...[
                     const SizedBox(height: 20),
