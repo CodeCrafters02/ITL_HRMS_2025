@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../theme/app_stitch_theme.dart';
+import '../../widgets/session_dialogs.dart';
 import '../../services/employee_service.dart';
 import '../../services/notification_service.dart';
 import '../../services/auth_service.dart';
@@ -25,8 +26,7 @@ class EmployeeLayout extends StatefulWidget {
   State<EmployeeLayout> createState() => _EmployeeLayoutState();
 }
 
-class _EmployeeLayoutState extends State<EmployeeLayout>
-    with WidgetsBindingObserver {
+class _EmployeeLayoutState extends State<EmployeeLayout> with WidgetsBindingObserver {
   int _currentIndex = 0;
   bool _isReportingManager = false;
   bool _isDemoMode = false;
@@ -136,14 +136,11 @@ class _EmployeeLayoutState extends State<EmployeeLayout>
       setState(() {
         _currentIndex = 1; // My Tasks tab
       });
-    } else if (type == 'loan_status' ||
-        type == 'loan_request' ||
-        type == 'loan_admin_review') {
+    } else if (type == 'loan_status' || type == 'loan_request' || type == 'loan_admin_review') {
       Navigator.pushNamed(context, '/employee/loan-application');
     } else if (type == 'wfh_status' || type == 'wfh_request') {
       Navigator.pushNamed(context, '/employee/wfh-request');
-    } else if (type == 'reimbursement_status' ||
-        type == 'reimbursement_request') {
+    } else if (type == 'reimbursement_status' || type == 'reimbursement_request') {
       Navigator.pushNamed(context, '/employee/reimbursement');
     } else if (type == 'payslip_new') {
       Navigator.pushNamed(context, '/employee/my-payslips');
@@ -221,8 +218,7 @@ class _EmployeeLayoutState extends State<EmployeeLayout>
       setState(() {
         _currentIndex = 1;
       });
-    } else if (path == '/employee/attendance' ||
-        path == '/employee/attendance-history') {
+    } else if (path == '/employee/attendance' || path == '/employee/attendance-history') {
       setState(() {
         _currentIndex = 2;
       });
@@ -304,17 +300,11 @@ class _EmployeeLayoutState extends State<EmployeeLayout>
   }
 
   Widget _buildInitialsWidget() {
-    final initials = _profile != null
-        ? _getInitials(_profile!.firstName, _profile!.lastName)
-        : 'E';
+    final initials = _profile != null ? _getInitials(_profile!.firstName, _profile!.lastName) : 'E';
     return Center(
       child: Text(
         initials.isEmpty ? 'E' : initials,
-        style: const TextStyle(
-          color: Colors.white,
-          fontWeight: FontWeight.bold,
-          fontSize: 16,
-        ),
+        style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
       ),
     );
   }
@@ -325,239 +315,123 @@ class _EmployeeLayoutState extends State<EmployeeLayout>
       return false;
     }
 
-    final bool? shouldExit = await showDialog<bool>(
-      context: context,
-      barrierColor: Colors.black.withValues(alpha: 0.4),
-      builder: (context) => Dialog(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        child: Container(
-          padding: const EdgeInsets.all(24),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(24),
-            boxShadow: [
-              BoxShadow(
-                color: AppStitchTheme.primary.withValues(alpha: 0.10),
-                blurRadius: 30,
-                offset: const Offset(0, 10),
-              ),
-            ],
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [
-                      AppStitchTheme.primary.withValues(alpha: 0.12),
-                      const Color(0xFF8B5CF6).withValues(alpha: 0.08),
-                    ],
-                  ),
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(
-                  Icons.exit_to_app_rounded,
-                  color: AppStitchTheme.primary,
-                  size: 32,
-                ),
-              ),
-              const SizedBox(height: 16),
-              Text(
-                'Exit App?',
-                style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                      fontWeight: FontWeight.w900,
-                      color: AppStitchTheme.lightOnSurface,
-                      letterSpacing: -0.5,
-                    ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                'Are you sure you want to exit the application?',
-                textAlign: TextAlign.center,
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: AppStitchTheme.lightOnSurfaceMuted,
-                      height: 1.4,
-                    ),
-              ),
-              const SizedBox(height: 24),
-              Row(
-                children: [
-                  Expanded(
-                    child: TextButton(
-                      onPressed: () => Navigator.of(context).pop(false),
-                      style: TextButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(14),
-                          side: BorderSide(
-                            color: AppStitchTheme.lightOutline.withValues(alpha: 0.5),
-                          ),
-                        ),
-                      ),
-                      child: Text(
-                        'Stay',
-                        style: TextStyle(
-                          color: AppStitchTheme.lightOnSurfaceMuted,
-                          fontWeight: FontWeight.w700,
-                          fontSize: 14,
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: ElevatedButton(
-                      onPressed: () => Navigator.of(context).pop(true),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppStitchTheme.primary,
-                        foregroundColor: Colors.white,
-                        elevation: 0,
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(14),
-                        ),
-                      ),
-                      child: const Text(
-                        'Exit',
-                        style: TextStyle(
-                          fontWeight: FontWeight.w800,
-                          fontSize: 14,
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-
-    return shouldExit ?? false;
+    // Back from the dashboard returns to the ITL Employee Hub (exit is confirmed there).
+    if (Navigator.of(context).canPop()) return true;
+    Navigator.of(context).pushReplacementNamed('/employee');
+    return false;
   }
 
   @override
   Widget build(BuildContext context) {
-    return WillPopScope(
-      onWillPop: _onWillPop,
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, _) async {
+        if (!didPop && await _onWillPop() && context.mounted) Navigator.of(context).pop();
+      },
       child: Scaffold(
         key: _scaffoldKey,
-      drawerEdgeDragWidth: MediaQuery.of(context).size.width * 0.2,
-      drawer: EmployeeDrawer(
-        isReportingManager: _isReportingManager,
-        onItemTap: _onDrawerItemTap,
-      ),
-      body: StitchBackground(
-        enableAnimations: PerformanceHelper.enableParticles,
-        child: SafeArea(
-          child: Column(
-            children: [
-              // Demo Mode Indicator (shown only when in demo mode)
-              if (_isDemoMode) const DemoModeIndicator(),
-              Padding(
-                padding: const EdgeInsets.fromLTRB(12, 8, 12, 4),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 6,
-                    vertical: 6,
-                  ),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.08),
-                    borderRadius: BorderRadius.circular(28),
-                    border: Border.all(
-                      color: Colors.white.withValues(alpha: 0.12),
-                      width: 1,
+        drawerEdgeDragWidth: MediaQuery.of(context).size.width * 0.2,
+        drawer: EmployeeDrawer(
+          isReportingManager: _isReportingManager,
+          onItemTap: _onDrawerItemTap,
+        ),
+        body: StitchBackground(
+          enableAnimations: PerformanceHelper.enableParticles,
+          child: SafeArea(
+            child: Column(
+              children: [
+                // Demo Mode Indicator (shown only when in demo mode)
+                if (_isDemoMode) const DemoModeIndicator(),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(12, 8, 12, 4),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.08),
+                      borderRadius: BorderRadius.circular(28),
+                      border: Border.all(color: Colors.white.withValues(alpha: 0.12), width: 1),
+                      boxShadow: [
+                        BoxShadow(
+                          color: AppStitchTheme.primary.withValues(alpha: 0.06),
+                          blurRadius: 20,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
                     ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: AppStitchTheme.primary.withValues(alpha: 0.06),
-                        blurRadius: 20,
-                        offset: const Offset(0, 4),
-                      ),
-                    ],
-                  ),
-                  child: Row(
-                    children: [
-                      // Menu button
-                      _GlassIconButton(
-                        icon: Icons.menu_rounded,
-                        onTap: () => _scaffoldKey.currentState?.openDrawer(),
-                      ),
-                      const Spacer(),
-                      // Center branding — logo with subtle glow
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 14,
-                          vertical: 6,
+                    child: Row(
+                      children: [
+                        // Menu button
+                        _GlassIconButton(
+                          icon: Icons.menu_rounded,
+                          onTap: () => _scaffoldKey.currentState?.openDrawer(),
                         ),
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            colors: [
-                              AppStitchTheme.primary.withValues(alpha: 0.12),
-                              AppStitchTheme.primary.withValues(alpha: 0.04),
-                            ],
-                          ),
-                          borderRadius: BorderRadius.circular(20),
-                          border: Border.all(
-                            color: AppStitchTheme.primary.withValues(
-                              alpha: 0.15,
+                        const SizedBox(width: 8),
+                        _GlassIconButton(icon: Icons.home_rounded, onTap: () => goHome(context)),
+                        const Spacer(),
+                        // Center branding — logo with subtle glow
+                        Flexible(
+                          flex: 8,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                colors: [
+                                  AppStitchTheme.primary.withValues(alpha: 0.12),
+                                  AppStitchTheme.primary.withValues(alpha: 0.04),
+                                ],
+                              ),
+                              borderRadius: BorderRadius.circular(20),
+                              border: Border.all(
+                                color: AppStitchTheme.primary.withValues(alpha: 0.15),
+                              ),
                             ),
-                          ),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Image.asset(
-                              'assets/logo/app_logo.png',
-                              height: 22,
-                              errorBuilder: (context, error, stackTrace) =>
-                                  Icon(
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Image.asset(
+                                  'assets/logo/app_logo.png',
+                                  height: 22,
+                                  errorBuilder: (context, error, stackTrace) => Icon(
                                     Icons.people_alt_rounded,
                                     size: 20,
-                                    color: AppStitchTheme.primary.withValues(
-                                      alpha: 0.8,
+                                    color: AppStitchTheme.primary.withValues(alpha: 0.8),
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                Flexible(
+                                  child: Text(
+                                    'PEOPLE SUITE',
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                                      fontWeight: FontWeight.w900,
+                                      letterSpacing: 1.5,
+                                      color: AppStitchTheme.lightOnSurface.withValues(alpha: 0.85),
                                     ),
                                   ),
+                                ),
+                              ],
                             ),
-                            const SizedBox(width: 8),
-                            Text(
-                              'PEOPLE SUITE',
-                              style: Theme.of(context).textTheme.labelMedium
-                                  ?.copyWith(
-                                    fontWeight: FontWeight.w900,
-                                    letterSpacing: 1.5,
-                                    color: AppStitchTheme.lightOnSurface
-                                        .withValues(alpha: 0.85),
-                                  ),
-                            ),
-                          ],
+                          ),
                         ),
-                      ),
-                      const Spacer(),
-                      // Notification + Profile
-                      const _GlassNotificationButton(),
-                      const SizedBox(width: 8),
-                      _buildProfileAvatar(),
-                    ],
+                        const Spacer(),
+                        // Notification + Profile
+                        const _GlassNotificationButton(),
+                        const SizedBox(width: 8),
+                        _buildProfileAvatar(),
+                      ],
+                    ),
                   ),
                 ),
-              ),
-              Expanded(child: _getPage(_currentIndex)),
-            ],
+                Expanded(child: _getPage(_currentIndex)),
+              ],
+            ),
           ),
         ),
+        bottomNavigationBar: EmployeeBottomNav(currentIndex: _currentIndex, onTap: _onBottomNavTap),
       ),
-      bottomNavigationBar: EmployeeBottomNav(
-        currentIndex: _currentIndex,
-        onTap: _onBottomNavTap,
-      ),
-    ),
-  );
-}
+    );
+  }
 }
 
 /// A frosted-glass circular icon button for the header bar.
@@ -589,8 +463,7 @@ class _GlassNotificationButton extends StatefulWidget {
   const _GlassNotificationButton();
 
   @override
-  State<_GlassNotificationButton> createState() =>
-      _GlassNotificationButtonState();
+  State<_GlassNotificationButton> createState() => _GlassNotificationButtonState();
 }
 
 class _GlassNotificationButtonState extends State<_GlassNotificationButton> {
@@ -639,11 +512,7 @@ class _GlassNotificationButtonState extends State<_GlassNotificationButton> {
         child: Stack(
           alignment: Alignment.center,
           children: [
-            Icon(
-              Icons.notifications_outlined,
-              color: AppStitchTheme.lightOnSurface,
-              size: 21,
-            ),
+            Icon(Icons.notifications_outlined, color: AppStitchTheme.lightOnSurface, size: 21),
             if (_badgeCount > 0)
               Positioned(
                 top: 6,
@@ -653,15 +522,9 @@ class _GlassNotificationButtonState extends State<_GlassNotificationButton> {
                   decoration: BoxDecoration(
                     color: const Color(0xFFEF4444),
                     shape: BoxShape.circle,
-                    border: Border.all(
-                      color: Colors.white.withValues(alpha: 0.9),
-                      width: 1.5,
-                    ),
+                    border: Border.all(color: Colors.white.withValues(alpha: 0.9), width: 1.5),
                   ),
-                  constraints: const BoxConstraints(
-                    minWidth: 16,
-                    minHeight: 16,
-                  ),
+                  constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
                   child: Center(
                     child: Text(
                       _badgeCount > 99 ? '99+' : _badgeCount.toString(),

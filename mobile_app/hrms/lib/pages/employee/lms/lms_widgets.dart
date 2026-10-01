@@ -27,11 +27,36 @@ class Lc {
 
   static const hero = [Color(0xFF1E1B4B), Color(0xFF3730A3)];
 
-  static const r = 16.0;
+  static const r = 22.0;
   static List<BoxShadow> get shadow => [
-        BoxShadow(color: ink.withValues(alpha: 0.04), blurRadius: 2, offset: const Offset(0, 1)),
-        BoxShadow(color: ink.withValues(alpha: 0.05), blurRadius: 16, offset: const Offset(0, 6)),
-      ];
+    BoxShadow(color: Colors.black.withValues(alpha: 0.10), blurRadius: 24, offset: const Offset(0, 12)),
+    BoxShadow(color: Colors.white.withValues(alpha: 0.26), blurRadius: 18, offset: const Offset(0, 1)),
+  ];
+
+  /// Frosted bars (app bar, tab strips, bottom nav) over the dashboard background.
+  static final bar = Colors.white.withValues(alpha: 0.72);
+  static const glassBorder = Color(0xC7CBD5E1); // AppStitchTheme.lightOutline @ 0.78
+
+  /// Employee-dashboard GlassCard fill; [tint] gives status cards a coloured glass.
+  static LinearGradient glassGradient([Color? tint]) => LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: tint == null
+        ? [
+            Colors.white.withValues(alpha: 0.78),
+            const Color(0xFF4285F4).withValues(alpha: 0.10),
+            Colors.white.withValues(alpha: 0.62),
+          ]
+        : [tint.withValues(alpha: 0.92), tint.withValues(alpha: 0.72), tint.withValues(alpha: 0.85)],
+    stops: const [0.0, 0.55, 1.0],
+  );
+
+  static BoxDecoration glass({double radius = r, Color? tint, bool shadowed = true}) => BoxDecoration(
+    gradient: glassGradient(tint),
+    borderRadius: BorderRadius.circular(radius),
+    border: Border.all(color: glassBorder),
+    boxShadow: shadowed ? shadow : null,
+  );
 
   static const h1 = TextStyle(fontSize: 22, fontWeight: FontWeight.w800, color: ink, letterSpacing: -0.3);
   static const h2 = TextStyle(fontSize: 17, fontWeight: FontWeight.w700, color: ink, letterSpacing: -0.2);
@@ -67,7 +92,15 @@ String titleCase(String s) =>
 }
 
 class CourseThumb extends StatelessWidget {
-  const CourseThumb({super.key, required this.url, required this.seed, this.height = 120, this.width, this.radius = 12, this.icon});
+  const CourseThumb({
+    super.key,
+    required this.url,
+    required this.seed,
+    this.height = 120,
+    this.width,
+    this.radius = 12,
+    this.icon,
+  });
   final String? url;
   final int seed;
   final double height;
@@ -82,14 +115,18 @@ class CourseThumb extends StatelessWidget {
       height: height,
       width: width ?? double.infinity,
       color: t.bg,
-      child: Stack(children: [
-        Positioned(
-          right: -height * 0.15,
-          bottom: -height * 0.2,
-          child: Icon(icon ?? Icons.auto_stories_rounded, size: height * 0.9, color: t.fg.withValues(alpha: 0.08)),
-        ),
-        Center(child: Icon(icon ?? Icons.auto_stories_rounded, color: t.fg, size: (height * 0.34).clamp(18, 44))),
-      ]),
+      child: Stack(
+        children: [
+          Positioned(
+            right: -height * 0.15,
+            bottom: -height * 0.2,
+            child: Icon(icon ?? Icons.auto_stories_rounded, size: height * 0.9, color: t.fg.withValues(alpha: 0.08)),
+          ),
+          Center(
+            child: Icon(icon ?? Icons.auto_stories_rounded, color: t.fg, size: (height * 0.34).clamp(18, 44)),
+          ),
+        ],
+      ),
     );
     return ClipRRect(
       borderRadius: BorderRadius.circular(radius),
@@ -116,38 +153,41 @@ class Pill extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Container(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-        decoration: BoxDecoration(
-          color: solid ? color : color.withValues(alpha: 0.09),
-          borderRadius: BorderRadius.circular(6),
-        ),
-        child: Row(mainAxisSize: MainAxisSize.min, children: [
-          if (icon != null) ...[Icon(icon, size: 12, color: solid ? Colors.white : color), const SizedBox(width: 4)],
-          ConstrainedBox(
-            constraints: BoxConstraints(maxWidth: MediaQuery.sizeOf(context).width * 0.62),
-            child: Text(
-              text,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: solid ? Colors.white : color),
-            ),
+    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+    decoration: BoxDecoration(
+      color: solid ? color : color.withValues(alpha: 0.09),
+      borderRadius: BorderRadius.circular(6),
+    ),
+    child: Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        if (icon != null) ...[Icon(icon, size: 12, color: solid ? Colors.white : color), const SizedBox(width: 4)],
+        ConstrainedBox(
+          constraints: BoxConstraints(maxWidth: MediaQuery.sizeOf(context).width * 0.62),
+          child: Text(
+            text,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: solid ? Colors.white : color),
           ),
-        ]),
-      );
+        ),
+      ],
+    ),
+  );
 }
 
 Color difficultyColor(String? d) => switch ((d ?? '').toLowerCase()) {
-      'advanced' => Lc.danger,
-      'intermediate' => Lc.warning,
-      _ => Lc.teal,
-    };
+  'advanced' => Lc.danger,
+  'intermediate' => Lc.warning,
+  _ => Lc.teal,
+};
 
 Color statusColor(String? s) => switch ((s ?? '').toLowerCase()) {
-      'completed' || 'approved' || 'valid' || 'graded' || 'passed' => Lc.success,
-      'overdue' || 'rejected' || 'expired' || 'failed' || 'revoked' => Lc.danger,
-      'in_progress' || 'submitted' || 'late' || 'enrolled' => Lc.primary,
-      _ => Lc.warning,
-    };
+  'completed' || 'approved' || 'valid' || 'graded' || 'passed' => Lc.success,
+  'overdue' || 'rejected' || 'expired' || 'failed' || 'revoked' => Lc.danger,
+  'in_progress' || 'submitted' || 'late' || 'enrolled' => Lc.primary,
+  _ => Lc.warning,
+};
 
 class ProgressLine extends StatelessWidget {
   const ProgressLine(this.value, {super.key, this.height = 6, this.color = Lc.primary});
@@ -157,19 +197,19 @@ class ProgressLine extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => ClipRRect(
-        borderRadius: BorderRadius.circular(99),
-        child: TweenAnimationBuilder<double>(
-          tween: Tween(begin: 0, end: (value / 100).clamp(0, 1)),
-          duration: const Duration(milliseconds: 700),
-          curve: Curves.easeOutCubic,
-          builder: (_, v, _) => LinearProgressIndicator(
-            value: v,
-            minHeight: height,
-            backgroundColor: Lc.line,
-            valueColor: AlwaysStoppedAnimation(v >= 1 ? Lc.success : color),
-          ),
-        ),
-      );
+    borderRadius: BorderRadius.circular(99),
+    child: TweenAnimationBuilder<double>(
+      tween: Tween(begin: 0, end: (value / 100).clamp(0, 1)),
+      duration: const Duration(milliseconds: 700),
+      curve: Curves.easeOutCubic,
+      builder: (_, v, _) => LinearProgressIndicator(
+        value: v,
+        minHeight: height,
+        backgroundColor: Lc.line,
+        valueColor: AlwaysStoppedAnimation(v >= 1 ? Lc.success : color),
+      ),
+    ),
+  );
 }
 
 class ProgressRing extends StatelessWidget {
@@ -181,33 +221,46 @@ class ProgressRing extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => SizedBox(
-        width: size,
-        height: size,
-        child: TweenAnimationBuilder<double>(
-          tween: Tween(begin: 0, end: (value / 100).clamp(0, 1)),
-          duration: const Duration(milliseconds: 900),
-          curve: Curves.easeOutCubic,
-          builder: (_, v, _) => Stack(fit: StackFit.expand, children: [
-            CircularProgressIndicator(
-              value: v,
-              strokeWidth: stroke,
-              strokeCap: StrokeCap.round,
-              backgroundColor: light ? Colors.white.withValues(alpha: 0.18) : Lc.line,
-              valueColor: AlwaysStoppedAnimation(light ? const Color(0xFF5EEAD4) : (v >= 1 ? Lc.success : Lc.primary)),
-            ),
-            Center(
-              child: Text(
-                '${(v * 100).round()}%',
-                style: TextStyle(fontSize: size * 0.23, fontWeight: FontWeight.w800, color: light ? Colors.white : Lc.ink),
+    width: size,
+    height: size,
+    child: TweenAnimationBuilder<double>(
+      tween: Tween(begin: 0, end: (value / 100).clamp(0, 1)),
+      duration: const Duration(milliseconds: 900),
+      curve: Curves.easeOutCubic,
+      builder: (_, v, _) => Stack(
+        fit: StackFit.expand,
+        children: [
+          CircularProgressIndicator(
+            value: v,
+            strokeWidth: stroke,
+            strokeCap: StrokeCap.round,
+            backgroundColor: light ? Colors.white.withValues(alpha: 0.18) : Lc.line,
+            valueColor: AlwaysStoppedAnimation(light ? const Color(0xFF5EEAD4) : (v >= 1 ? Lc.success : Lc.primary)),
+          ),
+          Center(
+            child: Text(
+              '${(v * 100).round()}%',
+              style: TextStyle(
+                fontSize: size * 0.23,
+                fontWeight: FontWeight.w800,
+                color: light ? Colors.white : Lc.ink,
               ),
             ),
-          ]),
-        ),
-      );
+          ),
+        ],
+      ),
+    ),
+  );
 }
 
 class LmsCard extends StatelessWidget {
-  const LmsCard({super.key, required this.child, this.onTap, this.padding = const EdgeInsets.all(14), this.color = Lc.surface});
+  const LmsCard({
+    super.key,
+    required this.child,
+    this.onTap,
+    this.padding = const EdgeInsets.all(14),
+    this.color = Lc.surface,
+  });
   final Widget child;
   final VoidCallback? onTap;
   final EdgeInsets padding;
@@ -215,21 +268,16 @@ class LmsCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Container(
-        decoration: BoxDecoration(
-          color: color,
-          borderRadius: BorderRadius.circular(Lc.r),
-          border: Border.all(color: Lc.line),
-          boxShadow: Lc.shadow,
-        ),
-        child: Material(
-          color: Colors.transparent,
-          child: InkWell(
-            onTap: onTap,
-            borderRadius: BorderRadius.circular(Lc.r),
-            child: Padding(padding: padding, child: child),
-          ),
-        ),
-      );
+    decoration: Lc.glass(tint: color == Lc.surface ? null : color),
+    child: Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(Lc.r),
+        child: Padding(padding: padding, child: child),
+      ),
+    ),
+  );
 }
 
 class SectionHeader extends StatelessWidget {
@@ -241,29 +289,37 @@ class SectionHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Padding(
-        padding: const EdgeInsets.fromLTRB(2, 22, 2, 10),
-        child: Row(children: [
-          Text(title, style: Lc.h2),
-          if (count != null) ...[
-            const SizedBox(width: 8),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 1),
-              decoration: BoxDecoration(color: Lc.line, borderRadius: BorderRadius.circular(99)),
-              child: Text('$count', style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700, color: Lc.muted)),
+    padding: const EdgeInsets.fromLTRB(2, 22, 2, 10),
+    child: Row(
+      children: [
+        Text(title, style: Lc.h2),
+        if (count != null) ...[
+          const SizedBox(width: 8),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 1),
+            decoration: BoxDecoration(color: Lc.line, borderRadius: BorderRadius.circular(99)),
+            child: Text(
+              '$count',
+              style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700, color: Lc.muted),
             ),
-          ],
-          const Spacer(),
-          if (action != null)
-            InkWell(
-              onTap: onAction,
-              borderRadius: BorderRadius.circular(6),
-              child: Padding(
-                padding: const EdgeInsets.all(4),
-                child: Text(action!, style: const TextStyle(color: Lc.primary, fontWeight: FontWeight.w700, fontSize: 13)),
+          ),
+        ],
+        const Spacer(),
+        if (action != null)
+          InkWell(
+            onTap: onAction,
+            borderRadius: BorderRadius.circular(6),
+            child: Padding(
+              padding: const EdgeInsets.all(4),
+              child: Text(
+                action!,
+                style: const TextStyle(color: Lc.primary, fontWeight: FontWeight.w700, fontSize: 13),
               ),
             ),
-        ]),
-      );
+          ),
+      ],
+    ),
+  );
 }
 
 class EmptyState extends StatelessWidget {
@@ -275,21 +331,24 @@ class EmptyState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Padding(
-        padding: const EdgeInsets.fromLTRB(32, 40, 32, 32),
-        child: Column(mainAxisSize: MainAxisSize.min, children: [
-          Container(
-            width: 72,
-            height: 72,
-            decoration: BoxDecoration(color: Lc.primarySoft, borderRadius: BorderRadius.circular(20)),
-            child: Icon(icon, size: 34, color: Lc.primary),
-          ),
-          const SizedBox(height: 16),
-          Text(title, textAlign: TextAlign.center, style: Lc.h3),
-          const SizedBox(height: 6),
-          Text(message, textAlign: TextAlign.center, style: Lc.body),
-          if (action != null) ...[const SizedBox(height: 18), action!],
-        ]),
-      );
+    padding: const EdgeInsets.fromLTRB(32, 40, 32, 32),
+    child: Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          width: 72,
+          height: 72,
+          decoration: BoxDecoration(color: Lc.primarySoft, borderRadius: BorderRadius.circular(20)),
+          child: Icon(icon, size: 34, color: Lc.primary),
+        ),
+        const SizedBox(height: 16),
+        Text(title, textAlign: TextAlign.center, style: Lc.h3),
+        const SizedBox(height: 6),
+        Text(message, textAlign: TextAlign.center, style: Lc.body),
+        if (action != null) ...[const SizedBox(height: 18), action!],
+      ],
+    ),
+  );
 }
 
 class ErrorRetry extends StatelessWidget {
@@ -299,76 +358,95 @@ class ErrorRetry extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => EmptyState(
-        icon: Icons.cloud_off_rounded,
-        title: 'Couldn\'t load',
-        message: message,
-        action: FilledButton.icon(
-          onPressed: onRetry,
-          style: lmsPrimaryButton(height: 44),
-          icon: const Icon(Icons.refresh_rounded, size: 18),
-          label: const Text('Try again'),
-        ),
-      );
+    icon: Icons.cloud_off_rounded,
+    title: 'Couldn\'t load',
+    message: message,
+    action: FilledButton.icon(
+      onPressed: onRetry,
+      style: lmsPrimaryButton(height: 44),
+      icon: const Icon(Icons.refresh_rounded, size: 18),
+      label: const Text('Try again'),
+    ),
+  );
 }
 
 ButtonStyle lmsPrimaryButton({double height = 48, Color color = Lc.primary}) => FilledButton.styleFrom(
-      backgroundColor: color,
-      foregroundColor: Colors.white,
-      disabledBackgroundColor: Lc.line,
-      minimumSize: Size.fromHeight(height),
-      elevation: 0,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      textStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14.5),
-    );
+  backgroundColor: color,
+  foregroundColor: Colors.white,
+  disabledBackgroundColor: Lc.line,
+  minimumSize: Size.fromHeight(height),
+  elevation: 0,
+  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+  textStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14.5),
+);
 
 ButtonStyle lmsSecondaryButton({double height = 48}) => OutlinedButton.styleFrom(
-      foregroundColor: Lc.primary,
-      minimumSize: Size.fromHeight(height),
-      side: const BorderSide(color: Lc.line),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      textStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14.5),
-    );
+  foregroundColor: Lc.primary,
+  minimumSize: Size.fromHeight(height),
+  side: const BorderSide(color: Lc.line),
+  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+  textStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14.5),
+);
 
 InputDecoration lmsInput(String label, {IconData? icon}) => InputDecoration(
-      labelText: label,
-      alignLabelWithHint: true,
-      prefixIcon: icon == null ? null : Icon(icon, color: Lc.faint),
-      filled: true,
-      fillColor: Lc.surface,
-      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
-      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Lc.line)),
-      enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Lc.line)),
-      focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Lc.primary, width: 1.5)),
-    );
+  labelText: label,
+  alignLabelWithHint: true,
+  prefixIcon: icon == null ? null : Icon(icon, color: Lc.faint),
+  filled: true,
+  fillColor: Lc.surface,
+  contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+  border: OutlineInputBorder(
+    borderRadius: BorderRadius.circular(12),
+    borderSide: const BorderSide(color: Lc.line),
+  ),
+  enabledBorder: OutlineInputBorder(
+    borderRadius: BorderRadius.circular(12),
+    borderSide: const BorderSide(color: Lc.line),
+  ),
+  focusedBorder: OutlineInputBorder(
+    borderRadius: BorderRadius.circular(12),
+    borderSide: const BorderSide(color: Lc.primary, width: 1.5),
+  ),
+);
 
 void lmsToast(BuildContext context, String msg, {bool error = false}) {
   ScaffoldMessenger.of(context)
     ..hideCurrentSnackBar()
-    ..showSnackBar(SnackBar(
-      content: Row(children: [
-        Icon(error ? Icons.error_outline_rounded : Icons.check_circle_outline_rounded, color: Colors.white, size: 20),
-        const SizedBox(width: 10),
-        Expanded(child: Text(msg, style: const TextStyle(fontWeight: FontWeight.w500))),
-      ]),
-      behavior: SnackBarBehavior.floating,
-      backgroundColor: error ? Lc.danger : Lc.ink,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-    ));
+    ..showSnackBar(
+      SnackBar(
+        content: Row(
+          children: [
+            Icon(
+              error ? Icons.error_outline_rounded : Icons.check_circle_outline_rounded,
+              color: Colors.white,
+              size: 20,
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(msg, style: const TextStyle(fontWeight: FontWeight.w500)),
+            ),
+          ],
+        ),
+        behavior: SnackBarBehavior.floating,
+        backgroundColor: error ? Lc.danger : Lc.ink,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+      ),
+    );
 }
 
 /// Thumbnail URL for an enrollment / course / wishlist row.
 String? thumbOf(Json m) => LmsService.mediaUrl(m['course_image_url'] ?? m['thumbnail_url'] ?? m['thumbnail']);
 
 IconData contentIcon(String t) => switch (t) {
-      'video' => Icons.play_circle_outline_rounded,
-      'pdf' || 'document' => Icons.description_outlined,
-      'ppt' => Icons.slideshow_rounded,
-      'audio' => Icons.headphones_rounded,
-      'link' => Icons.link_rounded,
-      'scorm' => Icons.extension_rounded,
-      _ => Icons.article_outlined,
-    };
+  'video' => Icons.play_circle_outline_rounded,
+  'pdf' || 'document' => Icons.description_outlined,
+  'ppt' => Icons.slideshow_rounded,
+  'audio' => Icons.headphones_rounded,
+  'link' => Icons.link_rounded,
+  'scorm' => Icons.extension_rounded,
+  _ => Icons.article_outlined,
+};
 
 /// Standard bottom sheet chrome.
 class LmsSheet extends StatelessWidget {
@@ -379,23 +457,36 @@ class LmsSheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Padding(
-        padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
-        child: Container(
-          decoration: const BoxDecoration(color: Lc.surface, borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
-          padding: const EdgeInsets.fromLTRB(20, 10, 20, 20),
-          child: SafeArea(
-            top: false,
-            child: SingleChildScrollView(
-              child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, mainAxisSize: MainAxisSize.min, children: [
-                Center(child: Container(width: 36, height: 4, decoration: BoxDecoration(color: Lc.line, borderRadius: BorderRadius.circular(9)))),
-                const SizedBox(height: 16),
-                Text(title, style: Lc.h2),
-                if (subtitle != null) ...[const SizedBox(height: 4), Text(subtitle!, style: Lc.body)],
-                const SizedBox(height: 18),
-                child,
-              ]),
-            ),
+    padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+    child: Container(
+      decoration: const BoxDecoration(
+        color: Lc.surface,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      padding: const EdgeInsets.fromLTRB(20, 10, 20, 20),
+      child: SafeArea(
+        top: false,
+        child: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Center(
+                child: Container(
+                  width: 36,
+                  height: 4,
+                  decoration: BoxDecoration(color: Lc.line, borderRadius: BorderRadius.circular(9)),
+                ),
+              ),
+              const SizedBox(height: 16),
+              Text(title, style: Lc.h2),
+              if (subtitle != null) ...[const SizedBox(height: 4), Text(subtitle!, style: Lc.body)],
+              const SizedBox(height: 18),
+              child,
+            ],
           ),
         ),
-      );
+      ),
+    ),
+  );
 }

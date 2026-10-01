@@ -49,6 +49,8 @@ android {
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
+        // Microsoft SSO (flutter_appauth): redirect URI com.innovyx.peoplesuite://oauthredirect
+        manifestPlaceholders["appAuthRedirectScheme"] = "com.innovyx.peoplesuite"
     }
 
     buildTypes {

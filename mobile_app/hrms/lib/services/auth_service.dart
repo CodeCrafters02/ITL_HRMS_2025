@@ -4,10 +4,12 @@ import 'dart:math';
 import 'dart:io' show Platform;
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/services.dart';
+import 'package:flutter_appauth/flutter_appauth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:http/http.dart' as http;
 import '../config/api_config.dart';
 import '../config/google_oauth_config.dart';
+import '../config/microsoft_oauth_config.dart';
 import '../models/user_model.dart';
 import '../services/storage_service.dart';
 import '../services/fcm_service.dart';
@@ -31,6 +33,72 @@ class AuthService {
       // to avoid configuration errors when serverClientId is also used.
       clientId: (!kIsWeb && Platform.isIOS) ? kGoogleIosClientId : null,
     );
+  }
+
+  static const FlutterAppAuth _appAuth = FlutterAppAuth();
+
+  /// Microsoft Entra ID SSO: authorization code + PKCE in the system browser,
+  /// then posts the ID token to `/app/microsoft-login/`.
+  static Future<ApiResponse<LoginResponse>> loginWithMicrosoft() async {
+    if (kMsClientId.isEmpty) {
+      return ApiResponse(
+        success: false,
+        message: 'Microsoft sign-in is not configured. Set MS_CLIENT_ID and MS_TENANT_ID in .env '
+            'and run with --dart-define-from-file=.env',
+      );
+    }
+    try {
+      final result = await _appAuth.authorizeAndExchangeCode(
+        AuthorizationTokenRequest(
+          kMsClientId,
+          kMsRedirectUri,
+          scopes: kMsScopes,
+          promptValues: const ['select_account'],
+          serviceConfiguration: AuthorizationServiceConfiguration(
+            authorizationEndpoint: '$kMsAuthority/oauth2/v2.0/authorize',
+            tokenEndpoint: '$kMsAuthority/oauth2/v2.0/token',
+          ),
+        ),
+      );
+      final idToken = result.idToken;
+      if (idToken == null || idToken.isEmpty) {
+        return ApiResponse(success: false, message: 'Microsoft did not return an ID token.');
+      }
+
+      final response = await http.post(
+        Uri.parse(ApiConfig.microsoftLoginUrl),
+        headers: ApiConfig.headers,
+        body: jsonEncode({'id_token': idToken}),
+      );
+      final data = jsonDecode(response.body);
+      if (response.statusCode != 200 || data is! Map<String, dynamic>) {
+        return ApiResponse(
+          success: false,
+          message: data is Map && data['detail'] != null ? '${data['detail']}' : 'Microsoft login failed',
+        );
+      }
+      final loginResponse = LoginResponse.fromJson(data);
+      final username = (data['username'] as String?)?.trim() ?? '';
+      await StorageService.saveTokens(
+        accessToken: loginResponse.accessToken,
+        refreshToken: loginResponse.refreshToken,
+        role: loginResponse.role,
+        username: username,
+        userEmail: username.contains('@') ? username : null,
+        firstName: (data['first_name'] as String?)?.trim(),
+        lastName: (data['last_name'] as String?)?.trim(),
+      );
+      return ApiResponse(success: true, message: 'Login successful', data: loginResponse);
+    } on FlutterAppAuthUserCancelledException {
+      return ApiResponse(success: false, message: 'Sign in cancelled');
+    } on FlutterAppAuthPlatformException catch (e) {
+      return ApiResponse(
+        success: false,
+        message: 'Microsoft sign-in failed: ${e.platformErrorDetails.errorDescription ?? e.message}',
+      );
+    } catch (e) {
+      return ApiResponse(success: false, message: 'Microsoft sign-in failed: $e');
+    }
   }
 
   /// Google SSO: obtains ID token, posts to `/app/google-login/` as `credential`.

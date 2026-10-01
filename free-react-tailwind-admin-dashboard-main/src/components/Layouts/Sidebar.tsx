@@ -921,6 +921,7 @@ const Sidebar = () => {
                                         <AnimateHeight duration={300} height={currentMenu === 'employee-mgt' ? 'auto' : 0}>
                                             <ul className="sub-menu text-gray-500">
                                                 <li><NavLink to="/admin/employee-register">{t('Employee Register')}</NavLink></li>
+                                                <li><NavLink to="/admin/registration-requests">{t('Registration Requests')}</NavLink></li>
                                                 <li><NavLink to="/admin/assign-shifts">{t('Assign Shifts')}</NavLink></li>
                                                 <li><NavLink to="/admin/recruitment">{t('Recruitment')}</NavLink></li>
                                                 <li><NavLink to="/admin/relieved-employees">{t('Relieved Employees')}</NavLink></li>

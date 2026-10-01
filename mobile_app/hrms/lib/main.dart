@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'config/env.dart';
+import 'pages/auth/register_page.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'firebase_options.dart';
@@ -50,6 +52,9 @@ Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // All runtime config (API URL, SSO IDs) comes from the bundled .env
+  await Env.load();
 
   // Initialize performance detection early
   await PerformanceHelper.initialize();
@@ -104,6 +109,7 @@ class _MyAppState extends State<MyApp> {
         routes: {
           '/login': (context) => const LoginPage(),
           '/signup': (context) => const SignupPage(),
+          '/register': (context) => const RegisterPage(),
           '/employee': (context) => const AuthGuard(child: EmployeeHubPage()),
           '/employee/hub': (context) => const AuthGuard(child: EmployeeHubPage()),
           '/employee/performance': (context) => const AuthGuard(child: PmsHomePage()),

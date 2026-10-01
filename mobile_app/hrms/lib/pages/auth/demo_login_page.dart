@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import '../../widgets/stitch_background.dart';
+import '../../utils/performance_helper.dart';
 import '../../services/auth_service.dart';
 import '../../services/storage_service.dart';
 import '../../config/api_config.dart';
@@ -27,10 +29,7 @@ class _DemoLoginPageState extends State<DemoLoginPage> {
 
   Future<void> _checkDemoStatus() async {
     try {
-      final response = await http.get(
-        Uri.parse(ApiConfig.demoStatusUrl),
-        headers: ApiConfig.headers,
-      );
+      final response = await http.get(Uri.parse(ApiConfig.demoStatusUrl), headers: ApiConfig.headers);
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
@@ -64,10 +63,7 @@ class _DemoLoginPageState extends State<DemoLoginPage> {
     });
 
     try {
-      final response = await AuthService.loginWithDemoCredentials(
-        username: username,
-        password: password,
-      );
+      final response = await AuthService.loginWithDemoCredentials(username: username, password: password);
 
       if (mounted) {
         setState(() {
@@ -75,11 +71,7 @@ class _DemoLoginPageState extends State<DemoLoginPage> {
         });
 
         if (response.success) {
-          Navigator.pushNamedAndRemoveUntil(
-            context,
-            '/employee',
-            (route) => false,
-          );
+          Navigator.pushNamedAndRemoveUntil(context, '/employee', (route) => false);
         } else {
           _showErrorDialog(response.message ?? 'Demo login failed');
         }
@@ -100,12 +92,7 @@ class _DemoLoginPageState extends State<DemoLoginPage> {
       builder: (context) => AlertDialog(
         title: const Text('Demo Login Failed'),
         content: Text(message),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('OK'),
-          ),
-        ],
+        actions: [TextButton(onPressed: () => Navigator.pop(context), child: const Text('OK'))],
       ),
     );
   }
@@ -113,194 +100,146 @@ class _DemoLoginPageState extends State<DemoLoginPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
-      body: SafeArea(
-        child: Center(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(24),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                // Logo/Icon
-                Container(
-                  padding: const EdgeInsets.all(20),
-                  decoration: BoxDecoration(
-                    color: Colors.blue.withOpacity(0.1),
-                    shape: BoxShape.circle,
-                  ),
-                  child: Icon(
-                    Icons.science_outlined,
-                    size: 60,
-                    color: Colors.blue[700],
-                  ),
-                ),
-                const SizedBox(height: 24),
-
-                // Title
-                Text(
-                  'Demo Mode Login',
-                  style: TextStyle(
-                    fontSize: 28,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.grey[800],
-                  ),
-                ),
-                const SizedBox(height: 8),
-
-                // Subtitle
-                Text(
-                  'Enter demo credentials to explore the app',
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: Colors.grey[600],
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 32),
-
-                // Demo Mode Status
-                if (!_isDemoEnabled)
+      backgroundColor: Colors.transparent,
+      body: StitchBackground(
+        enableAnimations: PerformanceHelper.enableParticles,
+        child: SafeArea(
+          child: Center(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  // Logo/Icon
                   Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: Colors.orange.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Row(
-                      children: [
-                        Icon(Icons.warning, color: Colors.orange[700], size: 20),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                            'Demo mode appears to be disabled on the server. You may still use local demo mode.',
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: Colors.orange[800],
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
+                    padding: const EdgeInsets.all(20),
+                    decoration: BoxDecoration(color: Colors.blue.withOpacity(0.1), shape: BoxShape.circle),
+                    child: Icon(Icons.science_outlined, size: 60, color: Colors.blue[700]),
                   ),
-                if (!_isDemoEnabled) const SizedBox(height: 16),
+                  const SizedBox(height: 24),
 
-                // Username Field
-                TextField(
-                  controller: _usernameController,
-                  decoration: InputDecoration(
-                    labelText: 'Username',
-                    hintText: 'Enter demo username',
-                    prefixIcon: const Icon(Icons.person_outline),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    filled: true,
-                    fillColor: Colors.grey[50],
+                  // Title
+                  Text(
+                    'Demo Mode Login',
+                    style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: Colors.grey[800]),
                   ),
-                ),
-                const SizedBox(height: 16),
+                  const SizedBox(height: 8),
 
-                // Password Field
-                TextField(
-                  controller: _passwordController,
-                  obscureText: true,
-                  decoration: InputDecoration(
-                    labelText: 'Password',
-                    hintText: 'Enter demo password',
-                    prefixIcon: const Icon(Icons.lock_outline),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    filled: true,
-                    fillColor: Colors.grey[50],
+                  // Subtitle
+                  Text(
+                    'Enter demo credentials to explore the app',
+                    style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+                    textAlign: TextAlign.center,
                   ),
-                ),
-                const SizedBox(height: 24),
+                  const SizedBox(height: 32),
 
-                // Login Button
-                SizedBox(
-                  width: double.infinity,
-                  height: 50,
-                  child: ElevatedButton(
-                    onPressed: _isLoading ? null : _handleLogin,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.blue[700],
-                      foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
-                    child: _isLoading
-                        ? const SizedBox(
-                            width: 20,
-                            height: 20,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                            ),
-                          )
-                        : const Text(
-                            'Login to Demo',
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                  ),
-                ),
-                const SizedBox(height: 16),
-
-                // Back to regular login
-                TextButton(
-                  onPressed: () {
-                    Navigator.pop(context);
-                  },
-                  child: Text(
-                    '← Back to Regular Login',
-                    style: TextStyle(
-                      color: Colors.grey[600],
-                      fontSize: 14,
-                    ),
-                  ),
-                ),
-
-                // Info text
-                const SizedBox(height: 24),
-                Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: Colors.grey[100],
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Column(
-                    children: [
-                      Row(
+                  // Demo Mode Status
+                  if (!_isDemoEnabled)
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(color: Colors.orange.withOpacity(0.1), borderRadius: BorderRadius.circular(8)),
+                      child: Row(
                         children: [
-                          Icon(Icons.info_outline, color: Colors.grey[600], size: 16),
+                          Icon(Icons.warning, color: Colors.orange[700], size: 20),
                           const SizedBox(width: 8),
-                          Text(
-                            'About Demo Mode',
-                            style: TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w600,
-                              color: Colors.grey[700],
+                          Expanded(
+                            child: Text(
+                              'Demo mode appears to be disabled on the server. You may still use local demo mode.',
+                              style: TextStyle(fontSize: 12, color: Colors.orange[800]),
                             ),
                           ),
                         ],
                       ),
-                      const SizedBox(height: 8),
-                      Text(
-                        'Demo mode lets you explore all app features with sample data. '
-                        'No real account required. Regular Google SSO login continues to work normally.',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Colors.grey[600],
-                        ),
-                      ),
-                    ],
+                    ),
+                  if (!_isDemoEnabled) const SizedBox(height: 16),
+
+                  // Username Field
+                  TextField(
+                    controller: _usernameController,
+                    decoration: InputDecoration(
+                      labelText: 'Username',
+                      hintText: 'Enter demo username',
+                      prefixIcon: const Icon(Icons.person_outline),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                      filled: true,
+                      fillColor: Colors.grey[50],
+                    ),
                   ),
-                ),
-              ],
+                  const SizedBox(height: 16),
+
+                  // Password Field
+                  TextField(
+                    controller: _passwordController,
+                    obscureText: true,
+                    decoration: InputDecoration(
+                      labelText: 'Password',
+                      hintText: 'Enter demo password',
+                      prefixIcon: const Icon(Icons.lock_outline),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                      filled: true,
+                      fillColor: Colors.grey[50],
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+
+                  // Login Button
+                  SizedBox(
+                    width: double.infinity,
+                    height: 50,
+                    child: ElevatedButton(
+                      onPressed: _isLoading ? null : _handleLogin,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.blue[700],
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      ),
+                      child: _isLoading
+                          ? const SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(strokeWidth: 2, valueColor: AlwaysStoppedAnimation<Color>(Colors.white)),
+                            )
+                          : const Text('Login to Demo', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Back to regular login
+                  TextButton(
+                    onPressed: () {
+                      Navigator.pop(context);
+                    },
+                    child: Text('← Back to Regular Login', style: TextStyle(color: Colors.grey[600], fontSize: 14)),
+                  ),
+
+                  // Info text
+                  const SizedBox(height: 24),
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(color: Colors.grey[100], borderRadius: BorderRadius.circular(8)),
+                    child: Column(
+                      children: [
+                        Row(
+                          children: [
+                            Icon(Icons.info_outline, color: Colors.grey[600], size: 16),
+                            const SizedBox(width: 8),
+                            Text(
+                              'About Demo Mode',
+                              style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.grey[700]),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          'Demo mode lets you explore all app features with sample data. '
+                          'No real account required. Regular Google SSO login continues to work normally.',
+                          style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         ),

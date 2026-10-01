@@ -66,6 +66,7 @@ urlpatterns = [
     path('change-password/', CustomPasswordChangeAPIView.as_view(), name='custom-password-change'),
     path('login/', LoginAPIView.as_view(), name='login'),
     path('google-login/', GoogleLoginAPIView.as_view(), name='google-login'),
+    path('microsoft-login/', MicrosoftLoginAPIView.as_view(), name='microsoft-login'),
     path('demo-status/', DemoStatusAPIView.as_view(), name='demo-status'),
     path('demo-login/', DemoLoginAPIView.as_view(), name='demo-login'),
     path('system-settings/', SystemSettingsAPIView.as_view(), name='system-settings'),

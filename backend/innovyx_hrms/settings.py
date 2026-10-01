@@ -19,6 +19,9 @@ from dotenv import load_dotenv
 BASE_DIR = Path(__file__).resolve().parent.parent
 DEBUG=True
 load_dotenv(BASE_DIR / '.env', override=True)
+# Microsoft Entra ID (Azure AD) SSO — same app registration the mobile app uses.
+MS_CLIENT_ID = os.getenv("MS_CLIENT_ID", "")
+MS_TENANT_ID = os.getenv("MS_TENANT_ID") or "organizations"
 GOOGLE_CLIENT_ID_RAW = os.getenv("GOOGLE_CLIENT_ID") or os.getenv("GMAIL_CLIENT_ID")
 if GOOGLE_CLIENT_ID_RAW and "," in GOOGLE_CLIENT_ID_RAW:
     GOOGLE_CLIENT_ID = [cid.strip() for cid in GOOGLE_CLIENT_ID_RAW.split(",") if cid.strip()]

@@ -75,6 +75,7 @@
 			<key>CFBundleURLSchemes</key>
 			<array>
 				<string>com.googleusercontent.apps.482392351722-4t91e445h429erfeje0vgh8f396cmbfh</string>
+				<string>com.innovyx.peoplesuite</string>
 			</array>
 		</dict>
 	</array>

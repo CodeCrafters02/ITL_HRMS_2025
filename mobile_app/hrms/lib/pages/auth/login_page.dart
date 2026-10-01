@@ -3,7 +3,6 @@ import 'dart:ui' show ImageFilter;
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../config/api_config.dart';
@@ -12,8 +11,9 @@ import '../../services/auth_service.dart';
 import '../../models/user_model.dart';
 import '../../theme/app_stitch_theme.dart';
 import 'demo_login_page.dart';
+import 'register_page.dart';
 
-/// Google SSO login — vector background, floating particles, glassmorphic card.
+/// Microsoft SSO login — vector background, floating particles, glassmorphic card.
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
 
@@ -164,7 +164,7 @@ class _LoginPageState extends State<LoginPage> {
     }
   }
 
-  Future<void> _handleGoogleSignIn({
+  Future<void> _handleSsoSignIn({
     Future<ApiResponse<LoginResponse>> Function()? login,
     bool enforceEmployeeRole = true,
   }) async {
@@ -173,7 +173,7 @@ class _LoginPageState extends State<LoginPage> {
     });
 
     try {
-      final response = await (login ?? AuthService.loginWithGoogle)();
+      final response = await (login ?? AuthService.loginWithMicrosoft)();
 
       if (mounted) {
         setState(() {
@@ -202,7 +202,7 @@ class _LoginPageState extends State<LoginPage> {
       }
     } catch (e, stackTrace) {
       assert(() {
-        debugPrint('loginWithGoogle: $e\n$stackTrace');
+        debugPrint('SSO login: $e\n$stackTrace');
         return true;
       }());
       if (mounted) {
@@ -260,7 +260,7 @@ class _LoginPageState extends State<LoginPage> {
       passCtrl.dispose();
     });
     if (ok != true || username.isEmpty || password.isEmpty) return;
-    await _handleGoogleSignIn(
+    await _handleSsoSignIn(
       login: () => AuthService.loginWithPassword(username: username, password: password),
       enforceEmployeeRole: false,
     );
@@ -495,11 +495,11 @@ class _LoginPageState extends State<LoginPage> {
                   const SizedBox(height: 28),
                   Semantics(
                     button: true,
-                    label: 'Sign in with Google',
+                    label: 'Sign in with Microsoft',
                     child: SizedBox(
                       height: 52,
                       child: OutlinedButton(
-                        onPressed: _isLoading ? null : _handleGoogleSignIn,
+                        onPressed: _isLoading ? null : _handleSsoSignIn,
                         style: OutlinedButton.styleFrom(
                           backgroundColor: Colors.white.withValues(alpha: 0.92),
                           foregroundColor: const Color(0xFF2D2D2D),
@@ -527,14 +527,10 @@ class _LoginPageState extends State<LoginPage> {
                             : Row(
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
-                                  FaIcon(
-                                    FontAwesomeIcons.google,
-                                    size: 20,
-                                    color: AppStitchTheme.primary,
-                                  ),
+                                  const _MicrosoftLogo(size: 18),
                                   const SizedBox(width: 10),
                                   Text(
-                                    'Sign in with Google',
+                                    'Sign in with Microsoft',
                                     style: theme.textTheme.titleSmall?.copyWith(
                                       fontWeight: FontWeight.w700,
                                       color: const Color(0xFF2D2D2D),
@@ -555,6 +551,25 @@ class _LoginPageState extends State<LoginPage> {
                       ),
                     ),
                   ],
+                  const SizedBox(height: 18),
+                  Center(
+                    child: Wrap(
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      alignment: WrapAlignment.center,
+                      children: [
+                        Text('New employee?', style: theme.textTheme.bodyMedium?.copyWith(color: _LoginDesign.textSecondary)),
+                        TextButton(
+                          onPressed: _isLoading ? null : () => Navigator.pushNamed(context, '/register'),
+                          child: const Text('Register', style: TextStyle(fontWeight: FontWeight.w800)),
+                        ),
+                        Text('·', style: theme.textTheme.bodyMedium?.copyWith(color: _LoginDesign.textSecondary)),
+                        TextButton(
+                          onPressed: _isLoading ? null : () => showRegistrationStatus(context),
+                          child: const Text('Check status', style: TextStyle(fontWeight: FontWeight.w700)),
+                        ),
+                      ],
+                    ),
+                  ),
                   // Demo Mode Link (only shown when demo mode is enabled)
                   if (!_isCheckingDemoStatus && _demoModeEnabled) ...[
                     const SizedBox(height: 20),
@@ -602,7 +617,7 @@ class _LoginPageState extends State<LoginPage> {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    'Enable biometric quick access after Google sign-in',
+                    'Enable biometric quick access after Microsoft sign-in',
                     textAlign: TextAlign.center,
                     style: theme.textTheme.labelSmall?.copyWith(
                       color: _LoginDesign.textMuted.withValues(alpha: 0.88),
@@ -904,6 +919,29 @@ class _QuickChip extends StatelessWidget {
             ),
           ),
         ),
+      ),
+    );
+  }
+}
+
+/// Official four-square Microsoft mark.
+class _MicrosoftLogo extends StatelessWidget {
+  const _MicrosoftLogo({this.size = 18});
+  final double size;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = size / 2 - 1;
+    Widget sq(Color c) => Container(width: t, height: t, color: c);
+    return SizedBox(
+      width: size,
+      height: size,
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [sq(const Color(0xFFF25022)), sq(const Color(0xFF7FBA00))]),
+          Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [sq(const Color(0xFF00A4EF)), sq(const Color(0xFFFFB900))]),
+        ],
       ),
     );
   }

@@ -2,8 +2,11 @@ from django.urls import path
 from rest_framework.routers import DefaultRouter
 from .views import *
 from .all_notifications import AllNotificationsAPIView, NotificationSSEView
+from .registration_views import RegistrationRequestViewSet
 
 router = DefaultRouter()
+
+router.register('registration-requests', RegistrationRequestViewSet, basename='registration-requests')
 
 router.register('employeereference', EmployeeReferenceViewSet, basename='employeereference')
 router.register('multirater', MultiRaterMappingViewSet, basename='multirater')

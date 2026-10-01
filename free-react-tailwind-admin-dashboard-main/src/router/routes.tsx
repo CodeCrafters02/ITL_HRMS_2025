@@ -169,6 +169,7 @@ const AdminCalendar = lazy(() => import('../pages/Admin/Calendar'));
 const AdminAssetsInventory = lazy(() => import('../pages/Admin/AssetsInventory'));
 const AdminOfficeStructure = lazy(() => import('../pages/Admin/OfficeStructure'));
 const AdminSeatApprovals = lazy(() => import('../pages/Admin/SeatApprovals'));
+const AdminRegistrationRequests = lazy(() => import('../pages/Admin/RegistrationRequests'));
 const AdminSeatBookingsOverview = lazy(() => import('../pages/Admin/SeatBookingsOverview'));
 const AdminConfRoomStructure = lazy(() => import('../pages/Admin/ConferenceRoomStructure'));
 const AdminConfRoomApproval = lazy(() => import('../pages/Admin/ConferenceRoomApproval'));
@@ -974,6 +975,10 @@ const routes = [
     {
         path: '/admin/seat-approvals',
         element: <AdminSeatApprovals />,
+    },
+    {
+        path: '/admin/registration-requests',
+        element: <AdminRegistrationRequests />,
     },
     {
         path: '/admin/seat-bookings-overview',

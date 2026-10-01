@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'stitch_background.dart';
+import '../utils/performance_helper.dart';
 import '../services/auth_service.dart';
 
 /// AuthGuard widget that checks authentication before showing child
@@ -7,12 +9,7 @@ class AuthGuard extends StatefulWidget {
   final Widget? loadingWidget;
   final String? redirectTo;
 
-  const AuthGuard({
-    super.key,
-    required this.child,
-    this.loadingWidget,
-    this.redirectTo,
-  });
+  const AuthGuard({super.key, required this.child, this.loadingWidget, this.redirectTo});
 
   @override
   State<AuthGuard> createState() => _AuthGuardState();
@@ -32,7 +29,7 @@ class _AuthGuardState extends State<AuthGuard> {
     try {
       // Check if tokens exist and are valid
       final isValid = await AuthService.ensureValidToken();
-      
+
       if (mounted) {
         setState(() {
           _isAuthenticated = isValid;
@@ -41,11 +38,7 @@ class _AuthGuardState extends State<AuthGuard> {
 
         // If not authenticated, navigate to login
         if (!isValid) {
-          Navigator.pushNamedAndRemoveUntil(
-            context,
-            '/login',
-            (route) => false,
-          );
+          Navigator.pushNamedAndRemoveUntil(context, '/login', (route) => false);
         }
       }
     } catch (e) {
@@ -54,11 +47,7 @@ class _AuthGuardState extends State<AuthGuard> {
           _isAuthenticated = false;
           _isChecking = false;
         });
-        Navigator.pushNamedAndRemoveUntil(
-          context,
-          '/login',
-          (route) => false,
-        );
+        Navigator.pushNamedAndRemoveUntil(context, '/login', (route) => false);
       }
     }
   }
@@ -67,9 +56,11 @@ class _AuthGuardState extends State<AuthGuard> {
   Widget build(BuildContext context) {
     if (_isChecking) {
       return widget.loadingWidget ??
-          const Scaffold(
-            body: Center(
-              child: CircularProgressIndicator(),
+          Scaffold(
+            backgroundColor: Colors.transparent,
+            body: StitchBackground(
+              enableAnimations: PerformanceHelper.enableParticles,
+              child: Center(child: CircularProgressIndicator()),
             ),
           );
     }
@@ -81,4 +72,3 @@ class _AuthGuardState extends State<AuthGuard> {
     return widget.child;
   }
 }
-

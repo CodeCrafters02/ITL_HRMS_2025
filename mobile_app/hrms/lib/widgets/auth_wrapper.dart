@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'stitch_background.dart';
+import '../utils/performance_helper.dart';
 import 'package:flutter/foundation.dart';
 import '../services/auth_service.dart';
 import '../services/storage_service.dart';
@@ -10,11 +12,7 @@ class AuthWrapper extends StatefulWidget {
   final Widget authenticatedChild;
   final Widget unauthenticatedChild;
 
-  const AuthWrapper({
-    super.key,
-    required this.authenticatedChild,
-    required this.unauthenticatedChild,
-  });
+  const AuthWrapper({super.key, required this.authenticatedChild, required this.unauthenticatedChild});
 
   @override
   State<AuthWrapper> createState() => _AuthWrapperState();
@@ -36,7 +34,7 @@ class _AuthWrapperState extends State<AuthWrapper> {
     try {
       // Check if tokens exist
       final hasTokens = await StorageService.isLoggedIn();
-      
+
       if (!hasTokens) {
         if (mounted) {
           setState(() {
@@ -50,10 +48,8 @@ class _AuthWrapperState extends State<AuthWrapper> {
 
       // Validate tokens and refresh if needed
       final isValid = await AuthService.ensureValidToken();
-      final biometricEnabled = isValid
-          ? await StorageService.isBiometricEnabled()
-          : false;
-      
+      final biometricEnabled = isValid ? await StorageService.isBiometricEnabled() : false;
+
       if (mounted) {
         setState(() {
           _isAuthenticated = isValid;
@@ -76,9 +72,8 @@ class _AuthWrapperState extends State<AuthWrapper> {
 
   @override
   Widget build(BuildContext context) {
-    final isMobileSplashPlatform = !kIsWeb &&
-        (defaultTargetPlatform == TargetPlatform.android ||
-            defaultTargetPlatform == TargetPlatform.iOS);
+    final isMobileSplashPlatform =
+        !kIsWeb && (defaultTargetPlatform == TargetPlatform.android || defaultTargetPlatform == TargetPlatform.iOS);
 
     if (!_isSplashFinished) {
       if (isMobileSplashPlatform) {
@@ -95,19 +90,21 @@ class _AuthWrapperState extends State<AuthWrapper> {
       }
 
       // Non-mobile targets keep a white loading screen.
-      return const Scaffold(
-        backgroundColor: Colors.white,
-        body: Center(
-          child: CircularProgressIndicator(),
+      return Scaffold(
+        backgroundColor: Colors.transparent,
+        body: StitchBackground(
+          enableAnimations: PerformanceHelper.enableParticles,
+          child: Center(child: CircularProgressIndicator()),
         ),
       );
     }
 
     if (_isAuthLoading) {
-      return const Scaffold(
-        backgroundColor: Colors.white,
-        body: Center(
-          child: CircularProgressIndicator(),
+      return Scaffold(
+        backgroundColor: Colors.transparent,
+        body: StitchBackground(
+          enableAnimations: PerformanceHelper.enableParticles,
+          child: Center(child: CircularProgressIndicator()),
         ),
       );
     }
@@ -128,4 +125,3 @@ class _AuthWrapperState extends State<AuthWrapper> {
     return _isAuthenticated ? widget.authenticatedChild : widget.unauthenticatedChild;
   }
 }
-

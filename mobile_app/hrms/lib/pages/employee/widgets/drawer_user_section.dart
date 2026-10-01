@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../../../services/auth_service.dart';
+import '../../../widgets/session_dialogs.dart';
 import '../../../services/storage_service.dart';
 import '../../../services/employee_service.dart';
 import '../../../models/profile_model.dart';
@@ -42,36 +42,7 @@ class _DrawerUserSectionState extends State<DrawerUserSection> {
     }
   }
 
-  Future<void> _handleLogout(BuildContext context) async {
-    final confirm = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Logout'),
-        content: const Text('Are you sure you want to logout?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text('Logout'),
-          ),
-        ],
-      ),
-    );
-
-    if (confirm == true) {
-      await AuthService.logout();
-      if (context.mounted) {
-        Navigator.pushNamedAndRemoveUntil(
-          context,
-          '/login',
-          (route) => false,
-        );
-      }
-    }
-  }
+  Future<void> _handleLogout(BuildContext context) => confirmLogout(context);
 
   String _getInitials(String? firstName, String? lastName) {
     final first = firstName?.isNotEmpty == true ? firstName![0] : '';

@@ -855,3 +855,45 @@ class CourseWishlist(models.Model):
 
     def __str__(self):
         return f'{self.employee} - {self.course.title}'
+
+
+class RegistrationRequest(models.Model):
+    """Self-registration submitted from the mobile app. Any company admin can accept it;
+    the first admin to accept wins and the person joins that admin's company."""
+
+    STATUS_CHOICES = (('pending', 'Pending'), ('approved', 'Approved'))
+    GENDER_CHOICES = (('male', 'Male'), ('female', 'Female'), ('other', 'Other'))
+
+    first_name = models.CharField(max_length=100)
+    middle_name = models.CharField(max_length=100, blank=True, default='')
+    last_name = models.CharField(max_length=100, blank=True, default='')
+    email = models.EmailField()
+    mobile = models.CharField(max_length=15)
+    gender = models.CharField(max_length=10, choices=GENDER_CHOICES, blank=True, default='')
+    date_of_birth = models.DateField(null=True, blank=True)
+    temporary_address = models.CharField(max_length=255, blank=True, default='')
+    permanent_address = models.CharField(max_length=255, blank=True, default='')
+    aadhar_no = models.CharField(max_length=20, blank=True, default='')
+    pan_no = models.CharField(max_length=20, blank=True, default='')
+    desired_department = models.CharField(max_length=100, blank=True, default='')
+    desired_designation = models.CharField(max_length=100, blank=True, default='')
+    previous_employer = models.CharField(max_length=100, blank=True, default='')
+    previous_designation = models.CharField(max_length=100, blank=True, default='')
+    total_experience_years = models.DecimalField(max_digits=4, decimal_places=1, null=True, blank=True)
+    message = models.TextField(blank=True, default='')
+    password_hash = models.CharField(max_length=128, blank=True, default='')
+
+    status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='pending', db_index=True)
+    company = models.ForeignKey('app.Company', null=True, blank=True, on_delete=models.SET_NULL, related_name='registration_requests')
+    approved_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name='approved_registrations')
+    approved_at = models.DateTimeField(null=True, blank=True)
+    employee = models.ForeignKey(Employee, null=True, blank=True, on_delete=models.SET_NULL, related_name='registration_requests')
+    # Companies whose admins hid this request (it stays open for other companies).
+    dismissed_by_companies = models.ManyToManyField('app.Company', blank=True, related_name='dismissed_registration_requests')
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"{self.first_name} {self.last_name} <{self.email}> ({self.status})"

@@ -6162,6 +6162,101 @@ def _ensure_employee_for_company_user(*, user: UserRegister, email: str, first_n
     )
 
 
+def _sso_login(email, first_name="", last_name=""):
+    """Shared Google/Microsoft SSO: activation checks, user provisioning, company domain rules, JWT tokens."""
+    # --- Activation check (Early check via Email) ---
+    emp = Employee.objects.filter(email__iexact=email).first()
+    if emp and not emp.is_active:
+         return Response(
+            {"detail": "Your employee profile is inactive. Please contact your HR administrator."},
+            status=status.HTTP_403_FORBIDDEN
+        )
+    
+    # Determine role for new user:
+    # If NO users exist on the platform yet, the first SSO user becomes 'master'.
+    # All subsequent users default to 'employee'.
+    if UserRegister.objects.count() == 0:
+        default_role = "master"
+    else:
+        default_role = "employee"
+
+    # Find or Create User
+    user, created = UserRegister.objects.get_or_create(
+        email=email,
+        defaults={
+            "username": email,
+            "first_name": first_name,
+            "last_name": last_name,
+            "role": default_role,
+            "is_active": True
+        }
+    )
+    if created:
+        user.set_unusable_password()
+        user.save()
+
+    # --- Activation check (Secondary check via User account) ---
+    if not user.is_active:
+        return Response(
+            {"detail": "Your account is disabled. Please contact your HR administrator."},
+            status=status.HTTP_403_FORBIDDEN
+        )
+
+    # ── Domain / Company validation ──
+    # Master and admin users always bypass domain checks
+    if user.role not in ('master', 'admin'):
+        # Check if email domain matches any company
+        matched_company = _company_for_email_domain(email)
+        user_has_company = getattr(user, 'company_id', None)
+        
+        # For brand-new users with no matching company → reject & cleanup
+        if created and not matched_company:
+            user.delete()
+            return Response(
+                {"detail": "Your email domain is not authorized for any registered company. Please contact your HR administrator."},
+                status=status.HTTP_403_FORBIDDEN
+            )
+        
+        # For existing users with no company association and no matching domain → reject
+        if not created and not user_has_company and not matched_company:
+            return Response(
+                {"detail": "Your account is not associated with any company. Please contact your HR administrator."},
+                status=status.HTTP_403_FORBIDDEN
+            )
+
+    # If this is an employee login, ensure profile is synced and ID generated
+    if user.role == "employee":
+        emp = Employee.objects.filter(email__iexact=email).first()
+        if emp:
+            # Link to User account if needed
+            if not emp.user_id:
+                emp.user_id = user.id
+            # Sync activation status from Employee profile
+            if not emp.is_active:
+                user.is_active = False
+                user.save(update_fields=["is_active", "company"])
+            else:
+                user.save(update_fields=["company"])
+            # Trigger model save (generates employee_id if missing)
+            emp.save()
+        elif not getattr(user, "company_id", None):
+            # If no Employee profile yet, try auto-link via company domain
+            _ensure_employee_for_company_user(user=user, email=email, first_name=first_name, last_name=last_name)
+
+    # Return tokens
+    refresh = RefreshToken.for_user(user)
+    return Response({
+        "access": str(refresh.access_token),
+        "refresh": str(refresh),
+        "id": user.id,
+        "username": user.username,
+        "first_name": user.first_name,
+        "last_name": user.last_name,
+        "role": user.role,
+        "is_reporting_manager": user.is_reporting_manager
+    }, status=status.HTTP_200_OK)
+
+
 class GoogleLoginAPIView(APIView):
     permission_classes = [AllowAny]
 
@@ -6183,101 +6278,70 @@ class GoogleLoginAPIView(APIView):
             first_name = idinfo.get("given_name", "")
             last_name = idinfo.get("family_name", "")
 
-            # --- Activation check (Early check via Email) ---
-            emp = Employee.objects.filter(email__iexact=email).first()
-            if emp and not emp.is_active:
-                 return Response(
-                    {"detail": "Your employee profile is inactive. Please contact your HR administrator."},
-                    status=status.HTTP_403_FORBIDDEN
-                )
-            
-            # Determine role for new user:
-            # If NO users exist on the platform yet, the first SSO user becomes 'master'.
-            # All subsequent users default to 'employee'.
-            if UserRegister.objects.count() == 0:
-                default_role = "master"
-            else:
-                default_role = "employee"
-
-            # Find or Create User
-            user, created = UserRegister.objects.get_or_create(
-                email=email,
-                defaults={
-                    "username": email,
-                    "first_name": first_name,
-                    "last_name": last_name,
-                    "role": default_role,
-                    "is_active": True
-                }
-            )
-            if created:
-                user.set_unusable_password()
-                user.save()
-
-            # --- Activation check (Secondary check via User account) ---
-            if not user.is_active:
-                return Response(
-                    {"detail": "Your account is disabled. Please contact your HR administrator."},
-                    status=status.HTTP_403_FORBIDDEN
-                )
-
-            # ── Domain / Company validation ──
-            # Master and admin users always bypass domain checks
-            if user.role not in ('master', 'admin'):
-                # Check if email domain matches any company
-                matched_company = _company_for_email_domain(email)
-                user_has_company = getattr(user, 'company_id', None)
-                
-                # For brand-new users with no matching company → reject & cleanup
-                if created and not matched_company:
-                    user.delete()
-                    return Response(
-                        {"detail": "Your email domain is not authorized for any registered company. Please contact your HR administrator."},
-                        status=status.HTTP_403_FORBIDDEN
-                    )
-                
-                # For existing users with no company association and no matching domain → reject
-                if not created and not user_has_company and not matched_company:
-                    return Response(
-                        {"detail": "Your account is not associated with any company. Please contact your HR administrator."},
-                        status=status.HTTP_403_FORBIDDEN
-                    )
-
-            # If this is an employee login, ensure profile is synced and ID generated
-            if user.role == "employee":
-                emp = Employee.objects.filter(email__iexact=email).first()
-                if emp:
-                    # Link to User account if needed
-                    if not emp.user_id:
-                        emp.user_id = user.id
-                    # Sync activation status from Employee profile
-                    if not emp.is_active:
-                        user.is_active = False
-                        user.save(update_fields=["is_active", "company"])
-                    else:
-                        user.save(update_fields=["company"])
-                    # Trigger model save (generates employee_id if missing)
-                    emp.save()
-                elif not getattr(user, "company_id", None):
-                    # If no Employee profile yet, try auto-link via company domain
-                    _ensure_employee_for_company_user(user=user, email=email, first_name=first_name, last_name=last_name)
-
-            # Return tokens
-            refresh = RefreshToken.for_user(user)
-            return Response({
-                "access": str(refresh.access_token),
-                "refresh": str(refresh),
-                "id": user.id,
-                "username": user.username,
-                "first_name": user.first_name,
-                "last_name": user.last_name,
-                "role": user.role,
-                "is_reporting_manager": user.is_reporting_manager
-            }, status=status.HTTP_200_OK)
+            return _sso_login(email, first_name, last_name)
 
         except ValueError as e:
             print("Google verify error:", str(e))
             return Response({"detail": f"Invalid Google token: {str(e)}"}, status=status.HTTP_401_UNAUTHORIZED)
+        except Exception as e:
+            return Response({"detail": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+class MicrosoftLoginAPIView(APIView):
+    """Microsoft Entra ID (Azure AD) SSO for the mobile app.
+
+    Body: {"id_token": "<Entra ID token>"} — verified against Microsoft's signing keys,
+    audience = MS_CLIENT_ID, issuer = the token's tenant (restricted to MS_TENANT_ID unless it is
+    'common'/'organizations').
+    """
+    permission_classes = [AllowAny]
+    _jwks_cache = {"at": 0, "certs": {}}
+
+    @classmethod
+    def _certs(cls, tenant):
+        import time
+        import requests as http
+        if time.time() - cls._jwks_cache["at"] < 3600 and cls._jwks_cache["certs"]:
+            return cls._jwks_cache["certs"]
+        keys = http.get(f"https://login.microsoftonline.com/{tenant}/discovery/v2.0/keys", timeout=10).json().get("keys", [])
+        certs = {
+            k["kid"]: f"-----BEGIN CERTIFICATE-----{chr(10)}{k['x5c'][0]}{chr(10)}-----END CERTIFICATE-----{chr(10)}"
+            for k in keys if k.get("kid") and k.get("x5c")
+        }
+        cls._jwks_cache = {"at": time.time(), "certs": certs}
+        return certs
+
+    def post(self, request):
+        from google.auth import jwt as gjwt
+
+        token = request.data.get("id_token") or request.data.get("credential")
+        if not token:
+            return Response({"detail": "id_token missing"}, status=status.HTTP_400_BAD_REQUEST)
+        client_id = getattr(settings, "MS_CLIENT_ID", "")
+        tenant = getattr(settings, "MS_TENANT_ID", "") or "organizations"
+        if not client_id:
+            return Response({"detail": "Microsoft sign-in is not configured on the server (MS_CLIENT_ID)."},
+                            status=status.HTTP_503_SERVICE_UNAVAILABLE)
+        try:
+            claims = gjwt.decode(token, certs=self._certs(tenant), audience=client_id, clock_skew_in_seconds=10)
+            tid = claims.get("tid", "")
+            if claims.get("iss") != f"https://login.microsoftonline.com/{tid}/v2.0":
+                raise ValueError("unexpected issuer")
+            if tenant not in ("common", "organizations") and tid != tenant:
+                raise ValueError("token is from a different tenant")
+        except ValueError as e:
+            return Response({"detail": f"Invalid Microsoft token: {e}"}, status=status.HTTP_401_UNAUTHORIZED)
+        except Exception as e:
+            return Response({"detail": f"Could not verify Microsoft token: {e}"}, status=status.HTTP_502_BAD_GATEWAY)
+
+        email = (claims.get("email") or claims.get("preferred_username") or claims.get("upn") or "").strip().lower()
+        if "@" not in email:
+            return Response({"detail": "Your Microsoft account has no email address."}, status=status.HTTP_400_BAD_REQUEST)
+        first_name = claims.get("given_name") or ""
+        last_name = claims.get("family_name") or ""
+        if not first_name and claims.get("name"):
+            first_name, _, last_name = claims["name"].partition(" ")
+        try:
+            return _sso_login(email, first_name, last_name)
         except Exception as e:
             return Response({"detail": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 

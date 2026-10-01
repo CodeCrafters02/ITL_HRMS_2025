@@ -1,23 +1,11 @@
-class ApiConfig {
-  /// Base URL for the backend API.
-  ///
-  /// Override at build time:
-  /// `--dart-define=API_BASE_URL=https://apihrms.innovyxtechlabs.com`
-  /// or from `.env`: `flutter run --dart-define-from-file=.env`
-  ///
-  /// Keep a sensible dev default for local/LAN testing.
-  static const String baseUrl = String.fromEnvironment(
-    'API_BASE_URL',
-    // defaultValue: 'https://apihrms.innovyxtechlabs.com',
-    defaultValue: 'http://10.240.21.242:8000',
-  );
+import 'env.dart';
 
-  /// Login footer "Contact IT Support" mailto. Override at build:
-  /// `--dart-define=IT_SUPPORT_EMAIL=help@company.com`
-  static const String itSupportEmail = String.fromEnvironment(
-    'IT_SUPPORT_EMAIL',
-    defaultValue: 'it-support@company.local',
-  );
+class ApiConfig {
+  /// Backend base URL — `API_BASE_URL` in `.env`.
+  static String get baseUrl => Env.require('API_BASE_URL');
+
+  /// Login footer "Contact IT Support" mailto — `IT_SUPPORT_EMAIL` in `.env`.
+  static String get itSupportEmail => Env.get('IT_SUPPORT_EMAIL', fallback: 'it-support@company.local');
 
   static Uri get itSupportMailtoUri => Uri(
     scheme: 'mailto',
@@ -32,6 +20,8 @@ class ApiConfig {
   // API Endpoints
   static const String loginEndpoint = '/app/login/';
   static const String googleLoginEndpoint = '/app/google-login/';
+  static const String microsoftLoginEndpoint = '/app/microsoft-login/';
+  static const String registrationRequestsEndpoint = '/employee/registration-requests/';
   static const String demoLoginEndpoint = '/app/demo-login/';
   static const String demoStatusEndpoint = '/app/demo-status/';
   static const String registerEndpoint = '/app/master-register/';
@@ -130,6 +120,8 @@ class ApiConfig {
   // Full URLs
   static String get loginUrl => '$baseUrl$loginEndpoint';
   static String get googleLoginUrl => '$baseUrl$googleLoginEndpoint';
+  static String get microsoftLoginUrl => '$baseUrl$microsoftLoginEndpoint';
+  static String get registrationRequestsUrl => '$baseUrl$registrationRequestsEndpoint';
   static String get demoLoginUrl => '$baseUrl$demoLoginEndpoint'; // Backend demo login
   static String get demoStatusUrl => '$baseUrl$demoStatusEndpoint'; // Backend demo status check
   static String get registerUrl => '$baseUrl$registerEndpoint';
