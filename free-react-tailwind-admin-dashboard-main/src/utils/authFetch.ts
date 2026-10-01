@@ -1,3 +1,5 @@
+import { clearAllSessionData } from './sessionManager';
+
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000';
 const REFRESH_URL = `${API_BASE_URL}/app/token/refresh/`;
 const LOGIN_ROUTE = '/auth/boxed-signin';
@@ -19,14 +21,7 @@ const decodeJwtExpiryMs = (token: string | null): number | null => {
 };
 
 const clearAuthStorage = () => {
-    localStorage.removeItem('access_token');
-    localStorage.removeItem('refresh_token');
-    localStorage.removeItem('user_role');
-    localStorage.removeItem('user_id');
-    localStorage.removeItem('username');
-    localStorage.removeItem('user_email');
-    localStorage.removeItem('first_name');
-    localStorage.removeItem('last_name');
+    clearAllSessionData();
 };
 
 const redirectToLogin = () => {

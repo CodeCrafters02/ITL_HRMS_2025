@@ -10,6 +10,7 @@ import Setting from './Setting';
 import Sidebar from './Sidebar';
 import Portals from '../../components/Portals';
 import ChatFloatingButton from '../ChatFloatingButton';
+import { isSessionValid, initTabSession, clearAllSessionData } from '../../utils/sessionManager';
 
 const DefaultLayout = ({ children }: PropsWithChildren) => {
     const themeConfig = useSelector((state: IRootState) => state.themeConfig);
@@ -53,24 +54,17 @@ const DefaultLayout = ({ children }: PropsWithChildren) => {
         };
     }, []);
 
-    // Authentication Guard & Remember Me Logic
+    // Authentication Guard & Multi-Tab / 30-day Session Logic
     useEffect(() => {
         const token = localStorage.getItem('access_token');
-        const rememberMe = localStorage.getItem('remember_me') === 'true';
-        const sessionActive = document.cookie.includes('session_active=true');
+        const valid = isSessionValid();
         const role = localStorage.getItem('user_role');
 
-        if (!token) {
-            navigate('/auth/boxed-signin', { replace: true });
-        } else if (!rememberMe && !sessionActive) {
-            // Token exists but session is dead and remember me is false -> WIPE & LOGOUT
-            ['access_token', 'refresh_token', 'user_role', 'user_id', 'username', 'is_reporting_manager', 'user_email', 'first_name', 'last_name', 'remember_me'].forEach(k => localStorage.removeItem(k));
-            document.cookie = "session_active=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+        if (!token || !valid) {
+            clearAllSessionData();
             navigate('/auth/boxed-signin', { replace: true });
         } else {
-            // Session is alive, ensure sessionActive cookie is set for safety across all tabs
-            document.cookie = "session_active=true; path=/";
-            
+            initTabSession();
             // Role-Based Access Control (RBAC)
             if (location.pathname.startsWith('/master') && role !== 'master') {
                 navigate(role ? `/${role}/dashboard` : '/auth/boxed-signin', { replace: true });
