@@ -19,9 +19,6 @@ from dotenv import load_dotenv
 BASE_DIR = Path(__file__).resolve().parent.parent
 DEBUG=True
 load_dotenv(BASE_DIR / '.env', override=True)
-# Microsoft Entra ID (Azure AD) SSO — same app registration the mobile app uses.
-MS_CLIENT_ID = os.getenv("MS_CLIENT_ID", "")
-MS_TENANT_ID = os.getenv("MS_TENANT_ID") or "organizations"
 GOOGLE_CLIENT_ID_RAW = os.getenv("GOOGLE_CLIENT_ID") or os.getenv("GMAIL_CLIENT_ID")
 if GOOGLE_CLIENT_ID_RAW and "," in GOOGLE_CLIENT_ID_RAW:
     GOOGLE_CLIENT_ID = [cid.strip() for cid in GOOGLE_CLIENT_ID_RAW.split(",") if cid.strip()]
@@ -34,9 +31,11 @@ if not GOOGLE_CLIENT_ID and DEBUG:
         stacklevel=1,
     )
 
-MICROSOFT_CLIENT_ID = os.getenv("MICROSOFT_CLIENT_ID", "")
-MICROSOFT_CLIENT_SECRET = os.getenv("MICROSOFT_CLIENT_SECRET", "")
-MICROSOFT_TENANT_ID = os.getenv("MICROSOFT_TENANT_ID", "common")
+# Microsoft Entra ID SSO (web code flow + mobile PKCE) — one app registration.
+# Accepts MICROSOFT_* or the older MS_* / AZURE_* names.
+MICROSOFT_CLIENT_ID = os.getenv("MICROSOFT_CLIENT_ID") or os.getenv("MS_CLIENT_ID") or os.getenv("AZURE_CLIENT_ID") or ""
+MICROSOFT_CLIENT_SECRET = os.getenv("MICROSOFT_CLIENT_SECRET") or os.getenv("AZURE_CLIENT_SECRET") or ""
+MICROSOFT_TENANT_ID = os.getenv("MICROSOFT_TENANT_ID") or os.getenv("MS_TENANT_ID") or os.getenv("AZURE_TENANT_ID") or "common"
 MICROSOFT_REDIRECT_URI = os.getenv("MICROSOFT_REDIRECT_URI", "http://localhost:5173/auth/callback/microsoft")
 
 
