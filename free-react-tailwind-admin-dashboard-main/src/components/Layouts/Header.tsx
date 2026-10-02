@@ -37,6 +37,7 @@ import IconMenuForms from '../Icon/Menu/IconMenuForms';
 import IconMenuPages from '../Icon/Menu/IconMenuPages';
 import IconMenuMore from '../Icon/Menu/IconMenuMore';
 import { notificationService } from '../../services/notificationService';
+import OutlookHeaderButton from '../Outlook/OutlookHeaderButton';
 
 const Header = () => {
     const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000';
@@ -748,6 +749,7 @@ const Header = () => {
                                 </button>
                             )}
                         </div>
+                        {(userRole === 'admin' || userRole === 'employee') && <OutlookHeaderButton isRtl={isRtl} />}
                         <div className="shrink-0">
                             <Link 
                                 to={notificationRoute} 

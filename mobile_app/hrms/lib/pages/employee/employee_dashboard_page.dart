@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'widgets/outlook_mail_widgets.dart';
 
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
@@ -783,6 +784,8 @@ class _EmployeeDashboardPageState extends State<EmployeeDashboardPage> {
                     onNavigate: (route, {arguments}) =>
                         Navigator.pushNamed(context, route, arguments: arguments),
                   ),
+                  const SizedBox(height: 12),
+                  const OutlookMailCard(),
                   const SizedBox(height: 12),
                   _RoundedTabs(
                     index: _tabIndex,

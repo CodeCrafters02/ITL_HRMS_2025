@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import OutlookInboxWidget from '../../components/Outlook/OutlookInboxWidget';
 import { useDispatch } from 'react-redux';
 import { setPageTitle } from '../../store/themeConfigSlice';
 import { Link, useNavigate } from 'react-router-dom';
@@ -642,6 +643,8 @@ const AdminDashboard = () => {
                     </div>
                 </div>
             </div>
+
+            <OutlookInboxWidget />
 
             {/* ─── Bottom Grid: Birthdays, Quick Actions, Events ─── */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">

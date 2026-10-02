@@ -48,6 +48,7 @@ const Dropdown = (props : any, forwardedRef: any) => {
                 ref={referenceRef}
                 type="button"
                 className={props.btnClassName}
+                disabled={props.disabled}
                 onClick={() => setVisibility(!visibility)}
             >
                 {props.button}

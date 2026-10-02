@@ -51,3 +51,4 @@ apscheduler==3.10.4
 django-apscheduler==0.6.2
 django-celery-beat==2.9.0
 django-celery-results==2.6.0
+cryptography==50.0.2

@@ -31,6 +31,7 @@ from rest_framework.permissions import IsAuthenticated, AllowAny
 from .permissions import IsMaster, IsAdminUser, IsCompanyChatUser, CanReadCompanyCalendar
 from .serializers import *
 from .models import *
+from .outlook import OutlookMailAPIView, save_ms_refresh_token
 
 from rest_framework import filters
 from rest_framework.pagination import PageNumberPagination
@@ -6315,7 +6316,7 @@ class MicrosoftAuthURLAPIView(APIView):
         redirect_uri = request.query_params.get('redirect_uri') or getattr(settings, 'MICROSOFT_REDIRECT_URI', '')
         state = request.query_params.get('state') or 'ms_login'
 
-        scopes = "openid profile email User.Read"
+        scopes = "openid profile email User.Read offline_access Mail.Read"
         auth_url = (
             f"https://login.microsoftonline.com/{tenant_id}/oauth2/v2.0/authorize?"
             f"client_id={urllib.parse.quote(client_id)}&"
@@ -6358,7 +6359,7 @@ class MicrosoftLoginAPIView(APIView):
         cls._jwks_cache = {"at": time.time(), "tenant": tenant, "certs": certs}
         return certs
 
-    def _login_with_id_token(self, token):
+    def _login_with_id_token(self, token, ms_refresh_token=None):
         from google.auth import jwt as gjwt
 
         client_id = getattr(settings, 'MICROSOFT_CLIENT_ID', '')
@@ -6385,13 +6386,16 @@ class MicrosoftLoginAPIView(APIView):
         last_name = claims.get("family_name") or ""
         if not first_name and claims.get("name"):
             first_name, _, last_name = claims["name"].partition(" ")
-        return _process_sso_user_login(email=email, first_name=first_name, last_name=last_name)
+        resp = _process_sso_user_login(email=email, first_name=first_name, last_name=last_name)
+        if resp.status_code == 200 and ms_refresh_token:
+            save_ms_refresh_token(resp.data.get("id"), ms_refresh_token, public_client=True)
+        return resp
 
     def post(self, request):
         code = request.data.get("code")
         mobile_id_token = request.data.get("id_token")
         if not code and mobile_id_token:
-            return self._login_with_id_token(mobile_id_token)
+            return self._login_with_id_token(mobile_id_token, request.data.get("ms_refresh_token"))
         if not code:
             return Response({"detail": "Authorization code is required."}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -6485,7 +6489,10 @@ class MicrosoftLoginAPIView(APIView):
                 status=status.HTTP_400_BAD_REQUEST
             )
 
-        return _process_sso_user_login(email=email, first_name=first_name, last_name=last_name)
+        resp = _process_sso_user_login(email=email, first_name=first_name, last_name=last_name)
+        if resp.status_code == 200:
+            save_ms_refresh_token(resp.data.get("id"), token_data.get("refresh_token"), scope=token_data.get("scope", ""))
+        return resp
 
 class LoanCategoryViewSet(viewsets.ModelViewSet):
     serializer_class = LoanCategorySerializer

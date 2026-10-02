@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import '../../theme/app_stitch_theme.dart';
 import '../../widgets/session_dialogs.dart';
@@ -17,6 +19,8 @@ import 'attendance_history_page.dart';
 import 'my_payslips_page.dart';
 import 'widgets/employee_drawer.dart';
 import 'widgets/employee_bottom_nav.dart';
+import 'widgets/outlook_mail_widgets.dart';
+import '../../services/outlook_service.dart';
 import '../../widgets/stitch_background.dart';
 
 class EmployeeLayout extends StatefulWidget {
@@ -415,7 +419,9 @@ class _EmployeeLayoutState extends State<EmployeeLayout> with WidgetsBindingObse
                           ),
                         ),
                         const Spacer(),
-                        // Notification + Profile
+                        // Outlook + Notification + Profile
+                        const _GlassOutlookButton(),
+                        const SizedBox(width: 8),
                         const _GlassNotificationButton(),
                         const SizedBox(width: 8),
                         _buildProfileAvatar(),
@@ -539,6 +545,79 @@ class _GlassNotificationButtonState extends State<_GlassNotificationButton> {
                 ),
               ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Outlook inbox shortcut with unread badge.
+class _GlassOutlookButton extends StatefulWidget {
+  const _GlassOutlookButton();
+
+  @override
+  State<_GlassOutlookButton> createState() => _GlassOutlookButtonState();
+}
+
+class _GlassOutlookButtonState extends State<_GlassOutlookButton> {
+  Timer? _timer;
+
+  @override
+  void initState() {
+    super.initState();
+    OutlookService.refresh();
+    _timer = Timer.periodic(const Duration(minutes: 2), (_) => OutlookService.refresh(force: true));
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: () => openOutlookInbox(context),
+      child: Container(
+        width: 40,
+        height: 40,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          color: Colors.white.withValues(alpha: 0.1),
+          border: Border.all(color: Colors.white.withValues(alpha: 0.15)),
+        ),
+        child: ValueListenableBuilder<OutlookInbox?>(
+          valueListenable: OutlookService.inbox,
+          builder: (context, inbox, _) {
+            final unread = inbox?.connected == true ? inbox!.unreadCount : 0;
+            return Stack(
+              alignment: Alignment.center,
+              children: [
+                const Icon(Icons.mail_outline_rounded, color: outlookBlue, size: 21),
+                if (unread > 0)
+                  Positioned(
+                    top: 6,
+                    right: 4,
+                    child: Container(
+                      padding: const EdgeInsets.all(3),
+                      decoration: BoxDecoration(
+                        color: outlookBlue,
+                        shape: BoxShape.circle,
+                        border: Border.all(color: Colors.white.withValues(alpha: 0.9), width: 1.5),
+                      ),
+                      constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
+                      child: Center(
+                        child: Text(
+                          unread > 99 ? '99+' : '$unread',
+                          style: const TextStyle(color: Colors.white, fontSize: 8, fontWeight: FontWeight.w900, height: 1),
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
+            );
+          },
         ),
       ),
     );

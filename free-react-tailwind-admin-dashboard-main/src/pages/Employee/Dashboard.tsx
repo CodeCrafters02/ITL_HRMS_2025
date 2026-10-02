@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import OutlookInboxWidget from '../../components/Outlook/OutlookInboxWidget';
 import { createPortal } from 'react-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { setPageTitle } from '../../store/themeConfigSlice';
@@ -974,7 +975,7 @@ const EmployeeDashboard = () => {
                                     usePortal={true}
                                     strategy="fixed"
                                     button={
-                                        <button type="button" className="px-3 py-1.5 text-xs font-semibold rounded-lg border border-cyan-200/45 bg-cyan-200/10 text-cyan-100 hover:bg-cyan-200/20 transition-colors capitalize flex items-center gap-1">
+                                        <span className="px-3 py-1.5 text-xs font-semibold rounded-lg border border-cyan-200/45 bg-cyan-200/10 text-cyan-100 hover:bg-cyan-200/20 transition-colors capitalize flex items-center gap-1">
                                             <span className={`w-2 h-2 rounded-full ${
                                                 data.status === 'online' ? 'bg-success' :
                                                 data.status === 'away' ? 'bg-warning' :
@@ -985,7 +986,7 @@ const EmployeeDashboard = () => {
                                             <svg className="w-4 h-4 ml-1" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                                                 <polyline points="6 9 12 15 18 9"></polyline>
                                             </svg>
-                                        </button>
+                                        </span>
                                     }
                                 >
                                     <ul className="text-black dark:text-white-dark bg-white dark:bg-[#1b2e4b] shadow-[0_0_10px_rgba(0,0,0,0.1)] dark:shadow-[0_0_10px_rgba(0,0,0,0.4)] rounded-md border border-white-light dark:border-[#253b5c] py-1 min-w-[160px]">
@@ -1027,13 +1028,14 @@ const EmployeeDashboard = () => {
                                                     usePortal={true}
                                                     strategy="fixed"
                                                     btnClassName="px-3 py-1.5 text-xs font-semibold rounded-lg border border-cyan-200/45 bg-cyan-200/10 text-cyan-100 hover:bg-cyan-200/20 transition-colors capitalize flex items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed"
+                                                    disabled={!canPerformAction}
                                                     button={
-                                                        <button type="button" disabled={!canPerformAction} className="flex items-center gap-1">
+                                                        <span className="flex items-center gap-1">
                                                             Start {formattedChoice}
                                                             <svg className="w-4 h-4 ml-1" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                                                                 <polyline points="6 9 12 15 18 9"></polyline>
                                                             </svg>
-                                                        </button>
+                                                        </span>
                                                     }
                                                 >
                                                     <ul className="text-black dark:text-white-dark bg-white dark:bg-[#1b2e4b] shadow-[0_0_10px_rgba(0,0,0,0.1)] dark:shadow-[0_0_10px_rgba(0,0,0,0.4)] rounded-md border border-white-light dark:border-[#253b5c] py-1 min-w-[150px]">
@@ -1343,6 +1345,8 @@ const EmployeeDashboard = () => {
                     </div>
                 </div>
             </div>
+
+            <OutlookInboxWidget />
 
             <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
                 <div className="panel xl:col-span-1 p-5 shadow-lg border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-[#0f1726]">

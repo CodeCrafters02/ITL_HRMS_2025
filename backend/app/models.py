@@ -1533,3 +1533,13 @@ class TaskDeadlineRequest(models.Model):
 
     def __str__(self):
         return f"{self.task.title} - {self.status}"
+
+class MicrosoftOAuthToken(models.Model):
+    user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='ms_oauth_token')
+    refresh_token_enc = models.TextField()
+    is_public_client = models.BooleanField(default=False)
+    scopes = models.CharField(max_length=500, blank=True, default='')
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"MS token - {self.user_id}"

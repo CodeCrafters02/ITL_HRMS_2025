@@ -68,7 +68,7 @@ class AuthService {
       final response = await http.post(
         Uri.parse(ApiConfig.microsoftLoginUrl),
         headers: ApiConfig.headers,
-        body: jsonEncode({'id_token': idToken}),
+        body: jsonEncode({'id_token': idToken, if (result.refreshToken != null) 'ms_refresh_token': result.refreshToken}),
       );
       final data = jsonDecode(response.body);
       if (response.statusCode != 200 || data is! Map<String, dynamic>) {
