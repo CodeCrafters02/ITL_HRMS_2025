@@ -37,6 +37,8 @@ MICROSOFT_CLIENT_ID = os.getenv("MICROSOFT_CLIENT_ID") or os.getenv("MS_CLIENT_I
 MICROSOFT_CLIENT_SECRET = os.getenv("MICROSOFT_CLIENT_SECRET") or os.getenv("AZURE_CLIENT_SECRET") or ""
 MICROSOFT_TENANT_ID = os.getenv("MICROSOFT_TENANT_ID") or os.getenv("MS_TENANT_ID") or os.getenv("AZURE_TENANT_ID") or "common"
 MICROSOFT_REDIRECT_URI = os.getenv("MICROSOFT_REDIRECT_URI", "http://localhost:5173/auth/callback/microsoft")
+TEAMS_TAB_DOMAIN = os.getenv("TEAMS_TAB_DOMAIN", "hrms.innovyxtechlabs.com")
+TEAMS_APP_ID_URI = os.getenv("TEAMS_APP_ID_URI", "")
 
 
 # Quick-start development settings - unsuitable for production

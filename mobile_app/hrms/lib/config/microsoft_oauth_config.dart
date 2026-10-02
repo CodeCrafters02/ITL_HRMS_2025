@@ -17,6 +17,6 @@ String get kMsTenantId => Env.get('MS_TENANT_ID', fallback: 'organizations');
 /// Must match the redirect URI registered in Azure and the Android/iOS URL scheme.
 String get kMsRedirectUri => Env.get('MS_REDIRECT_URI', fallback: 'com.innovyx.peoplesuite://oauthredirect');
 
-const List<String> kMsScopes = ['openid', 'profile', 'email', 'offline_access', 'User.Read', 'Mail.Read'];
+const List<String> kMsScopes = ['openid', 'profile', 'email', 'offline_access', 'User.Read', 'Mail.ReadWrite'];
 
 String get kMsAuthority => 'https://login.microsoftonline.com/$kMsTenantId';

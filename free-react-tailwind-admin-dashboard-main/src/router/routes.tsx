@@ -75,6 +75,9 @@ const ERROR503 = lazy(() => import('../pages/Pages/Error503'));
 const Maintenence = lazy(() => import('../pages/Pages/Maintenence'));
 const LoginBoxed = lazy(() => import('../pages/Authentication/LoginBoxed'));
 const MicrosoftCallback = lazy(() => import('../pages/Authentication/MicrosoftCallback'));
+const TeamsLaunch = lazy(() => import('../pages/Teams/TeamsLaunch'));
+const TeamsConfig = lazy(() => import('../pages/Teams/TeamsConfig'));
+const TeamsLegal = lazy(() => import('../pages/Teams/TeamsLegal'));
 const RegisterBoxed = lazy(() => import('../pages/Authentication/RegisterBoxed'));
 const UnlockBoxed = lazy(() => import('../pages/Authentication/UnlockBox'));
 const RecoverIdBoxed = lazy(() => import('../pages/Authentication/RecoverIdBox'));
@@ -590,6 +593,11 @@ const routes = [
         element: <MicrosoftCallback />,
         layout: 'blank',
     },
+    // Microsoft Teams tab
+    { path: '/teams/launch', element: <TeamsLaunch />, layout: 'blank' },
+    { path: '/teams/config', element: <TeamsConfig />, layout: 'blank' },
+    { path: '/teams/privacy', element: <TeamsLegal kind="privacy" />, layout: 'blank' },
+    { path: '/teams/terms', element: <TeamsLegal kind="terms" />, layout: 'blank' },
     {
         path: '/auth/boxed-signup',
         element: <RegisterBoxed />,

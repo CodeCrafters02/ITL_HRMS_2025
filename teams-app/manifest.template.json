@@ -1,0 +1,37 @@
+{
+  "$schema": "https://developer.microsoft.com/en-us/json-schemas/teams/v1.17/MicrosoftTeams.schema.json",
+  "manifestVersion": "1.17",
+  "version": "1.0.0",
+  "id": "61aef780-972b-4305-8189-74716898dc93",
+  "developer": {
+    "name": "Innovyx Tech Labs",
+    "websiteUrl": "https://{{DOMAIN}}",
+    "privacyUrl": "https://{{DOMAIN}}/teams/privacy",
+    "termsOfUseUrl": "https://{{DOMAIN}}/teams/terms"
+  },
+  "name": { "short": "HRMS", "full": "Innovyx HRMS — People Suite" },
+  "description": {
+    "short": "Leave, attendance, payslips and HR tools inside Teams.",
+    "full": "Use Innovyx HRMS without leaving Microsoft Teams: apply for and approve leave, check attendance, download payslips, view the company calendar and more. Signs you in automatically with your Teams account."
+  },
+  "icons": { "color": "color.png", "outline": "outline.png" },
+  "accentColor": "#4361EE",
+  "staticTabs": [
+    { "entityId": "hrms-home", "name": "Home", "contentUrl": "https://{{DOMAIN}}/teams/launch?page=home&inTeams=1", "websiteUrl": "https://{{DOMAIN}}/teams/launch?page=home", "scopes": ["personal"] },
+    { "entityId": "hrms-leave", "name": "Leave", "contentUrl": "https://{{DOMAIN}}/teams/launch?page=leave&inTeams=1", "websiteUrl": "https://{{DOMAIN}}/teams/launch?page=leave", "scopes": ["personal"] },
+    { "entityId": "hrms-attendance", "name": "Attendance", "contentUrl": "https://{{DOMAIN}}/teams/launch?page=attendance&inTeams=1", "websiteUrl": "https://{{DOMAIN}}/teams/launch?page=attendance", "scopes": ["personal"] },
+    { "entityId": "hrms-payslips", "name": "Payslips", "contentUrl": "https://{{DOMAIN}}/teams/launch?page=payslips&inTeams=1", "websiteUrl": "https://{{DOMAIN}}/teams/launch?page=payslips", "scopes": ["personal"] },
+    { "entityId": "about", "scopes": ["personal"] }
+  ],
+  "configurableTabs": [
+    { "configurationUrl": "https://{{DOMAIN}}/teams/config?inTeams=1", "canUpdateConfiguration": true, "scopes": ["team", "groupChat"] }
+  ],
+  "permissions": ["identity"],
+  "validDomains": ["{{DOMAIN}}", "{{API_DOMAIN}}"],
+  "webApplicationInfo": {
+    "id": "{{CLIENT_ID}}",
+    "resource": "api://{{DOMAIN}}/{{CLIENT_ID}}"
+  },
+  "showLoadingIndicator": true,
+  "isFullScreen": false
+}

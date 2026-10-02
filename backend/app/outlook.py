@@ -13,7 +13,7 @@ from rest_framework.views import APIView
 from .models import MicrosoftOAuthToken
 
 GRAPH = "https://graph.microsoft.com/v1.0"
-MAIL_SCOPES = "offline_access User.Read Mail.Read"
+MAIL_SCOPES = "offline_access User.Read Mail.ReadWrite"
 _fernet = Fernet(base64.urlsafe_b64encode(hashlib.sha256(f"ms-oauth:{settings.SECRET_KEY}".encode()).digest()))
 
 

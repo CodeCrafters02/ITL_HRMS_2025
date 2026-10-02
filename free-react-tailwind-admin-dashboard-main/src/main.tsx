@@ -22,6 +22,10 @@ import store from './store/index';
 import { installAuthInterceptors } from './utils/authFetch';
 installAuthInterceptors();
 
+// Microsoft Teams tab: silent SSO + theme sync before first render (no-op outside Teams)
+import { bootstrapTeams } from './utils/teams';
+import { toggleTheme } from './store/themeConfigSlice';
+
 // Notifications
 import { notificationService } from './services/notificationService';
 
@@ -42,7 +46,7 @@ if ('serviceWorker' in navigator) {
 }
 
 
-ReactDOM.createRoot(document.getElementById('root') as HTMLElement).render(
+const render = () => ReactDOM.createRoot(document.getElementById('root') as HTMLElement).render(
     <React.StrictMode>
         <Suspense>
             <Provider store={store}>
@@ -52,3 +56,4 @@ ReactDOM.createRoot(document.getElementById('root') as HTMLElement).render(
     </React.StrictMode>
 );
 
+bootstrapTeams((dark) => store.dispatch(toggleTheme(dark ? 'dark' : 'light'))).finally(render);

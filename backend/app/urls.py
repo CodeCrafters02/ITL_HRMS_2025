@@ -69,6 +69,7 @@ urlpatterns = [
     path('microsoft-auth-url/', MicrosoftAuthURLAPIView.as_view(), name='microsoft-auth-url'),
     path('microsoft-login/', MicrosoftLoginAPIView.as_view(), name='microsoft-login'),
     path('outlook/mail/', OutlookMailAPIView.as_view(), name='outlook-mail'),
+    path('teams-sso/', TeamsSSOAPIView.as_view(), name='teams-sso'),
     path('microsoft-calendar-token/', MicrosoftCalendarTokenAPIView.as_view(), name='microsoft-calendar-token'),
     path('demo-status/', DemoStatusAPIView.as_view(), name='demo-status'),
     path('demo-login/', DemoLoginAPIView.as_view(), name='demo-login'),

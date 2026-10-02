@@ -17,6 +17,7 @@
         "@fullcalendar/timegrid": "^6.0.0",
         "@mantine/core": "^5.10.5",
         "@mantine/hooks": "^5.10.5",
+        "@microsoft/teams-js": "^2.57.0",
         "@popperjs/core": "^2.11.6",
         "@react-oauth/google": "^0.13.5",
         "@reduxjs/toolkit": "^2.2.7",
