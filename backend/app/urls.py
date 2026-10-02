@@ -68,6 +68,7 @@ urlpatterns = [
     path('google-login/', GoogleLoginAPIView.as_view(), name='google-login'),
     path('microsoft-auth-url/', MicrosoftAuthURLAPIView.as_view(), name='microsoft-auth-url'),
     path('microsoft-login/', MicrosoftLoginAPIView.as_view(), name='microsoft-login'),
+    path('microsoft-calendar-token/', MicrosoftCalendarTokenAPIView.as_view(), name='microsoft-calendar-token'),
     path('demo-status/', DemoStatusAPIView.as_view(), name='demo-status'),
     path('demo-login/', DemoLoginAPIView.as_view(), name='demo-login'),
     path('system-settings/', SystemSettingsAPIView.as_view(), name='system-settings'),

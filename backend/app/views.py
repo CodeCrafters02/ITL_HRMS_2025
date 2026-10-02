@@ -6164,7 +6164,7 @@ def _ensure_employee_for_company_user(*, user: UserRegister, email: str, first_n
     )
 
 
-def _process_sso_user_login(*, email: str, first_name: str = "", last_name: str = ""):
+def _process_sso_user_login(*, email: str, first_name: str = "", last_name: str = "", extra_data: dict = None):
     email = (email or "").strip().lower()
     if not email:
         return Response({"detail": "Valid email address is required for SSO."}, status=status.HTTP_400_BAD_REQUEST)
@@ -6259,7 +6259,7 @@ def _process_sso_user_login(*, email: str, first_name: str = "", last_name: str 
 
     # Return tokens
     refresh = RefreshToken.for_user(user)
-    return Response({
+    payload = {
         "access": str(refresh.access_token),
         "refresh": str(refresh),
         "id": user.id,
@@ -6268,7 +6268,10 @@ def _process_sso_user_login(*, email: str, first_name: str = "", last_name: str 
         "last_name": user.last_name,
         "role": user.role,
         "is_reporting_manager": user.is_reporting_manager
-    }, status=status.HTTP_200_OK)
+    }
+    if extra_data and isinstance(extra_data, dict):
+        payload.update(extra_data)
+    return Response(payload, status=status.HTTP_200_OK)
 
 
 class GoogleLoginAPIView(APIView):
@@ -6315,7 +6318,7 @@ class MicrosoftAuthURLAPIView(APIView):
         redirect_uri = request.query_params.get('redirect_uri') or getattr(settings, 'MICROSOFT_REDIRECT_URI', '')
         state = request.query_params.get('state') or 'ms_login'
 
-        scopes = "openid profile email User.Read"
+        scopes = request.query_params.get('scope') or "openid profile email User.Read Calendars.ReadWrite offline_access"
         auth_url = (
             f"https://login.microsoftonline.com/{tenant_id}/oauth2/v2.0/authorize?"
             f"client_id={urllib.parse.quote(client_id)}&"
@@ -6432,7 +6435,70 @@ class MicrosoftLoginAPIView(APIView):
                 status=status.HTTP_400_BAD_REQUEST
             )
 
-        return _process_sso_user_login(email=email, first_name=first_name, last_name=last_name)
+        extra_data = {
+            "ms_access_token": access_token or "",
+            "ms_refresh_token": token_data.get("refresh_token") or "",
+            "ms_expires_in": token_data.get("expires_in", 3600),
+        }
+        return _process_sso_user_login(email=email, first_name=first_name, last_name=last_name, extra_data=extra_data)
+
+
+class MicrosoftCalendarTokenAPIView(APIView):
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        action = request.data.get("action", "exchange")
+        client_id = getattr(settings, 'MICROSOFT_CLIENT_ID', '')
+        client_secret = getattr(settings, 'MICROSOFT_CLIENT_SECRET', '')
+        tenant_id = getattr(settings, 'MICROSOFT_TENANT_ID', 'common') or 'common'
+        token_url = f"https://login.microsoftonline.com/{tenant_id}/oauth2/v2.0/token"
+
+        if not client_id or not client_secret:
+            return Response(
+                {"detail": "Microsoft Entra ID credentials (MICROSOFT_CLIENT_ID or MICROSOFT_CLIENT_SECRET) are not configured in backend."},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+        if action == "refresh":
+            refresh_token = request.data.get("refresh_token")
+            if not refresh_token:
+                return Response({"detail": "Refresh token is required."}, status=status.HTTP_400_BAD_REQUEST)
+            data = {
+                "client_id": client_id,
+                "client_secret": client_secret,
+                "grant_type": "refresh_token",
+                "refresh_token": refresh_token,
+                "scope": "openid profile email User.Read Calendars.ReadWrite offline_access",
+            }
+        else:
+            code = request.data.get("code")
+            redirect_uri = request.data.get("redirect_uri") or getattr(settings, 'MICROSOFT_REDIRECT_URI', '')
+            if not code:
+                return Response({"detail": "Authorization code is required."}, status=status.HTTP_400_BAD_REQUEST)
+            data = {
+                "client_id": client_id,
+                "client_secret": client_secret,
+                "grant_type": "authorization_code",
+                "code": code,
+                "redirect_uri": redirect_uri,
+            }
+
+        try:
+            token_resp = requests.post(token_url, data=data, timeout=15)
+            token_data = token_resp.json()
+        except requests.RequestException as e:
+            return Response({"detail": f"Failed to connect to Microsoft token service: {str(e)}"}, status=status.HTTP_502_BAD_GATEWAY)
+
+        if token_resp.status_code != 200 or "access_token" not in token_data:
+            err_msg = token_data.get("error_description") or token_data.get("error") or "Token exchange failed"
+            return Response({"detail": f"Microsoft token error: {err_msg}"}, status=status.HTTP_400_BAD_REQUEST)
+
+        return Response({
+            "access_token": token_data.get("access_token"),
+            "refresh_token": token_data.get("refresh_token") or "",
+            "expires_in": token_data.get("expires_in", 3600),
+            "scope": token_data.get("scope", "")
+        }, status=status.HTTP_200_OK)
 
 class LoanCategoryViewSet(viewsets.ModelViewSet):
     serializer_class = LoanCategorySerializer
