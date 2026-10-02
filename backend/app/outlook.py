@@ -1,10 +1,12 @@
 import base64
 import hashlib
+import logging
 
 import requests
 from cryptography.fernet import Fernet, InvalidToken
 from django.conf import settings
 from django.core.cache import cache
+from django.db import DatabaseError, transaction
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -13,7 +15,8 @@ from rest_framework.views import APIView
 from .models import MicrosoftOAuthToken
 
 GRAPH = "https://graph.microsoft.com/v1.0"
-MAIL_SCOPES = "offline_access User.Read Mail.ReadWrite"
+logger = logging.getLogger(__name__)
+MAIL_SCOPES ="offline_access User.Read Mail.ReadWrite"
 _fernet = Fernet(base64.urlsafe_b64encode(hashlib.sha256(f"ms-oauth:{settings.SECRET_KEY}".encode()).digest()))
 
 
@@ -24,14 +27,19 @@ class OutlookReauthRequired(Exception):
 def save_ms_refresh_token(user_id, refresh_token, *, public_client=False, scope=""):
     if not (user_id and refresh_token):
         return
-    MicrosoftOAuthToken.objects.update_or_create(
-        user_id=user_id,
-        defaults={
-            "refresh_token_enc": _fernet.encrypt(refresh_token.encode()).decode(),
-            "is_public_client": public_client,
-            "scopes": scope or "",
-        },
-    )
+    try:
+        with transaction.atomic():
+            MicrosoftOAuthToken.objects.update_or_create(
+                user_id=user_id,
+                defaults={
+                    "refresh_token_enc": _fernet.encrypt(refresh_token.encode()).decode(),
+                    "is_public_client": public_client,
+                    "scopes": scope or "",
+                },
+            )
+    except DatabaseError:
+        logger.exception("Could not store Microsoft refresh token for user %s; Outlook mail disabled", user_id)
+        return
     cache.delete(f"ms_graph_at:{user_id}")
 
 
