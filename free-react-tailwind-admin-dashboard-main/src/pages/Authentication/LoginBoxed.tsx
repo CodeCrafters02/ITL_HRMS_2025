@@ -130,6 +130,10 @@ const LoginBoxed = () => {
                 }
                 if (data.first_name !== undefined) localStorage.setItem('first_name', data.first_name || '');
                 if (data.last_name !== undefined) localStorage.setItem('last_name', data.last_name || '');
+                if (data.ms_access_token) {
+                    localStorage.setItem('ms_calendar_token', data.ms_access_token);
+                    if (data.ms_refresh_token) localStorage.setItem('ms_refresh_token', data.ms_refresh_token);
+                }
 
                 recordLoginSuccess(rememberMe);
 

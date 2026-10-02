@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import { useDispatch } from 'react-redux';
 import { setPageTitle } from '../../store/themeConfigSlice';
-import CompanyGoogleCalendar from '../../components/Calendar/CompanyGoogleCalendar';
+import CompanyMicrosoftCalendar from '../../components/Calendar/CompanyMicrosoftCalendar';
 
 const AdminCalendar = () => {
     const dispatch = useDispatch();
@@ -9,7 +9,7 @@ const AdminCalendar = () => {
         dispatch(setPageTitle('Calendar'));
     }, [dispatch]);
 
-    return <CompanyGoogleCalendar variant="page" />;
+    return <CompanyMicrosoftCalendar variant="page" />;
 };
 
 export default AdminCalendar;
