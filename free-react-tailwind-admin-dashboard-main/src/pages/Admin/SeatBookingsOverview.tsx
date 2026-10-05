@@ -273,7 +273,7 @@ const AdminSeatBookingsOverview = () => {
     );
 
     return (
-        <div className="flex flex-col h-[calc(100vh-90px)] space-y-4">
+        <div className="flex flex-col h-[calc(var(--app-vh)_-_90px)] space-y-4">
             {/* Header Banner - Restored with better spacing */}
             <div className="bg-gradient-to-r from-emerald-500 to-teal-600 rounded-xl p-4 text-white shadow-lg overflow-hidden relative">
                 <div className="relative z-10 flex items-center justify-between">

@@ -264,7 +264,7 @@ const Sidebar = () => {
                             <IconCaretsDown className="m-auto rotate-90" />
                         </button>
                     </div>
-                    <PerfectScrollbar className="h-[calc(100vh-80px)] relative">
+                    <PerfectScrollbar className="h-[calc(var(--app-vh)_-_80px)] relative">
                         <ul className="relative font-semibold space-y-0.5 p-4 py-0">
 
                             {/* ===== MASTER SIDEBAR ===== */}

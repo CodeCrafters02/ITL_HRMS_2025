@@ -1,28 +1,24 @@
-import { Link, useNavigate } from 'react-router-dom';
-import { useDispatch, useSelector } from 'react-redux';
-import { IRootState } from '../../store';
+import { useNavigate } from 'react-router-dom';
+import { useDispatch } from 'react-redux';
 import { useEffect, useState } from 'react';
-import { setPageTitle, toggleRTL } from '../../store/themeConfigSlice';
-import IconCaretDown from '../../components/Icon/IconCaretDown';
-import IconMail from '../../components/Icon/IconMail';
-import IconLockDots from '../../components/Icon/IconLockDots';
-import IconMicrosoft from '../../components/Icon/IconMicrosoft';
+import { setPageTitle } from '../../store/themeConfigSlice';
+import IconLoader from '../../components/Icon/IconLoader';
+import IconInfoCircle from '../../components/Icon/IconInfoCircle';
+import IconX from '../../components/Icon/IconX';
 import { isSessionValid, initTabSession, recordLoginSuccess, clearAllSessionData } from '../../utils/sessionManager';
 
 const LoginBoxed = () => {
     const dispatch = useDispatch();
-    useEffect(() => {
-        dispatch(setPageTitle('Login Boxed'));
-    });
     const navigate = useNavigate();
-    const isDark = useSelector((state: IRootState) => state.themeConfig.theme === 'dark' || state.themeConfig.isDarkMode);
-    const [username, setUsername] = useState('');
-    const [password, setPassword] = useState('');
-    const [rememberMe, setRememberMe] = useState(false);
+
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
-    const [acceptedTerms, setAcceptedTerms] = useState(false);
 
+    useEffect(() => {
+        dispatch(setPageTitle('HRMS - Sign In'));
+    }, [dispatch]);
+
+    // Check existing session on load
     useEffect(() => {
         const token = localStorage.getItem('access_token');
         const role = localStorage.getItem('user_role');
@@ -37,69 +33,6 @@ const LoginBoxed = () => {
             clearAllSessionData();
         }
     }, [navigate]);
-
-
-    const submitForm = async (e: React.FormEvent) => {
-        e.preventDefault();
-        setLoading(true);
-        setError('');
-        
-        try {
-            const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000';
-            const response = await fetch(`${API_BASE_URL}/app/login/`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ 
-                    username, 
-                    password
-                }),
-            });
-
-            if (response.ok) {
-                const data = await response.json();
-                localStorage.setItem('access_token', data.access);
-                localStorage.setItem('refresh_token', data.refresh);
-                localStorage.setItem('user_role', data.role);
-                localStorage.setItem('user_id', data.id);
-                localStorage.setItem('username', data.username);
-                localStorage.setItem('is_reporting_manager', data.is_reporting_manager ? 'true' : 'false');
-                if (data.username && String(data.username).includes('@')) {
-                    localStorage.setItem('user_email', String(data.username));
-                }
-                if (data.first_name !== undefined) localStorage.setItem('first_name', data.first_name || '');
-                if (data.last_name !== undefined) localStorage.setItem('last_name', data.last_name || '');
-                
-                recordLoginSuccess(rememberMe);
-                
-                // Navigate based on role (replace: true prevents browser back from returning to login)
-                if (data.role === 'master') {
-                    navigate('/master/dashboard', { replace: true });
-                } else if (data.role === 'admin') {
-                    navigate('/admin/hub', { replace: true });
-                } else if (data.role === 'employee') {
-                    const uid = String(data.id ?? '');
-                    if (uid && !localStorage.getItem(`hrms_leave_intro_ack_${uid}`)) {
-                        sessionStorage.setItem('hrms_leave_intro_pulse', '1');
-                    }
-                    if (uid && !localStorage.getItem(`hrms_checkin_intro_ack_${uid}`)) {
-                        sessionStorage.setItem('hrms_checkin_intro_pulse', '1');
-                    }
-                    navigate('/employee/hub', { replace: true });
-                } else {
-                    navigate('/master/dashboard', { replace: true });
-                }
-            } else {
-                const err = await response.json();
-                setError(err.detail || 'Login failed. Please check credentials.');
-            }
-        } catch (error) {
-            setError('Server error during login.');
-        } finally {
-            setLoading(false);
-        }
-    };
 
     const processMicrosoftAuthCode = async (code: string) => {
         setLoading(true);
@@ -135,9 +68,8 @@ const LoginBoxed = () => {
                     if (data.ms_refresh_token) localStorage.setItem('ms_refresh_token', data.ms_refresh_token);
                 }
 
-                recordLoginSuccess(rememberMe);
+                recordLoginSuccess(true);
 
-                // Navigate based on role (replace: true prevents browser back from returning to login)
                 if (data.role === 'master') {
                     navigate('/master/dashboard', { replace: true });
                 } else if (data.role === 'admin') {
@@ -156,9 +88,9 @@ const LoginBoxed = () => {
                 }
             } else {
                 const err = await response.json();
-                setError(err.detail || 'Microsoft Login failed on server.');
+                setError(err.detail || 'Microsoft authentication failed on server.');
             }
-        } catch (error) {
+        } catch (err) {
             setError('Server connection error during Microsoft Login.');
         } finally {
             setLoading(false);
@@ -166,11 +98,6 @@ const LoginBoxed = () => {
     };
 
     const handleMicrosoftLogin = async () => {
-        if (!acceptedTerms) {
-            setError('Please accept the Terms and Conditions to proceed.');
-            return;
-        }
-
         setLoading(true);
         setError('');
         try {
@@ -198,7 +125,6 @@ const LoginBoxed = () => {
             const left = window.screenX + (window.outerWidth - width) / 2;
             const top = window.screenY + (window.outerHeight - height) / 2;
 
-            // Clear any old auth state and set in-progress marker
             localStorage.removeItem('ms_auth_result');
             localStorage.setItem('ms_auth_in_progress', 'true');
 
@@ -239,7 +165,6 @@ const LoginBoxed = () => {
                 handled = true;
                 cleanup();
 
-                // Aggressively close the popup window from the main window that opened it
                 const closePopupSafely = () => {
                     try {
                         if (popup && !popup.closed) {
@@ -264,7 +189,6 @@ const LoginBoxed = () => {
                 }
             };
 
-            // 1. BroadcastChannel listener (direct same-origin channel)
             try {
                 channel = new BroadcastChannel('ms_auth_channel');
                 channel.onmessage = (event) => {
@@ -276,7 +200,6 @@ const LoginBoxed = () => {
                 };
             } catch (e) {}
 
-            // 2. Storage event listener (fires across tabs/popups on the same origin)
             const handleStorage = (event: StorageEvent) => {
                 if (event.key === 'ms_auth_result' && event.newValue) {
                     try {
@@ -291,7 +214,6 @@ const LoginBoxed = () => {
             };
             window.addEventListener('storage', handleStorage);
 
-            // 3. postMessage listener (fallback for direct opener postMessage)
             const handleMessage = (event: MessageEvent) => {
                 if (event.origin !== window.location.origin) return;
                 if (event.data?.type === 'MS_AUTH_CODE' && event.data?.code) {
@@ -302,7 +224,6 @@ const LoginBoxed = () => {
             };
             window.addEventListener('message', handleMessage);
 
-            // 4. Active polling of localStorage (100% reliable regardless of COOP / window.opener loss)
             pollStorageInterval = setInterval(() => {
                 const raw = localStorage.getItem('ms_auth_result');
                 if (raw) {
@@ -317,7 +238,6 @@ const LoginBoxed = () => {
                 }
             }, 50);
 
-            // 5. Watch for popup closure by user (with grace period to avoid false positives during cross-origin auth)
             const startTime = Date.now();
             checkClosedInterval = setInterval(() => {
                 if (Date.now() - startTime > 3500) {
@@ -342,120 +262,142 @@ const LoginBoxed = () => {
                     } catch (e) {}
                 }
             }, 1000);
-
-            return;
-        } catch (error) {
+        } catch (err) {
             setError('Server connection error while initiating Microsoft Sign-in.');
             setLoading(false);
         }
     };
 
     return (
-        <div>
-            <div className="absolute inset-0">
-                <img src="/assets/images/auth/bg-gradient.png" alt="image" className="h-full w-full object-cover" />
+        <div className="min-h-screen w-full flex flex-col lg:flex-row overflow-x-hidden font-sans m-0 p-0 bg-white">
+            
+            {/* ========================================================
+                LEFT PANEL: Exact Matching Brand Showcase from Image
+               ======================================================== */}
+            <div className="w-full lg:w-[58%] xl:w-[60%] min-h-[460px] sm:min-h-[580px] lg:min-h-screen relative overflow-hidden bg-slate-100 flex items-center justify-center">
+                <img
+                    src="/assets/images/auth/hrms-banner.jpg"
+                    alt="HRMS - Building a better workplace together"
+                    className="w-full h-full object-cover object-center"
+                />
             </div>
 
-            <div className="relative flex min-h-screen items-center justify-center bg-[url(/assets/images/auth/map.png)] bg-cover bg-center bg-no-repeat px-6 py-10 dark:bg-[#060818] sm:px-16">
-                <img src="/assets/images/auth/coming-soon-object1.png" alt="image" className="absolute left-0 top-1/2 h-full max-h-[893px] -translate-y-1/2" />
-                <img src="/assets/images/auth/coming-soon-object2.png" alt="image" className="absolute left-24 top-0 h-40 md:left-[30%]" />
-                <img src="/assets/images/auth/coming-soon-object3.png" alt="image" className="absolute right-0 top-0 h-[300px]" />
-                <img src="/assets/images/auth/polygon-object.svg" alt="image" className="absolute bottom-0 end-[28%]" />
-                <div className="relative w-full max-w-[870px] rounded-md bg-[linear-gradient(45deg,#fff9f9_0%,rgba(255,255,255,0)_25%,rgba(255,255,255,0)_75%,_#fff9f9_100%)] p-2 dark:bg-[linear-gradient(52.22deg,#0E1726_0%,rgba(14,23,38,0)_18.66%,rgba(14,23,38,0)_51.04%,rgba(14,23,38,0)_80.07%,#0E1726_100%)]">
-                    <div className="relative flex flex-col justify-center rounded-md bg-white/60 backdrop-blur-lg dark:bg-black/50 px-6 lg:min-h-[758px] py-20">
+            {/* ========================================================
+                RIGHT PANEL: Matching Soft Gradient & Pure White Card
+               ======================================================== */}
+            <div className="w-full lg:w-[42%] xl:w-[40%] min-h-[520px] lg:min-h-screen relative flex items-center justify-center p-6 sm:p-10 lg:p-12 bg-gradient-to-br from-[#ebf3fc] via-[#f2f7fd] to-[#e4eefb] overflow-hidden">
+                
+                {/* Soft decorative background curves */}
+                <div className="absolute -top-32 -right-32 w-[420px] h-[420px] rounded-full bg-blue-100/70 blur-3xl pointer-events-none"></div>
+                <div className="absolute -bottom-32 -left-32 w-[420px] h-[420px] rounded-full bg-indigo-100/60 blur-3xl pointer-events-none"></div>
 
-                        <div className="mx-auto w-full max-w-[440px]">
-                            <div className="mb-10">
-                                <h1 className="text-3xl font-extrabold uppercase !leading-snug text-primary md:text-4xl">Sign in</h1>
-                                <p className="text-base font-bold leading-normal text-white-dark">Enter your username and password to login</p>
-                            </div>
-                            <form className="space-y-5 dark:text-white" onSubmit={submitForm}>
-                                <div>
-                                    <label htmlFor="Username">Username / Email</label>
-                                    <div className="relative text-white-dark">
-                                        <input 
-                                            id="Username" 
-                                            type="text" 
-                                            placeholder="Enter Username" 
-                                            className="form-input ps-10 placeholder:text-white-dark" 
-                                            value={username}
-                                            onChange={(e) => setUsername(e.target.value)}
-                                            required
-                                        />
-                                        <span className="absolute start-4 top-1/2 -translate-y-1/2">
-                                            <IconMail fill={true} />
-                                        </span>
-                                    </div>
-                                </div>
-                                <div>
-                                    <label htmlFor="Password">Password</label>
-                                    <div className="relative text-white-dark">
-                                        <input 
-                                            id="Password" 
-                                            type="password" 
-                                            placeholder="Enter Password" 
-                                            className="form-input ps-10 placeholder:text-white-dark" 
-                                            value={password}
-                                            onChange={(e) => setPassword(e.target.value)}
-                                            required
-                                        />
-                                        <span className="absolute start-4 top-1/2 -translate-y-1/2">
-                                            <IconLockDots fill={true} />
-                                        </span>
-                                    </div>
-                                </div>
-                                {error && <div className="text-danger font-semibold">{error}</div>}
-                                <div>
-                                    <label className="flex cursor-pointer items-center">
-                                        <input 
-                                            type="checkbox" 
-                                            className="form-checkbox bg-white dark:bg-black" 
-                                            checked={rememberMe}
-                                            onChange={(e) => setRememberMe(e.target.checked)}
-                                        />
-                                        <span className="text-white-dark">Remember me</span>
-                                    </label>
-                                </div>
-                                <div>
-                                    <label className="flex cursor-pointer items-center">
-                                        <input 
-                                            type="checkbox" 
-                                            className="form-checkbox bg-white dark:bg-black" 
-                                            checked={acceptedTerms}
-                                            onChange={(e) => setAcceptedTerms(e.target.checked)}
-                                            required
-                                        />
-                                        <span className="text-white-dark">I agree to the <Link to="/privacy-policy" className="text-primary hover:underline ml-1">Terms and Conditions</Link></span>
-                                    </label>
-                                </div>
-                                <button 
-                                    type="submit" 
-                                    disabled={loading || !acceptedTerms} 
-                                    className={`btn btn-gradient !mt-6 w-full border-0 uppercase shadow-[0_10px_20px_-10px_rgba(67,97,238,0.44)] ${(!acceptedTerms) ? 'opacity-50 cursor-not-allowed' : ''}`}
-                                >
-                                    {loading ? 'Signing in...' : 'Sign in'}
-                                </button>
-                            </form>
-                            <div className="relative my-7 text-center md:mb-9">
-                                <span className="absolute inset-x-0 top-1/2 h-px w-full -translate-y-1/2 bg-white-light dark:bg-white-dark"></span>
-                                <span className="relative bg-white px-2 font-bold uppercase text-white-dark dark:bg-dark dark:text-white-light">or</span>
-                            </div>
-                            <div className={`mb-10 md:mb-[60px] flex justify-center ${!acceptedTerms ? 'pointer-events-none opacity-50' : ''}`}>
-                                <button
-                                    type="button"
-                                    onClick={handleMicrosoftLogin}
-                                    disabled={loading || !acceptedTerms}
-                                    className="flex items-center justify-center gap-3 px-5 py-2.5 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-[#1b2e4b] hover:bg-gray-50 dark:hover:bg-[#233857] text-[#5e5e5e] dark:text-white font-semibold text-sm shadow-sm transition-all duration-200"
-                                    title="Sign in with Microsoft"
-                                >
-                                    <IconMicrosoft size={20} />
-                                    <span>{loading ? 'Signing in with Microsoft...' : 'Sign in with Microsoft'}</span>
-                                </button>
-                            </div>
+                {/* Floating Clean White Card */}
+                <div className="relative z-10 w-full max-w-[380px] sm:max-w-[400px] rounded-3xl bg-white p-8 sm:p-10 shadow-[0_20px_50px_-10px_rgba(20,50,140,0.12),0_4px_16px_-2px_rgba(0,0,0,0.04)] border border-slate-100 text-center">
+                    
+                    {/* Blue HRMS 3-People Logo */}
+                    <div className="flex justify-center mb-3">
+                        <svg className="w-14 h-11 text-[#0062E0]" viewBox="0 0 48 36" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+                            <circle cx="24" cy="9" r="5" />
+                            <path d="M17 32C17 26.5 20.1 22 24 22C27.9 22 31 26.5 31 32H17Z" />
+                            <circle cx="11" cy="12" r="4" />
+                            <path d="M5 32C5 27.5 7.5 24 11 24C13.2 24 15.1 25.4 16.1 27.6C15.4 28.9 15 30.4 15 32H5Z" />
+                            <circle cx="37" cy="12" r="4" />
+                            <path d="M43 32C43 27.5 40.5 24 37 24C34.8 24 32.9 25.4 31.9 27.6C32.6 28.9 33 30.4 33 32H43Z" />
+                        </svg>
+                    </div>
+
+                    {/* Title & Subtitle */}
+                    <h2 className="text-2xl font-black text-[#0f172a] tracking-tight">
+                        HRMS
+                    </h2>
+                    <p className="text-xs sm:text-sm font-semibold text-[#64748b] mt-1 mb-8">
+                        Sign in to your account
+                    </p>
+
+                    {/* Error Alert (if any) */}
+                    {error && (
+                        <div className="mb-5 flex items-start gap-2 p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs font-semibold text-left">
+                            <IconInfoCircle className="w-4 h-4 shrink-0 mt-0.5 text-rose-600" />
+                            <span className="flex-1">{error}</span>
+                            <button
+                                type="button"
+                                onClick={() => setError('')}
+                                className="text-rose-400 hover:text-rose-700 transition-colors"
+                            >
+                                <IconX className="w-3.5 h-3.5" />
+                            </button>
                         </div>
+                    )}
+
+                    {/* Primary Sign In with Microsoft Button */}
+                    <button
+                        type="button"
+                        onClick={handleMicrosoftLogin}
+                        disabled={loading}
+                        className={`w-full group relative flex items-center justify-between px-5 py-3.5 rounded-xl bg-[#0062E0] hover:bg-[#0051ba] active:scale-[0.99] text-white font-bold text-sm shadow-[0_8px_20px_-4px_rgba(0,98,224,0.38)] hover:shadow-[0_12px_24px_-4px_rgba(0,98,224,0.5)] transition-all duration-200 ${
+                            loading ? 'opacity-85 cursor-wait' : ''
+                        }`}
+                        title="Sign in with Microsoft SSO"
+                    >
+                        {loading ? (
+                            <div className="w-full flex items-center justify-center gap-2">
+                                <IconLoader className="w-5 h-5 animate-spin text-white" />
+                                <span>Connecting to Microsoft...</span>
+                            </div>
+                        ) : (
+                            <>
+                                {/* Microsoft 4-Square Color Logo */}
+                                <div className="grid grid-cols-2 gap-0.5 w-4 h-4 shrink-0 p-0.5">
+                                    <span className="w-1.5 h-1.5 bg-[#F25022]"></span>
+                                    <span className="w-1.5 h-1.5 bg-[#7FBA00]"></span>
+                                    <span className="w-1.5 h-1.5 bg-[#00A4EF]"></span>
+                                    <span className="w-1.5 h-1.5 bg-[#FFB900]"></span>
+                                </div>
+
+                                {/* Button Text */}
+                                <span className="tracking-tight text-white font-bold text-sm">
+                                    Sign in with Microsoft
+                                </span>
+
+                                {/* Arrow Right Icon */}
+                                <svg
+                                    className="w-5 h-5 text-white shrink-0 transition-transform duration-200 group-hover:translate-x-1"
+                                    fill="none"
+                                    viewBox="0 0 24 24"
+                                    stroke="currentColor"
+                                    strokeWidth="2.2"
+                                >
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3" />
+                                </svg>
+                            </>
+                        )}
+                    </button>
+
+                    {/* Divider Line: Secure Login */}
+                    <div className="relative my-7 text-center">
+                        <div className="absolute inset-0 flex items-center">
+                            <div className="w-full border-t border-slate-200"></div>
+                        </div>
+                        <span className="relative bg-white px-3 text-[11px] font-semibold text-[#94a3b8]">
+                            Secure Login
+                        </span>
+                    </div>
+
+                    {/* Bottom Shield & Security Notice */}
+                    <div className="flex flex-col items-center justify-center space-y-2 pt-1">
+                        <div className="h-8 w-8 flex items-center justify-center text-[#0062E0]">
+                            <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.6">
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75 11.25 15 15 9.75m-3-7.036A11.959 11.959 0 0 1 3.598 6 11.99 11.99 0 0 0 3 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285Z" />
+                            </svg>
+                        </div>
+                        <p className="text-[11px] sm:text-xs text-[#64748b] leading-tight font-medium">
+                            Your data is secure and protected<br />
+                            with Microsoft.
+                        </p>
                     </div>
                 </div>
             </div>
+
         </div>
     );
 };

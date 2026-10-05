@@ -363,7 +363,7 @@ const PayrollReport = () => {
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
                 {/* Employee List */}
                 <div className="lg:col-span-4 xl:col-span-3">
-                    <div className="panel p-0 overflow-hidden h-[calc(100vh-220px)] flex flex-col">
+                    <div className="panel p-0 overflow-hidden h-[calc(var(--app-vh)_-_220px)] flex flex-col">
                         <div className="p-3 border-b border-[#e0e6ed] dark:border-[#1b2e4b]">
                             <h3 className="font-bold text-gray-700 dark:text-gray-200 text-sm mb-2">Employees</h3>
                             <input className="form-input text-sm" placeholder="Search by name, ID, dept..." value={search} onChange={e => setSearch(e.target.value)} />

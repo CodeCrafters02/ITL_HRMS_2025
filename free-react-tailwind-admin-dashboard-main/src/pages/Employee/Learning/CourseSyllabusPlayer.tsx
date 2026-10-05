@@ -497,9 +497,9 @@ const CourseSyllabusPlayer = () => {
     };
 
     return (
-        <div className="flex flex-col lg:flex-row gap-6 min-h-[calc(100vh-160px)]">
+        <div className="flex flex-col lg:flex-row gap-6 min-h-[calc(var(--app-vh)_-_160px)]">
             {/* Left Panel: Course Curriculum Checklists */}
-            <div className="w-full lg:w-80 panel border border-[#e0e6ed] dark:border-[#1b2e4b] p-4 flex flex-col justify-between h-auto lg:h-[calc(100vh-160px)] overflow-y-auto bg-white dark:bg-[#0e1726]/40">
+            <div className="w-full lg:w-80 panel border border-[#e0e6ed] dark:border-[#1b2e4b] p-4 flex flex-col justify-between h-auto lg:h-[calc(var(--app-vh)_-_160px)] overflow-y-auto bg-white dark:bg-[#0e1726]/40">
                 <div>
                     <div className="pb-4 border-b border-[#ebedf2] dark:border-[#1b2e4b] mb-4">
                         {isQuizInProgress ? (
@@ -787,7 +787,7 @@ const CourseSyllabusPlayer = () => {
                                                     preload="auto"
                                                     playsInline
                                                     className="w-full rounded-xl"
-                                                    style={{ maxHeight: 'calc(100vh - 340px)' }}
+                                                    style={{ maxHeight: 'calc(var(--app-vh) - 340px)' }}
                                                 >
                                                     Your browser does not support the video tag.
                                                 </video>
@@ -859,7 +859,7 @@ const CourseSyllabusPlayer = () => {
                                                             src={`${fileUrl}?t=${new Date().getTime()}`}
                                                             title={activeLecture.title}
                                                             className="w-full border-0 rounded-xl flex-grow"
-                                                            style={{ height: 'calc(100vh - 400px)', minHeight: '450px' }}
+                                                            style={{ height: 'calc(var(--app-vh) - 400px)', minHeight: '450px' }}
                                                         ></iframe>
                                                     </div>
                                                 );

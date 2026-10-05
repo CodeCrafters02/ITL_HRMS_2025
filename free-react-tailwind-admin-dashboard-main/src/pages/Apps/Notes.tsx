@@ -371,7 +371,7 @@ const Notes = () => {
 
     return (
         <div>
-            <div className="flex gap-5 relative sm:h-[calc(100vh_-_150px)] h-full">
+            <div className="flex gap-5 relative sm:h-[calc(var(--app-vh)_-_150px)] h-full">
                 <div className={`bg-black/60 z-10 w-full h-full rounded-md absolute hidden ${isShowNoteMenu ? '!block xl:!hidden' : ''}`} onClick={() => setIsShowNoteMenu(!isShowNoteMenu)}></div>
                 <div
                     className={`panel

@@ -746,3 +746,22 @@ hover:text-primary hover:before:!bg-primary ltr:before:mr-2 rtl:before:ml-2 dark
 pre.hljs {
     @apply p-6 rounded-md overflow-x-auto !bg-[#191e3a];
 }
+
+/* Microsoft Teams tab: the iframe is much smaller than a browser window, so scale the whole UI down */
+:root {
+    --app-vh: 100vh;
+}
+html.in-teams {
+    --teams-zoom: 0.85;
+    --app-vh: calc(100vh / var(--teams-zoom));
+    zoom: var(--teams-zoom);
+}
+html.in-teams .min-h-screen {
+    min-height: var(--app-vh);
+}
+html.in-teams .h-screen {
+    height: var(--app-vh);
+}
+html.in-teams .max-h-screen {
+    max-height: var(--app-vh);
+}

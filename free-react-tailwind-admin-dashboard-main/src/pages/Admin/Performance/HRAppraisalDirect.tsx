@@ -182,7 +182,7 @@ const HRAppraisalDirect = () => {
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 {/* Left: Directory list */}
-                <div className="bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 p-5 rounded-3xl shadow-sm space-y-4 h-[calc(100vh-250px)] flex flex-col">
+                <div className="bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 p-5 rounded-3xl shadow-sm space-y-4 h-[calc(var(--app-vh)_-_250px)] flex flex-col">
                     <div className="relative shrink-0">
                         <input
                             type="text"
@@ -237,7 +237,7 @@ const HRAppraisalDirect = () => {
                 </div>
 
                 {/* Right: Questionnaire panel */}
-                <div className="lg:col-span-2 bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-3xl shadow-sm p-6 h-[calc(100vh-250px)] flex flex-col">
+                <div className="lg:col-span-2 bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-3xl shadow-sm p-6 h-[calc(var(--app-vh)_-_250px)] flex flex-col">
                     {!selectedEmployee ? (
                         <div className="m-auto text-center py-12 max-w-sm space-y-3">
                             <div className="text-4xl">👥</div>

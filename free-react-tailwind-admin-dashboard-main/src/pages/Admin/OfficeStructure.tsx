@@ -284,7 +284,7 @@ const OfficeStructure = () => {
 
 
     return (
-        <div className="flex flex-col h-[calc(100vh-90px)] space-y-4">
+        <div className="flex flex-col h-[calc(var(--app-vh)_-_90px)] space-y-4">
             {/* Header Banner */}
             <div className="bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 rounded-xl p-4 text-white shadow-lg overflow-hidden relative">
                 <div className="relative z-10">

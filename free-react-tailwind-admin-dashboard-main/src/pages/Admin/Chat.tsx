@@ -830,7 +830,7 @@ ${filtered
 
     return (
         <div className="panel p-0 overflow-hidden border-0">
-            <div className="flex h-[calc(100vh-180px)] min-h-[520px]">
+            <div className="flex h-[calc(var(--app-vh)_-_180px)] min-h-[520px]">
                 {/* Left: conversation list */}
                 <div className="w-full max-w-[320px] border-r border-[#e0e6ed] dark:border-[#1b2e4b] flex flex-col">
                     <div className="p-4 flex items-center gap-2">

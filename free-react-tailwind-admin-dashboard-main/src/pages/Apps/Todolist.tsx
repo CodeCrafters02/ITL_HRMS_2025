@@ -600,7 +600,7 @@ const Todolist = () => {
 
     return (
         <div>
-            <div className="flex gap-5 relative sm:h-[calc(100vh_-_150px)] h-full">
+            <div className="flex gap-5 relative sm:h-[calc(var(--app-vh)_-_150px)] h-full">
                 <div
                     className={`panel p-4 flex-none w-[240px] max-w-full absolute xl:relative z-10 space-y-4 xl:h-auto h-full xl:block ltr:xl:rounded-r-md ltr:rounded-r-none rtl:xl:rounded-l-md rtl:rounded-l-none hidden ${
                         isShowTaskMenu && '!block'

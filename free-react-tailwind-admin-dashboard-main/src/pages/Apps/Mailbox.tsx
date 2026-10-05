@@ -1225,7 +1225,7 @@ const Mailbox = () => {
 
     return (
         <div>
-            <div className="flex gap-5 relative sm:h-[calc(100vh_-_150px)] h-full">
+            <div className="flex gap-5 relative sm:h-[calc(var(--app-vh)_-_150px)] h-full">
                 <div
                     className={`overlay bg-black/60 z-[5] w-full h-full rounded-md absolute hidden ${isShowMailMenu ? '!block xl:!hidden' : ''}`}
                     onClick={() => setIsShowMailMenu(!isShowMailMenu)}

@@ -313,7 +313,7 @@ const Chat = () => {
     };
     return (
         <div>
-            <div className={`flex gap-5 relative sm:h-[calc(100vh_-_150px)] h-full sm:min-h-0 ${isShowChatMenu ? 'min-h-[999px]' : ''}`}>
+            <div className={`flex gap-5 relative sm:h-[calc(var(--app-vh)_-_150px)] h-full sm:min-h-0 ${isShowChatMenu ? 'min-h-[999px]' : ''}`}>
                 <div className={`panel p-4 flex-none max-w-xs w-full absolute xl:relative z-10 space-y-4 xl:h-full hidden xl:block overflow-hidden ${isShowChatMenu ? '!block' : ''}`}>
                     <div className="flex justify-between items-center">
                         <div className="flex items-center">
@@ -384,7 +384,7 @@ const Chat = () => {
                     </div>
                     <div className="h-px w-full border-b border-white-light dark:border-[#1b2e4b]"></div>
                     <div className="!mt-0">
-                        <PerfectScrollbar className="chat-users relative h-full min-h-[100px] sm:h-[calc(100vh_-_357px)] space-y-0.5 ltr:pr-3.5 rtl:pl-3.5 ltr:-mr-3.5 rtl:-ml-3.5">
+                        <PerfectScrollbar className="chat-users relative h-full min-h-[100px] sm:h-[calc(var(--app-vh)_-_357px)] space-y-0.5 ltr:pr-3.5 rtl:pl-3.5 ltr:-mr-3.5 rtl:-ml-3.5">
                             {filteredItems.map((person: any) => {
                                 return (
                                     <div key={person.userId}>
@@ -432,7 +432,7 @@ const Chat = () => {
                             </button>
 
                             <div className="py-8 flex items-center justify-center flex-col">
-                                <div className="w-[280px] md:w-[430px] mb-8 h-[calc(100vh_-_320px)] min-h-[120px] text-white dark:text-black">
+                                <div className="w-[280px] md:w-[430px] mb-8 h-[calc(var(--app-vh)_-_320px)] min-h-[120px] text-white dark:text-black">
                                     <svg xmlns="http://www.w3.org/2000/svg" data-name="Layer 1" className="w-full h-full" viewBox="0 0 891.29496 745.19434" xmlns-xlink="http://www.w3.org/1999/xlink">
                                         <ellipse cx="418.64354" cy="727.19434" rx="352" ry="18" fill={isDark ? '#888ea8' : '#e6e6e6'} />
                                         <path
@@ -612,7 +612,7 @@ const Chat = () => {
                             </div>
                             <div className="h-px w-full border-b border-white-light dark:border-[#1b2e4b]"></div>
 
-                            <PerfectScrollbar className="relative h-full sm:h-[calc(100vh_-_300px)] chat-conversation-box">
+                            <PerfectScrollbar className="relative h-full sm:h-[calc(var(--app-vh)_-_300px)] chat-conversation-box">
                                 <div className="space-y-5 p-4 sm:pb-0 pb-[68px] sm:min-h-[300px] min-h-[400px]">
                                     <div className="block m-6 mt-0">
                                         <h4 className="text-xs text-center border-b border-[#f4f4f4] dark:border-gray-800 relative">
