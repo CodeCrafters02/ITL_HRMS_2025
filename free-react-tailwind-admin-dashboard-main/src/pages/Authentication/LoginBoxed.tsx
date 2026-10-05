@@ -277,7 +277,7 @@ const LoginBoxed = () => {
                ======================================================== */}
             <div className="w-full lg:w-[58%] xl:w-[60%] min-h-[460px] sm:min-h-[580px] lg:min-h-screen relative overflow-hidden bg-slate-100 flex items-center justify-center">
                 <img
-                    src="/assets/images/auth/hrms-banner.jpg"
+                    src="/assets/images/auth/people-suite-banner.jpg?v=2"
                     alt="People Suite - Building a better workplace together"
                     className="w-full h-full object-cover object-center"
                 />
@@ -297,7 +297,7 @@ const LoginBoxed = () => {
                     
                     {/* People Suite logo */}
                     <div className="flex justify-center mb-4">
-                        <img src={peopleSuiteLogo} alt="People Suite" className="h-24 w-24 rounded-2xl object-cover shadow-[0_10px_24px_-6px_rgba(20,50,140,0.35)]" />
+                        <img src={peopleSuiteLogo} alt="People Suite" className="h-24 w-24 object-contain" />
                     </div>
 
                     {/* Title & Subtitle */}
