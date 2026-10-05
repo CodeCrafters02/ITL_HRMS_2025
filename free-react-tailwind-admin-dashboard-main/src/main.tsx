@@ -26,15 +26,6 @@ installAuthInterceptors();
 import { bootstrapTeams } from './utils/teams';
 import { toggleTheme } from './store/themeConfigSlice';
 
-// After a deploy, a cached page still points at old chunk hashes: reload once to pick up the new build
-window.addEventListener('vite:preloadError', (e) => {
-    const last = Number(sessionStorage.getItem('chunk_reload_at') || 0);
-    if (Date.now() - last < 30000) return;
-    e.preventDefault();
-    sessionStorage.setItem('chunk_reload_at', String(Date.now()));
-    window.location.reload();
-});
-
 // Notifications
 import { notificationService } from './services/notificationService';
 

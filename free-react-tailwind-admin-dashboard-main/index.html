@@ -23,6 +23,54 @@
     -->
         <title>HRMS</title>
 
+        <!-- Stale-build guard: a cached copy of this page (Teams keeps one for a long time) points at chunk files a newer deploy deleted -->
+        <script>
+            (function () {
+                var BUILD = '__BUILD_ID__';
+                if (BUILD === 'dev') return;
+                var stale = false;
+                function hardReload() {
+                    try {
+                        var url = new URL(window.location.href);
+                        var last = Number(url.searchParams.get('_v')) || 0;
+                        try { last = Math.max(last, Number(sessionStorage.getItem('hrms_reload_at')) || 0); } catch (e) {}
+                        if (Date.now() - last < 30000) return false;
+                        try { sessionStorage.setItem('hrms_reload_at', String(Date.now())); } catch (e) {}
+                        // New query string = cache miss, so the latest index.html is fetched from the server
+                        url.searchParams.set('_v', String(Date.now()));
+                        window.location.replace(url.href);
+                        return true;
+                    } catch (e) {
+                        return false;
+                    }
+                }
+                function check() {
+                    fetch('/version.json?t=' + Date.now(), { cache: 'no-store' })
+                        .then(function (r) { return r.ok ? r.json() : null; })
+                        .then(function (v) {
+                            if (!v || !v.id || v.id === BUILD) return;
+                            stale = true;
+                            // Just loaded: nothing to lose, reload now. Otherwise wait for the next page navigation.
+                            if (performance.now() < 15000) hardReload();
+                        })
+                        .catch(function () {});
+                }
+                window.addEventListener('vite:preloadError', function (e) {
+                    if (hardReload()) e.preventDefault();
+                });
+                var pushState = history.pushState;
+                history.pushState = function () {
+                    pushState.apply(this, arguments);
+                    if (stale) hardReload();
+                };
+                document.addEventListener('visibilitychange', function () {
+                    if (document.visibilityState === 'visible') check();
+                });
+                setInterval(check, 5 * 60 * 1000);
+                check();
+            })();
+        </script>
+
         <!-- Instant Microsoft OAuth Popup Callback Relay (zero-delay popup handoff & close) -->
         <script>
             (function() {
