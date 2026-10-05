@@ -1,4 +1,6 @@
 import { FC } from 'react';
+import { Link } from 'react-router-dom';
+import { outlookPath } from '../../services/outlookMail';
 import IconOutlook from '../Icon/IconOutlook';
 import OutlookMailList from './OutlookMailList';
 import { useOutlookInbox } from '../../services/outlookService';
@@ -18,9 +20,9 @@ const OutlookInboxWidget: FC<{ className?: string }> = ({ className = '' }) => {
                         {loading ? 'Refreshing…' : 'Refresh'}
                     </button>
                     {data?.connected && (
-                        <a href={data.inbox_url} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
-                            Open Outlook
-                        </a>
+                        <Link to={outlookPath()} className="text-primary hover:underline">
+                            Open mailbox
+                        </Link>
                     )}
                 </div>
             </div>

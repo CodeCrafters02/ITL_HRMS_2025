@@ -6366,7 +6366,7 @@ class MicrosoftAuthURLAPIView(APIView):
         redirect_uri = request.query_params.get('redirect_uri') or getattr(settings, 'MICROSOFT_REDIRECT_URI', '')
         state = request.query_params.get('state') or 'ms_login'
 
-        scopes = request.query_params.get('scope') or "openid profile email User.Read Calendars.ReadWrite Mail.ReadWrite offline_access"
+        scopes = request.query_params.get('scope') or "openid profile email User.Read Calendars.ReadWrite Mail.ReadWrite Mail.Send offline_access"
         auth_url = (
             f"https://login.microsoftonline.com/{tenant_id}/oauth2/v2.0/authorize?"
             f"client_id={urllib.parse.quote(client_id)}&"

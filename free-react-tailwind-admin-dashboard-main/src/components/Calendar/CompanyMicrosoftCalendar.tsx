@@ -1204,9 +1204,10 @@ export const CompanyMicrosoftCalendar = ({ variant = 'page' }: CompanyCalendarPr
 
             {/* Modal: Add Microsoft Outlook Event */}
             {addOpen && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
-                    <div className="relative w-full max-w-lg rounded-xl bg-white p-6 shadow-2xl dark:bg-[#121e32]">
-                        <div className="flex items-center justify-between pb-3 border-b border-gray-200 dark:border-gray-700">
+                <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 p-3 sm:p-4">
+                    {/* Never taller than the screen: the header and buttons stay put, the fields scroll */}
+                    <div className="relative flex max-h-full w-full max-w-lg flex-col rounded-xl bg-white shadow-2xl dark:bg-[#121e32]">
+                        <div className="flex shrink-0 items-center justify-between border-b border-gray-200 px-5 py-4 dark:border-gray-700 sm:px-6">
                             <div className="flex items-center gap-2">
                                 <IconMicrosoft size={22} />
                                 <h3 className="text-lg font-bold text-gray-800 dark:text-white">Add Outlook Event</h3>
@@ -1220,7 +1221,8 @@ export const CompanyMicrosoftCalendar = ({ variant = 'page' }: CompanyCalendarPr
                             </button>
                         </div>
 
-                        <form onSubmit={submitOutlookEvent} className="mt-4 space-y-4">
+                        <form onSubmit={submitOutlookEvent} className="flex min-h-0 flex-1 flex-col">
+                            <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-5 py-4 sm:px-6">
                             <div>
                                 <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">
                                     Event Title *
@@ -1245,7 +1247,7 @@ export const CompanyMicrosoftCalendar = ({ variant = 'page' }: CompanyCalendarPr
                                         required
                                     />
                                 </div>
-                                <div className="flex items-center gap-2 pt-6">
+                                <div className="flex items-center gap-2 sm:pt-6">
                                     <input
                                         type="checkbox"
                                         id="allDayCheck"
@@ -1260,7 +1262,7 @@ export const CompanyMicrosoftCalendar = ({ variant = 'page' }: CompanyCalendarPr
                             </div>
 
                             {!eventAllDay && (
-                                <div className="grid grid-cols-2 gap-3">
+                                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                                     <div>
                                         <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">Start Time</label>
                                         <input
@@ -1359,7 +1361,9 @@ export const CompanyMicrosoftCalendar = ({ variant = 'page' }: CompanyCalendarPr
                                 />
                             </div>
 
-                            <div className="flex justify-end gap-2 pt-2 border-t border-gray-200 dark:border-gray-700">
+                            </div>
+
+                            <div className="flex shrink-0 flex-wrap justify-end gap-2 border-t border-gray-200 px-5 py-3 dark:border-gray-700 sm:px-6">
                                 <button
                                     type="button"
                                     className="btn btn-outline-danger btn-sm"

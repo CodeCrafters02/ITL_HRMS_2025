@@ -14,6 +14,7 @@ GRAPH_SCOPES = " ".join([
     "https://graph.microsoft.com/Calendars.ReadWrite",
     "offline_access",
 ])
+SEND_SCOPE = "https://graph.microsoft.com/Mail.Send"
 CONSENT_ERRORS = ("invalid_grant", "interaction_required", "consent_required")
 
 
@@ -67,25 +68,30 @@ class TeamsSSOAPIView(APIView):
             first_name, _, last_name = claims["name"].partition(" ")
 
         obo, consent_required = {}, False
-        try:
-            r = requests.post(
-                f"https://login.microsoftonline.com/{tenant}/oauth2/v2.0/token",
-                data={
-                    "client_id": client_id,
-                    "client_secret": client_secret,
-                    "grant_type": "urn:ietf:params:oauth:grant-type:jwt-bearer",
-                    "assertion": token,
-                    "requested_token_use": "on_behalf_of",
-                    "scope": GRAPH_SCOPES,
-                },
-                timeout=15,
-            )
-            obo = r.json() if r.content else {}
-            if r.status_code != 200:
+        # First try with permission to send mail; fall back to the base scopes when that was never consented
+        for scope in (f"{GRAPH_SCOPES} {SEND_SCOPE}", GRAPH_SCOPES):
+            try:
+                r = requests.post(
+                    f"https://login.microsoftonline.com/{tenant}/oauth2/v2.0/token",
+                    data={
+                        "client_id": client_id,
+                        "client_secret": client_secret,
+                        "grant_type": "urn:ietf:params:oauth:grant-type:jwt-bearer",
+                        "assertion": token,
+                        "requested_token_use": "on_behalf_of",
+                        "scope": scope,
+                    },
+                    timeout=15,
+                )
+                obo = r.json() if r.content else {}
+                if r.status_code == 200:
+                    consent_required = False
+                    break
                 consent_required = obo.get("error") in CONSENT_ERRORS
                 obo = {}
-        except requests.RequestException:
-            obo = {}
+            except requests.RequestException:
+                obo = {}
+                break
 
         extra = {"consent_required": consent_required}
         if obo.get("access_token"):

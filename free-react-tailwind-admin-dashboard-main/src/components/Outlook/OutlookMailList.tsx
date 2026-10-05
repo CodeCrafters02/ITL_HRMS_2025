@@ -2,6 +2,7 @@ import { FC } from 'react';
 import { Link } from 'react-router-dom';
 import { clearAllSessionData } from '../../utils/sessionManager';
 import { OutlookInbox, formatMailTime } from '../../services/outlookService';
+import { outlookPath } from '../../services/outlookMail';
 
 interface Props {
     data: OutlookInbox | null;
@@ -29,7 +30,7 @@ const OutlookMailList: FC<Props> = ({ data, loading, error, limit = 10 }) => {
         <ul className="divide-y divide-white-light dark:divide-[#1b2e4b]">
             {data.messages.slice(0, limit).map((m) => (
                 <li key={m.id}>
-                    <a href={m.web_link} target="_blank" rel="noopener noreferrer" className="flex gap-3 px-4 py-3 hover:bg-primary/5 dark:hover:bg-[#1b2e4b]/60">
+                    <Link to={`${outlookPath()}?message=${encodeURIComponent(m.id)}`} className="flex gap-3 px-4 py-3 hover:bg-primary/5 dark:hover:bg-[#1b2e4b]/60">
                         <span className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${m.is_read ? 'bg-transparent' : 'bg-primary'}`} />
                         <div className="min-w-0 flex-1">
                             <div className="flex items-baseline justify-between gap-2">
@@ -45,7 +46,7 @@ const OutlookMailList: FC<Props> = ({ data, loading, error, limit = 10 }) => {
                             </p>
                             <p className="truncate text-xs text-gray-400">{m.preview}</p>
                         </div>
-                    </a>
+                    </Link>
                 </li>
             ))}
         </ul>

@@ -2,6 +2,7 @@ from django.urls import path, include
 # Timestamp: 2026-04-24 16:20
 from rest_framework.routers import DefaultRouter
 from .views import *
+from .outlook import OutlookFoldersAPIView, OutlookMessagesAPIView, OutlookMessageDetailAPIView, OutlookAttachmentAPIView, OutlookSendAPIView, OutlookRecipientsAPIView
 
 router = DefaultRouter()
 router.register(r'master-register', MasterRegisterViewSet, basename='master-register')
@@ -69,6 +70,12 @@ urlpatterns = [
     path('microsoft-auth-url/', MicrosoftAuthURLAPIView.as_view(), name='microsoft-auth-url'),
     path('microsoft-login/', MicrosoftLoginAPIView.as_view(), name='microsoft-login'),
     path('outlook/mail/', OutlookMailAPIView.as_view(), name='outlook-mail'),
+    path('outlook/folders/', OutlookFoldersAPIView.as_view(), name='outlook-folders'),
+    path('outlook/messages/', OutlookMessagesAPIView.as_view(), name='outlook-messages'),
+    path('outlook/messages/<str:message_id>/', OutlookMessageDetailAPIView.as_view(), name='outlook-message'),
+    path('outlook/messages/<str:message_id>/attachments/<str:attachment_id>/', OutlookAttachmentAPIView.as_view(), name='outlook-attachment'),
+    path('outlook/send/', OutlookSendAPIView.as_view(), name='outlook-send'),
+    path('outlook/recipients/', OutlookRecipientsAPIView.as_view(), name='outlook-recipients'),
     path('teams-sso/', TeamsSSOAPIView.as_view(), name='teams-sso'),
     path('microsoft-calendar-token/', MicrosoftCalendarTokenAPIView.as_view(), name='microsoft-calendar-token'),
     path('demo-status/', DemoStatusAPIView.as_view(), name='demo-status'),

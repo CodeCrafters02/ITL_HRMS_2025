@@ -214,6 +214,7 @@ const EmployeeChat = lazy(() => import('../pages/Employee/Chat'));
 const LoanApplication = lazy(() => import('../pages/Employee/LoanApplication'));
 const WFHRequest = lazy(() => import('../pages/Employee/WFHRequest'));
 const EmployeeCalendar = lazy(() => import('../pages/Employee/Calendar'));
+const OutlookMail = lazy(() => import('../pages/Outlook/OutlookMail'));
 const EmployeeMyTasks = lazy(() => import('../pages/Employee/MyTasks/Mytasks'));
 const EmployeeApplyLeave = lazy(() => import('../pages/Employee/LeaveApplication/ApplyLeave'));
 const EmployeeAttendanceHistory = lazy(() => import('../pages/Employee/AttendanceHistory/AttendanceHistory'));
@@ -969,6 +970,14 @@ const routes = [
     {
         path: '/admin/calendar',
         element: <AdminCalendar />,
+    },
+    {
+        path: '/admin/outlook',
+        element: <OutlookMail />,
+    },
+    {
+        path: '/employee/outlook',
+        element: <OutlookMail />,
     },
     {
         path: '/admin/notifications',
