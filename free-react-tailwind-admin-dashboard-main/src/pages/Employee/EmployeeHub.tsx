@@ -12,11 +12,8 @@ interface HubCard {
     subtitle: string;
     description: string;
     icon: React.ReactNode;
-    gradient: string;
-    hoverGradient: string;
-    glowColor: string;
-    iconBg: string;
-    borderColor: string;
+    tint: string;
+    accent: string;
     route: string;
     available: boolean;
     features: string[];
@@ -27,12 +24,9 @@ const cards: HubCard[] = [
         label: 'Employee Dashboard',
         subtitle: 'Core Operations & Tasks',
         description: 'Manage your daily work check-in/out, view assigned tasks, submit leave requests, download monthly payslips, and check company announcements.',
-        icon: <IconUsersGroup className="w-10 h-10" />,
-        gradient: 'from-blue-600 to-indigo-600',
-        hoverGradient: 'group-hover:from-blue-700 group-hover:to-indigo-700',
-        glowColor: 'shadow-blue-500/20 dark:shadow-blue-500/10',
-        iconBg: 'bg-gradient-to-br from-blue-500 to-indigo-600',
-        borderColor: 'border-blue-100 dark:border-blue-900/30',
+        icon: <IconUsersGroup className="w-6 h-6" />,
+        tint: 'bg-blue-50 text-blue-600 dark:bg-blue-500/10 dark:text-blue-400',
+        accent: 'text-blue-600 dark:text-blue-400',
         route: '/employee/dashboard',
         available: true,
         features: ['Attendance Check-in', 'Leave Application', 'My Tasks & Work logs', 'Download Payslips'],
@@ -41,28 +35,22 @@ const cards: HubCard[] = [
         label: 'Performance Management',
         subtitle: 'Goals, KPIs & Reviews',
         description: 'Track your Objectives & Key Results (OKRs), view active KPIs, fill out self-appraisal cycles, and review constructive feedback from your managers.',
-        icon: <IconTrendingUp className="w-10 h-10" />,
-        gradient: 'from-emerald-500 to-teal-600',
-        hoverGradient: 'group-hover:from-emerald-600 group-hover:to-teal-700',
-        glowColor: 'shadow-emerald-500/20 dark:shadow-emerald-500/10',
-        iconBg: 'bg-gradient-to-br from-emerald-500 to-teal-600',
-        borderColor: 'border-emerald-100 dark:border-emerald-900/30',
+        icon: <IconTrendingUp className="w-6 h-6" />,
+        tint: 'bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-400',
+        accent: 'text-emerald-600 dark:text-emerald-400',
         route: '/employee/performance',
-        available: false,
+        available: true,
         features: ['My OKRs & KPIs', 'Self-Appraisal Forms', 'Manager Review feedback', 'Training recommendations'],
     },
     {
         label: 'Learning Management',
         subtitle: 'Training & Skill Dev',
         description: 'Browse assigned training courses, watch video and document lessons, attempt quizzes, and download your earned completion certificates.',
-        icon: <IconOpenBook className="w-10 h-10" />,
-        gradient: 'from-violet-500 to-purple-600',
-        hoverGradient: 'group-hover:from-violet-600 group-hover:to-purple-700',
-        glowColor: 'shadow-violet-500/20 dark:shadow-violet-500/10',
-        iconBg: 'bg-gradient-to-br from-violet-500 to-purple-600',
-        borderColor: 'border-violet-100 dark:border-violet-900/30',
+        icon: <IconOpenBook className="w-6 h-6" />,
+        tint: 'bg-violet-50 text-violet-600 dark:bg-violet-500/10 dark:text-violet-400',
+        accent: 'text-violet-600 dark:text-violet-400',
         route: '/employee/learning-management',
-        available: false,
+        available: true,
         features: ['Assigned Courses', 'Quizzes & Grading', 'Progress Tracking', 'PDF Certificates'],
     },
 ];
@@ -70,14 +58,21 @@ const cards: HubCard[] = [
 const EmployeeHub = () => {
     const dispatch = useDispatch();
     const navigate = useNavigate();
-    const userName = localStorage.getItem('username') || 'Employee';
-    const formattedName = userName.charAt(0).toUpperCase() + userName.slice(1);
+    const fullName = [localStorage.getItem('first_name'), localStorage.getItem('last_name')].filter(Boolean).join(' ');
+    const displayName =
+        fullName ||
+        (localStorage.getItem('username') || 'Employee')
+            .split('@')[0]
+            .split(/[._\s]+/)
+            .filter(Boolean)
+            .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+            .join(' ');
 
     const [currentTime, setCurrentTime] = useState(new Date());
 
     useEffect(() => {
         dispatch(setPageTitle('Employee Workspace'));
-        const timer = setInterval(() => setCurrentTime(new Date()), 1000);
+        const timer = setInterval(() => setCurrentTime(new Date()), 15000);
         return () => clearInterval(timer);
     }, [dispatch]);
 
@@ -121,19 +116,11 @@ const EmployeeHub = () => {
     }, []);
 
     const activeHour = currentTime.getHours();
-    let greeting = 'Good Evening';
-    let greetingEmoji = '🌙';
-    if (activeHour < 12) {
-        greeting = 'Good Morning';
-        greetingEmoji = '☀️';
-    } else if (activeHour < 18) {
-        greeting = 'Good Afternoon';
-        greetingEmoji = '🌤️';
-    }
+    const greeting = activeHour < 12 ? 'Good morning' : activeHour < 18 ? 'Good afternoon' : 'Good evening';
 
     const formattedDate = currentTime.toLocaleDateString('en-US', {
         weekday: 'long',
-        month: 'short',
+        month: 'long',
         day: 'numeric',
         year: 'numeric',
     });
@@ -141,124 +128,78 @@ const EmployeeHub = () => {
     const formattedTime = currentTime.toLocaleTimeString('en-US', {
         hour: '2-digit',
         minute: '2-digit',
-        second: '2-digit',
     });
 
     return (
-        <div className="relative min-h-[85vh] flex flex-col justify-between overflow-hidden py-4">
-            {/* Ambient Background Glows */}
-            <div className="absolute -top-40 -left-40 w-96 h-96 bg-primary/10 rounded-full blur-[100px] pointer-events-none" />
-            <div className="absolute -bottom-40 -right-40 w-96 h-96 bg-purple-500/10 rounded-full blur-[100px] pointer-events-none" />
+        <div className="mx-auto w-full max-w-[85rem] space-y-8 px-1 py-2 sm:px-2">
+            {/* Welcome banner */}
+            <div className="relative overflow-hidden rounded-2xl bg-[#0b1437] text-white shadow-sm">
+                <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_88%_-10%,rgba(67,97,238,0.55),transparent_55%)]" />
+                <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_0%_120%,rgba(99,102,241,0.25),transparent_45%)]" />
 
-            <div className="max-w-[85rem] mx-auto w-full px-4 sm:px-6 lg:px-8 flex-1 flex flex-col justify-start gap-8 z-10">
-                {/* ── Top Premium Welcome Card ── */}
-                <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 text-white shadow-xl shadow-indigo-500/10">
-                    <div className="absolute top-0 right-0 w-80 h-full bg-cover bg-center opacity-10 pointer-events-none" />
-                    {/* Decorative Circle Elements */}
-                    <div className="absolute -top-10 -right-10 w-48 h-48 rounded-full bg-white/5 blur-2xl" />
-                    <div className="absolute -bottom-20 -left-20 w-80 h-80 rounded-full bg-white/5 blur-3xl" />
-
-                    <div className="p-8 sm:p-10 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6 z-10 relative">
-                        <div>
-                            <div className="inline-flex items-center gap-2 px-3.5 py-1 bg-white/10 backdrop-blur-md rounded-full mb-3">
-                                <span>{greetingEmoji}</span>
-                                <span className="text-sm font-semibold tracking-wide uppercase text-white/95">{greeting}, {formattedName}</span>
-                            </div>
-                            <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight mb-2">
-                                ITL Employee Hub
-                            </h1>
-                            <p className="text-white/80 text-sm sm:text-base max-w-xl">
-                                Access your employee dashboard to check in, apply for leaves, download monthly payslips, or track your OKRs and performance.
-                            </p>
-                        </div>
-                        <div className="flex flex-col sm:items-end bg-white/10 backdrop-blur-md px-6 py-4 rounded-2xl border border-white/10 self-stretch sm:self-auto justify-center">
-                            <span className="text-xs uppercase tracking-wider text-white/70 font-semibold mb-0.5">{formattedDate}</span>
-                            <span className="text-2xl font-black tracking-widest tabular-nums">{formattedTime}</span>
-                        </div>
+                <div className="relative flex flex-col gap-6 p-7 sm:p-9 md:flex-row md:items-center md:justify-between">
+                    <div className="min-w-0">
+                        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-blue-200/80">People Suite · Employee Hub</p>
+                        <h1 className="mt-2 text-2xl font-bold tracking-tight sm:text-3xl">
+                            {greeting}, {displayName}
+                        </h1>
+                        <p className="mt-2 max-w-xl text-sm leading-relaxed text-slate-300">
+                            Check in, apply for leave, download your payslips and track your goals and performance, all from one place.
+                        </p>
+                    </div>
+                    <div className="shrink-0 rounded-xl border border-white/10 bg-white/5 px-5 py-3.5 md:text-right">
+                        <p className="text-xs font-medium text-slate-300">{formattedDate}</p>
+                        <p className="mt-0.5 text-2xl font-semibold tabular-nums">{formattedTime}</p>
                     </div>
                 </div>
+            </div>
 
-                {/* ── Wide Grid Section ── */}
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 w-full">
+            {/* Workspaces */}
+            <div>
+                <div className="mb-4">
+                    <h2 className="text-lg font-bold text-slate-900 dark:text-white">Your workspaces</h2>
+                    <p className="text-sm text-slate-500 dark:text-slate-400">Choose where you want to work today.</p>
+                </div>
+
+                <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
                     {cards.map((card) => (
                         <button
                             key={card.label}
                             onClick={() => navigate(card.route)}
-                            className={`
-                                group relative flex flex-col justify-between overflow-hidden rounded-3xl border-2 ${card.borderColor}
-                                bg-white dark:bg-gray-800/40 backdrop-blur-md text-left p-8 min-h-[380px]
-                                transition-all duration-500 ease-out
-                                hover:shadow-2xl hover:${card.glowColor} hover:scale-[1.03] hover:-translate-y-2
-                                focus:outline-none focus:ring-4 focus:ring-primary/20
-                            `}
+                            className="group flex flex-col rounded-2xl border border-slate-200 bg-white p-6 text-left shadow-sm transition duration-200 hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 dark:border-[#1b2e4b] dark:bg-[#0e1726]"
                         >
-                            {/* Decorative Top Accent Line */}
-                            <div className={`absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r ${card.gradient} ${card.hoverGradient} transition-all duration-300`} />
-
-                            <div>
-                                {/* Icon Container with Inner/Outer Glows */}
-                                <div className={`
-                                    w-16 h-16 rounded-2xl ${card.iconBg} text-white
-                                    flex items-center justify-center mb-6
-                                    shadow-lg ${card.glowColor}
-                                    transition-all duration-500 group-hover:scale-110 group-hover:rotate-3
-                                `}>
-                                    {card.icon}
-                                </div>
-
-                                {/* Header */}
-                                <span className="text-xs font-bold text-primary dark:text-blue-400 uppercase tracking-widest mb-1.5 block">
-                                    {card.subtitle}
-                                </span>
-                                <h2 className="text-2xl font-black text-gray-800 dark:text-white mb-3 transition-colors duration-200">
-                                    {card.label}
-                                </h2>
-
-                                {/* Description */}
-                                <p className="text-sm text-gray-500 dark:text-gray-400 leading-relaxed mb-6">
-                                    {card.description}
-                                </p>
-
-                                {/* Features List */}
-                                <div className="border-t border-gray-100 dark:border-gray-700/50 pt-5 mb-8">
-                                    <ul className="grid grid-cols-2 gap-x-2 gap-y-2.5">
-                                        {card.features.map((feature, idx) => (
-                                            <li key={idx} className="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-400">
-                                                <div className={`w-1.5 h-1.5 rounded-full bg-gradient-to-r ${card.gradient}`} />
-                                                <span className="truncate">{feature}</span>
-                                            </li>
-                                        ))}
-                                    </ul>
-                                </div>
-                            </div>
-
-                            {/* Footer Action Area */}
-                            <div className="flex items-center justify-between mt-auto">
+                            <div className="flex w-full items-start justify-between gap-3">
+                                <div className={`flex h-12 w-12 items-center justify-center rounded-xl ${card.tint}`}>{card.icon}</div>
                                 {card.available ? (
-                                    <span className={`
-                                        inline-flex items-center gap-2 text-sm font-extrabold
-                                        bg-gradient-to-r ${card.gradient} bg-clip-text text-transparent
-                                        transition-all duration-300 group-hover:gap-3
-                                    `}>
-                                        Launch System
-                                        <svg className="w-4 h-4 text-indigo-600 dark:text-indigo-400 transition-transform duration-300 group-hover:translate-x-1.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" style={{ color: 'inherit' }}>
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M13 7l5 5m0 0l-5 5m5-5H6" />
-                                        </svg>
-                                    </span>
+                                    <span className="rounded-full bg-emerald-50 px-2.5 py-1 text-[11px] font-semibold text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400">Available</span>
                                 ) : (
-                                    <span className="inline-flex items-center gap-2 px-3.5 py-1.5 bg-amber-50 dark:bg-amber-900/20 rounded-full border border-amber-100 dark:border-amber-900/30">
-                                        <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
-                                        <span className="text-xs font-bold text-amber-700 dark:text-amber-400">Coming Soon</span>
-                                    </span>
+                                    <span className="rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-semibold text-slate-500 dark:bg-white/5 dark:text-slate-400">Coming soon</span>
                                 )}
                             </div>
 
-                            {/* Corner Wave Background Element */}
-                            <div className={`
-                                absolute -bottom-12 -right-12 w-40 h-40 rounded-full
-                                bg-gradient-to-br ${card.gradient} opacity-5
-                                transition-all duration-700 group-hover:opacity-10 group-hover:scale-125
-                            `} />
+                            <p className="mt-5 text-[11px] font-semibold uppercase tracking-wider text-slate-400">{card.subtitle}</p>
+                            <h3 className="mt-1 text-lg font-bold text-slate-900 dark:text-white">{card.label}</h3>
+                            <p className="mt-2 text-sm leading-relaxed text-slate-500 dark:text-slate-400">{card.description}</p>
+
+                            <ul className="mt-5 grid w-full grid-cols-1 gap-2 border-t border-slate-100 pt-5 dark:border-white/5 sm:grid-cols-2">
+                                {card.features.map((feature) => (
+                                    <li key={feature} className="flex items-center gap-2 text-xs text-slate-600 dark:text-slate-400">
+                                        <svg className={`h-3.5 w-3.5 shrink-0 ${card.accent}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                                            <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                                        </svg>
+                                        <span className="truncate">{feature}</span>
+                                    </li>
+                                ))}
+                            </ul>
+
+                            <div className={`mt-auto flex items-center gap-2 pt-6 text-sm font-semibold ${card.available ? 'text-primary' : 'text-slate-400'}`}>
+                                {card.available ? 'Open' : 'Launching soon'}
+                                {card.available && (
+                                    <svg className="h-4 w-4 transition-transform duration-200 group-hover:translate-x-1" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                                        <path strokeLinecap="round" strokeLinejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                                    </svg>
+                                )}
+                            </div>
                         </button>
                     ))}
                 </div>

@@ -138,7 +138,7 @@ const themeConfigSlice = createSlice({
         },
 
         setPageTitle(state, { payload }) {
-            document.title = `${payload} | HRMS`;
+            document.title = `${payload} | People Suite`;
         },
     },
 });

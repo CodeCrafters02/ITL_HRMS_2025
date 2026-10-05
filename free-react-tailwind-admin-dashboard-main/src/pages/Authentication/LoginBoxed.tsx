@@ -5,6 +5,7 @@ import { setPageTitle } from '../../store/themeConfigSlice';
 import IconLoader from '../../components/Icon/IconLoader';
 import IconInfoCircle from '../../components/Icon/IconInfoCircle';
 import IconX from '../../components/Icon/IconX';
+import peopleSuiteLogo from '../../assets/logo/hrms-logo.png';
 import { isSessionValid, initTabSession, recordLoginSuccess, clearAllSessionData } from '../../utils/sessionManager';
 
 const LoginBoxed = () => {
@@ -15,7 +16,7 @@ const LoginBoxed = () => {
     const [error, setError] = useState('');
 
     useEffect(() => {
-        dispatch(setPageTitle('HRMS - Sign In'));
+        dispatch(setPageTitle('Sign In'));
     }, [dispatch]);
 
     // Check existing session on load
@@ -277,7 +278,7 @@ const LoginBoxed = () => {
             <div className="w-full lg:w-[58%] xl:w-[60%] min-h-[460px] sm:min-h-[580px] lg:min-h-screen relative overflow-hidden bg-slate-100 flex items-center justify-center">
                 <img
                     src="/assets/images/auth/hrms-banner.jpg"
-                    alt="HRMS - Building a better workplace together"
+                    alt="People Suite - Building a better workplace together"
                     className="w-full h-full object-cover object-center"
                 />
             </div>
@@ -294,23 +295,15 @@ const LoginBoxed = () => {
                 {/* Floating Clean White Card */}
                 <div className="relative z-10 w-full max-w-[380px] sm:max-w-[400px] rounded-3xl bg-white p-8 sm:p-10 shadow-[0_20px_50px_-10px_rgba(20,50,140,0.12),0_4px_16px_-2px_rgba(0,0,0,0.04)] border border-slate-100 text-center">
                     
-                    {/* Blue HRMS 3-People Logo */}
-                    <div className="flex justify-center mb-3">
-                        <svg className="w-14 h-11 text-[#0062E0]" viewBox="0 0 48 36" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
-                            <circle cx="24" cy="9" r="5" />
-                            <path d="M17 32C17 26.5 20.1 22 24 22C27.9 22 31 26.5 31 32H17Z" />
-                            <circle cx="11" cy="12" r="4" />
-                            <path d="M5 32C5 27.5 7.5 24 11 24C13.2 24 15.1 25.4 16.1 27.6C15.4 28.9 15 30.4 15 32H5Z" />
-                            <circle cx="37" cy="12" r="4" />
-                            <path d="M43 32C43 27.5 40.5 24 37 24C34.8 24 32.9 25.4 31.9 27.6C32.6 28.9 33 30.4 33 32H43Z" />
-                        </svg>
+                    {/* People Suite logo */}
+                    <div className="flex justify-center mb-4">
+                        <img src={peopleSuiteLogo} alt="People Suite" className="h-24 w-24 rounded-2xl object-cover shadow-[0_10px_24px_-6px_rgba(20,50,140,0.35)]" />
                     </div>
 
                     {/* Title & Subtitle */}
-                    <h2 className="text-2xl font-black text-[#0f172a] tracking-tight">
-                        HRMS
-                    </h2>
-                    <p className="text-xs sm:text-sm font-semibold text-[#64748b] mt-1 mb-8">
+                    <h2 className="text-2xl font-black text-[#0f172a] tracking-tight">People Suite</h2>
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#94a3b8] mt-1">Powered by Innovyx</p>
+                    <p className="text-xs sm:text-sm font-semibold text-[#64748b] mt-4 mb-8">
                         Sign in to your account
                     </p>
 

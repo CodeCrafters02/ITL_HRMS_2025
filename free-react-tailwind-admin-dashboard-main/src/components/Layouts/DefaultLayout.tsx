@@ -122,7 +122,7 @@ const DefaultLayout = ({ children }: PropsWithChildren) => {
                     )}
                     {/* END SIDEBAR */}
 
-                    <div className={`main-content flex flex-col min-h-screen ${isHubPage ? '!pl-0 !pr-0 ltr:xl:!pl-0 rtl:xl:!pr-0' : ''}`}>
+                    <div className={`main-content flex flex-col min-h-screen ${isHubPage ? 'ltr:!ml-0 rtl:!mr-0' : ''}`}>
                         {/* BEGIN TOP NAVBAR */}
                         <div className={themeConfig.isQuizActive ? 'pointer-events-none opacity-50 select-none' : ''}>
                             <Header />
