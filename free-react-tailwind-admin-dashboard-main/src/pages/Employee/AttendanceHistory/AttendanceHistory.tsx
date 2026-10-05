@@ -258,36 +258,37 @@ const AttendanceHistory = () => {
                                             setSelectedDateKey(cell.dateKey);
                                             setIsDetailsModalOpen(true);
                                         }}
-                                        className={`min-h-[92px] md:min-h-[128px] rounded-lg border bg-white dark:bg-[#0e1726] p-2 md:p-2.5 flex flex-col gap-1 text-left transition ${
+                                        className={`min-h-[92px] md:min-h-[128px] min-w-0 overflow-hidden rounded-lg border bg-white dark:bg-[#0e1726] p-2 md:p-2.5 flex flex-col gap-1 text-left transition ${
                                             isSelected
                                                 ? 'border-primary ring-1 ring-primary/40 shadow-md shadow-primary/10'
                                                 : 'border-[#ebedf2] dark:border-[#1b2e4b] hover:border-primary/50'
                                         }`}
                                     >
-                                        <div className="flex items-center justify-between">
+                                        <div className="flex w-full min-w-0 items-center justify-between gap-1">
                                             <span className="text-sm font-bold">{cell.day}</span>
-                                            {!holidayName && status !== 'no_data' && <span className={`badge ${statusClassMap[status]}`}>{statusLabelMap[status]}</span>}
+                                            {!holidayName && status !== 'no_data' && <span className={`badge min-w-0 truncate ${statusClassMap[status]}`}>{statusLabelMap[status]}</span>}
                                         </div>
-                                        <p className="text-[11px] text-white-dark truncate">{row?.day_name || '-'}</p>
+                                        <p className="w-full text-[11px] text-white-dark truncate">{row?.day_name || '-'}</p>
                                         {holidayName ? (
-                                            <div className="mt-1">
+                                            <div className="mt-1 w-full min-w-0">
                                                 <span className="badge bg-info-light text-info">Holiday</span>
                                                 <p className="text-[11px] font-semibold text-info truncate mt-1" title={holidayName}>
                                                     {holidayName}
                                                 </p>
                                             </div>
                                         ) : (
-                                            <div className="text-[11px] space-y-0.5 text-white-dark">
-                                                <p className="whitespace-nowrap">
-                                                    <span className="font-semibold">In:</span>{' '}
-                                                    <span className="font-bold">{row?.check_in || '-'}</span>{' '}
-                                                    <span className="mx-1 text-white-dark/60">|</span>
-                                                    <span className="font-semibold">Out:</span>{' '}
-                                                    <span className="font-bold">{row?.check_out || '-'}</span>
+                                            <div className="w-full min-w-0 text-[11px] space-y-0.5 text-white-dark">
+                                                <p className="flex items-center justify-between gap-1">
+                                                    <span className="shrink-0 font-semibold">In</span>
+                                                    <span className="min-w-0 truncate font-bold" title={row?.check_in || undefined}>{row?.check_in || '-'}</span>
+                                                </p>
+                                                <p className="flex items-center justify-between gap-1">
+                                                    <span className="shrink-0 font-semibold">Out</span>
+                                                    <span className="min-w-0 truncate font-bold" title={row?.check_out || undefined}>{row?.check_out || '-'}</span>
                                                 </p>
                                             </div>
                                         )}
-                                        {row?.is_late && row.late_duration && <p className="text-[11px] font-semibold text-danger mt-auto">Late: {row.late_duration}</p>}
+                                        {row?.is_late && row.late_duration && <p className="w-full truncate text-[11px] font-semibold text-danger mt-auto" title={`Late: ${row.late_duration}`}>Late: {row.late_duration}</p>}
                                     </button>
                                 );
                                     })}

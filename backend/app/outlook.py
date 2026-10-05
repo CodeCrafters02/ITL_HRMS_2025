@@ -17,6 +17,8 @@ from .models import MicrosoftOAuthToken
 GRAPH = "https://graph.microsoft.com/v1.0"
 logger = logging.getLogger(__name__)
 MAIL_SCOPES ="offline_access User.Read Mail.ReadWrite"
+MAX_PROFILE_PHOTO_BYTES = 5 * 1024 * 1024
+MS_PHOTO_PREFIX = "ms_profile_"
 _fernet = Fernet(base64.urlsafe_b64encode(hashlib.sha256(f"ms-oauth:{settings.SECRET_KEY}".encode()).digest()))
 
 
@@ -77,6 +79,48 @@ def _graph_token(user):
         save_ms_refresh_token(user.id, body["refresh_token"], public_client=rec.is_public_client, scope=body.get("scope", ""))
     cache.set(key, body["access_token"], max(int(body.get("expires_in", 3600)) - 120, 60))
     return body["access_token"]
+
+
+def sync_ms_profile_photo(user_id, access_token=None):
+    """Set the employee's profile photo to their current Microsoft 365 photo on every SSO sign-in.
+
+    The Microsoft photo replaces whatever is set. When the account has no photo in Microsoft 365
+    (or it cannot be read) the existing one is kept. Never raises: sign-in must not fail because
+    of a picture.
+    """
+    from django.core.files.base import ContentFile
+    from .models import Employee, UserRegister
+
+    try:
+        emp = Employee.objects.filter(user_id=user_id).only("id", "photo").first() if user_id else None
+        if not emp:
+            return False
+        if not access_token:
+            access_token = _graph_token(UserRegister.objects.get(pk=user_id))
+        resp = requests.get(f"{GRAPH}/me/photo/$value", headers={"Authorization": f"Bearer {access_token}"}, timeout=6)
+        content_type = resp.headers.get("Content-Type", "")
+        # 404 = the account has no photo in Microsoft 365
+        if resp.status_code != 200 or not content_type.startswith("image/") or not 0 < len(resp.content) <= MAX_PROFILE_PHOTO_BYTES:
+            return False
+
+        field = Employee._meta.get_field("photo")
+        old_name = emp.photo.name if emp.photo else ""
+        # Unchanged since the last sign-in: keep the stored file instead of writing a copy
+        if old_name and field.storage.exists(old_name) and field.storage.size(old_name) == len(resp.content):
+            with field.storage.open(old_name, "rb") as current:
+                if current.read() == resp.content:
+                    return False
+
+        ext = {"image/png": "png", "image/gif": "gif"}.get(content_type.split(";")[0].strip(), "jpg")
+        name = field.storage.save(field.generate_filename(emp, f"{MS_PHOTO_PREFIX}{user_id}.{ext}"), ContentFile(resp.content))
+        Employee.objects.filter(pk=emp.pk).update(photo=name)
+        # Earlier synced copies are ours to clean up; a photo the user uploaded is left on disk
+        if old_name and old_name != name and old_name.rsplit("/", 1)[-1].startswith(MS_PHOTO_PREFIX):
+            field.storage.delete(old_name)
+        return True
+    except Exception:
+        logger.warning("Could not sync Microsoft profile photo for user %s", user_id, exc_info=True)
+        return False
 
 
 def _graph_get(user, path, params=None):

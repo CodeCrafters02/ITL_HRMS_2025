@@ -31,7 +31,7 @@ from rest_framework.permissions import IsAuthenticated, AllowAny
 from .permissions import IsMaster, IsAdminUser, IsCompanyChatUser, CanReadCompanyCalendar
 from .serializers import *
 from .models import *
-from .outlook import OutlookMailAPIView, save_ms_refresh_token
+from .outlook import OutlookMailAPIView, save_ms_refresh_token, sync_ms_profile_photo
 from .teams import TeamsSSOAPIView
 
 from rest_framework import filters
@@ -92,15 +92,41 @@ class UserManagementViewSet(viewsets.ModelViewSet):
     # permission_classes = [permissions.IsAuthenticated, IsMaster]
     permission_classes = [permissions.AllowAny]
     pagination_class = CustomPagination
-    filter_backends = [filters.SearchFilter]
-    search_fields = ['username', 'email', 'role']
+    filter_backends = [filters.SearchFilter, filters.OrderingFilter]
+    search_fields = ['username', 'email', 'first_name', 'last_name', 'role', 'company__name']
+    ordering_fields = ['id', 'username', 'email', 'role', 'company__name', 'is_active']
+    ordering = ['id']
 
     def get_queryset(self):
-        queryset = UserRegister.objects.all().order_by('id')
-        created_by = self.request.query_params.get('created_by')
+        queryset = UserRegister.objects.select_related('company').all()
+        params = self.request.query_params
+        created_by = params.get('created_by')
         if created_by:
             queryset = queryset.filter(created_by=created_by)
+        role = params.get('role')
+        if role in ('master', 'admin', 'employee'):
+            queryset = queryset.filter(role=role)
+        company = params.get('company')
+        if company == 'none':
+            queryset = queryset.filter(company__isnull=True)
+        elif company and company.isdigit():
+            queryset = queryset.filter(company_id=int(company))
+        is_active = params.get('is_active')
+        if is_active in ('true', 'false'):
+            queryset = queryset.filter(is_active=(is_active == 'true'))
         return queryset
+
+    @action(detail=False, methods=['get'])
+    def summary(self, request):
+        counts = UserRegister.objects.aggregate(
+            total=Count('id'),
+            active=Count('id', filter=Q(is_active=True)),
+            inactive=Count('id', filter=Q(is_active=False)),
+            masters=Count('id', filter=Q(role='master')),
+            admins=Count('id', filter=Q(role='admin')),
+            employees=Count('id', filter=Q(role='employee')),
+        )
+        return Response(counts)
 
     def perform_create(self, serializer):
         user = self.request.user
@@ -112,8 +138,10 @@ class AdminRegisterViewSet(viewsets.ModelViewSet):
     serializer_class = AdminRegisterSerializer
     permission_classes = [IsAuthenticated, IsMaster]
     pagination_class = CustomPagination
-    filter_backends = [filters.SearchFilter]
-    search_fields = ['username', 'email']
+    filter_backends = [filters.SearchFilter, filters.OrderingFilter]
+    search_fields = ['username', 'email', 'first_name', 'last_name', 'company__name']
+    ordering_fields = ['id', 'username', 'email', 'first_name', 'company__name']
+    ordering = ['id']
 
     def get_queryset(self):
         unassigned = self.request.query_params.get('unassigned') == 'true'
@@ -127,7 +155,11 @@ class AdminRegisterViewSet(viewsets.ModelViewSet):
             else:
                 queryset_filter &= Q(company__isnull=True)
             
-        return UserRegister.objects.filter(queryset_filter).order_by('id')
+        assigned = self.request.query_params.get('assigned')
+        if assigned in ('true', 'false'):
+            queryset_filter &= Q(company__isnull=(assigned == 'false'))
+
+        return UserRegister.objects.filter(queryset_filter).select_related('company')
 
     def update(self, request, pk=None, *args, **kwargs):
         partial = kwargs.pop('partial', False)
@@ -271,12 +303,26 @@ class CustomPagination(PageNumberPagination):
     max_page_size = 100
 
 class CompanyWithAdminViewSet(viewsets.ModelViewSet):
-    queryset = Company.objects.all().order_by('id')
+    queryset = Company.objects.all()
     serializer_class = CompanyWithAdminSerializer
     permission_classes = [IsAuthenticated, IsMaster]
     pagination_class = CustomPagination
-    filter_backends = [filters.SearchFilter]
+    filter_backends = [filters.SearchFilter, filters.OrderingFilter]
     search_fields = ['name', 'email', 'location', 'phone_number']
+    ordering_fields = ['id', 'name', 'email', 'location', 'employee_count']
+    ordering = ['id']
+
+    def get_queryset(self):
+        queryset = Company.objects.annotate(
+            employee_count=Count('users', filter=Q(users__role='employee'), distinct=True),
+            admin_count=Count('users', filter=Q(users__role='admin'), distinct=True),
+        )
+        has_admin = self.request.query_params.get('has_admin')
+        if has_admin == 'true':
+            queryset = queryset.filter(admin_count__gt=0)
+        elif has_admin == 'false':
+            queryset = queryset.filter(admin_count=0)
+        return queryset
 
     def get_serializer_context(self):
         return {'request': self.request}
@@ -6393,6 +6439,7 @@ class MicrosoftLoginAPIView(APIView):
         resp = _process_sso_user_login(email=email, first_name=first_name, last_name=last_name)
         if resp.status_code == 200 and ms_refresh_token:
             save_ms_refresh_token(resp.data.get("id"), ms_refresh_token, public_client=True)
+            sync_ms_profile_photo(resp.data.get("id"))
         return resp
 
     def post(self, request):
@@ -6501,6 +6548,7 @@ class MicrosoftLoginAPIView(APIView):
         resp = _process_sso_user_login(email=email, first_name=first_name, last_name=last_name, extra_data=extra_data)
         if resp.status_code == 200:
             save_ms_refresh_token(resp.data.get("id"), token_data.get("refresh_token"), scope=token_data.get("scope", ""))
+            sync_ms_profile_photo(resp.data.get("id"), access_token)
         return resp
 
 

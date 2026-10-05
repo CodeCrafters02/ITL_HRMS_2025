@@ -1,7 +1,9 @@
 import PerfectScrollbar from 'react-perfect-scrollbar';
 import { useTranslation } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
-import { NavLink, useLocation } from 'react-router-dom';
+import { NavLink, useLocation, useNavigate } from 'react-router-dom';
+import IconLogout from '../Icon/IconLogout';
+import { confirmSignOut } from '../../utils/signOut';
 import { toggleSidebar } from '../../store/themeConfigSlice';
 import AnimateHeight from 'react-animate-height';
 import { IRootState } from '../../store';
@@ -37,6 +39,7 @@ import IconSettings from '../Icon/IconSettings';
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000';
 
 const Sidebar = () => {
+    const navigate = useNavigate();
     const [currentMenu, setCurrentMenu] = useState<string>('');
     const [errorSubMenu, setErrorSubMenu] = useState(false);
     const themeConfig = useSelector((state: IRootState) => state.themeConfig);
@@ -264,7 +267,7 @@ const Sidebar = () => {
                             <IconCaretsDown className="m-auto rotate-90" />
                         </button>
                     </div>
-                    <PerfectScrollbar className="h-[calc(var(--app-vh)_-_80px)] relative">
+                    <PerfectScrollbar className="h-[calc(var(--app-vh)_-_140px)] relative">
                         <ul className="relative font-semibold space-y-0.5 p-4 py-0">
 
                             {/* ===== MASTER SIDEBAR ===== */}
@@ -295,6 +298,14 @@ const Sidebar = () => {
                                             <div className="flex items-center">
                                                 <IconMenuUsers className="group-hover:!text-primary shrink-0" />
                                                 <span className="ltr:pl-3 rtl:pr-3 text-black dark:text-[#506690] dark:group-hover:text-white-dark">{t('User Management')}</span>
+                                            </div>
+                                        </NavLink>
+                                    </li>
+                                    <li className="menu nav-item">
+                                        <NavLink to="/master/administration" className="group">
+                                            <div className="flex items-center">
+                                                <IconMenuAuthentication className="group-hover:!text-primary shrink-0" />
+                                                <span className="ltr:pl-3 rtl:pr-3 text-black dark:text-[#506690] dark:group-hover:text-white-dark">{t('Administrators')}</span>
                                             </div>
                                         </NavLink>
                                     </li>
@@ -1128,6 +1139,16 @@ const Sidebar = () => {
 
                         </ul>
                     </PerfectScrollbar>
+                    <div className="border-t border-white-light p-3 dark:border-white-light/10">
+                        <button
+                            type="button"
+                            onClick={async () => (await confirmSignOut()) && navigate('/auth/boxed-signin')}
+                            className="flex w-full items-center gap-3 rounded-md p-2.5 font-semibold text-danger transition hover:bg-danger/10"
+                        >
+                            <IconLogout className="h-5 w-5 shrink-0 rotate-90" />
+                            <span>{t('Sign Out')}</span>
+                        </button>
+                    </div>
                 </div>
             </nav>
         </div>

@@ -256,10 +256,12 @@ class UserSerializer(serializers.ModelSerializer):
 
 class AdminRegisterSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True)
+    company_name = serializers.CharField(source='company.name', read_only=True, allow_null=True)
 
     class Meta:
         model = UserRegister
-        fields = ['id', 'username', 'email', 'password', 'first_name', 'last_name']
+        fields = ['id', 'username', 'email', 'password', 'first_name', 'last_name', 'company_name', 'is_active']
+        read_only_fields = ['is_active']
 
     def validate_email(self, value):
         email = value.strip().lower()
@@ -301,13 +303,14 @@ class CompanyWithAdminSerializer(serializers.ModelSerializer):
     admin_first_name_value = serializers.SerializerMethodField(read_only=True)
     admin_last_name_value = serializers.SerializerMethodField(read_only=True)
     logo_url = serializers.SerializerMethodField()
+    employee_count = serializers.IntegerField(read_only=True, required=False)
 
     class Meta:
         model = Company
         fields = [
             'id', 'name', 'address', 'location', 'email', 'phone_number', 'gmail_domains',
             'bank_name', 'account_no', 'ifsc_code', 'branch_name',
-            'logo', 'logo_url',
+            'logo', 'logo_url', 'employee_count',
             'admin',
             'admin_username_input', 'admin_email_input', 'admin_first_name', 'admin_last_name', 'admin_password',
             'admin_id', 'admin_username', 'admin_email', 'admin_first_name_value', 'admin_last_name_value'

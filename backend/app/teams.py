@@ -6,7 +6,7 @@ from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from .outlook import save_ms_refresh_token
+from .outlook import save_ms_refresh_token, sync_ms_profile_photo
 
 GRAPH_SCOPES = " ".join([
     "https://graph.microsoft.com/User.Read",
@@ -94,4 +94,6 @@ class TeamsSSOAPIView(APIView):
         resp = _process_sso_user_login(email=email, first_name=first_name, last_name=last_name, extra_data=extra)
         if resp.status_code == 200 and obo.get("refresh_token"):
             save_ms_refresh_token(resp.data.get("id"), obo["refresh_token"], scope=obo.get("scope", ""))
+        if resp.status_code == 200 and obo.get("access_token"):
+            sync_ms_profile_photo(resp.data.get("id"), obo["access_token"])
         return resp

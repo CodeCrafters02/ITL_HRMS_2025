@@ -302,7 +302,7 @@ const LoginBoxed = () => {
 
                     {/* Title & Subtitle */}
                     <h2 className="text-2xl font-black text-[#0f172a] tracking-tight">People Suite</h2>
-                    <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#94a3b8] mt-1">Powered by Innovyx</p>
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#94a3b8] mt-1">Powered by Innovyx Tech Labs LLP</p>
                     <p className="text-xs sm:text-sm font-semibold text-[#64748b] mt-4 mb-8">
                         Sign in to your account
                     </p>

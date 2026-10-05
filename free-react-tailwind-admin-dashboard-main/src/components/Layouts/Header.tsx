@@ -25,7 +25,7 @@ import IconUser from '../Icon/IconUser';
 import IconMail from '../Icon/IconMail';
 import IconLockDots from '../Icon/IconLockDots';
 import IconLogout from '../Icon/IconLogout';
-import { clearAllSessionData } from '../../utils/sessionManager';
+import { confirmSignOut } from '../../utils/signOut';
 import IconMenuDashboard from '../Icon/Menu/IconMenuDashboard';
 import IconHome from '../Icon/IconHome';
 import IconCaretDown from '../Icon/IconCaretDown';
@@ -204,6 +204,7 @@ const Header = () => {
                 { label: 'Dashboard', path: '/master/dashboard' },
                 { label: 'Company', path: '/master/company' },
                 { label: 'User Management', path: '/master/user-management' },
+                { label: 'Administrators', path: '/master/administration' },
             ];
         }
         if (userRole === 'admin') {
@@ -834,7 +835,14 @@ const Header = () => {
                                         // </li>
                                     )} */}
                                     <li className="border-t border-white-light dark:border-white-light/10">
-                                        <Link to="/auth/boxed-signin" className="text-danger !py-3 flex items-center" onClick={() => clearAllSessionData()}>
+                                        <Link
+                                            to="/auth/boxed-signin"
+                                            className="text-danger !py-3 flex items-center"
+                                            onClick={async (e) => {
+                                                e.preventDefault();
+                                                if (await confirmSignOut()) navigate('/auth/boxed-signin');
+                                            }}
+                                        >
                                             <IconLogout className="w-4.5 h-4.5 ltr:mr-2 rtl:ml-2 rotate-90 shrink-0" />
                                             Sign Out
                                         </Link>
