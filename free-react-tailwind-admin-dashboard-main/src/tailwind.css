@@ -765,3 +765,19 @@ html.in-teams .h-screen {
 html.in-teams .max-h-screen {
     max-height: var(--app-vh);
 }
+
+/* Modals: an element left with `animation-fill-mode: both` keeps a stacking context after its "In" animation ends,
+   which traps fixed overlays below the sidebar/header. Only keep the fill for "Out" animations. */
+.animate__animated:not([class*='Out']) {
+    animation-fill-mode: backwards;
+    -webkit-animation-fill-mode: backwards;
+}
+
+/* Full-screen dimmed overlays: blur whatever is behind them */
+.fixed.inset-0[class*='bg-black/'],
+.fixed.inset-0[class*='bg-[#000'],
+.fixed.inset-0[class*='bg-gray-900/'],
+.fixed.inset-0[class*='bg-slate-900/'] {
+    -webkit-backdrop-filter: blur(4px);
+    backdrop-filter: blur(4px);
+}
