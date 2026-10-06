@@ -561,10 +561,10 @@ const Header = () => {
                         </button>
                     </div>
 
-                    <div className="ltr:mr-2 rtl:ml-2 hidden sm:block">
+                    <div className="ltr:mr-2 rtl:ml-2">
                         <ul className="flex items-center space-x-2 rtl:space-x-reverse dark:text-[#d0d2d6]">
                             {userRole === 'admin' && location.pathname !== '/admin/hub' && (
-                                <li>
+                                <li className="hidden sm:block">
                                     <Link 
                                         to="/admin/hub" 
                                         replace={true}
@@ -577,7 +577,7 @@ const Header = () => {
                                 </li>
                             )}
                             {userRole === 'employee' && location.pathname !== '/employee/hub' && (
-                                <li>
+                                <li className="hidden sm:block">
                                     <Link 
                                         to="/employee/hub" 
                                         replace={true}
@@ -596,7 +596,7 @@ const Header = () => {
                                             <IconCalendar />
                                         </Link>
                                     </li>
-                                    <li className="relative">
+                                    <li className="relative hidden sm:block">
                                         <span ref={leaveIntroAnchorRef} className="relative inline-flex">
                                             <Link
                                                 to={leaveRoute}
@@ -630,7 +630,7 @@ const Header = () => {
                                         </span>
                                     </li>
                                     {userRole !== 'employee' && (
-                                        <li>
+                                        <li className="hidden sm:block">
                                             <Link to="/apps/chat" className="block p-2 rounded-full bg-white-light/40 dark:bg-dark/40 hover:text-primary hover:bg-white-light/90 dark:hover:bg-dark/60">
                                                 <IconChatNotification />
                                             </Link>

@@ -1,0 +1,84 @@
+import logging
+import threading
+import time
+from urllib.parse import quote
+
+import requests
+from django.conf import settings
+
+logger = logging.getLogger(__name__)
+
+GRAPH = "https://graph.microsoft.com/v1.0"
+TEAMS_APP_ID = "61aef780-972b-4305-8189-74716898dc93"
+ACTIVITY_TYPE = "hrmsAlert"
+ENTITY_BY_TYPE = {"payroll": "hrms-payslips", "attendance": "hrms-attendance", "leave": "hrms-leave"}
+
+_token = {"value": None, "exp": 0}
+_lock = threading.Lock()
+
+
+def _app_token():
+    with _lock:
+        if _token["value"] and _token["exp"] > time.time() + 60:
+            return _token["value"]
+        r = requests.post(
+            f"https://login.microsoftonline.com/{settings.MICROSOFT_TENANT_ID}/oauth2/v2.0/token",
+            data={
+                "client_id": settings.MICROSOFT_CLIENT_ID,
+                "client_secret": settings.MICROSOFT_CLIENT_SECRET,
+                "scope": "https://graph.microsoft.com/.default",
+                "grant_type": "client_credentials",
+            },
+            timeout=10,
+        )
+        r.raise_for_status()
+        d = r.json()
+        _token.update(value=d["access_token"], exp=time.time() + int(d.get("expires_in", 3000)))
+        return _token["value"]
+
+
+def _send_one(email, title, message, entity_id):
+    body = {
+        "topic": {
+            "source": "text",
+            "value": "HRMS",
+            "webUrl": f"https://teams.microsoft.com/l/entity/{TEAMS_APP_ID}/{entity_id}",
+        },
+        "activityType": ACTIVITY_TYPE,
+        "previewText": {"content": (message or title)[:150]},
+        "templateParameters": [{"name": "title", "value": title[:120]}],
+    }
+    url = f"{GRAPH}/users/{quote(email)}/teamwork/sendActivityNotification"
+    for _ in range(2):
+        r = requests.post(url, json=body, headers={"Authorization": f"Bearer {_app_token()}"}, timeout=10)
+        if r.status_code == 429:
+            time.sleep(min(int(r.headers.get("Retry-After", 2)), 10))
+            continue
+        if r.status_code not in (200, 204, 404):
+            logger.warning("Teams notify %s -> %s %s", email, r.status_code, r.text[:200])
+        return
+
+
+def _run(emails, title, message, entity_id):
+    for email in emails:
+        try:
+            _send_one(email, title, message, entity_id)
+        except Exception as e:
+            logger.warning("Teams notify failed for %s: %s", email, e)
+
+
+def send_teams_notification(user_ids, title, message="", notif_type="general"):
+    """Generic Teams activity-feed notification. Never raises; runs in a background thread."""
+    try:
+        if not (getattr(settings, "TEAMS_NOTIFY_ENABLED", False) and settings.MICROSOFT_CLIENT_ID and user_ids):
+            return
+        from app.models import UserRegister
+        emails = [e for e in UserRegister.objects.filter(id__in=user_ids).values_list("email", flat=True) if e]
+        if emails:
+            threading.Thread(
+                target=_run,
+                args=(emails, title or "HRMS", message, ENTITY_BY_TYPE.get(notif_type, "hrms-home")),
+                daemon=True,
+            ).start()
+    except Exception as e:
+        logger.warning("Teams notify skipped: %s", e)

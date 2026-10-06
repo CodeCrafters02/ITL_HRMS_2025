@@ -39,6 +39,7 @@ MICROSOFT_TENANT_ID = os.getenv("MICROSOFT_TENANT_ID") or os.getenv("MS_TENANT_I
 MICROSOFT_REDIRECT_URI = os.getenv("MICROSOFT_REDIRECT_URI", "http://localhost:5173/auth/callback/microsoft")
 TEAMS_TAB_DOMAIN = os.getenv("TEAMS_TAB_DOMAIN", "hrms.innovyxtechlabs.com")
 TEAMS_APP_ID_URI = os.getenv("TEAMS_APP_ID_URI", "")
+TEAMS_NOTIFY_ENABLED = os.getenv("TEAMS_NOTIFY_ENABLED", "false").lower() == "true"
 
 
 # Quick-start development settings - unsuitable for production
@@ -309,6 +310,22 @@ CELERY_BEAT_SCHEDULE = {
     'sync-appraisal-cycle-statuses': {
         'task': 'employee.tasks.sync_appraisal_cycle_statuses',
         'schedule': crontab(minute=0),  # every hour on the hour
+    },
+    'teams-birthday-digest': {
+        'task': 'notifications.tasks.teams_birthday_digest',
+        'schedule': crontab(hour=9, minute=0),
+    },
+    'teams-pending-approvals-digest': {
+        'task': 'notifications.tasks.teams_pending_approvals_digest',
+        'schedule': crontab(hour=10, minute=0, day_of_week='mon-fri'),
+    },
+    'teams-outlook-poll': {
+        'task': 'notifications.tasks.teams_outlook_poll',
+        'schedule': crontab(minute='*/5'),
+    },
+    'teams-missing-checkout-admin-digest': {
+        'task': 'notifications.tasks.teams_missing_checkout_admin_digest',
+        'schedule': crontab(hour=9, minute=30, day_of_week='mon-fri'),
     },
 }
 

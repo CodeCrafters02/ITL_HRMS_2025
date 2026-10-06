@@ -649,7 +649,7 @@ const AdminDashboard = () => {
             {/* ─── Bottom Grid: Birthdays, Quick Actions, Events ─── */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
                 {/* Upcoming Birthdays */}
-                <div className="panel p-5">
+                <div className="panel p-5 flex flex-col">
                     <h3 className="text-base font-bold text-gray-800 dark:text-white mb-5 flex items-center gap-2">
                         <span className="w-1 h-5 bg-gradient-to-b from-pink-500 to-rose-500 rounded-full"></span>
                         🎂 Upcoming Birthdays
@@ -661,7 +661,7 @@ const AdminDashboard = () => {
                             <p className="text-gray-400 dark:text-gray-500 text-sm">No upcoming birthdays</p>
                         </div>
                     ) : (
-                        <div className="space-y-2.5 max-h-[260px] overflow-y-auto ltr:pr-1 rtl:pl-1">
+                        <div className="flex-1 min-h-0 space-y-2.5 max-h-[420px] overflow-y-auto ltr:pr-1 rtl:pl-1">
                             {data.upcoming_birthdays.map((birthday, idx) => (
                                 <div
                                     key={idx}

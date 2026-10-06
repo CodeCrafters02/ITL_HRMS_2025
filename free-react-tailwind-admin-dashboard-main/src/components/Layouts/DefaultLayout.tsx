@@ -6,7 +6,6 @@ import { IRootState } from '../../store';
 import { toggleSidebar } from '../../store/themeConfigSlice';
 // import Footer from './Footer';
 import Header from './Header';
-import Setting from './Setting';
 import Sidebar from './Sidebar';
 import Portals from '../../components/Portals';
 import ChatFloatingButton from '../ChatFloatingButton';
@@ -110,7 +109,6 @@ const DefaultLayout = ({ children }: PropsWithChildren) => {
                 {!themeConfig.isQuizActive && <ChatFloatingButton />}
 
                 {/* BEGIN APP SETTING LAUNCHER */}
-                {!themeConfig.isQuizActive && <Setting />}
                 {/* END APP SETTING LAUNCHER */}
 
                 <div className={`${themeConfig.navbar} main-container text-black dark:text-white-dark min-h-screen`}>
