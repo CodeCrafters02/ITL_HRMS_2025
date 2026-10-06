@@ -44,6 +44,29 @@ class EmployeeConfig(AppConfig):
                 except Exception as exc:
                     logger.error('[Scheduler] flag_missing_checkouts failed: %s', exc)
 
+            def _teams_job(name, ttl):
+                def run():
+                    try:
+                        from django.core.cache import caches
+                        from notifications import tasks
+                        if not caches['teams_state'].add(f'lock:{name}', 1, ttl):
+                            return
+                        getattr(tasks, name)()
+                    except Exception as exc:
+                        logger.error('[Scheduler] %s failed: %s', name, exc)
+                return run
+
+            scheduler.add_job(_teams_job('teams_outlook_poll', 240), IntervalTrigger(minutes=5),
+                              id='teams_outlook_poll', replace_existing=True, max_instances=1, misfire_grace_time=120)
+            scheduler.add_job(_teams_job('teams_birthday_digest', 3600), CronTrigger(hour=9, minute=0, timezone='Asia/Kolkata'),
+                              id='teams_birthday_digest', replace_existing=True, misfire_grace_time=600)
+            scheduler.add_job(_teams_job('teams_missing_checkout_admin_digest', 3600),
+                              CronTrigger(day_of_week='mon-fri', hour=9, minute=30, timezone='Asia/Kolkata'),
+                              id='teams_missing_checkout_admin_digest', replace_existing=True, misfire_grace_time=600)
+            scheduler.add_job(_teams_job('teams_pending_approvals_digest', 3600),
+                              CronTrigger(day_of_week='mon-fri', hour=10, minute=0, timezone='Asia/Kolkata'),
+                              id='teams_pending_approvals_digest', replace_existing=True, misfire_grace_time=600)
+
             # Checks every 2 minutes — fires 10s after startup then repeats.
             # 10s delay gives Django time to fully initialize DB before first run.
             # NOTE: Change minutes=2 to minutes=30 in production.

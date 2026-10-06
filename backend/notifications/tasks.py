@@ -66,12 +66,13 @@ def teams_missing_checkout_admin_digest():
 def teams_outlook_poll():
     """Every few minutes: Teams alerts for new unread Outlook mail and meetings starting within 15 min (per connected user)."""
     from django.conf import settings
-    from django.core.cache import cache
+    from django.core.cache import caches
     from app.models import MicrosoftOAuthToken
     from app.outlook import _graph_get, OutlookReauthRequired
 
     if not getattr(settings, "TEAMS_NOTIFY_ENABLED", False):
         return
+    cache = caches['teams_state']
     now = timezone.now()
     iso = lambda d: d.strftime("%Y-%m-%dT%H:%M:%SZ")
     for user in (t.user for t in MicrosoftOAuthToken.objects.select_related('user')):

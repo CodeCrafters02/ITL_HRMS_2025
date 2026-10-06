@@ -304,28 +304,21 @@ CELERY_RESULT_BACKEND = f"{REDIS_URL_BASE}/{CELERY_REDIS_DB_RESULTS}?protocol=2"
 # Use Redis scheduler via django-celery-beat's database scheduler (keeps schedule in Django DB)
 CELERY_BEAT_SCHEDULER = 'django_celery_beat.schedulers:DatabaseScheduler'
 
+CACHES = {
+    'default': {'BACKEND': 'django.core.cache.backends.locmem.LocMemCache'},
+    # shared across worker processes and kept across restarts (used by Teams alert dedupe/locks)
+    'teams_state': {
+        'BACKEND': 'django.core.cache.backends.filebased.FileBasedCache',
+        'LOCATION': str(BASE_DIR / '.teams_state_cache'),
+    },
+}
+
 from celery.schedules import crontab
 CELERY_BEAT_SCHEDULE = {
     # Activate cycles whose start_date has arrived; complete when deadline passed
     'sync-appraisal-cycle-statuses': {
         'task': 'employee.tasks.sync_appraisal_cycle_statuses',
         'schedule': crontab(minute=0),  # every hour on the hour
-    },
-    'teams-birthday-digest': {
-        'task': 'notifications.tasks.teams_birthday_digest',
-        'schedule': crontab(hour=9, minute=0),
-    },
-    'teams-pending-approvals-digest': {
-        'task': 'notifications.tasks.teams_pending_approvals_digest',
-        'schedule': crontab(hour=10, minute=0, day_of_week='mon-fri'),
-    },
-    'teams-outlook-poll': {
-        'task': 'notifications.tasks.teams_outlook_poll',
-        'schedule': crontab(minute='*/5'),
-    },
-    'teams-missing-checkout-admin-digest': {
-        'task': 'notifications.tasks.teams_missing_checkout_admin_digest',
-        'schedule': crontab(hour=9, minute=30, day_of_week='mon-fri'),
     },
 }
 
