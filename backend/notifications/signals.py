@@ -20,6 +20,25 @@ def _company_user_ids(company):
     return list(
         UserRegister.objects.filter(company=company).values_list("id", flat=True)
     )
+
+def _leave_summary(l):
+    d = lambda x: x.strftime("%d %b %Y")
+    days = f"{d(l.from_date)}" if l.from_date == l.to_date else f"{d(l.from_date)} → {d(l.to_date)}"
+    half = " (Half day)" if getattr(l, "leave_duration", "") == "half_day" else ""
+    return f"{l.leave_type or 'Leave'} · {days}{half}"
+
+
+def _leave_status_title_msg(l):
+    summary = _leave_summary(l)
+    if l.status == "Approved":
+        return "✅ Leave Approved", f"Your {summary} was approved."
+    if l.status == "Rejected":
+        reason = f" Reason: {l.rejection_reason}" if l.rejection_reason else ""
+        return "❌ Leave Rejected", f"Your {summary} was rejected.{reason}"
+    if l.status == "Cancelled":
+        return "🚫 Leave Cancelled", f"Your {summary} was cancelled."
+    return "Leave Status Updated", f"Your {summary} is {l.status}."
+
 # --- TASKS ---
 
 @receiver(pre_save, sender=TaskAssignment)
@@ -123,8 +142,9 @@ def leave_created_notify_manager(sender, instance, created, **kwargs):
             send_fcm_to_users(
                 [instance.reporting_manager.user.id],
                 "leave",
-                f"{instance.employee} requested {instance.leave_type} ({instance.from_date} → {instance.to_date})",
+                f"{instance.employee} requested {_leave_summary(instance)}" + (f". Reason: {instance.reason}" if instance.reason else ""),
                 sender=default_sender,
+                title=f"📝 Leave Request from {instance.employee}",
                 extra_data={"type": "leave_request", "leave_id": instance.id}
             )
         except Exception as e:
@@ -156,8 +176,9 @@ def leave_status_change(sender, instance, **kwargs):
                 send_fcm_to_users(
                     [instance.employee.user.id],
                     "leave",
-                    f"Your leave ({instance.from_date} → {instance.to_date}) is {instance.status}",
+                    _leave_status_title_msg(instance)[1],
                     sender=default_sender,
+                    title=_leave_status_title_msg(instance)[0],
                     extra_data={"type": "leave_status", "leave_id": instance.id, "status": instance.status}
                 )
             except Exception as e:
@@ -220,9 +241,9 @@ def calendar_event_broadcast(sender, instance, created, **kwargs):
         send_fcm_to_users(
             user_ids,
             "event",
-            f"{instance.name} on {instance.date}",
+            f"{instance.name} on {instance.date:%d %b %Y}" if hasattr(instance.date, "strftime") else f"{instance.name} on {instance.date}",
             sender=default_sender,
-            title=instance.name,
+            title=f"📅 New Event: {instance.name}",
             related_object_id=instance.id,
             extra_data={"type": "calendar_event", "event_id": instance.id}
         )
@@ -246,7 +267,7 @@ def learning_corner_broadcast(sender, instance, created, **kwargs):
             "learning",
             instance.title or "New item in Learning Corner",
             sender=default_sender,
-            title=instance.title or "Learning Corner",
+            title=f"📚 New in Learning Corner: {instance.title}" if instance.title else "📚 Learning Corner",
             related_object_id=instance.id,
             extra_data={"type": "learning_corner", "learning_id": instance.id}
         )
@@ -616,14 +637,14 @@ def loan_status_change_notify(sender, instance, **kwargs):
         
         # 1. Notify Employee of any status change
         if instance.employee and instance.employee.id:
-            body = f"Your loan application for {instance.category.name} is now {status_label}."
+            body = f"Your {instance.category.name} application (₹{instance.requested_amount}) is now {status_label}."
             try:
                 send_fcm_to_users(
                     [instance.employee.id],
                     "loan",
                     body,
                     sender=default_sender,
-                    title="Loan Status Updated",
+                    title=f"Loan {status_label}",
                     extra_data={"type": "loan_status", "loan_id": instance.id, "status": instance.status}
                 )
                 # Create UserNotification for employee

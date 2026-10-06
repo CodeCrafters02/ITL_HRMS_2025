@@ -13,6 +13,13 @@ TEAMS_APP_ID = "61aef780-972b-4305-8189-74716898dc93"
 ACTIVITY_TYPE = "hrmsAlert"
 ENTITY_BY_TYPE = {"payroll": "hrms-payslips", "attendance": "hrms-attendance", "leave": "hrms-leave"}
 
+TYPE_ICONS = {
+    "leave": "📝", "task": "📋", "wfh": "🏠", "reimbursement": "💸", "loan": "💰", "asset": "🖥️",
+    "booking": "🪑", "event": "📅", "learning": "📚", "chat": "💬", "payroll": "💵",
+    "attendance": "⏰", "admin_notification": "📢",
+}
+STATUS_ICONS = (("approved", "✅"), ("rejected", "❌"), ("cancelled", "🚫"), ("published", "✅"))
+
 _token = {"value": None, "exp": 0}
 _lock = threading.Lock()
 
@@ -35,6 +42,16 @@ def _app_token():
         d = r.json()
         _token.update(value=d["access_token"], exp=time.time() + int(d.get("expires_in", 3000)))
         return _token["value"]
+
+
+def decorate_title(title, notif_type):
+    """Prefix a title with a status or type icon unless it already starts with an emoji."""
+    title = (title or "HRMS").strip()
+    if ord(title[0]) > 0x2000:
+        return title
+    low = title.lower()
+    icon = next((i for k, i in STATUS_ICONS if k in low), TYPE_ICONS.get(notif_type, "🔔"))
+    return f"{icon} {title}"
 
 
 def _send_one(email, title, message, entity_id):
@@ -77,7 +94,7 @@ def send_teams_notification(user_ids, title, message="", notif_type="general"):
         if emails:
             threading.Thread(
                 target=_run,
-                args=(emails, title or "HRMS", message, ENTITY_BY_TYPE.get(notif_type, "hrms-home")),
+                args=(emails, decorate_title(title, notif_type), message, ENTITY_BY_TYPE.get(notif_type, "hrms-home")),
                 daemon=True,
             ).start()
     except Exception as e:
