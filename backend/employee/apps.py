@@ -47,9 +47,9 @@ class EmployeeConfig(AppConfig):
             def _teams_job(name, ttl):
                 def run():
                     try:
-                        from django.core.cache import caches
                         from notifications import tasks
-                        if not caches['teams_state'].add(f'lock:{name}', 1, ttl):
+                        from notifications.teams import claim
+                        if not claim(f'lock:{name}', ttl):
                             return
                         getattr(tasks, name)()
                     except Exception as exc:

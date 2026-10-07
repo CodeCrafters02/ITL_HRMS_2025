@@ -1,4 +1,6 @@
+import hashlib
 import logging
+import os
 import threading
 import time
 from urllib.parse import quote
@@ -42,6 +44,25 @@ def _app_token():
         d = r.json()
         _token.update(value=d["access_token"], exp=time.time() + int(d.get("expires_in", 3000)))
         return _token["value"]
+
+
+def claim(key, ttl):
+    """Atomic cross-process "first caller wins" (O_EXCL lock file); False if already claimed within ttl seconds."""
+    d = os.path.join(str(settings.BASE_DIR), ".teams_state_cache", "claims")
+    os.makedirs(d, exist_ok=True)
+    path = os.path.join(d, hashlib.sha1(key.encode()).hexdigest())
+    for _ in range(2):
+        try:
+            os.close(os.open(path, os.O_CREAT | os.O_EXCL | os.O_WRONLY))
+            return True
+        except FileExistsError:
+            try:
+                if time.time() - os.path.getmtime(path) < ttl:
+                    return False
+                os.remove(path)
+            except OSError:
+                return False
+    return False
 
 
 def decorate_title(title, notif_type):

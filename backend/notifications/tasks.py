@@ -4,7 +4,7 @@ from datetime import timedelta
 from celery import shared_task
 from django.utils import timezone
 
-from .teams import send_teams_notification
+from .teams import claim, send_teams_notification
 
 
 def _admin_ids(company_id):
@@ -98,10 +98,9 @@ def teams_outlook_poll():
                 "$select": "id,subject,start,isCancelled", "$top": 10,
             }).get("value", [])
             for ev in events:
-                key = f"teams_evt:{user.id}:{ev['id']}"
-                if ev.get("isCancelled") or cache.get(key):
+                key = f"teams_evt:{user.id}:{ev.get('subject')}:{(ev.get('start') or {}).get('dateTime')}"
+                if ev.get("isCancelled") or not claim(key, 3600):
                     continue
-                cache.set(key, 1, 3600)
                 send_teams_notification([user.id], f"📅 Starting soon: {ev.get('subject') or 'Meeting'}", "Starts within 15 minutes")
         except OutlookReauthRequired:
             continue
