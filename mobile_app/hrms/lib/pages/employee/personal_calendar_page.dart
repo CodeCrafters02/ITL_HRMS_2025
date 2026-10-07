@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../../models/calendar_model.dart';
-import '../../models/google_calendar_model.dart';
+import '../../models/calendar_event_model.dart';
 import '../../services/employee_service.dart';
-import '../../services/google_calendar_service.dart';
+import '../../services/outlook_calendar_service.dart';
 import '../../services/storage_service.dart';
 import '../../theme/app_stitch_theme.dart';
 import '../../widgets/glass_card.dart';
@@ -19,8 +19,8 @@ class PersonalCalendarPage extends StatefulWidget {
   State<PersonalCalendarPage> createState() => _PersonalCalendarPageState();
 }
 
-class _GoogleCreateEventSheet extends StatefulWidget {
-  const _GoogleCreateEventSheet({
+class _OutlookCreateEventSheet extends StatefulWidget {
+  const _OutlookCreateEventSheet({
     required this.initialDate,
     required this.onCreated,
   });
@@ -29,10 +29,10 @@ class _GoogleCreateEventSheet extends StatefulWidget {
   final VoidCallback onCreated;
 
   @override
-  State<_GoogleCreateEventSheet> createState() => _GoogleCreateEventSheetState();
+  State<_OutlookCreateEventSheet> createState() => _OutlookCreateEventSheetState();
 }
 
-class _GoogleCreateEventSheetState extends State<_GoogleCreateEventSheet> {
+class _OutlookCreateEventSheetState extends State<_OutlookCreateEventSheet> {
   final _titleCtrl = TextEditingController();
   final _descCtrl = TextEditingController();
   final _guestsCtrl = TextEditingController();
@@ -42,7 +42,6 @@ class _GoogleCreateEventSheetState extends State<_GoogleCreateEventSheet> {
   TimeOfDay _start = const TimeOfDay(hour: 10, minute: 0);
   TimeOfDay _end = const TimeOfDay(hour: 11, minute: 0);
   bool _meet = false;
-  bool _sendUpdates = false;
   bool _saving = false;
 
   @override
@@ -112,7 +111,7 @@ class _GoogleCreateEventSheetState extends State<_GoogleCreateEventSheet> {
     setState(() => _saving = true);
     try {
       final guests = _parseGuests(_guestsCtrl.text);
-      await GoogleCalendarService.createEvent(
+      await OutlookCalendarService.createEvent(
         title: title,
         description: _descCtrl.text.trim().isEmpty ? null : _descCtrl.text.trim(),
         start: start,
@@ -120,11 +119,10 @@ class _GoogleCreateEventSheetState extends State<_GoogleCreateEventSheet> {
         allDay: _allDay,
         withMeet: _meet,
         guests: guests,
-        sendUpdatesToGuests: _sendUpdates,
       );
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Saved to Google Calendar')),
+        const SnackBar(content: Text('Saved to Outlook Calendar')),
       );
       widget.onCreated();
     } catch (e) {
@@ -175,7 +173,7 @@ class _GoogleCreateEventSheetState extends State<_GoogleCreateEventSheet> {
                               children: [
                                 Expanded(
                                   child: Text(
-                                    'New Google event',
+                                    'New Outlook event',
                                     style: Theme.of(context)
                                         .textTheme
                                         .titleMedium
@@ -264,19 +262,11 @@ class _GoogleCreateEventSheetState extends State<_GoogleCreateEventSheet> {
                             ),
                             const SizedBox(height: 6),
                             SwitchListTile(
-                              value: _sendUpdates,
-                              onChanged: _saving
-                                  ? null
-                                  : (v) => setState(() => _sendUpdates = v),
-                              title: const Text('Send email updates to guests'),
-                              contentPadding: EdgeInsets.zero,
-                            ),
-                            SwitchListTile(
                               value: _meet,
                               onChanged: _saving
                                   ? null
                                   : (v) => setState(() => _meet = v),
-                              title: const Text('Add Google Meet link'),
+                              title: const Text('Add Teams meeting link'),
                               contentPadding: EdgeInsets.zero,
                             ),
                           ],
@@ -289,7 +279,7 @@ class _GoogleCreateEventSheetState extends State<_GoogleCreateEventSheet> {
                       child: ElevatedButton(
                         onPressed: _saving ? null : _submit,
                         child:
-                            Text(_saving ? 'Saving…' : 'Create in Google Calendar'),
+                            Text(_saving ? 'Saving…' : 'Create in Outlook Calendar'),
                       ),
                     ),
                   ],
@@ -311,26 +301,21 @@ class _PersonalCalendarPageState extends State<PersonalCalendarPage> {
   DateTime? _selectedDate;
   List<CalendarEvent> _selectedDateEvents = [];
 
-  int _tabIndex = 0; // 0 = HRMS, 1 = Google
-  bool _googleLoading = false;
-  String? _googleError;
-  bool _googleConnected = false;
-  List<GoogleCalendarEvent> _googleEvents = [];
+  int _tabIndex = 0; // 0 = HRMS, 1 = Outlook
+  bool _outlookLoading = true;
+  String? _outlookError;
+  bool _outlookConnected = false;
+  List<OutlookCalendarEvent> _outlookEvents = [];
 
   @override
   void initState() {
     super.initState();
     _fetchCalendarData();
-    _initGoogle();
+    _initOutlook();
   }
 
-  Future<void> _initGoogle() async {
-    final connected = await GoogleCalendarService.isConnected();
-    if (!mounted) return;
-    setState(() => _googleConnected = connected);
-    if (connected) {
-      await _fetchGoogleEvents();
-    }
+  Future<void> _initOutlook() async {
+    await _fetchOutlookEvents();
   }
 
   Future<void> _fetchCalendarData() async {
@@ -362,61 +347,49 @@ class _PersonalCalendarPageState extends State<PersonalCalendarPage> {
   DateTime _monthStart(DateTime d) => DateTime(d.year, d.month, 1);
   DateTime _monthEndExclusive(DateTime d) => DateTime(d.year, d.month + 1, 1);
 
-  Future<void> _fetchGoogleEvents() async {
+  Future<void> _fetchOutlookEvents() async {
     setState(() {
-      _googleLoading = true;
-      _googleError = null;
+      _outlookLoading = true;
+      _outlookError = null;
     });
     try {
-      final items = await GoogleCalendarService.listPrimaryEvents(
+      final items = await OutlookCalendarService.listEvents(
         timeMin: _monthStart(_currentMonth),
         timeMax: _monthEndExclusive(_currentMonth),
       );
       if (!mounted) return;
       setState(() {
-        _googleEvents = items;
-        _googleLoading = false;
+        _outlookConnected = items != null;
+        _outlookEvents = items ?? [];
+        _outlookLoading = false;
       });
     } catch (e) {
       if (!mounted) return;
       setState(() {
-        _googleEvents = [];
-        _googleLoading = false;
-        _googleError = e.toString();
+        _outlookEvents = [];
+        _outlookLoading = false;
+        _outlookError = e.toString();
       });
     }
   }
 
-  Future<void> _connectGoogle() async {
+  Future<void> _connectOutlook() async {
     setState(() {
-      _googleLoading = true;
-      _googleError = null;
+      _outlookLoading = true;
+      _outlookError = null;
     });
     try {
-      final token = await GoogleCalendarService.connect();
+      final ok = await OutlookCalendarService.connect();
       if (!mounted) return;
-      setState(() {
-        _googleConnected = token != null;
-        _googleLoading = false;
-      });
-      if (token != null) await _fetchGoogleEvents();
+      setState(() => _outlookLoading = false);
+      if (ok) await _fetchOutlookEvents();
     } catch (e) {
       if (!mounted) return;
       setState(() {
-        _googleLoading = false;
-        _googleError = e.toString();
+        _outlookLoading = false;
+        _outlookError = e.toString();
       });
     }
-  }
-
-  Future<void> _disconnectGoogle() async {
-    await GoogleCalendarService.disconnect();
-    if (!mounted) return;
-    setState(() {
-      _googleConnected = false;
-      _googleEvents = [];
-      _googleError = null;
-    });
   }
 
   void _updateSelectedDateEvents() {
@@ -444,8 +417,8 @@ class _PersonalCalendarPageState extends State<PersonalCalendarPage> {
       _currentMonth = DateTime(_currentMonth.year, _currentMonth.month + direction, 1);
     });
     _fetchCalendarData();
-    if (_googleConnected) {
-      _fetchGoogleEvents();
+    if (_outlookConnected) {
+      _fetchOutlookEvents();
     }
   }
 
@@ -600,9 +573,9 @@ class _PersonalCalendarPageState extends State<PersonalCalendarPage> {
               backgroundColor: AppStitchTheme.primary,
               child: const Icon(Icons.add, color: Colors.white),
             )
-          : (_googleConnected
+          : (_outlookConnected
               ? FloatingActionButton(
-                  onPressed: _openCreateGoogleEventSheet,
+                  onPressed: _openCreateOutlookEventSheet,
                   backgroundColor: AppStitchTheme.primary,
                   child: const Icon(Icons.add, color: Colors.white),
                 )
@@ -678,9 +651,9 @@ class _PersonalCalendarPageState extends State<PersonalCalendarPage> {
             }),
           ),
           Expanded(
-            child: _tabButton('Google', _tabIndex == 1, () {
+            child: _tabButton('Outlook', _tabIndex == 1, () {
               setState(() => _tabIndex = 1);
-              if (_googleConnected) _fetchGoogleEvents();
+              if (_outlookConnected) _fetchOutlookEvents();
             }),
           ),
         ],
@@ -733,10 +706,10 @@ class _PersonalCalendarPageState extends State<PersonalCalendarPage> {
       return _buildCalendarView();
     }
 
-    return _buildGoogleBody();
+    return _buildOutlookBody();
   }
 
-  Widget _buildGoogleBody() {
+  Widget _buildOutlookBody() {
     return Column(
       children: [
         GlassCard(
@@ -745,45 +718,46 @@ class _PersonalCalendarPageState extends State<PersonalCalendarPage> {
             children: [
               Expanded(
                 child: Text(
-                  _googleConnected ? 'Google Calendar connected' : 'Connect Google Calendar',
+                  _outlookConnected || _outlookError != null || _outlookLoading ? 'Outlook Calendar (Microsoft account)' : 'Grant Outlook Calendar access',
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
                         fontWeight: FontWeight.w900,
                         color: AppStitchTheme.lightOnSurface,
                       ),
                 ),
               ),
-              if (_googleConnected)
+              if (_outlookConnected)
                 Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     TextButton(
-                      onPressed: _googleLoading ? null : _syncCompanyHolidaysToGoogle,
+                      onPressed: _outlookLoading ? null : _syncCompanyHolidaysToOutlook,
                       child: const Text('Sync holidays'),
-                    ),
-                    TextButton(
-                      onPressed: _googleLoading ? null : _disconnectGoogle,
-                      child: const Text('Disconnect'),
                     ),
                   ],
                 )
+              else if (_outlookError != null)
+                ElevatedButton(
+                  onPressed: _outlookLoading ? null : _fetchOutlookEvents,
+                  child: const Text('Retry'),
+                )
               else
                 ElevatedButton(
-                  onPressed: _googleLoading ? null : _connectGoogle,
-                  child: const Text('Connect'),
+                  onPressed: _outlookLoading ? null : _connectOutlook,
+                  child: const Text('Allow'),
                 ),
             ],
           ),
         ),
         const SizedBox(height: 12),
         Expanded(
-          child: _googleLoading
+          child: _outlookLoading
               ? const Center(child: CircularProgressIndicator())
-              : (_googleError != null
+              : (_outlookError != null
                   ? Center(
                       child: GlassCard(
                         padding: const EdgeInsets.all(18),
                         child: Text(
-                          _googleError!,
+                          _outlookError!,
                           style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                                 color: AppStitchTheme.lightOnSurfaceMuted,
                                 fontWeight: FontWeight.w600,
@@ -792,12 +766,12 @@ class _PersonalCalendarPageState extends State<PersonalCalendarPage> {
                         ),
                       ),
                     )
-                  : (!_googleConnected
+                  : (!_outlookConnected
                       ? Center(
                           child: GlassCard(
                             padding: const EdgeInsets.all(18),
                             child: Text(
-                              'Connect to view and manage your Google events.',
+                              'Connect to view and manage your Outlook events.',
                               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                                     color: AppStitchTheme.lightOnSurfaceMuted,
                                     fontWeight: FontWeight.w600,
@@ -806,12 +780,12 @@ class _PersonalCalendarPageState extends State<PersonalCalendarPage> {
                             ),
                           ),
                         )
-                      : _googleEvents.isEmpty
+                      : _outlookEvents.isEmpty
                           ? Center(
                               child: GlassCard(
                                 padding: const EdgeInsets.all(18),
                                 child: Text(
-                                  'No Google events in this month.',
+                                  'No Outlook events in this month.',
                                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                                         color: AppStitchTheme.lightOnSurfaceMuted,
                                         fontWeight: FontWeight.w600,
@@ -820,11 +794,11 @@ class _PersonalCalendarPageState extends State<PersonalCalendarPage> {
                               ),
                             )
                           : ListView.separated(
-                              itemCount: _googleEvents.length,
+                              itemCount: _outlookEvents.length,
                               separatorBuilder: (context, index) => const SizedBox(height: 10),
                               itemBuilder: (context, i) {
-                                final e = _googleEvents[i];
-                                return _buildGoogleEventTile(e);
+                                final e = _outlookEvents[i];
+                                return _buildOutlookEventTile(e);
                               },
                             ))),
         ),
@@ -832,13 +806,13 @@ class _PersonalCalendarPageState extends State<PersonalCalendarPage> {
     );
   }
 
-  Widget _buildGoogleEventTile(GoogleCalendarEvent e) {
+  Widget _buildOutlookEventTile(OutlookCalendarEvent e) {
     final startLabel = DateFormat('MMM dd').format(e.start.toLocal());
     final timeLabel = e.allDay ? 'All day' : DateFormat('HH:mm').format(e.start.toLocal());
     return GlassCard(
       padding: EdgeInsets.zero,
       child: InkWell(
-        onTap: () => _openGoogleEventDetails(e),
+        onTap: () => _openOutlookEventDetails(e),
         borderRadius: BorderRadius.circular(28),
         child: Padding(
           padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
@@ -889,12 +863,12 @@ class _PersonalCalendarPageState extends State<PersonalCalendarPage> {
     );
   }
 
-  Future<void> _confirmDeleteGoogleEvent(GoogleCalendarEvent e) async {
+  Future<void> _confirmDeleteOutlookEvent(OutlookCalendarEvent e) async {
     final ok = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Delete Google event?'),
-        content: Text('Delete "${e.title}" from your Google Calendar?'),
+        title: const Text('Delete Outlook event?'),
+        content: Text('Delete "${e.title}" from your Outlook Calendar?'),
         actions: [
           TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
           TextButton(
@@ -907,27 +881,27 @@ class _PersonalCalendarPageState extends State<PersonalCalendarPage> {
     );
     if (ok != true) return;
     try {
-      await GoogleCalendarService.deleteEvent(e.id);
+      await OutlookCalendarService.deleteEvent(e.id);
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Deleted from Google Calendar')));
-      await _fetchGoogleEvents();
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Deleted from Outlook Calendar')));
+      await _fetchOutlookEvents();
     } catch (err) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(err.toString())));
     }
   }
 
-  Future<void> _openCreateGoogleEventSheet() async {
-    if (!_googleConnected) return;
+  Future<void> _openCreateOutlookEventSheet() async {
+    if (!_outlookConnected) return;
     await showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (context) => _GoogleCreateEventSheet(
+      builder: (context) => _OutlookCreateEventSheet(
         initialDate: _selectedDate ?? DateTime.now(),
         onCreated: () async {
           Navigator.pop(context);
-          await _fetchGoogleEvents();
+          await _fetchOutlookEvents();
         },
       ),
     );
@@ -949,8 +923,8 @@ class _PersonalCalendarPageState extends State<PersonalCalendarPage> {
     return out.where((e) => seen.add(e.id)).toList();
   }
 
-  Future<void> _syncCompanyHolidaysToGoogle() async {
-    if (!_googleConnected) return;
+  Future<void> _syncCompanyHolidaysToOutlook() async {
+    if (!_outlookConnected) return;
     final username = await StorageService.getUsername() ?? 'anon';
     final holidays = _companyHolidayList();
     if (holidays.isEmpty) {
@@ -961,19 +935,18 @@ class _PersonalCalendarPageState extends State<PersonalCalendarPage> {
       return;
     }
 
-    setState(() => _googleLoading = true);
+    setState(() => _outlookLoading = true);
     try {
-      final map = await GoogleCalendarService.readHolidayMap(username);
+      final map = await OutlookCalendarService.readHolidayMap(username);
       final nextMap = Map<String, String>.from(map);
 
       for (final h in holidays) {
         final start = DateTime(h.date.year, h.date.month, h.date.day);
         final end = start.add(const Duration(days: 1));
-        final privateProps = {'hrmsCompanyHolidayId': h.id};
         final existingId = map[h.id];
 
         if (existingId == null || existingId.isEmpty) {
-          final created = await GoogleCalendarService.createEvent(
+          final created = await OutlookCalendarService.createEvent(
             title: '[Company] ${h.title}',
             description: (h.description ?? '').trim().isEmpty
                 ? 'Synced from HRMS company calendar.'
@@ -981,13 +954,12 @@ class _PersonalCalendarPageState extends State<PersonalCalendarPage> {
             start: start,
             end: end,
             allDay: true,
-            privateProps: privateProps,
           );
           nextMap[h.id] = created.id;
         } else {
           // Best-effort: ensure title/description match (ignore failures silently).
           try {
-            await GoogleCalendarService.patchEvent(
+            await OutlookCalendarService.patchEvent(
               existingId,
               title: '[Company] ${h.title}',
               description: (h.description ?? '').trim().isEmpty
@@ -996,7 +968,7 @@ class _PersonalCalendarPageState extends State<PersonalCalendarPage> {
             );
           } catch (_) {
             // If patch fails (deleted/permission), recreate.
-            final created = await GoogleCalendarService.createEvent(
+            final created = await OutlookCalendarService.createEvent(
               title: '[Company] ${h.title}',
               description: (h.description ?? '').trim().isEmpty
                   ? 'Synced from HRMS company calendar.'
@@ -1004,24 +976,23 @@ class _PersonalCalendarPageState extends State<PersonalCalendarPage> {
               start: start,
               end: end,
               allDay: true,
-              privateProps: privateProps,
             );
             nextMap[h.id] = created.id;
           }
         }
       }
 
-      await GoogleCalendarService.writeHolidayMap(username, nextMap);
+      await OutlookCalendarService.writeHolidayMap(username, nextMap);
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Synced ${holidays.length} company holidays to Google')),
+        SnackBar(content: Text('Synced ${holidays.length} company holidays to Outlook')),
       );
-      await _fetchGoogleEvents();
+      await _fetchOutlookEvents();
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString())));
     } finally {
-      if (mounted) setState(() => _googleLoading = false);
+      if (mounted) setState(() => _outlookLoading = false);
     }
   }
 
@@ -1281,7 +1252,7 @@ class _PersonalCalendarPageState extends State<PersonalCalendarPage> {
     await launchUrl(uri, mode: LaunchMode.externalApplication);
   }
 
-  Future<void> _openGoogleEventDetails(GoogleCalendarEvent e) async {
+  Future<void> _openOutlookEventDetails(OutlookCalendarEvent e) async {
     await showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -1354,9 +1325,9 @@ class _PersonalCalendarPageState extends State<PersonalCalendarPage> {
                     children: [
                       Expanded(
                         child: OutlinedButton.icon(
-                          onPressed: e.htmlLink == null
+                          onPressed: e.webLink == null
                               ? null
-                              : () => _openUrl(e.htmlLink!),
+                              : () => _openUrl(e.webLink!),
                           icon: const Icon(Icons.open_in_new_rounded, size: 18),
                           label: const Text('Open'),
                         ),
@@ -1364,11 +1335,11 @@ class _PersonalCalendarPageState extends State<PersonalCalendarPage> {
                       const SizedBox(width: 10),
                       Expanded(
                         child: OutlinedButton.icon(
-                          onPressed: e.hangoutLink == null
+                          onPressed: e.meetingLink == null
                               ? null
-                              : () => _openUrl(e.hangoutLink!),
+                              : () => _openUrl(e.meetingLink!),
                           icon: const Icon(Icons.video_call_rounded, size: 18),
-                          label: const Text('Meet'),
+                          label: const Text('Teams'),
                         ),
                       ),
                     ],
@@ -1383,10 +1354,10 @@ class _PersonalCalendarPageState extends State<PersonalCalendarPage> {
                       ),
                       onPressed: () async {
                         Navigator.pop(context);
-                        await _confirmDeleteGoogleEvent(e);
+                        await _confirmDeleteOutlookEvent(e);
                       },
                       icon: const Icon(Icons.delete_outline_rounded),
-                      label: const Text('Delete from Google Calendar'),
+                      label: const Text('Delete from Outlook Calendar'),
                     ),
                   ),
                 ],

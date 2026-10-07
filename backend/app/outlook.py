@@ -48,8 +48,11 @@ def save_ms_refresh_token(user_id, refresh_token, *, public_client=False, scope=
     cache.delete(f"ms_graph_at:{user_id}")
 
 
-def _graph_token(user):
-    key = f"ms_graph_at:{user.id}"
+CAL_SCOPES = "offline_access User.Read Calendars.ReadWrite"
+
+
+def _graph_token(user, calendar=False):
+    key = f"ms_graph_cal:{user.id}" if calendar else f"ms_graph_at:{user.id}"
     if at := cache.get(key):
         return at
     try:
@@ -72,7 +75,7 @@ def _graph_token(user):
         "grant_type": "refresh_token",
         "refresh_token": rt,
         # Ask for "send" only when the user granted it at sign-in; requesting an ungranted scope fails the refresh
-        "scope": f"{MAIL_SCOPES} Mail.Send" if "mail.send" in (rec.scopes or "").lower() else MAIL_SCOPES,
+        "scope": CAL_SCOPES if calendar else (f"{MAIL_SCOPES} Mail.Send" if "mail.send" in (rec.scopes or "").lower() else MAIL_SCOPES),
     }
     if not rec.is_public_client:
         data["client_secret"] = settings.MICROSOFT_CLIENT_SECRET
@@ -80,12 +83,13 @@ def _graph_token(user):
     body = resp.json() if resp.content else {}
     if resp.status_code != 200 or "access_token" not in body:
         if body.get("error") in ("invalid_grant", "interaction_required", "consent_required"):
-            rec.delete()
+            if not calendar:
+                rec.delete()
             raise OutlookReauthRequired(body.get("error"))
         raise requests.RequestException(body.get("error_description") or "Token refresh failed")
 
     if body.get("refresh_token"):
-        save_ms_refresh_token(user.id, body["refresh_token"], public_client=rec.is_public_client, scope=body.get("scope", ""))
+        save_ms_refresh_token(user.id, body["refresh_token"], public_client=rec.is_public_client, scope=rec.scopes if calendar else body.get("scope", ""))
     cache.set(key, body["access_token"], max(int(body.get("expires_in", 3600)) - 120, 60))
     return body["access_token"]
 
@@ -214,13 +218,13 @@ class OutlookSendPermissionRequired(Exception):
     pass
 
 
-def _graph(user, method, path, *, params=None, json=None, headers=None):
+def _graph(user, method, path, *, params=None, json=None, headers=None, calendar=False):
     """Raw Graph call for the signed-in user. `path` may be a full Graph URL (paging links)."""
     url = path if path.startswith("https://") else f"{GRAPH}{path}"
     resp = requests.request(method, url, params=params, json=json, timeout=20,
-                            headers={"Authorization": f"Bearer {_graph_token(user)}", **(headers or {})})
+                            headers={"Authorization": f"Bearer {_graph_token(user, calendar)}", **(headers or {})})
     if resp.status_code == 401:
-        cache.delete(f"ms_graph_at:{user.id}")
+        cache.delete(f"ms_graph_cal:{user.id}" if calendar else f"ms_graph_at:{user.id}")
         raise OutlookReauthRequired("unauthorized")
     return resp
 
@@ -559,3 +563,92 @@ class OutlookRecipientsAPIView(APIView):
                     or f"{u['employee__first_name'] or ''} {u['employee__last_name'] or ''}".strip())
 
         return Response({"results": [{"name": display(u), "email": u["email"]} for u in users]})
+
+
+UTC_PREFER = {"Prefer": 'outlook.timezone="UTC"'}
+
+
+def _fmt_event(e):
+    all_day = bool(e.get("isAllDay"))
+    start, end = (e.get("start") or {}).get("dateTime", ""), (e.get("end") or {}).get("dateTime", "")
+    return {
+        "id": e.get("id"),
+        "title": e.get("subject") or "(No title)",
+        "description": e.get("bodyPreview") or "",
+        "start": start[:10] if all_day else (start[:19] + "Z" if start else None),
+        "end": end[:10] if all_day else (end[:19] + "Z" if end else None),
+        "all_day": all_day,
+        "web_link": e.get("webLink"),
+        "online_meeting_url": (e.get("onlineMeeting") or {}).get("joinUrl"),
+        "location": (e.get("location") or {}).get("displayName") or "",
+    }
+
+
+def _event_body(d, partial=False):
+    body = {}
+    if "title" in d or not partial:
+        body["subject"] = (d.get("title") or "").strip() or "(No title)"
+    if "description" in d or not partial:
+        body["body"] = {"contentType": "text", "content": d.get("description") or ""}
+    if "start" in d:
+        all_day = bool(d.get("all_day"))
+        cut = 10 if all_day else 19
+        fmt = (lambda v: f"{str(v)[:10]}T00:00:00") if all_day else (lambda v: str(v).rstrip("Z")[:cut])
+        body["isAllDay"] = all_day
+        body["start"] = {"dateTime": fmt(d["start"]), "timeZone": "UTC"}
+        body["end"] = {"dateTime": fmt(d["end"]), "timeZone": "UTC"}
+    if d.get("guests"):
+        body["attendees"] = [{**a, "type": "required"} for a in _parse_recipients(d["guests"], "Guests")]
+    if d.get("online_meeting"):
+        body["isOnlineMeeting"] = True
+        body["onlineMeetingProvider"] = "teamsForBusiness"
+    return body
+
+
+class OutlookCalendarAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    @_mail_errors
+    def get(self, request):
+        start, end = request.query_params.get("start"), request.query_params.get("end")
+        if not (start and end):
+            raise ValueError("start and end are required.")
+        try:
+            data = _graph_json(request.user, "GET", "/me/calendarView", calendar=True, headers=UTC_PREFER,
+                               params={"startDateTime": start, "endDateTime": end, "$top": 500,
+                                       "$orderby": "start/dateTime",
+                                       "$select": "id,subject,bodyPreview,start,end,isAllDay,webLink,onlineMeeting,location"})
+        except OutlookReauthRequired as e:
+            return Response({"connected": False, "reason": str(e), "events": []})
+        return Response({"connected": True, "events": [_fmt_event(e) for e in data.get("value", [])]})
+
+    @_mail_errors
+    def post(self, request):
+        d = request.data
+        if not (d.get("start") and d.get("end")):
+            raise ValueError("start and end are required.")
+        ev = _graph_json(request.user, "POST", "/me/events", json=_event_body(d), calendar=True, headers=UTC_PREFER)
+        return Response(_fmt_event(ev), status=status.HTTP_201_CREATED)
+
+
+class OutlookCalendarEventAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    @_mail_errors
+    def patch(self, request, event_id):
+        if not _valid_id(event_id):
+            raise ValueError("Invalid event id.")
+        ev = _graph_json(request.user, "PATCH", f"/me/events/{quote(event_id, safe='')}",
+                         json=_event_body(request.data, partial=True), calendar=True, headers=UTC_PREFER)
+        return Response(_fmt_event(ev))
+
+    @_mail_errors
+    def delete(self, request, event_id):
+        if not _valid_id(event_id):
+            raise ValueError("Invalid event id.")
+        resp = _graph(request.user, "DELETE", f"/me/events/{quote(event_id, safe='')}", calendar=True)
+        if resp.status_code == 403:
+            raise OutlookReauthRequired("consent_required")
+        if resp.status_code != 404:
+            resp.raise_for_status()
+        return Response(status=status.HTTP_204_NO_CONTENT)

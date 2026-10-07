@@ -2,7 +2,7 @@ from django.urls import path, include
 # Timestamp: 2026-04-24 16:20
 from rest_framework.routers import DefaultRouter
 from .views import *
-from .outlook import OutlookFoldersAPIView, OutlookMessagesAPIView, OutlookMessageDetailAPIView, OutlookAttachmentAPIView, OutlookSendAPIView, OutlookRecipientsAPIView
+from .outlook import OutlookFoldersAPIView, OutlookMessagesAPIView, OutlookMessageDetailAPIView, OutlookAttachmentAPIView, OutlookSendAPIView, OutlookRecipientsAPIView, OutlookCalendarAPIView, OutlookCalendarEventAPIView
 
 router = DefaultRouter()
 router.register(r'master-register', MasterRegisterViewSet, basename='master-register')
@@ -75,6 +75,8 @@ urlpatterns = [
     path('outlook/messages/<str:message_id>/', OutlookMessageDetailAPIView.as_view(), name='outlook-message'),
     path('outlook/messages/<str:message_id>/attachments/<str:attachment_id>/', OutlookAttachmentAPIView.as_view(), name='outlook-attachment'),
     path('outlook/send/', OutlookSendAPIView.as_view(), name='outlook-send'),
+    path('outlook/calendar/', OutlookCalendarAPIView.as_view(), name='outlook-calendar'),
+    path('outlook/calendar/<str:event_id>/', OutlookCalendarEventAPIView.as_view(), name='outlook-calendar-event'),
     path('outlook/recipients/', OutlookRecipientsAPIView.as_view(), name='outlook-recipients'),
     path('teams-sso/', TeamsSSOAPIView.as_view(), name='teams-sso'),
     path('microsoft-calendar-token/', MicrosoftCalendarTokenAPIView.as_view(), name='microsoft-calendar-token'),

@@ -21,7 +21,6 @@ import IconBarChart from '../../components/Icon/IconBarChart';
 import IconSun from '../../components/Icon/IconSun';
 import IconMoon from '../../components/Icon/IconMoon';
 import IconListCheck from '../../components/Icon/IconListCheck';
-import CompanyGoogleCalendar from '../../components/Calendar/CompanyGoogleCalendar';
 import confetti from 'canvas-confetti';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000';
