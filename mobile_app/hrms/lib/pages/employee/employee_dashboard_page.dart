@@ -1227,73 +1227,132 @@ class _ReadyForDayStrip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final statusColor = !isCheckedIn
+        ? AppStitchTheme.lightOnSurfaceMuted
+        : (hasActiveBreak ? const Color(0xFFF59E0B) : const Color(0xFF10B981));
     return GlassCard(
-      padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
-      child: Row(
+      padding: const EdgeInsets.fromLTRB(16, 14, 12, 14),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const Icon(Icons.access_time, size: 18, color: AppStitchTheme.primary),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Ready for the day?',
-                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Container(
+                width: 42,
+                height: 42,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: AppStitchTheme.primary.withValues(alpha: 0.12),
+                ),
+                alignment: Alignment.center,
+                child: const Icon(Icons.access_time_rounded, size: 22, color: AppStitchTheme.primary),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      'Ready for the day?',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: theme.textTheme.titleSmall?.copyWith(
                         fontWeight: FontWeight.w900,
                         color: AppStitchTheme.lightOnSurface,
                       ),
+                    ),
+                    const SizedBox(height: 3),
+                    Row(
+                      children: [
+                        Container(
+                          width: 8,
+                          height: 8,
+                          decoration: BoxDecoration(shape: BoxShape.circle, color: statusColor),
+                        ),
+                        const SizedBox(width: 6),
+                        Flexible(
+                          child: Text(
+                            isCheckedIn
+                                ? (hasActiveBreak ? 'On break' : 'Working')
+                                : 'Tap check-in to start',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: AppStitchTheme.lightOnSurfaceMuted,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
                 ),
-                const SizedBox(height: 2),
-                Text(
-                  isCheckedIn
-                      ? (hasActiveBreak ? 'On break' : 'Working')
-                      : 'Tap check-in to start',
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: AppStitchTheme.lightOnSurfaceMuted,
-                        fontWeight: FontWeight.w700,
+              ),
+              IconButton(
+                onPressed: onRefresh,
+                tooltip: 'Refresh',
+                visualDensity: VisualDensity.compact,
+                icon: const Icon(Icons.refresh_rounded),
+                color: AppStitchTheme.lightOnSurfaceMuted,
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Padding(
+            padding: const EdgeInsets.only(right: 4),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.6),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: AppStitchTheme.lightOutline.withValues(alpha: 0.7)),
+                  ),
+                  child: TimerWidget(
+                    seconds: seconds,
+                    textStyle: theme.textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w900,
+                      fontFamily: 'monospace',
+                      color: AppStitchTheme.lightOnSurface,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: SizedBox(
+                    height: 46,
+                    child: ElevatedButton(
+                      onPressed: isLoading ? null : onCheckInOut,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: isCheckedIn ? const Color(0xFFEF4444) : const Color(0xFF10B981),
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                        elevation: 0,
                       ),
+                      child: isLoading
+                          ? const SizedBox(
+                              width: 18,
+                              height: 18,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                              ),
+                            )
+                          : Text(
+                              isCheckedIn ? 'Check out' : 'Check in',
+                              style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15),
+                            ),
+                    ),
+                  ),
                 ),
               ],
             ),
-          ),
-          TimerWidget(
-            seconds: seconds,
-            textStyle: Theme.of(context).textTheme.titleSmall?.copyWith(
-                  fontWeight: FontWeight.w900,
-                  fontFamily: 'monospace',
-                  color: AppStitchTheme.lightOnSurface,
-                ),
-          ),
-          const SizedBox(width: 10),
-          IconButton(
-            onPressed: onRefresh,
-            icon: const Icon(Icons.refresh_rounded),
-            color: AppStitchTheme.lightOnSurfaceMuted,
-          ),
-          const SizedBox(width: 4),
-          ElevatedButton(
-            onPressed: isLoading ? null : onCheckInOut,
-            style: ElevatedButton.styleFrom(
-              backgroundColor:
-                  isCheckedIn ? const Color(0xFFEF4444) : const Color(0xFF10B981),
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(18),
-              ),
-              elevation: 0,
-            ),
-            child: isLoading
-                ? const SizedBox(
-                    width: 18,
-                    height: 18,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                    ),
-                  )
-                : Text(isCheckedIn ? 'Check out' : 'Check in'),
           ),
         ],
       ),

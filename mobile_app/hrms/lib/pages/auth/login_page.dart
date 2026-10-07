@@ -214,10 +214,6 @@ class _LoginPageState extends State<LoginPage> {
     }
   }
 
-  void _showBiometricSoon() {
-    _promptBiometricEnrollment();
-  }
-
   void _showErrorDialog(String message) {
     showDialog(
       context: context,
@@ -310,7 +306,16 @@ class _LoginPageState extends State<LoginPage> {
                       ),
                       child: ConstrainedBox(
                         constraints: const BoxConstraints(maxWidth: 400),
-                        child: _glassLoginCard(theme),
+                        child: TweenAnimationBuilder<double>(
+                          tween: Tween(begin: 0, end: 1),
+                          duration: const Duration(milliseconds: 650),
+                          curve: Curves.easeOutCubic,
+                          builder: (context, t, child) => Opacity(
+                            opacity: t,
+                            child: Transform.translate(offset: Offset(0, 24 * (1 - t)), child: child),
+                          ),
+                          child: _glassLoginCard(theme),
+                        ),
                       ),
                     ),
                   ),
@@ -420,188 +425,141 @@ class _LoginPageState extends State<LoginPage> {
               ),
             ),
             Padding(
-              padding: const EdgeInsets.fromLTRB(28, 32, 28, 32),
+              padding: const EdgeInsets.fromLTRB(26, 30, 26, 24),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   Center(child: _buildLogoMark()),
-                  const SizedBox(height: 20),
+                  const SizedBox(height: 22),
                   Text(
-                    'Innovyx HRMS',
+                    'Welcome back',
                     textAlign: TextAlign.center,
                     style: theme.textTheme.headlineSmall?.copyWith(
                       fontWeight: FontWeight.w800,
                       color: _LoginDesign.textPrimary,
-                      letterSpacing: -0.3,
+                      letterSpacing: -0.4,
                     ),
                   ),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: 6),
                   Text(
-                    'Human Resource Management System',
+                    'Sign in to Innovyx HRMS with your work account',
                     textAlign: TextAlign.center,
                     style: theme.textTheme.bodyMedium?.copyWith(
                       color: _LoginDesign.textSecondary,
-                      height: 1.35,
+                      height: 1.4,
                     ),
                   ),
-                  const SizedBox(height: 28),
+                  const SizedBox(height: 26),
                   Semantics(
                     button: true,
                     label: 'Sign in with Microsoft',
-                    child: SizedBox(
-                      height: 52,
-                      child: OutlinedButton(
-                        onPressed: _isLoading ? null : _handleSsoSignIn,
-                        style: OutlinedButton.styleFrom(
-                          backgroundColor: Colors.white.withValues(alpha: 0.92),
-                          foregroundColor: const Color(0xFF2D2D2D),
-                          side: BorderSide(
-                            color: Colors.black.withValues(alpha: 0.09),
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(16),
+                        boxShadow: [
+                          BoxShadow(
+                            color: AppStitchTheme.primary.withValues(alpha: 0.28),
+                            blurRadius: 18,
+                            offset: const Offset(0, 8),
                           ),
-                          elevation: 1,
-                          shadowColor: Colors.black.withValues(alpha: 0.12),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(26),
+                        ],
+                      ),
+                      child: SizedBox(
+                        height: 54,
+                        child: ElevatedButton(
+                          onPressed: _isLoading ? null : _handleSsoSignIn,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppStitchTheme.primary,
+                            foregroundColor: Colors.white,
+                            disabledBackgroundColor: AppStitchTheme.primary.withValues(alpha: 0.6),
+                            elevation: 0,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                            padding: const EdgeInsets.symmetric(horizontal: 16),
                           ),
-                          padding: const EdgeInsets.symmetric(horizontal: 20),
-                        ),
-                        child: _isLoading
-                            ? SizedBox(
-                                height: 22,
-                                width: 22,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  valueColor: AlwaysStoppedAnimation<Color>(
-                                    AppStitchTheme.primary,
-                                  ),
-                                ),
-                              )
-                            : Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  const _MicrosoftLogo(size: 18),
-                                  const SizedBox(width: 10),
-                                  Text(
-                                    'Sign in with Microsoft',
-                                    style: theme.textTheme.titleSmall?.copyWith(
-                                      fontWeight: FontWeight.w700,
-                                      color: const Color(0xFF2D2D2D),
+                          child: _isLoading
+                              ? const SizedBox(
+                                  height: 22,
+                                  width: 22,
+                                  child: CircularProgressIndicator(strokeWidth: 2.2, color: Colors.white),
+                                )
+                              : Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Container(
+                                      padding: const EdgeInsets.all(6),
+                                      decoration: BoxDecoration(
+                                        color: Colors.white,
+                                        borderRadius: BorderRadius.circular(8),
+                                      ),
+                                      child: const _MicrosoftLogo(size: 16),
                                     ),
-                                  ),
-                                ],
-                              ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 18),
-                  Center(
-                    child: Wrap(
-                      crossAxisAlignment: WrapCrossAlignment.center,
-                      alignment: WrapAlignment.center,
-                      children: [
-                        Text('New employee?', style: theme.textTheme.bodyMedium?.copyWith(color: _LoginDesign.textSecondary)),
-                        TextButton(
-                          onPressed: _isLoading ? null : () => Navigator.pushNamed(context, '/register'),
-                          child: const Text('Register', style: TextStyle(fontWeight: FontWeight.w800)),
-                        ),
-                        Text('·', style: theme.textTheme.bodyMedium?.copyWith(color: _LoginDesign.textSecondary)),
-                        TextButton(
-                          onPressed: _isLoading ? null : () => showRegistrationStatus(context),
-                          child: const Text('Check status', style: TextStyle(fontWeight: FontWeight.w700)),
-                        ),
-                      ],
-                    ),
-                  ),
-                  // Demo Mode Link (only shown when demo mode is enabled)
-                  if (!_isCheckingDemoStatus && _demoModeEnabled) ...[
-                    const SizedBox(height: 20),
-                    Center(
-                      child: TextButton(
-                        onPressed: _isLoading ? null : () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(builder: (context) => const DemoLoginPage()),
-                          );
-                        },
-                        style: TextButton.styleFrom(
-                          foregroundColor: Colors.amber.shade700,
-                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(
-                              Icons.science_outlined,
-                              size: 16,
-                              color: Colors.amber.shade700,
-                            ),
-                            const SizedBox(width: 6),
-                            Text(
-                              'Try Demo Mode',
-                              style: theme.textTheme.bodyMedium?.copyWith(
-                                fontWeight: FontWeight.w600,
-                                color: Colors.amber.shade700,
-                              ),
-                            ),
-                          ],
+                                    const SizedBox(width: 12),
+                                    Text(
+                                      'Continue with Microsoft',
+                                      style: theme.textTheme.titleSmall?.copyWith(
+                                        fontWeight: FontWeight.w700,
+                                        color: Colors.white,
+                                        letterSpacing: 0.1,
+                                      ),
+                                    ),
+                                  ],
+                                ),
                         ),
                       ),
                     ),
-                  ],
-                  const SizedBox(height: 24),
-                  Text(
-                    'Quick Access',
-                    textAlign: TextAlign.center,
-                    style: theme.textTheme.labelMedium?.copyWith(
-                      color: _LoginDesign.textMuted,
-                      letterSpacing: 0.2,
-                    ),
                   ),
-                  const SizedBox(height: 4),
-                  Text(
-                    'Enable biometric quick access after Microsoft sign-in',
-                    textAlign: TextAlign.center,
-                    style: theme.textTheme.labelSmall?.copyWith(
-                      color: _LoginDesign.textMuted.withValues(alpha: 0.88),
-                    ),
-                  ),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 22),
+                  _OrDivider(color: _LoginDesign.textMuted),
+                  const SizedBox(height: 14),
                   Row(
                     children: [
                       Expanded(
                         child: _QuickChip(
-                          icon: Icons.face_retouching_natural,
-                          label: 'Face ID',
-                          onTap: _showBiometricSoon,
+                          icon: Icons.person_add_alt_1_rounded,
+                          label: 'Register',
+                          onTap: _isLoading ? null : () => Navigator.pushNamed(context, '/register'),
                         ),
                       ),
                       const SizedBox(width: 12),
                       Expanded(
                         child: _QuickChip(
-                          icon: Icons.fingerprint,
-                          label: 'Fingerprint',
-                          onTap: _showBiometricSoon,
+                          icon: Icons.fact_check_outlined,
+                          label: 'Check status',
+                          onTap: _isLoading ? null : () => showRegistrationStatus(context),
                         ),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 28),
-                  Text(
-                    'Welcome Back',
-                    textAlign: TextAlign.center,
-                    style: theme.textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.w700,
-                      color: _LoginDesign.textPrimary,
+                  if (!_isCheckingDemoStatus && _demoModeEnabled) ...[
+                    const SizedBox(height: 12),
+                    Center(
+                      child: TextButton.icon(
+                        onPressed: _isLoading
+                            ? null
+                            : () => Navigator.push(
+                                  context,
+                                  MaterialPageRoute(builder: (context) => const DemoLoginPage()),
+                                ),
+                        style: TextButton.styleFrom(foregroundColor: Colors.amber.shade700),
+                        icon: const Icon(Icons.science_outlined, size: 16),
+                        label: const Text('Try Demo Mode', style: TextStyle(fontWeight: FontWeight.w600)),
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 6),
-                  Text(
-                    'Streamlining your workforce success.',
-                    textAlign: TextAlign.center,
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: _LoginDesign.textSecondary,
-                      height: 1.4,
-                    ),
+                  ],
+                  const SizedBox(height: 18),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.fingerprint, size: 16, color: _LoginDesign.textMuted),
+                      const SizedBox(width: 6),
+                      Flexible(
+                        child: Text(
+                          'Enable biometric quick access after your first sign-in',
+                          textAlign: TextAlign.center,
+                          style: theme.textTheme.labelSmall?.copyWith(color: _LoginDesign.textMuted),
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),
@@ -812,7 +770,7 @@ class _QuickChip extends StatelessWidget {
 
   final IconData icon;
   final String label;
-  final VoidCallback onTap;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
@@ -885,6 +843,27 @@ class _MicrosoftLogo extends StatelessWidget {
           Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [sq(const Color(0xFF00A4EF)), sq(const Color(0xFFFFB900))]),
         ],
       ),
+    );
+  }
+}
+
+
+class _OrDivider extends StatelessWidget {
+  const _OrDivider({required this.color});
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    final line = Expanded(child: Divider(color: color.withValues(alpha: 0.3), height: 1));
+    return Row(
+      children: [
+        line,
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12),
+          child: Text('New here?', style: Theme.of(context).textTheme.labelSmall?.copyWith(color: color)),
+        ),
+        line,
+      ],
     );
   }
 }

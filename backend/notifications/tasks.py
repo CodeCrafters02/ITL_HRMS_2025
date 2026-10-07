@@ -1,5 +1,5 @@
 from collections import defaultdict
-from datetime import timedelta
+from datetime import datetime, timedelta, timezone as dt_timezone
 
 from celery import shared_task
 from django.utils import timezone
@@ -95,11 +95,19 @@ def teams_outlook_poll():
 
             events = _graph_get(user, "/me/calendarView", {
                 "startDateTime": iso(now), "endDateTime": iso(now + timedelta(minutes=15)),
-                "$select": "id,subject,start,isCancelled", "$top": 10,
+                "$select": "id,subject,start,isCancelled,isAllDay", "$top": 25,
             }).get("value", [])
             for ev in events:
-                key = f"teams_evt:{user.id}:{ev.get('subject')}:{(ev.get('start') or {}).get('dateTime')}"
-                if ev.get("isCancelled") or not claim(key, 3600):
+                if ev.get("isCancelled") or ev.get("isAllDay"):
+                    continue
+                raw = ((ev.get("start") or {}).get("dateTime") or "")[:19]
+                try:
+                    starts = datetime.strptime(raw, "%Y-%m-%dT%H:%M:%S").replace(tzinfo=dt_timezone.utc)
+                except ValueError:
+                    continue
+                if not (now - timedelta(minutes=1) <= starts <= now + timedelta(minutes=15)):
+                    continue
+                if not claim(f"teams_evt:{user.id}:{ev.get('subject')}:{raw}", 86400):
                     continue
                 send_teams_notification([user.id], f"📅 Starting soon: {ev.get('subject') or 'Meeting'}", "Starts within 15 minutes")
         except OutlookReauthRequired:

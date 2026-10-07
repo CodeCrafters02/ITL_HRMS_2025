@@ -168,40 +168,42 @@ class _RegisterPageState extends State<RegisterPage> {
   Widget _stepper() => GlassCard(
         borderRadius: 22,
         enableBlur: false,
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
-        child: Row(children: [
-          for (var i = 0; i < _steps.length; i++) ...[
-            if (i > 0)
-              Expanded(
-                child: Container(
-                  height: 2,
-                  margin: const EdgeInsets.only(bottom: 18),
-                  color: i <= _step ? AppStitchTheme.primary : AppStitchTheme.lightOutline,
+        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 12),
+        child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          for (var i = 0; i < _steps.length; i++)
+            Expanded(
+              child: Column(mainAxisSize: MainAxisSize.min, children: [
+                SizedBox(
+                  height: 34,
+                  child: Row(children: [
+                    Expanded(child: Container(height: 2, color: i == 0 ? Colors.transparent : (i <= _step ? AppStitchTheme.primary : AppStitchTheme.lightOutline))),
+                    AnimatedContainer(
+                      duration: const Duration(milliseconds: 250),
+                      width: 34,
+                      height: 34,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: i < _step ? const Color(0xFF16A34A) : (i == _step ? AppStitchTheme.primary : Colors.white),
+                        border: Border.all(color: i <= _step ? Colors.transparent : AppStitchTheme.lightOutline),
+                      ),
+                      child: Icon(i < _step ? Icons.check_rounded : _steps[i].$1, size: 17, color: i <= _step ? Colors.white : AppStitchTheme.lightOnSurfaceMuted),
+                    ),
+                    Expanded(child: Container(height: 2, color: i == _steps.length - 1 ? Colors.transparent : (i < _step ? AppStitchTheme.primary : AppStitchTheme.lightOutline))),
+                  ]),
                 ),
-              ),
-            Column(mainAxisSize: MainAxisSize.min, children: [
-              AnimatedContainer(
-                duration: const Duration(milliseconds: 250),
-                width: 34,
-                height: 34,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: i < _step ? const Color(0xFF16A34A) : (i == _step ? AppStitchTheme.primary : Colors.white),
-                  border: Border.all(color: i <= _step ? Colors.transparent : AppStitchTheme.lightOutline),
+                const SizedBox(height: 6),
+                Text(
+                  _steps[i].$2,
+                  textAlign: TextAlign.center,
+                  maxLines: 1,
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: i == _step ? FontWeight.w800 : FontWeight.w600,
+                    color: i == _step ? AppStitchTheme.primary : AppStitchTheme.lightOnSurfaceMuted,
+                  ),
                 ),
-                child: Icon(i < _step ? Icons.check_rounded : _steps[i].$1, size: 17, color: i <= _step ? Colors.white : AppStitchTheme.lightOnSurfaceMuted),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                _steps[i].$2,
-                style: TextStyle(
-                  fontSize: 10.5,
-                  fontWeight: i == _step ? FontWeight.w800 : FontWeight.w600,
-                  color: i == _step ? AppStitchTheme.primary : AppStitchTheme.lightOnSurfaceMuted,
-                ),
-              ),
-            ]),
-          ],
+              ]),
+            ),
         ]),
       );
 
@@ -212,10 +214,12 @@ class _RegisterPageState extends State<RegisterPage> {
         child: Form(
           key: _forms[step],
           child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-            Text(title, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: AppStitchTheme.lightOnSurface)),
-            const SizedBox(height: 2),
-            Text(subtitle, style: const TextStyle(fontSize: 12.5, color: AppStitchTheme.lightOnSurfaceMuted)),
-            const SizedBox(height: 16),
+            Text(title, style: const TextStyle(fontSize: 19, fontWeight: FontWeight.w900, color: AppStitchTheme.lightOnSurface)),
+            const SizedBox(height: 4),
+            Text(subtitle, style: const TextStyle(fontSize: 13, height: 1.35, color: AppStitchTheme.lightOnSurfaceMuted)),
+            const SizedBox(height: 14),
+            Divider(height: 1, color: AppStitchTheme.lightOutline.withValues(alpha: 0.6)),
+            const SizedBox(height: 18),
             ...children,
           ]),
         ),
@@ -235,7 +239,7 @@ class _RegisterPageState extends State<RegisterPage> {
     TextCapitalization caps = TextCapitalization.none,
   }) =>
       Padding(
-        padding: const EdgeInsets.only(bottom: 12),
+        padding: const EdgeInsets.only(bottom: 16),
         child: TextFormField(
           controller: _c[key],
           keyboardType: keyboard,
@@ -243,7 +247,7 @@ class _RegisterPageState extends State<RegisterPage> {
           obscureText: obscure,
           textCapitalization: caps,
           textInputAction: maxLines > 1 ? TextInputAction.newline : TextInputAction.next,
-          decoration: _deco(required ? '$label *' : label, icon: icon, hint: hint, suffix: suffix),
+          decoration: _deco(required ? '$label *' : label, icon: icon, hint: hint, suffix: suffix, multiline: maxLines > 1),
           validator: (raw) {
             final t = (raw ?? '').trim();
             if (required && t.isEmpty) return '$label is required';
@@ -252,15 +256,29 @@ class _RegisterPageState extends State<RegisterPage> {
         ),
       );
 
-  InputDecoration _deco(String label, {IconData? icon, String? hint, Widget? suffix}) => InputDecoration(
+  InputDecoration _deco(String label, {IconData? icon, String? hint, Widget? suffix, bool multiline = false}) => InputDecoration(
         labelText: label,
         hintText: hint,
+        hintStyle: TextStyle(fontSize: 14, color: AppStitchTheme.lightOnSurfaceMuted.withValues(alpha: 0.7)),
+        floatingLabelBehavior: FloatingLabelBehavior.always,
         alignLabelWithHint: true,
-        prefixIcon: icon == null ? null : Icon(icon, size: 20, color: AppStitchTheme.lightOnSurfaceMuted),
+        errorMaxLines: 2,
+        prefixIcon: icon == null
+            ? null
+            : Padding(
+                padding: EdgeInsets.only(left: 14, right: 10, top: multiline ? 14 : 0),
+                child: Align(
+                  alignment: multiline ? Alignment.topCenter : Alignment.center,
+                  widthFactor: 1,
+                  heightFactor: multiline ? 1 : null,
+                  child: Icon(icon, size: 20, color: AppStitchTheme.lightOnSurfaceMuted),
+                ),
+              ),
+        prefixIconConstraints: const BoxConstraints(minWidth: 0, minHeight: 0),
         suffixIcon: suffix,
         filled: true,
         fillColor: Colors.white.withValues(alpha: 0.85),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 16),
         border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide(color: AppStitchTheme.lightOutline)),
         enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide(color: AppStitchTheme.lightOutline)),
         focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: AppStitchTheme.primary, width: 1.6)),
@@ -271,7 +289,10 @@ class _RegisterPageState extends State<RegisterPage> {
         _field('first_name', 'First name', icon: Icons.badge_outlined, required: true, caps: TextCapitalization.words),
         _field('middle_name', 'Middle name', icon: Icons.badge_outlined, caps: TextCapitalization.words),
         _field('last_name', 'Last name', icon: Icons.badge_outlined, required: true, caps: TextCapitalization.words),
-        const Text('Gender *', style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700, color: AppStitchTheme.lightOnSurfaceMuted)),
+        const Padding(
+          padding: EdgeInsets.only(left: 4),
+          child: Text('Gender *', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: AppStitchTheme.lightOnSurface)),
+        ),
         const SizedBox(height: 8),
         Row(children: [
           for (final g in const [('male', 'Male', Icons.male_rounded), ('female', 'Female', Icons.female_rounded), ('other', 'Other', Icons.transgender_rounded)])
@@ -299,7 +320,7 @@ class _RegisterPageState extends State<RegisterPage> {
               ),
             ),
         ]),
-        const SizedBox(height: 12),
+        const SizedBox(height: 16),
         FormField<DateTime>(
           validator: (_) => _dob == null ? 'Date of birth is required' : null,
           builder: (state) => InkWell(
@@ -318,7 +339,7 @@ class _RegisterPageState extends State<RegisterPage> {
               }
             },
             child: InputDecorator(
-              decoration: _deco('Date of birth *', icon: Icons.cake_outlined).copyWith(errorText: state.errorText),
+              decoration: _deco('Date of birth *', icon: Icons.cake_outlined).copyWith(errorText: state.errorText, suffixIcon: const Icon(Icons.calendar_today_rounded, size: 18)),
               child: Text(
                 _dob == null ? 'Select date' : DateFormat('dd MMM yyyy').format(_dob!),
                 style: TextStyle(color: _dob == null ? AppStitchTheme.lightOnSurfaceMuted : AppStitchTheme.lightOnSurface, fontWeight: FontWeight.w600),
@@ -344,6 +365,10 @@ class _RegisterPageState extends State<RegisterPage> {
           title: const Text('Permanent address is the same', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
         ),
         if (!_sameAddress) _field('permanent_address', 'Permanent address', icon: Icons.location_city_outlined, required: true, maxLines: 2, caps: TextCapitalization.sentences),
+        const Padding(
+          padding: EdgeInsets.only(top: 6, bottom: 12, left: 4),
+          child: Text('Identity documents (optional)', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w800, color: AppStitchTheme.lightOnSurface)),
+        ),
         _field('aadhar_no', 'Aadhaar number', icon: Icons.fingerprint_rounded, keyboard: TextInputType.number,
             validator: (t) => t.replaceAll(' ', '').length == 12 ? null : 'Aadhaar must be 12 digits'),
         _field('pan_no', 'PAN', icon: Icons.credit_card_rounded, caps: TextCapitalization.characters,
@@ -355,6 +380,10 @@ class _RegisterPageState extends State<RegisterPage> {
         _field('desired_designation', 'Designation / role', icon: Icons.work_outline_rounded, required: true, caps: TextCapitalization.words, hint: 'e.g. Flutter Developer'),
         _field('total_experience_years', 'Total experience (years)', icon: Icons.timeline_rounded, keyboard: const TextInputType.numberWithOptions(decimal: true),
             validator: (t) => (double.tryParse(t) ?? -1) >= 0 ? null : 'Enter years, e.g. 2.5'),
+        const Padding(
+          padding: EdgeInsets.only(top: 6, bottom: 12, left: 4),
+          child: Text('Previous experience (optional)', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w800, color: AppStitchTheme.lightOnSurface)),
+        ),
         _field('previous_employer', 'Previous employer', icon: Icons.business_rounded, caps: TextCapitalization.words),
         _field('previous_designation', 'Previous designation', icon: Icons.badge_rounded, caps: TextCapitalization.words),
         _field('message', 'Note for the admin', icon: Icons.chat_bubble_outline_rounded, maxLines: 3, caps: TextCapitalization.sentences, hint: 'Who referred you, joining date, etc.'),
