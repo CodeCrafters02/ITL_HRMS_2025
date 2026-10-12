@@ -1,0 +1,976 @@
+<!DOCTYPE html>
+
+<html class="scroll-smooth" lang="en"><head><meta charset="utf-8"/><meta content="width=device-width, initial-scale=1.0" name="viewport"/><meta content="web_standard" name="shell-type"/><title>PeopleSuite | Modern Cloud HRMS</title><link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"/><link href="https://fonts.googleapis.com" rel="preconnect"/><link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/><style>@layer base{html,body{margin:0;padding:0;}body{overscroll-behavior:none;}main>:first-child{margin-top:0!important;}main>:last-child{margin-bottom:0!important;}}::-webkit-scrollbar{display:none;}</style><script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script><script id="tailwind-config">tailwind.config = { darkMode: "class", theme: { extend: { "colors": { "surface-container": "#EAF0FF", "secondary-container": "#DCE8FF", "inverse-surface": "#0B0F2E", "surface-bright": "#FFFFFF", "on-error-container": "#93000a", "secondary-fixed-dim": "#7DC8FF", "on-tertiary-container": "#0B5BD3", "on-surface-variant": "#5B6488", "surface-tint": "#0B5BD3", "tertiary-fixed-dim": "#7DC8FF", "primary-fixed-dim": "#7DC8FF", "outline": "#5B6488", "on-tertiary-fixed": "#0B0F2E", "on-secondary-container": "#0B5BD3", "surface-variant": "#DCE4F5", "surface-container-low": "#F5F8FF", "outline-variant": "#DCE4F5", "surface-container-highest": "#EAF0FF", "primary-container": "#0B5BD3", "on-background": "#0B0F2E", "primary-fixed": "#EAF0FF", "tertiary": "#4A6CFF", "error-container": "#ffdad6", "on-tertiary": "#ffffff", "on-secondary-fixed": "#0B0F2E", "on-surface": "#0B0F2E", "on-secondary": "#ffffff", "on-primary-fixed": "#0B0F2E", "background": "#FFFFFF", "primary": "#1E1AB8", "inverse-primary": "#7DC8FF", "on-primary-fixed-variant": "#0B5BD3", "surface-dim": "#DCE4F5", "on-primary": "#ffffff", "surface-container-lowest": "#ffffff", "surface": "#F5F8FF", "secondary-fixed": "#EAF0FF", "on-error": "#ffffff", "tertiary-container": "#4A6CFF", "on-secondary-fixed-variant": "#1E1AB8", "on-primary-container": "#EAF0FF", "tertiary-fixed": "#EAF0FF", "secondary": "#4A6CFF", "error": "#ba1a1a", "surface-container-high": "#E2ECFF", "on-tertiary-fixed-variant": "#1E1AB8", "inverse-on-surface": "#F5F8FF" }, "borderRadius": { "DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px" }, "spacing": { "space-xl": "2rem", "gutter": "1.5rem", "space-xs": "0.25rem", "space-2xl": "3rem", "margin": "2rem", "space-md": "1rem", "gutter-sm": "1rem", "space-lg": "1.5rem", "space-sm": "0.5rem", "gutter-lg": "2rem", "margin-mobile": "1rem" }, "fontFamily": { "headline-md-mobile": ["Inter"], "display": ["Inter"], "headline-lg-mobile": ["Inter"], "label-md": ["Inter"], "headline-lg": ["Inter"], "body-lg": ["Inter"], "headline-sm": ["Inter"], "label-lg": ["Inter"], "body-md": ["Inter"], "headline-md": ["Inter"], "title-md": ["Inter"], "body-sm": ["Inter"], "caption": ["Inter"], "display-mobile": ["Inter"] }, "fontSize": { "headline-md-mobile": ["26px", { "lineHeight": "34px", "letterSpacing": "-0.01em", "fontWeight": "600" }], "display": ["48px", { "lineHeight": "56px", "letterSpacing": "-0.02em", "fontWeight": "700" }], "headline-lg-mobile": ["32px", { "lineHeight": "40px", "letterSpacing": "-0.015em", "fontWeight": "700" }], "label-md": ["12px", { "lineHeight": "16px", "letterSpacing": "0.02em", "fontWeight": "600" }], "headline-lg": ["40px", { "lineHeight": "48px", "letterSpacing": "-0.015em", "fontWeight": "700" }], "body-lg": ["18px", { "lineHeight": "28px", "fontWeight": "400" }], "headline-sm": ["24px", { "lineHeight": "32px", "letterSpacing": "-0.05em", "fontWeight": "600" }], "label-lg": ["14px", { "lineHeight": "20px", "letterSpacing": "0.01em", "fontWeight": "600" }], "body-md": ["16px", { "lineHeight": "24px", "fontWeight": "400" }], "headline-md": ["32px", { "lineHeight": "40px", "letterSpacing": "-0.01em", "fontWeight": "600" }], "title-md": ["20px", { "lineHeight": "28px", "fontWeight": "600" }], "body-sm": ["14px", { "lineHeight": "20px", "fontWeight": "400" }], "caption": ["12px", { "lineHeight": "16px", "fontWeight": "400" }], "display-mobile": ["36px", { "lineHeight": "44px", "letterSpacing": "-0.02em", "fontWeight": "700" }] } } } };</script></head><body class="bg-background font-body-md text-[#0B0F2E] antialiased"><header class="fixed top-0 left-0 right-0 z-50 bg-[#0A0B14]/95 backdrop-blur-md shadow-[0_1px_12px_rgba(74,108,255,0.12)] border-b border-[#4A6CFF]/20"><div class="h-[72px] max-w-7xl mx-auto px-6 lg:px-12 flex items-center justify-between gap-6"><div class="flex items-center gap-8"><a class="flex items-center gap-3 group" data-path="home" href="#"><img alt="PeopleSuite Brand Logo" class="h-8 w-auto object-contain drop-shadow-[0_0_12px_rgba(125,200,255,0.45)]" src="https://lh3.googleusercontent.com/aida/AEtjO1UYvYuwBeXq9v09l5PsShh5dDjqtAScBtz5qPPKgNo56zJs1YwHw_wfVL1Z6rhcy8AeGNVldeluO_Uj5dXXJJYeCo9SnYLNDPFg3_PXyuyl4E2qdMeKklcyPbubO212UlGz6PNmORzZ_iesCcDbFE4eK1O09moUbqSW3b-TZgmUmXfdk3EXlLroLPcZUhZwf9rOZEJnRK-zJ3Ww2NwlNO3lxv2_x7I55n4UzHpsOFDNC0FAfDRAvx9kfjBe"/><span class="font-title-md text-title-md text-[#E8ECFF] tracking-tight group-hover:text-[#7DC8FF] transition-colors">PeopleSuite</span></a><nav class="hidden lg:flex items-center gap-7" data-active-classes="text-[#4A6CFF] font-label-lg font-semibold"><div class="relative group py-2"><button class="flex items-center gap-1 font-label-lg text-label-lg text-[#9AA3D1] hover:text-[#E8ECFF] transition-colors cursor-pointer" type="button"><span>Product</span><span class="material-symbols-outlined text-[18px] text-[#9AA3D1] group-hover:rotate-180 transition-transform duration-200">expand_more</span></button><div class="absolute top-full left-0 w-64 pt-2 opacity-0 translate-y-1 invisible group-hover:opacity-100 group-hover:translate-y-0 group-hover:visible transition-all duration-200"><div class="bg-[#0F1122] rounded-xl p-3 shadow-[0_10px_25px_-5px_rgba(11,91,211,0.35)] border border-[#4A6CFF]/25 space-y-1"><a class="block px-3 py-2 rounded-lg font-body-sm text-body-sm text-[#E8ECFF] hover:bg-[#1E1AB8]/30 hover:text-[#7DC8FF] transition-colors" data-path="product-core-hr" href="#">Core HR &amp; Directory</a><a class="block px-3 py-2 rounded-lg font-body-sm text-body-sm text-[#E8ECFF] hover:bg-[#1E1AB8]/30 hover:text-[#7DC8FF] transition-colors" data-path="product-attendance" href="#">Attendance &amp; Geofencing</a><a class="block px-3 py-2 rounded-lg font-body-sm text-body-sm text-[#E8ECFF] hover:bg-[#1E1AB8]/30 hover:text-[#7DC8FF] transition-colors" data-path="product-payroll" href="#">Payroll &amp; Tax Compliance</a><a class="block px-3 py-2 rounded-lg font-body-sm text-body-sm text-[#E8ECFF] hover:bg-[#1E1AB8]/30 hover:text-[#7DC8FF] transition-colors" data-path="product-performance" href="#">Performance &amp; OKRs</a><a class="block px-3 py-2 rounded-lg font-body-sm text-body-sm text-[#E8ECFF] hover:bg-[#1E1AB8]/30 hover:text-[#7DC8FF] transition-colors" data-path="product-recruitment" href="#">Recruitment ATS</a><a class="block px-3 py-2 rounded-lg font-body-sm text-body-sm text-[#E8ECFF] hover:bg-[#1E1AB8]/30 hover:text-[#7DC8FF] transition-colors" data-path="product-mobile" href="#">Mobile App</a></div></div></div><div class="relative group py-2"><button class="flex items-center gap-1 font-label-lg text-label-lg text-[#9AA3D1] hover:text-[#E8ECFF] transition-colors cursor-pointer" type="button"><span>Solutions</span><span class="material-symbols-outlined text-[18px] text-[#9AA3D1] group-hover:rotate-180 transition-transform duration-200">expand_more</span></button><div class="absolute top-full left-0 w-60 pt-2 opacity-0 translate-y-1 invisible group-hover:opacity-100 group-hover:translate-y-0 group-hover:visible transition-all duration-200"><div class="bg-[#0F1122] rounded-xl p-3 shadow-[0_10px_25px_-5px_rgba(11,91,211,0.35)] border border-[#4A6CFF]/25 space-y-1"><a class="block px-3 py-2 rounded-lg font-body-sm text-body-sm text-[#E8ECFF] hover:bg-[#1E1AB8]/30 hover:text-[#7DC8FF] transition-colors" data-path="solutions-enterprise" href="#">Mid-Market Enterprise</a><a class="block px-3 py-2 rounded-lg font-body-sm text-body-sm text-[#E8ECFF] hover:bg-[#1E1AB8]/30 hover:text-[#7DC8FF] transition-colors" data-path="solutions-smb" href="#">High-Growth Startups &amp; SMB</a><a class="block px-3 py-2 rounded-lg font-body-sm text-body-sm text-[#E8ECFF] hover:bg-[#1E1AB8]/30 hover:text-[#7DC8FF] transition-colors" data-path="solutions-healthcare" href="#">Healthcare &amp; Clinics</a><a class="block px-3 py-2 rounded-lg font-body-sm text-body-sm text-[#E8ECFF] hover:bg-[#1E1AB8]/30 hover:text-[#7DC8FF] transition-colors" data-path="solutions-tech" href="#">Tech &amp; Remote Teams</a><a class="block px-3 py-2 rounded-lg font-body-sm text-body-sm text-[#E8ECFF] hover:bg-[#1E1AB8]/30 hover:text-[#7DC8FF] transition-colors" data-path="solutions-manufacturing" href="#">Manufacturing &amp; Shifts</a></div></div></div><a class="flex items-center gap-2 font-label-lg text-label-lg text-[#9AA3D1] hover:text-[#E8ECFF] transition-colors" data-path="pricing" href="#"><span>Pricing</span><span class="bg-[#0B5BD3]/25 text-[#7DC8FF] border border-[#4A6CFF]/30 font-label-md text-label-md px-2 py-0.5 rounded-full">Save 20% Annual</span></a><div class="relative group py-2"><button class="flex items-center gap-1 font-label-lg text-label-lg text-[#9AA3D1] hover:text-[#E8ECFF] transition-colors cursor-pointer" type="button"><span>Resources</span><span class="material-symbols-outlined text-[18px] text-[#9AA3D1] group-hover:rotate-180 transition-transform duration-200">expand_more</span></button><div class="absolute top-full left-0 w-64 pt-2 opacity-0 translate-y-1 invisible group-hover:opacity-100 group-hover:translate-y-0 group-hover:visible transition-all duration-200"><div class="bg-[#0F1122] rounded-xl p-3 shadow-[0_10px_25px_-5px_rgba(11,91,211,0.35)] border border-[#4A6CFF]/25 space-y-1"><a class="block px-3 py-2 rounded-lg font-body-sm text-body-sm text-[#E8ECFF] hover:bg-[#1E1AB8]/30 hover:text-[#7DC8FF] transition-colors" data-path="resources-blog" href="#">HR Knowledge Hub &amp; Blog</a><a class="block px-3 py-2 rounded-lg font-body-sm text-body-sm text-[#E8ECFF] hover:bg-[#1E1AB8]/30 hover:text-[#7DC8FF] transition-colors" data-path="resources-stories" href="#">Customer Stories</a><a class="block px-3 py-2 rounded-lg font-body-sm text-body-sm text-[#E8ECFF] hover:bg-[#1E1AB8]/30 hover:text-[#7DC8FF] transition-colors" data-path="resources-roi-calculator" href="#">HR Tech ROI Calculator</a><a class="block px-3 py-2 rounded-lg font-body-sm text-body-sm text-[#E8ECFF] hover:bg-[#1E1AB8]/30 hover:text-[#7DC8FF] transition-colors" data-path="resources-compliance-guides" href="#">State Compliance 2025</a></div></div></div><a class="font-label-lg text-label-lg text-[#9AA3D1] hover:text-[#E8ECFF] transition-colors" data-path="about" href="#">About</a></nav></div><div class="flex items-center gap-4"><button aria-label="Toggle Light or Dark Mode" class="w-9 h-9 rounded-xl flex items-center justify-center text-[#9AA3D1] hover:bg-[#1E1AB8]/20 hover:text-[#7DC8FF] transition-colors" type="button"><span class="material-symbols-outlined text-[20px]">light_mode</span></button><a class="hidden sm:inline-flex font-label-lg text-label-lg text-[#E8ECFF] hover:text-[#7DC8FF] transition-colors px-3 py-2" data-path="login" href="#">Login</a><a class="inline-flex items-center justify-center bg-gradient-to-r from-[#1E1AB8] to-[#0B5BD3] hover:from-[#0B5BD3] hover:to-[#4A6CFF] text-[#ffffff] font-label-lg text-label-lg px-5 py-2.5 rounded-xl shadow-[0_4px_16px_rgba(11,91,211,0.4)] hover:shadow-[0_4px_22px_rgba(74,108,255,0.6)] transition-all active:scale-[0.98]" data-path="book-demo" href="#">Book a Demo</a><div class="flex items-center pl-2 border-l border-[#4A6CFF]/20"><img alt="Profile" class="w-8 h-8 rounded-full object-cover ring-2 ring-[#4A6CFF]/40" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCRQnOpDnMGqUYJKGLJdpMD4KlO3ZfDLmsdZ1Bjl_5X4mwbHYX4ojw5XtC0WYmTN44IXJBytDsW9Z8CCHuheiZQtAF-0QrRxfLFDOkXsUcn_POFbGACq0AddopWCm9d8CACBhuAXiJmfuBx70047oEGMW6k3xfzThhyfKeCcZS6qmLDaC-11ZCcLb7u1rH5ThO_5XptfPmvr1jmge3h-ppLPCZFWDlOf-HBcp7FEwIaO3p3ad-G_Lss7Q"/></div></div></div></header><main class="w-full pt-[72px] bg-background min-h-[calc(100vh-72px)]"><div class="flex flex-col w-full">
+<!-- 1. HERO SECTION (Dark Treatment with Glowing Accents) -->
+<section class="relative overflow-hidden bg-[#0A0B14] py-16 lg:py-24 text-[#E8ECFF]">
+<div class="absolute -top-32 -left-32 w-[520px] h-[520px] rounded-full pointer-events-none" style="background: radial-gradient(circle, rgba(74, 108, 255, 0.25) 0%, rgba(30, 26, 184, 0.12) 45%, transparent 70%);"></div>
+<div class="absolute -bottom-32 -right-32 w-[520px] h-[520px] rounded-full pointer-events-none" style="background: radial-gradient(circle, rgba(125, 200, 255, 0.22) 0%, rgba(11, 91, 211, 0.12) 45%, transparent 70%);"></div>
+<div class="max-w-7xl mx-auto px-6 lg:px-12 relative z-10">
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-8 items-center">
+<!-- Hero Copy -->
+<div class="lg:col-span-6 flex flex-col items-start space-y-6">
+<a class="inline-flex items-center gap-2.5 px-4 py-1.5 rounded-full bg-[#121528] border border-[#4A6CFF]/30 shadow-[0_0_15px_rgba(74,108,255,0.2)] hover:border-[#7DC8FF]/50 transition-all group" href="#">
+<span class="inline-block w-2 h-2 rounded-full bg-[#7DC8FF] shadow-[0_0_8px_#7DC8FF] animate-ping"></span>
+<span class="font-label-md text-label-md text-[#7DC8FF] font-semibold tracking-wide">
+              🚀 New in 2.4: AI Workforce Analytics &amp; Automated Tax Filing
+            </span>
+<span class="material-symbols-outlined text-[16px] text-[#7DC8FF] group-hover:translate-x-0.5 transition-transform">arrow_forward</span>
+</a>
+<h1 class="font-display text-display text-[#E8ECFF] tracking-tight leading-tight">
+            Everything People. <br/>
+<span class="text-transparent bg-clip-text" style="background-image: linear-gradient(135deg, #7DC8FF 0%, #4A6CFF 50%, #0B5BD3 100%);">One Suite.</span>
+</h1>
+<p class="font-body-lg text-body-lg text-[#9AA3D1] max-w-xl">
+            Streamline core HR, automate multi-state payroll, track shift attendance, and empower 100 to 10,000+ employees with an all-in-one intuitive HRMS platform built for modern organizations.
+          </p>
+<div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-4 w-full sm:w-auto pt-2">
+<a class="inline-flex items-center justify-center gap-2 px-6 py-3.5 rounded-xl text-white font-label-lg text-label-lg shadow-[0_4px_20px_rgba(11,91,211,0.5)] hover:shadow-[0_6px_25px_rgba(74,108,255,0.7)] hover:scale-[1.01] active:scale-[0.98] transition-all" href="#" style="background: linear-gradient(90deg, #1E1AB8, #0B5BD3);">
+<span>Book a 1-on-1 Demo</span>
+<span class="material-symbols-outlined text-[18px]">calendar_today</span>
+</a>
+<a class="inline-flex items-center justify-center gap-2 px-6 py-3.5 rounded-xl bg-[#121528] hover:bg-[#1A1E38] text-[#E8ECFF] border border-[#4A6CFF]/35 font-label-lg text-label-lg shadow-sm hover:shadow-[0_0_15px_rgba(74,108,255,0.25)] transition-all" href="#">
+<span class="material-symbols-outlined text-[20px] text-[#7DC8FF]">play_circle</span>
+<span>Start Free 14-Day Trial</span>
+</a>
+</div>
+<div class="flex flex-wrap items-center gap-x-5 gap-y-2 pt-2 text-[#9AA3D1] font-label-md text-label-md">
+<span class="inline-flex items-center gap-1.5"><span class="material-symbols-outlined text-[#7DC8FF] text-[16px]">check_circle</span> No credit card required</span>
+<span class="inline-flex items-center gap-1.5"><span class="material-symbols-outlined text-[#7DC8FF] text-[16px]">check_circle</span> 15-minute setup</span>
+<span class="inline-flex items-center gap-1.5"><span class="material-symbols-outlined text-[#7DC8FF] text-[16px]">check_circle</span> SOC2 &amp; GDPR Compliant</span>
+</div>
+</div>
+<!-- Hero Mockup & Floating Badges -->
+<div class="lg:col-span-6 relative flex justify-center">
+<div class="w-full max-w-xl bg-[#0F1226] border border-[#4A6CFF]/30 rounded-2xl shadow-[0_20px_50px_rgba(11,91,211,0.25)] p-6 relative">
+<!-- Window Bar -->
+<div class="flex items-center justify-between pb-4 mb-4 bg-[#141834] -mx-6 -mt-6 px-6 pt-4 rounded-t-2xl border-b border-[#4A6CFF]/20">
+<div class="flex items-center gap-2">
+<div class="w-3 h-3 rounded-full bg-[#4A6CFF]/40"></div>
+<div class="w-3 h-3 rounded-full bg-[#0B5BD3]"></div>
+<div class="w-3 h-3 rounded-full bg-[#7DC8FF]"></div>
+<span class="ml-2 font-caption text-caption text-[#9AA3D1]">PeopleSuite Console • Enterprise Portal</span>
+</div>
+<span class="px-2 py-0.5 rounded-full bg-[#0B5BD3]/25 border border-[#4A6CFF]/40 text-[#7DC8FF] font-label-md text-[11px] font-semibold">Live Real-time</span>
+</div>
+<!-- Metrics Top Grid -->
+<div class="grid grid-cols-3 gap-3 mb-5">
+<div class="bg-[#141834] border border-[#4A6CFF]/20 p-3.5 rounded-xl">
+<span class="font-caption text-caption text-[#9AA3D1] block">Active Staff</span>
+<span class="font-title-md text-title-md text-[#E8ECFF] font-bold">1,428</span>
+<span class="text-[#7DC8FF] font-label-md text-[11px] font-semibold flex items-center gap-0.5 mt-0.5">
+<span class="material-symbols-outlined text-[13px]">trending_up</span>+14 this wk
+                </span>
+</div>
+<div class="bg-[#141834] border border-[#4A6CFF]/20 p-3.5 rounded-xl">
+<span class="font-caption text-caption text-[#9AA3D1] block">May Payroll</span>
+<span class="font-title-md text-title-md text-[#E8ECFF] font-bold">$482,900</span>
+<span class="text-[#4A6CFF] font-label-md text-[11px] font-semibold flex items-center gap-0.5 mt-0.5">
+<span class="material-symbols-outlined text-[13px]">check_circle</span>Processed
+                </span>
+</div>
+<div class="bg-[#141834] border border-[#4A6CFF]/20 p-3.5 rounded-xl">
+<span class="font-caption text-caption text-[#9AA3D1] block">On-Time Punch</span>
+<span class="font-title-md text-title-md text-[#E8ECFF] font-bold">97.4%</span>
+<span class="text-[#7DC8FF] font-label-md text-[11px] font-semibold flex items-center gap-0.5 mt-0.5">
+<span class="material-symbols-outlined text-[13px]">location_on</span>Geofenced
+                </span>
+</div>
+</div>
+<!-- Interactive Mini Chart -->
+<div class="bg-[#141834] border border-[#4A6CFF]/20 rounded-xl p-4 mb-4">
+<div class="flex items-center justify-between mb-3">
+<span class="font-label-lg text-label-lg font-semibold text-[#E8ECFF]">Weekly Attendance Distribution</span>
+<span class="font-caption text-caption text-[#9AA3D1]">Mon - Fri Overview</span>
+</div>
+<!-- Chart Visual -->
+<div class="h-24 flex items-end justify-between gap-3 px-2 pt-2">
+<div class="flex-1 flex flex-col items-center gap-1.5">
+<div class="w-full bg-[#0B5BD3]/20 rounded-t-md h-14 relative group">
+<div class="absolute inset-x-0 bottom-0 bg-[#0B5BD3] rounded-t-md h-[88%]"></div>
+</div>
+<span class="font-caption text-[11px] text-[#9AA3D1]">Mon</span>
+</div>
+<div class="flex-1 flex flex-col items-center gap-1.5">
+<div class="w-full bg-[#0B5BD3]/20 rounded-t-md h-16 relative">
+<div class="absolute inset-x-0 bottom-0 bg-[#0B5BD3] rounded-t-md h-[95%]"></div>
+</div>
+<span class="font-caption text-[11px] text-[#9AA3D1]">Tue</span>
+</div>
+<div class="flex-1 flex flex-col items-center gap-1.5">
+<div class="w-full bg-[#4A6CFF]/20 rounded-t-md h-16 relative">
+<div class="absolute inset-x-0 bottom-0 bg-[#4A6CFF] rounded-t-md h-[98%] shadow-[0_0_10px_#4A6CFF]"></div>
+</div>
+<span class="font-caption text-[11px] text-[#7DC8FF] font-semibold">Wed</span>
+</div>
+<div class="flex-1 flex flex-col items-center gap-1.5">
+<div class="w-full bg-[#0B5BD3]/20 rounded-t-md h-16 relative">
+<div class="absolute inset-x-0 bottom-0 bg-[#0B5BD3] rounded-t-md h-[94%]"></div>
+</div>
+<span class="font-caption text-[11px] text-[#9AA3D1]">Thu</span>
+</div>
+<div class="flex-1 flex flex-col items-center gap-1.5">
+<div class="w-full bg-[#0B5BD3]/20 rounded-t-md h-14 relative">
+<div class="absolute inset-x-0 bottom-0 bg-[#0B5BD3] rounded-t-md h-[90%]"></div>
+</div>
+<span class="font-caption text-[11px] text-[#9AA3D1]">Fri</span>
+</div>
+</div>
+</div>
+<!-- Mini Recent Activity Row -->
+<div class="space-y-2">
+<div class="flex items-center justify-between p-2.5 rounded-lg bg-[#141834] border border-[#4A6CFF]/15">
+<div class="flex items-center gap-3">
+<div class="w-7 h-7 rounded-full bg-[#0B5BD3]/30 border border-[#4A6CFF]/30 flex items-center justify-center text-[#7DC8FF]">
+<span class="material-symbols-outlined text-[16px]">touch_app</span>
+</div>
+<div>
+<span class="font-body-sm text-body-sm font-semibold text-[#E8ECFF] block">Facial Punch Verified</span>
+<span class="font-caption text-[11px] text-[#9AA3D1]">Dev Hub 4 • Austin, TX</span>
+</div>
+</div>
+<span class="font-label-md text-[11px] text-[#7DC8FF] font-medium">Just now</span>
+</div>
+</div>
+<!-- Floating Pill 1: Attendance Check-in -->
+<div class="absolute -top-6 -left-6 bg-[#0F1226] border border-[#4A6CFF]/35 rounded-xl shadow-[0_10px_30px_rgba(11,91,211,0.35)] p-3.5 flex items-center gap-3 animate-bounce">
+<div class="w-9 h-9 rounded-xl bg-[#0B5BD3]/30 border border-[#4A6CFF]/40 text-[#7DC8FF] flex items-center justify-center">
+<span class="material-symbols-outlined text-[20px]">how_to_reg</span>
+</div>
+<div>
+<div class="flex items-center gap-2">
+<span class="font-label-md text-label-md font-bold text-[#E8ECFF]">Checked In 08:58 AM</span>
+<span class="px-1.5 py-0.5 rounded-full bg-[#0B5BD3]/40 text-[#7DC8FF] border border-[#4A6CFF]/30 font-caption text-[10px] font-semibold">On Time</span>
+</div>
+<span class="font-caption text-caption text-[#9AA3D1]">Geofenced GPS Radius (12m)</span>
+</div>
+</div>
+<!-- Floating Pill 2: Leave Approved -->
+<div class="absolute -bottom-8 -left-4 bg-[#0F1226] border border-[#4A6CFF]/35 rounded-xl shadow-[0_10px_30px_rgba(11,91,211,0.35)] p-3 flex items-center gap-3">
+<div class="w-9 h-9 rounded-xl bg-[#0B5BD3]/30 border border-[#4A6CFF]/40 text-[#7DC8FF] flex items-center justify-center">
+<span class="material-symbols-outlined text-[20px]">event_available</span>
+</div>
+<div>
+<div class="flex items-center gap-1.5">
+<span class="font-label-md text-label-md font-semibold text-[#E8ECFF]">Sarah Jenkins • 3 Days PTO</span>
+<span class="px-1.5 py-0.2 rounded-full bg-[#0B5BD3]/40 text-[#7DC8FF] border border-[#4A6CFF]/30 font-caption text-[10px]">Approved</span>
+</div>
+<span class="font-caption text-[11px] text-[#9AA3D1]">Manager signed via Mobile App</span>
+</div>
+</div>
+<!-- Floating Pill 3: Payslip Ready -->
+<div class="absolute -bottom-6 -right-6 bg-[#0F1226] border border-[#4A6CFF]/35 rounded-xl shadow-[0_10px_30px_rgba(11,91,211,0.35)] p-3 flex items-center gap-3">
+<div class="w-9 h-9 rounded-xl bg-gradient-to-r from-[#1E1AB8] to-[#0B5BD3] text-white flex items-center justify-center shadow-[0_0_12px_rgba(74,108,255,0.4)]">
+<span class="material-symbols-outlined text-[20px]">receipt_long</span>
+</div>
+<div>
+<div class="flex items-center gap-2">
+<span class="font-label-md text-label-md font-bold text-[#E8ECFF]">Payslip Ready: May 2025</span>
+</div>
+<span class="font-caption text-caption text-[#7DC8FF] font-medium">$6,420 Net Direct Deposit</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- 2. TRUSTED BY LOGO STRIP -->
+<section class="py-12 bg-white border-b border-[#DCE4F5] shadow-xs">
+<div class="max-w-7xl mx-auto px-6 lg:px-12 text-center">
+<p class="font-label-md text-label-md uppercase tracking-widest text-[#5B6488] mb-8">
+        Trusted by 2,400+ Forward-Thinking Enterprises &amp; Fast-Growing SMBs
+      </p>
+<div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-8 items-center opacity-80 hover:opacity-100 transition-all">
+<!-- Logo 1 -->
+<div class="flex items-center justify-center gap-2 font-headline-sm text-headline-sm font-bold text-[#0B0F2E] hover:text-[#0B5BD3] transition-colors">
+<span class="material-symbols-outlined text-[#0B5BD3] text-[28px]">account_balance</span>
+<span>Finova Tech</span>
+</div>
+<!-- Logo 2 -->
+<div class="flex items-center justify-center gap-2 font-headline-sm text-headline-sm font-bold text-[#0B0F2E] hover:text-[#0B5BD3] transition-colors">
+<span class="material-symbols-outlined text-[#4A6CFF] text-[28px]">health_and_safety</span>
+<span>Nexa Health</span>
+</div>
+<!-- Logo 3 -->
+<div class="flex items-center justify-center gap-2 font-headline-sm text-headline-sm font-bold text-[#0B0F2E] hover:text-[#0B5BD3] transition-colors">
+<span class="material-symbols-outlined text-[#1E1AB8] text-[28px]">cloud_sync</span>
+<span>CloudScale</span>
+</div>
+<!-- Logo 4 -->
+<div class="flex items-center justify-center gap-2 font-headline-sm text-headline-sm font-bold text-[#0B0F2E] hover:text-[#0B5BD3] transition-colors">
+<span class="material-symbols-outlined text-[#0B5BD3] text-[28px]">storefront</span>
+<span>Vertex Retail</span>
+</div>
+<!-- Logo 5 -->
+<div class="flex items-center justify-center gap-2 font-headline-sm text-headline-sm font-bold text-[#0B0F2E] hover:text-[#0B5BD3] transition-colors">
+<span class="material-symbols-outlined text-[#4A6CFF] text-[28px]">local_shipping</span>
+<span>Apex Logistics</span>
+</div>
+<!-- Logo 6 -->
+<div class="flex items-center justify-center gap-2 font-headline-sm text-headline-sm font-bold text-[#0B0F2E] hover:text-[#0B5BD3] transition-colors">
+<span class="material-symbols-outlined text-[#1E1AB8] text-[28px]">biotech</span>
+<span>BioSphere Labs</span>
+</div>
+</div>
+</div>
+</section>
+<!-- 3. FEATURE GRID: 8 CORE HRMS PILLARS -->
+<section class="py-20 lg:py-28 bg-[#F5F8FF]">
+<div class="max-w-7xl mx-auto px-6 lg:px-12">
+<div class="text-center max-w-3xl mx-auto mb-16">
+<span class="px-3 py-1 rounded-full bg-[#EAF0FF] text-[#0B5BD3] border border-[#DCE4F5] font-label-md text-label-md font-semibold uppercase tracking-wider">
+          Unified Platform Architecture
+        </span>
+<h2 class="font-headline-lg text-headline-lg text-[#0B0F2E] font-bold tracking-tight mt-4 mb-4">
+          Engineered for the Modern Employment Lifecycle
+        </h2>
+<p class="font-body-lg text-body-lg text-[#5B6488]">
+          Ditch disparate software and brittle spreadsheets. Every module is deeply connected to a single source of workforce truth.
+        </p>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+<!-- Pillar 1 -->
+<div class="bg-white rounded-2xl p-6 border border-[#DCE4F5] shadow-sm hover:shadow-[0_12px_30px_rgba(11,91,211,0.12)] hover:-translate-y-1 transition-all group flex flex-col justify-between">
+<div>
+<div class="w-12 h-12 rounded-xl bg-[#EAF0FF] text-[#0B5BD3] flex items-center justify-center mb-5 group-hover:scale-110 transition-transform">
+<span class="material-symbols-outlined text-[26px]">badge</span>
+</div>
+<h3 class="font-title-md text-title-md text-[#0B0F2E] font-semibold mb-2">Core HR &amp; Directory</h3>
+<p class="font-body-sm text-body-sm text-[#5B6488] leading-relaxed">
+              Centralized digital employee profiles, automated document vaults, custom organizational hierarchies, and global team structures.
+            </p>
+</div>
+<div class="mt-6 pt-4 flex items-center text-[#0B5BD3] font-label-md text-label-md font-semibold">
+<span>Explore Core HR</span>
+<span class="material-symbols-outlined text-[16px] ml-1 group-hover:translate-x-1 transition-transform">arrow_forward</span>
+</div>
+</div>
+<!-- Pillar 2 -->
+<div class="bg-white rounded-2xl p-6 border border-[#DCE4F5] shadow-sm hover:shadow-[0_12px_30px_rgba(11,91,211,0.12)] hover:-translate-y-1 transition-all group flex flex-col justify-between">
+<div>
+<div class="w-12 h-12 rounded-xl bg-[#EAF0FF] text-[#4A6CFF] flex items-center justify-center mb-5 group-hover:scale-110 transition-transform">
+<span class="material-symbols-outlined text-[26px]">pin_drop</span>
+</div>
+<h3 class="font-title-md text-title-md text-[#0B0F2E] font-semibold mb-2">Attendance &amp; Shifts</h3>
+<p class="font-body-sm text-body-sm text-[#5B6488] leading-relaxed">
+              Geofenced mobile check-ins, multi-shift rosters, optical facial validation, and direct biometric hardware API synchronization.
+            </p>
+</div>
+<div class="mt-6 pt-4 flex items-center text-[#4A6CFF] font-label-md text-label-md font-semibold">
+<span>Explore Shifts</span>
+<span class="material-symbols-outlined text-[16px] ml-1 group-hover:translate-x-1 transition-transform">arrow_forward</span>
+</div>
+</div>
+<!-- Pillar 3 -->
+<div class="bg-white rounded-2xl p-6 border border-[#DCE4F5] shadow-sm hover:shadow-[0_12px_30px_rgba(11,91,211,0.12)] hover:-translate-y-1 transition-all group flex flex-col justify-between">
+<div>
+<div class="w-12 h-12 rounded-xl bg-[#EAF0FF] text-[#1E1AB8] flex items-center justify-center mb-5 group-hover:scale-110 transition-transform">
+<span class="material-symbols-outlined text-[26px]">date_range</span>
+</div>
+<h3 class="font-title-md text-title-md text-[#0B0F2E] font-semibold mb-2">Leave &amp; PTO Rules</h3>
+<p class="font-body-sm text-body-sm text-[#5B6488] leading-relaxed">
+              Automated accruals, multi-tier approval chains, customized leave categories, parental leaves, and live regional holiday syncing.
+            </p>
+</div>
+<div class="mt-6 pt-4 flex items-center text-[#1E1AB8] font-label-md text-label-md font-semibold">
+<span>Explore Leave Engine</span>
+<span class="material-symbols-outlined text-[16px] ml-1 group-hover:translate-x-1 transition-transform">arrow_forward</span>
+</div>
+</div>
+<!-- Pillar 4 -->
+<div class="bg-white rounded-2xl p-6 border border-[#DCE4F5] shadow-sm hover:shadow-[0_12px_30px_rgba(11,91,211,0.12)] hover:-translate-y-1 transition-all group flex flex-col justify-between">
+<div>
+<div class="w-12 h-12 rounded-xl bg-[#EAF0FF] text-[#0B5BD3] flex items-center justify-center mb-5 group-hover:scale-110 transition-transform">
+<span class="material-symbols-outlined text-[26px]">account_balance_wallet</span>
+</div>
+<h3 class="font-title-md text-title-md text-[#0B0F2E] font-semibold mb-2">Payroll &amp; Tax</h3>
+<p class="font-body-sm text-body-sm text-[#5B6488] leading-relaxed">
+              1-click multi-state payroll run, automated withholding, 401(k)/pension deductions, digital W-2 &amp; 1099 filings, direct deposits.
+            </p>
+</div>
+<div class="mt-6 pt-4 flex items-center text-[#0B5BD3] font-label-md text-label-md font-semibold">
+<span>Explore Payroll</span>
+<span class="material-symbols-outlined text-[16px] ml-1 group-hover:translate-x-1 transition-transform">arrow_forward</span>
+</div>
+</div>
+<!-- Pillar 5 -->
+<div class="bg-white rounded-2xl p-6 border border-[#DCE4F5] shadow-sm hover:shadow-[0_12px_30px_rgba(11,91,211,0.12)] hover:-translate-y-1 transition-all group flex flex-col justify-between">
+<div>
+<div class="w-12 h-12 rounded-xl bg-[#EAF0FF] text-[#1E1AB8] flex items-center justify-center mb-5 group-hover:scale-110 transition-transform">
+<span class="material-symbols-outlined text-[26px]">person_search</span>
+</div>
+<h3 class="font-title-md text-title-md text-[#0B0F2E] font-semibold mb-2">Recruitment ATS</h3>
+<p class="font-body-sm text-body-sm text-[#5B6488] leading-relaxed">
+              Collaborative job pipelines, AI resume parsing, automated scorecards, interview self-scheduling, and digital offer letter signing.
+            </p>
+</div>
+<div class="mt-6 pt-4 flex items-center text-[#1E1AB8] font-label-md text-label-md font-semibold">
+<span>Explore Recruitment</span>
+<span class="material-symbols-outlined text-[16px] ml-1 group-hover:translate-x-1 transition-transform">arrow_forward</span>
+</div>
+</div>
+<!-- Pillar 6 -->
+<div class="bg-white rounded-2xl p-6 border border-[#DCE4F5] shadow-sm hover:shadow-[0_12px_30px_rgba(11,91,211,0.12)] hover:-translate-y-1 transition-all group flex flex-col justify-between">
+<div>
+<div class="w-12 h-12 rounded-xl bg-[#EAF0FF] text-[#4A6CFF] flex items-center justify-center mb-5 group-hover:scale-110 transition-transform">
+<span class="material-symbols-outlined text-[26px]">assignment_turned_in</span>
+</div>
+<h3 class="font-title-md text-title-md text-[#0B0F2E] font-semibold mb-2">Digital Onboarding</h3>
+<p class="font-body-sm text-body-sm text-[#5B6488] leading-relaxed">
+              Paperless pre-boarding checklists, legally binding e-signatures, IT asset provisioning, and guided employee welcome journeys.
+            </p>
+</div>
+<div class="mt-6 pt-4 flex items-center text-[#4A6CFF] font-label-md text-label-md font-semibold">
+<span>Explore Onboarding</span>
+<span class="material-symbols-outlined text-[16px] ml-1 group-hover:translate-x-1 transition-transform">arrow_forward</span>
+</div>
+</div>
+<!-- Pillar 7 -->
+<div class="bg-white rounded-2xl p-6 border border-[#DCE4F5] shadow-sm hover:shadow-[0_12px_30px_rgba(11,91,211,0.12)] hover:-translate-y-1 transition-all group flex flex-col justify-between">
+<div>
+<div class="w-12 h-12 rounded-xl bg-[#EAF0FF] text-[#0B5BD3] flex items-center justify-center mb-5 group-hover:scale-110 transition-transform">
+<span class="material-symbols-outlined text-[26px]">track_changes</span>
+</div>
+<h3 class="font-title-md text-title-md text-[#0B0F2E] font-semibold mb-2">Performance &amp; OKRs</h3>
+<p class="font-body-sm text-body-sm text-[#5B6488] leading-relaxed">
+              Quarterly OKR cascades, peer 360-degree review cycles, continuous feedback praise walls, and merit-based compensation matrix.
+            </p>
+</div>
+<div class="mt-6 pt-4 flex items-center text-[#0B5BD3] font-label-md text-label-md font-semibold">
+<span>Explore Performance</span>
+<span class="material-symbols-outlined text-[16px] ml-1 group-hover:translate-x-1 transition-transform">arrow_forward</span>
+</div>
+</div>
+<!-- Pillar 8 -->
+<div class="bg-white rounded-2xl p-6 border border-[#DCE4F5] shadow-sm hover:shadow-[0_12px_30px_rgba(11,91,211,0.12)] hover:-translate-y-1 transition-all group flex flex-col justify-between">
+<div>
+<div class="w-12 h-12 rounded-xl bg-[#EAF0FF] text-[#1E1AB8] flex items-center justify-center mb-5 group-hover:scale-110 transition-transform">
+<span class="material-symbols-outlined text-[26px]">phone_iphone</span>
+</div>
+<h3 class="font-title-md text-title-md text-[#0B0F2E] font-semibold mb-2">Mobile Self-Service</h3>
+<p class="font-body-sm text-body-sm text-[#5B6488] leading-relaxed">
+              High-rated iOS &amp; Android app for requesting time off, uploading receipt expenses, swapping shifts, and downloading tax slips.
+            </p>
+</div>
+<div class="mt-6 pt-4 flex items-center text-[#1E1AB8] font-label-md text-label-md font-semibold">
+<span>Explore Mobile App</span>
+<span class="material-symbols-outlined text-[16px] ml-1 group-hover:translate-x-1 transition-transform">arrow_forward</span>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- 4. ALTERNATING DEEP-DIVE SECTIONS -->
+<div class="space-y-24 py-16 bg-white">
+<!-- DEEP DIVE A: PAYROLL AUTOMATION -->
+<section class="max-w-7xl mx-auto px-6 lg:px-12">
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
+<div class="lg:col-span-6 space-y-6">
+<span class="px-3 py-1 rounded-full bg-[#EAF0FF] text-[#0B5BD3] border border-[#DCE4F5] font-label-md text-label-md font-bold uppercase tracking-wider">
+            Payroll Automation Engine
+          </span>
+<h2 class="font-headline-lg text-headline-lg text-[#0B0F2E] font-bold leading-tight">
+            Run 100% compliant multi-state payroll in under 90 seconds.
+          </h2>
+<p class="font-body-lg text-body-lg text-[#5B6488]">
+            Say goodbye to endless calculation discrepancies and manual tax remittance filings. PeopleSuite calculates state, local, and federal withholdings with surgical accuracy.
+          </p>
+<ul class="space-y-3.5 pt-2">
+<li class="flex items-start gap-3">
+<div class="w-6 h-6 rounded-full bg-[#EAF0FF] text-[#0B5BD3] flex items-center justify-center shrink-0 mt-0.5 border border-[#DCE4F5]">
+<span class="material-symbols-outlined text-[16px]">check</span>
+</div>
+<span class="font-body-md text-body-md text-[#0B0F2E]"><strong class="font-semibold">Automated Gross-to-Net:</strong> Instant calculations for hourly, salary, commission, and custom bonus tiers.</span>
+</li>
+<li class="flex items-start gap-3">
+<div class="w-6 h-6 rounded-full bg-[#EAF0FF] text-[#0B5BD3] flex items-center justify-center shrink-0 mt-0.5 border border-[#DCE4F5]">
+<span class="material-symbols-outlined text-[16px]">check</span>
+</div>
+<span class="font-body-md text-body-md text-[#0B0F2E]"><strong class="font-semibold">Direct Clearinghouse Rail:</strong> 2-day or next-day direct bank deposits with automated failure reconciliation.</span>
+</li>
+<li class="flex items-start gap-3">
+<div class="w-6 h-6 rounded-full bg-[#EAF0FF] text-[#0B5BD3] flex items-center justify-center shrink-0 mt-0.5 border border-[#DCE4F5]">
+<span class="material-symbols-outlined text-[16px]">check</span>
+</div>
+<span class="font-body-md text-body-md text-[#0B0F2E]"><strong class="font-semibold">Zero-Penalty Guarantee:</strong> State compliance updates handled continuously in all 50 US jurisdictions.</span>
+</li>
+</ul>
+<div class="pt-4">
+<a class="inline-flex items-center gap-2 font-label-lg text-label-lg text-[#0B5BD3] font-semibold hover:underline" href="#">
+<span>View sample payroll reports and export demos</span>
+<span class="material-symbols-outlined text-[18px]">arrow_forward</span>
+</a>
+</div>
+</div>
+<!-- Mockup Card Payroll -->
+<div class="lg:col-span-6 bg-[#F5F8FF] border border-[#DCE4F5] rounded-2xl p-6 lg:p-8 shadow-xl">
+<div class="bg-white border border-[#DCE4F5] rounded-xl p-6 shadow-sm">
+<div class="flex items-center justify-between pb-4 border-b border-[#DCE4F5]">
+<div>
+<span class="font-caption text-caption text-[#5B6488] block uppercase tracking-wider">Payroll Batch #2025-05B</span>
+<h4 class="font-title-md text-title-md font-bold text-[#0B0F2E]">Bi-Weekly Engineering &amp; Operations</h4>
+</div>
+<span class="px-3 py-1 rounded-full bg-[#EAF0FF] text-[#0B5BD3] border border-[#DCE4F5] font-label-md text-label-md font-semibold">100% Ready</span>
+</div>
+<!-- Timeline Stepper -->
+<div class="py-6 flex items-center justify-between">
+<div class="flex flex-col items-center gap-1">
+<div class="w-8 h-8 rounded-full bg-[#0B5BD3] text-white flex items-center justify-center font-bold text-xs shadow-sm">✓</div>
+<span class="font-caption text-[11px] font-semibold text-[#0B0F2E]">Time Synced</span>
+</div>
+<div class="flex-1 h-0.5 bg-[#0B5BD3] mx-2"></div>
+<div class="flex flex-col items-center gap-1">
+<div class="w-8 h-8 rounded-full bg-[#0B5BD3] text-white flex items-center justify-center font-bold text-xs shadow-sm">✓</div>
+<span class="font-caption text-[11px] font-semibold text-[#0B0F2E]">Taxes Checked</span>
+</div>
+<div class="flex-1 h-0.5 bg-[#4A6CFF] mx-2"></div>
+<div class="flex flex-col items-center gap-1">
+<div class="w-8 h-8 rounded-full bg-[#1E1AB8] text-white flex items-center justify-center font-bold text-xs ring-4 ring-[#4A6CFF]/30">3</div>
+<span class="font-caption text-[11px] font-semibold text-[#0B5BD3]">Disbursement</span>
+</div>
+<div class="flex-1 h-0.5 bg-[#DCE4F5] mx-2"></div>
+<div class="flex flex-col items-center gap-1">
+<div class="w-8 h-8 rounded-full bg-[#EAF0FF] text-[#5B6488] border border-[#DCE4F5] flex items-center justify-center font-bold text-xs">4</div>
+<span class="font-caption text-[11px] text-[#5B6488]">Auto Filing</span>
+</div>
+</div>
+<!-- Breakdown -->
+<div class="space-y-3 bg-[#F5F8FF] border border-[#DCE4F5] p-4 rounded-xl">
+<div class="flex justify-between items-center text-body-sm font-body-sm">
+<span class="text-[#5B6488]">Gross Pay (342 employees)</span>
+<span class="font-semibold text-[#0B0F2E]">$592,480.00</span>
+</div>
+<div class="flex justify-between items-center text-body-sm font-body-sm">
+<span class="text-[#5B6488]">Federal &amp; State Withholding</span>
+<span class="font-semibold text-[#ba1a1a]">-$124,190.00</span>
+</div>
+<div class="flex justify-between items-center text-body-sm font-body-sm">
+<span class="text-[#5B6488]">401(k) &amp; Medical Deductions</span>
+<span class="font-semibold text-[#ba1a1a]">-$45,210.00</span>
+</div>
+<div class="pt-2 border-t border-[#DCE4F5] flex justify-between items-center font-title-md text-title-md font-bold">
+<span class="text-[#0B0F2E]">Net Disbursed via ACH</span>
+<span class="text-[#0B5BD3]">$423,080.00</span>
+</div>
+</div>
+<button class="mt-5 w-full py-3 bg-gradient-to-r from-[#1E1AB8] to-[#0B5BD3] hover:from-[#0B5BD3] hover:to-[#4A6CFF] text-white font-label-lg text-label-lg font-semibold rounded-xl transition-all shadow-[0_4px_16px_rgba(11,91,211,0.35)]" type="button">
+              Approve &amp; Transmit Batch
+            </button>
+</div>
+</div>
+</div>
+</section>
+<!-- DEEP DIVE B: GEOFENCED ATTENDANCE -->
+<section class="max-w-7xl mx-auto px-6 lg:px-12">
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
+<!-- Visual Mockup Map Pin -->
+<div class="lg:col-span-6 order-2 lg:order-1 bg-[#F5F8FF] border border-[#DCE4F5] rounded-2xl p-6 lg:p-8 shadow-xl">
+<div class="bg-white border border-[#DCE4F5] rounded-xl p-5 shadow-sm space-y-4">
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-[#0B5BD3]">explore</span>
+<span class="font-label-lg text-label-lg font-bold text-[#0B0F2E]">Austin Logistics Hub • Perimeter #1</span>
+</div>
+<span class="bg-[#EAF0FF] text-[#0B5BD3] border border-[#DCE4F5] font-label-md text-label-md px-2.5 py-0.5 rounded-full font-semibold">Active Geofence</span>
+</div>
+<!-- Stylized Radial Radar Map Display -->
+<div class="relative w-full h-52 bg-[#EAF0FF] rounded-xl overflow-hidden flex items-center justify-center border border-[#DCE4F5]">
+<div class="absolute inset-0 opacity-20 bg-[radial-gradient(#0B5BD3_1px,transparent_1px)] [background-size:16px_16px]"></div>
+<!-- Concentric circles -->
+<div class="w-44 h-44 rounded-full border border-[#4A6CFF]/40 animate-ping absolute"></div>
+<div class="w-36 h-36 rounded-full bg-[#4A6CFF]/10 border-2 border-[#4A6CFF]/30 flex items-center justify-center">
+<div class="w-20 h-20 rounded-full bg-[#0B5BD3]/15 border border-[#0B5BD3]/40 flex items-center justify-center">
+<div class="w-10 h-10 rounded-full bg-[#1E1AB8] text-white flex items-center justify-center shadow-lg">
+<span class="material-symbols-outlined text-[20px]">store</span>
+</div>
+</div>
+</div>
+<!-- Worker Ping 1 -->
+<div class="absolute top-8 left-16 bg-white px-2 py-1 rounded-md shadow border border-[#DCE4F5] flex items-center gap-1.5">
+<div class="w-2 h-2 rounded-full bg-[#0B5BD3]"></div>
+<span class="font-caption text-[11px] font-semibold text-[#0B0F2E]">Alex M. (08:55)</span>
+</div>
+<!-- Worker Ping 2 -->
+<div class="absolute bottom-10 right-14 bg-white px-2 py-1 rounded-md shadow border border-[#DCE4F5] flex items-center gap-1.5">
+<div class="w-2 h-2 rounded-full bg-[#4A6CFF]"></div>
+<span class="font-caption text-[11px] font-semibold text-[#0B0F2E]">David K. (08:58)</span>
+</div>
+</div>
+<!-- Verification Log List -->
+<div class="space-y-2 pt-2">
+<div class="flex items-center justify-between text-body-sm font-body-sm p-2 rounded-lg bg-[#F5F8FF] border border-[#DCE4F5]">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-[#0B5BD3] text-[18px]">verified_user</span>
+<span class="font-medium text-[#0B0F2E]">Facial Match: 99.8% Match</span>
+</div>
+<span class="font-caption text-[11px] text-[#5B6488]">Liveness Verified</span>
+</div>
+<div class="flex items-center justify-between text-body-sm font-body-sm p-2 rounded-lg bg-[#F5F8FF] border border-[#DCE4F5]">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-[#4A6CFF] text-[18px]">schedule</span>
+<span class="font-medium text-[#0B0F2E]">Shift Auto-Calculations</span>
+</div>
+<span class="font-caption text-[11px] text-[#5B6488]">Overtime capped + Night Diff</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Section Copy -->
+<div class="lg:col-span-6 order-1 lg:order-2 space-y-6">
+<span class="px-3 py-1 rounded-full bg-[#EAF0FF] text-[#0B5BD3] border border-[#DCE4F5] font-label-md text-label-md font-bold uppercase tracking-wider">
+            Precision Time &amp; Attendance
+          </span>
+<h2 class="font-headline-lg text-headline-lg text-[#0B0F2E] font-bold leading-tight">
+            Precision attendance tracking without biometric hardware headaches.
+          </h2>
+<p class="font-body-lg text-body-lg text-[#5B6488]">
+            Eliminate buddy-punching and expensive specialized hardware terminals. Enable seamless GPS geofencing, on-device facial authentication, and automated roster scheduling.
+          </p>
+<ul class="space-y-3.5 pt-2">
+<li class="flex items-start gap-3">
+<div class="w-6 h-6 rounded-full bg-[#EAF0FF] text-[#0B5BD3] border border-[#DCE4F5] flex items-center justify-center shrink-0 mt-0.5">
+<span class="material-symbols-outlined text-[16px]">check</span>
+</div>
+<span class="font-body-md text-body-md text-[#0B0F2E]"><strong class="font-semibold">Geofenced GPS Punch:</strong> Restrict punches precisely within physical office polygons or client jobsites.</span>
+</li>
+<li class="flex items-start gap-3">
+<div class="w-6 h-6 rounded-full bg-[#EAF0FF] text-[#0B5BD3] border border-[#DCE4F5] flex items-center justify-center shrink-0 mt-0.5">
+<span class="material-symbols-outlined text-[16px]">check</span>
+</div>
+<span class="font-body-md text-body-md text-[#0B0F2E]"><strong class="font-semibold">AI Facial Validation:</strong> Real-time anti-spoofing facial recognition directly from smartphones or shared tablets.</span>
+</li>
+<li class="flex items-start gap-3">
+<div class="w-6 h-6 rounded-full bg-[#EAF0FF] text-[#0B5BD3] border border-[#DCE4F5] flex items-center justify-center shrink-0 mt-0.5">
+<span class="material-symbols-outlined text-[16px]">check</span>
+</div>
+<span class="font-body-md text-body-md text-[#0B0F2E]"><strong class="font-semibold">Shift Roster Sync:</strong> Auto-detect late arrivals, early checkouts, split shifts, and California-compliant break penalties.</span>
+</li>
+</ul>
+</div>
+</div>
+</section>
+<!-- DEEP DIVE C: NATIVE MOBILE APP -->
+<section class="max-w-7xl mx-auto px-6 lg:px-12">
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
+<div class="lg:col-span-6 space-y-6">
+<span class="px-3 py-1 rounded-full bg-[#EAF0FF] text-[#0B5BD3] border border-[#DCE4F5] font-label-md text-label-md font-bold uppercase tracking-wider">
+            Consumer-Grade Mobile Experience
+          </span>
+<h2 class="font-headline-lg text-headline-lg text-[#0B0F2E] font-bold leading-tight">
+            A mobile app your employees will actually love using every day.
+          </h2>
+<p class="font-body-lg text-body-lg text-[#5B6488]">
+            HR tools have a reputation for being clunky and unintuitive. PeopleSuite delivers a lightning-fast native experience designed with consumer app polish.
+          </p>
+<div class="grid grid-cols-2 gap-4 pt-2">
+<div class="bg-[#F5F8FF] border border-[#DCE4F5] p-4 rounded-xl">
+<span class="material-symbols-outlined text-[#0B5BD3] text-[28px] mb-2">swap_horiz</span>
+<h5 class="font-title-md text-title-md font-semibold text-[#0B0F2E]">1-Tap Shift Trades</h5>
+<p class="font-caption text-caption text-[#5B6488] mt-1">Colleagues swap shifts instantly with manager push-notification approval.</p>
+</div>
+<div class="bg-[#F5F8FF] border border-[#DCE4F5] p-4 rounded-xl">
+<span class="material-symbols-outlined text-[#4A6CFF] text-[28px] mb-2">document_scanner</span>
+<h5 class="font-title-md text-title-md font-semibold text-[#0B0F2E]">OCR Expense Scans</h5>
+<p class="font-caption text-caption text-[#5B6488] mt-1">Snap receipt photos; AI parses tax, merchant, and totals automatically.</p>
+</div>
+</div>
+<div class="flex items-center gap-4 pt-2">
+<div class="flex items-center gap-1 text-[#0B5BD3]">
+<span class="material-symbols-outlined text-[20px] text-[#0B5BD3]" style="font-variation-settings: 'FILL' 1;">star</span>
+<span class="material-symbols-outlined text-[20px] text-[#0B5BD3]" style="font-variation-settings: 'FILL' 1;">star</span>
+<span class="material-symbols-outlined text-[20px] text-[#0B5BD3]" style="font-variation-settings: 'FILL' 1;">star</span>
+<span class="material-symbols-outlined text-[20px] text-[#0B5BD3]" style="font-variation-settings: 'FILL' 1;">star</span>
+<span class="material-symbols-outlined text-[20px] text-[#0B5BD3]" style="font-variation-settings: 'FILL' 1;">star_half</span>
+</div>
+<span class="font-label-md text-label-md font-bold text-[#0B0F2E]">4.9 / 5 Rating on iOS App Store &amp; Google Play</span>
+</div>
+</div>
+<!-- Dual Mobile Screen Visual -->
+<div class="lg:col-span-6 flex justify-center gap-6">
+<!-- Mobile Frame 1 -->
+<div class="w-64 bg-[#0B0F2E] p-3 rounded-[36px] shadow-2xl border-4 border-[#DCE4F5]">
+<div class="bg-white rounded-[28px] overflow-hidden p-4 space-y-4">
+<div class="flex justify-between items-center text-xs font-semibold text-[#0B0F2E]">
+<span>9:41</span>
+<span class="material-symbols-outlined text-[14px]">battery_full</span>
+</div>
+<div class="text-center pt-2">
+<div class="w-14 h-14 rounded-full bg-[#EAF0FF] border border-[#DCE4F5] mx-auto flex items-center justify-center text-[#0B5BD3] font-bold text-lg mb-2">
+                  SJ
+                </div>
+<h6 class="font-label-lg text-label-lg font-bold text-[#0B0F2E]">Sarah Jenkins</h6>
+<span class="font-caption text-[11px] text-[#5B6488]">Lead Product Designer</span>
+</div>
+<div class="bg-[#F5F8FF] border border-[#DCE4F5] p-3 rounded-xl space-y-1">
+<span class="font-caption text-[11px] text-[#5B6488]">Vacation Balance</span>
+<div class="flex justify-between items-baseline">
+<span class="font-headline-sm text-headline-sm font-bold text-[#1E1AB8]">18.5</span>
+<span class="font-caption text-caption text-[#0B5BD3] font-semibold">Days Left</span>
+</div>
+</div>
+<button class="w-full py-2 bg-gradient-to-r from-[#1E1AB8] to-[#0B5BD3] text-white text-xs font-semibold rounded-lg shadow-sm" type="button">
+                Request PTO Now
+              </button>
+</div>
+</div>
+<!-- Mobile Frame 2 -->
+<div class="w-64 bg-[#0B0F2E] p-3 rounded-[36px] shadow-2xl border-4 border-[#DCE4F5] mt-8 hidden sm:block">
+<div class="bg-white rounded-[28px] overflow-hidden p-4 space-y-3">
+<div class="flex justify-between items-center text-xs font-semibold text-[#0B0F2E]">
+<span>9:41</span>
+<span class="material-symbols-outlined text-[14px]">wifi</span>
+</div>
+<span class="font-label-md text-label-md font-bold text-[#0B0F2E] block">Your Shifts This Week</span>
+<div class="bg-[#EAF0FF] p-2.5 rounded-xl border border-[#DCE4F5]">
+<span class="font-caption text-[11px] font-bold text-[#0B5BD3] block">Thursday • Morning Shift</span>
+<span class="font-caption text-[11px] text-[#5B6488]">08:00 AM - 04:30 PM</span>
+</div>
+<div class="bg-[#F5F8FF] border border-[#DCE4F5] p-2.5 rounded-xl">
+<span class="font-caption text-[11px] font-bold text-[#0B0F2E] block">Friday • Flexible Remote</span>
+<span class="font-caption text-[11px] text-[#5B6488]">Home Office Checked</span>
+</div>
+<div class="p-2.5 rounded-xl bg-[#EAF0FF] text-center border border-[#DCE4F5]">
+<span class="font-caption text-[11px] text-[#0B5BD3] font-bold">1-Tap Punch In</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- DEEP DIVE D: WORKFORCE INTELLIGENCE & ANALYTICS -->
+<section class="max-w-7xl mx-auto px-6 lg:px-12">
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
+<!-- Analytics Dashboard Graphic -->
+<div class="lg:col-span-6 order-2 lg:order-1 bg-[#F5F8FF] border border-[#DCE4F5] rounded-2xl p-6 lg:p-8 shadow-xl">
+<div class="bg-white border border-[#DCE4F5] rounded-xl p-6 shadow-sm space-y-5">
+<div class="flex justify-between items-center">
+<div>
+<h4 class="font-title-md text-title-md font-bold text-[#0B0F2E]">Predictive Attrition Risk Heatmap</h4>
+<span class="font-caption text-caption text-[#5B6488]">AI-scored via engagement, tenure &amp; manager 1-on-1s</span>
+</div>
+<span class="px-2.5 py-1 rounded-full bg-[#EAF0FF] text-[#0B5BD3] border border-[#DCE4F5] font-label-md text-label-md font-semibold">Q2 Model</span>
+</div>
+<!-- Heatmap / Metric Grid -->
+<div class="grid grid-cols-3 gap-3">
+<div class="p-3 rounded-xl bg-[#F5F8FF] border-l-4 border-[#0B5BD3] border border-[#DCE4F5]">
+<span class="font-caption text-[11px] text-[#5B6488] block">Engineering</span>
+<span class="font-title-md text-title-md font-bold text-[#0B0F2E]">3.2%</span>
+<span class="font-caption text-[11px] text-[#0B5BD3] font-medium">Low Risk</span>
+</div>
+<div class="p-3 rounded-xl bg-[#F5F8FF] border-l-4 border-[#4A6CFF] border border-[#DCE4F5]">
+<span class="font-caption text-[11px] text-[#5B6488] block">Sales Ops</span>
+<span class="font-title-md text-title-md font-bold text-[#0B0F2E]">11.8%</span>
+<span class="font-caption text-[11px] text-[#4A6CFF] font-medium">Moderate</span>
+</div>
+<div class="p-3 rounded-xl bg-[#F5F8FF] border-l-4 border-[#1E1AB8] border border-[#DCE4F5]">
+<span class="font-caption text-[11px] text-[#5B6488] block">Customer Care</span>
+<span class="font-title-md text-title-md font-bold text-[#0B0F2E]">4.1%</span>
+<span class="font-caption text-[11px] text-[#1E1AB8] font-medium">Stable</span>
+</div>
+</div>
+<!-- Parity & Overtime Analysis -->
+<div class="bg-[#F5F8FF] border border-[#DCE4F5] p-4 rounded-xl space-y-3">
+<div class="flex justify-between items-center text-body-sm font-body-sm">
+<span class="font-medium text-[#0B0F2E]">Gender &amp; Band Compensation Parity</span>
+<span class="text-[#0B5BD3] font-semibold">99.4% Compliant</span>
+</div>
+<div class="w-full bg-[#DCE4F5] rounded-full h-2">
+<div class="bg-gradient-to-r from-[#1E1AB8] to-[#0B5BD3] h-2 rounded-full" style="width: 99.4%"></div>
+</div>
+<div class="flex justify-between text-caption text-caption text-[#5B6488] pt-1">
+<span>Target Band: 98-102%</span>
+<span>Audit Ready (ISO/EEOC)</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Section Copy -->
+<div class="lg:col-span-6 order-1 lg:order-2 space-y-6">
+<span class="px-3 py-1 rounded-full bg-[#EAF0FF] text-[#0B5BD3] border border-[#DCE4F5] font-label-md text-label-md font-bold uppercase tracking-wider">
+            Workforce Intelligence
+          </span>
+<h2 class="font-headline-lg text-headline-lg text-[#0B0F2E] font-bold leading-tight">
+            Real-time workforce intelligence for leadership decisions.
+          </h2>
+<p class="font-body-lg text-body-lg text-[#5B6488]">
+            Empower C-suites and People leaders with forward-looking workforce models. Understand retention dynamics, forecast overtime liabilities, and maintain equitable salary distribution across global teams.
+          </p>
+<ul class="space-y-3.5 pt-2">
+<li class="flex items-start gap-3">
+<div class="w-6 h-6 rounded-full bg-[#EAF0FF] text-[#0B5BD3] border border-[#DCE4F5] flex items-center justify-center shrink-0 mt-0.5">
+<span class="material-symbols-outlined text-[16px]">insights</span>
+</div>
+<span class="font-body-md text-body-md text-[#0B0F2E]"><strong class="font-semibold">Predictive Attrition Signals:</strong> Intervene before high performers exit using tenure and sentiment indicators.</span>
+</li>
+<li class="flex items-start gap-3">
+<div class="w-6 h-6 rounded-full bg-[#EAF0FF] text-[#0B5BD3] border border-[#DCE4F5] flex items-center justify-center shrink-0 mt-0.5">
+<span class="material-symbols-outlined text-[16px]">equalizer</span>
+</div>
+<span class="font-body-md text-body-md text-[#0B0F2E]"><strong class="font-semibold">Compensation Parity Audits:</strong> Automated gender and racial wage parity analytics for effortless state regulatory reporting.</span>
+</li>
+<li class="flex items-start gap-3">
+<div class="w-6 h-6 rounded-full bg-[#EAF0FF] text-[#0B5BD3] border border-[#DCE4F5] flex items-center justify-center shrink-0 mt-0.5">
+<span class="material-symbols-outlined text-[16px]">pie_chart</span>
+</div>
+<span class="font-body-md text-body-md text-[#0B0F2E]"><strong class="font-semibold">Overtime Cost Leaks:</strong> Flag shift creep and excessive overtime spend across department nodes in real-time.</span>
+</li>
+</ul>
+</div>
+</div>
+</section>
+</div>
+<!-- 5. METRICS & SOCIAL PROOF BAND -->
+<section class="py-20 text-white relative overflow-hidden" style="background: linear-gradient(135deg, #1E1AB8 0%, #0B5BD3 50%, #4A6CFF 100%);">
+<div class="max-w-7xl mx-auto px-6 lg:px-12 relative z-10">
+<div class="text-center max-w-2xl mx-auto mb-14">
+<h2 class="font-headline-lg text-headline-lg font-bold tracking-tight mb-3 text-white">
+          Proven at Scale Across Growing Workforces
+        </h2>
+<p class="font-body-lg text-body-lg text-[#EAF0FF]">
+          Real metrics delivered to high-performance operations and enterprise HR departments.
+        </p>
+</div>
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
+<!-- Stat 1 -->
+<div class="bg-white/10 border border-white/20 p-8 rounded-2xl backdrop-blur-sm text-center">
+<span class="font-display text-display font-bold block tracking-tight text-[#7DC8FF]">10,000+</span>
+<span class="font-title-md text-title-md font-semibold block mt-2 text-white">Active Employees</span>
+<p class="font-body-sm text-body-sm text-[#EAF0FF] mt-1">Managed worldwide daily</p>
+</div>
+<!-- Stat 2 -->
+<div class="bg-white/10 border border-white/20 p-8 rounded-2xl backdrop-blur-sm text-center">
+<span class="font-display text-display font-bold block tracking-tight text-[#7DC8FF]">99.99%</span>
+<span class="font-title-md text-title-md font-semibold block mt-2 text-white">Guaranteed Uptime</span>
+<p class="font-body-sm text-body-sm text-[#EAF0FF] mt-1">Backed by enterprise SLA</p>
+</div>
+<!-- Stat 3 -->
+<div class="bg-white/10 border border-white/20 p-8 rounded-2xl backdrop-blur-sm text-center">
+<span class="font-display text-display font-bold block tracking-tight text-[#7DC8FF]">60%</span>
+<span class="font-title-md text-title-md font-semibold block mt-2 text-white">Admin Overhead Cut</span>
+<p class="font-body-sm text-body-sm text-[#EAF0FF] mt-1">Time saved per HR manager</p>
+</div>
+<!-- Stat 4 -->
+<div class="bg-white/10 border border-white/20 p-8 rounded-2xl backdrop-blur-sm text-center">
+<span class="font-display text-display font-bold block tracking-tight text-[#7DC8FF]">&lt; 90s</span>
+<span class="font-title-md text-title-md font-semibold block mt-2 text-white">Payroll Run Time</span>
+<p class="font-body-sm text-body-sm text-[#EAF0FF] mt-1">Average batch approval</p>
+</div>
+</div>
+</div>
+</section>
+<!-- 6. TESTIMONIALS GRID -->
+<section class="py-20 lg:py-28 bg-[#F5F8FF]">
+<div class="max-w-7xl mx-auto px-6 lg:px-12">
+<div class="text-center max-w-3xl mx-auto mb-16">
+<span class="px-3 py-1 rounded-full bg-[#EAF0FF] text-[#0B5BD3] border border-[#DCE4F5] font-label-md text-label-md font-semibold uppercase tracking-wider">
+          Customer Stories
+        </span>
+<h2 class="font-headline-lg text-headline-lg text-[#0B0F2E] font-bold tracking-tight mt-4 mb-4">
+          Trusted by Leaders Shaping Modern Work
+        </h2>
+<p class="font-body-lg text-body-lg text-[#5B6488]">
+          Discover why HR executives and operations leaders migrated their entire teams to PeopleSuite.
+        </p>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+<!-- Review 1 -->
+<div class="bg-white border border-[#DCE4F5] rounded-2xl p-8 shadow-sm flex flex-col justify-between hover:shadow-[0_12px_30px_rgba(11,91,211,0.12)] transition-all">
+<div>
+<div class="flex items-center gap-1 text-[#0B5BD3] mb-6">
+<span class="material-symbols-outlined text-[20px] text-[#0B5BD3]" style="font-variation-settings: 'FILL' 1;">star</span>
+<span class="material-symbols-outlined text-[20px] text-[#0B5BD3]" style="font-variation-settings: 'FILL' 1;">star</span>
+<span class="material-symbols-outlined text-[20px] text-[#0B5BD3]" style="font-variation-settings: 'FILL' 1;">star</span>
+<span class="material-symbols-outlined text-[20px] text-[#0B5BD3]" style="font-variation-settings: 'FILL' 1;">star</span>
+<span class="material-symbols-outlined text-[20px] text-[#0B5BD3]" style="font-variation-settings: 'FILL' 1;">star</span>
+</div>
+<p class="font-body-lg text-body-lg text-[#0B0F2E] italic mb-8">
+              “PeopleSuite replaced 4 disconnected legacy tools and cut our month-end payroll cycle from 4 days to 45 minutes.”
+            </p>
+</div>
+<div class="flex items-center gap-4 pt-4 border-t border-[#DCE4F5]">
+<img alt="Elena Rostova Headshot" class="w-12 h-12 rounded-full object-cover ring-2 ring-[#DCE4F5]" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCRQnOpDnMGqUYJKGLJdpMD4KlO3ZfDLmsdZ1Bjl_5X4mwbHYX4ojw5XtC0WYmTN44IXJBytDsW9Z8CCHuheiZQtAF-0QrRxfLFDOkXsUcn_POFbGACq0AddopWCm9d8CACBhuAXiJmfuBx70047oEGMW6k3xfzThhyfKeCcZS6qmLDaC-11ZCcLb7u1rH5ThO_5XptfPmvr1jmge3h-ppLPCZFWDlOf-HBcp7FEwIaO3p3ad-G_Lss7Q"/>
+<div>
+<h5 class="font-label-lg text-label-lg font-bold text-[#0B0F2E]">Elena Rostova</h5>
+<span class="font-body-sm text-body-sm text-[#5B6488] block">VP People • Nexa Health</span>
+</div>
+</div>
+</div>
+<!-- Review 2 -->
+<div class="bg-white border border-[#DCE4F5] rounded-2xl p-8 shadow-sm flex flex-col justify-between hover:shadow-[0_12px_30px_rgba(11,91,211,0.12)] transition-all">
+<div>
+<div class="flex items-center gap-1 text-[#0B5BD3] mb-6">
+<span class="material-symbols-outlined text-[20px] text-[#0B5BD3]" style="font-variation-settings: 'FILL' 1;">star</span>
+<span class="material-symbols-outlined text-[20px] text-[#0B5BD3]" style="font-variation-settings: 'FILL' 1;">star</span>
+<span class="material-symbols-outlined text-[20px] text-[#0B5BD3]" style="font-variation-settings: 'FILL' 1;">star</span>
+<span class="material-symbols-outlined text-[20px] text-[#0B5BD3]" style="font-variation-settings: 'FILL' 1;">star</span>
+<span class="material-symbols-outlined text-[20px] text-[#0B5BD3]" style="font-variation-settings: 'FILL' 1;">star</span>
+</div>
+<p class="font-body-lg text-body-lg text-[#0B0F2E] italic mb-8">
+              “The biometric and geofenced attendance transformed our distributed warehouse operations across 12 facilities.”
+            </p>
+</div>
+<div class="flex items-center gap-4 pt-4 border-t border-[#DCE4F5]">
+<div class="w-12 h-12 rounded-full bg-[#EAF0FF] border border-[#DCE4F5] flex items-center justify-center font-bold text-[#0B5BD3] font-headline-sm">
+              MV
+            </div>
+<div>
+<h5 class="font-label-lg text-label-lg font-bold text-[#0B0F2E]">Marcus Vance</h5>
+<span class="font-body-sm text-body-sm text-[#5B6488] block">COO • CloudScale Inc.</span>
+</div>
+</div>
+</div>
+<!-- Review 3 -->
+<div class="bg-white border border-[#DCE4F5] rounded-2xl p-8 shadow-sm flex flex-col justify-between hover:shadow-[0_12px_30px_rgba(11,91,211,0.12)] transition-all">
+<div>
+<div class="flex items-center gap-1 text-[#0B5BD3] mb-6">
+<span class="material-symbols-outlined text-[20px] text-[#0B5BD3]" style="font-variation-settings: 'FILL' 1;">star</span>
+<span class="material-symbols-outlined text-[20px] text-[#0B5BD3]" style="font-variation-settings: 'FILL' 1;">star</span>
+<span class="material-symbols-outlined text-[20px] text-[#0B5BD3]" style="font-variation-settings: 'FILL' 1;">star</span>
+<span class="material-symbols-outlined text-[20px] text-[#0B5BD3]" style="font-variation-settings: 'FILL' 1;">star</span>
+<span class="material-symbols-outlined text-[20px] text-[#0B5BD3]" style="font-variation-settings: 'FILL' 1;">star</span>
+</div>
+<p class="font-body-lg text-body-lg text-[#0B0F2E] italic mb-8">
+              “Our employees actually praise the self-service mobile app. Onboarding completion jumped to 98% in the first week.”
+            </p>
+</div>
+<div class="flex items-center gap-4 pt-4 border-t border-[#DCE4F5]">
+<div class="w-12 h-12 rounded-full bg-[#EAF0FF] border border-[#DCE4F5] flex items-center justify-center font-bold text-[#4A6CFF] font-headline-sm">
+              PP
+            </div>
+<div>
+<h5 class="font-label-lg text-label-lg font-bold text-[#0B0F2E]">Priya Patel</h5>
+<span class="font-body-sm text-body-sm text-[#5B6488] block">Head of Talent • Finova</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- 7. SEAMLESS INTEGRATIONS ROW -->
+<section class="py-16 bg-white border-y border-[#DCE4F5]">
+<div class="max-w-7xl mx-auto px-6 lg:px-12 text-center">
+<span class="font-label-md text-label-md font-bold uppercase tracking-wider text-[#0B5BD3] block mb-2">Connected Ecosystem</span>
+<h3 class="font-headline-md text-headline-md text-[#0B0F2E] font-bold mb-10">
+        Plays nicely with your existing enterprise tech stack
+      </h3>
+<div class="flex flex-wrap justify-center items-center gap-3 lg:gap-4 max-w-4xl mx-auto">
+<div class="flex items-center gap-2 bg-[#F5F8FF] border border-[#DCE4F5] px-4 py-2.5 rounded-xl shadow-xs hover:border-[#0B5BD3] transition-colors">
+<span class="material-symbols-outlined text-[20px] text-[#0B5BD3]">chat</span>
+<span class="font-label-lg text-label-lg text-[#0B0F2E] font-semibold">Slack</span>
+</div>
+<div class="flex items-center gap-2 bg-[#F5F8FF] border border-[#DCE4F5] px-4 py-2.5 rounded-xl shadow-xs hover:border-[#0B5BD3] transition-colors">
+<span class="material-symbols-outlined text-[20px] text-[#1E1AB8]">groups</span>
+<span class="font-label-lg text-label-lg text-[#0B0F2E] font-semibold">Microsoft Teams</span>
+</div>
+<div class="flex items-center gap-2 bg-[#F5F8FF] border border-[#DCE4F5] px-4 py-2.5 rounded-xl shadow-xs hover:border-[#0B5BD3] transition-colors">
+<span class="material-symbols-outlined text-[20px] text-[#0B5BD3]">mail</span>
+<span class="font-label-lg text-label-lg text-[#0B0F2E] font-semibold">Google Workspace</span>
+</div>
+<div class="flex items-center gap-2 bg-[#F5F8FF] border border-[#DCE4F5] px-4 py-2.5 rounded-xl shadow-xs hover:border-[#0B5BD3] transition-colors">
+<span class="material-symbols-outlined text-[20px] text-[#4A6CFF]">mark_email_read</span>
+<span class="font-label-lg text-label-lg text-[#0B0F2E] font-semibold">Microsoft Outlook</span>
+</div>
+<div class="flex items-center gap-2 bg-[#F5F8FF] border border-[#DCE4F5] px-4 py-2.5 rounded-xl shadow-xs hover:border-[#0B5BD3] transition-colors">
+<span class="material-symbols-outlined text-[20px] text-[#0B5BD3]">calculate</span>
+<span class="font-label-lg text-label-lg text-[#0B0F2E] font-semibold">QuickBooks Online</span>
+</div>
+<div class="flex items-center gap-2 bg-[#F5F8FF] border border-[#DCE4F5] px-4 py-2.5 rounded-xl shadow-xs hover:border-[#0B5BD3] transition-colors">
+<span class="material-symbols-outlined text-[20px] text-[#1E1AB8]">receipt</span>
+<span class="font-label-lg text-label-lg text-[#0B0F2E] font-semibold">Tally Prime</span>
+</div>
+<div class="flex items-center gap-2 bg-[#F5F8FF] border border-[#DCE4F5] px-4 py-2.5 rounded-xl shadow-xs hover:border-[#0B5BD3] transition-colors">
+<span class="material-symbols-outlined text-[20px] text-[#4A6CFF]">domain</span>
+<span class="font-label-lg text-label-lg text-[#0B0F2E] font-semibold">SAP SuccessFactors</span>
+</div>
+<div class="flex items-center gap-2 bg-[#F5F8FF] border border-[#DCE4F5] px-4 py-2.5 rounded-xl shadow-xs hover:border-[#0B5BD3] transition-colors">
+<span class="material-symbols-outlined text-[20px] text-[#0B5BD3]">payments</span>
+<span class="font-label-lg text-label-lg text-[#0B0F2E] font-semibold">ADP Integration</span>
+</div>
+<div class="flex items-center gap-2 bg-[#F5F8FF] border border-[#DCE4F5] px-4 py-2.5 rounded-xl shadow-xs hover:border-[#0B5BD3] transition-colors">
+<span class="material-symbols-outlined text-[20px] text-[#4A6CFF]">fingerprint</span>
+<span class="font-label-lg text-label-lg text-[#0B0F2E] font-semibold">Biometric Hardware API</span>
+</div>
+<div class="flex items-center gap-2 bg-[#F5F8FF] border border-[#DCE4F5] px-4 py-2.5 rounded-xl shadow-xs hover:border-[#0B5BD3] transition-colors">
+<span class="material-symbols-outlined text-[20px] text-[#1E1AB8]">bolt</span>
+<span class="font-label-lg text-label-lg text-[#0B0F2E] font-semibold">Zapier Webhooks</span>
+</div>
+</div>
+</div>
+</section>
+<!-- 8. ENTERPRISE SECURITY & COMPLIANCE BADGES -->
+<section class="py-20 bg-[#F5F8FF]">
+<div class="max-w-7xl mx-auto px-6 lg:px-12">
+<div class="text-center max-w-2xl mx-auto mb-14">
+<h3 class="font-headline-md text-headline-md font-bold text-[#0B0F2E]">
+          Institutional Security &amp; Data Sovereignty
+        </h3>
+<p class="font-body-md text-body-md text-[#5B6488] mt-2">
+          Your workforce data is secured behind bank-grade encryption protocols and audited global infrastructure.
+        </p>
+</div>
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+<div class="bg-white p-6 rounded-2xl border border-[#DCE4F5] shadow-sm text-center flex flex-col items-center hover:shadow-md transition-shadow">
+<div class="w-12 h-12 rounded-full bg-[#EAF0FF] text-[#0B5BD3] border border-[#DCE4F5] flex items-center justify-center mb-4">
+<span class="material-symbols-outlined text-[26px]">verified</span>
+</div>
+<h4 class="font-title-md text-title-md font-bold text-[#0B0F2E]">SOC 2 Type II</h4>
+<p class="font-body-sm text-body-sm text-[#5B6488] mt-1">Annually audited by independent Big-4 compliance assessors.</p>
+</div>
+<div class="bg-white p-6 rounded-2xl border border-[#DCE4F5] shadow-sm text-center flex flex-col items-center hover:shadow-md transition-shadow">
+<div class="w-12 h-12 rounded-full bg-[#EAF0FF] text-[#1E1AB8] border border-[#DCE4F5] flex items-center justify-center mb-4">
+<span class="material-symbols-outlined text-[26px]">gavel</span>
+</div>
+<h4 class="font-title-md text-title-md font-bold text-[#0B0F2E]">GDPR &amp; CCPA</h4>
+<p class="font-body-sm text-body-sm text-[#5B6488] mt-1">Granular right-to-erasure controls and strict EU privacy compliance.</p>
+</div>
+<div class="bg-white p-6 rounded-2xl border border-[#DCE4F5] shadow-sm text-center flex flex-col items-center hover:shadow-md transition-shadow">
+<div class="w-12 h-12 rounded-full bg-[#EAF0FF] text-[#4A6CFF] border border-[#DCE4F5] flex items-center justify-center mb-4">
+<span class="material-symbols-outlined text-[26px]">security</span>
+</div>
+<h4 class="font-title-md text-title-md font-bold text-[#0B0F2E]">ISO 27001 Certified</h4>
+<p class="font-body-sm text-body-sm text-[#5B6488] mt-1">Information security governance matching global standards.</p>
+</div>
+<div class="bg-white p-6 rounded-2xl border border-[#DCE4F5] shadow-sm text-center flex flex-col items-center hover:shadow-md transition-shadow">
+<div class="w-12 h-12 rounded-full bg-[#EAF0FF] text-[#0B5BD3] border border-[#DCE4F5] flex items-center justify-center mb-4">
+<span class="material-symbols-outlined text-[26px]">lock</span>
+</div>
+<h4 class="font-title-md text-title-md font-bold text-[#0B0F2E]">256-Bit SSL &amp; Vault</h4>
+<p class="font-body-sm text-body-sm text-[#5B6488] mt-1">End-to-end data encryption at rest (AES-256) and in transit.</p>
+</div>
+</div>
+</div>
+</section>
+<!-- 9. HIGH-IMPACT FINAL CTA BANNER -->
+<section class="py-20 lg:py-24 text-white relative overflow-hidden" style="background: linear-gradient(135deg, #1E1AB8 0%, #0B5BD3 50%, #4A6CFF 100%);">
+<div class="absolute inset-0 opacity-10 bg-[radial-gradient(#ffffff_1.5px,transparent_1.5px)] [background-size:24px_24px] pointer-events-none"></div>
+<div class="max-w-5xl mx-auto px-6 lg:px-12 text-center relative z-10 space-y-8">
+<h2 class="font-display text-display font-bold tracking-tight leading-tight text-white">
+        Ready to modernize your workforce experience?
+      </h2>
+<p class="font-body-lg text-body-lg text-[#EAF0FF] max-w-2xl mx-auto">
+        Join thousands of HR leaders who chose PeopleSuite. Get started in minutes or schedule a customized walkthrough for your organization.
+      </p>
+<div class="flex flex-col sm:flex-row items-center justify-center gap-4 pt-2">
+<a class="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-8 py-4 rounded-xl bg-white text-[#1E1AB8] font-label-lg text-label-lg font-bold shadow-xl hover:bg-[#EAF0FF] transition-all" href="#">
+<span>Schedule a Personalized Demo</span>
+<span class="material-symbols-outlined text-[20px]">calendar_today</span>
+</a>
+<a class="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-8 py-4 rounded-xl bg-white/10 hover:bg-white/20 text-white font-label-lg text-label-lg font-semibold border border-white/30 transition-all backdrop-blur-sm" href="#">
+<span>Start 14-Day Free Trial</span>
+<span class="material-symbols-outlined text-[20px]">arrow_forward</span>
+</a>
+</div>
+<!-- Live Chat Assistant Badge -->
+<div class="pt-8 flex justify-center">
+<div class="inline-flex items-center gap-3 px-4 py-2 rounded-full bg-white/15 backdrop-blur-md border border-white/20 shadow-md">
+<img alt="Support Executive" class="w-7 h-7 rounded-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCRQnOpDnMGqUYJKGLJdpMD4KlO3ZfDLmsdZ1Bjl_5X4mwbHYX4ojw5XtC0WYmTN44IXJBytDsW9Z8CCHuheiZQtAF-0QrRxfLFDOkXsUcn_POFbGACq0AddopWCm9d8CACBhuAXiJmfuBx70047oEGMW6k3xfzThhyfKeCcZS6qmLDaC-11ZCcLb7u1rH5ThO_5XptfPmvr1jmge3h-ppLPCZFWDlOf-HBcp7FEwIaO3p3ad-G_Lss7Q"/>
+<div class="text-left">
+<span class="font-label-md text-label-md font-semibold text-white block">Questions? Talk with our Product Specialists</span>
+<span class="font-caption text-[11px] text-[#7DC8FF] block">Average response time: &lt; 2 minutes</span>
+</div>
+</div>
+</div>
+</div>
+</section>
+</div></main><footer class="w-full bg-[#0A0B14] border-t border-[#4A6CFF]/25 pt-16 pb-12 text-[#9AA3D1]"><div class="max-w-7xl mx-auto px-6 lg:px-12"><div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-10 lg:gap-8 pb-16"><div class="lg:col-span-1 space-y-5"><a class="flex items-center gap-3" data-path="home" href="#"><img alt="PeopleSuite Brand Logo" class="h-7 w-auto object-contain drop-shadow-[0_0_10px_rgba(125,200,255,0.4)]" src="https://lh3.googleusercontent.com/aida/AEtjO1UYvYuwBeXq9v09l5PsShh5dDjqtAScBtz5qPPKgNo56zJs1YwHw_wfVL1Z6rhcy8AeGNVldeluO_Uj5dXXJJYeCo9SnYLNDPFg3_PXyuyl4E2qdMeKklcyPbubO212UlGz6PNmORzZ_iesCcDbFE4eK1O09moUbqSW3b-TZgmUmXfdk3EXlLroLPcZUhZwf9rOZEJnRK-zJ3Ww2NwlNO3lxv2_x7I55n4UzHpsOFDNC0FAfDRAvx9kfjBe"/><span class="font-title-md text-title-md text-[#E8ECFF] font-bold tracking-tight">PeopleSuite</span></a><p class="font-body-sm text-body-sm text-[#9AA3D1] leading-relaxed">Everything People. One Suite. Cloud HRMS empowering progressive workforces worldwide.</p><div class="inline-flex items-center gap-2 px-2.5 py-1 rounded-full bg-[#121528] border border-[#4A6CFF]/30 shadow-xs"><span class="w-2 h-2 rounded-full bg-[#7DC8FF] shadow-[0_0_6px_#7DC8FF] animate-pulse"></span><span class="font-caption text-caption font-medium text-[#E8ECFF]">System Operational (99.99%)</span></div><div class="flex items-center gap-3 pt-1 text-[#9AA3D1]"><a aria-label="LinkedIn" class="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-[#1E1AB8]/30 hover:text-[#7DC8FF] transition-colors" href="#"><span class="material-symbols-outlined text-[19px]">share</span></a><a aria-label="X Platform" class="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-[#1E1AB8]/30 hover:text-[#7DC8FF] transition-colors" href="#"><span class="material-symbols-outlined text-[19px]">forum</span></a><a aria-label="YouTube" class="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-[#1E1AB8]/30 hover:text-[#7DC8FF] transition-colors" href="#"><span class="material-symbols-outlined text-[19px]">play_circle</span></a><a aria-label="GitHub Code" class="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-[#1E1AB8]/30 hover:text-[#7DC8FF] transition-colors" href="#"><span class="material-symbols-outlined text-[19px]">terminal</span></a></div><div class="pt-2 space-y-1.5"><div class="font-label-md text-label-md text-[#7DC8FF] tracking-wider uppercase">Security Certified</div><div class="flex flex-wrap gap-1.5"><span class="bg-[#121528] border border-[#4A6CFF]/30 px-2 py-0.5 rounded font-caption text-[11px] text-[#E8ECFF] font-medium">ISO 27001</span><span class="bg-[#121528] border border-[#4A6CFF]/30 px-2 py-0.5 rounded font-caption text-[11px] text-[#E8ECFF] font-medium">GDPR Ready</span><span class="bg-[#121528] border border-[#4A6CFF]/30 px-2 py-0.5 rounded font-caption text-[11px] text-[#E8ECFF] font-medium">SOC 2 Type II</span><span class="bg-[#121528] border border-[#4A6CFF]/30 px-2 py-0.5 rounded font-caption text-[11px] text-[#E8ECFF] font-medium">HIPAA</span></div></div></div><div class="space-y-4"><h4 class="font-label-lg text-label-lg text-[#E8ECFF] font-semibold">Product</h4><ul class="space-y-2.5 font-body-sm text-body-sm text-[#9AA3D1]"><li><a class="hover:text-[#7DC8FF] transition-colors" data-path="product-core-hr" href="#">Core HR &amp; Directory</a></li><li><a class="hover:text-[#7DC8FF] transition-colors" data-path="product-attendance" href="#">Attendance &amp; Geofencing</a></li><li><a class="hover:text-[#7DC8FF] transition-colors" data-path="product-payroll" href="#">Payroll &amp; Tax Compliance</a></li><li><a class="hover:text-[#7DC8FF] transition-colors" data-path="product-performance" href="#">Performance &amp; OKRs</a></li><li><a class="hover:text-[#7DC8FF] transition-colors" data-path="product-recruitment" href="#">Recruitment ATS</a></li><li><a class="hover:text-[#7DC8FF] transition-colors" data-path="product-mobile" href="#">Employee Mobile App</a></li><li><a class="hover:text-[#7DC8FF] transition-colors" data-path="product-integrations" href="#">API &amp; Integrations</a></li></ul></div><div class="space-y-4"><h4 class="font-label-lg text-label-lg text-[#E8ECFF] font-semibold">Solutions</h4><ul class="space-y-2.5 font-body-sm text-body-sm text-[#9AA3D1]"><li><a class="hover:text-[#7DC8FF] transition-colors" data-path="solutions-enterprise" href="#">Mid-market Enterprises</a></li><li><a class="hover:text-[#7DC8FF] transition-colors" data-path="solutions-smb" href="#">High-Growth Startups</a></li><li><a class="hover:text-[#7DC8FF] transition-colors" data-path="solutions-healthcare" href="#">Healthcare &amp; Clinics</a></li><li><a class="hover:text-[#7DC8FF] transition-colors" data-path="solutions-tech" href="#">Tech &amp; Remote Teams</a></li><li><a class="hover:text-[#7DC8FF] transition-colors" data-path="solutions-manufacturing" href="#">Manufacturing &amp; Shifts</a></li><li><a class="hover:text-[#7DC8FF] transition-colors" data-path="solutions-retail" href="#">Retail Chains</a></li></ul></div><div class="space-y-4"><h4 class="font-label-lg text-label-lg text-[#E8ECFF] font-semibold">Resources</h4><ul class="space-y-2.5 font-body-sm text-body-sm text-[#9AA3D1]"><li><a class="hover:text-[#7DC8FF] transition-colors" data-path="resources-blog" href="#">HR Knowledge Hub</a></li><li><a class="hover:text-[#7DC8FF] transition-colors" data-path="resources-roi-calculator" href="#">HR Tech ROI Calculator</a></li><li><a class="hover:text-[#7DC8FF] transition-colors" data-path="resources-compliance-guides" href="#">State Compliance 2025</a></li><li><a class="hover:text-[#7DC8FF] transition-colors" data-path="resources-release-notes" href="#">Release Notes</a></li><li><a class="hover:text-[#7DC8FF] transition-colors" data-path="resources-api-docs" href="#">API Documentation</a></li><li><a class="hover:text-[#7DC8FF] transition-colors" data-path="resources-help-center" href="#">Help Center &amp; FAQ</a></li></ul></div><div class="space-y-4"><h4 class="font-label-lg text-label-lg text-[#E8ECFF] font-semibold">Company &amp; Legal</h4><ul class="space-y-2.5 font-body-sm text-body-sm text-[#9AA3D1]"><li><a class="hover:text-[#7DC8FF] transition-colors" data-path="about" href="#">About Us</a></li><li><a class="flex items-center gap-1.5 hover:text-[#7DC8FF] transition-colors" data-path="company-careers" href="#"><span>Careers</span><span class="bg-[#0B5BD3]/30 border border-[#4A6CFF]/40 text-[#7DC8FF] font-label-md text-[11px] px-1.5 py-0.2 rounded-full">Hiring</span></a></li><li><a class="hover:text-[#7DC8FF] transition-colors" data-path="company-press" href="#">Press &amp; Media</a></li><li><a class="hover:text-[#7DC8FF] transition-colors" data-path="contact-sales" href="#">Contact Sales</a></li><li><a class="hover:text-[#7DC8FF] transition-colors" data-path="legal-privacy" href="#">Privacy Policy</a></li><li><a class="hover:text-[#7DC8FF] transition-colors" data-path="legal-terms" href="#">Terms of Service</a></li><li><a class="hover:text-[#7DC8FF] transition-colors" data-path="legal-cookies" href="#">Cookie Preferences</a></li></ul></div></div><div class="pt-8 border-t border-[#4A6CFF]/20 flex flex-col sm:flex-row items-center justify-between gap-4 font-body-sm text-body-sm text-[#9AA3D1]"><div class="flex items-center gap-4 flex-wrap"><span>© 2025 PeopleSuite Technologies, Inc. All rights reserved.</span><div class="inline-flex items-center gap-1.5 text-[#7DC8FF] font-label-md text-label-md"><span class="material-symbols-outlined text-[16px]">lock</span><span>SSL 256-bit secure</span></div></div><div class="flex items-center gap-3"><div class="flex items-center gap-1.5 bg-[#121528] px-3 py-1.5 rounded-lg border border-[#4A6CFF]/30 cursor-pointer hover:border-[#7DC8FF] transition-colors"><span class="material-symbols-outlined text-[16px] text-[#7DC8FF]">language</span><span class="font-body-sm text-body-sm text-[#E8ECFF]">United States (USD)</span><span class="material-symbols-outlined text-[16px] text-[#7DC8FF]">unfold_more</span></div></div></div></div></footer></body></html>

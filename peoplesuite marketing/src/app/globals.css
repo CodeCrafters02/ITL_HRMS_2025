@@ -1,0 +1,216 @@
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    --background: #ffffff;
+    --foreground: #0B0F2E;
+    --primary: #0B5BD3;
+    --primary-deep: #1E1AB8;
+    --bright-blue: #4A6CFF;
+    --glow: #7DC8FF;
+    --primary-tint: #EAF0FF;
+    --surface: #F5F8FF;
+    --border-brand: #DCE4F5;
+    --text-brand: #0B0F2E;
+    --text-muted: #5B6488;
+  }
+
+  .dark {
+    --background: #0A0B14;
+    --foreground: #E8ECFF;
+    --primary: #4A6CFF;
+    --primary-deep: #0B5BD3;
+    --bright-blue: #7DC8FF;
+    --glow: #7DC8FF;
+    --primary-tint: #141834;
+    --surface: #0F1226;
+    --border-brand: #232A4E;
+    --text-brand: #E8ECFF;
+    --text-muted: #9AA3D1;
+  }
+
+  html, body {
+    margin: 0;
+    padding: 0;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  }
+}
+
+/* Material Symbols font configuration */
+.material-symbols-outlined {
+  font-family: 'Material Symbols Outlined';
+  font-weight: normal;
+  font-style: normal;
+  font-size: 24px;
+  line-height: 1;
+  letter-spacing: normal;
+  text-transform: none;
+  display: inline-block;
+  white-space: nowrap;
+  word-wrap: normal;
+  direction: ltr;
+  -webkit-font-feature-settings: 'liga';
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Typography styles matching Stitch specs */
+.font-display {
+  font-family: 'Inter', sans-serif;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.text-display {
+  font-size: clamp(2.25rem, 5vw, 3rem);
+  line-height: 1.15;
+}
+
+.font-headline-lg {
+  font-family: 'Inter', sans-serif;
+  font-weight: 700;
+  letter-spacing: -0.015em;
+}
+
+.text-headline-lg {
+  font-size: clamp(1.85rem, 4vw, 2.5rem);
+  line-height: 1.2;
+}
+
+.font-headline-md {
+  font-family: 'Inter', sans-serif;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.text-headline-md {
+  font-size: clamp(1.5rem, 3vw, 2rem);
+  line-height: 1.25;
+}
+
+.font-headline-sm {
+  font-family: 'Inter', sans-serif;
+  font-weight: 600;
+  letter-spacing: -0.005em;
+}
+
+.text-headline-sm {
+  font-size: 1.5rem;
+  line-height: 2rem;
+}
+
+.font-title-md {
+  font-family: 'Inter', sans-serif;
+  font-weight: 600;
+}
+
+.text-title-md {
+  font-size: 1.25rem;
+  line-height: 1.75rem;
+}
+
+.font-body-lg {
+  font-family: 'Inter', sans-serif;
+  font-weight: 400;
+}
+
+.text-body-lg {
+  font-size: 1.125rem;
+  line-height: 1.75rem;
+}
+
+.font-body-md {
+  font-family: 'Inter', sans-serif;
+  font-weight: 400;
+}
+
+.text-body-md {
+  font-size: 1rem;
+  line-height: 1.5rem;
+}
+
+.font-body-sm {
+  font-family: 'Inter', sans-serif;
+  font-weight: 400;
+}
+
+.text-body-sm {
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+}
+
+.font-label-lg {
+  font-family: 'Inter', sans-serif;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+
+.text-label-lg {
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+}
+
+.font-label-md {
+  font-family: 'Inter', sans-serif;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.text-label-md {
+  font-size: 0.75rem;
+  line-height: 1rem;
+}
+
+.font-caption {
+  font-family: 'Inter', sans-serif;
+  font-weight: 400;
+}
+
+.text-caption {
+  font-size: 0.75rem;
+  line-height: 1rem;
+}
+
+/* Color utilities for easy usage */
+.bg-primary-deep { background-color: #1E1AB8; }
+.bg-primary-color { background-color: #0B5BD3; }
+.bg-bright-blue { background-color: #4A6CFF; }
+.bg-glow { background-color: #7DC8FF; }
+.bg-primary-tint { background-color: #EAF0FF; }
+.bg-surface-tint { background-color: #F5F8FF; }
+.border-brand { border-color: #DCE4F5; }
+.text-brand-color { color: #0B0F2E; }
+.text-muted-color { color: #5B6488; }
+
+/* Custom animations & interactive polish */
+@keyframes float {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-8px); }
+}
+
+.animate-float {
+  animation: float 4s ease-in-out infinite;
+}
+
+@keyframes pulseSlow {
+  0%, 100% { opacity: 0.3; transform: scale(1); }
+  50% { opacity: 0.5; transform: scale(1.08); }
+}
+
+.animate-pulse-slow {
+  animation: pulseSlow 6s ease-in-out infinite;
+}
+
+/* Glassmorphism helpers */
+.glass-panel {
+  background: rgba(15, 18, 38, 0.85);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(74, 108, 255, 0.25);
+}
+
+.glass-panel-light {
+  background: rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid #DCE4F5;
+}

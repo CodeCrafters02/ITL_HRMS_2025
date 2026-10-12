@@ -1,0 +1,708 @@
+<!DOCTYPE html><html class="scroll-smooth" lang="en"><head><meta charset="utf-8"><meta content="width=device-width, initial-scale=1.0" name="viewport"><meta content="web_standard" name="shell-type"><title>PeopleSuite | Modern Cloud HRMS</title><link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"><link href="https://fonts.googleapis.com" rel="preconnect"><link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"><style>@layer base{html,body{margin:0;padding:0;}body{overscroll-behavior:none;}main>:first-child{margin-top:0!important;}main>:last-child{margin-bottom:0!important;}}::-webkit-scrollbar{display:none;}</style><script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script><script id="tailwind-config">tailwind.config = {
+  darkMode: "class",
+  theme: {
+    extend: {
+      colors: {
+        "primary-deep": "#1E1AB8",
+        "primary": "#0B5BD3",
+        "bright-blue": "#4A6CFF",
+        "glow": "#7DC8FF",
+        "primary-tint": "#EAF0FF",
+        "surface": "#F5F8FF",
+        "background": "#FFFFFF",
+        "border-brand": "#DCE4F5",
+        "text-brand": "#0B0F2E",
+        "text-muted": "#5B6488",
+        "surface-container": "#EAF0FF",
+        "surface-container-low": "#F5F8FF",
+        "surface-container-lowest": "#FFFFFF",
+        "surface-container-high": "#E2EAF8",
+        "surface-container-highest": "#DCE4F5",
+        "on-surface": "#0B0F2E",
+        "on-surface-variant": "#5B6488",
+        "outline": "#8590B2",
+        "outline-variant": "#DCE4F5",
+        "inverse-surface": "#0B0F2E",
+        "inverse-on-surface": "#F5F8FF"
+      },
+      borderRadius: {
+        DEFAULT: "0.25rem",
+        lg: "0.5rem",
+        xl: "0.75rem",
+        full: "9999px"
+      },
+      spacing: {
+        "space-xl": "2rem",
+        gutter: "1.5rem",
+        "space-xs": "0.25rem",
+        "space-2xl": "3rem",
+        margin: "2rem",
+        "space-md": "1rem",
+        "gutter-sm": "1rem",
+        "space-lg": "1.5rem",
+        "space-sm": "0.5rem",
+        "gutter-lg": "2rem",
+        "margin-mobile": "1rem"
+      },
+      fontFamily: {
+        "headline-md-mobile": ["Inter"],
+        display: ["Inter"],
+        "headline-lg-mobile": ["Inter"],
+        "label-md": ["Inter"],
+        "headline-lg": ["Inter"],
+        "body-lg": ["Inter"],
+        "headline-sm": ["Inter"],
+        "label-lg": ["Inter"],
+        "body-md": ["Inter"],
+        "headline-md": ["Inter"],
+        "title-md": ["Inter"],
+        "body-sm": ["Inter"],
+        caption: ["Inter"],
+        "display-mobile": ["Inter"]
+      },
+      fontSize: {
+        "headline-md-mobile": ["26px", { lineHeight: "34px", letterSpacing: "-0.01em", fontWeight: "600" }],
+        display: ["48px", { lineHeight: "56px", letterSpacing: "-0.02em", fontWeight: "700" }],
+        "headline-lg-mobile": ["32px", { lineHeight: "40px", letterSpacing: "-0.015em", fontWeight: "700" }],
+        "label-md": ["12px", { lineHeight: "16px", letterSpacing: "0.02em", fontWeight: "600" }],
+        "headline-lg": ["40px", { lineHeight: "48px", letterSpacing: "-0.015em", fontWeight: "700" }],
+        "body-lg": ["18px", { lineHeight: "28px", fontWeight: "400" }],
+        "headline-sm": ["24px", { lineHeight: "32px", letterSpacing: "-0.05em", fontWeight: "600" }],
+        "label-lg": ["14px", { lineHeight: "20px", letterSpacing: "0.01em", fontWeight: "600" }],
+        "body-md": ["16px", { lineHeight: "24px", fontWeight: "400" }],
+        "headline-md": ["32px", { lineHeight: "40px", letterSpacing: "-0.01em", fontWeight: "600" }],
+        "title-md": ["20px", { lineHeight: "28px", fontWeight: "600" }],
+        "body-sm": ["14px", { lineHeight: "20px", fontWeight: "400" }],
+        caption: ["12px", { lineHeight: "16px", fontWeight: "400" }],
+        "display-mobile": ["36px", { lineHeight: "44px", letterSpacing: "-0.02em", fontWeight: "700" }]
+      }
+    }
+  }
+};</script></head><body class="bg-background font-body-md text-text-brand antialiased"><header class="fixed top-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-md shadow-[0_1px_8px_rgba(11,91,211,0.06)] border-b border-border-brand/70"><div class="h-[72px] max-w-7xl mx-auto px-6 lg:px-12 flex items-center justify-between gap-6"><div class="flex items-center gap-8"><a class="flex items-center gap-3 group" data-path="home" href="#"><img alt="PeopleSuite Brand Logo" class="h-8 w-auto object-contain" src="https://lh3.googleusercontent.com/aida/AEtjO1UYvYuwBeXq9v09l5PsShh5dDjqtAScBtz5qPPKgNo56zJs1YwHw_wfVL1Z6rhcy8AeGNVldeluO_Uj5dXXJJYeCo9SnYLNDPFg3_PXyuyl4E2qdMeKklcyPbubO212UlGz6PNmORzZ_iesCcDbFE4eK1O09moUbqSW3b-TZgmUmXfdk3EXlLroLPcZUhZwf9rOZEJnRK-zJ3Ww2NwlNO3lxv2_x7I55n4UzHpsOFDNC0FAfDRAvx9kfjBe"><span class="font-title-md text-title-md text-text-brand tracking-tight group-hover:text-primary transition-colors">PeopleSuite</span></a><nav class="hidden lg:flex items-center gap-7" data-active-classes="text-primary font-label-lg font-semibold"><div class="relative group py-2"><button class="flex items-center gap-1 font-label-lg text-label-lg text-text-muted hover:text-text-brand transition-colors cursor-pointer" type="button"><span class="">Product</span><span class="material-symbols-outlined text-[18px] text-text-muted group-hover:rotate-180 transition-transform duration-200">expand_more</span></button><div class="absolute top-full left-0 w-64 pt-2 opacity-0 translate-y-1 invisible group-hover:opacity-100 group-hover:translate-y-0 group-hover:visible transition-all duration-200"><div class="bg-white rounded-xl p-3 shadow-[0_10px_25px_-5px_rgba(11,91,211,0.12)] border border-border-brand space-y-1"><a class="block px-3 py-2 rounded-lg font-body-sm text-body-sm text-text-brand hover:bg-surface transition-colors" data-path="product-core-hr" href="#">Core HR &amp; Directory</a><a class="block px-3 py-2 rounded-lg font-body-sm text-body-sm text-text-brand hover:bg-surface transition-colors" data-path="product-attendance" href="#">Attendance &amp; Geofencing</a><a class="block px-3 py-2 rounded-lg font-body-sm text-body-sm text-text-brand hover:bg-surface transition-colors" data-path="product-payroll" href="#">Payroll &amp; Tax Compliance</a><a class="block px-3 py-2 rounded-lg font-body-sm text-body-sm text-text-brand hover:bg-surface transition-colors" data-path="product-performance" href="#">Performance &amp; OKRs</a><a class="block px-3 py-2 rounded-lg font-body-sm text-body-sm text-text-brand hover:bg-surface transition-colors" data-path="product-recruitment" href="#">Recruitment ATS</a><a class="block px-3 py-2 rounded-lg font-body-sm text-body-sm text-text-brand hover:bg-surface transition-colors" data-path="product-mobile" href="#">Mobile App</a></div></div></div><div class="relative group py-2"><button class="flex items-center gap-1 font-label-lg text-label-lg text-text-muted hover:text-text-brand transition-colors cursor-pointer" type="button"><span class="">Solutions</span><span class="material-symbols-outlined text-[18px] text-text-muted group-hover:rotate-180 transition-transform duration-200">expand_more</span></button><div class="absolute top-full left-0 w-60 pt-2 opacity-0 translate-y-1 invisible group-hover:opacity-100 group-hover:translate-y-0 group-hover:visible transition-all duration-200"><div class="bg-white rounded-xl p-3 shadow-[0_10px_25px_-5px_rgba(11,91,211,0.12)] border border-border-brand space-y-1"><a class="block px-3 py-2 rounded-lg font-body-sm text-body-sm text-text-brand hover:bg-surface transition-colors" data-path="solutions-enterprise" href="#">Mid-Market Enterprise</a><a class="block px-3 py-2 rounded-lg font-body-sm text-body-sm text-text-brand hover:bg-surface transition-colors" data-path="solutions-smb" href="#">High-Growth Startups &amp; SMB</a><a class="block px-3 py-2 rounded-lg font-body-sm text-body-sm text-text-brand hover:bg-surface transition-colors" data-path="solutions-healthcare" href="#">Healthcare &amp; Clinics</a><a class="block px-3 py-2 rounded-lg font-body-sm text-body-sm text-text-brand hover:bg-surface transition-colors" data-path="solutions-tech" href="#">Tech &amp; Remote Teams</a><a class="block px-3 py-2 rounded-lg font-body-sm text-body-sm text-text-brand hover:bg-surface transition-colors" data-path="solutions-manufacturing" href="#">Manufacturing &amp; Shifts</a></div></div></div><a aria-current="page" class="flex items-center gap-2 transition-colors text-primary font-label-lg font-semibold" data-path="pricing" href="#"><span class="">Pricing</span><span class="bg-primary-tint text-primary font-label-md text-label-md px-2 py-0.5 rounded-full border border-border-brand">Save 20% Annual</span></a><div class="relative group py-2"><button class="flex items-center gap-1 font-label-lg text-label-lg text-text-muted hover:text-text-brand transition-colors cursor-pointer" type="button"><span class="">Resources</span><span class="material-symbols-outlined text-[18px] text-text-muted group-hover:rotate-180 transition-transform duration-200">expand_more</span></button><div class="absolute top-full left-0 w-64 pt-2 opacity-0 translate-y-1 invisible group-hover:opacity-100 group-hover:translate-y-0 group-hover:visible transition-all duration-200"><div class="bg-white rounded-xl p-3 shadow-[0_10px_25px_-5px_rgba(11,91,211,0.12)] border border-border-brand space-y-1"><a class="block px-3 py-2 rounded-lg font-body-sm text-body-sm text-text-brand hover:bg-surface transition-colors" data-path="resources-blog" href="#">HR Knowledge Hub &amp; Blog</a><a class="block px-3 py-2 rounded-lg font-body-sm text-body-sm text-text-brand hover:bg-surface transition-colors" data-path="resources-stories" href="#">Customer Stories</a><a class="block px-3 py-2 rounded-lg font-body-sm text-body-sm text-text-brand hover:bg-surface transition-colors" data-path="resources-roi-calculator" href="#">HR Tech ROI Calculator</a><a class="block px-3 py-2 rounded-lg font-body-sm text-body-sm text-text-brand hover:bg-surface transition-colors" data-path="resources-compliance-guides" href="#">State Compliance 2025</a></div></div></div><a class="font-label-lg text-label-lg text-text-muted hover:text-text-brand transition-colors" data-path="about" href="#">About</a></nav></div><div class="flex items-center gap-4"><button aria-label="Toggle Light or Dark Mode" class="w-9 h-9 rounded-xl flex items-center justify-center text-text-muted hover:bg-surface hover:text-text-brand transition-colors" type="button"><span class="material-symbols-outlined text-[20px]">light_mode</span></button><a class="hidden sm:inline-flex font-label-lg text-label-lg text-text-brand hover:text-primary transition-colors px-3 py-2" data-path="login" href="#">Login</a><a class="inline-flex items-center justify-center bg-gradient-to-r from-primary-deep to-primary hover:opacity-95 text-white font-label-lg text-label-lg px-5 py-2.5 rounded-xl shadow-sm hover:shadow-[0_4px_20px_-2px_rgba(11,91,211,0.35)] transition-all active:scale-[0.98]" data-path="book-demo" href="#">Book a Demo</a><div class="flex items-center pl-2 border-l border-border-brand"><img alt="Profile" class="w-8 h-8 rounded-full object-cover ring-2 ring-primary-tint" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCRQnOpDnMGqUYJKGLJdpMD4KlO3ZfDLmsdZ1Bjl_5X4mwbHYX4ojw5XtC0WYmTN44IXJBytDsW9Z8CCHuheiZQtAF-0QrRxfLFDOkXsUcn_POFbGACq0AddopWCm9d8CACBhuAXiJmfuBx70047oEGMW6k3xfzThhyfKeCcZS6qmLDaC-11ZCcLb7u1rH5ThO_5XptfPmvr1jmge3h-ppLPCZFWDlOf-HBcp7FEwIaO3p3ad-G_Lss7Q"></div></div></div></header><main class="w-full pt-[72px] bg-surface min-h-[calc(100vh-72px)]"><div class="flex flex-col w-full">
+<!-- Interactive Billing & Pricing Section -->
+<section class="relative w-full overflow-hidden py-16 lg:py-24 bg-surface">
+<!-- Brand Ambient Glows -->
+<div class="absolute -top-32 left-1/2 -translate-x-1/2 w-[720px] h-[360px] bg-gradient-to-b from-primary/5 to-transparent blur-3xl pointer-events-none rounded-full"></div>
+
+<div class="max-w-7xl mx-auto px-6 lg:px-12 relative z-10">
+<!-- Section Header -->
+<div class="text-center max-w-3xl mx-auto space-y-4">
+<div class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-primary-tint border border-border-brand text-primary shadow-xs">
+<span class="material-symbols-outlined text-[16px] text-primary" style="font-variation-settings: 'FILL' 1;">verified</span>
+<span class="font-label-md text-label-md uppercase tracking-wider font-semibold">Transparent, Predictable Pricing</span>
+</div>
+<h1 class="font-display text-display text-text-brand tracking-tight">
+          Simple, flexible plans that scale with your team
+        </h1>
+<p class="font-body-lg text-body-lg text-text-muted max-w-2xl mx-auto">
+          No hidden setup fees. Transparent per-employee pricing with 14-day risk-free trial. Upgrade, downgrade, or cancel anytime.
+        </p>
+<!-- Billing Toggle Pill -->
+<div class="pt-6 pb-2 flex items-center justify-center">
+<div class="inline-flex items-center p-1.5 rounded-full bg-primary-tint border border-border-brand shadow-inner">
+<button class="px-5 py-2 rounded-full font-label-lg text-label-lg text-text-muted hover:text-text-brand transition-all duration-200" id="billing-monthly-btn" onclick="setBillingCycle('monthly')" type="button">
+              Monthly Billing
+            </button>
+<button class="flex items-center gap-2 px-5 py-2 rounded-full font-label-lg text-label-lg bg-white text-primary shadow-sm font-semibold transition-all duration-200" id="billing-annual-btn" onclick="setBillingCycle('annual')" type="button">
+<span class="">Annual Billing</span>
+<span class="bg-primary text-white font-label-md text-label-md px-2.5 py-0.5 rounded-full font-bold">
+                Save 20% + 2 Mo Free
+              </span>
+</button>
+</div>
+</div>
+</div>
+<!-- Pricing Tier Cards Grid -->
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-8 mt-12 items-stretch">
+<!-- TIER 1: Starter -->
+<div class="flex flex-col rounded-3xl bg-white border border-border-brand shadow-md hover:shadow-xl transition-all duration-300 p-8 relative">
+<div class="space-y-2 mb-6">
+<div class="inline-flex items-center gap-1.5 text-text-muted font-label-md text-label-md uppercase tracking-wider">
+<span class="w-2 h-2 rounded-full bg-text-muted"></span>
+              Starter Plan
+            </div>
+<h2 class="font-headline-sm text-headline-sm text-text-brand">Starter</h2>
+<p class="font-body-sm text-body-sm text-text-muted min-h-[40px]">
+              For early-stage startups, boutique agencies, and retail shops up to 50 staff.
+            </p>
+</div>
+<!-- Price Indicator -->
+<div class="p-4 rounded-2xl bg-surface border border-border-brand mb-6">
+<div class="flex items-baseline gap-1">
+<span class="font-headline-lg text-headline-lg text-text-brand" id="price-starter">$4</span>
+<span class="font-body-sm text-body-sm text-text-muted">/ employee / month</span>
+</div>
+<div class="font-caption text-caption text-text-muted mt-1" id="base-starter">
+              +$49/mo base platform fee (billed annually)
+            </div>
+</div>
+<!-- CTA Button -->
+<a class="w-full inline-flex items-center justify-center py-3.5 px-6 rounded-xl bg-primary-tint hover:bg-border-brand text-primary font-label-lg text-label-lg transition-colors font-semibold border border-border-brand" data-path="signup-starter" href="#">
+            Start 14-Day Free Trial
+          </a>
+<p class="text-center font-caption text-caption text-text-muted mt-2 mb-6">No credit card required</p>
+<!-- Divider -->
+<div class="w-full h-px bg-border-brand my-2"></div>
+<!-- Features List -->
+<div class="space-y-3.5 pt-4 flex-1">
+<span class="font-label-md text-label-md uppercase tracking-wider text-text-muted block">Included Essentials</span>
+<div class="flex items-start gap-3">
+<span class="material-symbols-outlined text-[20px] text-primary mt-0.5">check_circle</span>
+<span class="font-body-sm text-body-sm text-text-brand">Core HR &amp; employee directory</span>
+</div>
+<div class="flex items-start gap-3">
+<span class="material-symbols-outlined text-[20px] text-primary mt-0.5">check_circle</span>
+<span class="font-body-sm text-body-sm text-text-brand">Leave &amp; PTO tracking</span>
+</div>
+<div class="flex items-start gap-3">
+<span class="material-symbols-outlined text-[20px] text-primary mt-0.5">check_circle</span>
+<span class="font-body-sm text-body-sm text-text-brand">Mobile self-service app (iOS &amp; Android)</span>
+</div>
+<div class="flex items-start gap-3">
+<span class="material-symbols-outlined text-[20px] text-primary mt-0.5">check_circle</span>
+<span class="font-body-sm text-body-sm text-text-brand">Standard shift scheduling</span>
+</div>
+<div class="flex items-start gap-3">
+<span class="material-symbols-outlined text-[20px] text-primary mt-0.5">check_circle</span>
+<span class="font-body-sm text-body-sm text-text-brand">Basic headcount &amp; attrition reports</span>
+</div>
+<div class="flex items-start gap-3">
+<span class="material-symbols-outlined text-[20px] text-primary mt-0.5">check_circle</span>
+<span class="font-body-sm text-body-sm text-text-brand">Email support (24-hour SLA response)</span>
+</div>
+<div class="flex items-start gap-3">
+<span class="material-symbols-outlined text-[20px] text-primary mt-0.5">check_circle</span>
+<span class="font-body-sm text-body-sm text-text-brand">Document storage (5GB secure cloud)</span>
+</div>
+<div class="flex items-start gap-3">
+<span class="material-symbols-outlined text-[20px] text-primary mt-0.5">check_circle</span>
+<span class="font-body-sm text-body-sm text-text-brand">Standard employee onboarding checklists</span>
+</div>
+</div>
+</div>
+<!-- TIER 2: Growth (Highlighted / Most Popular) -->
+<div class="flex flex-col rounded-3xl bg-white shadow-xl ring-2 ring-primary relative p-8 -mt-2 lg:-mt-4 mb-2 lg:mb-0">
+<!-- Top Badge -->
+<div class="absolute -top-3.5 left-1/2 -translate-x-1/2 bg-primary-tint text-primary border border-primary/30 font-label-md text-label-md px-4 py-1.5 rounded-full shadow-md font-bold tracking-wide whitespace-nowrap">
+            MOST POPULAR • BEST FOR 50–250 EMPLOYEES
+          </div>
+<div class="space-y-2 mb-6 mt-2">
+<div class="inline-flex items-center gap-1.5 text-primary-deep font-label-md text-label-md uppercase tracking-wider font-semibold">
+<span class="w-2 h-2 rounded-full bg-primary-deep animate-pulse"></span>
+              Growth Plan
+            </div>
+<h2 class="font-headline-sm text-headline-sm text-text-brand">Growth</h2>
+<p class="font-body-sm text-body-sm text-text-muted min-h-[40px]">
+              Complete automation for mid-sized organizations scaling rapidly across regions.
+            </p>
+</div>
+<!-- Price Indicator -->
+<div class="p-4 rounded-2xl bg-primary-tint/80 border border-border-brand mb-6">
+<div class="flex items-baseline gap-1">
+<span class="font-headline-lg text-headline-lg text-primary" id="price-growth">$7</span>
+<span class="font-body-sm text-body-sm text-text-brand font-medium">/ employee / month</span>
+</div>
+<div class="font-caption text-caption text-text-muted mt-1" id="base-growth">
+              +$99/mo base platform fee (billed annually)
+            </div>
+</div>
+<!-- CTA Button -->
+<a class="w-full inline-flex items-center justify-center py-3.5 px-6 rounded-xl bg-gradient-to-r from-primary-deep to-primary hover:opacity-95 text-white font-label-lg text-label-lg shadow-md hover:shadow-lg transition-all font-semibold active:scale-[0.99]" data-path="signup-growth" href="#">
+            Get Started with Growth
+          </a>
+<p class="text-center font-caption text-caption text-text-muted mt-2 mb-6">14 days free full-feature access</p>
+<!-- Divider -->
+<div class="w-full h-px bg-border-brand my-2"></div>
+<!-- Features List -->
+<div class="space-y-3.5 pt-4 flex-1"><span class="font-label-md text-label-md uppercase tracking-wider text-primary font-semibold block">Everything in Starter, plus:</span>
+<div class="flex items-start gap-3">
+<span class="material-symbols-outlined text-[20px] text-primary mt-0.5">check_circle</span>
+<span class="font-body-sm text-body-sm text-text-brand font-medium">Automated multi-state payroll run</span>
+</div>
+<div class="flex items-start gap-3">
+<span class="material-symbols-outlined text-[20px] text-primary mt-0.5">check_circle</span>
+<span class="font-body-sm text-body-sm text-text-brand">Statutory tax filing &amp; digital e-signatures</span>
+</div>
+<div class="flex items-start gap-3">
+<span class="material-symbols-outlined text-[20px] text-primary mt-0.5">check_circle</span>
+<span class="font-body-sm text-body-sm text-text-brand">Geofenced mobile clock-in &amp; biometric ready</span>
+</div>
+<div class="flex items-start gap-3">
+<span class="material-symbols-outlined text-[20px] text-primary mt-0.5">check_circle</span>
+<span class="font-body-sm text-body-sm text-text-brand">Performance reviews &amp; 360 OKR tracking</span>
+</div>
+<div class="flex items-start gap-3">
+<span class="material-symbols-outlined text-[20px] text-primary mt-0.5">check_circle</span>
+<span class="font-body-sm text-body-sm text-text-brand">ATS recruitment pipeline (5 active job postings)</span>
+</div>
+<div class="flex items-start gap-3">
+<span class="material-symbols-outlined text-[20px] text-primary mt-0.5">check_circle</span>
+<span class="font-body-sm text-body-sm text-text-brand">Native Slack &amp; Microsoft Teams integrations</span>
+</div>
+<div class="flex items-start gap-3">
+<span class="material-symbols-outlined text-[20px] text-primary mt-0.5">check_circle</span>
+<span class="font-body-sm text-body-sm text-text-brand">Multi-level approval workflows &amp; delegates</span>
+</div>
+<div class="flex items-start gap-3">
+<span class="material-symbols-outlined text-[20px] text-primary mt-0.5">check_circle</span>
+<span class="font-body-sm text-body-sm text-text-brand">Dedicated Customer Success Manager</span>
+</div></div>
+</div>
+<!-- TIER 3: Enterprise -->
+<div class="flex flex-col rounded-3xl bg-white border border-border-brand shadow-md hover:shadow-xl transition-all duration-300 p-8 relative">
+<div class="space-y-2 mb-6">
+<div class="inline-flex items-center gap-1.5 text-text-muted font-label-md text-label-md uppercase tracking-wider">
+<span class="w-2 h-2 rounded-full bg-text-brand"></span>
+              Enterprise
+            </div>
+<h2 class="font-headline-sm text-headline-sm text-text-brand">Enterprise</h2>
+<p class="font-body-sm text-body-sm text-text-muted min-h-[40px]">
+              For mid-market and global enterprises (250 to 10,000+ employees) needing bespoke compliance.
+            </p>
+</div>
+<!-- Price Indicator -->
+<div class="p-4 rounded-2xl bg-surface border border-border-brand mb-6">
+<div class="flex items-baseline gap-1">
+<span class="font-headline-lg text-headline-lg text-text-brand">Custom</span>
+<span class="font-body-sm text-body-sm text-text-muted">/ volume tiers</span>
+</div>
+<div class="font-caption text-caption text-text-muted mt-1">
+              Approx. $11/employee with custom SLAs &amp; architecture
+            </div>
+</div>
+<!-- CTA Button -->
+<a class="w-full inline-flex items-center justify-center py-3.5 px-6 rounded-xl bg-text-brand hover:bg-primary-deep text-white font-label-lg text-label-lg transition-colors font-semibold" data-path="contact-enterprise" href="#">
+            Contact Enterprise Sales
+          </a>
+<p class="text-center font-caption text-caption text-text-muted mt-2 mb-6">Custom pilot &amp; contract billing</p>
+<!-- Divider -->
+<div class="w-full h-px bg-border-brand my-2"></div>
+<!-- Features List -->
+<div class="space-y-3.5 pt-4 flex-1">
+<span class="font-label-md text-label-md uppercase tracking-wider text-text-muted block">Everything in Growth, plus:</span>
+<div class="flex items-start gap-3">
+<span class="material-symbols-outlined text-[20px] text-primary mt-0.5">check_circle</span>
+<span class="font-body-sm text-body-sm text-text-brand">Unlimited ATS job requisitions &amp; talent pools</span>
+</div>
+<div class="flex items-start gap-3">
+<span class="material-symbols-outlined text-[20px] text-primary mt-0.5">check_circle</span>
+<span class="font-body-sm text-body-sm text-text-brand">Multi-entity &amp; multi-currency payroll consoles</span>
+</div>
+<div class="flex items-start gap-3">
+<span class="material-symbols-outlined text-[20px] text-primary mt-0.5">check_circle</span>
+<span class="font-body-sm text-body-sm text-text-brand">Full REST API access, Webhooks &amp; ERP connectors</span>
+</div>
+<div class="flex items-start gap-3">
+<span class="material-symbols-outlined text-[20px] text-primary mt-0.5">check_circle</span>
+<span class="font-body-sm text-body-sm text-text-brand">Enterprise SSO (SAML 2.0, Okta, Azure AD, Ping)</span>
+</div>
+<div class="flex items-start gap-3">
+<span class="material-symbols-outlined text-[20px] text-primary mt-0.5">check_circle</span>
+<span class="font-body-sm text-body-sm text-text-brand">Granular audit logs &amp; custom role permissions</span>
+</div>
+<div class="flex items-start gap-3">
+<span class="material-symbols-outlined text-[20px] text-primary mt-0.5">check_circle</span>
+<span class="font-body-sm text-body-sm text-text-brand">99.99% Uptime SLA &amp; 24/7 priority phone support</span>
+</div>
+<div class="flex items-start gap-3">
+<span class="material-symbols-outlined text-[20px] text-primary mt-0.5">check_circle</span>
+<span class="font-body-sm text-body-sm text-text-brand">Dedicated Solution Architect &amp; Data Migration team</span>
+</div>
+<div class="flex items-start gap-3">
+<span class="material-symbols-outlined text-[20px] text-primary mt-0.5">check_circle</span>
+<span class="font-body-sm text-body-sm text-text-brand">Custom data residency &amp; HIPAA BAA agreements</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- Add-On Modules Section -->
+<section class="w-full py-16 bg-surface border-y border-border-brand/70">
+<div class="max-w-7xl mx-auto px-6 lg:px-12">
+<div class="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-10">
+<div>
+<div class="font-label-md text-label-md uppercase tracking-wider text-primary font-semibold">Modular Expansion</div>
+<h2 class="font-headline-md text-headline-md text-text-brand">Add-on Modules</h2>
+<p class="font-body-md text-body-md text-text-muted mt-1">Plug in capabilities only when your organization needs them.</p>
+</div>
+<div class="font-body-sm text-body-sm text-text-muted">
+          Can be activated or turned off on any monthly billing cycle.
+        </div>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+<!-- Addon 1 -->
+<div class="p-6 rounded-2xl bg-white border border-border-brand shadow-sm hover:shadow-md transition-shadow">
+<div class="flex items-center justify-between mb-4">
+<div class="w-12 h-12 rounded-xl bg-primary-tint flex items-center justify-center text-primary">
+<span class="material-symbols-outlined text-[28px]">payments</span>
+</div>
+<div class="text-right">
+<div class="font-title-md text-title-md text-text-brand font-bold">+$3</div>
+<div class="font-caption text-caption text-text-muted">/ contractor / mo</div>
+</div>
+</div>
+<h3 class="font-title-md text-title-md text-text-brand font-semibold mb-2">Global Contractor Payouts</h3>
+<p class="font-body-sm text-body-sm text-text-muted leading-relaxed">
+            Automate 1099 contracts, W-9 generation, cross-border localized currency disbursements, and automated invoice clearance in 130+ countries.
+          </p>
+</div>
+<!-- Addon 2 -->
+<div class="p-6 rounded-2xl bg-white border border-border-brand shadow-sm hover:shadow-md transition-shadow">
+<div class="flex items-center justify-between mb-4">
+<div class="w-12 h-12 rounded-xl bg-primary-tint flex items-center justify-center text-primary"><span class="material-symbols-outlined text-[28px]">psychology</span></div>
+<div class="text-right">
+<div class="font-title-md text-title-md text-text-brand font-bold">+$49</div>
+<div class="font-caption text-caption text-text-muted">/ company / mo</div>
+</div>
+</div>
+<h3 class="font-title-md text-title-md text-text-brand font-semibold mb-2">Advanced AI Candidate Sourcing</h3>
+<p class="font-body-sm text-body-sm text-text-muted leading-relaxed">
+            Smart semantic resume matching, AI job description generation, automated candidate screening questions, and predictive hiring scorecards.
+          </p>
+</div>
+<!-- Addon 3 -->
+<div class="p-6 rounded-2xl bg-white border border-border-brand shadow-sm hover:shadow-md transition-shadow">
+<div class="flex items-center justify-between mb-4">
+<div class="w-12 h-12 rounded-xl bg-primary-tint flex items-center justify-center text-primary-deep">
+<span class="material-symbols-outlined text-[28px]">fingerprint</span>
+</div>
+<div class="text-right">
+<div class="font-title-md text-title-md text-text-brand font-bold">+$29</div>
+<div class="font-caption text-caption text-text-muted">/ location / mo</div>
+</div>
+</div>
+<h3 class="font-title-md text-title-md text-text-brand font-semibold mb-2">Hardware Biometric Sync Gateway</h3>
+<p class="font-body-sm text-body-sm text-text-muted leading-relaxed">
+            Real-time bridge connecting physical fingerprint scanners, RFID badges, and facial-recognition turnstiles directly into PeopleSuite shifts.
+          </p>
+</div>
+</div>
+</div>
+</section>
+<!-- Comprehensive Feature Comparison Table -->
+<section class="w-full py-16 lg:py-24 bg-white">
+<div class="max-w-7xl mx-auto px-6 lg:px-12">
+<div class="text-center max-w-2xl mx-auto mb-16 space-y-3">
+<div class="font-label-md text-label-md uppercase tracking-wider text-primary font-semibold">Deep Dive</div>
+<h2 class="font-headline-lg text-headline-lg text-text-brand">Compare all features side-by-side</h2>
+<p class="font-body-md text-body-md text-text-muted">
+          Detailed transparency into our modules, capabilities, security baselines, and support tiers.
+        </p>
+</div>
+<!-- Feature Table Container -->
+<div class="rounded-2xl bg-white border border-border-brand shadow-md overflow-hidden">
+<div class="overflow-x-auto">
+<table class="w-full text-left border-collapse min-w-[760px]">
+<!-- Table Header -->
+<thead>
+<tr class="bg-surface text-text-brand border-b border-border-brand">
+<th class="py-5 px-6 font-label-lg text-label-lg w-2/5">Platform Features</th>
+<th class="py-5 px-4 font-label-lg text-label-lg text-center w-1/5">Starter</th>
+<th class="py-5 px-4 font-label-lg text-label-lg text-center w-1/5 bg-primary-tint/70 text-primary font-bold">Growth</th>
+<th class="py-5 px-4 font-label-lg text-label-lg text-center w-1/5">Enterprise</th>
+</tr>
+</thead>
+<tbody class="divide-y-0 text-text-brand font-body-sm text-body-sm">
+<!-- CATEGORY 1: Core HR -->
+<tr class="bg-primary-tint/60 font-label-md text-label-md uppercase tracking-wider text-primary border-y border-border-brand/70">
+<td class="py-3 px-6" colspan="4">1. Core HR &amp; Directory</td>
+</tr>
+<tr class="hover:bg-surface border-b border-border-brand/40">
+<td class="py-3.5 px-6 font-medium">Employee Profiles &amp; Document Vault</td>
+<td class="py-3.5 px-4 text-center"><span class="material-symbols-outlined text-primary">check</span></td>
+<td class="py-3.5 px-4 text-center bg-primary-tint/30"><span class="material-symbols-outlined text-primary">check</span></td>
+<td class="py-3.5 px-4 text-center"><span class="material-symbols-outlined text-primary">check</span></td>
+</tr>
+<tr class="hover:bg-surface border-b border-border-brand/40">
+<td class="py-3.5 px-6 font-medium">Interactive Org Chart &amp; Directory</td>
+<td class="py-3.5 px-4 text-center"><span class="material-symbols-outlined text-primary">check</span></td>
+<td class="py-3.5 px-4 text-center bg-primary-tint/30"><span class="material-symbols-outlined text-primary">check</span></td>
+<td class="py-3.5 px-4 text-center"><span class="material-symbols-outlined text-primary">check</span></td>
+</tr>
+<tr class="hover:bg-surface border-b border-border-brand/40">
+<td class="py-3.5 px-6 font-medium">Custom Field Builder &amp; Asset Management</td>
+<td class="py-3.5 px-4 text-center text-border-brand font-caption">—</td>
+<td class="py-3.5 px-4 text-center bg-primary-tint/30"><span class="material-symbols-outlined text-primary">check</span></td>
+<td class="py-3.5 px-4 text-center"><span class="material-symbols-outlined text-primary">check</span></td>
+</tr>
+<tr class="hover:bg-surface border-b border-border-brand/40">
+<td class="py-3.5 px-6 font-medium">Automated Offboarding &amp; Exit Interviews</td>
+<td class="py-3.5 px-4 text-center text-border-brand font-caption">—</td>
+<td class="py-3.5 px-4 text-center bg-primary-tint/30"><span class="material-symbols-outlined text-primary">check</span></td>
+<td class="py-3.5 px-4 text-center"><span class="material-symbols-outlined text-primary">check</span></td>
+</tr>
+<!-- CATEGORY 2: Time & Attendance -->
+<tr class="bg-primary-tint/60 font-label-md text-label-md uppercase tracking-wider text-primary border-y border-border-brand/70">
+<td class="py-3 px-6" colspan="4">2. Time, Shifts &amp; Attendance</td>
+</tr>
+<tr class="hover:bg-surface border-b border-border-brand/40">
+<td class="py-3.5 px-6 font-medium">Self-Service PTO Request &amp; Approval</td>
+<td class="py-3.5 px-4 text-center"><span class="material-symbols-outlined text-primary">check</span></td>
+<td class="py-3.5 px-4 text-center bg-primary-tint/30"><span class="material-symbols-outlined text-primary">check</span></td>
+<td class="py-3.5 px-4 text-center"><span class="material-symbols-outlined text-primary">check</span></td>
+</tr>
+<tr class="hover:bg-surface border-b border-border-brand/40">
+<td class="py-3.5 px-6 font-medium">Geofenced GPS Mobile Clock-in</td>
+<td class="py-3.5 px-4 text-center text-border-brand font-caption">—</td>
+<td class="py-3.5 px-4 text-center bg-primary-tint/30"><span class="material-symbols-outlined text-primary">check</span></td>
+<td class="py-3.5 px-4 text-center"><span class="material-symbols-outlined text-primary">check</span></td>
+</tr>
+<tr class="hover:bg-surface border-b border-border-brand/40">
+<td class="py-3.5 px-6 font-medium">Overtime Rules &amp; Complex Shift Rotations</td>
+<td class="py-3.5 px-4 text-center text-border-brand font-caption">—</td>
+<td class="py-3.5 px-4 text-center bg-primary-tint/30"><span class="material-symbols-outlined text-primary">check</span></td>
+<td class="py-3.5 px-4 text-center"><span class="material-symbols-outlined text-primary">check</span></td>
+</tr>
+<tr class="hover:bg-surface border-b border-border-brand/40">
+<td class="py-3.5 px-6 font-medium">Hardware Biometric Clocks Direct Hook</td>
+<td class="py-3.5 px-4 text-center text-border-brand font-caption">—</td>
+<td class="py-3.5 px-4 text-center bg-primary-tint/30 text-text-muted font-caption">Add-on</td>
+<td class="py-3.5 px-4 text-center"><span class="material-symbols-outlined text-primary">check</span></td>
+</tr>
+<!-- CATEGORY 3: Payroll & Tax -->
+<tr class="bg-primary-tint/60 font-label-md text-label-md uppercase tracking-wider text-primary border-y border-border-brand/70">
+<td class="py-3 px-6" colspan="4">3. Payroll &amp; Statutory Compliance</td>
+</tr>
+<tr class="hover:bg-surface border-b border-border-brand/40">
+<td class="py-3.5 px-6 font-medium">Single-State Payroll Processing</td>
+<td class="py-3.5 px-4 text-center text-text-muted font-caption">Basic Export</td>
+<td class="py-3.5 px-4 text-center bg-primary-tint/30"><span class="material-symbols-outlined text-primary">check</span></td>
+<td class="py-3.5 px-4 text-center"><span class="material-symbols-outlined text-primary">check</span></td>
+</tr>
+<tr class="hover:bg-surface border-b border-border-brand/40">
+<td class="py-3.5 px-6 font-medium">Multi-State Automated Tax Filing (W-2, 1099)</td>
+<td class="py-3.5 px-4 text-center text-border-brand font-caption">—</td>
+<td class="py-3.5 px-4 text-center bg-primary-tint/30"><span class="material-symbols-outlined text-primary">check</span></td>
+<td class="py-3.5 px-4 text-center"><span class="material-symbols-outlined text-primary">check</span></td>
+</tr>
+<tr class="hover:bg-surface border-b border-border-brand/40">
+<td class="py-3.5 px-6 font-medium">Direct Deposit &amp; Split Bank Accounts</td>
+<td class="py-3.5 px-4 text-center"><span class="material-symbols-outlined text-primary">check</span></td>
+<td class="py-3.5 px-4 text-center bg-primary-tint/30"><span class="material-symbols-outlined text-primary">check</span></td>
+<td class="py-3.5 px-4 text-center"><span class="material-symbols-outlined text-primary">check</span></td>
+</tr>
+<tr class="hover:bg-surface border-b border-border-brand/40">
+<td class="py-3.5 px-6 font-medium">Multi-Entity &amp; International Currencies</td>
+<td class="py-3.5 px-4 text-center text-border-brand font-caption">—</td>
+<td class="py-3.5 px-4 text-center text-border-brand bg-primary-tint/30 font-caption">—</td>
+<td class="py-3.5 px-4 text-center"><span class="material-symbols-outlined text-primary">check</span></td>
+</tr>
+<!-- CATEGORY 4: Talent & Performance -->
+<tr class="bg-primary-tint/60 font-label-md text-label-md uppercase tracking-wider text-primary border-y border-border-brand/70">
+<td class="py-3 px-6" colspan="4">4. Talent &amp; Performance</td>
+</tr>
+<tr class="hover:bg-surface border-b border-border-brand/40">
+<td class="py-3.5 px-6 font-medium">Applicant Tracking System (ATS)</td>
+<td class="py-3.5 px-4 text-center text-border-brand font-caption">—</td>
+<td class="py-3.5 px-4 text-center bg-primary-tint/30 font-medium text-primary">5 active jobs</td>
+<td class="py-3.5 px-4 text-center font-medium">Unlimited</td>
+</tr>
+<tr class="hover:bg-surface border-b border-border-brand/40">
+<td class="py-3.5 px-6 font-medium">OKR &amp; Goal Alignment Dashboards</td>
+<td class="py-3.5 px-4 text-center text-border-brand font-caption">—</td>
+<td class="py-3.5 px-4 text-center bg-primary-tint/30"><span class="material-symbols-outlined text-primary">check</span></td>
+<td class="py-3.5 px-4 text-center"><span class="material-symbols-outlined text-primary">check</span></td>
+</tr>
+<tr class="hover:bg-surface border-b border-border-brand/40">
+<td class="py-3.5 px-6 font-medium">360 Peer Review Cycles</td>
+<td class="py-3.5 px-4 text-center text-border-brand font-caption">—</td>
+<td class="py-3.5 px-4 text-center bg-primary-tint/30"><span class="material-symbols-outlined text-primary">check</span></td>
+<td class="py-3.5 px-4 text-center"><span class="material-symbols-outlined text-primary">check</span></td>
+</tr>
+<!-- CATEGORY 5: Security & Support -->
+<tr class="bg-primary-tint/60 font-label-md text-label-md uppercase tracking-wider text-primary border-y border-border-brand/70">
+<td class="py-3 px-6" colspan="4">5. Security &amp; Technical Support</td>
+</tr>
+<tr class="hover:bg-surface border-b border-border-brand/40">
+<td class="py-3.5 px-6 font-medium">Customer Support SLA</td>
+<td class="py-3.5 px-4 text-center text-text-muted font-caption">Email (24h)</td>
+<td class="py-3.5 px-4 text-center bg-primary-tint/30 font-caption font-semibold text-primary">Priority Chat &amp; CSM (4h)</td>
+<td class="py-3.5 px-4 text-center font-caption font-semibold">24/7 Phone + 15m SLA</td>
+</tr>
+<tr class="hover:bg-surface border-b border-border-brand/40">
+<td class="py-3.5 px-6 font-medium">Enterprise SSO (SAML 2.0 / Okta / Azure AD)</td>
+<td class="py-3.5 px-4 text-center text-border-brand font-caption">—</td>
+<td class="py-3.5 px-4 text-center text-border-brand bg-primary-tint/30 font-caption">—</td>
+<td class="py-3.5 px-4 text-center"><span class="material-symbols-outlined text-primary">check</span></td>
+</tr>
+<tr class="hover:bg-surface border-b border-border-brand/40">
+<td class="py-3.5 px-6 font-medium">SOC 2 Type II &amp; ISO 27001 Infrastructure</td>
+<td class="py-3.5 px-4 text-center"><span class="material-symbols-outlined text-primary">check</span></td>
+<td class="py-3.5 px-4 text-center bg-primary-tint/30"><span class="material-symbols-outlined text-primary">check</span></td>
+<td class="py-3.5 px-4 text-center"><span class="material-symbols-outlined text-primary">check</span></td>
+</tr>
+<tr class="hover:bg-surface">
+<td class="py-3.5 px-6 font-medium">Custom Dedicated Solution Architect</td>
+<td class="py-3.5 px-4 text-center text-border-brand font-caption">—</td>
+<td class="py-3.5 px-4 text-center text-border-brand bg-primary-tint/30 font-caption">—</td>
+<td class="py-3.5 px-4 text-center"><span class="material-symbols-outlined text-primary">check</span></td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</div>
+</section>
+<!-- Interactive FAQ Section -->
+<section class="w-full py-16 bg-surface">
+<div class="max-w-4xl mx-auto px-6 lg:px-12">
+<div class="text-center mb-12 space-y-2">
+<div class="font-label-md text-label-md uppercase tracking-wider text-primary font-semibold">Answers Ready</div>
+<h2 class="font-headline-md text-headline-md text-text-brand">Frequently Asked Questions</h2>
+<p class="font-body-md text-body-md text-text-muted">
+          Clear answers about pricing, contracts, compliance, and onboarding.
+        </p>
+</div>
+<div class="space-y-4" id="faq-accordion-group">
+<!-- FAQ Item 1 -->
+<div class="rounded-2xl bg-white border border-border-brand p-6 shadow-xs transition-all">
+<button class="w-full flex items-center justify-between text-left gap-4 cursor-pointer" onclick="toggleFaq(this)" type="button">
+<span class="font-title-md text-title-md text-text-brand font-semibold">Can we switch plans or cancel at any time?</span>
+<span class="material-symbols-outlined text-text-muted transition-transform duration-200">expand_more</span>
+</button>
+<div class="faq-content hidden pt-4 font-body-md text-body-md text-text-muted leading-relaxed">
+            Yes. You can upgrade, downgrade, or cancel your subscription directly from your Account Settings. If you upgrade mid-cycle, your new features activate instantly with prorated billing. If you downgrade or cancel, your changes will take effect at the end of your current billing period without penalty.
+          </div>
+</div>
+<!-- FAQ Item 2 -->
+<div class="rounded-2xl bg-white border border-border-brand p-6 shadow-xs transition-all">
+<button class="w-full flex items-center justify-between text-left gap-4 cursor-pointer" onclick="toggleFaq(this)" type="button">
+<span class="font-title-md text-title-md text-text-brand font-semibold">How does the 14-day free trial work?</span>
+<span class="material-symbols-outlined text-text-muted transition-transform duration-200">expand_more</span>
+</button>
+<div class="faq-content hidden pt-4 font-body-md text-body-md text-text-muted leading-relaxed">
+            Your 14-day trial gives you unrestricted access to all Growth tier features. No credit card is required to begin. You can invite team members, configure approval workflows, test sample payroll runs, and connect integrations. At any point, you can activate your chosen plan.
+          </div>
+</div>
+<!-- FAQ Item 3 -->
+<div class="rounded-2xl bg-white border border-border-brand p-6 shadow-xs transition-all">
+<button class="w-full flex items-center justify-between text-left gap-4 cursor-pointer" onclick="toggleFaq(this)" type="button">
+<span class="font-title-md text-title-md text-text-brand font-semibold">Do you assist with historical employee data migration from our old HR system?</span>
+<span class="material-symbols-outlined text-text-muted transition-transform duration-200">expand_more</span>
+</button>
+<div class="faq-content hidden pt-4 font-body-md text-body-md text-text-muted leading-relaxed">
+            Absolutely. Every Growth customer receives guided onboarding with CSV/Excel bulk import mapping tools. For Enterprise teams, our dedicated Solution Architecture squad handles end-to-end data cleansing, past payroll balance reconciliations, and custom migration from systems like ADP, BambooHR, Workday, or spreadsheets.
+          </div>
+</div>
+<!-- FAQ Item 4 -->
+<div class="rounded-2xl bg-white border border-border-brand p-6 shadow-xs transition-all">
+<button class="w-full flex items-center justify-between text-left gap-4 cursor-pointer" onclick="toggleFaq(this)" type="button">
+<span class="font-title-md text-title-md text-text-brand font-semibold">Are payroll tax filings included in the Growth plan?</span>
+<span class="material-symbols-outlined text-text-muted transition-transform duration-200">expand_more</span>
+</button>
+<div class="faq-content hidden pt-4 font-body-md text-body-md text-text-muted leading-relaxed">
+            Yes. Growth and Enterprise plans include automated federal, state, and local payroll tax calculations, quarterly filings, year-end Form W-2 and 1099 generation, as well as electronic distribution to employees without third-party fees.
+          </div>
+</div>
+<!-- FAQ Item 5 -->
+<div class="rounded-2xl bg-white border border-border-brand p-6 shadow-xs transition-all">
+<button class="w-full flex items-center justify-between text-left gap-4 cursor-pointer" onclick="toggleFaq(this)" type="button">
+<span class="font-title-md text-title-md text-text-brand font-semibold">How does per-employee pricing adjust when headcounts change?</span>
+<span class="material-symbols-outlined text-text-muted transition-transform duration-200">expand_more</span>
+</button>
+<div class="faq-content hidden pt-4 font-body-md text-body-md text-text-muted leading-relaxed">
+            PeopleSuite calculates your active headcount on your monthly billing date. Only active employees on the roster incur the per-employee rate. Offboarded or archived employees do not count toward your active license total, while their records remain safely retained for regulatory compliance.
+          </div>
+</div>
+<!-- FAQ Item 6 -->
+<div class="rounded-2xl bg-white border border-border-brand p-6 shadow-xs transition-all">
+<button class="w-full flex items-center justify-between text-left gap-4 cursor-pointer" onclick="toggleFaq(this)" type="button">
+<span class="font-title-md text-title-md text-text-brand font-semibold">What security certifications does PeopleSuite maintain?</span>
+<span class="material-symbols-outlined text-text-muted transition-transform duration-200">expand_more</span>
+</button>
+<div class="faq-content hidden pt-4 font-body-md text-body-md text-text-muted leading-relaxed">
+            We are SOC 2 Type II certified annually, ISO 27001 certified, and fully compliant with GDPR and CCPA. All data is encrypted in transit using TLS 1.3 and at rest with AES-256. For healthcare customers, we provide signed HIPAA Business Associate Agreements (BAA).
+          </div>
+</div>
+</div>
+</div>
+</section>
+<!-- Bottom Reassurance & Sales Specialist CTA Banner -->
+<section class="w-full py-16 lg:py-20 bg-surface">
+<div class="max-w-7xl mx-auto px-6 lg:px-12">
+<div class="rounded-3xl p-8 lg:p-14 shadow-2xl relative overflow-hidden flex flex-col lg:flex-row items-center justify-between gap-10 text-white" style="background: linear-gradient(135deg, rgb(21, 25, 56) 0%, rgb(30, 26, 184) 50%, rgb(11, 91, 211) 100%);">
+<!-- Subtle Background Pattern Decoration -->
+<div class="absolute -right-20 -bottom-20 w-80 h-80 rounded-full bg-white/10 blur-2xl pointer-events-none"></div>
+
+<!-- Left Context & Avatar -->
+<div class="flex flex-col sm:flex-row items-center sm:items-start text-center sm:text-left gap-6 relative z-10 max-w-2xl">
+<div class="relative shrink-0">
+<img alt="Professional headshot of a smiling female HR executive in her 30s" class="w-20 h-20 rounded-2xl object-cover shadow-lg ring-4 ring-white/20" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCRQnOpDnMGqUYJKGLJdpMD4KlO3ZfDLmsdZ1Bjl_5X4mwbHYX4ojw5XtC0WYmTN44IXJBytDsW9Z8CCHuheiZQtAF-0QrRxfLFDOkXsUcn_POFbGACq0AddopWCm9d8CACBhuAXiJmfuBx70047oEGMW6k3xfzThhyfKeCcZS6qmLDaC-11ZCcLb7u1rH5ThO_5XptfPmvr1jmge3h-ppLPCZFWDlOf-HBcp7FEwIaO3p3ad-G_Lss7Q">
+<span class="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-primary border-2 border-white flex items-center justify-center"><span class="w-2 h-2 rounded-full bg-white"></span></span>
+</div>
+<div class="space-y-2">
+<div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/15 text-primary-tint font-label-md text-label-md uppercase tracking-wider font-semibold border border-white/20">
+              Enterprise Advisory Team
+            </div>
+<h2 class="font-headline-md text-headline-md text-white tracking-tight">
+              Need a tailored quote for 500+ employees?
+            </h2>
+<p class="font-body-md text-body-md text-primary-tint/90 leading-relaxed">
+              Connect directly with an HR operations specialist. We will benchmark your current software stack, analyze data migration, and craft a volume discount package.
+            </p>
+</div>
+</div>
+<!-- Right Action Button Group -->
+<div class="flex flex-col sm:flex-row items-center gap-4 relative z-10 w-full sm:w-auto shrink-0">
+<a class="w-full sm:w-auto inline-flex items-center justify-center gap-2 py-4 px-8 rounded-xl bg-white text-primary hover:bg-primary-tint font-label-lg text-label-lg shadow-md hover:shadow-xl transition-all font-semibold" data-path="book-demo" href="#">
+<span class="material-symbols-outlined text-[20px] text-primary">calendar_month</span>
+<span class="">Schedule Custom Demo</span>
+</a>
+<a class="w-full sm:w-auto inline-flex items-center justify-center py-4 px-7 rounded-xl bg-white/15 hover:bg-white/25 text-white border border-white/20 font-label-lg text-label-lg transition-colors font-semibold" data-path="contact-sales" href="#">
+            Talk to Sales
+          </a>
+</div>
+</div>
+</div>
+</section>
+</div>
+<!-- Inline JavaScript for Pricing Billing Toggle & FAQ Interaction -->
+<script>
+  function setBillingCycle(cycle) {
+    const starterPrice = document.getElementById('price-starter');
+    const starterBase = document.getElementById('base-starter');
+    const growthPrice = document.getElementById('price-growth');
+    const growthBase = document.getElementById('base-growth');
+    const monthlyBtn = document.getElementById('billing-monthly-btn');
+    const annualBtn = document.getElementById('billing-annual-btn');
+
+    if (cycle === 'monthly') {
+      starterPrice.textContent = '$5';
+      starterBase.textContent = '+$49/mo base platform fee (billed monthly)';
+      growthPrice.textContent = '$9';
+      growthBase.textContent = '+$99/mo base platform fee (billed monthly)';
+
+      monthlyBtn.className = 'flex items-center px-5 py-2 rounded-full font-label-lg text-label-lg bg-white text-primary shadow-sm font-semibold transition-all duration-200';
+      annualBtn.className = 'flex items-center gap-2 px-5 py-2 rounded-full font-label-lg text-label-lg text-text-muted hover:text-text-brand transition-all duration-200';
+    } else {
+      starterPrice.textContent = '$4';
+      starterBase.textContent = '+$49/mo base platform fee (billed annually)';
+      growthPrice.textContent = '$7';
+      growthBase.textContent = '+$99/mo base platform fee (billed annually)';
+
+      monthlyBtn.className = 'px-5 py-2 rounded-full font-label-lg text-label-lg text-text-muted hover:text-text-brand transition-all duration-200';
+      annualBtn.className = 'flex items-center gap-2 px-5 py-2 rounded-full font-label-lg text-label-lg bg-white text-primary shadow-sm font-semibold transition-all duration-200';
+    }
+  }
+
+  function toggleFaq(btn) {
+    const content = btn.nextElementSibling;
+    const icon = btn.querySelector('.material-symbols-outlined');
+    const isHidden = content.classList.contains('hidden');
+
+    // Close other FAQs for clean accordion behavior
+    const allContents = document.querySelectorAll('.faq-content');
+    const allIcons = document.querySelectorAll('#faq-accordion-group .material-symbols-outlined');
+    allContents.forEach(el => el.classList.add('hidden'));
+    allIcons.forEach(ic => ic.style.transform = 'rotate(0deg)');
+
+    if (isHidden) {
+      content.classList.remove('hidden');
+      icon.style.transform = 'rotate(180deg)';
+    }
+  }
+</script></main><footer class="w-full bg-white border-t border-border-brand pt-16 pb-12"><div class="max-w-7xl mx-auto px-6 lg:px-12"><div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-10 lg:gap-8 pb-16"><div class="lg:col-span-1 space-y-5"><a class="flex items-center gap-3" data-path="home" href="#"><img alt="PeopleSuite Brand Logo" class="h-7 w-auto object-contain" src="https://lh3.googleusercontent.com/aida/AEtjO1UYvYuwBeXq9v09l5PsShh5dDjqtAScBtz5qPPKgNo56zJs1YwHw_wfVL1Z6rhcy8AeGNVldeluO_Uj5dXXJJYeCo9SnYLNDPFg3_PXyuyl4E2qdMeKklcyPbubO212UlGz6PNmORzZ_iesCcDbFE4eK1O09moUbqSW3b-TZgmUmXfdk3EXlLroLPcZUhZwf9rOZEJnRK-zJ3Ww2NwlNO3lxv2_x7I55n4UzHpsOFDNC0FAfDRAvx9kfjBe"><span class="font-title-md text-title-md text-text-brand font-bold tracking-tight">PeopleSuite</span></a><p class="font-body-sm text-body-sm text-text-muted leading-relaxed">Everything People. One Suite. Cloud HRMS empowering progressive workforces worldwide.</p><div class="inline-flex items-center gap-2 px-2.5 py-1 rounded-full bg-surface border border-border-brand shadow-xs"><span class="w-2 h-2 rounded-full bg-primary animate-pulse"></span><span class="font-caption text-caption font-medium text-text-brand">System Operational (99.99%)</span></div><div class="flex items-center gap-3 pt-1 text-text-muted"><a aria-label="LinkedIn" class="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-surface hover:text-primary transition-colors" href="#"><span class="material-symbols-outlined text-[19px]">share</span></a><a aria-label="X Platform" class="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-surface hover:text-primary transition-colors" href="#"><span class="material-symbols-outlined text-[19px]">forum</span></a><a aria-label="YouTube" class="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-surface hover:text-primary transition-colors" href="#"><span class="material-symbols-outlined text-[19px]">play_circle</span></a><a aria-label="GitHub Code" class="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-surface hover:text-primary transition-colors" href="#"><span class="material-symbols-outlined text-[19px]">terminal</span></a></div><div class="pt-2 space-y-1.5"><div class="font-label-md text-label-md text-text-muted tracking-wider uppercase">Security Certified</div><div class="flex flex-wrap gap-1.5"><span class="bg-surface border border-border-brand px-2 py-0.5 rounded font-caption text-[11px] text-text-muted font-medium">ISO 27001</span><span class="bg-surface border border-border-brand px-2 py-0.5 rounded font-caption text-[11px] text-text-muted font-medium">GDPR Ready</span><span class="bg-surface border border-border-brand px-2 py-0.5 rounded font-caption text-[11px] text-text-muted font-medium">SOC 2 Type II</span><span class="bg-surface border border-border-brand px-2 py-0.5 rounded font-caption text-[11px] text-text-muted font-medium">HIPAA</span></div></div></div><div class="space-y-4"><h4 class="font-label-lg text-label-lg text-text-brand font-semibold">Product</h4><ul class="space-y-2.5 font-body-sm text-body-sm text-text-muted"><li class=""><a class="hover:text-primary transition-colors" data-path="product-core-hr" href="#">Core HR &amp; Directory</a></li><li class=""><a class="hover:text-primary transition-colors" data-path="product-attendance" href="#">Attendance &amp; Geofencing</a></li><li class=""><a class="hover:text-primary transition-colors" data-path="product-payroll" href="#">Payroll &amp; Tax Compliance</a></li><li class=""><a class="hover:text-primary transition-colors" data-path="product-performance" href="#">Performance &amp; OKRs</a></li><li class=""><a class="hover:text-primary transition-colors" data-path="product-recruitment" href="#">Recruitment ATS</a></li><li class=""><a class="hover:text-primary transition-colors" data-path="product-mobile" href="#">Employee Mobile App</a></li><li class=""><a class="hover:text-primary transition-colors" data-path="product-integrations" href="#">API &amp; Integrations</a></li></ul></div><div class="space-y-4"><h4 class="font-label-lg text-label-lg text-text-brand font-semibold">Solutions</h4><ul class="space-y-2.5 font-body-sm text-body-sm text-text-muted"><li class=""><a class="hover:text-primary transition-colors" data-path="solutions-enterprise" href="#">Mid-market Enterprises</a></li><li class=""><a class="hover:text-primary transition-colors" data-path="solutions-smb" href="#">High-Growth Startups</a></li><li class=""><a class="hover:text-primary transition-colors" data-path="solutions-healthcare" href="#">Healthcare &amp; Clinics</a></li><li class=""><a class="hover:text-primary transition-colors" data-path="solutions-tech" href="#">Tech &amp; Remote Teams</a></li><li class=""><a class="hover:text-primary transition-colors" data-path="solutions-manufacturing" href="#">Manufacturing &amp; Shifts</a></li><li class=""><a class="hover:text-primary transition-colors" data-path="solutions-retail" href="#">Retail Chains</a></li></ul></div><div class="space-y-4"><h4 class="font-label-lg text-label-lg text-text-brand font-semibold">Resources</h4><ul class="space-y-2.5 font-body-sm text-body-sm text-text-muted"><li class=""><a class="hover:text-primary transition-colors" data-path="resources-blog" href="#">HR Knowledge Hub</a></li><li class=""><a class="hover:text-primary transition-colors" data-path="resources-roi-calculator" href="#">HR Tech ROI Calculator</a></li><li class=""><a class="hover:text-primary transition-colors" data-path="resources-compliance-guides" href="#">State Compliance 2025</a></li><li class=""><a class="hover:text-primary transition-colors" data-path="resources-release-notes" href="#">Release Notes</a></li><li class=""><a class="hover:text-primary transition-colors" data-path="resources-api-docs" href="#">API Documentation</a></li><li class=""><a class="hover:text-primary transition-colors" data-path="resources-help-center" href="#">Help Center &amp; FAQ</a></li></ul></div><div class="space-y-4"><h4 class="font-label-lg text-label-lg text-text-brand font-semibold">Company &amp; Legal</h4><ul class="space-y-2.5 font-body-sm text-body-sm text-text-muted"><li class=""><a class="hover:text-primary transition-colors" data-path="about" href="#">About Us</a></li><li class=""><a class="flex items-center gap-1.5 hover:text-primary transition-colors" data-path="company-careers" href="#"><span class="">Careers</span><span class="bg-primary-tint text-primary font-label-md text-[11px] px-1.5 py-0.5 rounded-full border border-border-brand">Hiring</span></a></li><li class=""><a class="hover:text-primary transition-colors" data-path="company-press" href="#">Press &amp; Media</a></li><li class=""><a class="hover:text-primary transition-colors" data-path="contact-sales" href="#">Contact Sales</a></li><li class=""><a class="hover:text-primary transition-colors" data-path="legal-privacy" href="#">Privacy Policy</a></li><li class=""><a class="hover:text-primary transition-colors" data-path="legal-terms" href="#">Terms of Service</a></li><li class=""><a class="hover:text-primary transition-colors" data-path="legal-cookies" href="#">Cookie Preferences</a></li></ul></div></div><div class="pt-8 border-t border-border-brand flex flex-col sm:flex-row items-center justify-between gap-4 font-body-sm text-body-sm text-text-muted"><div class="flex items-center gap-4 flex-wrap"><span class="">© 2025 PeopleSuite Technologies, Inc. All rights reserved.</span><div class="inline-flex items-center gap-1.5 text-primary font-label-md text-label-md"><span class="material-symbols-outlined text-[16px]">lock</span><span class="">SSL 256-bit secure</span></div></div><div class="flex items-center gap-3"><div class="flex items-center gap-1.5 bg-surface px-3 py-1.5 rounded-lg border border-border-brand cursor-pointer hover:border-primary transition-colors"><span class="material-symbols-outlined text-[16px] text-text-muted">language</span><span class="font-body-sm text-body-sm text-text-brand">United States (USD)</span><span class="material-symbols-outlined text-[16px] text-text-muted">unfold_more</span></div></div></div></div></footer>
+
+</body></html>
