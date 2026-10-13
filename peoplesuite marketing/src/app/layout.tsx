@@ -14,20 +14,30 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
-  title: "PeopleSuite | Modern Enterprise Cloud HRMS Platform",
+  title: "PeopleSuite + TalentFlow | Unified People & Talent Cloud by Innovyx Tech Labs LLP",
   description:
-    "Everything People. One Suite. Streamline core HR, automate multi-state payroll, track shift attendance with geofencing, and empower 100 to 10,000+ employees with PeopleSuite.",
+    "The unified platform combining TalentFlow (1-click Naukri sync, 3-tier dedup, AI fit scoring, tokenized client portals) with PeopleSuite (geofenced attendance, Indian statutory payroll, 2D hot desking, IT assets, and LMS). Engineered by Innovyx Tech Labs LLP.",
   keywords: [
-    "HRMS",
-    "Human Resource Management",
-    "Payroll Software",
-    "Time and Attendance",
-    "Geofencing Punch",
-    "Employee Self-Service",
-    "Applicant Tracking",
+    "Innovyx Tech Labs",
+    "Innovyx Tech Labs LLP",
+    "PeopleSuite",
+    "TalentFlow",
+    "Applicant Tracking System",
+    "ATS",
+    "Recruitment Automation",
+    "Naukri Resdex Sync",
+    "Indian Statutory Payroll",
+    "EPF ESIC PT TDS",
+    "Geofenced Attendance",
+    "2D Desk Booking",
+    "Hot Desking",
     "Performance Management",
+    "Corporate LMS",
+    "DPDP Compliance",
   ],
-  authors: [{ name: "PeopleSuite Technologies" }],
+  authors: [{ name: "Innovyx Tech Labs LLP" }],
+  creator: "Innovyx Tech Labs LLP",
+  publisher: "Innovyx Tech Labs LLP",
   icons: {
     icon: "/favicon.ico",
   },
@@ -48,7 +58,7 @@ export default function RootLayout({
           rel="stylesheet"
         />
       </head>
-      <body className="min-h-screen bg-[#FFFFFF] text-[#0B0F2E] antialiased selection:bg-[#EAF0FF] selection:text-[#0B5BD3]">
+      <body className="min-h-screen bg-[#0A0B14] text-[#E8ECFF] antialiased selection:bg-[#4A6CFF]/40 selection:text-white">
         {children}
       </body>
     </html>

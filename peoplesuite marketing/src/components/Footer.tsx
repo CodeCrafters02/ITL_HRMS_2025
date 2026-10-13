@@ -5,10 +5,12 @@ import Link from "next/link";
 
 interface FooterProps {
   theme?: "dark" | "light";
+  onOpenDemo?: () => void;
 }
 
-export default function Footer({ theme = "dark" }: FooterProps) {
+export default function Footer({ theme = "dark", onOpenDemo }: FooterProps) {
   const isDark = theme === "dark";
+  const linkHoverClass = isDark ? "hover:text-[#7DC8FF]" : "hover:text-[#0B5BD3]";
 
   return (
     <footer
@@ -23,32 +25,35 @@ export default function Footer({ theme = "dark" }: FooterProps) {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-10 lg:gap-8 pb-16">
           {/* Brand info column */}
           <div className="lg:col-span-1 space-y-5">
-            <Link href="/" className="flex items-center">
-              <img src="/logo.png" alt="PeopleSuite" className="h-14 w-auto" />
+            <Link href="/" className="inline-block">
+              <img src="/logo.png" alt="PeopleSuite" className="h-14 w-auto bg-white rounded-lg p-1" />
             </Link>
 
             <p className="font-body-sm text-body-sm leading-relaxed">
-              Everything People. One Suite. Cloud HRMS empowering progressive workforces worldwide.
+              Everything People. One Suite. Enterprise Cloud Platform combining <strong>TalentFlow</strong> and <strong>PeopleSuite</strong>, developed and engineered by <strong>Innovyx Tech Labs LLP</strong>.
             </p>
 
             {/* Live Operational Status */}
             <div
               className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full border shadow-xs ${
                 isDark
-                  ? "bg-[#121528] border-[#4A6CFF]/30 text-[#E8ECFF]"
+                  ? "bg-[#0F1226] border-[#4A6CFF]/30 text-[#E8ECFF]"
                   : "bg-[#F5F8FF] border-[#DCE4F5] text-[#0B0F2E]"
               }`}
             >
-              <span className="w-2 h-2 rounded-full bg-[#7DC8FF] "></span>
+              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
               <span className="font-caption text-caption font-medium">System Operational (99.99%)</span>
             </div>
 
-            {/* Social channels */}
+            {/* Social & Developer Channels */}
             <div className="flex items-center gap-2 pt-1">
               <a
-                href="#social"
+                href="https://www.linkedin.com"
+                target="_blank"
+                rel="noopener noreferrer"
                 aria-label="LinkedIn"
-                className={`w-8 h-8 rounded-lg flex items-center justify-center transition-colors ${
+                title="LinkedIn"
+                className={`w-8 h-8 rounded-lg flex items-center justify-center transition-colors cursor-pointer ${
                   isDark
                     ? "hover:bg-[#1E1AB8]/30 hover:text-[#7DC8FF]"
                     : "hover:bg-[#EAF0FF] hover:text-[#0B5BD3]"
@@ -57,52 +62,61 @@ export default function Footer({ theme = "dark" }: FooterProps) {
                 <span className="material-symbols-outlined text-[19px]">share</span>
               </a>
               <a
-                href="#social"
-                aria-label="Community"
-                className={`w-8 h-8 rounded-lg flex items-center justify-center transition-colors ${
+                href="https://github.com/CodeCrafters02/ITL_HRMS_2025"
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label="GitHub Repository"
+                title="GitHub Codebase"
+                className={`w-8 h-8 rounded-lg flex items-center justify-center transition-colors cursor-pointer ${
                   isDark
                     ? "hover:bg-[#1E1AB8]/30 hover:text-[#7DC8FF]"
                     : "hover:bg-[#EAF0FF] hover:text-[#0B5BD3]"
                 }`}
               >
-                <span className="material-symbols-outlined text-[19px]">forum</span>
+                <span className="material-symbols-outlined text-[19px]">code</span>
               </a>
-              <a
-                href="#social"
-                aria-label="Video Tutorials"
-                className={`w-8 h-8 rounded-lg flex items-center justify-center transition-colors ${
+              <Link
+                href="/#features"
+                aria-label="Feature Walkthroughs"
+                title="Feature Walkthroughs"
+                className={`w-8 h-8 rounded-lg flex items-center justify-center transition-colors cursor-pointer ${
                   isDark
                     ? "hover:bg-[#1E1AB8]/30 hover:text-[#7DC8FF]"
                     : "hover:bg-[#EAF0FF] hover:text-[#0B5BD3]"
                 }`}
               >
                 <span className="material-symbols-outlined text-[19px]">play_circle</span>
-              </a>
-              <a
-                href="#social"
-                aria-label="Developer Docs"
-                className={`w-8 h-8 rounded-lg flex items-center justify-center transition-colors ${
+              </Link>
+              <Link
+                href="/#faq"
+                aria-label="Technical Documentation & Architecture FAQ"
+                title="Technical Architecture FAQ"
+                className={`w-8 h-8 rounded-lg flex items-center justify-center transition-colors cursor-pointer ${
                   isDark
                     ? "hover:bg-[#1E1AB8]/30 hover:text-[#7DC8FF]"
                     : "hover:bg-[#EAF0FF] hover:text-[#0B5BD3]"
                 }`}
               >
                 <span className="material-symbols-outlined text-[19px]">terminal</span>
-              </a>
+              </Link>
             </div>
 
-            {/* Security Badges */}
+            {/* Enterprise Security Badges */}
             <div className="pt-2 space-y-1.5">
-              <div className="font-label-md text-label-md text-[#7DC8FF] tracking-wider uppercase font-semibold">
-                Security Certified
+              <div
+                className={`font-label-md text-label-md tracking-wider uppercase font-semibold ${
+                  isDark ? "text-[#7DC8FF]" : "text-[#0B5BD3]"
+                }`}
+              >
+                Enterprise Platform
               </div>
               <div className="flex flex-wrap gap-1.5">
-                {["ISO 27001", "GDPR Ready", "SOC 2 Type II", "HIPAA"].map((cert) => (
+                {["DPDP-Compliant", "SSL 256-Bit", "Role-Based RBAC", "Audit Logs"].map((cert) => (
                   <span
                     key={cert}
                     className={`border px-2 py-0.5 rounded font-caption text-[11px] font-medium ${
                       isDark
-                        ? "bg-[#121528] border-[#4A6CFF]/30 text-[#E8ECFF]"
+                        ? "bg-[#0F1226] border-[#4A6CFF]/30 text-[#E8ECFF]"
                         : "bg-[#F5F8FF] border-[#DCE4F5] text-[#5B6488]"
                     }`}
                   >
@@ -113,184 +127,188 @@ export default function Footer({ theme = "dark" }: FooterProps) {
             </div>
           </div>
 
-          {/* Product links */}
+          {/* TalentFlow Column */}
           <div className="space-y-4">
             <h4
-              className={`font-label-lg text-label-lg font-semibold ${
+              className={`font-label-lg text-label-lg font-semibold flex items-center gap-1.5 ${
                 isDark ? "text-[#E8ECFF]" : "text-[#0B0F2E]"
               }`}
             >
-              Product
+              <span>TalentFlow</span>
             </h4>
             <ul className="space-y-2.5 font-body-sm text-body-sm">
               <li>
-                <Link href="/#pillars" className="hover:text-[#7DC8FF] transition-colors">
-                  Core HR & Directory
+                <Link href="/#talentflow" className={`transition-colors cursor-pointer ${linkHoverClass}`}>
+                  1-Click Sourcing Gateway
                 </Link>
               </li>
               <li>
-                <Link href="/#attendance" className="hover:text-[#7DC8FF] transition-colors">
-                  Attendance & Geofencing
+                <Link href="/#talentflow" className={`transition-colors cursor-pointer ${linkHoverClass}`}>
+                  3-Tier Deduplication Engine
                 </Link>
               </li>
               <li>
-                <Link href="/#payroll" className="hover:text-[#7DC8FF] transition-colors">
-                  Payroll & Tax Compliance
+                <Link href="/#talentflow" className={`transition-colors cursor-pointer ${linkHoverClass}`}>
+                  AI Fit Score & Skill Gap
                 </Link>
               </li>
               <li>
-                <Link href="/#pillars" className="hover:text-[#7DC8FF] transition-colors">
-                  Performance & OKRs
+                <Link href="/#talentflow" className={`transition-colors cursor-pointer ${linkHoverClass}`}>
+                  Playwright Chromium Dossiers
                 </Link>
               </li>
               <li>
-                <Link href="/#pillars" className="hover:text-[#7DC8FF] transition-colors">
-                  Recruitment ATS
+                <Link href="/#talentflow" className={`transition-colors cursor-pointer ${linkHoverClass}`}>
+                  Tokenized Client Review Portal
                 </Link>
               </li>
               <li>
-                <Link href="/#mobile-app" className="hover:text-[#7DC8FF] transition-colors">
-                  Employee Mobile App
+                <Link href="/#talentflow" className={`transition-colors cursor-pointer ${linkHoverClass}`}>
+                  DPDP Pre-Onboarding Checklist
                 </Link>
               </li>
               <li>
-                <Link href="/#integrations" className="hover:text-[#7DC8FF] transition-colors">
-                  API & Integrations
+                <Link href="/talentflow" className={`transition-colors cursor-pointer font-semibold text-[#0B5BD3]`}>
+                  ➔ Dedicated TalentFlow Page
                 </Link>
               </li>
             </ul>
           </div>
 
-          {/* Solutions links */}
+          {/* PeopleSuite Column */}
           <div className="space-y-4">
             <h4
               className={`font-label-lg text-label-lg font-semibold ${
                 isDark ? "text-[#E8ECFF]" : "text-[#0B0F2E]"
               }`}
             >
-              Solutions
+              PeopleSuite
             </h4>
             <ul className="space-y-2.5 font-body-sm text-body-sm">
               <li>
-                <Link href="/#enterprise-scale" className="hover:text-[#7DC8FF] transition-colors">
-                  Mid-market Enterprises
+                <Link href="/#pillars" className={`transition-colors cursor-pointer ${linkHoverClass}`}>
+                  Core HR & Organization Vault
                 </Link>
               </li>
               <li>
-                <Link href="/pricing" className="hover:text-[#7DC8FF] transition-colors">
-                  High-Growth Startups
+                <Link href="/#attendance" className={`transition-colors cursor-pointer ${linkHoverClass}`}>
+                  Geofence Attendance & Shifts
                 </Link>
               </li>
               <li>
-                <Link href="/#pillars" className="hover:text-[#7DC8FF] transition-colors">
-                  Healthcare & Clinics
+                <Link href="/#payroll" className={`transition-colors cursor-pointer ${linkHoverClass}`}>
+                  Statutory Payroll & Payslips
                 </Link>
               </li>
               <li>
-                <Link href="/#pillars" className="hover:text-[#7DC8FF] transition-colors">
-                  Tech & Remote Teams
+                <Link href="/#workspace" className={`transition-colors cursor-pointer ${linkHoverClass}`}>
+                  2D Desk & Conference Booking
                 </Link>
               </li>
               <li>
-                <Link href="/#attendance" className="hover:text-[#7DC8FF] transition-colors">
-                  Manufacturing & Shifts
+                <Link href="/#assets" className={`transition-colors cursor-pointer ${linkHoverClass}`}>
+                  Fixed IT Assets & Inventory
                 </Link>
               </li>
               <li>
-                <Link href="/#attendance" className="hover:text-[#7DC8FF] transition-colors">
-                  Retail Chains
+                <Link href="/#performance" className={`transition-colors cursor-pointer ${linkHoverClass}`}>
+                  Performance & 360° Appraisals
+                </Link>
+              </li>
+              <li>
+                <Link href="/#lms" className={`transition-colors cursor-pointer ${linkHoverClass}`}>
+                  Corporate LMS & Certifications
                 </Link>
               </li>
             </ul>
           </div>
 
-          {/* Resources links */}
+          {/* Product Resources links */}
           <div className="space-y-4">
             <h4
               className={`font-label-lg text-label-lg font-semibold ${
                 isDark ? "text-[#E8ECFF]" : "text-[#0B0F2E]"
               }`}
             >
-              Resources
+              Product Resources
             </h4>
             <ul className="space-y-2.5 font-body-sm text-body-sm">
               <li>
-                <Link href="/#testimonials" className="hover:text-[#7DC8FF] transition-colors">
-                  Customer Stories
+                <Link href="/#pipeline" className={`transition-colors cursor-pointer ${linkHoverClass}`}>
+                  Sourcing-to-Payroll Pipeline
                 </Link>
               </li>
               <li>
-                <Link href="/pricing#calculator" className="hover:text-[#7DC8FF] transition-colors">
-                  HR Tech ROI Calculator
+                <Link href="/#pillars" className={`transition-colors cursor-pointer ${linkHoverClass}`}>
+                  12 Platform Modules
                 </Link>
               </li>
               <li>
-                <Link href="/#security" className="hover:text-[#7DC8FF] transition-colors">
-                  State Compliance 2025
+                <Link href="/#workspace" className={`transition-colors cursor-pointer ${linkHoverClass}`}>
+                  2D Desk & Floorplan Demo
                 </Link>
               </li>
               <li>
-                <Link href="/#hero" className="hover:text-[#7DC8FF] transition-colors">
-                  Release Notes v2.4
+                <Link href="/#features" className={`transition-colors cursor-pointer ${linkHoverClass}`}>
+                  Feature Walkthroughs
                 </Link>
               </li>
               <li>
-                <Link href="/#integrations" className="hover:text-[#7DC8FF] transition-colors">
-                  API Documentation
+                <Link href="/#faq" className={`transition-colors cursor-pointer ${linkHoverClass}`}>
+                  Frequently Asked Questions
                 </Link>
               </li>
               <li>
-                <Link href="/pricing#faq" className="hover:text-[#7DC8FF] transition-colors">
-                  Help Center & FAQ
+                <Link href="/#faq" className={`transition-colors cursor-pointer ${linkHoverClass}`}>
+                  Enterprise Security & SLAs
                 </Link>
               </li>
             </ul>
           </div>
 
-          {/* Company links */}
+          {/* Company & Support links */}
           <div className="space-y-4">
             <h4
               className={`font-label-lg text-label-lg font-semibold ${
                 isDark ? "text-[#E8ECFF]" : "text-[#0B0F2E]"
               }`}
             >
-              Company & Legal
+              Support & Security
             </h4>
             <ul className="space-y-2.5 font-body-sm text-body-sm">
               <li>
-                <Link href="/#about" className="hover:text-[#7DC8FF] transition-colors">
-                  About Us
+                <Link href="/#faq" className={`transition-colors cursor-pointer ${linkHoverClass}`}>
+                  Implementation & FAQs
                 </Link>
               </li>
               <li>
-                <Link
-                  href="/#careers"
-                  className="flex items-center gap-1.5 hover:text-[#7DC8FF] transition-colors"
-                >
-                  <span>Careers</span>
-                  <span className="bg-[#0B5BD3]/30 border border-[#4A6CFF]/40 text-[#7DC8FF] font-label-md text-[11px] px-1.5 py-0.2 rounded-full">
-                    Hiring
-                  </span>
+                {onOpenDemo ? (
+                  <button
+                    type="button"
+                    onClick={onOpenDemo}
+                    className={`transition-colors cursor-pointer text-left ${linkHoverClass}`}
+                  >
+                    Schedule 1-on-1 Walkthrough
+                  </button>
+                ) : (
+                  <Link href="/#pillars" className={`transition-colors cursor-pointer ${linkHoverClass}`}>
+                    Schedule 1-on-1 Walkthrough
+                  </Link>
+                )}
+              </li>
+              <li>
+                <Link href="/#attendance" className={`transition-colors cursor-pointer ${linkHoverClass}`}>
+                  Multi-Shift Setup Guide
                 </Link>
               </li>
               <li>
-                <Link href="/#press" className="hover:text-[#7DC8FF] transition-colors">
-                  Press & Media
+                <Link href="/#pillars" className={`transition-colors cursor-pointer ${linkHoverClass}`}>
+                  Role-Based Security (Admin/Staff)
                 </Link>
               </li>
               <li>
-                <Link href="/pricing#contact" className="hover:text-[#7DC8FF] transition-colors">
-                  Contact Sales
-                </Link>
-              </li>
-              <li>
-                <Link href="/#privacy" className="hover:text-[#7DC8FF] transition-colors">
-                  Privacy Policy
-                </Link>
-              </li>
-              <li>
-                <Link href="/#terms" className="hover:text-[#7DC8FF] transition-colors">
-                  Terms of Service
+                <Link href="/#faq" className={`transition-colors cursor-pointer ${linkHoverClass}`}>
+                  DPDP Compliance & Encryption
                 </Link>
               </li>
             </ul>
@@ -304,26 +322,49 @@ export default function Footer({ theme = "dark" }: FooterProps) {
           }`}
         >
           <div className="flex items-center gap-4 flex-wrap">
-            <span>© 2025 PeopleSuite Technologies, Inc. All rights reserved.</span>
-            <div className="inline-flex items-center gap-1.5 text-[#0B5BD3] dark:text-[#7DC8FF] font-label-md text-label-md font-semibold">
+            <span>
+              © 2026 PeopleSuite + TalentFlow. Developed and engineered by{" "}
+              <strong className="font-semibold text-current">Innovyx Tech Labs LLP</strong>. All rights reserved.
+            </span>
+            <div
+              className={`inline-flex items-center gap-1.5 font-label-md text-label-md font-semibold ${
+                isDark ? "text-[#7DC8FF]" : "text-[#0B5BD3]"
+              }`}
+            >
               <span className="material-symbols-outlined text-[16px]">lock</span>
-              <span>SSL 256-bit secure</span>
+              <span>Enterprise Grade Security</span>
+            </div>
+            <div className="flex items-center gap-3 text-xs opacity-80 pl-2">
+              <Link href="/#faq" className={linkHoverClass}>
+                Privacy Policy
+              </Link>
+              <span>•</span>
+              <Link href="/#faq" className={linkHoverClass}>
+                Security & Compliance
+              </Link>
+              <span>•</span>
+              <Link href="/#faq" className={linkHoverClass}>
+                Terms of Service
+              </Link>
             </div>
           </div>
 
           <div className="flex items-center gap-3">
             <div
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border cursor-pointer transition-colors ${
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border font-body-sm text-body-sm ${
                 isDark
-                  ? "bg-[#121528] border-[#4A6CFF]/30 hover:border-[#7DC8FF] text-[#E8ECFF]"
-                  : "bg-[#F5F8FF] border-[#DCE4F5] hover:border-[#0B5BD3] text-[#0B0F2E]"
+                  ? "bg-[#0F1226] border-[#4A6CFF]/30 text-[#E8ECFF]"
+                  : "bg-[#F5F8FF] border-[#DCE4F5] text-[#0B0F2E]"
               }`}
             >
-              <span className="material-symbols-outlined text-[16px] text-[#0B5BD3] dark:text-[#7DC8FF]">
-                language
+              <span
+                className={`material-symbols-outlined text-[16px] ${
+                  isDark ? "text-[#7DC8FF]" : "text-[#0B5BD3]"
+                }`}
+              >
+                verified_user
               </span>
-              <span className="font-body-sm text-body-sm font-medium">United States (USD)</span>
-              <span className="material-symbols-outlined text-[16px]">unfold_more</span>
+              <span>All Systems Operational</span>
             </div>
           </div>
         </div>

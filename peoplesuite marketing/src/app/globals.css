@@ -2,7 +2,7 @@
 
 @layer base {
   :root {
-    --background: #ffffff;
+    --background: #0A0B14;
     --foreground: #0B0F2E;
     --primary: #0B5BD3;
     --primary-deep: #1E1AB8;
@@ -27,6 +27,10 @@
     --border-brand: #232A4E;
     --text-brand: #E8ECFF;
     --text-muted: #9AA3D1;
+  }
+
+  html {
+    scroll-behavior: smooth;
   }
 
   html, body {
@@ -214,3 +218,10 @@
   -webkit-backdrop-filter: blur(12px);
   border: 1px solid #DCE4F5;
 }
+
+/* Hide Next.js dev indicator */
+[data-nextjs-dev-indicator],
+[data-nextjs-portal] {
+  display: none !important;
+}
+
