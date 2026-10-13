@@ -4,11 +4,11 @@ import { Dialog, Transition } from '@headlessui/react';
 import Swal from 'sweetalert2';
 import { setPageTitle } from '../../store/themeConfigSlice';
 import IconPlus from '../../components/Icon/IconPlus';
-import IconSearch from '../../components/Icon/IconSearch';
 import IconPencil from '../../components/Icon/IconPencil';
 import IconTrashLines from '../../components/Icon/IconTrashLines';
 import IconX from '../../components/Icon/IconX';
 import IconBell from '../../components/Icon/IconBell';
+import DataTable, { Column } from '../../components/Common/DataTable';
 import Flatpickr from 'react-flatpickr';
 import 'flatpickr/dist/flatpickr.css';
 
@@ -215,9 +215,66 @@ const AdminNotifications = () => {
         }
     };
 
+    const columns: Column<NotificationItem>[] = [
+        {
+            key: 'id',
+            title: '#',
+            width: '60px',
+            align: 'center',
+            render: (_val, _item, idx) => <span className="font-semibold text-gray-500">{(idx ?? 0) + 1}</span>,
+        },
+        {
+            key: 'title',
+            title: 'Title',
+            sortable: true,
+            render: (_val, item) => <span className="font-semibold text-gray-800 dark:text-white-light">{item.title}</span>,
+        },
+        {
+            key: 'description',
+            title: 'Message',
+            render: (_val, item) => (
+                <span className="text-gray-500 dark:text-gray-400 max-w-[400px] truncate block" title={item.description || ''}>
+                    {item.description || '-'}
+                </span>
+            ),
+        },
+        {
+            key: 'date',
+            title: 'Date',
+            sortable: true,
+            render: (_val, item) => <span className="text-gray-500 dark:text-gray-400">{item.date || '-'}</span>,
+        },
+        {
+            key: 'actions',
+            title: 'Actions',
+            align: 'center',
+            width: '120px',
+            render: (_val, item) => (
+                <div className="flex items-center justify-center gap-2">
+                    <button
+                        type="button"
+                        className="p-1.5 rounded-lg text-primary hover:bg-primary/10 transition-colors"
+                        onClick={() => openEditModal(item)}
+                        title="Edit Notification"
+                    >
+                        <IconPencil className="w-4 h-4" />
+                    </button>
+                    <button
+                        type="button"
+                        className="p-1.5 rounded-lg text-danger hover:bg-danger/10 transition-colors"
+                        onClick={() => handleDelete(item)}
+                        title="Delete Notification"
+                    >
+                        <IconTrashLines className="w-4 h-4" />
+                    </button>
+                </div>
+            ),
+        },
+    ];
+
     return (
-        <div>
-            <div className="bg-gradient-to-r from-[#0e1726] to-[#3b82f6] p-6 rounded-xl shadow-lg mb-6 relative overflow-hidden">
+        <div className="space-y-6">
+            <div className="bg-gradient-to-r from-[#0e1726] to-[#3b82f6] p-6 rounded-xl shadow-lg relative overflow-hidden">
                 <div className="relative z-10">
                     <h1 className="text-3xl font-extrabold text-white tracking-tight">Company Notifications</h1>
                     <p className="text-white/80 mt-1 text-sm font-medium">Create and manage announcements for your company employees.</p>
@@ -225,131 +282,25 @@ const AdminNotifications = () => {
                 <div className="absolute top-0 right-0 -mt-10 -mr-10 w-48 h-48 bg-white opacity-5 rounded-full blur-2xl"></div>
             </div>
 
-            <div className="flex flex-wrap items-center justify-between gap-4 mb-5">
-                <div className="relative">
-                    <input
-                        type="text"
-                        className="form-input pr-10 w-72"
-                        placeholder="Search notifications..."
-                        value={search}
-                        onChange={(e) => {
-                            setSearch(e.target.value);
-                            setCurrentPage(1);
-                        }}
-                    />
-                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400">
-                        <IconSearch className="w-4 h-4" />
-                    </span>
-                </div>
-                <button type="button" className="btn btn-primary gap-2" onClick={openCreateModal}>
-                    <IconPlus /> Add Notification
-                </button>
-            </div>
-
-            <div className="panel p-0 border-0 overflow-hidden">
-                <div className="table-responsive">
-                    <table className="table-hover">
-                        <thead>
-                            <tr>
-                                <th className="w-12">#</th>
-                                <th>Title</th>
-                                <th>Message</th>
-                                <th>Date</th>
-                                <th className="text-center w-24">Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {loading ? (
-                                <tr>
-                                    <td colSpan={5} className="text-center py-10">
-                                        <span className="animate-pulse text-gray-400 font-medium">Loading notifications...</span>
-                                    </td>
-                                </tr>
-                            ) : items.length === 0 ? (
-                                <tr>
-                                    <td colSpan={5} className="text-center py-10 text-gray-500 font-medium">No notifications found.</td>
-                                </tr>
-                            ) : (
-                                items.map((item, index) => (
-                                    <tr key={item.id}>
-                                        <td>{(currentPage - 1) * itemsPerPage + index + 1}</td>
-                                        <td className="font-semibold">{item.title}</td>
-                                        <td className="text-gray-500 max-w-[400px] truncate">{item.description || '-'}</td>
-                                        <td className="text-gray-500">{item.date || '-'}</td>
-                                        <td className="text-center">
-                                            <div className="flex items-center justify-center gap-3 font-semibold">
-                                                <button type="button" className="text-primary hover:text-blue-700" onClick={() => openEditModal(item)}>
-                                                    <IconPencil className="w-5 h-5" />
-                                                </button>
-                                                <button type="button" className="text-danger hover:text-red-700" onClick={() => handleDelete(item)}>
-                                                    <IconTrashLines className="w-5 h-5" />
-                                                </button>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                ))
-                            )}
-                        </tbody>
-                    </table>
-                </div>
-
-                {totalCount > 0 && (
-                    <div className="flex justify-between items-center p-4 border-t border-[#e0e6ed] dark:border-[#1b2e4b]">
-                        <div className="flex items-center gap-4">
-                            <div className="text-sm text-gray-500 font-semibold dark:text-gray-400">
-                                Showing <span className="text-primary">{(currentPage - 1) * itemsPerPage + 1}</span> to{' '}
-                                <span className="text-primary">{Math.min(currentPage * itemsPerPage, totalCount)}</span> of{' '}
-                                <span className="text-primary">{totalCount}</span> entries
-                            </div>
-                            <div className="flex items-center gap-2">
-                                <span className="text-sm font-semibold">Per page:</span>
-                                <select
-                                    className="form-select w-20 text-sm font-semibold py-1"
-                                    value={itemsPerPage}
-                                    onChange={(e) => {
-                                        setItemsPerPage(Number(e.target.value));
-                                        setCurrentPage(1);
-                                    }}
-                                >
-                                    <option value={10}>10</option>
-                                    <option value={20}>20</option>
-                                    <option value={50}>50</option>
-                                </select>
-                            </div>
-                        </div>
-                        <ul className="inline-flex items-center space-x-1 font-semibold">
-                            <li>
-                                <button
-                                    type="button"
-                                    className="flex justify-center font-semibold p-2 rounded-full transition bg-white-light text-dark hover:text-white hover:bg-primary dark:text-white-light dark:bg-[#191e3a] dark:hover:bg-primary disabled:opacity-50 disabled:cursor-not-allowed"
-                                    disabled={currentPage === 1}
-                                    onClick={() => setCurrentPage(currentPage - 1)}
-                                >
-                                    Prev
-                                </button>
-                            </li>
-                            <li>
-                                <button
-                                    type="button"
-                                    className="flex justify-center font-semibold px-3.5 py-2 rounded-full transition bg-primary text-white shadow-[0_10px_20px_-10px_rgba(67,97,238,0.44)]"
-                                >
-                                    {currentPage}
-                                </button>
-                            </li>
-                            <li>
-                                <button
-                                    type="button"
-                                    className="flex justify-center font-semibold p-2 rounded-full transition bg-white-light text-dark hover:text-white hover:bg-primary dark:text-white-light dark:bg-[#191e3a] dark:hover:bg-primary disabled:opacity-50 disabled:cursor-not-allowed"
-                                    disabled={currentPage === totalPages}
-                                    onClick={() => setCurrentPage(currentPage + 1)}
-                                >
-                                    Next
-                                </button>
-                            </li>
-                        </ul>
-                    </div>
-                )}
-            </div>
+            <DataTable
+                columns={columns}
+                data={items}
+                loading={loading}
+                page={currentPage}
+                pageSize={itemsPerPage}
+                totalCount={totalCount}
+                onPageChange={(p) => setCurrentPage(p)}
+                onPageSizeChange={(sz) => { setItemsPerPage(sz); setCurrentPage(1); }}
+                searchValue={search}
+                onSearchChange={(val) => { setSearch(val); setCurrentPage(1); }}
+                searchPlaceholder="Search notifications by title or message..."
+                onRefresh={fetchNotifications}
+                actionButton={
+                    <button type="button" className="btn btn-primary gap-2" onClick={openCreateModal}>
+                        <IconPlus className="w-4 h-4" /> Add Notification
+                    </button>
+                }
+            />
 
             <Transition appear show={modalOpen} as={Fragment}>
                 <Dialog as="div" open={modalOpen} onClose={() => setModalOpen(false)} className="relative z-50">

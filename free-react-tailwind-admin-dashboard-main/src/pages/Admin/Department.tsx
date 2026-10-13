@@ -8,6 +8,7 @@ import IconPlus from '../../components/Icon/IconPlus';
 import IconPencil from '../../components/Icon/IconPencil';
 import IconTrashLines from '../../components/Icon/IconTrashLines';
 import IconSearch from '../../components/Icon/IconSearch';
+import DataTable, { Column } from '../../components/Common/DataTable';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000';
 const API_URL = `${API_BASE_URL}/app/departments/`;
@@ -33,9 +34,10 @@ const AdminDepartment = () => {
     }, [dispatch]);
 
     useEffect(() => {
+        setLoading(true);
         const handler = setTimeout(() => {
             fetchDepartments();
-        }, 400);
+        }, 300);
         return () => clearTimeout(handler);
     }, [search, page, pageSize]);
 
@@ -160,10 +162,63 @@ const AdminDepartment = () => {
         }
     };
 
-    // Filter locally for instant search if backend doesn't support search param
-    const filteredDepartments = search
-        ? departments.filter((d) => d.department_name?.toLowerCase().includes(search.toLowerCase()))
-        : departments;
+    const columns: Column<any>[] = [
+        {
+            key: 'id',
+            title: '#',
+            width: '70px',
+            align: 'center',
+            render: (_val, _item, index) => (
+                <span className="font-semibold text-gray-500">{index + 1}</span>
+            ),
+        },
+        {
+            key: 'department_name',
+            title: 'Department Name',
+            sortable: true,
+            render: (name) => (
+                <span className="font-semibold text-gray-800 dark:text-white-light">{name}</span>
+            ),
+        },
+        {
+            key: 'creation_date',
+            title: 'Created On',
+            sortable: true,
+            render: (date) => (
+                <span className="text-gray-500 dark:text-gray-400">
+                    {date
+                        ? new Date(date).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })
+                        : '-'}
+                </span>
+            ),
+        },
+        {
+            key: 'actions',
+            title: 'Actions',
+            align: 'center',
+            width: '120px',
+            render: (_val, dept) => (
+                <div className="flex items-center justify-center gap-2">
+                    <button
+                        type="button"
+                        className="p-1.5 rounded-lg text-primary hover:text-white hover:bg-primary transition-colors"
+                        onClick={() => openEditModal(dept)}
+                        title="Edit Department"
+                    >
+                        <IconPencil className="w-4 h-4" />
+                    </button>
+                    <button
+                        type="button"
+                        className="p-1.5 rounded-lg text-danger hover:text-white hover:bg-danger transition-colors"
+                        onClick={() => handleDelete(dept)}
+                        title="Delete Department"
+                    >
+                        <IconTrashLines className="w-4 h-4" />
+                    </button>
+                </div>
+            ),
+        },
+    ];
 
     return (
         <div>
@@ -176,162 +231,26 @@ const AdminDepartment = () => {
                 <div className="absolute top-0 right-0 -mt-10 -mr-10 w-48 h-48 bg-white opacity-5 rounded-full blur-2xl"></div>
             </div>
 
-            {/* Toolbar */}
-            <div className="flex flex-wrap items-center justify-between gap-4 mb-5">
-                <div className="relative">
-                    <input
-                        type="text"
-                        className="form-input pr-10 w-64"
-                        placeholder="Search departments..."
-                        value={search}
-                        onChange={(e) => { setSearch(e.target.value); setPage(1); }}
-                    />
-                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400">
-                        <IconSearch className="w-4 h-4" />
-                    </span>
-                </div>
-                <button type="button" className="btn btn-primary gap-2" onClick={openAddModal}>
-                    <IconPlus /> Add Department
-                </button>
-            </div>
-
-            {/* Table */}
-            <div className="panel p-0 border-0 overflow-hidden">
-                <div className="table-responsive">
-                    <table className="table-hover">
-                        <thead>
-                            <tr>
-                                <th>#</th>
-                                <th>Department Name</th>
-                                <th>Created On</th>
-                                <th className="text-center">Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {loading ? (
-                                <tr>
-                                    <td colSpan={4} className="text-center py-5">
-                                        <span className="animate-pulse text-gray-400">Loading departments...</span>
-                                    </td>
-                                </tr>
-                            ) : filteredDepartments.length > 0 ? (
-                                filteredDepartments.map((dept, index) => (
-                                    <tr key={dept.id}>
-                                        <td>{(page - 1) * pageSize + index + 1}</td>
-                                        <td className="font-semibold">{dept.department_name}</td>
-                                        <td className="text-gray-500">
-                                            {dept.creation_date
-                                                ? new Date(dept.creation_date).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })
-                                                : '-'}
-                                        </td>
-                                        <td className="text-center">
-                                            <div className="flex items-center justify-center gap-3">
-                                                <button type="button" className="text-primary hover:text-blue-700" onClick={() => openEditModal(dept)} title="Edit">
-                                                    <IconPencil className="w-5 h-5" />
-                                                </button>
-                                                <button type="button" className="text-danger hover:text-red-700" onClick={() => handleDelete(dept)} title="Delete">
-                                                    <IconTrashLines className="w-5 h-5" />
-                                                </button>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                ))
-                            ) : (
-                                <tr>
-                                    <td colSpan={4} className="text-center py-5 text-gray-400">No departments found.</td>
-                                </tr>
-                            )}
-                        </tbody>
-                    </table>
-                </div>
-
-                {/* Pagination */}
-                {totalCount > 0 && (
-                    <div className="flex justify-between items-center p-4 border-t border-[#e0e6ed] dark:border-[#1b2e4b]">
-                        <div className="flex items-center gap-4">
-                            <div className="text-sm text-gray-500 font-semibold dark:text-gray-400">
-                                Showing <span className="text-primary">{((page - 1) * pageSize) + 1}</span> to <span className="text-primary">{Math.min(page * pageSize, totalCount)}</span> of <span className="text-primary">{totalCount}</span> entries
-                            </div>
-                            <div className="flex items-center gap-2">
-                                <span className="text-sm font-semibold">Per page:</span>
-                                <select
-                                    className="form-select w-20 text-sm font-semibold py-1"
-                                    value={pageSize}
-                                    onChange={(e) => { setPageSize(Number(e.target.value)); setPage(1); }}
-                                >
-                                    <option value="10">10</option>
-                                    <option value="20">20</option>
-                                    <option value="50">50</option>
-                                </select>
-                            </div>
-                        </div>
-                        <ul className="inline-flex items-center space-x-1 font-semibold">
-                            <li>
-                                <button
-                                    type="button"
-                                    className="flex justify-center font-semibold p-2 rounded-full transition bg-white-light text-dark hover:text-white hover:bg-primary dark:text-white-light dark:bg-[#191e3a] dark:hover:bg-primary disabled:opacity-50 disabled:cursor-not-allowed"
-                                    onClick={() => setPage(page > 1 ? page - 1 : 1)}
-                                    disabled={page === 1}
-                                >
-                                    Prev
-                                </button>
-                            </li>
-                            {(() => {
-                                const pages: (number | string)[] = [];
-                                if (totalPages <= 3) {
-                                    for (let i = 1; i <= totalPages; i++) pages.push(i);
-                                } else {
-                                    if (page <= 2) {
-                                        pages.push(1, 2, 3, 'right-ellipsis', totalPages);
-                                    } else if (page >= totalPages - 1) {
-                                        pages.push(1, 'left-ellipsis', totalPages - 2, totalPages - 1, totalPages);
-                                    } else {
-                                        pages.push(1, 'left-ellipsis', page, 'right-ellipsis', totalPages);
-                                    }
-                                }
-                                return pages.map((p, idx) => {
-                                    if (p === 'left-ellipsis' || p === 'right-ellipsis') {
-                                        const jumpPage = p === 'left-ellipsis' ? Math.max(1, page - 3) : Math.min(totalPages, page + 3);
-                                        return (
-                                            <li key={`${p}-${idx}`}>
-                                                <button
-                                                    type="button"
-                                                    title={p === 'left-ellipsis' ? "Previous 3 pages" : "Next 3 pages"}
-                                                    className="flex justify-center font-semibold px-3 py-2 rounded-full transition bg-white-light text-dark hover:text-white hover:bg-primary dark:text-white-light dark:bg-[#191e3a] dark:hover:bg-primary cursor-pointer"
-                                                    onClick={() => setPage(jumpPage)}
-                                                >
-                                                    ...
-                                                </button>
-                                            </li>
-                                        );
-                                    }
-                                    return (
-                                        <li key={p}>
-                                            <button
-                                                type="button"
-                                                className={`flex justify-center font-semibold px-3.5 py-2 rounded-full transition ${page === p ? 'bg-primary text-white shadow-[0_10px_20px_-10px_rgba(67,97,238,0.44)]' : 'bg-white-light text-dark hover:text-white hover:bg-primary dark:text-white-light dark:bg-[#191e3a] dark:hover:bg-primary'}`}
-                                                onClick={() => setPage(p as number)}
-                                            >
-                                                {p}
-                                            </button>
-                                        </li>
-                                    );
-                                });
-                            })()}
-                            <li>
-                                <button
-                                    type="button"
-                                    className="flex justify-center font-semibold p-2 rounded-full transition bg-white-light text-dark hover:text-white hover:bg-primary dark:text-white-light dark:bg-[#191e3a] dark:hover:bg-primary disabled:opacity-50 disabled:cursor-not-allowed"
-                                    onClick={() => setPage(page < totalPages ? page + 1 : totalPages)}
-                                    disabled={page === totalPages || totalPages === 0}
-                                >
-                                    Next
-                                </button>
-                            </li>
-                        </ul>
-                    </div>
-                )}
-            </div>
+            {/* Reusable Data Table */}
+            <DataTable
+                columns={columns}
+                data={departments}
+                totalCount={totalCount}
+                page={page}
+                pageSize={pageSize}
+                loading={loading}
+                searchValue={search}
+                searchPlaceholder="Search departments by name..."
+                onSearchChange={(val) => { setSearch(val); setLoading(true); setPage(1); }}
+                onPageChange={(p) => { setPage(p); setLoading(true); }}
+                onPageSizeChange={(sz) => { setPageSize(sz); setLoading(true); setPage(1); }}
+                onRefresh={fetchDepartments}
+                actionButton={
+                    <button type="button" className="btn btn-primary gap-2 shadow-md shadow-primary/20" onClick={openAddModal}>
+                        <IconPlus className="w-4 h-4" /> Add Department
+                    </button>
+                }
+            />
 
             {/* Add/Edit Department Modal */}
             <Transition appear show={isModalOpen} as={Fragment}>

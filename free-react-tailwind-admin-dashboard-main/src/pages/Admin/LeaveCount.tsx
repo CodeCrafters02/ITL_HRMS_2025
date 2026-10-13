@@ -7,6 +7,7 @@ import IconX from '../../components/Icon/IconX';
 import IconPlus from '../../components/Icon/IconPlus';
 import IconPencil from '../../components/Icon/IconPencil';
 import IconTrashLines from '../../components/Icon/IconTrashLines';
+import DataTable, { Column } from '../../components/Common/DataTable';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000';
 const API_URL = `${API_BASE_URL}/app/leaves/`;
@@ -22,6 +23,10 @@ const AdminLeaveCount = () => {
     const dispatch = useDispatch();
     const [items, setItems] = useState<Leave[]>([]);
     const [loading, setLoading] = useState(false);
+    const [page, setPage] = useState(1);
+    const [pageSize, setPageSize] = useState(10);
+    const [totalCount, setTotalCount] = useState(0);
+    const [search, setSearch] = useState('');
     const [modalOpen, setModalOpen] = useState(false);
     const [form, setForm] = useState<Partial<Leave>>({ leave_name: '', count: 0, is_paid: false });
 
@@ -39,10 +44,22 @@ const AdminLeaveCount = () => {
     const fetchAll = async () => {
         setLoading(true);
         try {
-            const resp = await fetch(API_URL, { headers: headers() });
+            const url = new URL(API_URL);
+            url.searchParams.append('page', String(page));
+            url.searchParams.append('page_size', String(pageSize));
+            if (search.trim()) url.searchParams.append('search', search.trim());
+
+            const resp = await fetch(url.toString(), { headers: headers() });
             const data = await resp.json();
             if (!resp.ok) throw new Error(data?.detail || 'Failed to load');
-            setItems(Array.isArray(data) ? data : data?.results || []);
+            if (data.results) {
+                setItems(data.results);
+                setTotalCount(data.count ?? 0);
+            } else {
+                const arr = Array.isArray(data) ? data : [];
+                setItems(arr);
+                setTotalCount(arr.length);
+            }
         } catch (e: any) {
             Swal.fire('Error', e?.message || 'Failed to load', 'error');
         } finally {
@@ -51,9 +68,12 @@ const AdminLeaveCount = () => {
     };
 
     useEffect(() => {
-        fetchAll();
+        const handler = setTimeout(() => {
+            fetchAll();
+        }, 300);
+        return () => clearTimeout(handler);
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, []);
+    }, [page, pageSize, search]);
 
     const openAdd = () => {
         setForm({ leave_name: '', count: 0, is_paid: false });
@@ -106,6 +126,64 @@ const AdminLeaveCount = () => {
         }
     };
 
+    const columns: Column<Leave>[] = [
+        {
+            key: 'id',
+            label: '#',
+            width: '60px',
+            align: 'center',
+            render: (_val, _row, idx) => <span className="font-semibold text-gray-500">{(idx ?? 0) + 1}</span>,
+        },
+        {
+            key: 'leave_name',
+            label: 'Leave Name',
+            sortable: true,
+            render: (_val, row) => <span className="font-semibold text-gray-800 dark:text-white-light">{row.leave_name}</span>,
+        },
+        {
+            key: 'count',
+            label: 'Total Days Allowed',
+            sortable: true,
+            render: (_val, row) => <span className="badge bg-primary/10 text-primary font-bold px-3 py-1 rounded-full">{row.count} days</span>,
+        },
+        {
+            key: 'is_paid',
+            label: 'Type',
+            sortable: true,
+            render: (_val, row) => (
+                <span className={`badge ${row.is_paid ? 'badge-outline-success text-success bg-success/10' : 'badge-outline-danger text-danger bg-danger/10'}`}>
+                    {row.is_paid ? 'Paid Leave' : 'Unpaid Leave'}
+                </span>
+            ),
+        },
+        {
+            key: 'actions',
+            label: 'Actions',
+            align: 'center',
+            width: '120px',
+            render: (_val, row) => (
+                <div className="flex items-center justify-center gap-2">
+                    <button
+                        type="button"
+                        className="p-1.5 rounded-lg text-primary hover:bg-primary/10 transition-colors"
+                        onClick={() => openEdit(row)}
+                        title="Edit Leave"
+                    >
+                        <IconPencil className="w-4 h-4" />
+                    </button>
+                    <button
+                        type="button"
+                        className="p-1.5 rounded-lg text-danger hover:bg-danger/10 transition-colors"
+                        onClick={() => del(row)}
+                        title="Delete Leave"
+                    >
+                        <IconTrashLines className="w-4 h-4" />
+                    </button>
+                </div>
+            ),
+        },
+    ];
+
     return (
         <div className="space-y-6">
             {/* Gradient Banner Header */}
@@ -117,60 +195,31 @@ const AdminLeaveCount = () => {
                 <div className="absolute top-0 right-0 -mt-10 -mr-10 w-48 h-48 bg-white opacity-10 rounded-full blur-2xl"></div>
             </div>
 
-            <div className="panel">
-                <div className="flex flex-wrap items-center justify-end gap-3 mb-4">
+            <DataTable
+                columns={columns}
+                data={items}
+                loading={loading}
+                page={page}
+                pageSize={pageSize}
+                totalCount={totalCount}
+                onPageChange={(p) => setPage(p)}
+                onPageSizeChange={(sz) => {
+                    setPageSize(sz);
+                    setPage(1);
+                }}
+                searchValue={search}
+                onSearchChange={(val) => {
+                    setSearch(val);
+                    setPage(1);
+                }}
+                onRefresh={fetchAll}
+                searchPlaceholder="Search leave policies..."
+                actionButton={
                     <button type="button" className="btn btn-primary gap-2" onClick={openAdd}>
-                        <IconPlus /> Add Leave
+                        <IconPlus className="w-4 h-4" /> Add Leave
                     </button>
-                </div>
-
-            <div className="table-responsive">
-                <table className="table-hover">
-                    <thead>
-                        <tr>
-                            <th>#</th>
-                            <th>Leave Name</th>
-                            <th>Count</th>
-                            <th>Paid</th>
-                            <th className="text-center">Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {loading ? (
-                            <tr>
-                                <td colSpan={5} className="text-center py-6 text-white-dark">
-                                    Loading...
-                                </td>
-                            </tr>
-                        ) : items.length ? (
-                            items.map((l, idx) => (
-                                <tr key={l.id}>
-                                    <td>{idx + 1}</td>
-                                    <td className="font-semibold">{l.leave_name}</td>
-                                    <td>{l.count}</td>
-                                    <td>{l.is_paid ? 'Yes' : 'No'}</td>
-                                    <td className="text-center">
-                                        <div className="flex items-center justify-center gap-3">
-                                            <button type="button" className="text-primary" onClick={() => openEdit(l)} title="Edit">
-                                                <IconPencil className="w-5 h-5" />
-                                            </button>
-                                            <button type="button" className="text-danger" onClick={() => del(l)} title="Delete">
-                                                <IconTrashLines className="w-5 h-5" />
-                                            </button>
-                                        </div>
-                                    </td>
-                                </tr>
-                            ))
-                        ) : (
-                            <tr>
-                                <td colSpan={5} className="text-center py-6 text-white-dark">
-                                    No leaves configured.
-                                </td>
-                            </tr>
-                        )}
-                    </tbody>
-                </table>
-            </div>
+                }
+            />
 
             <Transition appear show={modalOpen} as={Fragment}>
                 <Dialog as="div" open={modalOpen} onClose={() => setModalOpen(false)} className="relative z-50">
@@ -218,7 +267,6 @@ const AdminLeaveCount = () => {
                     </div>
                 </Dialog>
             </Transition>
-        </div>
         </div>
     );
 };

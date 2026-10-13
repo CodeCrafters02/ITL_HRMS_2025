@@ -40,7 +40,7 @@ const initialState = {
     layout: localStorage.getItem('layout') || themeConfig.layout,
     rtlClass: localStorage.getItem('rtlClass') || themeConfig.rtlClass,
     animation: localStorage.getItem('animation') || themeConfig.animation,
-    navbar: localStorage.getItem('navbar') || themeConfig.navbar,
+    navbar: (localStorage.getItem('navbar') === 'navbar-static' ? 'navbar-sticky' : localStorage.getItem('navbar')) || themeConfig.navbar,
     locale: localStorage.getItem('i18nextLng') || themeConfig.locale,
     isDarkMode: false,
     sidebar: localStorage.getItem('sidebar') || defaultState.sidebar,

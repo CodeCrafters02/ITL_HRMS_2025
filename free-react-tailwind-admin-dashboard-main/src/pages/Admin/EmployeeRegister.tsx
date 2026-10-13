@@ -9,6 +9,7 @@ import IconPencil from '../../components/Icon/IconPencil';
 import IconEye from '../../components/Icon/IconEye';
 import IconX from '../../components/Icon/IconX';
 import IconPlus from '../../components/Icon/IconPlus';
+import DataTable, { Column } from '../../components/Common/DataTable';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000';
 const API_URL = `${API_BASE_URL}/app/employee/`;
@@ -151,6 +152,8 @@ const AdminEmployeeRegister = () => {
     const [levels, setLevels] = useState<LevelOption[]>([]);
     const [allEmployees, setAllEmployees] = useState<{ id: number; full_name: string; level?: number }[]>([]);
     const [adminCompanyName, setAdminCompanyName] = useState('');
+    const [selectedDeptFilter, setSelectedDeptFilter] = useState('');
+    const [selectedStatusFilter, setSelectedStatusFilter] = useState('');
 
     useEffect(() => {
         dispatch(setPageTitle('Employee Register'));
@@ -158,12 +161,13 @@ const AdminEmployeeRegister = () => {
     }, [dispatch]);
 
     useEffect(() => {
+        setLoading(true);
         const handler = setTimeout(() => {
             fetchEmployees();
-        }, 400);
+        }, 300);
         return () => clearTimeout(handler);
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [search, page, pageSize]);
+    }, [search, page, pageSize, selectedDeptFilter, selectedStatusFilter]);
 
     const getHeaders = () => {
         const token = localStorage.getItem('access_token');
@@ -172,13 +176,20 @@ const AdminEmployeeRegister = () => {
         return headers;
     };
 
-    const fetchEmployees = async () => {
+    const fetchEmployees = async (overrideParams?: { page?: number; dept?: string; status?: string; query?: string }) => {
         setLoading(true);
         try {
             const url = new URL(API_URL);
-            url.searchParams.append('page', page.toString());
+            const currentPage = overrideParams?.page !== undefined ? overrideParams.page : page;
+            const currentDept = overrideParams?.dept !== undefined ? overrideParams.dept : selectedDeptFilter;
+            const currentStatus = overrideParams?.status !== undefined ? overrideParams.status : selectedStatusFilter;
+            const currentSearch = overrideParams?.query !== undefined ? overrideParams.query : search;
+
+            url.searchParams.append('page', currentPage.toString());
             url.searchParams.append('page_size', pageSize.toString());
-            if (search.trim()) url.searchParams.append('search', search.trim());
+            if (currentSearch.trim()) url.searchParams.append('search', currentSearch.trim());
+            if (currentDept) url.searchParams.append('department', currentDept);
+            if (currentStatus) url.searchParams.append('is_active', currentStatus === 'active' ? 'true' : 'false');
 
             const res = await fetch(url.toString(), { headers: getHeaders() });
             if (res.ok) {
@@ -199,8 +210,6 @@ const AdminEmployeeRegister = () => {
             setLoading(false);
         }
     };
-
-    const displayEmployees = useMemo(() => employees, [employees]);
     const photoUrl = selectedEmployee?.photo ? (String(selectedEmployee.photo).startsWith('http') ? selectedEmployee.photo : `${API_BASE_URL}${selectedEmployee.photo}`) : null;
     const aadharUrl = selectedEmployee?.aadhar_card ? (String(selectedEmployee.aadhar_card).startsWith('http') ? selectedEmployee.aadhar_card : `${API_BASE_URL}${selectedEmployee.aadhar_card}`) : null;
     const panUrl = selectedEmployee?.pan_card ? (String(selectedEmployee.pan_card).startsWith('http') ? selectedEmployee.pan_card : `${API_BASE_URL}${selectedEmployee.pan_card}`) : null;
@@ -587,6 +596,127 @@ const AdminEmployeeRegister = () => {
 
     const fullName = (e: EmployeeRecord) => [e.first_name, e.middle_name, e.last_name].filter(Boolean).join(' ') || '-';
 
+    const columns: Column<EmployeeRecord>[] = [
+        {
+            key: 'id',
+            title: '#',
+            width: '60px',
+            align: 'center',
+            render: (_val, _item, index) => (
+                <span className="font-semibold text-gray-500">{index + 1}</span>
+            ),
+        },
+        {
+            key: 'employee_id',
+            title: 'Emp ID',
+            sortable: true,
+            render: (empId) => (
+                <span className="font-mono text-xs font-bold text-primary">{empId || '-'}</span>
+            ),
+        },
+        {
+            key: 'name',
+            title: 'Name',
+            sortable: true,
+            render: (_val, emp) => (
+                <div className="flex items-center gap-2">
+                    {emp.photo ? (
+                        <img
+                            src={String(emp.photo).startsWith('http') ? emp.photo : `${API_BASE_URL}${emp.photo}`}
+                            alt={fullName(emp)}
+                            className="w-7 h-7 rounded-full object-cover border border-gray-200 dark:border-gray-700"
+                        />
+                    ) : (
+                        <div className="w-7 h-7 rounded-full bg-gradient-to-tr from-[#0062E0] to-[#38bdf8] text-white flex items-center justify-center font-bold text-[10px]">
+                            {(emp.first_name?.[0] || 'E').toUpperCase()}
+                        </div>
+                    )}
+                    <span className="font-semibold text-gray-800 dark:text-white-light">{fullName(emp)}</span>
+                </div>
+            ),
+        },
+        {
+            key: 'email',
+            title: 'Email',
+            sortable: true,
+            render: (email) => <span className="text-gray-500 dark:text-gray-400">{email || '-'}</span>,
+        },
+        {
+            key: 'mobile',
+            title: 'Mobile',
+            render: (mobile) => <span className="text-gray-500 dark:text-gray-400">{mobile || '-'}</span>,
+        },
+        {
+            key: 'department_name',
+            title: 'Department',
+            sortable: true,
+            render: (dept) => (
+                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">
+                    {dept || '-'}
+                </span>
+            ),
+        },
+        {
+            key: 'designation_name',
+            title: 'Designation',
+            sortable: true,
+            render: (desig) => (
+                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-purple-50 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300">
+                    {desig || '-'}
+                </span>
+            ),
+        },
+        {
+            key: 'is_active',
+            title: 'Status',
+            align: 'center',
+            render: (_val, emp) => (
+                <button
+                    type="button"
+                    onClick={() => toggleStatus(emp)}
+                    className={`badge ${emp.is_active ? 'badge-outline-success hover:bg-success hover:text-white' : 'badge-outline-danger hover:bg-danger hover:text-white'} transition-all duration-200 cursor-pointer`}
+                    title={`Click to mark as ${emp.is_active ? 'Inactive' : 'Active'}`}
+                >
+                    {emp.is_active ? 'Active' : 'Inactive'}
+                </button>
+            ),
+        },
+        {
+            key: 'actions',
+            title: 'Actions',
+            align: 'center',
+            width: '130px',
+            render: (_val, emp) => (
+                <div className="flex items-center justify-center gap-2">
+                    <button
+                        type="button"
+                        className="p-1.5 rounded-lg text-info hover:text-white hover:bg-info transition-colors"
+                        onClick={() => openProfileModal(emp.id)}
+                        title="View Profile"
+                    >
+                        <IconEye className="w-4 h-4" />
+                    </button>
+                    <button
+                        type="button"
+                        className="p-1.5 rounded-lg text-primary hover:text-white hover:bg-primary transition-colors"
+                        onClick={() => openEditModal(emp.id)}
+                        title="Edit"
+                    >
+                        <IconPencil className="w-4 h-4" />
+                    </button>
+                    <button
+                        type="button"
+                        className="p-1.5 rounded-lg text-danger hover:text-white hover:bg-danger transition-colors"
+                        onClick={() => handleDelete(emp)}
+                        title="Delete"
+                    >
+                        <IconTrashLines className="w-4 h-4" />
+                    </button>
+                </div>
+            ),
+        },
+    ];
+
     return (
         <div>
             <div className="bg-gradient-to-r from-[#0e1726] to-[#3b82f6] p-6 rounded-xl shadow-lg mb-6 relative overflow-hidden">
@@ -597,193 +727,88 @@ const AdminEmployeeRegister = () => {
                 <div className="absolute top-0 right-0 -mt-10 -mr-10 w-48 h-48 bg-white opacity-5 rounded-full blur-2xl"></div>
             </div>
 
-            <div className="flex flex-wrap items-center justify-between gap-4 mb-5">
-                <div className="relative">
-                    <input
-                        type="text"
-                        className="form-input pr-10 w-72"
-                        placeholder="Search employees..."
-                        value={search}
-                        onChange={(e) => {
-                            setSearch(e.target.value);
-                            setPage(1);
-                        }}
-                    />
-                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400">
-                        <IconSearch className="w-4 h-4" />
-                    </span>
-                </div>
-                <button type="button" className="btn btn-primary gap-2" onClick={openCreateModal}>
-                    <IconPlus /> Register Employee
-                </button>
-            </div>
-
-            <div className="panel p-0 border-0 overflow-hidden">
-                <div className="table-responsive">
-                    <table className="table-hover">
-                        <thead>
-                            <tr>
-                                <th>#</th>
-                                <th>Emp ID</th>
-                                <th>Name</th>
-                                <th>Email</th>
-                                <th>Mobile</th>
-                                <th>Department</th>
-                                <th>Designation</th>
-                                <th>Status</th>
-                                <th className="text-center">Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {loading ? (
-                                <tr>
-                                    <td colSpan={8} className="text-center py-5">
-                                        <span className="animate-pulse text-gray-400">Loading employees...</span>
-                                    </td>
-                                </tr>
-                            ) : displayEmployees.length > 0 ? (
-                                displayEmployees.map((emp, index) => (
-                                    <tr key={emp.id}>
-                                        <td>{(page - 1) * pageSize + index + 1}</td>
-                                        <td className="font-mono text-xs font-bold text-primary">{emp.employee_id || '-'}</td>
-                                        <td className="font-semibold">{fullName(emp)}</td>
-                                        <td className="text-gray-500">{emp.email || '-'}</td>
-                                        <td className="text-gray-500">{emp.mobile || '-'}</td>
-                                        <td className="text-gray-500">{emp.department_name || '-'}</td>
-                                        <td className="text-gray-500">{emp.designation_name || '-'}</td>
-                                        <td>
-                                            <button
-                                                type="button"
-                                                onClick={() => toggleStatus(emp)}
-                                                className={`badge ${emp.is_active ? 'badge-outline-success hover:bg-success hover:text-white' : 'badge-outline-danger hover:bg-danger hover:text-white'} transition-all duration-200 cursor-pointer`}
-                                                title={`Click to mark as ${emp.is_active ? 'Inactive' : 'Active'}`}
-                                            >
-                                                {emp.is_active ? 'Active' : 'Inactive'}
-                                            </button>
-                                        </td>
-                                        <td className="text-center">
-                                            <div className="flex items-center justify-center gap-3">
-                                                <button
-                                                    type="button"
-                                                    className="text-info hover:text-cyan-700"
-                                                    onClick={() => openProfileModal(emp.id)}
-                                                    title="View Profile"
-                                                >
-                                                    <IconEye className="w-5 h-5" />
-                                                </button>
-                                                <button
-                                                    type="button"
-                                                    className="text-primary hover:text-blue-700"
-                                                    onClick={() => openEditModal(emp.id)}
-                                                    title="Edit"
-                                                >
-                                                    <IconPencil className="w-5 h-5" />
-                                                </button>
-                                                <button type="button" className="text-danger hover:text-red-700" onClick={() => handleDelete(emp)} title="Delete">
-                                                    <IconTrashLines className="w-5 h-5" />
-                                                </button>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                ))
-                            ) : (
-                                <tr>
-                                    <td colSpan={8} className="text-center py-5 text-gray-400">No employees found.</td>
-                                </tr>
-                            )}
-                        </tbody>
-                    </table>
-                </div>
-
-                {totalCount > 0 && (
-                    <div className="flex justify-between items-center p-4 border-t border-[#e0e6ed] dark:border-[#1b2e4b]">
-                        <div className="flex items-center gap-4">
-                            <div className="text-sm text-gray-500 font-semibold dark:text-gray-400">
-                                Showing <span className="text-primary">{(page - 1) * pageSize + 1}</span> to <span className="text-primary">{Math.min(page * pageSize, totalCount)}</span> of <span className="text-primary">{totalCount}</span> entries
-                            </div>
-                            <div className="flex items-center gap-2">
-                                <span className="text-sm font-semibold">Per page:</span>
-                                <select
-                                    className="form-select w-20 text-sm font-semibold py-1"
-                                    value={pageSize}
-                                    onChange={(e) => {
-                                        setPageSize(Number(e.target.value));
-                                        setPage(1);
-                                    }}
-                                >
-                                    <option value="10">10</option>
-                                    <option value="20">20</option>
-                                    <option value="50">50</option>
-                                </select>
-                            </div>
-                        </div>
-                        <ul className="inline-flex items-center space-x-1 font-semibold">
-                            <li>
-                                <button
-                                    type="button"
-                                    className="flex justify-center font-semibold p-2 rounded-full transition bg-white-light text-dark hover:text-white hover:bg-primary dark:text-white-light dark:bg-[#191e3a] dark:hover:bg-primary disabled:opacity-50 disabled:cursor-not-allowed"
-                                    onClick={() => setPage(page > 1 ? page - 1 : 1)}
-                                    disabled={page === 1}
-                                >
-                                    Prev
-                                </button>
-                            </li>
-                            {(() => {
-                                const pages: (number | string)[] = [];
-                                if (totalPages <= 3) {
-                                    for (let i = 1; i <= totalPages; i++) pages.push(i);
-                                } else {
-                                    if (page <= 2) {
-                                        pages.push(1, 2, 3, 'right-ellipsis', totalPages);
-                                    } else if (page >= totalPages - 1) {
-                                        pages.push(1, 'left-ellipsis', totalPages - 2, totalPages - 1, totalPages);
-                                    } else {
-                                        pages.push(1, 'left-ellipsis', page, 'right-ellipsis', totalPages);
-                                    }
-                                }
-                                return pages.map((p, idx) => {
-                                    if (p === 'left-ellipsis' || p === 'right-ellipsis') {
-                                        const jumpPage = p === 'left-ellipsis' ? Math.max(1, page - 3) : Math.min(totalPages, page + 3);
-                                        return (
-                                            <li key={`${p}-${idx}`}>
-                                                <button
-                                                    type="button"
-                                                    title={p === 'left-ellipsis' ? "Previous 3 pages" : "Next 3 pages"}
-                                                    className="flex justify-center font-semibold px-3 py-2 rounded-full transition bg-white-light text-dark hover:text-white hover:bg-primary dark:text-white-light dark:bg-[#191e3a] dark:hover:bg-primary cursor-pointer"
-                                                    onClick={() => setPage(jumpPage)}
-                                                >
-                                                    ...
-                                                </button>
-                                            </li>
-                                        );
-                                    }
-                                    return (
-                                        <li key={p}>
-                                            <button
-                                                type="button"
-                                                className={`flex justify-center font-semibold px-3.5 py-2 rounded-full transition ${page === p ? 'bg-primary text-white shadow-[0_10px_20px_-10px_rgba(67,97,238,0.44)]' : 'bg-white-light text-dark hover:text-white hover:bg-primary dark:text-white-light dark:bg-[#191e3a] dark:hover:bg-primary'}`}
-                                                onClick={() => setPage(p as number)}
-                                            >
-                                                {p}
-                                            </button>
-                                        </li>
-                                    );
-                                });
-                            })()}
-                            <li>
-                                <button
-                                    type="button"
-                                    className="flex justify-center font-semibold p-2 rounded-full transition bg-white-light text-dark hover:text-white hover:bg-primary dark:text-white-light dark:bg-[#191e3a] dark:hover:bg-primary disabled:opacity-50 disabled:cursor-not-allowed"
-                                    onClick={() => setPage(page < totalPages ? page + 1 : totalPages)}
-                                    disabled={page === totalPages || totalPages === 0}
-                                >
-                                    Next
-                                </button>
-                            </li>
-                        </ul>
+            {/* Reusable Data Table */}
+            <DataTable
+                columns={columns}
+                data={employees}
+                totalCount={totalCount}
+                page={page}
+                pageSize={pageSize}
+                loading={loading}
+                search={search}
+                searchPlaceholder="Search employees by name, email, ID..."
+                onSearchChange={(val) => {
+                    setSearch(val);
+                    setLoading(true);
+                    setPage(1);
+                }}
+                onPageChange={(p) => {
+                    setPage(p);
+                    setLoading(true);
+                }}
+                onPageSizeChange={(sz) => {
+                    setPageSize(sz);
+                    setLoading(true);
+                    setPage(1);
+                }}
+                onRefresh={fetchEmployees}
+                filters={
+                    <div className="flex items-center gap-2.5 flex-wrap sm:flex-nowrap">
+                        <select
+                            className="form-select text-xs sm:text-sm h-10 px-3.5 rounded-xl border-[#cbd5e1] dark:border-[#1e293b] bg-white dark:bg-[#121e32] font-medium shadow-sm min-w-[170px] focus:border-[#0062E0] focus:ring-2 focus:ring-[#0062E0]/20"
+                            value={selectedDeptFilter}
+                            onChange={(e) => {
+                                const val = e.target.value;
+                                setSelectedDeptFilter(val);
+                                setLoading(true);
+                                setPage(1);
+                            }}
+                        >
+                            <option value="">All Departments</option>
+                            {departments.map((d) => (
+                                <option key={d.id} value={d.id}>
+                                    {d.department_name}
+                                </option>
+                            ))}
+                        </select>
+                        <select
+                            className="form-select text-xs sm:text-sm h-10 px-3.5 rounded-xl border-[#cbd5e1] dark:border-[#1e293b] bg-white dark:bg-[#121e32] font-medium shadow-sm min-w-[150px] focus:border-[#0062E0] focus:ring-2 focus:ring-[#0062E0]/20"
+                            value={selectedStatusFilter}
+                            onChange={(e) => {
+                                const val = e.target.value;
+                                setSelectedStatusFilter(val);
+                                setLoading(true);
+                                setPage(1);
+                            }}
+                        >
+                            <option value="">All Statuses</option>
+                            <option value="active">Active</option>
+                            <option value="inactive">Inactive</option>
+                        </select>
+                        {(selectedDeptFilter || selectedStatusFilter || search) && (
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    setSelectedDeptFilter('');
+                                    setSelectedStatusFilter('');
+                                    setSearch('');
+                                    setLoading(true);
+                                    setPage(1);
+                                }}
+                                className="h-10 px-3 text-xs font-semibold text-gray-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/20 rounded-xl border border-gray-200 dark:border-gray-700 transition-colors whitespace-nowrap shadow-sm"
+                                title="Reset all filters"
+                            >
+                                Reset
+                            </button>
+                        )}
                     </div>
-                )}
-            </div>
+                }
+                actions={
+                    <button type="button" className="btn btn-primary gap-2 shadow-md shadow-primary/20" onClick={openCreateModal}>
+                        <IconPlus className="w-4 h-4" /> Register Employee
+                    </button>
+                }
+            />
 
             <Transition appear show={profileModalOpen} as={Fragment}>
                 <Dialog as="div" open={profileModalOpen} onClose={() => setProfileModalOpen(false)} className="relative z-50">

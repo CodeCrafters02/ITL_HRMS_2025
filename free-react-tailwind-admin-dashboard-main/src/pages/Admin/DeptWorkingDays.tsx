@@ -7,6 +7,7 @@ import IconPlus from '../../components/Icon/IconPlus';
 import IconX from '../../components/Icon/IconX';
 import IconPencil from '../../components/Icon/IconPencil';
 import IconTrashLines from '../../components/Icon/IconTrashLines';
+import DataTable, { Column } from '../../components/Common/DataTable';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000';
 const API_URL = `${API_BASE_URL}/app/department-working-days/`;
@@ -35,6 +36,10 @@ const AdminDeptWorkingDays = () => {
     const [departments, setDepartments] = useState<Department[]>([]);
     const [shifts, setShifts] = useState<Shift[]>([]);
     const [loading, setLoading] = useState(false);
+    const [page, setPage] = useState(1);
+    const [pageSize, setPageSize] = useState(10);
+    const [totalCount, setTotalCount] = useState(0);
+    const [search, setSearch] = useState('');
     const [modalOpen, setModalOpen] = useState(false);
     const [form, setForm] = useState<any>({
         id: null,
@@ -58,8 +63,13 @@ const AdminDeptWorkingDays = () => {
     const fetchAll = async () => {
         setLoading(true);
         try {
+            const url = new URL(API_URL);
+            url.searchParams.append('page', String(page));
+            url.searchParams.append('page_size', String(pageSize));
+            if (search.trim()) url.searchParams.append('search', search.trim());
+
             const [wdRes, depRes, shRes] = await Promise.all([
-                fetch(API_URL, { headers: headers() }),
+                fetch(url.toString(), { headers: headers() }),
                 fetch(API_DEPTS, { headers: headers() }),
                 fetch(API_SHIFTS, { headers: headers() }),
             ]);
@@ -67,7 +77,14 @@ const AdminDeptWorkingDays = () => {
             const depData = await depRes.json();
             const shData = await shRes.json();
             if (!wdRes.ok) throw new Error(wdData?.detail || 'Failed to load working days');
-            setItems(Array.isArray(wdData) ? wdData : wdData?.results || []);
+            if (wdData.results) {
+                setItems(wdData.results);
+                setTotalCount(wdData.count ?? 0);
+            } else {
+                const arr = Array.isArray(wdData) ? wdData : [];
+                setItems(arr);
+                setTotalCount(arr.length);
+            }
             setDepartments(Array.isArray(depData) ? depData : depData?.results || []);
             setShifts(Array.isArray(shData) ? shData : shData?.results || []);
         } catch (e: any) {
@@ -78,9 +95,12 @@ const AdminDeptWorkingDays = () => {
     };
 
     useEffect(() => {
-        fetchAll();
+        const handler = setTimeout(() => {
+            fetchAll();
+        }, 300);
+        return () => clearTimeout(handler);
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, []);
+    }, [page, pageSize, search]);
 
     const deptName = (d: any) => (typeof d === 'object' ? d?.department_name : departments.find((x) => x.id === d)?.department_name) || '-';
     const shiftLabel = (s: any) => {
@@ -182,6 +202,76 @@ const AdminDeptWorkingDays = () => {
 
     const rows = useMemo(() => items, [items]);
 
+    const columns: Column<WorkingDay>[] = [
+        {
+            key: 'id',
+            label: '#',
+            width: '60px',
+            align: 'center',
+            render: (_val, _row, idx) => <span className="font-semibold text-gray-500">{(idx ?? 0) + 1}</span>,
+        },
+        {
+            key: 'department',
+            label: 'Department',
+            sortable: true,
+            render: (_val, row) => <span className="font-semibold text-gray-800 dark:text-white-light">{deptName(row.department)}</span>,
+        },
+        {
+            key: 'shifts',
+            label: 'Shift',
+            render: (_val, row) => (
+                <span className="badge bg-info/10 text-info font-medium">
+                    {Array.isArray(row.shifts) && row.shifts.length ? shiftLabel((row.shifts as any)[0]) : '-'}
+                </span>
+            ),
+        },
+        {
+            key: 'working_days_count',
+            label: 'Count',
+            sortable: true,
+            align: 'center',
+            width: '100px',
+            render: (_val, row) => <span className="badge bg-primary/10 text-primary font-bold px-3 py-1 rounded-full">{row.working_days_count} days</span>,
+        },
+        {
+            key: 'working_days',
+            label: 'Active Working Days',
+            render: (_val, row) => (
+                <span className="text-gray-600 dark:text-gray-300 font-medium">
+                    {Array.isArray(row.working_days) && row.working_days.length > 0 
+                        ? row.working_days.map(d => d.substring(0,3)).join(', ') 
+                        : `${row.week_start_day || ''} to ${row.week_end_day || ''}`}
+                </span>
+            ),
+        },
+        {
+            key: 'actions',
+            label: 'Actions',
+            align: 'center',
+            width: '120px',
+            render: (_val, row) => (
+                <div className="flex items-center justify-center gap-2">
+                    <button
+                        type="button"
+                        className="p-1.5 rounded-lg text-primary hover:bg-primary/10 transition-colors"
+                        onClick={() => openEdit(row)}
+                        title="Edit"
+                    >
+                        <IconPencil className="w-4 h-4" />
+                    </button>
+                    <button
+                        type="button"
+                        className="p-1.5 rounded-lg text-danger hover:bg-danger/10 transition-colors"
+                        onClick={() => del(row)}
+                        title="Delete"
+                    >
+                        <IconTrashLines className="w-4 h-4" />
+                    </button>
+                </div>
+            ),
+        },
+    ];
+
     return (
         <div className="space-y-6">
             {/* Gradient Banner Header */}
@@ -193,66 +283,31 @@ const AdminDeptWorkingDays = () => {
                 <div className="absolute top-0 right-0 -mt-10 -mr-10 w-48 h-48 bg-white opacity-10 rounded-full blur-2xl"></div>
             </div>
 
-            <div className="panel">
-                <div className="flex flex-wrap items-center justify-end gap-3 mb-4">
+            <DataTable
+                columns={columns}
+                data={rows}
+                loading={loading}
+                page={page}
+                pageSize={pageSize}
+                totalCount={totalCount}
+                onPageChange={(p) => setPage(p)}
+                onPageSizeChange={(sz) => {
+                    setPageSize(sz);
+                    setPage(1);
+                }}
+                searchValue={search}
+                onSearchChange={(val) => {
+                    setSearch(val);
+                    setPage(1);
+                }}
+                onRefresh={fetchAll}
+                searchPlaceholder="Search working day configurations..."
+                actionButton={
                     <button type="button" className="btn btn-primary gap-2" onClick={openAdd}>
-                        <IconPlus /> Add
+                        <IconPlus className="w-4 h-4" /> Add
                     </button>
-                </div>
-
-            <div className="table-responsive">
-                <table className="table-hover">
-                    <thead>
-                        <tr>
-                            <th>#</th>
-                            <th>Department</th>
-                            <th>Shift</th>
-                            <th>Count</th>
-                            <th>Active Working Days</th>
-                            <th className="text-center">Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {loading ? (
-                            <tr>
-                                <td colSpan={6} className="text-center py-6 text-white-dark">
-                                    Loading...
-                                </td>
-                            </tr>
-                        ) : rows.length ? (
-                            rows.map((it, idx) => (
-                                <tr key={it.id}>
-                                    <td>{idx + 1}</td>
-                                    <td className="font-semibold">{deptName(it.department)}</td>
-                                    <td>{Array.isArray(it.shifts) && it.shifts.length ? shiftLabel((it.shifts as any)[0]) : '-'}</td>
-                                    <td>{it.working_days_count}</td>
-                                    <td>
-                                        {Array.isArray(it.working_days) && it.working_days.length > 0 
-                                            ? it.working_days.map(d => d.substring(0,3)).join(', ') 
-                                            : `${it.week_start_day || ''} to ${it.week_end_day || ''}`}
-                                    </td>
-                                    <td className="text-center">
-                                        <div className="flex items-center justify-center gap-3">
-                                            <button type="button" className="text-primary" onClick={() => openEdit(it)} title="Edit">
-                                                <IconPencil className="w-5 h-5" />
-                                            </button>
-                                            <button type="button" className="text-danger" onClick={() => del(it)} title="Delete">
-                                                <IconTrashLines className="w-5 h-5" />
-                                            </button>
-                                        </div>
-                                    </td>
-                                </tr>
-                            ))
-                        ) : (
-                            <tr>
-                                <td colSpan={6} className="text-center py-6 text-white-dark">
-                                    No configurations found.
-                                </td>
-                            </tr>
-                        )}
-                    </tbody>
-                </table>
-            </div>
+                }
+            />
 
             <Transition appear show={modalOpen} as={Fragment}>
                 <Dialog as="div" open={modalOpen} onClose={() => setModalOpen(false)} className="relative z-50">
@@ -344,7 +399,6 @@ const AdminDeptWorkingDays = () => {
                     </div>
                 </Dialog>
             </Transition>
-        </div>
         </div>
     );
 };

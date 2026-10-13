@@ -4,8 +4,8 @@ import { createPortal } from 'react-dom';
 import Swal from 'sweetalert2';
 import { setPageTitle } from '../../store/themeConfigSlice';
 import IconListCheck from '../../components/Icon/IconListCheck';
-import IconSearch from '../../components/Icon/IconSearch';
 import IconTrashLines from '../../components/Icon/IconTrashLines';
+import DataTable, { Column } from '../../components/Common/DataTable';
 import { fetchMyReportees, Reportee } from '../Employee/Reportees/api';
 import {
     createManagerSubtask,
@@ -719,99 +719,115 @@ const AdminAssignTask = () => {
             )}
 
             {!showCreateForm && (
-                <div className="panel">
-                    <div className="flex flex-col sm:flex-row sm:items-center gap-6 mb-4">
-                        <div className="flex items-center gap-3 w-full sm:w-auto">
-                            <h3 className="text-lg font-bold whitespace-nowrap">Assigned Tasks</h3>
-                        </div>
-                        <div className="relative w-full sm:w-72">
-                            <input className="form-input pl-10" placeholder="Search tasks..." value={search} onChange={(e) => setSearch(e.target.value)} />
-                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-white-dark">
-                                <IconSearch className="w-4 h-4" />
-                            </span>
-                        </div>
-                    </div>
-
-                    {loadingTasks ? (
-                        <div className="text-center py-10 text-white-dark">Loading tasks...</div>
-                    ) : tasks.length === 0 ? (
-                        <div className="text-center py-10 text-white-dark">No tasks available.</div>
-                    ) : (
-                        <div className="table-responsive">
-                            <div className="mb-3 flex flex-col sm:flex-row items-center justify-between gap-3 px-1">
-                                <div className="text-xs text-white-dark">
-                                    Showing {(page - 1) * pageSize + 1} to {Math.min(page * pageSize, totalCount)} of {totalCount}
+                <DataTable
+                    columns={[
+                        {
+                            key: 'title',
+                            title: 'Task',
+                            sortable: true,
+                            render: (_val: any, task: ManagerTask) => (
+                                <div className="max-w-xs">
+                                    <p className="font-semibold text-gray-800 dark:text-white-light">{task.title}</p>
+                                    <p className="text-xs text-gray-500 dark:text-gray-400 line-clamp-1">{task.description || '-'}</p>
                                 </div>
-                                <div className="flex items-center gap-2">
-                                    <label className="text-xs text-white-dark">Per page</label>
-                                    <select
-                                        className="form-select w-20 text-xs"
-                                        value={pageSize}
-                                        onChange={(e) => {
-                                            setPageSize(Number(e.target.value));
-                                            setPage(1);
-                                        }}
-                                    >
-                                        <option value={5}>5</option>
-                                        <option value={10}>10</option>
-                                        <option value={20}>20</option>
-                                    </select>
-                                    <button type="button" className="btn btn-sm btn-outline-primary" disabled={page === 1} onClick={() => setPage((p) => Math.max(1, p - 1))}>
-                                        Prev
-                                    </button>
-                                    <span className="text-xs font-semibold px-2">{page} / {totalPages}</span>
-                                    <button type="button" className="btn btn-sm btn-outline-primary" disabled={page >= totalPages} onClick={() => setPage((p) => Math.min(totalPages, p + 1))}>
-                                        Next
-                                    </button>
+                            ),
+                        },
+                        {
+                            key: 'priority',
+                            title: 'Priority',
+                            sortable: true,
+                            align: 'center',
+                            width: '100px',
+                            render: (_val: any, task: ManagerTask) => (
+                                <span className={`badge uppercase ${priorityClasses[task.priority]}`}>{task.priority}</span>
+                            ),
+                        },
+                        {
+                            key: 'status',
+                            title: 'Status',
+                            sortable: true,
+                            align: 'center',
+                            width: '120px',
+                            render: (_val: any, task: ManagerTask) => (
+                                <span className="badge bg-primary/10 text-primary font-semibold">{statusLabel[task.status] || task.status}</span>
+                            ),
+                        },
+                        {
+                            key: 'deadline',
+                            title: 'Deadline',
+                            sortable: true,
+                            render: (_val: any, task: ManagerTask) => (
+                                <span className="text-gray-500 dark:text-gray-400">{task.deadline ? new Date(task.deadline).toLocaleDateString() : '-'}</span>
+                            ),
+                        },
+                        {
+                            key: 'created_at',
+                            title: 'Created On',
+                            sortable: true,
+                            render: (_val: any, task: ManagerTask) => (
+                                <span className="text-gray-500 dark:text-gray-400 text-xs">{task.created_at ? task.created_at.replace('T', ' ') : '-'}</span>
+                            ),
+                        },
+                        {
+                            key: 'progress',
+                            title: 'Progress',
+                            sortable: true,
+                            align: 'center',
+                            width: '120px',
+                            render: (_val: any, task: ManagerTask) => (
+                                <div className="w-full">
+                                    <div className="flex items-center justify-between text-xs mb-1">
+                                        <span className="font-semibold text-primary">{task.progress}%</span>
+                                    </div>
+                                    <div className="w-full h-1.5 bg-gray-200 dark:bg-[#1b2e4b] rounded-full overflow-hidden">
+                                        <div className="h-full bg-primary rounded-full transition-all duration-300" style={{ width: `${task.progress}%` }}></div>
+                                    </div>
                                 </div>
-                            </div>
-                            <table className="table-hover">
-                                <thead>
-                                    <tr>
-                                        <th>Task</th>
-                                        <th>Priority</th>
-                                        <th>Status</th>
-                                        <th>Deadline</th>
-                                        <th>Created On</th>
-                                        <th>Progress</th>
-                                        <th>Assignees</th>
-                                        <th>Actions</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {tasks.map((task) => (
-                                        <tr key={task.id} className="cursor-pointer" onClick={() => openTaskDetail(task.id)}>
-                                            <td>
-                                                <p className="font-semibold">{task.title}</p>
-                                                <p className="text-xs text-white-dark line-clamp-1">{task.description || '-'}</p>
-                                            </td>
-                                            <td>
-                                                <span className={`badge ${priorityClasses[task.priority]}`}>{task.priority}</span>
-                                            </td>
-                                            <td>{statusLabel[task.status]}</td>
-                                            <td>{task.deadline ? new Date(task.deadline).toLocaleDateString() : '-'}</td>
-                                            <td>{task.created_at ? task.created_at.replace('T', ' ') : '-'}</td>
-                                            <td>{task.progress}%</td>
-                                            <td>{task.assignments?.length || 0}</td>
-                                            <td>
-                                                <button
-                                                    type="button"
-                                                    className="btn btn-sm btn-outline-primary"
-                                                    onClick={(e) => {
-                                                        e.stopPropagation();
-                                                        startEditTask(task.id);
-                                                    }}
-                                                >
-                                                    Edit
-                                                </button>
-                                            </td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                        </div>
-                    )}
-                </div>
+                            ),
+                        },
+                        {
+                            key: 'assignments',
+                            title: 'Assignees',
+                            align: 'center',
+                            width: '100px',
+                            render: (_val: any, task: ManagerTask) => (
+                                <span className="badge bg-secondary/10 text-secondary font-bold px-2.5 py-0.5 rounded-full">
+                                    {task.assignments?.length || 0}
+                                </span>
+                            ),
+                        },
+                        {
+                            key: 'actions',
+                            title: 'Actions',
+                            align: 'center',
+                            width: '100px',
+                            render: (_val: any, task: ManagerTask) => (
+                                <button
+                                    type="button"
+                                    className="btn btn-sm btn-outline-primary"
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        startEditTask(task.id);
+                                    }}
+                                >
+                                    Edit
+                                </button>
+                            ),
+                        },
+                    ]}
+                    data={tasks}
+                    loading={loadingTasks}
+                    page={page}
+                    pageSize={pageSize}
+                    totalCount={totalCount}
+                    onPageChange={(p) => setPage(p)}
+                    onPageSizeChange={(sz) => { setPageSize(sz); setPage(1); }}
+                    searchValue={search}
+                    onSearchChange={(val) => { setSearch(val); setPage(1); }}
+                    searchPlaceholder="Search tasks by title, description..."
+                    onRefresh={loadTasks}
+                    onRowClick={(task) => openTaskDetail(task.id)}
+                />
             )}
 
             {selectedTask && typeof document !== 'undefined' && createPortal((

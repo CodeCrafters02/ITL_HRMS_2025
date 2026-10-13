@@ -8,6 +8,7 @@ import IconPlus from '../../components/Icon/IconPlus';
 import IconPencil from '../../components/Icon/IconPencil';
 import IconTrashLines from '../../components/Icon/IconTrashLines';
 import IconSearch from '../../components/Icon/IconSearch';
+import DataTable, { Column } from '../../components/Common/DataTable';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000';
 const DESIGNATION_API_URL = `${API_BASE_URL}/app/designations/`;
@@ -40,6 +41,8 @@ const AdminDesignation = () => {
     const [levels, setLevels] = useState<LevelOption[]>([]);
     const [loading, setLoading] = useState(false);
     const [search, setSearch] = useState('');
+    const [selectedDepartment, setSelectedDepartment] = useState('');
+    const [selectedLevel, setSelectedLevel] = useState('');
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editMode, setEditMode] = useState(false);
     const [editId, setEditId] = useState<number | null>(null);
@@ -56,11 +59,13 @@ const AdminDesignation = () => {
     }, [dispatch]);
 
     useEffect(() => {
+        setLoading(true);
         const handler = setTimeout(() => {
             fetchDesignations();
-        }, 400);
+        }, 300);
         return () => clearTimeout(handler);
-    }, [search, page, pageSize]);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [search, page, pageSize, selectedDepartment, selectedLevel]);
 
     const getHeaders = () => {
         const token = localStorage.getItem('access_token');
@@ -90,13 +95,20 @@ const AdminDesignation = () => {
         }
     };
 
-    const fetchDesignations = async () => {
+    const fetchDesignations = async (overrideParams?: { page?: number; dept?: string; level?: string; query?: string }) => {
         setLoading(true);
         try {
             const url = new URL(DESIGNATION_API_URL);
-            url.searchParams.append('page', page.toString());
+            const currentPage = overrideParams?.page !== undefined ? overrideParams.page : page;
+            const currentDept = overrideParams?.dept !== undefined ? overrideParams.dept : selectedDepartment;
+            const currentLevel = overrideParams?.level !== undefined ? overrideParams.level : selectedLevel;
+            const currentSearch = overrideParams?.query !== undefined ? overrideParams.query : search;
+
+            url.searchParams.append('page', currentPage.toString());
             url.searchParams.append('page_size', pageSize.toString());
-            if (search.trim()) url.searchParams.append('search', search.trim());
+            if (currentSearch.trim()) url.searchParams.append('search', currentSearch.trim());
+            if (currentDept) url.searchParams.append('department', currentDept);
+            if (currentLevel) url.searchParams.append('level', currentLevel);
 
             const response = await fetch(url.toString(), { headers: getHeaders() });
             if (response.ok) {
@@ -213,6 +225,72 @@ const AdminDesignation = () => {
         }
     };
 
+    const columns: Column<DesignationRecord>[] = [
+        {
+            key: 'id',
+            title: '#',
+            width: '70px',
+            align: 'center',
+            render: (_val, _item, index) => (
+                <span className="font-semibold text-gray-500">{index + 1}</span>
+            ),
+        },
+        {
+            key: 'designation_name',
+            title: 'Designation Name',
+            sortable: true,
+            render: (name) => (
+                <span className="font-semibold text-gray-800 dark:text-white-light">{name}</span>
+            ),
+        },
+        {
+            key: 'department_name',
+            title: 'Department',
+            sortable: true,
+            render: (dept) => (
+                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">
+                    {dept || '-'}
+                </span>
+            ),
+        },
+        {
+            key: 'level_name',
+            title: 'Level',
+            sortable: true,
+            render: (lvl) => (
+                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300">
+                    {lvl || '-'}
+                </span>
+            ),
+        },
+        {
+            key: 'actions',
+            title: 'Actions',
+            align: 'center',
+            width: '120px',
+            render: (_val, designation) => (
+                <div className="flex items-center justify-center gap-2">
+                    <button
+                        type="button"
+                        className="p-1.5 rounded-lg text-primary hover:text-white hover:bg-primary transition-colors"
+                        onClick={() => openEditModal(designation)}
+                        title="Edit Designation"
+                    >
+                        <IconPencil className="w-4 h-4" />
+                    </button>
+                    <button
+                        type="button"
+                        className="p-1.5 rounded-lg text-danger hover:text-white hover:bg-danger transition-colors"
+                        onClick={() => handleDelete(designation)}
+                        title="Delete Designation"
+                    >
+                        <IconTrashLines className="w-4 h-4" />
+                    </button>
+                </div>
+            ),
+        },
+    ];
+
     return (
         <div>
             <div className="bg-gradient-to-r from-[#1e3a5f] to-[#14b8a6] p-6 rounded-xl shadow-lg mb-6 relative overflow-hidden">
@@ -223,163 +301,91 @@ const AdminDesignation = () => {
                 <div className="absolute top-0 right-0 -mt-10 -mr-10 w-48 h-48 bg-white opacity-5 rounded-full blur-2xl"></div>
             </div>
 
-            <div className="flex flex-wrap items-center justify-between gap-4 mb-5">
-                <div className="relative">
-                    <input
-                        type="text"
-                        className="form-input pr-10 w-64"
-                        placeholder="Search designations..."
-                        value={search}
-                        onChange={(e) => {
-                            setSearch(e.target.value);
-                            setPage(1);
-                        }}
-                    />
-                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400">
-                        <IconSearch className="w-4 h-4" />
-                    </span>
-                </div>
-                <button type="button" className="btn btn-primary gap-2" onClick={openAddModal}>
-                    <IconPlus /> Add Designation
-                </button>
-            </div>
-
-            <div className="panel p-0 border-0 overflow-hidden">
-                <div className="table-responsive">
-                    <table className="table-hover">
-                        <thead>
-                            <tr>
-                                <th>#</th>
-                                <th>Designation Name</th>
-                                <th>Department</th>
-                                <th>Level</th>
-                                <th className="text-center">Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {loading ? (
-                                <tr>
-                                    <td colSpan={5} className="text-center py-5">
-                                        <span className="animate-pulse text-gray-400">Loading designations...</span>
-                                    </td>
-                                </tr>
-                            ) : designations.length > 0 ? (
-                                designations.map((designation, index) => (
-                                    <tr key={designation.id}>
-                                        <td>{(page - 1) * pageSize + index + 1}</td>
-                                        <td className="font-semibold">{designation.designation_name}</td>
-                                        <td className="text-gray-500">{designation.department_name || '-'}</td>
-                                        <td className="text-gray-500">{designation.level_name || '-'}</td>
-                                        <td className="text-center">
-                                            <div className="flex items-center justify-center gap-3">
-                                                <button type="button" className="text-primary hover:text-blue-700" onClick={() => openEditModal(designation)} title="Edit">
-                                                    <IconPencil className="w-5 h-5" />
-                                                </button>
-                                                <button type="button" className="text-danger hover:text-red-700" onClick={() => handleDelete(designation)} title="Delete">
-                                                    <IconTrashLines className="w-5 h-5" />
-                                                </button>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                ))
-                            ) : (
-                                <tr>
-                                    <td colSpan={5} className="text-center py-5 text-gray-400">No designations found.</td>
-                                </tr>
-                            )}
-                        </tbody>
-                    </table>
-                </div>
-
-                {totalCount > 0 && (
-                    <div className="flex justify-between items-center p-4 border-t border-[#e0e6ed] dark:border-[#1b2e4b]">
-                        <div className="flex items-center gap-4">
-                            <div className="text-sm text-gray-500 font-semibold dark:text-gray-400">
-                                Showing <span className="text-primary">{(page - 1) * pageSize + 1}</span> to <span className="text-primary">{Math.min(page * pageSize, totalCount)}</span> of <span className="text-primary">{totalCount}</span> entries
-                            </div>
-                            <div className="flex items-center gap-2">
-                                <span className="text-sm font-semibold">Per page:</span>
-                                <select
-                                    className="form-select w-20 text-sm font-semibold py-1"
-                                    value={pageSize}
-                                    onChange={(e) => {
-                                        setPageSize(Number(e.target.value));
-                                        setPage(1);
-                                    }}
-                                >
-                                    <option value="10">10</option>
-                                    <option value="20">20</option>
-                                    <option value="50">50</option>
-                                </select>
-                            </div>
-                        </div>
-                        <ul className="inline-flex items-center space-x-1 font-semibold">
-                            <li>
-                                <button
-                                    type="button"
-                                    className="flex justify-center font-semibold p-2 rounded-full transition bg-white-light text-dark hover:text-white hover:bg-primary dark:text-white-light dark:bg-[#191e3a] dark:hover:bg-primary disabled:opacity-50 disabled:cursor-not-allowed"
-                                    onClick={() => setPage(page > 1 ? page - 1 : 1)}
-                                    disabled={page === 1}
-                                >
-                                    Prev
-                                </button>
-                            </li>
-                            {(() => {
-                                const pages: (number | string)[] = [];
-                                if (totalPages <= 3) {
-                                    for (let i = 1; i <= totalPages; i++) pages.push(i);
-                                } else {
-                                    if (page <= 2) {
-                                        pages.push(1, 2, 3, 'right-ellipsis', totalPages);
-                                    } else if (page >= totalPages - 1) {
-                                        pages.push(1, 'left-ellipsis', totalPages - 2, totalPages - 1, totalPages);
-                                    } else {
-                                        pages.push(1, 'left-ellipsis', page, 'right-ellipsis', totalPages);
-                                    }
-                                }
-                                return pages.map((p, idx) => {
-                                    if (p === 'left-ellipsis' || p === 'right-ellipsis') {
-                                        const jumpPage = p === 'left-ellipsis' ? Math.max(1, page - 3) : Math.min(totalPages, page + 3);
-                                        return (
-                                            <li key={`${p}-${idx}`}>
-                                                <button
-                                                    type="button"
-                                                    title={p === 'left-ellipsis' ? "Previous 3 pages" : "Next 3 pages"}
-                                                    className="flex justify-center font-semibold px-3 py-2 rounded-full transition bg-white-light text-dark hover:text-white hover:bg-primary dark:text-white-light dark:bg-[#191e3a] dark:hover:bg-primary cursor-pointer"
-                                                    onClick={() => setPage(jumpPage)}
-                                                >
-                                                    ...
-                                                </button>
-                                            </li>
-                                        );
-                                    }
-                                    return (
-                                        <li key={p}>
-                                            <button
-                                                type="button"
-                                                className={`flex justify-center font-semibold px-3.5 py-2 rounded-full transition ${page === p ? 'bg-primary text-white shadow-[0_10px_20px_-10px_rgba(67,97,238,0.44)]' : 'bg-white-light text-dark hover:text-white hover:bg-primary dark:text-white-light dark:bg-[#191e3a] dark:hover:bg-primary'}`}
-                                                onClick={() => setPage(p as number)}
-                                            >
-                                                {p}
-                                            </button>
-                                        </li>
-                                    );
-                                });
-                            })()}
-                            <li>
-                                <button
-                                    type="button"
-                                    className="flex justify-center font-semibold p-2 rounded-full transition bg-white-light text-dark hover:text-white hover:bg-primary dark:text-white-light dark:bg-[#191e3a] dark:hover:bg-primary disabled:opacity-50 disabled:cursor-not-allowed"
-                                    onClick={() => setPage(page < totalPages ? page + 1 : totalPages)}
-                                    disabled={page === totalPages || totalPages === 0}
-                                >
-                                    Next
-                                </button>
-                            </li>
-                        </ul>
+            {/* Reusable Data Table */}
+            <DataTable
+                columns={columns}
+                data={designations}
+                totalCount={totalCount}
+                page={page}
+                pageSize={pageSize}
+                loading={loading}
+                search={search}
+                searchPlaceholder="Search designations..."
+                onSearchChange={(val) => {
+                    setSearch(val);
+                    setLoading(true);
+                    setPage(1);
+                }}
+                onPageChange={(p) => {
+                    setPage(p);
+                    setLoading(true);
+                }}
+                onPageSizeChange={(sz) => {
+                    setPageSize(sz);
+                    setLoading(true);
+                    setPage(1);
+                }}
+                onRefresh={fetchDesignations}
+                filters={
+                    <div className="flex items-center gap-2.5 flex-wrap sm:flex-nowrap">
+                        <select
+                            className="form-select text-xs sm:text-sm h-10 px-3.5 rounded-xl border-[#cbd5e1] dark:border-[#1e293b] bg-white dark:bg-[#121e32] font-medium shadow-sm min-w-[170px] focus:border-[#0062E0] focus:ring-2 focus:ring-[#0062E0]/20"
+                            value={selectedDepartment}
+                            onChange={(e) => {
+                                const val = e.target.value;
+                                setSelectedDepartment(val);
+                                setLoading(true);
+                                setPage(1);
+                            }}
+                        >
+                            <option value="">All Departments</option>
+                            {departments.map((d) => (
+                                <option key={d.id} value={d.id}>
+                                    {d.department_name}
+                                </option>
+                            ))}
+                        </select>
+                        <select
+                            className="form-select text-xs sm:text-sm h-10 px-3.5 rounded-xl border-[#cbd5e1] dark:border-[#1e293b] bg-white dark:bg-[#121e32] font-medium shadow-sm min-w-[150px] focus:border-[#0062E0] focus:ring-2 focus:ring-[#0062E0]/20"
+                            value={selectedLevel}
+                            onChange={(e) => {
+                                const val = e.target.value;
+                                setSelectedLevel(val);
+                                setLoading(true);
+                                setPage(1);
+                            }}
+                        >
+                            <option value="">All Levels</option>
+                            {levels.map((l) => (
+                                <option key={l.id} value={l.id}>
+                                    {l.level_name}
+                                </option>
+                            ))}
+                        </select>
+                        {(selectedDepartment || selectedLevel || search) && (
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    setSelectedDepartment('');
+                                    setSelectedLevel('');
+                                    setSearch('');
+                                    setLoading(true);
+                                    setPage(1);
+                                }}
+                                className="h-10 px-3 text-xs font-semibold text-gray-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/20 rounded-xl border border-gray-200 dark:border-gray-700 transition-colors whitespace-nowrap shadow-sm"
+                                title="Reset all filters"
+                            >
+                                Reset
+                            </button>
+                        )}
                     </div>
-                )}
-            </div>
+                }
+                actions={
+                    <button type="button" className="btn btn-primary gap-2 shadow-md shadow-primary/20" onClick={openAddModal}>
+                        <IconPlus className="w-4 h-4" /> Add Designation
+                    </button>
+                }
+            />
 
             <Transition appear show={isModalOpen} as={Fragment}>
                 <Dialog as="div" open={isModalOpen} onClose={() => setIsModalOpen(false)} className="relative z-50">

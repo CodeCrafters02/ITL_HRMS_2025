@@ -33,6 +33,7 @@
         "apexcharts": "^3.54.0",
         "axios": "^1.15.2",
         "canvas-confetti": "^1.9.4",
+        "docx-preview": "^0.4.1",
         "easymde": "^2.18.0",
         "firebase": "^12.12.1",
         "formik": "^2.2.9",

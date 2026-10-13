@@ -9,6 +9,7 @@ import IconPlus from '../../components/Icon/IconPlus';
 import IconPencil from '../../components/Icon/IconPencil';
 import IconTrashLines from '../../components/Icon/IconTrashLines';
 import IconSearch from '../../components/Icon/IconSearch';
+import DataTable, { Column } from '../../components/Common/DataTable';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000';
 
@@ -552,6 +553,247 @@ const AdminAssetsInventory = () => {
         else Swal.fire('Error', 'Could not delete', 'error');
     };
 
+    const faColumns: Column<any>[] = [
+        {
+            key: 'asset_tag',
+            title: 'Tag',
+            sortable: true,
+            render: (_val, row) => (
+                <div className="flex items-center gap-2">
+                    <button
+                        type="button"
+                        className={`p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800 transition-transform ${expandedFa.includes(row.id) ? 'rotate-180' : ''}`}
+                        onClick={() => setExpandedFa((prev) => prev.includes(row.id) ? prev.filter((id) => id !== row.id) : [...prev, row.id])}
+                    >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+                        </svg>
+                    </button>
+                    <span className="font-semibold text-gray-800 dark:text-white-light">{row.asset_tag}</span>
+                </div>
+            ),
+        },
+        {
+            key: 'category',
+            title: 'Category',
+            sortable: true,
+            render: (_val, row) => <span className="text-sm font-semibold">{row.category}</span>,
+        },
+        {
+            key: 'model_brand',
+            title: 'Model',
+            sortable: true,
+            render: (_val, row) => <span>{row.model_brand || '—'}</span>,
+        },
+        {
+            key: 'status',
+            title: 'Status',
+            sortable: true,
+            render: (_val, row) => (
+                <span className={`badge uppercase text-[9px] font-black ${
+                    row.status === 'available' ? 'badge-outline-success' :
+                    row.status === 'in_use' ? 'badge-outline-primary' :
+                    row.status === 'repair' ? 'badge-outline-warning' : 'badge-outline-danger'
+                }`}>{row.status}</span>
+            ),
+        },
+        {
+            key: 'assigned_to',
+            title: 'Assigned To',
+            render: (_val, row) => row.assigned_to_name ? (
+                <div className="flex flex-col">
+                    <span className="font-bold">{row.assigned_to_name}</span>
+                    <span className="text-[10px] text-gray-400 font-mono">ID: {row.assignee_emp_id || 'N/A'}</span>
+                </div>
+            ) : '—',
+        },
+        {
+            key: 'actions',
+            title: 'Actions',
+            align: 'right',
+            render: (_val, row) => (
+                <div className="flex justify-end gap-2">
+                    <button
+                        type="button"
+                        className="btn btn-outline-primary btn-sm"
+                        onClick={() => openDocs({ kind: 'fixed', id: row.id, label: row.asset_tag })}
+                    >
+                        Docs
+                    </button>
+                    <button
+                        type="button"
+                        className="btn btn-outline-primary btn-sm p-2"
+                        onClick={() => {
+                            setFaEditId(row.id);
+                            setFaForm({
+                                asset_tag: row.asset_tag || '',
+                                serial_number: row.serial_number || '',
+                                category: row.category || 'other',
+                                model_brand: row.model_brand || '',
+                                purchase_date: row.purchase_date || '',
+                                cost_price: row.cost_price != null ? String(row.cost_price) : '',
+                                assigned_to: row.assigned_to && typeof row.assigned_to === 'object' ? row.assigned_to.id : (row.assigned_to ?? ''),
+                                assignment_date: row.assignment_date || '',
+                                warranty_expiry: row.warranty_expiry || '',
+                                status: row.status || 'available',
+                                notes: row.notes || '',
+                                variable_supply_item: row.variable_supply_item && typeof row.variable_supply_item === 'object' ? row.variable_supply_item.id : (row.variable_supply_item ?? ''),
+                            });
+                            setFaModal(true);
+                        }}
+                    >
+                        <IconPencil className="w-4 h-4" />
+                    </button>
+                    <button
+                        type="button"
+                        className="btn btn-outline-danger btn-sm p-2"
+                        onClick={() => deleteFa(row.id)}
+                    >
+                        <IconTrashLines className="w-4 h-4" />
+                    </button>
+                </div>
+            ),
+        },
+    ];
+
+    const siColumns: Column<any>[] = [
+        {
+            key: 'image',
+            title: 'Image',
+            width: '60px',
+            render: (_val, row) => (
+                <div className="py-1">
+                    {row.image ? (
+                        <div className="w-10 h-10 rounded-lg overflow-hidden border border-gray-100 dark:border-gray-800 shadow-sm">
+                            <img 
+                                src={row.image.startsWith('http') ? row.image : `${API_BASE_URL}${row.image}`} 
+                                className="w-full h-full object-cover" 
+                                alt={row.item_name}
+                            />
+                        </div>
+                    ) : (
+                        <div className="w-10 h-10 rounded-lg bg-gray-50 dark:bg-gray-900/50 flex items-center justify-center border border-dashed border-gray-200 dark:border-gray-700">
+                            <span className="text-[9px] text-gray-400 font-bold uppercase tracking-tighter">No Pic</span>
+                        </div>
+                    )}
+                </div>
+            ),
+        },
+        {
+            key: 'item_code',
+            title: 'Code',
+            sortable: true,
+            render: (_val, row) => <span className="font-mono text-xs font-semibold">{row.item_code}</span>,
+        },
+        {
+            key: 'item_name',
+            title: 'Name',
+            sortable: true,
+            render: (_val, row) => <span className="font-semibold text-gray-800 dark:text-white-light">{row.item_name}</span>,
+        },
+        {
+            key: 'sub_category',
+            title: 'Sub-category',
+            render: (_val, row) => <span className="text-xs uppercase">{row.sub_category || '—'}</span>,
+        },
+        {
+            key: 'available_quantity',
+            title: 'Avail / Total',
+            align: 'center',
+            render: (_val, row) => (
+                <span className="font-semibold">
+                    <span className={row.available_quantity <= (row.reorder_level || 0) ? 'text-red-500 font-bold' : 'text-green-600'}>
+                        {row.available_quantity ?? 0}
+                    </span>{' '}
+                    / {row.total_stock ?? 0}
+                    {row.reorder_level > 0 && row.available_quantity <= row.reorder_level ? (
+                        <span className="ml-2 badge badge-outline-warning text-[10px]">Low</span>
+                    ) : null}
+                </span>
+            ),
+        },
+        {
+            key: 'reorder_level',
+            title: 'Reorder',
+            align: 'center',
+            render: (_val, row) => <span>{row.reorder_level ?? 0}</span>,
+        },
+        {
+            key: 'unit_price',
+            title: 'Unit price',
+            render: (_val, row) => <span>{row.unit_price ? `₹${Number(row.unit_price).toLocaleString()}` : '—'}</span>,
+        },
+        {
+            key: 'last_restocked',
+            title: 'Last restocked',
+            render: (_val, row) => <span className="text-xs text-gray-500">{row.last_restocked || '—'}</span>,
+        },
+        {
+            key: 'vendor_details',
+            title: 'Vendor',
+            render: (_val, row) => (
+                <span className="max-w-[180px] truncate text-xs text-gray-600 dark:text-gray-400 block" title={row.vendor_details || ''}>
+                    {row.vendor_details || '—'}
+                </span>
+            ),
+        },
+        {
+            key: 'unit_of_measure',
+            title: 'UoM',
+            align: 'center',
+            render: (_val, row) => <span className="text-xs uppercase">{row.unit_of_measure || 'pcs'}</span>,
+        },
+        {
+            key: 'max_per_order',
+            title: 'Max/Ord',
+            align: 'center',
+            render: (_val, row) => <span className="font-bold text-red-600">{row.max_per_order || 10}</span>,
+        },
+        {
+            key: 'actions',
+            title: 'Actions',
+            align: 'right',
+            render: (_val, row) => (
+                <div className="flex justify-end gap-2">
+                    <button
+                        type="button"
+                        className="btn btn-outline-primary btn-sm"
+                        onClick={() => openDocs({ kind: 'supply', id: row.id, label: row.item_code })}
+                    >
+                        Docs
+                    </button>
+                    <button
+                        type="button"
+                        className="btn btn-outline-primary btn-sm p-2"
+                        onClick={() => {
+                            setSiEditId(row.id);
+                            setSiForm({
+                                item_code: row.item_code || '',
+                                item_name: row.item_name || '',
+                                sub_category: row.sub_category || 'other',
+                                total_stock: row.total_stock ?? 0,
+                                available_quantity: row.available_quantity ?? 0,
+                                reorder_level: row.reorder_level ?? 0,
+                                unit_price: row.unit_price != null ? String(row.unit_price) : '',
+                                last_restocked: row.last_restocked || '',
+                                vendor_details: row.vendor_details || '',
+                                unit_of_measure: row.unit_of_measure || 'pcs',
+                                max_per_order: row.max_per_order ?? 10,
+                                notes: row.notes || '',
+                            });
+                            setSiModal(true);
+                        }}
+                    >
+                        <IconPencil className="w-4 h-4" />
+                    </button>
+                    <button type="button" className="btn btn-outline-danger btn-sm p-2" onClick={() => deleteSi(row.id)}>
+                        <IconTrashLines className="w-4 h-4" />
+                    </button>
+                </div>
+            ),
+        },
+    ];
+
     return (
         <div className="space-y-6 animate__animated animate__fadeIn">
             <div className="bg-gradient-to-r from-[#0e1726] to-[#3b82f6] p-6 rounded-xl shadow-lg mb-2 relative overflow-hidden">
@@ -586,362 +828,100 @@ const AdminAssetsInventory = () => {
                     </Tab.List>
                     <Tab.Panels className="pt-5">
                         <Tab.Panel>
-                            <div className="flex flex-wrap items-center justify-between gap-4 mb-4">
-                                <div className="relative flex-1 min-w-[200px] max-w-md">
-                                    <input
-                                        className="form-input pl-10"
-                                        placeholder="Search tag, serial, model..."
-                                        value={faSearch}
-                                        onChange={(e) => {
-                                            setFaSearch(e.target.value);
-                                            setFaPage(1);
-                                        }}
-                                    />
-                                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
-                                        <IconSearch className="w-4 h-4" />
-                                    </span>
-                                </div>
-                                <button
-                                    type="button"
-                                    className="btn btn-primary gap-2"
-                                    onClick={() => {
-                                        resetFa();
-                                        setFaModal(true);
-                                    }}
-                                >
-                                    <IconPlus /> Add fixed asset
-                                </button>
-                            </div>
-                            <div className="table-responsive">
-                                <table className="table-hover">
-                                    <thead>
-                                        <tr>
-                                            <th>Tag</th>
-                                            <th>Category</th>
-                                            <th>Model</th>
-                                            <th>Status</th>
-                                            <th>Assigned To</th>
-                                            <th className="text-end">Actions</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {faLoading ? (
-                                            <tr>
-                                                <td colSpan={6} className="text-center py-8 text-gray-500">
-                                                    Loading…
-                                                </td>
-                                            </tr>
-                                        ) : faList.length === 0 ? (
-                                            <tr>
-                                                <td colSpan={6} className="text-center py-8 text-gray-500">
-                                                    No fixed assets yet.
-                                                </td>
-                                            </tr>
-                                        ) : (
-                                            faList.map((row) => (
-                                                <Fragment key={row.id}>
-                                                    <tr className={expandedFa.includes(row.id) ? 'bg-gray-50/50 dark:bg-white-dark/5' : ''}>
-                                                        <td className="font-semibold">
-                                                            <div className="flex items-center gap-2">
-                                                                <button 
-                                                                    className={`p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800 transition-transform ${expandedFa.includes(row.id) ? 'rotate-180' : ''}`}
-                                                                    onClick={() => setExpandedFa(prev => prev.includes(row.id) ? prev.filter(id => id !== row.id) : [...prev, row.id])}
-                                                                >
-                                                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" /></svg>
-                                                                </button>
-                                                                {row.asset_tag}
-                                                            </div>
-                                                        </td>
-                                                        <td className="text-sm font-semibold">{row.category}</td>
-                                                        <td>{row.model_brand || '—'}</td>
-                                                        <td>
-                                                            <span className={`badge uppercase text-[9px] font-black ${
-                                                                row.status === 'available' ? 'badge-outline-success' :
-                                                                row.status === 'in_use' ? 'badge-outline-primary' :
-                                                                row.status === 'repair' ? 'badge-outline-warning' : 'badge-outline-danger'
-                                                            }`}>{row.status}</span>
-                                                        </td>
-                                                        <td>
-                                                            {row.assigned_to_name ? (
-                                                                <div className="flex flex-col">
-                                                                    <span className="font-bold">{row.assigned_to_name}</span>
-                                                                    <span className="text-[10px] text-gray-400 font-mono">ID: {row.assignee_emp_id || 'N/A'}</span>
-                                                                </div>
-                                                            ) : (
-                                                                '—'
-                                                            )}
-                                                        </td>
-                                                        <td className="text-end">
-                                                            <div className="flex justify-end gap-2">
-                                                                <button
-                                                                    type="button"
-                                                                    className="btn btn-outline-primary btn-sm"
-                                                                    onClick={() =>
-                                                                        openDocs({
-                                                                            kind: 'fixed',
-                                                                            id: row.id,
-                                                                            label: row.asset_tag,
-                                                                        })
-                                                                    }
-                                                                >
-                                                                    Docs
-                                                                </button>
-                                                            <button
-                                                                type="button"
-                                                                className="btn btn-outline-primary btn-sm p-2"
-                                                                onClick={() => {
-                                                                    setFaEditId(row.id);
-                                                                    setFaForm({
-                                                                        asset_tag: row.asset_tag || '',
-                                                                        serial_number: row.serial_number || '',
-                                                                        category: row.category || 'other',
-                                                                        model_brand: row.model_brand || '',
-                                                                        purchase_date: row.purchase_date || '',
-                                                                        cost_price: row.cost_price != null ? String(row.cost_price) : '',
-                                                                        assigned_to: row.assigned_to && typeof row.assigned_to === 'object' ? row.assigned_to.id : (row.assigned_to ?? ''),
-                                                                        assignment_date: row.assignment_date || '',
-                                                                        warranty_expiry: row.warranty_expiry || '',
-                                                                        status: row.status || 'available',
-                                                                        notes: row.notes || '',
-                                                                        variable_supply_item: row.variable_supply_item && typeof row.variable_supply_item === 'object' ? row.variable_supply_item.id : (row.variable_supply_item ?? ''),
-                                                                    });
-                                                                    setFaModal(true);
-                                                                }}
-                                                            >
-                                                                <IconPencil className="w-4 h-4" />
-                                                            </button>
-                                                            <button
-                                                                type="button"
-                                                                className="btn btn-outline-danger btn-sm p-2"
-                                                                onClick={() => deleteFa(row.id)}
-                                                            >
-                                                                <IconTrashLines className="w-4 h-4" />
-                                                            </button>
-                                                        </div>
-                                                    </td>
-                                                </tr>
-                                                {expandedFa.includes(row.id) && (
-                                                    <tr>
-                                                        <td colSpan={6} className="p-0 border-0">
-                                                            <div className="bg-gray-50 dark:bg-white-dark/5 p-4 border-l-4 border-primary">
-                                                                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                                                                    <div>
-                                                                        <p className="text-[10px] uppercase font-black text-gray-400">Serial Number</p>
-                                                                        <p className="font-bold text-sm">{row.serial_number || '—'}</p>
-                                                                    </div>
-                                                                    <div>
-                                                                        <p className="text-[10px] uppercase font-black text-gray-400">Purchase Date</p>
-                                                                        <p className="font-bold text-sm">{row.purchase_date || '—'}</p>
-                                                                    </div>
-                                                                    <div>
-                                                                        <p className="text-[10px] uppercase font-black text-gray-400">Cost Price</p>
-                                                                        <p className="font-bold text-sm text-green-600">
-                                                                            {row.cost_price ? `$${Number(row.cost_price).toLocaleString()}` : '—'}
-                                                                        </p>
-                                                                    </div>
-                                                                    <div>
-                                                                        <p className="text-[10px] uppercase font-black text-gray-400">Warranty Expiry</p>
-                                                                        <p className="font-bold text-sm text-orange-600">{row.warranty_expiry || '—'}</p>
-                                                                    </div>
-                                                                </div>
-                                                                <div className="mt-3">
-                                                                    <p className="text-[10px] uppercase font-black text-gray-400">Assignment Info</p>
-                                                                    <p className="text-sm">
-                                                                        Assigned on <span className="font-bold">{row.assignment_date || '—'}</span> 
-                                                                        {row.assigned_to_name && <> to <span className="font-bold text-primary">{row.assigned_to_name}</span></>}
-                                                                    </p>
-                                                                </div>
-                                                                <div className="mt-3 pt-2 border-t border-gray-200 dark:border-gray-700">
-                                                                    <p className="text-[10px] uppercase font-black text-gray-400">Notes</p>
-                                                                    <p className="text-sm italic">{row.notes || 'No notes available'}</p>
-                                                                </div>
-                                                            </div>
-                                                        </td>
-                                                    </tr>
-                                                )}
-                                                </Fragment>
-                                            ))
-                                        )}
-                                    </tbody>
-                                </table>
-                            </div>
-                            <div className="flex items-center justify-between mt-4 text-sm text-gray-500">
-                                <span>
-                                    Total: {faTotal} — Page {faPage} / {Math.max(1, Math.ceil(faTotal / 10))}
-                                </span>
-                                <div className="flex gap-2">
-                                    <button type="button" className="btn btn-outline-primary btn-sm" disabled={faPage <= 1} onClick={() => setFaPage((p) => p - 1)}>
-                                        Prev
-                                    </button>
+                            <DataTable
+                                columns={faColumns}
+                                data={faList}
+                                loading={faLoading}
+                                page={faPage}
+                                pageSize={10}
+                                totalCount={faTotal}
+                                onPageChange={(p) => setFaPage(p)}
+                                searchValue={faSearch}
+                                onSearchChange={(val) => {
+                                    setFaSearch(val);
+                                    setFaPage(1);
+                                }}
+                                searchPlaceholder="Search tag, serial, model..."
+                                onRefresh={fetchFixed}
+                                actionButton={
                                     <button
                                         type="button"
-                                        className="btn btn-outline-primary btn-sm"
-                                        disabled={faPage >= Math.max(1, Math.ceil(faTotal / 10))}
-                                        onClick={() => setFaPage((p) => p + 1)}
+                                        className="btn btn-primary gap-2"
+                                        onClick={() => {
+                                            resetFa();
+                                            setFaModal(true);
+                                        }}
                                     >
-                                        Next
+                                        <IconPlus /> Add fixed asset
                                     </button>
-                                </div>
-                            </div>
+                                }
+                                renderSubRow={(row) => expandedFa.includes(row.id) ? (
+                                    <div className="bg-gray-50 dark:bg-white-dark/5 p-4 border-l-4 border-primary">
+                                        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                                            <div>
+                                                <p className="text-[10px] uppercase font-black text-gray-400">Serial Number</p>
+                                                <p className="font-bold text-sm">{row.serial_number || '—'}</p>
+                                            </div>
+                                            <div>
+                                                <p className="text-[10px] uppercase font-black text-gray-400">Purchase Date</p>
+                                                <p className="font-bold text-sm">{row.purchase_date || '—'}</p>
+                                            </div>
+                                            <div>
+                                                <p className="text-[10px] uppercase font-black text-gray-400">Cost Price</p>
+                                                <p className="font-bold text-sm text-green-600">
+                                                    {row.cost_price ? `$${Number(row.cost_price).toLocaleString()}` : '—'}
+                                                </p>
+                                            </div>
+                                            <div>
+                                                <p className="text-[10px] uppercase font-black text-gray-400">Warranty Expiry</p>
+                                                <p className="font-bold text-sm text-orange-600">{row.warranty_expiry || '—'}</p>
+                                            </div>
+                                        </div>
+                                        <div className="mt-3">
+                                            <p className="text-[10px] uppercase font-black text-gray-400">Assignment Info</p>
+                                            <p className="text-sm">
+                                                Assigned on <span className="font-bold">{row.assignment_date || '—'}</span> 
+                                                {row.assigned_to_name && <> to <span className="font-bold text-primary">{row.assigned_to_name}</span></>}
+                                            </p>
+                                        </div>
+                                        <div className="mt-3 pt-2 border-t border-gray-200 dark:border-gray-700">
+                                            <p className="text-[10px] uppercase font-black text-gray-400">Notes</p>
+                                            <p className="text-sm italic">{row.notes || 'No notes available'}</p>
+                                        </div>
+                                    </div>
+                                ) : null}
+                            />
                         </Tab.Panel>
 
                         <Tab.Panel>
-                            <div className="flex flex-wrap items-center justify-between gap-4 mb-4">
-                                <div className="relative flex-1 min-w-[200px] max-w-md">
-                                    <input
-                                        className="form-input pl-10"
-                                        placeholder="Search code, name, vendor..."
-                                        value={siSearch}
-                                        onChange={(e) => {
-                                            setSiSearch(e.target.value);
-                                            setSiPage(1);
-                                        }}
-                                    />
-                                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
-                                        <IconSearch className="w-4 h-4" />
-                                    </span>
-                                </div>
-                                <button
-                                    type="button"
-                                    className="btn btn-primary gap-2"
-                                    onClick={() => {
-                                        resetSi();
-                                        setSiModal(true);
-                                    }}
-                                >
-                                    <IconPlus /> Add supply item
-                                </button>
-                            </div>
-                            <div className="table-responsive">
-                                <table className="table-hover">
-                                    <thead>
-                                        <tr>
-                                            <th>Image</th>
-                                            <th>Code</th>
-                                            <th>Name</th>
-                                            <th>Sub-category</th>
-                                            <th>Avail / Total</th>
-                                            <th>Reorder</th>
-                                            <th>Unit price</th>
-                                            <th>Last restocked</th>
-                                            <th>Vendor</th>
-                                            <th>UoM</th>
-                                            <th>Max/Ord</th>
-                                            <th className="text-end">Actions</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {siLoading ? (
-                                            <tr>
-                                                <td colSpan={10} className="text-center py-8">
-                                                    Loading…
-                                                </td>
-                                            </tr>
-                                        ) : siList.length === 0 ? (
-                                            <tr>
-                                                <td colSpan={10} className="text-center py-8 text-gray-500">
-                                                    No supply items.
-                                                </td>
-                                            </tr>
-                                        ) : (
-                                            siList.map((row) => (
-                                                <tr key={row.id}>
-                                                    <td className="py-2">
-                                                        {row.image ? (
-                                                            <div className="w-12 h-12 rounded-lg overflow-hidden border border-gray-100 dark:border-gray-800 shadow-sm">
-                                                                <img 
-                                                                    src={row.image.startsWith('http') ? row.image : `${API_BASE_URL}${row.image}`} 
-                                                                    className="w-full h-full object-cover" 
-                                                                    alt={row.item_name}
-                                                                />
-                                                            </div>
-                                                        ) : (
-                                                            <div className="w-12 h-12 rounded-lg bg-gray-50 dark:bg-gray-900/50 flex items-center justify-center border border-dashed border-gray-200 dark:border-gray-700">
-                                                                <span className="text-[10px] text-gray-400 font-bold uppercase tracking-tighter">No Pic</span>
-                                                            </div>
-                                                        )}
-                                                    </td>
-                                                    <td className="font-semibold">{row.item_code}</td>
-                                                    <td>{row.item_name}</td>
-                                                    <td className="text-sm text-gray-600 dark:text-gray-400">{row.sub_category || '—'}</td>
-                                                    <td>
-                                                        {row.available_quantity} / {row.total_stock}
-                                                        {row.reorder_level > 0 && row.available_quantity <= row.reorder_level ? (
-                                                            <span className="ml-2 badge badge-outline-warning">Low</span>
-                                                        ) : null}
-                                                    </td>
-                                                    <td>{row.reorder_level}</td>
-                                                    <td>{row.unit_price ?? '—'}</td>
-                                                    <td className="text-sm text-gray-600 dark:text-gray-400">{row.last_restocked || '—'}</td>
-                                                    <td className="max-w-[180px] truncate text-sm text-gray-600 dark:text-gray-400" title={row.vendor_details || ''}>
-                                                        {row.vendor_details || '—'}
-                                                    </td>
-                                                    <td className="text-sm text-gray-600 dark:text-gray-400">{row.unit_of_measure || '—'}</td>
-                                                    <td className="font-bold text-red-600">{row.max_per_order || 10}</td>
-                                                    <td className="text-end">
-                                                        <div className="flex justify-end gap-2">
-                                                            <button
-                                                                type="button"
-                                                                className="btn btn-outline-primary btn-sm"
-                                                                onClick={() =>
-                                                                    openDocs({ kind: 'supply', id: row.id, label: row.item_code })
-                                                                }
-                                                            >
-                                                                Docs
-                                                            </button>
-                                                            <button
-                                                                type="button"
-                                                                className="btn btn-outline-primary btn-sm p-2"
-                                                                onClick={() => {
-                                                                    setSiEditId(row.id);
-                                                                    setSiForm({
-                                                                        item_code: row.item_code || '',
-                                                                        item_name: row.item_name || '',
-                                                                        sub_category: row.sub_category || 'other',
-                                                                        total_stock: row.total_stock ?? 0,
-                                                                        available_quantity: row.available_quantity ?? 0,
-                                                                        reorder_level: row.reorder_level ?? 0,
-                                                                        unit_price: row.unit_price != null ? String(row.unit_price) : '',
-                                                                        last_restocked: row.last_restocked || '',
-                                                                        vendor_details: row.vendor_details || '',
-                                                                        unit_of_measure: row.unit_of_measure || 'pcs',
-                                                                        max_per_order: row.max_per_order ?? 10,
-                                                                        notes: row.notes || '',
-                                                                    });
-                                                                    setSiModal(true);
-                                                                }}
-                                                            >
-                                                                <IconPencil className="w-4 h-4" />
-                                                            </button>
-                                                            <button type="button" className="btn btn-outline-danger btn-sm p-2" onClick={() => deleteSi(row.id)}>
-                                                                <IconTrashLines className="w-4 h-4" />
-                                                            </button>
-                                                        </div>
-                                                    </td>
-                                                </tr>
-                                            ))
-                                        )}
-                                    </tbody>
-                                </table>
-                            </div>
-                            <div className="flex items-center justify-between mt-4 text-sm text-gray-500">
-                                <span>
-                                    Total: {siTotal} — Page {siPage} / {Math.max(1, Math.ceil(siTotal / 10))}
-                                </span>
-                                <div className="flex gap-2">
-                                    <button type="button" className="btn btn-outline-primary btn-sm" disabled={siPage <= 1} onClick={() => setSiPage((p) => p - 1)}>
-                                        Prev
-                                    </button>
+                            <DataTable
+                                columns={siColumns}
+                                data={siList}
+                                loading={siLoading}
+                                page={siPage}
+                                pageSize={10}
+                                totalCount={siTotal}
+                                onPageChange={(p) => setSiPage(p)}
+                                searchValue={siSearch}
+                                onSearchChange={(val) => {
+                                    setSiSearch(val);
+                                    setSiPage(1);
+                                }}
+                                searchPlaceholder="Search code, name, vendor..."
+                                onRefresh={fetchSupply}
+                                actionButton={
                                     <button
                                         type="button"
-                                        className="btn btn-outline-primary btn-sm"
-                                        disabled={siPage >= Math.max(1, Math.ceil(siTotal / 10))}
-                                        onClick={() => setSiPage((p) => p + 1)}
+                                        className="btn btn-primary gap-2"
+                                        onClick={() => {
+                                            resetSi();
+                                            setSiModal(true);
+                                        }}
                                     >
-                                        Next
+                                        <IconPlus /> Add supply item
                                     </button>
-                                </div>
-                            </div>
+                                }
+                            />
                         </Tab.Panel>
 
                         <Tab.Panel>

@@ -96,9 +96,9 @@ const DefaultLayout = ({ children }: PropsWithChildren) => {
                         </svg>
                     </div>
                 )}
-                <div className="fixed bottom-6 ltr:right-6 rtl:left-6 z-50">
+                <div className="fixed bottom-20 ltr:right-7 rtl:left-7 z-50">
                     {showTopButton && (
-                        <button type="button" className="btn btn-outline-primary rounded-full p-2 animate-pulse bg-[#fafafa] dark:bg-[#060818] dark:hover:bg-primary" onClick={goToTop}>
+                        <button type="button" className="btn btn-outline-primary rounded-full p-2 animate-pulse bg-[#fafafa] dark:bg-[#060818] dark:hover:bg-primary shadow-md" onClick={goToTop}>
                             <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5">
                                 <path strokeLinecap="round" strokeLinejoin="round" d="M8 7l4-4m0 0l4 4m-4-4v18" />
                             </svg>
@@ -122,7 +122,7 @@ const DefaultLayout = ({ children }: PropsWithChildren) => {
 
                     <div className={`main-content flex flex-col min-h-screen ${isHubPage ? 'ltr:!ml-0 rtl:!mr-0' : ''}`}>
                         {/* BEGIN TOP NAVBAR */}
-                        <div className={themeConfig.isQuizActive ? 'pointer-events-none opacity-50 select-none' : ''}>
+                        <div className={`sticky top-0 z-20 lg:z-[48] ${themeConfig.isQuizActive ? 'pointer-events-none opacity-50 select-none' : ''}`}>
                             <Header />
                         </div>
                         {/* END TOP NAVBAR */}

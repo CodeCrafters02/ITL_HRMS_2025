@@ -66,6 +66,7 @@
     }
 
     /* Navbar — z-20 on mobile stays under sidebar drawer overlay (z-50); lg+ lifts above docked sidebar (see .sidebar lg:z-) */
+    header,
     .navbar-sticky header,
     .navbar-floating header {
         @apply sticky top-0 z-20 lg:z-[48];

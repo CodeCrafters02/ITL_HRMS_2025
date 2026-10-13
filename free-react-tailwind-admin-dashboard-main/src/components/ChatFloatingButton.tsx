@@ -11,30 +11,15 @@ const ChatFloatingButton = () => {
     const location = useLocation();
     const navigate = useNavigate();
     const role = localStorage.getItem('user_role') || '';
-    const userId = localStorage.getItem('user_id') || 'anonymous';
 
     const [unreadTotal, setUnreadTotal] = useState(0);
-    const [position, setPosition] = useState<{ x: number; y: number } | null>(null);
-    const [isDragging, setIsDragging] = useState(false);
+    const [isGhost, setIsGhost] = useState(false);
 
     const buttonRef = useRef<HTMLButtonElement>(null);
-    const timerRef = useRef<any>(null);
-
-    const dragInfo = useRef<{
-        isDragging: boolean;
-        startX: number;
-        startY: number;
-        buttonX: number;
-        buttonY: number;
-        hasMoved: boolean;
-    }>({
-        isDragging: false,
-        startX: 0,
-        startY: 0,
-        buttonX: 0,
-        buttonY: 0,
-        hasMoved: false,
-    });
+    const pollTimerRef = useRef<any>(null);
+    const inactivityTimerRef = useRef<any>(null);
+    const lastClickTimeRef = useRef<number>(0);
+    const singleClickTimeoutRef = useRef<any>(null);
 
     const isChatRoute = useMemo(() => {
         const p = location.pathname || '';
@@ -65,219 +50,137 @@ const ChatFloatingButton = () => {
         }
     };
 
+    // Polling for unread messages
     useEffect(() => {
         if (!chatPath) return;
         refreshUnread();
-        if (timerRef.current) clearInterval(timerRef.current);
-        timerRef.current = setInterval(() => {
+        if (pollTimerRef.current) clearInterval(pollTimerRef.current);
+        pollTimerRef.current = setInterval(() => {
             if (typeof document !== 'undefined' && document.visibilityState === 'hidden') return;
             refreshUnread();
         }, 5000);
         return () => {
-            if (timerRef.current) clearInterval(timerRef.current);
+            if (pollTimerRef.current) clearInterval(pollTimerRef.current);
         };
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [chatPath]);
 
-    // Load saved position or set default position
+    // Inactivity timer: after 5 seconds, becomes transparent (ghost mode)
+    const resetInactivityTimer = () => {
+        if (inactivityTimerRef.current) clearTimeout(inactivityTimerRef.current);
+        inactivityTimerRef.current = setTimeout(() => {
+            setIsGhost(true);
+        }, 5000);
+    };
+
     useEffect(() => {
-        const saved = localStorage.getItem(`chat_pos_${userId}`);
-        if (saved) {
-            try {
-                const parsed = JSON.parse(saved);
-                if (typeof parsed.x === 'number' && typeof parsed.y === 'number') {
-                    const maxX = window.innerWidth - 130;
-                    const maxY = window.innerHeight - 60;
-                    const clampedX = Math.max(10, Math.min(parsed.x, maxX));
-                    const clampedY = Math.max(10, Math.min(parsed.y, maxY));
-                    setPosition({ x: clampedX, y: clampedY });
-                    return;
+        resetInactivityTimer();
+        return () => {
+            if (inactivityTimerRef.current) clearTimeout(inactivityTimerRef.current);
+            if (singleClickTimeoutRef.current) clearTimeout(singleClickTimeoutRef.current);
+        };
+    }, []);
+
+    // Forward single click in ghost mode to whatever button/element is behind the chat button
+    const forwardClickToUnderlyingElement = (x: number, y: number) => {
+        if (!buttonRef.current) return;
+        // Temporarily disable pointer events on the chat button to sample what is directly behind it
+        buttonRef.current.style.pointerEvents = 'none';
+        const elementBehind = document.elementFromPoint(x, y);
+        buttonRef.current.style.pointerEvents = 'auto';
+
+        if (elementBehind && elementBehind !== document.body && elementBehind !== document.documentElement) {
+            (elementBehind as HTMLElement).click?.();
+            (elementBehind as HTMLElement).focus?.();
+        }
+    };
+
+    const handleButtonClick = (e: React.MouseEvent<HTMLButtonElement>) => {
+        if (isGhost) {
+            // Ghost / Transparent Mode:
+            // Check if clicked two times within 350ms to wake up / enable
+            const now = Date.now();
+            const timeDiff = now - lastClickTimeRef.current;
+            lastClickTimeRef.current = now;
+
+            if (timeDiff < 350) {
+                // Double click: wake up and enable the chat button!
+                if (singleClickTimeoutRef.current) {
+                    clearTimeout(singleClickTimeoutRef.current);
+                    singleClickTimeoutRef.current = null;
                 }
-            } catch {
-                // ignore
+                setIsGhost(false);
+                resetInactivityTimer();
+                return;
+            }
+
+            // Single click in ghost mode: pass through to the element behind it
+            const { clientX, clientY } = e;
+            singleClickTimeoutRef.current = setTimeout(() => {
+                forwardClickToUnderlyingElement(clientX, clientY);
+            }, 300);
+            return;
+        }
+
+        // Active Mode: navigate to chat
+        resetInactivityTimer();
+        if (chatPath) {
+            try {
+                navigate(chatPath);
+            } catch (err: any) {
+                Swal.fire('Error', err?.message || 'Unable to open chat', 'error');
             }
         }
-        // Default position: bottom-6 right-6
-        const defaultX = window.innerWidth - 130;
-        const defaultY = window.innerHeight - 70;
-        setPosition({ x: defaultX, y: defaultY });
-    }, [userId]);
-
-    // Handle viewport resize
-    useEffect(() => {
-        const handleResize = () => {
-            setPosition((prev) => {
-                if (!prev) return null;
-                const buttonWidth = buttonRef.current?.offsetWidth || 120;
-                const buttonHeight = buttonRef.current?.offsetHeight || 48;
-                const clampedX = Math.max(10, Math.min(prev.x, window.innerWidth - buttonWidth - 10));
-                const clampedY = Math.max(10, Math.min(prev.y, window.innerHeight - buttonHeight - 10));
-                return { x: clampedX, y: clampedY };
-            });
-        };
-        window.addEventListener('resize', handleResize);
-        return () => window.removeEventListener('resize', handleResize);
-    }, []);
-
-    // Refs for drag handlers to avoid stale closure issues
-    const mouseMoveRef = useRef<(e: MouseEvent) => void>();
-    const touchMoveRef = useRef<(e: TouchEvent) => void>();
-    const mouseUpRef = useRef<() => void>();
-    const touchEndRef = useRef<() => void>();
-
-    useEffect(() => {
-        mouseMoveRef.current = (e: MouseEvent) => {
-            if (!dragInfo.current.isDragging) return;
-            const deltaX = e.clientX - dragInfo.current.startX;
-            const deltaY = e.clientY - dragInfo.current.startY;
-            if (Math.abs(deltaX) > 5 || Math.abs(deltaY) > 5) {
-                dragInfo.current.hasMoved = true;
-            }
-            const newX = dragInfo.current.buttonX + deltaX;
-            const newY = dragInfo.current.buttonY + deltaY;
-            const buttonWidth = buttonRef.current?.offsetWidth || 120;
-            const buttonHeight = buttonRef.current?.offsetHeight || 48;
-            const clampedX = Math.max(10, Math.min(newX, window.innerWidth - buttonWidth - 10));
-            const clampedY = Math.max(10, Math.min(newY, window.innerHeight - buttonHeight - 10));
-            setPosition({ x: clampedX, y: clampedY });
-        };
-
-        touchMoveRef.current = (e: TouchEvent) => {
-            if (!dragInfo.current.isDragging) return;
-            e.preventDefault();
-            const touch = e.touches[0];
-            const deltaX = touch.clientX - dragInfo.current.startX;
-            const deltaY = touch.clientY - dragInfo.current.startY;
-            if (Math.abs(deltaX) > 5 || Math.abs(deltaY) > 5) {
-                dragInfo.current.hasMoved = true;
-            }
-            const newX = dragInfo.current.buttonX + deltaX;
-            const newY = dragInfo.current.buttonY + deltaY;
-            const buttonWidth = buttonRef.current?.offsetWidth || 120;
-            const buttonHeight = buttonRef.current?.offsetHeight || 48;
-            const clampedX = Math.max(10, Math.min(newX, window.innerWidth - buttonWidth - 10));
-            const clampedY = Math.max(10, Math.min(newY, window.innerHeight - buttonHeight - 10));
-            setPosition({ x: clampedX, y: clampedY });
-        };
-
-        mouseUpRef.current = () => {
-            setIsDragging(false);
-            if (dragInfo.current.isDragging) {
-                dragInfo.current.isDragging = false;
-                const currentUserId = localStorage.getItem('user_id') || 'anonymous';
-                setPosition((pos) => {
-                    if (pos) {
-                        localStorage.setItem(`chat_pos_${currentUserId}`, JSON.stringify(pos));
-                    }
-                    return pos;
-                });
-            }
-            if (mouseMoveRef.current) document.removeEventListener('mousemove', mouseMoveRef.current);
-            if (mouseUpRef.current) document.removeEventListener('mouseup', mouseUpRef.current);
-        };
-
-        touchEndRef.current = () => {
-            setIsDragging(false);
-            if (dragInfo.current.isDragging) {
-                dragInfo.current.isDragging = false;
-                const currentUserId = localStorage.getItem('user_id') || 'anonymous';
-                setPosition((pos) => {
-                    if (pos) {
-                        localStorage.setItem(`chat_pos_${currentUserId}`, JSON.stringify(pos));
-                    }
-                    return pos;
-                });
-            }
-            if (touchMoveRef.current) document.removeEventListener('touchmove', touchMoveRef.current);
-            if (touchEndRef.current) document.removeEventListener('touchend', touchEndRef.current);
-        };
-    });
-
-    const handleMouseDown = (e: React.MouseEvent<HTMLButtonElement>) => {
-        if (e.button !== 0) return;
-        setIsDragging(true);
-        dragInfo.current = {
-            isDragging: true,
-            startX: e.clientX,
-            startY: e.clientY,
-            buttonX: position?.x || 0,
-            buttonY: position?.y || 0,
-            hasMoved: false,
-        };
-        if (mouseMoveRef.current) document.addEventListener('mousemove', mouseMoveRef.current);
-        if (mouseUpRef.current) document.addEventListener('mouseup', mouseUpRef.current);
     };
 
-    const handleTouchStart = (e: React.TouchEvent<HTMLButtonElement>) => {
-        setIsDragging(true);
-        const touch = e.touches[0];
-        dragInfo.current = {
-            isDragging: true,
-            startX: touch.clientX,
-            startY: touch.clientY,
-            buttonX: position?.x || 0,
-            buttonY: position?.y || 0,
-            hasMoved: false,
-        };
-        if (touchMoveRef.current) document.addEventListener('touchmove', touchMoveRef.current, { passive: false });
-        if (touchEndRef.current) document.addEventListener('touchend', touchEndRef.current);
+    const handleDoubleClick = () => {
+        if (isGhost) {
+            if (singleClickTimeoutRef.current) {
+                clearTimeout(singleClickTimeoutRef.current);
+                singleClickTimeoutRef.current = null;
+            }
+            setIsGhost(false);
+            resetInactivityTimer();
+        }
     };
-
-    useEffect(() => {
-        return () => {
-            if (mouseMoveRef.current) document.removeEventListener('mousemove', mouseMoveRef.current);
-            if (mouseUpRef.current) document.removeEventListener('mouseup', mouseUpRef.current);
-            if (touchMoveRef.current) document.removeEventListener('touchmove', touchMoveRef.current);
-            if (touchEndRef.current) document.removeEventListener('touchend', touchEndRef.current);
-        };
-    }, []);
 
     if (!chatPath) return null;
     if (isChatRoute) return null;
-
-    const style: React.CSSProperties = position
-        ? {
-              left: `${position.x}px`,
-              top: `${position.y}px`,
-              bottom: 'auto',
-              right: 'auto',
-              cursor: isDragging ? 'grabbing' : 'grab',
-              touchAction: 'none',
-              transition: isDragging ? 'none' : 'box-shadow 0.15s ease-in-out, opacity 0.15s ease-in-out',
-          }
-        : {
-              opacity: 0,
-          };
 
     return (
         <button
             ref={buttonRef}
             type="button"
-            style={style}
-            className="fixed z-[70] rounded-full bg-primary text-white shadow-lg hover:shadow-xl px-4 py-3 flex items-center gap-2 select-none"
-            onMouseDown={handleMouseDown}
-            onTouchStart={handleTouchStart}
-            onClick={async () => {
-                if (dragInfo.current.hasMoved) {
-                    return;
-                }
-                try {
-                    navigate(chatPath);
-                } catch (e: any) {
-                    Swal.fire('Error', e?.message || 'Unable to open chat', 'error');
-                }
+            className={`fixed bottom-6 ltr:right-6 rtl:left-6 z-[60] rounded-full flex items-center gap-2.5 select-none transition-all duration-300 group ${
+                isGhost
+                    ? 'opacity-25 bg-slate-900/30 dark:bg-slate-900/50 backdrop-blur-[1px] border border-white/10 text-white/50 shadow-none hover:opacity-40 scale-95 cursor-default'
+                    : 'opacity-100 bg-gradient-to-r from-[#0062E0] via-[#1d4ed8] to-[#2563eb] text-white shadow-lg shadow-[#0062E0]/30 hover:shadow-xl hover:shadow-[#0062E0]/50 hover:scale-105 active:scale-95 border border-white/20 scale-100 cursor-pointer px-4 py-3'
+            }`}
+            style={{
+                padding: isGhost ? '0.625rem 0.875rem' : '0.75rem 1rem',
             }}
-            title="Chat"
+            onClick={handleButtonClick}
+            onDoubleClick={handleDoubleClick}
+            onMouseEnter={() => {
+                if (!isGhost) resetInactivityTimer();
+            }}
+            title={isGhost ? 'Click behind to interact, or double-click to enable chat' : 'Open Chat'}
         >
-            <span className="relative">
-                <IconMenuChat className="w-5 h-5" />
+            <span className="relative flex items-center justify-center">
+                <IconMenuChat className={`w-5 h-5 transition-transform duration-200 ${!isGhost ? 'group-hover:rotate-12' : ''}`} />
                 {unreadTotal > 0 && (
-                    <span className="absolute -top-2 -right-2 min-w-[20px] h-[20px] px-1 rounded-full bg-success text-white text-[11px] flex items-center justify-center">
+                    <span
+                        className={`absolute -top-2.5 -right-2.5 min-w-[20px] h-[20px] px-1 rounded-full bg-emerald-500 text-white text-[11px] font-bold flex items-center justify-center shadow-md ${
+                            !isGhost ? 'animate-pulse' : 'opacity-50'
+                        }`}
+                    >
                         {unreadTotal > 99 ? '99+' : unreadTotal}
                     </span>
                 )}
             </span>
-            <span className="font-semibold hidden sm:inline">Chat</span>
+            <span className={`font-semibold text-sm hidden sm:inline tracking-wide ${isGhost ? 'text-white/40' : 'text-white'}`}>
+                {isGhost ? 'Chat (Click 2x)' : 'Chat'}
+            </span>
         </button>
     );
 };

@@ -7,6 +7,7 @@ import IconX from '../../components/Icon/IconX';
 import IconChecks from '../../components/Icon/IconChecks';
 import IconTrashLines from '../../components/Icon/IconTrashLines';
 import IconInfoCircle from '../../components/Icon/IconInfoCircle';
+import DataTable, { Column } from '../../components/Common/DataTable';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000';
 
@@ -27,8 +28,17 @@ type LoanApplication = {
 
 const LoanApprovals = () => {
     const dispatch = useDispatch();
-    const [applications, setApplications] = useState<LoanApplication[]>([]);
-    const [loading, setLoading] = useState(false);
+    const [pendingApps, setPendingApps] = useState<LoanApplication[]>([]);
+    const [pendingLoading, setPendingLoading] = useState(false);
+
+    // History tab backend pagination & search
+    const [historyApps, setHistoryApps] = useState<LoanApplication[]>([]);
+    const [historyLoading, setHistoryLoading] = useState(false);
+    const [historyPage, setHistoryPage] = useState(1);
+    const [historyPageSize, setHistoryPageSize] = useState(10);
+    const [historyTotalCount, setHistoryTotalCount] = useState(0);
+    const [historySearch, setHistorySearch] = useState('');
+
     const [modal, setModal] = useState(false);
     const [selectedApp, setSelectedApp] = useState<LoanApplication | null>(null);
     const [remarks, setRemarks] = useState('');
@@ -46,19 +56,52 @@ const LoanApprovals = () => {
 
     useEffect(() => {
         dispatch(setPageTitle('Loan Approvals'));
-        fetchData();
+        fetchPending();
     }, [dispatch]);
 
-    const fetchData = async () => {
-        setLoading(true);
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            fetchHistory();
+        }, 300);
+        return () => clearTimeout(timer);
+    }, [historyPage, historyPageSize, historySearch]);
+
+    const fetchPending = async () => {
+        setPendingLoading(true);
         try {
-            const res = await fetch(`${API_BASE_URL}/app/loan-applications/`, { headers: hdr() });
+            const res = await fetch(`${API_BASE_URL}/app/loan-applications/?pending=true&page_size=100`, { headers: hdr() });
             if (res.ok) {
                 const data = await res.json();
-                setApplications(data.results || data);
+                const list = Array.isArray(data) ? data : (data.results || []);
+                setPendingApps(list.filter((a: any) => a.status === 'PENDING' || a.status === 'MANAGER_APPROVED'));
             }
         } catch (e) { console.error(e); }
-        finally { setLoading(false); }
+        finally { setPendingLoading(false); }
+    };
+
+    const fetchHistory = async () => {
+        setHistoryLoading(true);
+        try {
+            const url = new URL(`${API_BASE_URL}/app/loan-applications/`);
+            url.searchParams.set('history', 'true');
+            url.searchParams.set('page', String(historyPage));
+            url.searchParams.set('page_size', String(historyPageSize));
+            if (historySearch.trim()) url.searchParams.set('search', historySearch.trim());
+
+            const res = await fetch(url.toString(), { headers: hdr() });
+            if (res.ok) {
+                const data = await res.json();
+                const list = data.results || (Array.isArray(data) ? data : []);
+                setHistoryApps(list);
+                setHistoryTotalCount(data.count !== undefined ? data.count : list.length);
+            }
+        } catch (e) { console.error(e); }
+        finally { setHistoryLoading(false); }
+    };
+
+    const refreshAll = () => {
+        fetchPending();
+        fetchHistory();
     };
 
     const handleAction = (app: LoanApplication) => {
@@ -80,7 +123,7 @@ const LoanApprovals = () => {
                 const data = await res.json();
                 Swal.fire('Success', data.message, 'success');
                 setModal(false);
-                fetchData();
+                refreshAll();
             } else {
                 const data = await res.json();
                 Swal.fire('Error', data.error || 'Failed to process approval', 'error');
@@ -106,7 +149,7 @@ const LoanApprovals = () => {
                 });
                 if (res.ok) {
                     Swal.fire('Cleared', 'Loan has been marked as cleared.', 'success');
-                    fetchData();
+                    refreshAll();
                 }
             } catch (e) {
                 console.error(e);
@@ -136,7 +179,7 @@ const LoanApprovals = () => {
                 });
                 if (res.ok) {
                     Swal.fire('Deleted!', 'Loan record has been deleted.', 'success');
-                    fetchData();
+                    refreshAll();
                 } else {
                     Swal.fire('Error', 'Failed to delete record.', 'error');
                 }
@@ -157,8 +200,97 @@ const LoanApprovals = () => {
         }
     };
 
-    const pendingApps = applications.filter(a => a.status === 'PENDING' || a.status === 'MANAGER_APPROVED');
-    const historyApps = applications.filter(a => a.status === 'APPROVED' || a.status === 'REJECTED' || a.status === 'CLEARED');
+    const historyColumns: Column<LoanApplication>[] = [
+        {
+            key: 'index',
+            title: '#',
+            width: '60px',
+            align: 'center',
+            render: (_val, _app, idx) => (
+                <span className="font-semibold text-gray-500">{(historyPage - 1) * historyPageSize + (idx ?? 0) + 1}</span>
+            ),
+        },
+        {
+            key: 'employee',
+            title: 'Employee',
+            sortable: true,
+            render: (_val, app) => (
+                <div className="font-bold text-gray-700 dark:text-white-light">
+                    <p>{app.employee_details.full_name}</p>
+                    <p className="text-[10px] font-normal text-gray-400 font-mono">{app.employee_details.employee_id}</p>
+                </div>
+            ),
+        },
+        {
+            key: 'category_name',
+            title: 'Loan Type',
+            sortable: true,
+            render: (val) => <span className="text-xs font-bold text-indigo-600 uppercase">{val}</span>,
+        },
+        {
+            key: 'requested_amount',
+            title: 'Amount',
+            sortable: true,
+            align: 'right',
+            render: (val) => <span className="font-black text-emerald-600">₹{Number(val).toLocaleString()}</span>,
+        },
+        {
+            key: 'status',
+            title: 'Status',
+            align: 'center',
+            render: (val) => getStatusBadge(val),
+        },
+        {
+            key: 'payment_status',
+            title: 'Payment Status',
+            align: 'center',
+            render: (_val, app) => (
+                app.status === 'CLEARED' ? (
+                    <span className="badge badge-outline-success font-bold text-[10px]">Fully Repaid</span>
+                ) : app.status === 'APPROVED' ? (
+                    <span className="badge badge-outline-primary font-bold text-[10px]">In Progress</span>
+                ) : (
+                    <span className="text-xs text-gray-400">—</span>
+                )
+            ),
+        },
+        {
+            key: 'repayment_end_month',
+            title: 'Ends On',
+            render: (val) => <span className="text-xs font-semibold text-indigo-500 uppercase">{val || '—'}</span>,
+        },
+        {
+            key: 'created_at',
+            title: 'Date',
+            sortable: true,
+            render: (val) => <span className="text-xs text-gray-400">{new Date(val).toLocaleDateString()}</span>,
+        },
+        {
+            key: 'action',
+            title: 'Action',
+            align: 'center',
+            render: (_val, app) => (
+                <div className="flex items-center justify-center gap-2">
+                    {app.status === 'APPROVED' && (
+                        <button
+                            type="button"
+                            onClick={() => handleClear(app.id)}
+                            className="btn btn-sm btn-outline-success text-[10px] font-bold px-2 py-1"
+                        >
+                            Mark Cleared
+                        </button>
+                    )}
+                    <button
+                        type="button"
+                        onClick={() => handleDelete(app.id)}
+                        className="btn btn-sm btn-outline-danger text-[10px] font-bold px-2 py-1"
+                    >
+                        Delete
+                    </button>
+                </div>
+            ),
+        },
+    ];
 
     return (
         <div className="pb-10">
@@ -186,7 +318,7 @@ const LoanApprovals = () => {
                 <Tab.Panels>
                     {/* Panel 1: Active Requests */}
                     <Tab.Panel className="animate-fade-in-up">
-                        {loading ? (
+                        {pendingLoading ? (
                             <div className="flex justify-center py-20"><span className="animate-spin border-4 border-primary border-l-transparent rounded-full w-12 h-12"></span></div>
                         ) : pendingApps.length === 0 ? (
                             <div className="panel flex flex-col items-center justify-center py-20 text-center bg-gray-50/50">
@@ -236,66 +368,28 @@ const LoanApprovals = () => {
 
                     {/* Panel 2: History */}
                     <Tab.Panel className="animate-fade-in-up">
-                        <div className="panel table-responsive border rounded-xl overflow-hidden p-0">
-                            <table className="table-hover">
-                                <thead className="bg-gray-50 dark:bg-gray-900/50">
-                                    <tr>
-                                        <th className="text-[10px] font-black uppercase">Employee</th>
-                                        <th className="text-[10px] font-black uppercase">Loan Type</th>
-                                        <th className="text-[10px] font-black uppercase text-right">Amount</th>
-                                        <th className="text-[10px] font-black uppercase text-center">Status</th>
-                                        <th className="text-[10px] font-black uppercase text-center">Payment Status</th>
-                                        <th className="text-[10px] font-black uppercase">Ends On</th>
-                                        <th className="text-[10px] font-black uppercase">Date</th>
-                                        <th className="text-[10px] font-black uppercase text-center">Action</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {historyApps.map(app => (
-                                        <tr key={app.id}>
-                                            <td className="font-bold text-gray-700 dark:text-white-light">
-                                                <p>{app.employee_details.full_name}</p>
-                                                <p className="text-[9px] font-normal text-gray-400">{app.employee_details.employee_id}</p>
-                                            </td>
-                                            <td className="text-xs font-bold text-indigo-600 uppercase">{app.category_name}</td>
-                                            <td className="font-black text-emerald-600 text-right">₹{Number(app.requested_amount).toLocaleString()}</td>
-                                            <td className="text-center">{getStatusBadge(app.status)}</td>
-                                            <td className="text-center">
-                                                {app.status === 'CLEARED' ? (
-                                                    <span className="text-[10px] font-black text-emerald-600 uppercase tracking-tighter">Fully Repaid</span>
-                                                ) : app.status === 'APPROVED' ? (
-                                                    <span className="text-[10px] font-black text-indigo-500 uppercase tracking-tighter">In Progress</span>
-                                                ) : (
-                                                    <span className="text-[10px] font-bold text-gray-400 uppercase">—</span>
-                                                )}
-                                            </td>
-                                            <td className="text-[10px] font-black text-indigo-500 uppercase tracking-tighter">
-                                                {app.repayment_end_month || '—'}
-                                            </td>
-                                            <td className="text-[10px] font-bold text-gray-400">{new Date(app.created_at).toLocaleDateString()}</td>
-                                            <td className="text-center">
-                                                <div className="flex items-center justify-center gap-2">
-                                                    {app.status === 'APPROVED' && (
-                                                        <button
-                                                            onClick={() => handleClear(app.id)}
-                                                            className="btn btn-sm btn-outline-success text-[9px] font-black uppercase px-2 py-1"
-                                                        >
-                                                            Mark Cleared
-                                                        </button>
-                                                    )}
-                                                    <button
-                                                        onClick={() => handleDelete(app.id)}
-                                                        className="btn btn-sm btn-outline-danger text-[9px] font-black uppercase px-2 py-1"
-                                                    >
-                                                        Delete
-                                                    </button>
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                        </div>
+                        <DataTable
+                            title="Approval History Records"
+                            columns={historyColumns}
+                            data={historyApps}
+                            loading={historyLoading}
+                            page={historyPage}
+                            pageSize={historyPageSize}
+                            totalCount={historyTotalCount}
+                            onPageChange={(p) => setHistoryPage(p)}
+                            onPageSizeChange={(sz) => {
+                                setHistoryPageSize(sz);
+                                setHistoryPage(1);
+                            }}
+                            searchValue={historySearch}
+                            onSearchChange={(val) => {
+                                setHistorySearch(val);
+                                setHistoryPage(1);
+                            }}
+                            onRefresh={fetchHistory}
+                            searchPlaceholder="Search history by employee, loan type..."
+                            emptyMessage="No loan approval history records found."
+                        />
                     </Tab.Panel>
                 </Tab.Panels>
             </Tab.Group>

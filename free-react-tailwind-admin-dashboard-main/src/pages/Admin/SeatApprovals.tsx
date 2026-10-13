@@ -2,13 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { useDispatch } from 'react-redux';
 import { setPageTitle } from '../../store/themeConfigSlice';
 import Swal from 'sweetalert2';
-import IconCircleCheck from '../../components/Icon/IconCircleCheck';
 import IconChecks from '../../components/Icon/IconChecks';
 import IconX from '../../components/Icon/IconX';
-import IconRefresh from '../../components/Icon/IconRefresh';
-import IconUsers from '../../components/Icon/IconUsers';
-import IconLayout from '../../components/Icon/IconLayout';
-import IconInfoCircle from '../../components/Icon/IconInfoCircle';
+import DataTable, { Column } from '../../components/Common/DataTable';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000';
 
@@ -36,22 +32,38 @@ const SeatApprovals = () => {
     const dispatch = useDispatch();
     const [bookings, setBookings] = useState<SeatBooking[]>([]);
     const [loading, setLoading] = useState(true);
+    const [page, setPage] = useState(1);
+    const [pageSize, setPageSize] = useState(10);
+    const [totalCount, setTotalCount] = useState(0);
+    const [search, setSearch] = useState('');
 
     useEffect(() => {
         dispatch(setPageTitle('Seat Booking Approvals'));
-        fetchPendingBookings();
-    }, []);
+    }, [dispatch]);
 
     const fetchPendingBookings = async () => {
         setLoading(true);
         try {
             const token = localStorage.getItem('access_token');
-            const res = await fetch(`${API_BASE_URL}/app/seat-bookings/?status=pending`, {
+            const url = new URL(`${API_BASE_URL}/app/seat-bookings/`);
+            url.searchParams.append('status', 'pending');
+            url.searchParams.append('page', String(page));
+            url.searchParams.append('page_size', String(pageSize));
+            if (search.trim()) url.searchParams.append('search', search.trim());
+
+            const res = await fetch(url.toString(), {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
             if (res.ok) {
                 const data = await res.json();
-                setBookings(data || []);
+                if (data.results) {
+                    setBookings(data.results);
+                    setTotalCount(data.count ?? 0);
+                } else {
+                    const arr = Array.isArray(data) ? data : [];
+                    setBookings(arr);
+                    setTotalCount(arr.length);
+                }
             }
         } catch (error) {
             console.error('Error fetching bookings:', error);
@@ -59,6 +71,14 @@ const SeatApprovals = () => {
             setLoading(false);
         }
     };
+
+    useEffect(() => {
+        const handler = setTimeout(() => {
+            fetchPendingBookings();
+        }, 300);
+        return () => clearTimeout(handler);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [page, pageSize, search]);
 
     const handleAction = async (id: number, action: 'approve' | 'reject') => {
         const confirm = await Swal.fire({
@@ -100,12 +120,103 @@ const SeatApprovals = () => {
         }
     };
 
+    const columns: Column<SeatBooking>[] = [
+        {
+            key: 'employee',
+            title: 'Employee',
+            sortable: true,
+            render: (_val, booking) => (
+                <div className="flex items-center gap-3">
+                    <div className="w-9 h-9 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-sm">
+                        {booking.employee_details.name.charAt(0)}
+                    </div>
+                    <div>
+                        <p className="font-bold text-gray-800 dark:text-white-light">{booking.employee_details.name}</p>
+                        <p className="text-xs text-gray-400 font-mono">ID: {booking.employee_details.employee_id}</p>
+                    </div>
+                </div>
+            ),
+        },
+        {
+            key: 'location',
+            title: 'Location / Floor',
+            sortable: true,
+            render: (_val, booking) => (
+                <div>
+                    <p className="font-bold text-sm text-gray-700 dark:text-white-light">{booking.seat_details.floor}</p>
+                    <p className="text-[10px] uppercase text-gray-400 font-bold">{booking.seat_details.section}</p>
+                </div>
+            ),
+        },
+        {
+            key: 'seat_number',
+            title: 'Seat',
+            align: 'center',
+            render: (_val, booking) => (
+                <span className="badge badge-outline-primary font-mono font-bold">
+                    #{booking.seat_details.seat_number}
+                </span>
+            ),
+        },
+        {
+            key: 'booking_type',
+            title: 'Type',
+            render: (val) => <span className="capitalize text-sm font-semibold text-gray-600 dark:text-gray-300">{val}</span>,
+        },
+        {
+            key: 'schedule',
+            title: 'Schedule',
+            render: (_val, booking) => (
+                <div className="text-xs space-y-1">
+                    <div className="flex items-center gap-2">
+                        <span className="text-gray-400 font-medium">Dates:</span>
+                        <span className="font-bold text-gray-700 dark:text-gray-300">
+                            {booking.start_date} {booking.end_date ? `to ${booking.end_date}` : '(Permanent)'}
+                        </span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                        <span className="text-gray-400 font-medium">Times:</span>
+                        <span className="font-semibold text-gray-500">
+                            {booking.start_time ? booking.start_time.substring(0, 5) : '00:00'} - {booking.end_time ? booking.end_time.substring(0, 5) : '23:59'}
+                        </span>
+                    </div>
+                </div>
+            ),
+        },
+        {
+            key: 'actions',
+            title: 'Actions',
+            align: 'center',
+            width: '120px',
+            render: (_val, booking) => (
+                <div className="flex items-center justify-center gap-2">
+                    <button 
+                        type="button"
+                        onClick={() => handleAction(booking.id, 'approve')}
+                        className="p-2 bg-success/10 text-success rounded-lg hover:bg-success hover:text-white transition-all shadow-sm"
+                        title="Approve"
+                    >
+                        <IconChecks className="w-4 h-4" />
+                    </button>
+                    <button 
+                        type="button"
+                        onClick={() => handleAction(booking.id, 'reject')}
+                        className="p-2 bg-danger/10 text-danger rounded-lg hover:bg-danger hover:text-white transition-all shadow-sm"
+                        title="Reject"
+                    >
+                        <IconX className="w-4 h-4" />
+                    </button>
+                </div>
+            ),
+        },
+    ];
+
     return (
-        <div className="flex flex-col h-[calc(var(--app-vh)_-_90px)] space-y-4">
+        <div className="space-y-4">
             {/* Header Banner */}
-            <div className="bg-gradient-to-r from-rose-500 to-orange-500 rounded-xl p-4 text-white shadow-lg overflow-hidden relative">
+            <div className="bg-gradient-to-r from-rose-500 to-orange-500 rounded-xl p-6 text-white shadow-lg overflow-hidden relative">
                 <div className="relative z-10">
-                    <h2 className="text-3xl font-extrabold mb-0.5">Seat Booking Approvals</h2>
+                    <h2 className="text-3xl font-extrabold mb-1">Seat Booking Approvals</h2>
                     <p className="text-white/80 text-sm font-medium">Review and manage pending seat requests. Approve or reject applications to ensure optimal office utilization.</p>
                 </div>
                 <div className="absolute right-[-20px] top-[-20px] opacity-10">
@@ -113,107 +224,32 @@ const SeatApprovals = () => {
                 </div>
             </div>
 
-            <div className="panel flex flex-1 flex-col overflow-hidden">
-            <div className="flex items-center justify-between mb-6">
-                <h5 className="font-bold text-xl dark:text-white-light">Pending Seat Requests</h5>
-                <button onClick={fetchPendingBookings} className="btn btn-outline-primary btn-sm flex items-center gap-2">
-                    <IconRefresh className="w-4 h-4" />
-                    Refresh
-                </button>
-            </div>
-
-            <div className="flex-1 overflow-auto">
-                {loading ? (
-                    <div className="flex items-center justify-center h-full">
-                        <span className="animate-spin border-4 border-primary border-t-transparent rounded-full w-10 h-10"></span>
-                    </div>
-                ) : bookings.length === 0 ? (
-                    <div className="flex flex-col items-center justify-center h-full opacity-50">
-                        <div className="w-20 h-20 bg-gray-100 dark:bg-gray-800 rounded-full flex items-center justify-center mb-4">
-                            <IconCircleCheck className="w-10 h-10 text-gray-400" />
-                        </div>
-                        <p className="font-bold text-lg">No pending requests</p>
-                        <p className="text-sm">All caught up!</p>
-                    </div>
-                ) : (
-                    <div className="table-responsive">
-                        <table className="table-hover table-striped">
-                            <thead>
-                                <tr>
-                                    <th>Employee</th>
-                                    <th>Location / Floor</th>
-                                    <th>Seat</th>
-                                    <th>Type</th>
-                                    <th>Schedule</th>
-                                    <th className="text-center">Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {bookings.map((booking) => (
-                                    <tr key={booking.id}>
-                                        <td>
-                                            <div className="flex items-center gap-3">
-                                                <div className="w-10 h-10 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold">
-                                                    {booking.employee_details.name.charAt(0)}
-                                                </div>
-                                                <div>
-                                                    <p className="font-bold">{booking.employee_details.name}</p>
-                                                    <p className="text-xs text-gray-400">ID: {booking.employee_details.employee_id}</p>
-                                                </div>
-                                            </div>
-                                        </td>
-                                        <td>
-                                            <p className="font-bold text-sm">{booking.seat_details.floor}</p>
-                                            <p className="text-[10px] uppercase text-gray-400 font-bold">{booking.seat_details.section}</p>
-                                        </td>
-                                        <td>
-                                            <span className="badge badge-outline-primary font-bold">#{booking.seat_details.seat_number}</span>
-                                        </td>
-                                        <td>
-                                            <span className="capitalize text-sm font-bold">{booking.booking_type}</span>
-                                        </td>
-                                        <td>
-                                            <div className="text-xs space-y-1">
-                                                <div className="flex items-center gap-2">
-                                                    <span className="text-gray-400">Dates:</span>
-                                                    <span className="font-bold">{booking.start_date} {booking.end_date ? `to ${booking.end_date}` : '(Permanent)'}</span>
-                                                </div>
-                                                <div className="flex items-center gap-2">
-                                                    <span className="text-gray-400">Times:</span>
-                                                    <span className="font-bold">
-                                                        {booking.start_time ? booking.start_time.substring(0, 5) : '00:00'} - {booking.end_time ? booking.end_time.substring(0, 5) : '23:59'}
-                                                    </span>
-                                                </div>
-                                            </div>
-                                        </td>
-                                        <td className="text-center">
-                                            <div className="flex items-center justify-center gap-2">
-                                                <button 
-                                                    onClick={() => handleAction(booking.id, 'approve')}
-                                                    className="p-2 bg-success/10 text-success rounded-lg hover:bg-success hover:text-white transition-all shadow-sm"
-                                                    title="Approve"
-                                                >
-                                                    <IconChecks className="w-4 h-4" />
-                                                </button>
-                                                <button 
-                                                    onClick={() => handleAction(booking.id, 'reject')}
-                                                    className="p-2 bg-danger/10 text-danger rounded-lg hover:bg-danger hover:text-white transition-all shadow-sm"
-                                                    title="Reject"
-                                                >
-                                                    <IconX className="w-4 h-4" />
-                                                </button>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                    </div>
-                )}
-            </div>
+            {/* Reusable Data Table */}
+            <DataTable
+                title="Pending Seat Requests"
+                columns={columns}
+                data={bookings}
+                loading={loading}
+                page={page}
+                pageSize={pageSize}
+                totalCount={totalCount}
+                onPageChange={(p) => setPage(p)}
+                onPageSizeChange={(sz) => {
+                    setPageSize(sz);
+                    setPage(1);
+                }}
+                searchValue={search}
+                onSearchChange={(val) => {
+                    setSearch(val);
+                    setPage(1);
+                }}
+                onRefresh={fetchPendingBookings}
+                searchPlaceholder="Search by employee, seat, section..."
+                emptyMessage="No pending seat requests found."
+                emptySubtitle="All seat booking requests are currently processed."
+            />
         </div>
-    </div>
-);
+    );
 };
 
 export default SeatApprovals;

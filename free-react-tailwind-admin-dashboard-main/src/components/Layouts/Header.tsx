@@ -38,6 +38,7 @@ import IconMenuPages from '../Icon/Menu/IconMenuPages';
 import IconMenuMore from '../Icon/Menu/IconMenuMore';
 import { notificationService } from '../../services/notificationService';
 import OutlookHeaderButton from '../Outlook/OutlookHeaderButton';
+import UpcomingEventsTicker from './UpcomingEventsTicker';
 
 const Header = () => {
     const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000';
@@ -542,7 +543,7 @@ const Header = () => {
 
     return (
         <>
-            <header className={`${themeConfig.semidark && themeConfig.menu === 'horizontal' ? 'dark' : ''}`}>
+            <header className={`w-full bg-white dark:bg-black shadow-sm ${themeConfig.semidark && themeConfig.menu === 'horizontal' ? 'dark' : ''}`}>
             <div className="shadow-sm">
                 <div className="relative bg-white flex w-full items-center px-5 py-2.5 dark:bg-black">
                     <div className="horizontal-logo flex lg:hidden justify-between items-center ltr:mr-2 rtl:ml-2">
@@ -707,6 +708,7 @@ const Header = () => {
                                 </>
                             )}
                         </div>
+                        {!hideHRQuickLinks && <UpcomingEventsTicker calendarRoute={calendarRoute} />}
                         <div>
                             {themeConfig.theme === 'light' ? (
                                 <button

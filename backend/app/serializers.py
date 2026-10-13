@@ -1619,19 +1619,75 @@ class AttendanceSerializer(serializers.ModelSerializer):
         return timedelta(hours=4)
 
         
+class CompanyPolicyVersionSerializer(serializers.ModelSerializer):
+    uploaded_by_name = serializers.SerializerMethodField()
+    file_name = serializers.SerializerMethodField()
+
+    class Meta:
+        model = CompanyPolicyVersion
+        fields = ['id', 'version', 'published_at', 'change_note', 'uploaded_by_name', 'file_name', 'created_at']
+
+    def get_uploaded_by_name(self, obj):
+        u = obj.uploaded_by
+        return (u.get_full_name() or u.username) if u else None
+
+    def get_file_name(self, obj):
+        return os.path.basename(obj.document.name) if obj.document else None
+
+
 class PolicyConfigurationSerializer(serializers.ModelSerializer):
+    ALLOWED_EXTENSIONS = ('.pdf', '.doc', '.docx', '.txt')
+
+    versions = CompanyPolicyVersionSerializer(many=True, read_only=True)
+    change_note = serializers.CharField(write_only=True, required=False, allow_blank=True, max_length=500)
+    published_at = serializers.DateField(required=False)
+
     class Meta:
         model = CompanyPolicies
-        fields = ['id', 'company', 'name', 'document', 'is_active', 'created_at']
-        read_only_fields = ['company', 'created_at']
+        fields = ['id', 'company', 'name', 'document', 'is_active', 'version', 'published_at', 'versions',
+                  'change_note', 'created_at']
+        read_only_fields = ['company', 'version', 'created_at']
+        extra_kwargs = {'document': {'required': False}}
+
+    def validate_document(self, value):
+        if value and not value.name.lower().endswith(self.ALLOWED_EXTENSIONS):
+            raise serializers.ValidationError('Only PDF, Word (.doc/.docx) or text (.txt) files are allowed.')
+        return value
+
+    def validate(self, attrs):
+        if not self.instance and not attrs.get('document'):
+            raise serializers.ValidationError({'document': 'Document is required.'})
+        return attrs
+
+    def _user(self):
+        request = self.context.get('request')
+        return getattr(request, 'user', None) if request else None
+
+    def create(self, validated_data):
+        note = validated_data.pop('change_note', '')
+        published_at = validated_data.pop('published_at', None) or timezone.localdate()
+        policy = CompanyPolicies.objects.create(version='1.0', published_at=published_at, **validated_data)
+        CompanyPolicyVersion.objects.create(
+            policy=policy, version=policy.version, document=policy.document.name,
+            published_at=published_at, change_note=note, uploaded_by=self._user(),
+        )
+        return policy
 
     def update(self, instance, validated_data):
-        # Only update document if provided
+        # A new document publishes a new version; metadata-only edits keep the current one
         document = validated_data.pop('document', None)
+        note = validated_data.pop('change_note', '')
+        published_at = validated_data.pop('published_at', None)
         for attr, value in validated_data.items():
             setattr(instance, attr, value)
         if document:
-            instance.document = document
+            ver = CompanyPolicyVersion.objects.create(
+                policy=instance, version=instance.next_version(), document=document,
+                published_at=published_at or timezone.localdate(), change_note=note, uploaded_by=self._user(),
+            )
+            instance.document = ver.document.name
+            instance.version = ver.version
+            instance.published_at = ver.published_at
         instance.save()
         return instance
 

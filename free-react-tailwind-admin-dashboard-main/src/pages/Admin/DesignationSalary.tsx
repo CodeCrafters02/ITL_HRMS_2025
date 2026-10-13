@@ -1,14 +1,11 @@
-import { useEffect, useState, Fragment } from 'react';
+import { useEffect, useState } from 'react';
 import { useDispatch } from 'react-redux';
 import { setPageTitle } from '../../store/themeConfigSlice';
 import Swal from 'sweetalert2';
-import IconSearch from '../../components/Icon/IconSearch';
 import IconSave from '../../components/Icon/IconSave';
-import IconLayoutGrid from '../../components/Icon/IconLayoutGrid';
+import DataTable, { Column } from '../../components/Common/DataTable';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000';
-const DESIGNATION_SALARY_API_URL = `${API_BASE_URL}/app/designationsalaries/`; // Fixed naming from DesignationSalaryViewSet router registration? 
-// Wait, I registered it as 'designation-salaries' in urls.py
 const SALARY_API_URL = `${API_BASE_URL}/app/designation-salaries/`;
 const DESIGNATION_API_URL = `${API_BASE_URL}/app/designations/`;
 const DEPARTMENT_API_URL = `${API_BASE_URL}/app/departments/?page_size=1000`;
@@ -41,6 +38,12 @@ const DesignationSalary = () => {
     const [loading, setLoading] = useState(false);
     const [saving, setSaving] = useState<number | null>(null);
 
+    // Backend pagination & search
+    const [page, setPage] = useState(1);
+    const [pageSize, setPageSize] = useState(10);
+    const [totalCount, setTotalCount] = useState(0);
+    const [search, setSearch] = useState('');
+
     useEffect(() => {
         dispatch(setPageTitle('Designation Salaries'));
         fetchDepartments();
@@ -48,12 +51,16 @@ const DesignationSalary = () => {
 
     useEffect(() => {
         if (selectedDepartment) {
-            fetchData();
+            const timer = setTimeout(() => {
+                fetchData();
+            }, 300);
+            return () => clearTimeout(timer);
         } else {
             setDesignations([]);
             setSalaries({});
+            setTotalCount(0);
         }
-    }, [selectedDepartment]);
+    }, [selectedDepartment, page, pageSize, search]);
 
     const getHeaders = () => {
         const token = localStorage.getItem('access_token');
@@ -77,24 +84,34 @@ const DesignationSalary = () => {
     const fetchData = async () => {
         setLoading(true);
         try {
-            // Fetch Designations for this department
-            const desUrl = `${DESIGNATION_API_URL}?department=${selectedDepartment}&page_size=1000`;
-            const salUrl = `${SALARY_API_URL}?department=${selectedDepartment}&page_size=1000`;
+            // Fetch Designations for this department with backend pagination and search
+            const desUrl = new URL(DESIGNATION_API_URL);
+            desUrl.searchParams.append('page', page.toString());
+            desUrl.searchParams.append('page_size', pageSize.toString());
+            if (selectedDepartment) desUrl.searchParams.append('department', selectedDepartment);
+            if (search.trim()) desUrl.searchParams.append('search', search.trim());
+
+            const salUrl = new URL(SALARY_API_URL);
+            salUrl.searchParams.append('page_size', '1000');
+            if (selectedDepartment) salUrl.searchParams.append('department', selectedDepartment);
 
             const [desRes, salRes] = await Promise.all([
-                fetch(desUrl, { headers: getHeaders() }),
-                fetch(salUrl, { headers: getHeaders() })
+                fetch(desUrl.toString(), { headers: getHeaders() }),
+                fetch(salUrl.toString(), { headers: getHeaders() })
             ]);
 
-            if (desRes.ok && salRes.ok) {
+            if (desRes.ok) {
                 const desData = await desRes.json();
-                const salData = await salRes.json();
-
                 const desList = desData.results || desData;
-                const salList = salData.results || salData;
-
                 setDesignations(desList);
-                
+                setTotalCount(desData.count !== undefined ? desData.count : desList.length);
+
+                let salList = [];
+                if (salRes.ok) {
+                    const salData = await salRes.json();
+                    salList = salData.results || salData;
+                }
+
                 // Map salaries by designation ID
                 const salMap: Record<number, SalaryRecord> = {};
                 salList.forEach((s: any) => {
@@ -104,7 +121,7 @@ const DesignationSalary = () => {
                         basic_pay: s.basic_pay
                     };
                 });
-                
+
                 // Ensure every designation has an entry in salMap
                 desList.forEach((d: DesignationRecord) => {
                     if (!salMap[d.id]) {
@@ -114,7 +131,7 @@ const DesignationSalary = () => {
                         };
                     }
                 });
-                
+
                 setSalaries(salMap);
             }
         } catch (error) {
@@ -180,8 +197,79 @@ const DesignationSalary = () => {
         }
     };
 
+    const columns: Column<DesignationRecord>[] = [
+        {
+            key: 'index',
+            title: '#',
+            width: '60px',
+            align: 'center',
+            render: (_val, _row, index) => (
+                <span className="font-semibold text-gray-500">{(page - 1) * pageSize + (index ?? 0) + 1}</span>
+            ),
+        },
+        {
+            key: 'designation_name',
+            title: 'Designation',
+            sortable: true,
+            render: (val) => (
+                <span className="font-bold text-[#1e3a5f] dark:text-white-light">{val}</span>
+            ),
+        },
+        {
+            key: 'level_name',
+            title: 'Level',
+            sortable: true,
+            render: (val) => (
+                <span className="text-gray-500 font-medium">{val || '-'}</span>
+            ),
+        },
+        {
+            key: 'basic_pay',
+            title: 'Basic Pay (Monthly)',
+            width: '260px',
+            render: (_val, des) => (
+                <div className="flex items-center gap-2 max-w-[220px]">
+                    <span className="text-gray-400 font-bold">₹</span>
+                    <input
+                        type="number"
+                        className="form-input font-bold text-primary dark:bg-[#1b2e4b] border-[#e0e6ed] dark:border-[#253b5c] h-9 text-sm"
+                        value={salaries[des.id]?.basic_pay || '0.00'}
+                        onChange={(e) => handlePayChange(des.id, e.target.value)}
+                        placeholder="0.00"
+                    />
+                </div>
+            ),
+        },
+        {
+            key: 'action',
+            title: 'Action',
+            align: 'center',
+            width: '140px',
+            render: (_val, des) => (
+                <button
+                    type="button"
+                    className={`btn btn-primary btn-sm gap-2 min-w-[100px] shadow-sm hover:shadow-md transition-all ${
+                        saving === des.id ? 'opacity-70 pointer-events-none' : ''
+                    }`}
+                    onClick={() => saveSalary(des.id)}
+                    disabled={saving === des.id}
+                >
+                    {saving === des.id ? (
+                        <span className="animate-spin border-2 border-white border-l-transparent rounded-full w-4 h-4"></span>
+                    ) : (
+                        <>
+                            <IconSave className="w-4 h-4" />
+                            Save
+                        </>
+                    )}
+                </button>
+            ),
+        },
+    ];
+
     return (
         <div>
+            {/* Header Banner */}
             <div className="bg-gradient-to-r from-[#1e3a5f] to-[#14b8a6] p-6 rounded-xl shadow-lg mb-6 relative overflow-hidden">
                 <div className="relative z-10">
                     <h1 className="text-3xl font-extrabold text-white tracking-tight">Designation Salary Configuration</h1>
@@ -190,106 +278,49 @@ const DesignationSalary = () => {
                 <div className="absolute top-0 right-0 -mt-10 -mr-10 w-48 h-48 bg-white opacity-5 rounded-full blur-2xl"></div>
             </div>
 
-            <div className="panel mb-6">
-                <div className="flex flex-col md:flex-row md:items-center gap-4">
-                    <div className="flex-1 max-w-md">
-                        <label className="block text-sm font-semibold mb-2">Select Department</label>
-                        <select 
-                            className="form-select border-[#e0e6ed] dark:border-[#1b2e4b] dark:bg-[#1b2e4b] text-black dark:text-white-dark font-semibold"
+            {/* Reusable Data Table */}
+            <DataTable
+                columns={columns}
+                data={designations}
+                loading={loading}
+                page={page}
+                pageSize={pageSize}
+                totalCount={totalCount}
+                onPageChange={(p) => setPage(p)}
+                onPageSizeChange={(sz) => {
+                    setPageSize(sz);
+                    setPage(1);
+                }}
+                searchValue={search}
+                onSearchChange={(val) => {
+                    setSearch(val);
+                    setPage(1);
+                }}
+                onRefresh={selectedDepartment ? fetchData : undefined}
+                searchPlaceholder="Search designations..."
+                filters={
+                    <div className="flex items-center gap-2">
+                        <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">Department:</label>
+                        <select
+                            className="form-select h-10 py-1.5 px-3 text-sm rounded-xl font-medium min-w-[220px]"
                             value={selectedDepartment}
-                            onChange={(e) => setSelectedDepartment(e.target.value)}
+                            onChange={(e) => {
+                                setSelectedDepartment(e.target.value);
+                                setPage(1);
+                            }}
                         >
                             <option value="">Choose a department...</option>
-                            {departments.map(dept => (
-                                <option key={dept.id} value={dept.id}>{dept.department_name}</option>
+                            {departments.map((dept) => (
+                                <option key={dept.id} value={dept.id}>
+                                    {dept.department_name}
+                                </option>
                             ))}
                         </select>
                     </div>
-                </div>
-            </div>
-
-            {selectedDepartment ? (
-                <div className="panel p-0 border-0 overflow-hidden shadow-md">
-                    <div className="table-responsive">
-                        <table className="table-hover">
-                            <thead>
-                                <tr className="bg-[#f6f8fa] dark:bg-[#1b2e4b]">
-                                    <th className="py-4">Designation</th>
-                                    <th className="py-4">Level</th>
-                                    <th className="py-4">Basic Pay (Monthly)</th>
-                                    <th className="py-4 text-center">Action</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {loading ? (
-                                    <tr>
-                                        <td colSpan={4} className="text-center py-10">
-                                            <div className="flex flex-col items-center gap-2">
-                                                <span className="animate-spin border-4 border-primary border-l-transparent rounded-full w-8 h-8"></span>
-                                                <span className="text-gray-400 font-medium">Loading designations...</span>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                ) : designations.length > 0 ? (
-                                    designations.map((des) => (
-                                        <tr key={des.id} className="group hover:bg-[#fbfcfd] dark:hover:bg-[#121c2c]">
-                                            <td className="font-bold text-[#1e3a5f] dark:text-white-light">
-                                                {des.designation_name}
-                                            </td>
-                                            <td className="text-gray-500 font-medium">
-                                                {des.level_name || '-'}
-                                            </td>
-                                            <td>
-                                                <div className="flex items-center gap-2 max-w-[200px]">
-                                                    <span className="text-gray-400 font-bold">₹</span>
-                                                    <input
-                                                        type="number"
-                                                        className="form-input font-bold text-primary dark:bg-[#1b2e4b] border-[#e0e6ed] dark:border-[#253b5c]"
-                                                        value={salaries[des.id]?.basic_pay || '0.00'}
-                                                        onChange={(e) => handlePayChange(des.id, e.target.value)}
-                                                        placeholder="0.00"
-                                                    />
-                                                </div>
-                                            </td>
-                                            <td className="text-center">
-                                                <button
-                                                    type="button"
-                                                    className={`btn btn-primary btn-sm gap-2 min-w-[100px] shadow-sm hover:shadow-md transition-all ${saving === des.id ? 'opacity-70 pointer-events-none' : ''}`}
-                                                    onClick={() => saveSalary(des.id)}
-                                                    disabled={saving === des.id}
-                                                >
-                                                    {saving === des.id ? (
-                                                        <span className="animate-spin border-2 border-white border-l-transparent rounded-full w-4 h-4"></span>
-                                                    ) : (
-                                                        <>
-                                                            <IconSave className="w-4 h-4" />
-                                                            Save
-                                                        </>
-                                                    )}
-                                                </button>
-                                            </td>
-                                        </tr>
-                                    ))
-                                ) : (
-                                    <tr>
-                                        <td colSpan={4} className="text-center py-10 text-gray-400 font-medium italic">
-                                            No designations found for this department.
-                                        </td>
-                                    </tr>
-                                )}
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            ) : (
-                <div className="panel flex flex-col items-center justify-center py-20 text-center border-dashed border-2 border-[#e0e6ed] dark:border-[#1b2e4b]">
-                    <div className="bg-[#f6f8fa] dark:bg-[#1b2e4b] p-4 rounded-full mb-4">
-                        <IconLayoutGrid className="w-12 h-12 text-primary opacity-20" />
-                    </div>
-                    <h3 className="text-xl font-bold text-[#1e3a5f] dark:text-white-light mb-2">No Department Selected</h3>
-                    <p className="text-gray-500 max-w-sm">Please select a department from the dropdown above to view and manage designation salaries.</p>
-                </div>
-            )}
+                }
+                emptyMessage={selectedDepartment ? 'No designations found for this department.' : 'Please select a department above'}
+                emptySubtitle={selectedDepartment ? undefined : 'Choose a department from the filter dropdown to view and edit basic pay.'}
+            />
         </div>
     );
 };

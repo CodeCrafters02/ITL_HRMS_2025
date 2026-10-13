@@ -552,7 +552,7 @@ class PolicyConfigurationSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = CompanyPolicies
-        fields = ['id', 'name', 'document']
+        fields = ['id', 'name', 'document', 'version', 'published_at']
 
     def get_document(self, obj):
         request = self.context.get('request')

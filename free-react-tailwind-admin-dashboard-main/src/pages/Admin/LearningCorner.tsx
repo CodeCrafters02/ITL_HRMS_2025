@@ -9,6 +9,7 @@ import IconPencil from '../../components/Icon/IconPencil';
 import IconTrashLines from '../../components/Icon/IconTrashLines';
 import IconEye from '../../components/Icon/IconEye';
 import IconX from '../../components/Icon/IconX';
+import DataTable, { Column } from '../../components/Common/DataTable';
 import LearningCornerDetailModal, { sanitizeLearningCornerLinks } from './LearningCornerDetailModal';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000';
@@ -282,6 +283,80 @@ const AdminLearningCorner = () => {
         return badges;
     };
 
+    const columns: Column<LearningCornerItem>[] = [
+        {
+            key: 'title',
+            title: 'Title',
+            sortable: true,
+            render: (_val, item: LearningCornerItem) => (
+                <span className="font-semibold text-gray-800 dark:text-white-light">{item.title}</span>
+            ),
+        },
+        {
+            key: 'description',
+            title: 'Description',
+            render: (_val, item: LearningCornerItem) => (
+                <p className="text-gray-500 dark:text-gray-400 max-w-sm truncate text-xs">{item.description || '-'}</p>
+            ),
+        },
+        {
+            key: 'assets',
+            title: 'Assets',
+            render: (_val, item: LearningCornerItem) => (
+                <div className="flex flex-wrap gap-1.5">
+                    {getBadges(item).length ? (
+                        getBadges(item).map((badge) => (
+                            <span key={badge} className="badge badge-outline-primary text-[11px] py-0.5">
+                                {badge}
+                            </span>
+                        ))
+                    ) : (
+                        <span className="text-gray-400 text-xs">No assets</span>
+                    )}
+                </div>
+            ),
+        },
+        {
+            key: 'actions',
+            title: 'Actions',
+            align: 'center',
+            width: '120px',
+            render: (_val, item: LearningCornerItem) => (
+                <div className="flex items-center justify-center gap-2">
+                    <button type="button" className="text-info hover:opacity-80" onClick={() => setPreviewItem(item)} title="Preview">
+                        <IconEye className="w-4 h-4" />
+                    </button>
+                    <button type="button" className="text-primary hover:opacity-80" onClick={() => openEditModal(item)} title="Edit">
+                        <IconPencil className="w-4 h-4" />
+                    </button>
+                    <button type="button" className="text-danger hover:opacity-80" onClick={() => handleDelete(item)} title="Delete">
+                        <IconTrashLines className="w-4 h-4" />
+                    </button>
+                </div>
+            ),
+        },
+    ];
+
+    const filterControls = (
+        <div className="flex flex-wrap items-center gap-2">
+            <select className="form-select w-36 text-xs" value={filterType} onChange={(e) => setFilterType(e.target.value as FilterType)}>
+                <option value="all">All Types</option>
+                <option value="image">Images Only</option>
+                <option value="video">Videos Only</option>
+                <option value="document">Documents Only</option>
+            </select>
+            <select className="form-select w-32 text-xs" value={sortType} onChange={(e) => setSortType(e.target.value as SortType)}>
+                <option value="newest">Newest First</option>
+                <option value="oldest">Oldest First</option>
+                <option value="az">A-Z</option>
+            </select>
+            <select className="form-select w-28 text-xs" value={viewType} onChange={(e) => setViewType(e.target.value as ViewType)}>
+                <option value="card">Card View</option>
+                <option value="table">Table View</option>
+            </select>
+        </div>
+    );
+
     return (
         <div>
             <div className="bg-gradient-to-r from-[#0e1726] to-[#8b5cf6] p-6 rounded-xl shadow-lg mb-6 relative overflow-hidden">
@@ -292,179 +367,155 @@ const AdminLearningCorner = () => {
                 <div className="absolute top-0 right-0 -mt-10 -mr-10 w-48 h-48 bg-white opacity-5 rounded-full blur-2xl"></div>
             </div>
 
-            <div className="flex flex-wrap items-center justify-between gap-4 mb-5">
-                <div className="flex flex-wrap items-center gap-3">
-                    <div className="relative">
-                        <input
-                            type="text"
-                            className="form-input pr-10 w-72"
-                            placeholder="Search learning resources..."
-                            value={search}
-                            onChange={(e) => {
-                                setSearch(e.target.value);
-                                setCurrentPage(1);
-                            }}
-                        />
-                        <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400">
-                            <IconSearch className="w-4 h-4" />
-                        </span>
+            {viewType === 'table' ? (
+                <DataTable
+                    columns={columns}
+                    data={filteredItems}
+                    loading={loading}
+                    page={currentPage}
+                    pageSize={itemsPerPage}
+                    totalCount={totalCount}
+                    onPageChange={(p) => setCurrentPage(p)}
+                    onPageSizeChange={(sz) => {
+                        setItemsPerPage(sz);
+                        setCurrentPage(1);
+                    }}
+                    searchValue={search}
+                    onSearchChange={(val) => {
+                        setSearch(val);
+                        setCurrentPage(1);
+                    }}
+                    searchPlaceholder="Search learning resources..."
+                    onRefresh={fetchItems}
+                    filters={filterControls}
+                    actionButton={
+                        <button type="button" className="btn btn-primary gap-2" onClick={openCreateModal}>
+                            <IconPlus /> Add Resource
+                        </button>
+                    }
+                />
+            ) : (
+                <>
+                    <div className="flex flex-wrap items-center justify-between gap-4 mb-5">
+                        <div className="flex flex-wrap items-center gap-3">
+                            <div className="relative">
+                                <input
+                                    type="text"
+                                    className="form-input pr-10 w-72"
+                                    placeholder="Search learning resources..."
+                                    value={search}
+                                    onChange={(e) => {
+                                        setSearch(e.target.value);
+                                        setCurrentPage(1);
+                                    }}
+                                />
+                                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400">
+                                    <IconSearch className="w-4 h-4" />
+                                </span>
+                            </div>
+                            {filterControls}
+                        </div>
+                        <button type="button" className="btn btn-primary gap-2" onClick={openCreateModal}>
+                            <IconPlus /> Add Resource
+                        </button>
                     </div>
-                    <select className="form-select w-40" value={filterType} onChange={(e) => setFilterType(e.target.value as FilterType)}>
-                        <option value="all">All Types</option>
-                        <option value="image">Images Only</option>
-                        <option value="video">Videos Only</option>
-                        <option value="document">Documents Only</option>
-                    </select>
-                    <select className="form-select w-36" value={sortType} onChange={(e) => setSortType(e.target.value as SortType)}>
-                        <option value="newest">Newest First</option>
-                        <option value="oldest">Oldest First</option>
-                        <option value="az">A-Z</option>
-                    </select>
-                    <select className="form-select w-32" value={viewType} onChange={(e) => setViewType(e.target.value as ViewType)}>
-                        <option value="card">Card View</option>
-                        <option value="table">Table View</option>
-                    </select>
-                </div>
-                <button type="button" className="btn btn-primary gap-2" onClick={openCreateModal}>
-                    <IconPlus /> Add Resource
-                </button>
-            </div>
 
-            {loading ? (
-                <div className="panel text-center py-10">
-                    <span className="animate-pulse text-gray-400">Loading learning resources...</span>
-                </div>
-            ) : filteredItems.length === 0 ? (
-                <div className="panel text-center py-10 text-gray-500">No learning resources found.</div>
-            ) : viewType === 'card' ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-                    {filteredItems.map((item) => (
-                            <div key={item.id} className="panel overflow-hidden border-0 shadow-md">
-                                <div className="flex items-start justify-between gap-3">
-                                    <div>
-                                        <h3 className="text-lg font-bold">{item.title}</h3>
-                                        <p className="text-sm text-gray-500 mt-1 line-clamp-3">{item.description || 'No description available.'}</p>
+                    {loading ? (
+                        <div className="panel text-center py-10">
+                            <span className="animate-pulse text-gray-400">Loading learning resources...</span>
+                        </div>
+                    ) : filteredItems.length === 0 ? (
+                        <div className="panel text-center py-10 text-gray-500">No learning resources found.</div>
+                    ) : (
+                        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+                            {filteredItems.map((item) => (
+                                <div key={item.id} className="panel overflow-hidden border-0 shadow-md">
+                                    <div className="flex items-start justify-between gap-3">
+                                        <div>
+                                            <h3 className="text-lg font-bold">{item.title}</h3>
+                                            <p className="text-sm text-gray-500 mt-1 line-clamp-3">{item.description || 'No description available.'}</p>
+                                        </div>
+                                        <div className="flex items-center gap-1">
+                                            <button type="button" className="text-info hover:text-info-dark" onClick={() => setPreviewItem(item)}>
+                                                <IconEye className="w-5 h-5" />
+                                            </button>
+                                            <button type="button" className="text-primary hover:text-primary-dark" onClick={() => openEditModal(item)}>
+                                                <IconPencil className="w-5 h-5" />
+                                            </button>
+                                            <button type="button" className="text-danger hover:text-danger-dark" onClick={() => handleDelete(item)}>
+                                                <IconTrashLines className="w-5 h-5" />
+                                            </button>
+                                        </div>
                                     </div>
-                                    <div className="flex items-center gap-1">
-                                        <button type="button" className="text-info hover:text-info-dark" onClick={() => setPreviewItem(item)}>
-                                            <IconEye className="w-5 h-5" />
-                                        </button>
-                                        <button type="button" className="text-primary hover:text-primary-dark" onClick={() => openEditModal(item)}>
-                                            <IconPencil className="w-5 h-5" />
-                                        </button>
-                                        <button type="button" className="text-danger hover:text-danger-dark" onClick={() => handleDelete(item)}>
-                                            <IconTrashLines className="w-5 h-5" />
-                                        </button>
+                                    <div className="mt-4 flex flex-wrap gap-2">
+                                        {getBadges(item).map((badge) => (
+                                            <span key={badge} className="badge badge-outline-primary">
+                                                {badge}
+                                            </span>
+                                        ))}
                                     </div>
                                 </div>
-                                <div className="mt-4 flex flex-wrap gap-2">
-                                    {getBadges(item).map((badge) => (
-                                        <span key={badge} className="badge badge-outline-primary">
-                                            {badge}
-                                        </span>
-                                    ))}
+                            ))}
+                        </div>
+                    )}
+
+                    {totalCount > 0 && (
+                        <div className="flex justify-between items-center p-4 border-t border-[#e0e6ed] dark:border-[#1b2e4b] panel mt-5">
+                            <div className="flex flex-wrap items-center gap-4">
+                                <div className="text-sm text-gray-500 font-semibold dark:text-gray-400">
+                                    Showing <span className="text-primary">{(currentPage - 1) * itemsPerPage + 1}</span> to{' '}
+                                    <span className="text-primary">{Math.min(currentPage * itemsPerPage, totalCount)}</span> of{' '}
+                                    <span className="text-primary">{totalCount}</span> entries
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    <span className="text-sm font-semibold">Per page:</span>
+                                    <select
+                                        className="form-select w-20 text-sm font-semibold py-1"
+                                        value={itemsPerPage}
+                                        onChange={(e) => {
+                                            setItemsPerPage(Number(e.target.value));
+                                            setCurrentPage(1);
+                                        }}
+                                    >
+                                        <option value={6}>6</option>
+                                        <option value={12}>12</option>
+                                        <option value={24}>24</option>
+                                    </select>
                                 </div>
                             </div>
-                    ))}
-                </div>
-            ) : (
-                <div className="panel p-0 border-0 overflow-hidden">
-                    <div className="table-responsive">
-                        <table className="table-hover">
-                            <thead>
-                                <tr>
-                                    <th>Title</th>
-                                    <th>Description</th>
-                                    <th>Assets</th>
-                                    <th className="text-center">Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {filteredItems.map((item) => (
-                                    <tr key={item.id}>
-                                        <td className="font-semibold">{item.title}</td>
-                                        <td className="text-gray-500 max-w-[320px] truncate">{item.description || '-'}</td>
-                                        <td>
-                                            <div className="flex flex-wrap gap-2">
-                                                {getBadges(item).length ? getBadges(item).map((badge) => <span key={badge} className="badge badge-outline-primary">{badge}</span>) : <span className="text-gray-400">No assets</span>}
-                                            </div>
-                                        </td>
-                                        <td className="text-center">
-                                            <div className="flex items-center justify-center gap-2">
-                                                <button type="button" className="text-info" onClick={() => setPreviewItem(item)}>
-                                                    <IconEye className="w-5 h-5" />
-                                                </button>
-                                                <button type="button" className="text-primary" onClick={() => openEditModal(item)}>
-                                                    <IconPencil className="w-5 h-5" />
-                                                </button>
-                                                <button type="button" className="text-danger" onClick={() => handleDelete(item)}>
-                                                    <IconTrashLines className="w-5 h-5" />
-                                                </button>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            )}
-
-            {totalCount > 0 && (
-                <div className="flex justify-between items-center p-4 border-t border-[#e0e6ed] dark:border-[#1b2e4b] panel">
-                    <div className="flex flex-wrap items-center gap-4">
-                        <div className="text-sm text-gray-500 font-semibold dark:text-gray-400">
-                        Showing <span className="text-primary">{(currentPage - 1) * itemsPerPage + 1}</span> to{' '}
-                        <span className="text-primary">{Math.min(currentPage * itemsPerPage, totalCount)}</span> of{' '}
-                        <span className="text-primary">{totalCount}</span> entries
-                    </div>
-                        <div className="flex items-center gap-2">
-                            <span className="text-sm font-semibold">Per page:</span>
-                            <select
-                                className="form-select w-20 text-sm font-semibold py-1"
-                                value={itemsPerPage}
-                                onChange={(e) => {
-                                    setItemsPerPage(Number(e.target.value));
-                                    setCurrentPage(1);
-                                }}
-                            >
-                                <option value={6}>6</option>
-                                <option value={12}>12</option>
-                                <option value={24}>24</option>
-                            </select>
+                            <ul className="inline-flex items-center space-x-1 font-semibold">
+                                <li>
+                                    <button
+                                        type="button"
+                                        className="flex justify-center font-semibold p-2 rounded-full transition bg-white-light text-dark hover:text-white hover:bg-primary dark:text-white-light dark:bg-[#191e3a] dark:hover:bg-primary disabled:opacity-50 disabled:cursor-not-allowed"
+                                        disabled={currentPage === 1}
+                                        onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
+                                    >
+                                        Prev
+                                    </button>
+                                </li>
+                                <li>
+                                    <button
+                                        type="button"
+                                        className="flex justify-center font-semibold px-3.5 py-2 rounded-full transition bg-primary text-white shadow-[0_10px_20px_-10px_rgba(67,97,238,0.44)]"
+                                    >
+                                        {currentPage}
+                                    </button>
+                                </li>
+                                <li>
+                                    <button
+                                        type="button"
+                                        className="flex justify-center font-semibold p-2 rounded-full transition bg-white-light text-dark hover:text-white hover:bg-primary dark:text-white-light dark:bg-[#191e3a] dark:hover:bg-primary disabled:opacity-50 disabled:cursor-not-allowed"
+                                        disabled={currentPage === totalPages}
+                                        onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
+                                    >
+                                        Next
+                                    </button>
+                                </li>
+                            </ul>
                         </div>
-                    </div>
-                    <ul className="inline-flex items-center space-x-1 font-semibold">
-                        <li>
-                            <button
-                                type="button"
-                                className="flex justify-center font-semibold p-2 rounded-full transition bg-white-light text-dark hover:text-white hover:bg-primary dark:text-white-light dark:bg-[#191e3a] dark:hover:bg-primary disabled:opacity-50 disabled:cursor-not-allowed"
-                                disabled={currentPage === 1}
-                                onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
-                            >
-                                Prev
-                            </button>
-                        </li>
-                        <li>
-                            <button
-                                type="button"
-                                className="flex justify-center font-semibold px-3.5 py-2 rounded-full transition bg-primary text-white shadow-[0_10px_20px_-10px_rgba(67,97,238,0.44)]"
-                            >
-                                {currentPage}
-                            </button>
-                        </li>
-                        <li>
-                            <button
-                                type="button"
-                                className="flex justify-center font-semibold p-2 rounded-full transition bg-white-light text-dark hover:text-white hover:bg-primary dark:text-white-light dark:bg-[#191e3a] dark:hover:bg-primary disabled:opacity-50 disabled:cursor-not-allowed"
-                                disabled={currentPage === totalPages}
-                                onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
-                            >
-                                Next
-                            </button>
-                        </li>
-                    </ul>
-                </div>
+                    )}
+                </>
             )}
 
             <Transition appear show={modalOpen} as={Fragment}>

@@ -6,6 +6,7 @@ from django.utils import timezone
 from rest_framework import serializers, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.permissions import AllowAny, IsAuthenticated
+from rest_framework.pagination import PageNumberPagination
 from rest_framework.response import Response
 
 from app.models import Employee, UserRegister
@@ -61,6 +62,12 @@ def _admin_company(user):
     return user.company
 
 
+class RegistrationPagination(PageNumberPagination):
+    page_size = 10
+    page_size_query_param = 'page_size'
+    max_page_size = 100
+
+
 class RegistrationRequestViewSet(viewsets.GenericViewSet):
     """
     POST   /employee/registration-requests/              public — submit a registration
@@ -71,6 +78,7 @@ class RegistrationRequestViewSet(viewsets.GenericViewSet):
     """
     serializer_class = RegistrationRequestSerializer
     queryset = RegistrationRequest.objects.select_related('company', 'approved_by')
+    pagination_class = RegistrationPagination
 
     def get_permissions(self):
         if self.action in ('create', 'check_status'):
@@ -109,6 +117,10 @@ class RegistrationRequestViewSet(viewsets.GenericViewSet):
                 Q(first_name__icontains=search) | Q(last_name__icontains=search) | Q(email__icontains=search)
                 | Q(mobile__icontains=search) | Q(desired_designation__icontains=search)
             )
+        page = self.paginate_queryset(qs)
+        if page is not None:
+            serializer = self.get_serializer(page, many=True)
+            return self.get_paginated_response(serializer.data)
         return Response(self.get_serializer(qs, many=True).data)
 
     @action(detail=True, methods=['post'])
