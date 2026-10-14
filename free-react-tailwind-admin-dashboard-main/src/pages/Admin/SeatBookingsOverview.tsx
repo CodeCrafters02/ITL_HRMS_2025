@@ -12,7 +12,10 @@ import IconClock from '../../components/Icon/IconClock';
 import IconTrash from '../../components/Icon/IconTrash';
 import Swal from 'sweetalert2';
 import DataTable, { Column } from '../../components/Common/DataTable';
+import PageHeader from '../../components/Common/PageHeader';
 
+import StatCard, { StatGrid } from '../../components/Common/StatCard';
+import Button, { IconButton } from '../../components/Common/Button';
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000';
 
 const AdminSeatBookingsOverview = () => {
@@ -291,25 +294,24 @@ const AdminSeatBookingsOverview = () => {
 
     return (
         <div className="flex flex-col h-[calc(var(--app-vh)_-_90px)] space-y-4">
-            {/* Header Banner - Restored with better spacing */}
-            <div className="bg-gradient-to-r from-emerald-500 to-teal-600 rounded-xl p-4 text-white shadow-lg overflow-hidden relative">
-                <div className="relative z-10 flex items-center justify-between">
-                    <div>
-                        <h2 className="text-3xl font-extrabold mb-0.5 tracking-tight">Seat Management Insights</h2>
-                        <p className="text-white/80 text-sm font-medium">Real-time office occupancy tracking and booking history.</p>
-                    </div>
-                     <button 
+            {/* Executive Page Header */}
+            <PageHeader
+                title="Seat Management Insights"
+                subtitle="Real-time office occupancy tracking, interactive floor plans, and employee workspace allocation."
+                icon={<IconInfoCircle />}
+                badge="Facilities & Seating"
+                variant="emerald"
+                className="mb-0"
+                actions={
+                    <button 
                         onClick={() => setShowHistoryModal(true)}
-                        className="bg-white/20 hover:bg-white/30 backdrop-blur-md text-white px-5 py-2 rounded-xl font-bold transition-all border border-white/20 flex items-center gap-2"
+                        className="btn btn-outline-light gap-2 backdrop-blur-md bg-white/10 hover:bg-white/20 border-white/20 text-white font-semibold"
                     >
                         <IconClock className="w-4 h-4" />
                         View History
                     </button>
-                </div>
-                <div className="absolute right-[-20px] top-[-20px] opacity-10">
-                    <IconInfoCircle className="w-48 h-48" />
-                </div>
-            </div>
+                }
+            />
 
             <div className="flex flex-col md:flex-row justify-between items-center bg-white dark:bg-[#0e1726] p-4 rounded-xl shadow-sm gap-4 border border-gray-100 dark:border-gray-800">
                 <div className="flex items-center gap-4">
@@ -358,63 +360,27 @@ const AdminSeatBookingsOverview = () => {
                         value={selectedDate}
                         onChange={(e) => setSelectedDate(e.target.value)}
                     />
-                    <button
+                    <Button
                         onClick={() => {
                             setShowHistoryModal(true);
                             fetchHistory();
                         }}
-                        className="btn btn-primary flex items-center gap-2"
+                        
                         title="View All History"
                     >
                         <IconClock className="w-4 h-4" />
                         History
-                    </button>
+                    </Button>
                 </div>
             </div>
 
             {/* Restored Analytics Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                <div className="panel bg-gradient-to-br from-blue-500 to-indigo-600 text-white p-4 rounded-xl shadow-md border-none">
-                    <div className="flex justify-between items-center mb-1">
-                        <h5 className="font-bold text-xs uppercase opacity-80 tracking-wider">Total Capacity</h5>
-                        <IconUsers className="w-4 h-4 opacity-50" />
-                    </div>
-                    <div className="flex items-baseline gap-1">
-                        <div className="text-2xl font-black">{totalSeats}</div>
-                        <span className="text-[10px] font-bold opacity-60">SEATS</span>
-                    </div>
-                </div>
-                <div className="panel bg-gradient-to-br from-emerald-500 to-teal-600 text-white p-4 rounded-xl shadow-md border-none">
-                    <div className="flex justify-between items-center mb-1">
-                        <h5 className="font-bold text-xs uppercase opacity-80 tracking-wider">Available Now</h5>
-                        <IconChecks className="w-4 h-4 opacity-50" />
-                    </div>
-                    <div className="flex items-baseline gap-1">
-                        <div className="text-2xl font-black">{availableCount}</div>
-                        <span className="text-[10px] font-bold opacity-60">FREE</span>
-                    </div>
-                </div>
-                <div className="panel bg-gradient-to-br from-orange-400 to-orange-600 text-white p-4 rounded-xl shadow-md border-none">
-                    <div className="flex justify-between items-center mb-1">
-                        <h5 className="font-bold text-xs uppercase opacity-80 tracking-wider">Booked</h5>
-                        <IconInfoCircle className="w-4 h-4 opacity-50" />
-                    </div>
-                    <div className="flex items-baseline gap-1">
-                        <div className="text-2xl font-black">{bookedCount}</div>
-                        <span className="text-[10px] font-bold opacity-60">{dailyCount}D | {weeklyCount}W</span>
-                    </div>
-                </div>
-                <div className="panel bg-gradient-to-br from-pink-500 to-rose-600 text-white p-4 rounded-xl shadow-md border-none">
-                    <div className="flex justify-between items-center mb-1">
-                        <h5 className="font-bold text-xs uppercase opacity-80 tracking-wider">Permanent</h5>
-                        <IconInfoCircle className="w-4 h-4 opacity-50" />
-                    </div>
-                    <div className="flex items-baseline gap-1">
-                        <div className="text-2xl font-black">{permanentCount}</div>
-                        <span className="text-[10px] font-bold opacity-60">ALLOCATED</span>
-                    </div>
-                </div>
-            </div>
+            <StatGrid cols={4}>
+                <StatCard label="Total Capacity" value={totalSeats} tone="primary" icon={<IconUsers />} hint="seats" />
+                <StatCard label="Available Now" value={availableCount} tone="success" icon={<IconChecks />} hint="free" />
+                <StatCard label="Booked" value={bookedCount} tone="warning" icon={<IconInfoCircle />} hint={`${dailyCount}D | ${weeklyCount}W`} />
+                <StatCard label="Permanent" value={permanentCount} tone="purple" icon={<IconInfoCircle />} hint="allocated" />
+            </StatGrid>
 
 
             <div className="flex-1 flex gap-6 overflow-hidden">
@@ -579,13 +545,13 @@ const AdminSeatBookingsOverview = () => {
                                         </div>
                                     )}
 
-                                    <button 
+                                    <Button variant="outline-danger" className="w-full mt-2" 
                                         onClick={() => handleCancelBooking(selectedSeat.booking.id)}
-                                        className="btn btn-outline-danger w-full gap-2 mt-2"
+                                        
                                     >
                                         <IconTrash className="w-4 h-4" />
                                         Cancel This Booking
-                                    </button>
+                                    </Button>
                                 </div>
                             ) : (
                                 <div className="space-y-4">
@@ -620,16 +586,16 @@ const AdminSeatBookingsOverview = () => {
                                                 </div>
                                                 
                                                 {/* Quick Cancel for Admin */}
-                                                <button 
+                                                <IconButton tone="danger" 
                                                     onClick={(e) => {
                                                         e.stopPropagation();
                                                         handleCancelBooking(b.id);
                                                     }}
-                                                    className="absolute top-2 right-2 p-1.5 bg-danger/10 text-danger rounded-lg opacity-0 group-hover:opacity-100 transition-opacity z-20 hover:bg-danger hover:text-white"
+                                                    
                                                     title="Cancel Booking"
                                                 >
                                                     <IconTrash className="w-3.5 h-3.5" />
-                                                </button>
+                                                </IconButton>
 
                                                 <div className="absolute right-[-10px] bottom-[-10px] opacity-5 group-hover:opacity-10 transition-opacity">
                                                     <IconClock className="w-12 h-12" />
@@ -640,9 +606,9 @@ const AdminSeatBookingsOverview = () => {
                                 </div>
                             )}
 
-                            <button onClick={() => setSelectedSeat(null)} className="btn btn-outline-secondary w-full mt-6">
+                            <Button variant="secondary" className="w-full mt-6" onClick={() => setSelectedSeat(null)} >
                                 Close Details
-                            </button>
+                            </Button>
                         </div>
                     ) : (
                         <div className="flex flex-col items-center justify-center h-full opacity-50 text-center">
@@ -754,13 +720,13 @@ const AdminSeatBookingsOverview = () => {
                                     width: '80px',
                                     render: (_val: any, b: any) => (
                                         (b.status === 'approved' || b.status === 'pending') ? (
-                                             <button 
+                                             <IconButton tone="danger" 
                                                 onClick={() => handleCancelBooking(b.id)}
-                                                className="p-1.5 bg-danger/10 text-danger rounded-lg hover:bg-danger hover:text-white transition-all shadow-sm"
+                                                
                                                 title="Cancel Booking"
                                             >
                                                 <IconTrash className="w-4 h-4" />
-                                            </button>
+                                            </IconButton>
                                         ) : null
                                     ),
                                 },

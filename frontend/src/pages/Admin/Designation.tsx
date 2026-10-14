@@ -7,7 +7,7 @@ import IconX from '../../components/Icon/IconX';
 import IconPlus from '../../components/Icon/IconPlus';
 import IconPencil from '../../components/Icon/IconPencil';
 import IconTrashLines from '../../components/Icon/IconTrashLines';
-import IconSearch from '../../components/Icon/IconSearch';
+import DataTable, { Column } from '../../components/Common/DataTable';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000';
 const DESIGNATION_API_URL = `${API_BASE_URL}/app/designations/`;
@@ -213,6 +213,22 @@ const AdminDesignation = () => {
         }
     };
 
+    const columns: Column<DesignationRecord>[] = [
+        { key: 'index', title: '#', width: '60px', render: (_v, _r, i) => i + 1 },
+        { key: 'designation_name', title: 'Designation Name', render: (v) => <span className="font-semibold">{v}</span> },
+        { key: 'department_name', title: 'Department', render: (v) => <span className="text-gray-500">{v || '-'}</span> },
+        { key: 'level_name', title: 'Level', render: (v) => <span className="text-gray-500">{v || '-'}</span> },
+        {
+            key: 'actions', title: 'Actions', align: 'center', width: '120px',
+            render: (_v, row) => (
+                <div className="flex items-center justify-center gap-2">
+                    <button type="button" className="p-1.5 rounded-lg text-primary hover:text-white hover:bg-primary transition-colors" onClick={() => openEditModal(row)} title="Edit"><IconPencil className="w-4 h-4" /></button>
+                    <button type="button" className="p-1.5 rounded-lg text-danger hover:text-white hover:bg-danger transition-colors" onClick={() => handleDelete(row)} title="Delete"><IconTrashLines className="w-4 h-4" /></button>
+                </div>
+            ),
+        },
+    ];
+
     return (
         <div>
             <div className="bg-gradient-to-r from-[#1e3a5f] to-[#14b8a6] p-6 rounded-xl shadow-lg mb-6 relative overflow-hidden">
@@ -222,134 +238,22 @@ const AdminDesignation = () => {
                 </div>
                 <div className="absolute top-0 right-0 -mt-10 -mr-10 w-48 h-48 bg-white opacity-5 rounded-full blur-2xl"></div>
             </div>
-
-            <div className="flex flex-wrap items-center justify-between gap-4 mb-5">
-                <div className="relative">
-                    <input
-                        type="text"
-                        className="form-input pr-10 w-64"
-                        placeholder="Search designations..."
-                        value={search}
-                        onChange={(e) => {
-                            setSearch(e.target.value);
-                            setPage(1);
-                        }}
-                    />
-                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400">
-                        <IconSearch className="w-4 h-4" />
-                    </span>
-                </div>
-                <button type="button" className="btn btn-primary gap-2" onClick={openAddModal}>
-                    <IconPlus /> Add Designation
-                </button>
-            </div>
-
-            <div className="panel p-0 border-0 overflow-hidden">
-                <div className="table-responsive">
-                    <table className="table-hover">
-                        <thead>
-                            <tr>
-                                <th>#</th>
-                                <th>Designation Name</th>
-                                <th>Department</th>
-                                <th>Level</th>
-                                <th className="text-center">Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {loading ? (
-                                <tr>
-                                    <td colSpan={5} className="text-center py-5">
-                                        <span className="animate-pulse text-gray-400">Loading designations...</span>
-                                    </td>
-                                </tr>
-                            ) : designations.length > 0 ? (
-                                designations.map((designation, index) => (
-                                    <tr key={designation.id}>
-                                        <td>{(page - 1) * pageSize + index + 1}</td>
-                                        <td className="font-semibold">{designation.designation_name}</td>
-                                        <td className="text-gray-500">{designation.department_name || '-'}</td>
-                                        <td className="text-gray-500">{designation.level_name || '-'}</td>
-                                        <td className="text-center">
-                                            <div className="flex items-center justify-center gap-3">
-                                                <button type="button" className="text-primary hover:text-blue-700" onClick={() => openEditModal(designation)} title="Edit">
-                                                    <IconPencil className="w-5 h-5" />
-                                                </button>
-                                                <button type="button" className="text-danger hover:text-red-700" onClick={() => handleDelete(designation)} title="Delete">
-                                                    <IconTrashLines className="w-5 h-5" />
-                                                </button>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                ))
-                            ) : (
-                                <tr>
-                                    <td colSpan={5} className="text-center py-5 text-gray-400">No designations found.</td>
-                                </tr>
-                            )}
-                        </tbody>
-                    </table>
-                </div>
-
-                {totalCount > 0 && (
-                    <div className="flex justify-between items-center p-4 border-t border-[#e0e6ed] dark:border-[#1b2e4b]">
-                        <div className="flex items-center gap-4">
-                            <div className="text-sm text-gray-500 font-semibold dark:text-gray-400">
-                                Showing <span className="text-primary">{(page - 1) * pageSize + 1}</span> to <span className="text-primary">{Math.min(page * pageSize, totalCount)}</span> of <span className="text-primary">{totalCount}</span> entries
-                            </div>
-                            <div className="flex items-center gap-2">
-                                <span className="text-sm font-semibold">Per page:</span>
-                                <select
-                                    className="form-select w-20 text-sm font-semibold py-1"
-                                    value={pageSize}
-                                    onChange={(e) => {
-                                        setPageSize(Number(e.target.value));
-                                        setPage(1);
-                                    }}
-                                >
-                                    <option value="10">10</option>
-                                    <option value="20">20</option>
-                                    <option value="50">50</option>
-                                </select>
-                            </div>
-                        </div>
-                        <ul className="inline-flex items-center space-x-1 font-semibold">
-                            <li>
-                                <button
-                                    type="button"
-                                    className="flex justify-center font-semibold p-2 rounded-full transition bg-white-light text-dark hover:text-white hover:bg-primary dark:text-white-light dark:bg-[#191e3a] dark:hover:bg-primary disabled:opacity-50 disabled:cursor-not-allowed"
-                                    onClick={() => setPage(page > 1 ? page - 1 : 1)}
-                                    disabled={page === 1}
-                                >
-                                    Prev
-                                </button>
-                            </li>
-                            {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
-                                <li key={p}>
-                                    <button
-                                        type="button"
-                                        className={`flex justify-center font-semibold px-3.5 py-2 rounded-full transition ${page === p ? 'bg-primary text-white shadow-[0_10px_20px_-10px_rgba(67,97,238,0.44)]' : 'bg-white-light text-dark hover:text-white hover:bg-primary dark:text-white-light dark:bg-[#191e3a] dark:hover:bg-primary'}`}
-                                        onClick={() => setPage(p)}
-                                    >
-                                        {p}
-                                    </button>
-                                </li>
-                            ))}
-                            <li>
-                                <button
-                                    type="button"
-                                    className="flex justify-center font-semibold p-2 rounded-full transition bg-white-light text-dark hover:text-white hover:bg-primary dark:text-white-light dark:bg-[#191e3a] dark:hover:bg-primary disabled:opacity-50 disabled:cursor-not-allowed"
-                                    onClick={() => setPage(page < totalPages ? page + 1 : totalPages)}
-                                    disabled={page === totalPages || totalPages === 0}
-                                >
-                                    Next
-                                </button>
-                            </li>
-                        </ul>
-                    </div>
-                )}
-            </div>
-
+            <DataTable
+                columns={columns}
+                data={designations}
+                loading={loading}
+                page={page}
+                pageSize={pageSize}
+                totalCount={totalCount}
+                onPageChange={setPage}
+                onPageSizeChange={(sz) => { setPageSize(sz); setPage(1); }}
+                searchValue={search}
+                onSearchChange={(v) => { setSearch(v); setPage(1); }}
+                onRefresh={fetchDesignations}
+                searchPlaceholder="Search designations..."
+                emptyMessage="No designations found"
+                actionButton={<button type="button" className="btn btn-primary gap-2" onClick={openAddModal}><IconPlus /> Add Designation</button>}
+            />
             <Transition appear show={isModalOpen} as={Fragment}>
                 <Dialog as="div" open={isModalOpen} onClose={() => setIsModalOpen(false)} className="relative z-50">
                     <Transition.Child

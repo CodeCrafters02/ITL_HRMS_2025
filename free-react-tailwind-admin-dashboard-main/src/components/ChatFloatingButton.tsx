@@ -3,6 +3,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import Swal from 'sweetalert2';
 import IconMenuChat from './Icon/Menu/IconMenuChat';
 
+import { openTeamsChat } from '../utils/teams';
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000';
 
 type Conversation = { id: number; unread_count?: number };
@@ -125,11 +126,7 @@ const ChatFloatingButton = () => {
         // Active Mode: navigate to chat
         resetInactivityTimer();
         if (chatPath) {
-            try {
-                navigate(chatPath);
-            } catch (err: any) {
-                Swal.fire('Error', err?.message || 'Unable to open chat', 'error');
-            }
+            if (!openTeamsChat()) Swal.fire('Allow pop-ups', 'Your browser blocked the Microsoft Teams tab. Please allow pop-ups for this site.', 'info');
         }
     };
 
@@ -154,7 +151,7 @@ const ChatFloatingButton = () => {
             className={`fixed bottom-6 ltr:right-6 rtl:left-6 z-[60] rounded-full flex items-center gap-2.5 select-none transition-all duration-300 group ${
                 isGhost
                     ? 'opacity-25 bg-slate-900/30 dark:bg-slate-900/50 backdrop-blur-[1px] border border-white/10 text-white/50 shadow-none hover:opacity-40 scale-95 cursor-default'
-                    : 'opacity-100 bg-gradient-to-r from-[#0062E0] via-[#1d4ed8] to-[#2563eb] text-white shadow-lg shadow-[#0062E0]/30 hover:shadow-xl hover:shadow-[#0062E0]/50 hover:scale-105 active:scale-95 border border-white/20 scale-100 cursor-pointer px-4 py-3'
+                    : 'opacity-100 bg-gradient-to-r from-brand via-brand-dark to-brand-mid text-white shadow-lg shadow-brand/30 hover:shadow-xl hover:shadow-brand/50 hover:scale-105 active:scale-95 border border-white/20 scale-100 cursor-pointer px-4 py-3'
             }`}
             style={{
                 padding: isGhost ? '0.625rem 0.875rem' : '0.75rem 1rem',
@@ -164,7 +161,7 @@ const ChatFloatingButton = () => {
             onMouseEnter={() => {
                 if (!isGhost) resetInactivityTimer();
             }}
-            title={isGhost ? 'Click behind to interact, or double-click to enable chat' : 'Open Chat'}
+            title={isGhost ? 'Click behind to interact, or double-click to enable chat' : 'Open chat in Microsoft Teams'}
         >
             <span className="relative flex items-center justify-center">
                 <IconMenuChat className={`w-5 h-5 transition-transform duration-200 ${!isGhost ? 'group-hover:rotate-12' : ''}`} />

@@ -5,6 +5,7 @@ import IconMaximize from '../../components/Icon/IconMaximize';
 import IconArrowLeft from '../../components/Icon/IconArrowLeft';
 import IconArrowForward from '../../components/Icon/IconArrowForward';
 
+import Button from '../../components/Common/Button';
 export type LearningCornerPreviewMedia = {
     id: number | null;
     url: string;
@@ -123,9 +124,9 @@ export default function LearningCornerDetailModal({ resource, onClose }: Props) 
                     <h3 className="text-xl font-bold">{resource.title}</h3>
                     <p className="text-white-dark mt-1">{resource.description || 'No description provided.'}</p>
                 </div>
-                <button type="button" className="btn btn-sm btn-outline-danger" onClick={onClose}>
+                <Button variant="outline-danger" size="sm" type="button"  onClick={onClose}>
                     Close
-                </button>
+                </Button>
             </div>
 
             <div className="mt-5 grid grid-cols-1 sm:grid-cols-3 gap-3">
@@ -160,9 +161,9 @@ export default function LearningCornerDetailModal({ resource, onClose }: Props) 
                                                 <button type="button" className="block w-full text-left" onClick={openGallery}>
                                                     <img src={it.url} alt={it.filename} className="w-full max-h-[240px] object-contain" />
                                                 </button>
-                                                <button
+                                                <Button variant="outline" size="sm" className="absolute top-2 right-2 !p-2 rounded-md bg-[#0e1726]/90"
                                                     type="button"
-                                                    className="absolute top-2 right-2 btn btn-sm btn-outline-primary p-2 rounded-md bg-[#0e1726]/90 shadow-md"
+                                                    
                                                     aria-label="Open expanded preview"
                                                     title="Expanded preview"
                                                     onClick={(e) => {
@@ -171,7 +172,7 @@ export default function LearningCornerDetailModal({ resource, onClose }: Props) 
                                                     }}
                                                 >
                                                     <IconMaximize className="w-4 h-4" />
-                                                </button>
+                                                </Button>
                                             </div>
                                             <span className="block text-xs text-white-dark truncate px-2 py-1">{it.filename || 'Image'}</span>
                                         </div>
@@ -285,15 +286,15 @@ export default function LearningCornerDetailModal({ resource, onClose }: Props) 
                                         </p>
                                     )}
                                 </div>
-                                <button type="button" className="btn btn-sm btn-outline-danger" onClick={() => setImageGallery(null)}>
+                                <Button variant="outline-danger" size="sm" type="button"  onClick={() => setImageGallery(null)}>
                                     Close
-                                </button>
+                                </Button>
                             </div>
                             <div className="mt-4 relative flex items-center justify-center min-h-[200px]">
                                 {imageGallery.urls.length > 1 && (
-                                    <button
+                                    <Button variant="outline" className="absolute left-1 sm:left-2 top-1/2 z-10 -translate-y-1/2 !p-2.5 rounded-full bg-[#0e1726]/90 border-white-light"
                                         type="button"
-                                        className="absolute left-1 sm:left-2 top-1/2 z-10 -translate-y-1/2 btn btn-outline-primary p-2.5 rounded-full bg-[#0e1726]/90 border-white-light shadow-lg"
+                                        
                                         aria-label="Previous image"
                                         onClick={(e) => {
                                             e.stopPropagation();
@@ -305,7 +306,7 @@ export default function LearningCornerDetailModal({ resource, onClose }: Props) 
                                         }}
                                     >
                                         <IconArrowLeft className="w-5 h-5" />
-                                    </button>
+                                    </Button>
                                 )}
                                 <img
                                     src={imageGallery.urls[imageGallery.index]}
@@ -313,9 +314,9 @@ export default function LearningCornerDetailModal({ resource, onClose }: Props) 
                                     className="w-full max-h-[72vh] object-contain rounded-lg border border-white-light dark:border-[#1b2e4b]"
                                 />
                                 {imageGallery.urls.length > 1 && (
-                                    <button
+                                    <Button variant="outline" className="absolute right-1 sm:right-2 top-1/2 z-10 -translate-y-1/2 !p-2.5 rounded-full bg-[#0e1726]/90 border-white-light"
                                         type="button"
-                                        className="absolute right-1 sm:right-2 top-1/2 z-10 -translate-y-1/2 btn btn-outline-primary p-2.5 rounded-full bg-[#0e1726]/90 border-white-light shadow-lg"
+                                        
                                         aria-label="Next image"
                                         onClick={(e) => {
                                             e.stopPropagation();
@@ -327,7 +328,7 @@ export default function LearningCornerDetailModal({ resource, onClose }: Props) 
                                         }}
                                     >
                                         <IconArrowForward className="w-5 h-5" />
-                                    </button>
+                                    </Button>
                                 )}
                             </div>
                         </div>

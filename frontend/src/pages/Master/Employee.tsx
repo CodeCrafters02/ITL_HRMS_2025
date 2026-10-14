@@ -8,6 +8,8 @@ import IconPlus from '../../components/Icon/IconPlus';
 import IconEdit from '../../components/Icon/IconEdit';
 import IconTrash from '../../components/Icon/IconTrash';
 import IconEye from '../../components/Icon/IconEye';
+import IconUsers from '../../components/Icon/IconUsers';
+import PageHeader from '../../components/Common/PageHeader';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000';
 const API_URL = `${API_BASE_URL}/app/employee/`;
@@ -243,13 +245,25 @@ const MasterEmployee = () => {
 
     return (
         <div>
-            <div className="bg-gradient-to-r from-[#0d9488] to-[#14b8a6] p-6 rounded-xl shadow-lg mb-6 relative overflow-hidden">
-                <div className="relative z-10">
-                    <h1 className="text-3xl font-extrabold text-white tracking-tight">Employee Management</h1>
-                    <p className="text-white/80 mt-1 text-sm font-medium">Manage and view the list of all employees in the organization.</p>
-                </div>
-                <div className="absolute top-0 right-0 -mt-10 -mr-10 w-48 h-48 bg-white opacity-5 rounded-full blur-2xl"></div>
-            </div>
+            <PageHeader
+                title="Employee Management"
+                subtitle="Manage and view the complete organizational employee registry, department roles, and designations."
+                icon={<IconUsers />}
+                badge="Workforce Master"
+                variant="primary"
+                actions={
+                    <button
+                        type="button"
+                        className="btn btn-primary gap-2 shadow-lg shadow-primary/20 backdrop-blur-sm"
+                        onClick={() => {
+                            resetForm();
+                            setIsAddModalOpen(true);
+                        }}
+                    >
+                        <IconPlus className="w-4 h-4" /> Add Employee
+                    </button>
+                }
+            />
 
             <div className="flex flex-wrap items-center justify-end gap-4 mb-5">
                 <div className="flex items-center gap-2 w-full sm:w-auto">
@@ -356,17 +370,48 @@ const MasterEmployee = () => {
                                     Prev
                                 </button>
                             </li>
-                            {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
-                                <li key={p}>
-                                    <button
-                                        type="button"
-                                        className={`flex justify-center font-semibold px-3.5 py-2 rounded-full transition ${page === p ? 'bg-primary text-white shadow-[0_10px_20px_-10px_rgba(67,97,238,0.44)]' : 'bg-white-light text-dark hover:text-white hover:bg-primary dark:text-white-light dark:bg-[#191e3a] dark:hover:bg-primary'}`}
-                                        onClick={() => setPage(p)}
-                                    >
-                                        {p}
-                                    </button>
-                                </li>
-                            ))}
+                            {(() => {
+                                const pages: (number | string)[] = [];
+                                if (totalPages <= 3) {
+                                    for (let i = 1; i <= totalPages; i++) pages.push(i);
+                                } else {
+                                    if (page <= 2) {
+                                        pages.push(1, 2, 3, 'right-ellipsis', totalPages);
+                                    } else if (page >= totalPages - 1) {
+                                        pages.push(1, 'left-ellipsis', totalPages - 2, totalPages - 1, totalPages);
+                                    } else {
+                                        pages.push(1, 'left-ellipsis', page, 'right-ellipsis', totalPages);
+                                    }
+                                }
+                                return pages.map((p, idx) => {
+                                    if (p === 'left-ellipsis' || p === 'right-ellipsis') {
+                                        const jumpPage = p === 'left-ellipsis' ? Math.max(1, page - 3) : Math.min(totalPages, page + 3);
+                                        return (
+                                            <li key={`${p}-${idx}`}>
+                                                <button
+                                                    type="button"
+                                                    title={p === 'left-ellipsis' ? "Previous 3 pages" : "Next 3 pages"}
+                                                    className="flex justify-center font-semibold px-3 py-2 rounded-full transition bg-white-light text-dark hover:text-white hover:bg-primary dark:text-white-light dark:bg-[#191e3a] dark:hover:bg-primary cursor-pointer"
+                                                    onClick={() => setPage(jumpPage)}
+                                                >
+                                                    ...
+                                                </button>
+                                            </li>
+                                        );
+                                    }
+                                    return (
+                                        <li key={p}>
+                                            <button
+                                                type="button"
+                                                className={`flex justify-center font-semibold px-3.5 py-2 rounded-full transition ${page === p ? 'bg-primary text-white shadow-[0_10px_20px_-10px_rgba(67,97,238,0.44)]' : 'bg-white-light text-dark hover:text-white hover:bg-primary dark:text-white-light dark:bg-[#191e3a] dark:hover:bg-primary'}`}
+                                                onClick={() => setPage(p as number)}
+                                            >
+                                                {p}
+                                            </button>
+                                        </li>
+                                    );
+                                });
+                            })()}
                             <li>
                                 <button
                                     type="button"

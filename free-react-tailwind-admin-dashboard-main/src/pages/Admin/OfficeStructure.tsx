@@ -14,6 +14,7 @@ import { IRootState } from '../../store';
 import Swal from 'sweetalert2';
 import { authFetch } from '../../utils/authFetch';
 
+import PageHeader from '../../components/Common/PageHeader';
 interface LayoutElement {
     id: string;
     type: 'seat' | 'door' | 'zone' | 'room' | 'label';
@@ -286,15 +287,12 @@ const OfficeStructure = () => {
     return (
         <div className="flex flex-col h-[calc(var(--app-vh)_-_90px)] space-y-4">
             {/* Header Banner */}
-            <div className="bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 rounded-xl p-4 text-white shadow-lg overflow-hidden relative">
-                <div className="relative z-10">
-                    <h2 className="text-3xl font-extrabold mb-0.5">Office Structure & Layout</h2>
-                    <p className="text-white/80 text-sm font-medium">Design and map your office floor plans. Create zones, meeting rooms, and assignable seats.</p>
-                </div>
-                <div className="absolute right-[-20px] top-[-20px] opacity-10">
-                    <IconLayout className="w-48 h-48" />
-                </div>
-            </div>
+            <PageHeader
+                icon={<IconLayout />}
+                title="Office Structure & Layout"
+                subtitle="Design and map your office floor plans. Create zones, meeting rooms, and assignable seats."
+                variant="cyan"
+            />
 
 
             {/* Header / Tabs */}

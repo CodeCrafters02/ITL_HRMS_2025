@@ -68,7 +68,7 @@ const Request = () => {
     return (
         <div className="space-y-6 animate__animated animate__fadeIn">
             {/* Header Banner */}
-            <div className="panel bg-gradient-to-r from-[#0ea5e9] via-[#2563eb] to-[#1d4ed8] text-white border-0">
+            <div className="panel bg-gradient-to-r from-[#0ea5e9] via-brand-mid to-brand-dark text-white border-0">
                 <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
                     <div className="flex items-start gap-4">
                         <div className="w-11 h-11 rounded-lg bg-white/15 flex items-center justify-center shrink-0">

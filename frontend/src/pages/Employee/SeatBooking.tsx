@@ -8,6 +8,7 @@ import flatpickr from 'flatpickr';
 import 'flatpickr/dist/flatpickr.css';
 import IconChecks from '../../components/Icon/IconChecks';
 import IconClock from '../../components/Icon/IconClock';
+import PageHeader from '../../components/Common/PageHeader';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000';
 
@@ -287,25 +288,25 @@ const SeatBooking = () => {
     const getSeatColor = (el: any) => {
         const booking = bookings.find(b => b.seat_details.seat_number === el.name);
         if (booking) {
-            return booking.booking_type === 'permanent' ? '#F472B6' : '#FB923C'; // Pink for Permanent, Orange for Temp
+            if (booking.status === 'pending') {
+                return '#FBBF24'; // Yellow for Pending
+            }
+            return booking.booking_type === 'permanent' ? '#F472B6' : '#FB923C'; // Pink for Permanent, Orange for Temp/Weekly
         }
         return '#10B981'; // Green for Available
     };
 
     return (
-        <div className="flex flex-col h-[calc(100vh-90px)] space-y-4">
-            {/* Header Banner - Employee Style */}
-            <div className="bg-gradient-to-r from-blue-700 via-blue-800 to-indigo-900 rounded-xl p-4 text-white shadow-lg overflow-hidden relative">
-                <div className="relative z-10 flex items-center justify-between">
-                    <div>
-                        <h2 className="text-3xl font-extrabold mb-0.5 tracking-tight">Reserve Your Workspace</h2>
-                        <p className="text-white/80 text-sm font-medium">Select a seat on the interactive map below to reserve it for the day or week.</p>
-                    </div>
-                </div>
-                <div className="absolute right-[-20px] top-[-20px] opacity-10">
-                    <IconChecks className="w-48 h-48" />
-                </div>
-            </div>
+        <div className="flex flex-col h-[calc(var(--app-vh)_-_90px)] space-y-4">
+            {/* Executive Page Header */}
+            <PageHeader
+                title="Reserve Your Workspace"
+                subtitle="Select an office floor and choose your desired workstation on the interactive seat plan."
+                icon={<IconChecks />}
+                badge="Hot-Desking & Workspaces"
+                variant="emerald"
+                className="mb-0"
+            />
 
             <div className="flex flex-wrap items-center justify-between gap-4 bg-white dark:bg-[#0e1726] p-4 rounded-xl shadow-sm border border-gray-100 dark:border-gray-800">
                 <div className="flex items-center gap-3 pr-4 border-r border-gray-200 dark:border-gray-700">
@@ -684,11 +685,15 @@ const SeatBooking = () => {
                                 </div>
                                 <div className="flex items-center gap-2 text-xs">
                                     <div className="w-3 h-3 rounded bg-[#FB923C]"></div>
-                                    <span>Booked (Temp)</span>
+                                    <span>Booked (Daily/Weekly)</span>
                                 </div>
                                 <div className="flex items-center gap-2 text-xs">
                                     <div className="w-3 h-3 rounded bg-[#F472B6]"></div>
-                                    <span>Permanent</span>
+                                    <span>Permanent Seat</span>
+                                </div>
+                                <div className="flex items-center gap-2 text-xs">
+                                    <div className="w-3 h-3 rounded bg-[#FBBF24]"></div>
+                                    <span>Pending Approval</span>
                                 </div>
                             </div>
                         </div>

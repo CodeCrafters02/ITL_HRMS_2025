@@ -40,6 +40,8 @@ import IconCashBanknotes from '../Icon/IconCashBanknotes';
 import IconDesktop from '../Icon/IconDesktop';
 import IconHome from '../Icon/IconHome';
 import IconArrowBackward from '../Icon/IconArrowBackward';
+import SideNav from '../Common/SideNav';
+import { buildAdminNav, getAdminNavMode, adminScopeLabel } from './adminNav';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000';
 
@@ -53,6 +55,7 @@ const Sidebar = () => {
     const dispatch = useDispatch();
     const { t } = useTranslation();
     const userRole = localStorage.getItem('user_role') || '';
+    const adminNavMode = getAdminNavMode(location.pathname);
     const [employeeCounts, setEmployeeCounts] = useState({
         myTasks: 0,
         assetRequests: 0,
@@ -257,23 +260,49 @@ const Sidebar = () => {
             <nav
                 className={`sidebar fixed min-h-screen h-full top-0 bottom-0 w-[260px] shadow-[5px_0_25px_0_rgba(94,92,154,0.1)] z-50 lg:z-[38] transition-all duration-300 ${semidark ? 'text-white-dark' : ''}`}
             >
-                <div className="bg-white dark:bg-black h-full">
-                    <div className="flex justify-between items-center px-4 py-3">
-                        <NavLink to="/" className="main-logo flex items-center shrink-0">
-                            <img className="w-14 ml-1 flex-none object-contain" src={hrmsLogo} alt="logo" />
-                            <span className="text-2xl ltr:ml-1.5 rtl:mr-1.5 font-bold align-middle lg:inline dark:text-white-light tracking-tight pb-1">HRMS</span>
-                        </NavLink>
+                <div className="bg-white dark:bg-[#060818] h-full flex flex-col justify-between">
+                    <div>
+                        <div className="flex justify-between items-center px-4 py-3.5 border-b border-slate-100 dark:border-slate-800/80 bg-slate-50/50 dark:bg-slate-900/40">
+                            <NavLink to="/" className="main-logo flex items-center gap-2.5 shrink-0 group">
+                                <div className="p-1 rounded-xl bg-white dark:bg-slate-800 shadow-xs border border-slate-200/60 dark:border-slate-700/60 flex items-center justify-center">
+                                    <img className="w-8 h-8 object-contain" src={hrmsLogo} alt="logo" />
+                                </div>
+                                <div className="flex flex-col">
+                                    <div className="flex items-center gap-1.5 leading-none">
+                                        <span className="text-lg font-black tracking-tight text-slate-900 dark:text-white">People Suite</span>
+                                    </div>
+                                    <span className="text-[10px] text-slate-400 font-medium tracking-wide mt-0.5">Enterprise Portal</span>
+                                </div>
+                            </NavLink>
 
-                        <button
-                            type="button"
-                            className="collapse-icon w-8 h-8 rounded-full flex items-center hover:bg-gray-500/10 dark:hover:bg-dark-light/10 dark:text-white-light transition duration-300 rtl:rotate-180"
-                            onClick={() => dispatch(toggleSidebar())}
-                        >
-                            <IconCaretsDown className="m-auto rotate-90" />
-                        </button>
-                    </div>
-                    <PerfectScrollbar className="h-[calc(var(--app-vh)_-_140px)] relative">
-                        <ul className="relative font-semibold space-y-0.5 p-4 py-0">
+                            <button
+                                type="button"
+                                className="collapse-icon w-8 h-8 rounded-xl flex items-center justify-center text-slate-400 hover:text-primary hover:bg-primary/10 dark:hover:bg-slate-800 dark:hover:text-primary transition-all duration-200 rtl:rotate-180"
+                                onClick={() => dispatch(toggleSidebar())}
+                                title="Toggle Sidebar"
+                            >
+                                <IconCaretsDown className="m-auto rotate-90 w-4 h-4" />
+                            </button>
+                        </div>
+                        {userRole === 'admin' ? (
+                            <div className="h-[calc(var(--app-vh)_-_185px)]">
+                                <SideNav
+                                    sections={buildAdminNav(adminNavMode, t)}
+                                    header={
+                                        <div className="flex items-center justify-between rounded-xl border border-brand/15 bg-gradient-to-r from-brand/[0.07] to-transparent px-3 py-2 dark:border-blue-400/15 dark:from-blue-500/10">
+                                            <div className="flex min-w-0 items-center gap-2">
+                                                <span className="h-2 w-2 shrink-0 animate-pulse rounded-full bg-brand dark:bg-blue-400" />
+                                                <span className="truncate text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-200">{adminScopeLabel(adminNavMode, t)}</span>
+                                            </div>
+                                            <span className="rounded-md border border-brand/20 bg-brand/10 px-1.5 py-0.5 text-[10px] font-extrabold uppercase text-brand dark:text-blue-300">Admin</span>
+                                        </div>
+                                    }
+                                    searchable={adminNavMode !== 'hub'}
+                                />
+                            </div>
+                        ) : (
+                        <PerfectScrollbar className="h-[calc(var(--app-vh)_-_185px)] relative">
+                            <ul className="relative font-semibold space-y-1 p-3 py-1">
 
                             {/* ===== MASTER SIDEBAR ===== */}
                             {userRole === 'master' && (
@@ -698,507 +727,37 @@ const Sidebar = () => {
                             })()}
 
                             {/* ===== ADMIN SIDEBAR ===== */}
-                            {userRole === 'admin' && (() => {
-                                const isHubPage = ['/admin/hub', '/admin/learning'].includes(location.pathname);
-                                const isPerfPage = location.pathname.startsWith('/admin/performance');
-                                const isLmsPage = location.pathname.startsWith('/admin/learning-management');
-                                return (
-                                <>
-                                    <h2 className="py-3 px-7 flex items-center uppercase font-extrabold bg-white-light/30 dark:bg-dark dark:bg-opacity-[0.08] -mx-4 mb-1">
-                                        <IconMinus className="w-4 h-5 flex-none hidden" />
-                                        <span>{isPerfPage ? t('Performance Management Systems') : isLmsPage ? t('Learning Management') : t('Admin Dashboard')}</span>
-                                    </h2>
-
-                                    {!isHubPage && (<>
-                                        {isLmsPage ? (
-                                            <>
-                                                <li className="menu nav-item mb-2">
-                                                    <NavLink to="/admin/dashboard" className="group !bg-primary/10 hover:!bg-primary/20">
-                                                        <div className="flex items-center text-primary font-bold">
-                                                            <IconArrowBackward className="shrink-0 w-4 h-4 !text-primary" />
-                                                            <span className="ltr:pl-3 rtl:pr-3 text-primary font-bold">{t('Back to HR Admin')}</span>
-                                                        </div>
-                                                    </NavLink>
-                                                </li>
-                                                <li className="menu nav-item">
-                                                    <NavLink to="/admin/learning-management" end className="group">
-                                                        <div className="flex items-center">
-                                                            <IconMenuCharts className="group-hover:!text-primary shrink-0" />
-                                                            <span className="ltr:pl-3 rtl:pr-3 text-black dark:text-[#506690] dark:group-hover:text-white-dark">{t('Dashboard')}</span>
-                                                        </div>
-                                                    </NavLink>
-                                                </li>
-                                                <li className="menu nav-item">
-                                                    <NavLink to="/admin/learning-management/course-catalog" className="group">
-                                                        <div className="flex items-center">
-                                                            <IconBook className="group-hover:!text-primary shrink-0" />
-                                                            <span className="ltr:pl-3 rtl:pr-3 text-black dark:text-[#506690] dark:group-hover:text-white-dark">{t('Course Catalog')}</span>
-                                                        </div>
-                                                    </NavLink>
-                                                </li>
-                                                <li className="menu nav-item">
-                                                    <NavLink to="/admin/learning-management/compliance-training" className="group">
-                                                        <div className="flex items-center">
-                                                            <IconUsersGroup className="group-hover:!text-primary shrink-0" />
-                                                            <span className="ltr:pl-3 rtl:pr-3 text-black dark:text-[#506690] dark:group-hover:text-white-dark">{t('Employee Course Activity')}</span>
-                                                        </div>
-                                                    </NavLink>
-                                                </li>
-                                                <li className="menu nav-item">
-                                                    <NavLink to="/admin/learning-management/certifications" className="group">
-                                                        <div className="flex items-center">
-                                                            <IconAward className="group-hover:!text-primary shrink-0" />
-                                                            <span className="ltr:pl-3 rtl:pr-3 text-black dark:text-[#506690] dark:group-hover:text-white-dark">{t('Certifications')}</span>
-                                                        </div>
-                                                    </NavLink>
-                                                </li>
-                                                <li className="menu nav-item">
-                                                    <NavLink to="/admin/learning-management/training-requests" className="group">
-                                                        <div className="flex items-center">
-                                                            <IconSend className="group-hover:!text-primary shrink-0" />
-                                                            <span className="ltr:pl-3 rtl:pr-3 text-black dark:text-[#506690] dark:group-hover:text-white-dark">{t('Training Requests')}</span>
-                                                        </div>
-                                                    </NavLink>
-                                                </li>
-                                                <li className="menu nav-item">
-                                                    <NavLink to="/admin/learning-management/quizzes" className="group">
-                                                        <div className="flex items-center">
-                                                            <IconListCheck className="group-hover:!text-primary shrink-0" />
-                                                            <span className="ltr:pl-3 rtl:pr-3 text-black dark:text-[#506690] dark:group-hover:text-white-dark">{t('Course Quizzes')}</span>
-                                                        </div>
-                                                    </NavLink>
-                                                </li>
-                                                <li className="menu nav-item">
-                                                    <NavLink to="/admin/learning-management/administration" className="group">
-                                                        <div className="flex items-center">
-                                                            <IconSettings className="group-hover:!text-primary shrink-0" />
-                                                            <span className="ltr:pl-3 rtl:pr-3 text-black dark:text-[#506690] dark:group-hover:text-white-dark">{t('Administration')}</span>
-                                                        </div>
-                                                    </NavLink>
-                                                </li>
-                                            </>
-                                        ) : isPerfPage ? (
-                                            <>
-                                                <li className="menu nav-item mb-2">
-                                                    <NavLink to="/admin/dashboard" className="group !bg-primary/10 hover:!bg-primary/20">
-                                                        <div className="flex items-center text-primary font-bold">
-                                                            <IconArrowBackward className="shrink-0 w-4 h-4 !text-primary" />
-                                                            <span className="ltr:pl-3 rtl:pr-3 text-primary font-bold">{t('Back to HR Admin')}</span>
-                                                        </div>
-                                                    </NavLink>
-                                                </li>
-                                                {/* Return to Performance Dashboard */}
-                                                <li className="menu nav-item">
-                                                    <NavLink to="/admin/performance" end className="group">
-                                                        <div className="flex items-center">
-                                                            <IconMenuCharts className="group-hover:!text-primary shrink-0" />
-                                                            <span className="ltr:pl-3 rtl:pr-3 text-black dark:text-[#506690] dark:group-hover:text-white-dark">{t('Performance Dashboard')}</span>
-                                                        </div>
-                                                    </NavLink>
-                                                </li>
-
-                                                {/* Group 1: USER SPECIFIC OPERATIONS */}
-                                                <li className="menu nav-item">
-                                                    <button type="button" className={`${currentMenu === 'adminUserOps' ? 'active' : ''} nav-link group w-full`} onClick={() => toggleMenu('adminUserOps')}>
-                                                        <div className="flex items-center">
-                                                            <IconMenuUsers className="group-hover:!text-primary shrink-0" />
-                                                            <span className="ltr:pl-3 rtl:pr-3 text-black dark:text-[#506690] dark:group-hover:text-white-dark">{t('User Specific Operations')}</span>
-                                                        </div>
-                                                        <div className={currentMenu !== 'adminUserOps' ? 'rtl:rotate-90 -rotate-90' : ''}>
-                                                            <IconCaretDown />
-                                                        </div>
-                                                    </button>
-                                                    <AnimateHeight duration={300} height={currentMenu === 'adminUserOps' ? 'auto' : 0}>
-                                                        <ul className="sub-menu text-gray-500">
-                                                            <li><NavLink to="/admin/performance/search-profile">{t('Search Profile')}</NavLink></li>
-                                                            <li><NavLink to="/admin/performance/appraisal">{t('Admin/HR Appraisal')}</NavLink></li>
-                                                            <li><NavLink to="/admin/performance/assign-kras">{t('Assign KRAs/Goals')}</NavLink></li>
-                                                            <li><NavLink to="/admin/performance/kra-review">{t('KRA Review')}</NavLink></li>
-                                                            <li><NavLink to="/admin/performance/track-feedback">{t('Track Feedback')}</NavLink></li>
-                                                        </ul>
-                                                    </AnimateHeight>
-                                                </li>
-
-                                                {/* Group 2: METHODS */}
-                                                <li className="menu nav-item">
-                                                    <button type="button" className={`${currentMenu === 'adminMethods' ? 'active' : ''} nav-link group w-full`} onClick={() => toggleMenu('adminMethods')}>
-                                                        <div className="flex items-center">
-                                                            <IconMenuForms className="group-hover:!text-primary shrink-0" />
-                                                            <span className="ltr:pl-3 rtl:pr-3 text-black dark:text-[#506690] dark:group-hover:text-white-dark">{t('Methods & Setup')}</span>
-                                                        </div>
-                                                        <div className={currentMenu !== 'adminMethods' ? 'rtl:rotate-90 -rotate-90' : ''}>
-                                                            <IconCaretDown />
-                                                        </div>
-                                                    </button>
-                                                    <AnimateHeight duration={300} height={currentMenu === 'adminMethods' ? 'auto' : 0}>
-                                                        <ul className="sub-menu text-gray-500">
-                                                            <li><NavLink to="/admin/performance/bulk-map">{t('Bulk Map KRAs')}</NavLink></li>
-                                                        </ul>
-                                                    </AnimateHeight>
-                                                </li>
-
-                                                {/* Group 3: APPRAISALS */}
-                                                <li className="menu nav-item">
-                                                    <button type="button" className={`${currentMenu === 'adminAppraisals' ? 'active' : ''} nav-link group w-full`} onClick={() => toggleMenu('adminAppraisals')}>
-                                                        <div className="flex items-center">
-                                                            <IconMenuCalendar className="group-hover:!text-primary shrink-0" />
-                                                            <span className="ltr:pl-3 rtl:pr-3 text-black dark:text-[#506690] dark:group-hover:text-white-dark">{t('Appraisal Cycles')}</span>
-                                                        </div>
-                                                        <div className={currentMenu !== 'adminAppraisals' ? 'rtl:rotate-90 -rotate-90' : ''}>
-                                                            <IconCaretDown />
-                                                        </div>
-                                                    </button>
-                                                    <AnimateHeight duration={300} height={currentMenu === 'adminAppraisals' ? 'auto' : 0}>
-                                                        <ul className="sub-menu text-gray-500">
-                                                            <li><NavLink to="/admin/performance/appraisal-cycles">{t('Create Cycles')}</NavLink></li>
-                                                            <li><NavLink to="/admin/performance/review-extensions">{t('Review Extensions')}</NavLink></li>
-                                                            <li><NavLink to="/admin/performance/multi-rater-selection">{t('Multi-Rater Selection')}</NavLink></li>
-                                                        </ul>
-                                                    </AnimateHeight>
-                                                </li>
-
-                                                {/* Group 6: DATA UTILITIES & MULTI-RATER LOGS */}
-                                                <li className="menu nav-item">
-                                                    <button type="button" className={`${currentMenu === 'adminDataUtils' ? 'active' : ''} nav-link group w-full`} onClick={() => toggleMenu('adminDataUtils')}>
-                                                        <div className="flex items-center">
-                                                            <IconMenuInvoice className="group-hover:!text-primary shrink-0" />
-                                                            <span className="ltr:pl-3 rtl:pr-3 text-black dark:text-[#506690] dark:group-hover:text-white-dark">{t('Utilities & Logs')}</span>
-                                                        </div>
-                                                        <div className={currentMenu !== 'adminDataUtils' ? 'rtl:rotate-90 -rotate-90' : ''}>
-                                                            <IconCaretDown />
-                                                        </div>
-                                                    </button>
-                                                    <AnimateHeight duration={300} height={currentMenu === 'adminDataUtils' ? 'auto' : 0}>
-                                                        <ul className="sub-menu text-gray-500">
-                                                            <li><NavLink to="/admin/performance/export-module">{t('Reports & Analytics')}</NavLink></li>
-                                                            <li><NavLink to="/admin/performance/multi-rater-log">{t('Multi-Rater Log')}</NavLink></li>
-                                                        </ul>
-                                                    </AnimateHeight>
-                                                </li>
-                                            </>
-                                        ) : (
-                                            <>
-
-                                    {/* ==================== 1. MAIN ==================== */}
-                                    <h2 className="py-2.5 px-7 flex items-center uppercase font-extrabold bg-white-light/30 dark:bg-dark dark:bg-opacity-[0.08] -mx-4 mb-1 text-[11px] tracking-wider text-[#506690] dark:text-[#888ea8]">
-                                        <IconMinus className="w-4 h-5 flex-none hidden" />
-                                        <span>{t('Main')}</span>
-                                    </h2>
-
-                                    <li className="menu nav-item">
-                                        <NavLink to="/admin/dashboard" className="group">
-                                            <div className="flex items-center">
-                                                <IconMenuDashboard className="group-hover:!text-primary shrink-0" />
-                                                <span className="ltr:pl-3 rtl:pr-3 text-black dark:text-[#506690] dark:group-hover:text-white-dark">{t('Dashboard')}</span>
-                                            </div>
-                                        </NavLink>
-                                    </li>
-
-                                    {/* ==================== 2. WORKFORCE ==================== */}
-                                    <h2 className="py-2.5 px-7 flex items-center uppercase font-extrabold bg-white-light/30 dark:bg-dark dark:bg-opacity-[0.08] -mx-4 mb-1 mt-3 text-[11px] tracking-wider text-[#506690] dark:text-[#888ea8]">
-                                        <IconMinus className="w-4 h-5 flex-none hidden" />
-                                        <span>{t('Workforce')}</span>
-                                    </h2>
-
-                                    <li className="menu nav-item">
-                                        <button type="button" className={`${currentMenu === 'employee-mgt' ? 'active' : ''} nav-link group w-full`} onClick={() => toggleMenu('employee-mgt')}>
-                                            <div className="flex items-center">
-                                                <IconMenuUsers className="group-hover:!text-primary shrink-0" />
-                                                <span className="ltr:pl-3 rtl:pr-3 text-black dark:text-[#506690] dark:group-hover:text-white-dark">{t('Employee Mgt')}</span>
-                                            </div>
-                                            <div className={currentMenu !== 'employee-mgt' ? 'rtl:rotate-90 -rotate-90' : ''}>
-                                                <IconCaretDown />
-                                            </div>
-                                        </button>
-                                        <AnimateHeight duration={300} height={currentMenu === 'employee-mgt' ? 'auto' : 0}>
-                                            <ul className="sub-menu text-gray-500">
-                                                <li><NavLink to="/admin/employee-register">{t('Employee Register')}</NavLink></li>
-                                                <li><NavLink to="/admin/registration-requests">{t('Registration Requests')}</NavLink></li>
-                                                <li><NavLink to="/admin/assign-shifts">{t('Assign Shifts')}</NavLink></li>
-                                                <li><NavLink to="/admin/recruitment">{t('Recruitment')}</NavLink></li>
-                                                <li><NavLink to="/admin/relieved-employees">{t('Relieved Employees')}</NavLink></li>
-                                                <li><NavLink to="/admin/letter-templates">{t('Letter Templates')}</NavLink></li>
-                                                <li><NavLink to="/admin/employee-references">{t('Employee References')}</NavLink></li>
-                                            </ul>
-                                        </AnimateHeight>
-                                    </li>
-
-                                    <li className="menu nav-item">
-                                        <button type="button" className={`${currentMenu === 'task-mgt' ? 'active' : ''} nav-link group w-full`} onClick={() => toggleMenu('task-mgt')}>
-                                            <div className="flex items-center">
-                                                <IconMenuNotes className="group-hover:!text-primary shrink-0" />
-                                                <span className="ltr:pl-3 rtl:pr-3 text-black dark:text-[#506690] dark:group-hover:text-white-dark">{t('Task Delegation')}</span>
-                                            </div>
-                                            <div className={currentMenu !== 'task-mgt' ? 'rtl:rotate-90 -rotate-90' : ''}>
-                                                <IconCaretDown />
-                                            </div>
-                                        </button>
-                                        <AnimateHeight duration={300} height={currentMenu === 'task-mgt' ? 'auto' : 0}>
-                                            <ul className="sub-menu text-gray-500">
-                                                <li><NavLink to="/admin/assign-task">{t('Assign Task')}</NavLink></li>
-                                                <li><NavLink to="/admin/reportees">{t('Reportees')}</NavLink></li>
-                                            </ul>
-                                        </AnimateHeight>
-                                    </li>
-
-                                    {/* ==================== 3. TIME & ATTENDANCE ==================== */}
-                                    <h2 className="py-2.5 px-7 flex items-center uppercase font-extrabold bg-white-light/30 dark:bg-dark dark:bg-opacity-[0.08] -mx-4 mb-1 mt-3 text-[11px] tracking-wider text-[#506690] dark:text-[#888ea8]">
-                                        <IconMinus className="w-4 h-5 flex-none hidden" />
-                                        <span>{t('Time & Attendance')}</span>
-                                    </h2>
-
-                                    <li className="menu nav-item">
-                                        <button type="button" className={`${currentMenu === 'attendance-mgt' ? 'active' : ''} nav-link group w-full`} onClick={() => toggleMenu('attendance-mgt')}>
-                                            <div className="flex items-center">
-                                                <IconMenuCharts className="group-hover:!text-primary shrink-0" />
-                                                <span className="ltr:pl-3 rtl:pr-3 text-black dark:text-[#506690] dark:group-hover:text-white-dark">{t('Attendance Mgt')}</span>
-                                            </div>
-                                            <div className={currentMenu !== 'attendance-mgt' ? 'rtl:rotate-90 -rotate-90' : ''}>
-                                                <IconCaretDown />
-                                            </div>
-                                        </button>
-                                        <AnimateHeight duration={300} height={currentMenu === 'attendance-mgt' ? 'auto' : 0}>
-                                            <ul className="sub-menu text-gray-500">
-                                                <li><NavLink to="/admin/attendance-logs">{t('Attendance Logs')}</NavLink></li>
-                                                <li><NavLink to="/admin/attendance-details">{t('Attendance Details')}</NavLink></li>
-                                            </ul>
-                                        </AnimateHeight>
-                                    </li>
-
-                                    <li className="menu nav-item">
-                                        <button type="button" className={`${currentMenu === 'leave-mgt' ? 'active' : ''} nav-link group w-full`} onClick={() => toggleMenu('leave-mgt')}>
-                                            <div className="flex items-center">
-                                                <IconMenuCalendar className="group-hover:!text-primary shrink-0" />
-                                                <span className="ltr:pl-3 rtl:pr-3 text-black dark:text-[#506690] dark:group-hover:text-white-dark">{t('Leave Mgt')}</span>
-                                            </div>
-                                            <div className={currentMenu !== 'leave-mgt' ? 'rtl:rotate-90 -rotate-90' : ''}>
-                                                <IconCaretDown />
-                                            </div>
-                                        </button>
-                                        <AnimateHeight duration={300} height={currentMenu === 'leave-mgt' ? 'auto' : 0}>
-                                            <ul className="sub-menu text-gray-500">
-                                                <li><NavLink to="/admin/leave-approval">{t('Leave Approval')}</NavLink></li>
-                                                <li><NavLink to="/admin/leave-history">{t('Leave History')}</NavLink></li>
-                                            </ul>
-                                        </AnimateHeight>
-                                    </li>
-
-                                    <li className="menu nav-item">
-                                        <NavLink to="/admin/wfh-management" className="group">
-                                            <div className="flex items-center">
-                                                <IconHome className="group-hover:!text-primary shrink-0" />
-                                                <span className="ltr:pl-3 rtl:pr-3 text-black dark:text-[#506690] dark:group-hover:text-white-dark">{t('Work From Home')}</span>
-                                            </div>
-                                        </NavLink>
-                                    </li>
-
-                                    {/* ==================== 4. PAYROLL & FINANCE ==================== */}
-                                    <h2 className="py-2.5 px-7 flex items-center uppercase font-extrabold bg-white-light/30 dark:bg-dark dark:bg-opacity-[0.08] -mx-4 mb-1 mt-3 text-[11px] tracking-wider text-[#506690] dark:text-[#888ea8]">
-                                        <IconMinus className="w-4 h-5 flex-none hidden" />
-                                        <span>{t('Payroll & Finance')}</span>
-                                    </h2>
-
-                                    <li className="menu nav-item">
-                                        <button type="button" className={`${currentMenu === 'payroll-mgt' ? 'active' : ''} nav-link group w-full`} onClick={() => toggleMenu('payroll-mgt')}>
-                                            <div className="flex items-center">
-                                                <IconMenuInvoice className="group-hover:!text-primary shrink-0" />
-                                                <span className="ltr:pl-3 rtl:pr-3 text-black dark:text-[#506690] dark:group-hover:text-white-dark">{t('Payroll Mgt')}</span>
-                                            </div>
-                                            <div className={currentMenu !== 'payroll-mgt' ? 'rtl:rotate-90 -rotate-90' : ''}>
-                                                <IconCaretDown />
-                                            </div>
-                                        </button>
-                                        <AnimateHeight duration={300} height={currentMenu === 'payroll-mgt' ? 'auto' : 0}>
-                                            <ul className="sub-menu text-gray-500">
-                                                <li><NavLink to="/admin/salary-structure">{t('Salary Structure')}</NavLink></li>
-                                                <li><NavLink to="/admin/designation-salary">{t('Salary per Designation')}</NavLink></li>
-                                                <li><NavLink to="/admin/payroll-batches">{t('Payroll Reports')}</NavLink></li>
-                                                <li><NavLink to="/admin/salary-disbursement">{t('Disbursement Statement')}</NavLink></li>
-                                                <li><NavLink to="/admin/payslip-rollout">{t('Payslip Rollout')}</NavLink></li>
-                                                <li><NavLink to="/admin/income-tax">{t('Income Tax Config')}</NavLink></li>
-                                            </ul>
-                                        </AnimateHeight>
-                                    </li>
-
-                                    <li className="menu nav-item">
-                                        <button type="button" className={`${currentMenu === 'reimbursement-admin' ? 'active' : ''} nav-link group w-full`} onClick={() => toggleMenu('reimbursement-admin')}>
-                                            <div className="flex items-center">
-                                                <IconCashBanknotes className="group-hover:!text-primary shrink-0" />
-                                                <span className="ltr:pl-3 rtl:pr-3 text-black dark:text-[#506690] dark:group-hover:text-white-dark">{t('Reimbursements')}</span>
-                                            </div>
-                                            <div className={currentMenu !== 'reimbursement-admin' ? 'rtl:rotate-90 -rotate-90' : ''}>
-                                                <IconCaretDown />
-                                            </div>
-                                        </button>
-                                        <AnimateHeight duration={300} height={currentMenu === 'reimbursement-admin' ? 'auto' : 0}>
-                                            <ul className="sub-menu text-gray-500">
-                                                <li><NavLink to="/admin/reimbursement/approvals">{t('Approvals')}</NavLink></li>
-                                                <li><NavLink to="/admin/reimbursement/categories">{t('Categories')}</NavLink></li>
-                                                <li><NavLink to="/admin/reimbursement/history">{t('History & Stats')}</NavLink></li>
-                                            </ul>
-                                        </AnimateHeight>
-                                    </li>
-
-                                    <li className="menu nav-item">
-                                        <button type="button" className={`${currentMenu === 'loan-mgt' ? 'active' : ''} nav-link group w-full`} onClick={() => toggleMenu('loan-mgt')}>
-                                            <div className="flex items-center">
-                                                <IconMenuInvoice className="group-hover:!text-primary shrink-0" />
-                                                <span className="ltr:pl-3 rtl:pr-3 text-black dark:text-[#506690] dark:group-hover:text-white-dark">{t('Loans & Advances')}</span>
-                                            </div>
-                                            <div className={currentMenu !== 'loan-mgt' ? 'rtl:rotate-90 -rotate-90' : ''}>
-                                                <IconCaretDown />
-                                            </div>
-                                        </button>
-                                        <AnimateHeight duration={300} height={currentMenu === 'loan-mgt' ? 'auto' : 0}>
-                                            <ul className="sub-menu text-gray-500">
-                                                <li><NavLink to="/admin/loan-approvals">{t('Loan Approvals')}</NavLink></li>
-                                                <li><NavLink to="/admin/loan-configuration">{t('Loan Configuration')}</NavLink></li>
-                                            </ul>
-                                        </AnimateHeight>
-                                    </li>
-
-                                    {/* ==================== 5. FACILITIES & ASSETS ==================== */}
-                                    <h2 className="py-2.5 px-7 flex items-center uppercase font-extrabold bg-white-light/30 dark:bg-dark dark:bg-opacity-[0.08] -mx-4 mb-1 mt-3 text-[11px] tracking-wider text-[#506690] dark:text-[#888ea8]">
-                                        <IconMinus className="w-4 h-5 flex-none hidden" />
-                                        <span>{t('Facilities & Assets')}</span>
-                                    </h2>
-
-                                    <li className="menu nav-item">
-                                        <button type="button" className={`${currentMenu === 'seat-booking-mgt' ? 'active' : ''} nav-link group w-full`} onClick={() => toggleMenu('seat-booking-mgt')}>
-                                            <div className="flex items-center">
-                                                <IconDesktop className="group-hover:!text-primary shrink-0" />
-                                                <span className="ltr:pl-3 rtl:pr-3 text-black dark:text-[#506690] dark:group-hover:text-white-dark">{t('Seat Booking')}</span>
-                                            </div>
-                                            <div className={currentMenu !== 'seat-booking-mgt' ? 'rtl:rotate-90 -rotate-90' : ''}>
-                                                <IconCaretDown />
-                                            </div>
-                                        </button>
-                                        <AnimateHeight duration={300} height={currentMenu === 'seat-booking-mgt' ? 'auto' : 0}>
-                                            <ul className="sub-menu text-gray-500">
-                                                <li><NavLink to="/admin/seat-approvals">{t('Seat Approvals')}</NavLink></li>
-                                                <li><NavLink to="/admin/seat-bookings-overview">{t('Bookings Overview')}</NavLink></li>
-                                            </ul>
-                                        </AnimateHeight>
-                                    </li>
-
-                                    <li className="menu nav-item">
-                                        <button type="button" className={`${currentMenu === 'conference-room-mgt' ? 'active' : ''} nav-link group w-full`} onClick={() => toggleMenu('conference-room-mgt')}>
-                                            <div className="flex items-center">
-                                                <IconMenuComponents className="group-hover:!text-primary shrink-0" />
-                                                <span className="ltr:pl-3 rtl:pr-3 text-black dark:text-[#506690] dark:group-hover:text-white-dark">{t('Conference Room')}</span>
-                                            </div>
-                                            <div className={currentMenu !== 'conference-room-mgt' ? 'rtl:rotate-90 -rotate-90' : ''}>
-                                                <IconCaretDown />
-                                            </div>
-                                        </button>
-                                        <AnimateHeight duration={300} height={currentMenu === 'conference-room-mgt' ? 'auto' : 0}>
-                                            <ul className="sub-menu text-gray-500">
-                                                <li><NavLink to="/admin/conference-room/overview">{t('Overview')}</NavLink></li>
-                                                <li><NavLink to="/admin/conference-room/approval">{t('Room Approvals')}</NavLink></li>
-                                                <li><NavLink to="/admin/conference-room/structure">{t('Room Structure')}</NavLink></li>
-                                            </ul>
-                                        </AnimateHeight>
-                                    </li>
-
-                                    <li className="menu nav-item">
-                                        <NavLink to="/admin/assets-inventory" className="group">
-                                            <div className="flex items-center">
-                                                <IconBox className="group-hover:!text-primary shrink-0" />
-                                                <span className="ltr:pl-3 rtl:pr-3 text-black dark:text-[#506690] dark:group-hover:text-white-dark">{t('Assets & Inventory')}</span>
-                                            </div>
-                                        </NavLink>
-                                    </li>
-
-                                    {/* ==================== 6. APPS & COMMUNICATION ==================== */}
-                                    <h2 className="py-2.5 px-7 flex items-center uppercase font-extrabold bg-white-light/30 dark:bg-dark dark:bg-opacity-[0.08] -mx-4 mb-1 mt-3 text-[11px] tracking-wider text-[#506690] dark:text-[#888ea8]">
-                                        <IconMinus className="w-4 h-5 flex-none hidden" />
-                                        <span>{t('Apps & Communication')}</span>
-                                    </h2>
-
-                                    <li className="menu nav-item">
-                                        <NavLink to="/admin/calendar" className="group">
-                                            <div className="flex items-center">
-                                                <IconMenuCalendar className="group-hover:!text-primary shrink-0" />
-                                                <span className="ltr:pl-3 rtl:pr-3 text-black dark:text-[#506690] dark:group-hover:text-white-dark">{t('Calendar')}</span>
-                                            </div>
-                                        </NavLink>
-                                    </li>
-
-                                    <li className="menu nav-item">
-                                        <NavLink to="/admin/chat" className="group">
-                                            <div className="flex items-center">
-                                                <IconMenuChat className="group-hover:!text-primary shrink-0" />
-                                                <span className="ltr:pl-3 rtl:pr-3 text-black dark:text-[#506690] dark:group-hover:text-white-dark">{t('Chat')}</span>
-                                            </div>
-                                        </NavLink>
-                                    </li>
-
-                                    <li className="menu nav-item">
-                                        <NavLink to="/admin/learning-corner" className="group">
-                                            <div className="flex items-center">
-                                                <IconBook className="group-hover:!text-primary shrink-0" />
-                                                <span className="ltr:pl-3 rtl:pr-3 text-black dark:text-[#506690] dark:group-hover:text-white-dark">{t('Learning Corner')}</span>
-                                            </div>
-                                        </NavLink>
-                                    </li>
-
-                                    {/* ==================== 7. SYSTEM & SETUP ==================== */}
-                                    <h2 className="py-2.5 px-7 flex items-center uppercase font-extrabold bg-white-light/30 dark:bg-dark dark:bg-opacity-[0.08] -mx-4 mb-1 mt-3 text-[11px] tracking-wider text-[#506690] dark:text-[#888ea8]">
-                                        <IconMinus className="w-4 h-5 flex-none hidden" />
-                                        <span>{t('System & Setup')}</span>
-                                    </h2>
-
-                                    <li className="menu nav-item">
-                                        <button type="button" className={`${currentMenu === 'configurator' ? 'active' : ''} nav-link group w-full`} onClick={() => toggleMenu('configurator')}>
-                                            <div className="flex items-center">
-                                                <IconMenuElements className="group-hover:!text-primary shrink-0" />
-                                                <span className="ltr:pl-3 rtl:pr-3 text-black dark:text-[#506690] dark:group-hover:text-white-dark">{t('Organization Setup')}</span>
-                                            </div>
-                                            <div className={currentMenu !== 'configurator' ? 'rtl:rotate-90 -rotate-90' : ''}>
-                                                <IconCaretDown />
-                                            </div>
-                                        </button>
-                                        <AnimateHeight duration={300} height={currentMenu === 'configurator' ? 'auto' : 0}>
-                                            <ul className="sub-menu text-gray-500">
-                                                <li><NavLink to="/admin/branch-mgt/department">{t('Department')}</NavLink></li>
-                                                <li><NavLink to="/admin/branch-mgt/designation">{t('Designation')}</NavLink></li>
-                                                <li><NavLink to="/admin/branch-mgt/level">{t('Level')}</NavLink></li>
-                                                <li><NavLink to="/admin/configuration/office-structure">{t('Office Structure')}</NavLink></li>
-                                                <li><NavLink to="/admin/configuration/shift">{t('Shift Config')}</NavLink></li>
-                                                <li><NavLink to="/admin/configuration/break-config">{t('Break Config')}</NavLink></li>
-                                                <li><NavLink to="/admin/configuration/department-wise-working-days">{t('Dept Working Days')}</NavLink></li>
-                                                <li><NavLink to="/admin/configuration/leave-count">{t('Leave Policy Count')}</NavLink></li>
-                                                <li><NavLink to="/admin/configuration/company-policies">{t('Company Policies')}</NavLink></li>
-                                                <li><NavLink to="/admin/geofencing">{t('Geofencing')}</NavLink></li>
-                                            </ul>
-                                        </AnimateHeight>
-                                    </li>
-
-                                    <li className="menu nav-item">
-                                        <NavLink to="/admin/system-settings" className="group">
-                                            <div className="flex items-center">
-                                                <IconSettings className="group-hover:!text-primary shrink-0" />
-                                                <span className="ltr:pl-3 rtl:pr-3 text-black dark:text-[#506690] dark:group-hover:text-white-dark">{t('System Settings')}</span>
-                                            </div>
-                                        </NavLink>
-                                    </li>
-
-                                            </>
-                                        )
-                                    }                                    </>)}
-                                </>
-                                );
-                            })()}
 
                         </ul>
                     </PerfectScrollbar>
-                    <div className="border-t border-white-light p-3 dark:border-white-light/10">
+                        )}
+                    </div>
+
+                    <div className="border-t border-slate-100 dark:border-slate-800/80 p-3 bg-slate-50/50 dark:bg-slate-900/50">
+                        {/* Compact Admin User Info */}
+                        <div className="mb-2 px-2.5 py-2 flex items-center justify-between rounded-xl bg-white dark:bg-slate-800/90 border border-slate-200/80 dark:border-slate-700/70 shadow-2xs">
+                            <div className="flex items-center gap-2.5 min-w-0">
+                                <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-primary to-indigo-600 text-white font-extrabold text-xs flex items-center justify-center shrink-0 shadow-xs ring-2 ring-primary/20">
+                                    {(localStorage.getItem('username') || 'A')[0].toUpperCase()}
+                                </div>
+                                <div className="min-w-0 truncate">
+                                    <p className="text-xs font-bold text-slate-800 dark:text-white truncate">
+                                        {localStorage.getItem('username') || 'Administrator'}
+                                    </p>
+                                    <p className="text-[10px] text-slate-400 truncate uppercase font-semibold">
+                                        {userRole || 'Admin'}
+                                    </p>
+                                </div>
+                            </div>
+                            <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0 ring-4 ring-emerald-500/20" title="Active"></span>
+                        </div>
+
                         <button
                             type="button"
                             onClick={async () => (await confirmSignOut()) && navigate('/auth/boxed-signin')}
-                            className="flex w-full items-center gap-3 rounded-md p-2.5 font-semibold text-danger transition hover:bg-danger/10"
+                            className="flex w-full items-center justify-center gap-2 rounded-xl p-2 font-semibold text-xs text-rose-500 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/20 transition-all border border-transparent hover:border-rose-200 dark:hover:border-rose-900/40"
                         >
-                            <IconLogout className="h-5 w-5 shrink-0 rotate-90" />
+                            <IconLogout className="h-4 w-4 shrink-0 rotate-90" />
                             <span>{t('Sign Out')}</span>
                         </button>
                     </div>

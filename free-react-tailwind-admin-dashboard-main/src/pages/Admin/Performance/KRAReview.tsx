@@ -3,6 +3,7 @@ import { useDispatch } from 'react-redux';
 import axios from 'axios';
 import { setPageTitle } from '../../../store/themeConfigSlice';
 
+import PageHeader from '../../../components/Common/PageHeader';
 const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
 const auth = () => ({ Authorization: `Bearer ${localStorage.getItem('access_token')}` });
 
@@ -140,10 +141,10 @@ const KRAReview = () => {
             )}
 
             {/* Header */}
-            <div className="bg-white dark:bg-gray-900 rounded-3xl border border-gray-100 dark:border-gray-800 shadow-sm p-6">
-                <h1 className="text-xl font-black text-gray-800 dark:text-white">KRA Review Panel</h1>
-                <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">Select an employee to review their Key Result Areas and submit performance evaluations.</p>
-            </div>
+            <PageHeader
+                title="KRA Review Panel"
+                subtitle="Select an employee to review their Key Result Areas and submit performance evaluations."
+            />
 
             <div className="grid grid-cols-1 lg:grid-cols-4 gap-5">
 

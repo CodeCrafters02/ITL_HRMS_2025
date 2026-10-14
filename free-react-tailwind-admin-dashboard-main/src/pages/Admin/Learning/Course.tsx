@@ -1,6 +1,5 @@
 import { Fragment, useEffect, useMemo, useState } from 'react';
 import { useDispatch } from 'react-redux';
-import { Dialog, Transition } from '@headlessui/react';
 import Swal from 'sweetalert2';
 import { setPageTitle } from '../../../store/themeConfigSlice';
 import { authFetch } from '../../../utils/authFetch';
@@ -10,10 +9,20 @@ import IconPencil from '../../../components/Icon/IconPencil';
 import IconTrashLines from '../../../components/Icon/IconTrashLines';
 import IconEye from '../../../components/Icon/IconEye';
 import IconX from '../../../components/Icon/IconX';
+import IconOpenBook from '../../../components/Icon/IconOpenBook';
+import PageHeader from '../../../components/Common/PageHeader';
 import CourseCategory, { CourseCategoryType } from './CourseCategory';
 import CertificateSignature from './CertificateSignature';
 import SearchableSelect from '../../Elements/SearchableSelect';
 
+import Modal from '../../../components/Common/Modal';
+import StatCard, { StatGrid } from '../../../components/Common/StatCard';
+import IconBook from '../../../components/Icon/IconBook';
+import IconCircleCheck from '../../../components/Icon/IconCircleCheck';
+import IconNotesEdit from '../../../components/Icon/IconNotesEdit';
+import IconAward from '../../../components/Icon/IconAward';
+import Button from '../../../components/Common/Button';
+import CardGrid from '../../../components/Common/CardGrid';
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000';
 const COURSES_API = `${API_BASE_URL}/employee/courses/`;
 const CONTENTS_API = `${API_BASE_URL}/employee/course-contents/`;
@@ -774,15 +783,13 @@ const Course = () => {
     return (
         <div>
             {/* Header / Banner */}
-            <div className="bg-gradient-to-r from-[#0e1726] to-[#8b5cf6] p-6 rounded-xl shadow-lg mb-6 relative overflow-hidden">
-                <div className="relative z-10">
-                    <h1 className="text-3xl font-extrabold text-white tracking-tight">Courses Catalog</h1>
-                    <p className="text-white/80 mt-1 text-sm font-medium">
-                        Manage training programs, compile lesson directories, and configure compliance parameters.
-                    </p>
-                </div>
-                <div className="absolute top-0 right-0 -mt-10 -mr-10 w-48 h-48 bg-white opacity-5 rounded-full blur-2xl"></div>
-            </div>
+            <PageHeader
+                title="Courses Catalog"
+                subtitle="Manage corporate training programs, compile lesson directories, build quizzes, and configure compliance parameters."
+                icon={<IconOpenBook />}
+                badge="Learning Management System"
+                variant="purple"
+            />
 
             {/* Tabbed Navigation */}
             <div className="flex border-b border-[#ebedf2] dark:border-[#1b2e4b] mb-6 overflow-x-auto">
@@ -825,1010 +832,708 @@ const Course = () => {
             ) : (
                 <>
                     {/* Quick Stats Grid */}
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-                        <div className="panel bg-gradient-to-br from-blue-500/10 to-indigo-500/10 border-blue-500/20 p-4 rounded-xl flex flex-col justify-between">
-                            <span className="text-xs font-bold text-blue-600 dark:text-blue-400 uppercase tracking-wide">Total Courses</span>
-                            <span className="text-3xl font-black text-blue-800 dark:text-white-light mt-1">{stats.total}</span>
-                        </div>
-                        <div className="panel bg-gradient-to-br from-emerald-500/10 to-teal-500/10 border-emerald-500/20 p-4 rounded-xl flex flex-col justify-between">
-                            <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wide">Published</span>
-                            <span className="text-3xl font-black text-emerald-800 dark:text-white-light mt-1">{stats.published}</span>
-                        </div>
-                        <div className="panel bg-gradient-to-br from-amber-500/10 to-orange-500/10 border-amber-500/20 p-4 rounded-xl flex flex-col justify-between">
-                            <span className="text-xs font-bold text-amber-600 dark:text-amber-400 uppercase tracking-wide">Drafts</span>
-                            <span className="text-3xl font-black text-amber-800 dark:text-white-light mt-1">{stats.draft}</span>
-                        </div>
-                        <div className="panel bg-gradient-to-br from-purple-500/10 to-pink-500/10 border-purple-500/20 p-4 rounded-xl flex flex-col justify-between">
-                            <span className="text-xs font-bold text-purple-600 dark:text-purple-400 uppercase tracking-wide">Compliance</span>
-                            <span className="text-3xl font-black text-purple-800 dark:text-white-light mt-1">{stats.compliance}</span>
-                        </div>
-                    </div>
+                    <StatGrid cols={4}>
+                        <StatCard label="Total Courses" value={stats.total} tone="primary" icon={<IconBook />} />
+                        <StatCard label="Published" value={stats.published} tone="success" icon={<IconCircleCheck />} />
+                        <StatCard label="Drafts" value={stats.draft} tone="warning" icon={<IconNotesEdit />} />
+                        <StatCard label="Compliance" value={stats.compliance} tone="purple" icon={<IconAward />} />
+                    </StatGrid>
 
-                    {/* Filters panel */}
-                    <div className="flex flex-wrap items-center justify-between gap-4 mb-5">
-                        <div className="flex flex-wrap items-center gap-3">
-                            <div className="relative">
-                                <input
-                                    type="text"
-                                    className="form-input pr-10 w-72"
-                                    placeholder="Search courses..."
-                                    value={search}
-                                    onChange={(e) => { setSearch(e.target.value); setPage(1); }}
-                                />
-                                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400">
-                                    <IconSearch className="w-4 h-4" />
-                                </span>
-                            </div>
+                    <CardGrid
+                        items={courses}
+                        loading={loading}
+                        page={page}
+                        pageSize={limit}
+                        totalCount={totalCount}
+                        pageSizeOptions={[6, 9, 12, 24]}
+                        onPageChange={setPage}
+                        onPageSizeChange={(sz) => { setLimit(sz); setPage(1); }}
+                        searchValue={search}
+                        onSearchChange={(v) => { setSearch(v); setPage(1); }}
+                        searchPlaceholder="Search courses..."
+                        emptyMessage="No courses registered yet"
+                        entityLabel="courses"
+                        cols={3}
+                        onRefresh={fetchCourses}
+                        actions={
+                            <Button type="button" onClick={openCreateCourseModal}><IconPlus /> Add Course</Button>
+                        }
+                        filters={
+                            <>
                             <SearchableSelect
                                 className="w-44"
-                                options={[
-                                    { value: 'all', label: 'All Categories' },
-                                    ...categories.map(c => ({ value: String(c.id), label: c.name }))
-                                ]}
+                                options={[{ value: 'all', label: 'All Categories' }, ...categories.map((c) => ({ value: String(c.id), label: c.name }))]}
                                 value={filterCategory}
                                 onChange={(val) => { setFilterCategory(String(val)); setPage(1); }}
                                 placeholder="Filter by Category"
                             />
-                            <select
-                                className="form-select w-40"
-                                value={filterDifficulty}
-                                onChange={(e) => { setFilterDifficulty(e.target.value); setPage(1); }}
-                            >
+                            <select className="form-select h-10 w-40 rounded-xl" value={filterDifficulty} onChange={(e) => { setFilterDifficulty(e.target.value); setPage(1); }}>
                                 <option value="all">All Levels</option>
                                 <option value="beginner">Beginner</option>
                                 <option value="intermediate">Intermediate</option>
                                 <option value="advanced">Advanced</option>
                             </select>
-
-                            <select
-                                className="form-select w-40"
-                                value={filterStatus}
-                                onChange={(e) => { setFilterStatus(e.target.value); setPage(1); }}
-                            >
+                            <select className="form-select h-10 w-40 rounded-xl" value={filterStatus} onChange={(e) => { setFilterStatus(e.target.value); setPage(1); }}>
                                 <option value="all">All Statuses</option>
                                 <option value="draft">Draft</option>
                                 <option value="published">Published</option>
                                 <option value="archived">Archived</option>
                             </select>
+                            </>
+                        }
+                        renderCard={(course) => (
+                                <div
+                                    className="panel border border-[#e0e6ed] dark:border-[#1b2e4b] hover:shadow-lg transition-all duration-300 rounded-xl overflow-hidden flex flex-col justify-between"
+                                >
+                                    {/* Course Thumbnail */}
+                                    <div className="relative h-44 bg-gray-150 dark:bg-gray-800 flex items-center justify-center overflow-hidden border-b border-[#e0e6ed] dark:border-[#1b2e4b]">
+                                        {course.thumbnail_url ? (
+                                            <img
+                                                src={course.thumbnail_url}
+                                                alt={course.title}
+                                                className="w-full h-full object-cover"
+                                            />
+                                        ) : (
+                                            <div className="w-full h-full bg-gradient-to-tr from-primary/10 to-purple-500/10 flex flex-col items-center justify-center p-4 text-center">
+                                                <span className="font-extrabold text-primary text-xl uppercase tracking-wide">
+                                                    {course.title.slice(0, 15)}...
+                                                </span>
+                                                <span className="text-xs text-gray-400 font-semibold mt-1">No Image Attachment</span>
+                                            </div>
+                                        )}
 
-                        </div>
-                        <button type="button" className="btn btn-primary gap-2" onClick={openCreateCourseModal}>
-                            <IconPlus /> Add Course
-                        </button>
-                    </div>
+                                        {/* Difficulty and Status tags overlay */}
+                                        <div className="absolute top-3 left-3 flex flex-col gap-1.5 z-10">
+                                            <span className={`badge capitalize text-[10px] font-bold px-2 py-0.5 rounded-full ${course.difficulty_level === 'advanced'
+                                                ? 'badge-outline-danger'
+                                                : course.difficulty_level === 'intermediate'
+                                                    ? 'badge-outline-warning'
+                                                    : 'badge-outline-success'
+                                                }`}>
+                                                {course.difficulty_level}
+                                            </span>
+                                            <span className={`badge capitalize text-[10px] font-bold px-2 py-0.5 rounded-full ${course.status === 'published'
+                                                ? 'bg-success text-white'
+                                                : course.status === 'archived'
+                                                    ? 'bg-danger text-white'
+                                                    : 'bg-amber-500 text-white'
+                                                }`}>
+                                                {course.status}
+                                            </span>
+                                        </div>
+                                    </div>
 
-                    {/* Course Cards Grid */}
-                    {loading ? (
-                        <div className="panel text-center py-10">
-                            <span className="animate-pulse text-gray-400">Loading courses catalog...</span>
-                        </div>
-                    ) : courses.length === 0 ? (
-                        <div className="panel text-center py-10 text-gray-500">No courses registered yet.</div>
-                    ) : (
-                        <div className="space-y-6">
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                                {courses.map((course) => (
-                                    <div
-                                        key={course.id}
-                                        className="panel border border-[#e0e6ed] dark:border-[#1b2e4b] hover:shadow-lg transition-all duration-300 rounded-xl overflow-hidden flex flex-col justify-between"
-                                    >
-                                        {/* Course Thumbnail */}
-                                        <div className="relative h-44 bg-gray-150 dark:bg-gray-800 flex items-center justify-center overflow-hidden border-b border-[#e0e6ed] dark:border-[#1b2e4b]">
-                                            {course.thumbnail_url ? (
-                                                <img
-                                                    src={course.thumbnail_url}
-                                                    alt={course.title}
-                                                    className="w-full h-full object-cover"
-                                                />
-                                            ) : (
-                                                <div className="w-full h-full bg-gradient-to-tr from-primary/10 to-purple-500/10 flex flex-col items-center justify-center p-4 text-center">
-                                                    <span className="font-extrabold text-primary text-xl uppercase tracking-wide">
-                                                        {course.title.slice(0, 15)}...
-                                                    </span>
-                                                    <span className="text-xs text-gray-400 font-semibold mt-1">No Image Attachment</span>
-                                                </div>
+                                    <div className="p-5 flex-1 flex flex-col justify-between">
+                                        <div>
+                                            {course.category_name && (
+                                                <span className="text-[10px] text-primary uppercase font-bold tracking-wider block mb-1">
+                                                    {course.category_name}
+                                                </span>
                                             )}
+                                            <h3 className="text-lg font-bold text-gray-800 dark:text-white-light mb-2 line-clamp-1">
+                                                {course.title}
+                                            </h3>
+                                            <p className="text-sm text-gray-500 dark:text-gray-400 line-clamp-3 mb-4 leading-relaxed">
+                                                {course.description || 'No course syllabus overview.'}
+                                            </p>
+                                        </div>
 
-                                            {/* Difficulty and Status tags overlay */}
-                                            <div className="absolute top-3 left-3 flex flex-col gap-1.5 z-10">
-                                                <span className={`badge capitalize text-[10px] font-bold px-2 py-0.5 rounded-full ${course.difficulty_level === 'advanced'
-                                                    ? 'badge-outline-danger'
-                                                    : course.difficulty_level === 'intermediate'
-                                                        ? 'badge-outline-warning'
-                                                        : 'badge-outline-success'
-                                                    }`}>
-                                                    {course.difficulty_level}
-                                                </span>
-                                                <span className={`badge capitalize text-[10px] font-bold px-2 py-0.5 rounded-full ${course.status === 'published'
-                                                    ? 'bg-success text-white'
-                                                    : course.status === 'archived'
-                                                        ? 'bg-danger text-white'
-                                                        : 'bg-amber-500 text-white'
-                                                    }`}>
-                                                    {course.status}
+                                        <div className="space-y-2 border-t border-[#f1f2f3] dark:border-[#191e3a] pt-4 mt-auto">
+                                            <div className="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
+                                                <span className="font-semibold">Duration & Language:</span>
+                                                <span>
+                                                    {course.duration_hours} hrs • {course.language}
                                                 </span>
                                             </div>
-                                        </div>
-
-                                        <div className="p-5 flex-1 flex flex-col justify-between">
-                                            <div>
-                                                {course.category_name && (
-                                                    <span className="text-[10px] text-primary uppercase font-bold tracking-wider block mb-1">
-                                                        {course.category_name}
-                                                    </span>
-                                                )}
-                                                <h3 className="text-lg font-bold text-gray-800 dark:text-white-light mb-2 line-clamp-1">
-                                                    {course.title}
-                                                </h3>
-                                                <p className="text-sm text-gray-500 dark:text-gray-400 line-clamp-3 mb-4 leading-relaxed">
-                                                    {course.description || 'No course syllabus overview.'}
-                                                </p>
+                                            <div className="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400 pb-2">
+                                                <span className="font-semibold">Total Students:</span>
+                                                <button
+                                                    type="button"
+                                                    className="badge badge-outline-primary py-0.5 px-2 rounded-full font-bold hover:bg-primary hover:text-white transition-colors"
+                                                    onClick={() => openEnrolledModal(course)}
+                                                >
+                                                    {course.enrollments_count || 0} enrolled
+                                                </button>
                                             </div>
-
-                                            <div className="space-y-2 border-t border-[#f1f2f3] dark:border-[#191e3a] pt-4 mt-auto">
-                                                <div className="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
-                                                    <span className="font-semibold">Duration & Language:</span>
-                                                    <span>
-                                                        {course.duration_hours} hrs • {course.language}
-                                                    </span>
-                                                </div>
-                                                <div className="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400 pb-2">
-                                                    <span className="font-semibold">Total Students:</span>
-                                                    <button
-                                                        type="button"
-                                                        className="badge badge-outline-primary py-0.5 px-2 rounded-full font-bold hover:bg-primary hover:text-white transition-colors"
-                                                        onClick={() => openEnrolledModal(course)}
-                                                    >
-                                                        {course.enrollments_count || 0} enrolled
-                                                    </button>
-                                                </div>
-                                                <div className="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400 pb-2">
-                                                    <span className="font-semibold">Completion Certificate:</span>
-                                                    <button
-                                                        type="button"
-                                                        className="badge badge-outline-success py-0.5 px-2 rounded-full font-bold hover:bg-success hover:text-white transition-colors"
-                                                        onClick={() => openCertModal(course)}
-                                                    >
-                                                        Preview
-                                                    </button>
-                                                </div>
-                                            </div>
-
-                                            {/* Actions */}
-                                            <div className="flex gap-2 border-t border-[#f1f2f3] dark:border-[#191e3a] pt-4 mt-2">
+                                            <div className="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400 pb-2">
+                                                <span className="font-semibold">Completion Certificate:</span>
                                                 <button
                                                     type="button"
-                                                    className="btn btn-outline-primary btn-sm flex-1 flex items-center justify-center gap-1 rounded-lg"
-                                                    onClick={() => openManageContent(course)}
+                                                    className="badge badge-outline-success py-0.5 px-2 rounded-full font-bold hover:bg-success hover:text-white transition-colors"
+                                                    onClick={() => openCertModal(course)}
                                                 >
-                                                    <IconEye className="w-4 h-4" /> Curriculum
-                                                </button>
-                                                <button
-                                                    type="button"
-                                                    className="btn btn-outline-warning btn-sm flex-1 flex items-center justify-center gap-1 rounded-lg"
-                                                    onClick={() => openReviewsPanel(course)}
-                                                >
-                                                    ★ Reviews
-                                                </button>
-                                                <button
-                                                    type="button"
-                                                    className="btn btn-outline-secondary btn-sm p-2 rounded-lg"
-                                                    onClick={() => openEditCourseModal(course)}
-                                                >
-                                                    <IconPencil className="w-4.5 h-4.5" />
-                                                </button>
-                                                <button
-                                                    type="button"
-                                                    className="btn btn-outline-danger btn-sm p-2 rounded-lg"
-                                                    onClick={() => handleDeleteCourse(course)}
-                                                >
-                                                    <IconTrashLines className="w-4.5 h-4.5" />
+                                                    Preview
                                                 </button>
                                             </div>
                                         </div>
-                                    </div>
-                                ))}
-                            </div>
 
-                            {totalCount > 0 && (
-                                <div className="flex flex-col sm:flex-row justify-between items-center gap-4 p-4 panel border border-[#e0e6ed] dark:border-[#1b2e4b] rounded-xl mt-6">
-                                    <div className="flex items-center gap-4">
-                                        <div className="text-sm text-gray-500 font-semibold dark:text-gray-400">
-                                            Showing <span className="text-primary">{((page - 1) * limit) + 1}</span> to <span className="text-primary">{Math.min(page * limit, totalCount)}</span> of <span className="text-primary">{totalCount}</span> entries
-                                        </div>
-                                        <div className="flex items-center gap-2">
-                                            <span className="text-sm font-semibold">Per page:</span>
-                                            <select
-                                                className="form-select w-20 text-sm font-semibold py-1"
-                                                value={limit}
-                                                onChange={(e) => { setLimit(Number(e.target.value)); setPage(1); }}
+                                        {/* Actions */}
+                                        <div className="flex gap-2 border-t border-[#f1f2f3] dark:border-[#191e3a] pt-4 mt-2">
+                                            <Button variant="outline" size="sm" className="flex-1"
+                                                type="button"
+
+                                                onClick={() => openManageContent(course)}
                                             >
-                                                <option value="5">5</option>
-                                                <option value="10">10</option>
-                                                <option value="20">20</option>
-                                                <option value="50">50</option>
-                                            </select>
-                                        </div>
-                                    </div>
-                                    <ul className="inline-flex items-center space-x-1 font-semibold">
-                                        <li>
+                                                <IconEye className="w-4 h-4" /> Curriculum
+                                            </Button>
                                             <button
                                                 type="button"
-                                                className="flex justify-center font-semibold px-3 py-1.5 rounded-lg transition bg-white-light text-dark hover:text-white hover:bg-primary dark:text-white-light dark:bg-[#191e3a] dark:hover:bg-primary disabled:opacity-50 disabled:cursor-not-allowed text-xs"
-                                                onClick={() => setPage(page > 1 ? page - 1 : 1)}
-                                                disabled={page === 1}
+                                                className="btn btn-outline-warning btn-sm flex-1 flex items-center justify-center gap-1 rounded-lg"
+                                                onClick={() => openReviewsPanel(course)}
                                             >
-                                                Prev
+                                                ★ Reviews
                                             </button>
-                                        </li>
-                                        {(() => {
-                                            const pages: (number | string)[] = [];
-                                            if (totalPages <= 3) {
-                                                for (let i = 1; i <= totalPages; i++) pages.push(i);
-                                            } else {
-                                                if (page <= 2) {
-                                                    pages.push(1, 2, 3, 'right-ellipsis', totalPages);
-                                                } else if (page >= totalPages - 1) {
-                                                    pages.push(1, 'left-ellipsis', totalPages - 2, totalPages - 1, totalPages);
-                                                } else {
-                                                    pages.push(1, 'left-ellipsis', page, 'right-ellipsis', totalPages);
-                                                }
-                                            }
-                                            return pages.map((p, idx) => {
-                                                if (p === 'left-ellipsis' || p === 'right-ellipsis') {
-                                                    const jumpPage = p === 'left-ellipsis' ? Math.max(1, page - 3) : Math.min(totalPages, page + 3);
-                                                    return (
-                                                        <li key={`${p}-${idx}`}>
-                                                            <button
-                                                                type="button"
-                                                                title={p === 'left-ellipsis' ? "Previous 3 pages" : "Next 3 pages"}
-                                                                className="flex justify-center font-semibold px-3 py-1.5 rounded-lg transition bg-white-light text-dark hover:text-white hover:bg-primary dark:text-white-light dark:bg-[#191e3a] dark:hover:bg-primary cursor-pointer text-xs"
-                                                                onClick={() => setPage(jumpPage)}
-                                                            >
-                                                                ...
-                                                            </button>
-                                                        </li>
-                                                    );
-                                                }
-                                                return (
-                                                    <li key={p}>
-                                                        <button
-                                                            type="button"
-                                                            className={`flex justify-center font-semibold px-3 py-1.5 rounded-lg transition text-xs ${page === p ? 'bg-primary text-white shadow-md' : 'bg-white-light text-dark hover:text-white hover:bg-primary dark:text-white-light dark:bg-[#191e3a] dark:hover:bg-primary'}`}
-                                                            onClick={() => setPage(p as number)}
-                                                        >
-                                                            {p}
-                                                        </button>
-                                                    </li>
-                                                );
-                                            });
-                                        })()}
-                                        <li>
-                                            <button
+                                            <Button variant="secondary" size="sm" className="!p-2"
                                                 type="button"
-                                                className="flex justify-center font-semibold px-3 py-1.5 rounded-lg transition bg-white-light text-dark hover:text-white hover:bg-primary dark:text-white-light dark:bg-[#191e3a] dark:hover:bg-primary disabled:opacity-50 disabled:cursor-not-allowed text-xs"
-                                                onClick={() => setPage(page < totalPages ? page + 1 : totalPages)}
-                                                disabled={page === totalPages || totalPages === 0}
+
+                                                onClick={() => openEditCourseModal(course)}
                                             >
-                                                Next
-                                            </button>
-                                        </li>
-                                    </ul>
+                                                <IconPencil className="w-4.5 h-4.5" />
+                                            </Button>
+                                            <Button variant="outline-danger" size="sm" className="!p-2"
+                                                type="button"
+
+                                                onClick={() => handleDeleteCourse(course)}
+                                            >
+                                                <IconTrashLines className="w-4.5 h-4.5" />
+                                            </Button>
+                                        </div>
+                                    </div>
                                 </div>
+
                             )}
-                        </div>
-                    )}
+                    />
                 </>
             )}
 
             {/* Course Modal (Create & Edit) */}
-            <Transition appear show={courseModalOpen} as={Fragment}>
-                <Dialog as="div" open={courseModalOpen} onClose={() => setCourseModalOpen(false)} className="relative z-50">
-                    <Transition.Child as={Fragment} enter="ease-out duration-300" enterFrom="opacity-0" enterTo="opacity-100" leave="ease-in duration-200" leaveFrom="opacity-100" leaveTo="opacity-0">
-                        <div className="fixed inset-0 bg-[black]/65 backdrop-blur-sm" />
-                    </Transition.Child>
-                    <div className="fixed inset-0 overflow-y-auto">
-                        <div className="flex min-h-full items-center justify-center px-4 py-8">
-                            <Transition.Child as={Fragment} enter="ease-out duration-300" enterFrom="opacity-0 scale-95" enterTo="opacity-100 scale-100" leave="ease-in duration-200" leaveFrom="opacity-100 scale-100" leaveTo="opacity-0 scale-95">
-                                <Dialog.Panel className="panel border-0 p-0 rounded-xl overflow-hidden w-full max-w-2xl text-black dark:text-white-dark shadow-2xl relative">
-                                    <button type="button" onClick={() => setCourseModalOpen(false)} className="absolute top-4 right-4 text-gray-400 hover:text-gray-800 dark:hover:text-gray-250 outline-none">
-                                        <IconX className="w-5 h-5" />
-                                    </button>
-                                    <div className="text-lg font-bold bg-[#fbfbfb] dark:bg-[#121c2c] py-4 px-6 border-b border-[#ebedf2] dark:border-[#1b2e4b]">
-                                        {editingCourse ? 'Edit Course Details' : 'Register New Course'}
-                                    </div>
-                                    <div className="p-6">
-                                        <form onSubmit={handleSaveCourse} className="space-y-4">
-                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                                <div>
-                                                    <label className="font-semibold mb-1 block">Course Title <span className="text-danger">*</span></label>
-                                                    <input className="form-input rounded-lg" required placeholder="e.g. React Native Fundamentals" value={courseForm.title} onChange={(e) => setCourseForm({ ...courseForm, title: e.target.value })} />
-                                                </div>
-                                                <div>
-                                                    <label className="font-semibold mb-1 block">Course Thumbnail</label>
-                                                    {!thumbnailFile && editingCourse?.thumbnail_url && (
-                                                        <div className="flex items-center gap-2 mb-2">
-                                                            <img src={editingCourse.thumbnail_url} alt="Current thumbnail" className="w-12 h-12 object-cover rounded-lg border border-white-light dark:border-[#1b2e4b]" />
-                                                            <span className="text-xs text-gray-400">Current image (choose a file to replace)</span>
-                                                        </div>
-                                                    )}
-                                                    <input type="file" accept="image/*" className="form-input rounded-lg text-xs" onChange={(e) => setThumbnailFile(e.target.files ? e.target.files[0] : null)} />
-                                                </div>
-                                            </div>
-
-                                            <div>
-                                                <label className="font-semibold mb-1 block">Overview / Syllabus Description</label>
-                                                <textarea className="form-textarea min-h-[100px] rounded-lg" placeholder="Enter course description and syllabus summary..." value={courseForm.description} onChange={(e) => setCourseForm({ ...courseForm, description: e.target.value })} />
-                                            </div>
-
-                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                                <div>
-                                                    <label className="font-semibold mb-1 block">Category</label>
-                                                    <SearchableSelect
-                                                        options={[
-                                                            { value: '', label: '-- No Category --' },
-                                                            ...categories.map(c => ({ value: String(c.id), label: c.name }))
-                                                        ]}
-                                                        value={courseForm.category}
-                                                        onChange={(val) => setCourseForm({ ...courseForm, category: String(val) })}
-                                                        placeholder="Search & select category..."
-                                                    />
-                                                </div>
-                                                <div>
-                                                    <label className="font-semibold mb-1 block">Difficulty Level</label>
-                                                    <select className="form-select rounded-lg" value={courseForm.difficulty_level} onChange={(e) => setCourseForm({ ...courseForm, difficulty_level: e.target.value as any })}>
-                                                        <option value="beginner">Beginner</option>
-                                                        <option value="intermediate">Intermediate</option>
-                                                        <option value="advanced">Advanced</option>
-                                                    </select>
-                                                </div>
-                                            </div>
-
-                                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                                <div>
-                                                    <label className="font-semibold mb-1 block">Duration (Hours)</label>
-                                                    <input type="number" step="0.1" className="form-input rounded-lg" min="0" value={courseForm.duration_hours} onChange={(e) => setCourseForm({ ...courseForm, duration_hours: Number(e.target.value) })} />
-                                                </div>
-                                                <div>
-                                                    <label className="font-semibold mb-1 block">Language</label>
-                                                    <input className="form-input rounded-lg" value={courseForm.language} onChange={(e) => setCourseForm({ ...courseForm, language: e.target.value })} />
-                                                </div>
-                                                <div>
-                                                    <label className="font-semibold mb-1 block">Status</label>
-                                                    <select className="form-select rounded-lg" value={courseForm.status} onChange={(e) => setCourseForm({ ...courseForm, status: e.target.value as any })}>
-                                                        <option value="draft">Draft</option>
-                                                        <option value="published">Published</option>
-                                                        <option value="archived">Archived</option>
-                                                    </select>
-                                                </div>
-                                            </div>
-
-                                            <div className="panel bg-[#fbfbfb] dark:bg-[#0e1726]/40 p-4 border border-[#e0e6ed] dark:border-[#1b2e4b] rounded-lg">
-                                                <div className="flex items-center gap-2">
-                                                    <input type="checkbox" id="is_compliance" className="form-checkbox" checked={courseForm.is_compliance} onChange={(e) => setCourseForm({ ...courseForm, is_compliance: e.target.checked })} />
-                                                    <label htmlFor="is_compliance" className="font-semibold cursor-pointer select-none">
-                                                        Mark as Compliance / Mandatory Training
-                                                    </label>
-                                                </div>
-                                                {courseForm.is_compliance && (
-                                                    <div className="mt-3 animate-fade-in">
-                                                        <label className="font-semibold mb-1 block text-xs">Compliance Due Days (after assignment)</label>
-                                                        <input type="number" className="form-input rounded-lg py-1.5" min="1" placeholder="e.g. 30 days" value={courseForm.compliance_due_days} onChange={(e) => setCourseForm({ ...courseForm, compliance_due_days: e.target.value })} />
-                                                    </div>
-                                                )}
-                                            </div>
-
-                                            <div className="flex justify-end gap-3 pt-4 border-t border-[#ebedf2] dark:border-[#1b2e4b] mt-6">
-                                                <button type="button" className="btn btn-outline-danger rounded-lg" onClick={() => setCourseModalOpen(false)}>Cancel</button>
-                                                <button type="submit" className="btn btn-primary rounded-lg px-5 shadow-md" disabled={saving}>
-                                                    {saving ? 'Saving...' : editingCourse ? 'Save Changes' : 'Register Course'}
-                                                </button>
-                                            </div>
-                                        </form>
-                                    </div>
-                                </Dialog.Panel>
-                            </Transition.Child>
+            <Modal open={courseModalOpen} onClose={() => setCourseModalOpen(false)} title={editingCourse ? 'Edit Course Details' : 'Register New Course'} size="2xl">
+                <form onSubmit={handleSaveCourse} className="space-y-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label className="font-semibold mb-1 block">Course Title <span className="text-danger">*</span></label>
+                            <input className="form-input rounded-lg" required placeholder="e.g. React Native Fundamentals" value={courseForm.title} onChange={(e) => setCourseForm({ ...courseForm, title: e.target.value })} />
+                        </div>
+                        <div>
+                            <label className="font-semibold mb-1 block">Course Thumbnail</label>
+                            {!thumbnailFile && editingCourse?.thumbnail_url && (
+                                <div className="flex items-center gap-2 mb-2">
+                                    <img src={editingCourse.thumbnail_url} alt="Current thumbnail" className="w-12 h-12 object-cover rounded-lg border border-white-light dark:border-[#1b2e4b]" />
+                                    <span className="text-xs text-gray-400">Current image (choose a file to replace)</span>
+                                </div>
+                            )}
+                            <input type="file" accept="image/*" className="form-input rounded-lg text-xs" onChange={(e) => setThumbnailFile(e.target.files ? e.target.files[0] : null)} />
                         </div>
                     </div>
-                </Dialog>
-            </Transition>
+
+                    <div>
+                        <label className="font-semibold mb-1 block">Overview / Syllabus Description</label>
+                        <textarea className="form-textarea min-h-[100px] rounded-lg" placeholder="Enter course description and syllabus summary..." value={courseForm.description} onChange={(e) => setCourseForm({ ...courseForm, description: e.target.value })} />
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label className="font-semibold mb-1 block">Category</label>
+                            <SearchableSelect
+                                options={[
+                                    { value: '', label: '-- No Category --' },
+                                    ...categories.map(c => ({ value: String(c.id), label: c.name }))
+                                ]}
+                                value={courseForm.category}
+                                onChange={(val) => setCourseForm({ ...courseForm, category: String(val) })}
+                                placeholder="Search & select category..."
+                            />
+                        </div>
+                        <div>
+                            <label className="font-semibold mb-1 block">Difficulty Level</label>
+                            <select className="form-select rounded-lg" value={courseForm.difficulty_level} onChange={(e) => setCourseForm({ ...courseForm, difficulty_level: e.target.value as any })}>
+                                <option value="beginner">Beginner</option>
+                                <option value="intermediate">Intermediate</option>
+                                <option value="advanced">Advanced</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div>
+                            <label className="font-semibold mb-1 block">Duration (Hours)</label>
+                            <input type="number" step="0.1" className="form-input rounded-lg" min="0" value={courseForm.duration_hours} onChange={(e) => setCourseForm({ ...courseForm, duration_hours: Number(e.target.value) })} />
+                        </div>
+                        <div>
+                            <label className="font-semibold mb-1 block">Language</label>
+                            <input className="form-input rounded-lg" value={courseForm.language} onChange={(e) => setCourseForm({ ...courseForm, language: e.target.value })} />
+                        </div>
+                        <div>
+                            <label className="font-semibold mb-1 block">Status</label>
+                            <select className="form-select rounded-lg" value={courseForm.status} onChange={(e) => setCourseForm({ ...courseForm, status: e.target.value as any })}>
+                                <option value="draft">Draft</option>
+                                <option value="published">Published</option>
+                                <option value="archived">Archived</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div className="panel bg-[#fbfbfb] dark:bg-[#0e1726]/40 p-4 border border-[#e0e6ed] dark:border-[#1b2e4b] rounded-lg">
+                        <div className="flex items-center gap-2">
+                            <input type="checkbox" id="is_compliance" className="form-checkbox" checked={courseForm.is_compliance} onChange={(e) => setCourseForm({ ...courseForm, is_compliance: e.target.checked })} />
+                            <label htmlFor="is_compliance" className="font-semibold cursor-pointer select-none">
+                                Mark as Compliance / Mandatory Training
+                            </label>
+                        </div>
+                        {courseForm.is_compliance && (
+                            <div className="mt-3 animate-fade-in">
+                                <label className="font-semibold mb-1 block text-xs">Compliance Due Days (after assignment)</label>
+                                <input type="number" className="form-input rounded-lg py-1.5" min="1" placeholder="e.g. 30 days" value={courseForm.compliance_due_days} onChange={(e) => setCourseForm({ ...courseForm, compliance_due_days: e.target.value })} />
+                            </div>
+                        )}
+                    </div>
+
+                    <div className="flex justify-end gap-3 pt-4 border-t border-[#ebedf2] dark:border-[#1b2e4b] mt-6">
+                        <Button variant="outline-danger" type="button"  onClick={() => setCourseModalOpen(false)}>Cancel</Button>
+                        <Button className="!px-5" type="submit"  disabled={saving}>
+                            {saving ? 'Saving...' : editingCourse ? 'Save Changes' : 'Register Course'}
+                        </Button>
+                    </div>
+                </form>
+
+            </Modal>
 
             {/* Course Content Manager Modal */}
-            <Transition appear show={contentModalOpen} as={Fragment}>
-                <Dialog as="div" open={contentModalOpen} onClose={() => setContentModalOpen(false)} className="relative z-50">
-                    <Transition.Child as={Fragment} enter="ease-out duration-300" enterFrom="opacity-0" enterTo="opacity-100" leave="ease-in duration-200" leaveFrom="opacity-100" leaveTo="opacity-0">
-                        <div className="fixed inset-0 bg-[black]/65 backdrop-blur-sm" />
-                    </Transition.Child>
-                    <div className="fixed inset-0 overflow-y-auto">
-                        <div className="flex min-h-full items-center justify-center px-4 py-8">
-                            <Transition.Child as={Fragment} enter="ease-out duration-300" enterFrom="opacity-0 scale-95" enterTo="opacity-100 scale-100" leave="ease-in duration-200" leaveFrom="opacity-100 scale-100" leaveTo="opacity-0 scale-95">
-                                <Dialog.Panel className="panel border-0 p-0 rounded-xl overflow-hidden w-full max-w-3xl text-black dark:text-white-dark shadow-2xl relative">
-                                    <button type="button" onClick={() => setContentModalOpen(false)} className="absolute top-4 right-4 text-gray-400 hover:text-gray-800 dark:hover:text-gray-250 outline-none">
-                                        <IconX className="w-5 h-5" />
-                                    </button>
-                                    <div className="text-lg font-bold bg-[#fbfbfb] dark:bg-[#121c2c] py-4 px-6 border-b border-[#ebedf2] dark:border-[#1b2e4b]">
-                                        Curriculum: {selectedCourse?.title}
-                                    </div>
-                                    <div className="p-6">
-                                        <div className="flex justify-between items-center mb-4">
-                                            <h4 className="font-extrabold text-sm uppercase text-gray-400 tracking-wider">Lesson Materials</h4>
-                                            <button type="button" className="btn btn-primary btn-sm gap-1" onClick={() => { resetContentForm(); setAddContentOpen(true); }}>
-                                                <IconPlus className="w-3.5 h-3.5" /> Upload Material
-                                            </button>
-                                        </div>
+            <Modal open={contentModalOpen} onClose={() => setContentModalOpen(false)} title={<>Curriculum: {selectedCourse?.title}</>} size="3xl">
+                <div className="flex justify-between items-center mb-4">
+                    <h4 className="font-extrabold text-sm uppercase text-gray-400 tracking-wider">Lesson Materials</h4>
+                    <Button size="sm" type="button"  onClick={() => { resetContentForm(); setAddContentOpen(true); }}>
+                        <IconPlus className="w-3.5 h-3.5" /> Upload Material
+                    </Button>
+                </div>
 
-                                        {contentsLoading ? (
-                                            <div className="py-10 text-center text-gray-400 animate-pulse">Loading materials...</div>
-                                        ) : courseContents.length === 0 ? (
-                                            <div className="py-10 text-center text-gray-400 italic bg-gray-50 dark:bg-[#0e1726]/20 border border-dashed rounded-lg border-gray-200 dark:border-gray-800">
-                                                No course syllabus items uploaded yet.
-                                            </div>
-                                        ) : (
-                                            <div className="table-responsive border border-[#e0e6ed] dark:border-[#1b2e4b] rounded-lg">
-                                                <table className="table-hover">
-                                                    <thead>
-                                                        <tr>
-                                                            <th>Seq</th>
-                                                            <th>Material Title</th>
-                                                            <th>Type</th>
-                                                            <th>Duration</th>
-                                                            <th>Resource</th>
-                                                            <th className="text-center">Action</th>
-                                                        </tr>
-                                                    </thead>
-                                                    <tbody>
-                                                        {[...courseContents].sort((a, b) => a.sequence - b.sequence || a.id - b.id).map((content, idx) => (
-                                                            <tr key={content.id}>
-                                                                <td>
-                                                                    <div className="flex items-center gap-1.5">
-                                                                        <span className="font-bold text-primary">{content.sequence}</span>
-                                                                        <div className="flex flex-col">
-                                                                            <button type="button" disabled={idx === 0} className="disabled:opacity-25 disabled:cursor-not-allowed text-gray-400 hover:text-primary leading-none" title="Move up" onClick={() => handleMoveContent(content, 'up')}>▲</button>
-                                                                            <button type="button" disabled={idx === courseContents.length - 1} className="disabled:opacity-25 disabled:cursor-not-allowed text-gray-400 hover:text-primary leading-none" title="Move down" onClick={() => handleMoveContent(content, 'down')}>▼</button>
-                                                                        </div>
-                                                                    </div>
-                                                                </td>
-                                                                <td className="font-semibold text-gray-800 dark:text-gray-200">{content.title}</td>
-                                                                <td>
-                                                                    <span className="badge badge-outline-primary text-[10px] font-bold uppercase rounded px-1.5 py-0.5">
-                                                                        {content.content_type}
-                                                                    </span>
-                                                                </td>
-                                                                <td>{content.duration_minutes} mins</td>
-                                                                <td>
-                                                                    {content.content_type === 'link' ? (
-                                                                        <a href={content.external_url || ''} target="_blank" rel="noreferrer" className="text-primary hover:underline text-xs truncate max-w-[150px] block">
-                                                                            {content.external_url}
-                                                                        </a>
-                                                                    ) : (
-                                                                        <a href={content.file_url || ''} target="_blank" rel="noreferrer" className="text-primary hover:underline text-xs truncate max-w-[150px] block">
-                                                                            {content.filename || 'Download'}
-                                                                        </a>
-                                                                    )}
-                                                                </td>
-                                                                <td className="text-center">
-                                                                    <button type="button" className="text-danger hover:text-danger-dark" onClick={() => handleDeleteContent(content)}>
-                                                                        <IconTrashLines className="w-4.5 h-4.5" />
-                                                                    </button>
-                                                                </td>
-                                                            </tr>
-                                                        ))}
-                                                    </tbody>
-                                                </table>
-                                            </div>
-                                        )}
-
-                                        <div className="flex justify-between items-center mb-4 mt-8 pt-6 border-t border-[#ebedf2] dark:border-[#1b2e4b]">
-                                            <div>
-                                                <h4 className="font-extrabold text-sm uppercase text-gray-400 tracking-wider">Quiz / Assessment</h4>
-                                                <p className="text-[11px] text-gray-400 mt-0.5">Unlocks for learners only after all lesson materials above are marked complete.</p>
-                                            </div>
-                                            <button type="button" className="btn btn-primary btn-sm gap-1" onClick={() => { resetQuizForm(); setAddQuizOpen(true); }}>
-                                                <IconPlus className="w-3.5 h-3.5" /> Add Quiz
-                                            </button>
-                                        </div>
-
-                                        {assessmentsLoading ? (
-                                            <div className="py-6 text-center text-gray-400 animate-pulse">Loading quizzes...</div>
-                                        ) : courseAssessments.length === 0 ? (
-                                            <div className="py-6 text-center text-gray-400 italic bg-gray-50 dark:bg-[#0e1726]/20 border border-dashed rounded-lg border-gray-200 dark:border-gray-800">
-                                                No quiz added for this course yet.
-                                            </div>
-                                        ) : (
-                                            <div className="table-responsive border border-[#e0e6ed] dark:border-[#1b2e4b] rounded-lg">
-                                                <table className="table-hover">
-                                                    <thead>
-                                                        <tr>
-                                                            <th>Quiz Title</th>
-                                                            <th>Pass %</th>
-                                                            <th>Time Limit</th>
-                                                            <th>Max Attempts</th>
-                                                            <th>Questions</th>
-                                                            <th className="text-center">Action</th>
-                                                        </tr>
-                                                    </thead>
-                                                    <tbody>
-                                                        {courseAssessments.map((a) => (
-                                                            <tr key={a.id}>
-                                                                <td className="font-semibold text-gray-800 dark:text-gray-200">{a.title}</td>
-                                                                <td>{a.pass_marks}%</td>
-                                                                <td>{a.time_limit_minutes ? `${a.time_limit_minutes} mins` : '—'}</td>
-                                                                <td>{a.max_attempts}</td>
-                                                                <td>{a.questions_count}</td>
-                                                                <td className="text-center">
-                                                                    <div className="flex items-center justify-center gap-3">
-                                                                        <button type="button" className="text-primary hover:underline text-xs font-bold" onClick={() => openQuestionsModal(a)}>
-                                                                            Questions
-                                                                        </button>
-                                                                        <button type="button" className="text-primary hover:text-primary-dark" onClick={() => openEditQuizModal(a)}>
-                                                                            <IconPencil className="w-4 h-4" />
-                                                                        </button>
-                                                                        <button type="button" className="text-danger hover:text-danger-dark" onClick={() => handleDeleteQuiz(a)}>
-                                                                            <IconTrashLines className="w-4.5 h-4.5" />
-                                                                        </button>
-                                                                    </div>
-                                                                </td>
-                                                            </tr>
-                                                        ))}
-                                                    </tbody>
-                                                </table>
-                                            </div>
-                                        )}
-
-                                        <div className="flex justify-end pt-6 border-t border-[#ebedf2] dark:border-[#1b2e4b] mt-6">
-                                            <button type="button" className="btn btn-outline-danger rounded-lg" onClick={() => setContentModalOpen(false)}>Close Manager</button>
-                                        </div>
-                                    </div>
-                                </Dialog.Panel>
-                            </Transition.Child>
-                        </div>
+                {contentsLoading ? (
+                    <div className="py-10 text-center text-gray-400 animate-pulse">Loading materials...</div>
+                ) : courseContents.length === 0 ? (
+                    <div className="py-10 text-center text-gray-400 italic bg-gray-50 dark:bg-[#0e1726]/20 border border-dashed rounded-lg border-gray-200 dark:border-gray-800">
+                        No course syllabus items uploaded yet.
                     </div>
-                </Dialog>
-            </Transition>
+                ) : (
+                    <div className="table-responsive border border-[#e0e6ed] dark:border-[#1b2e4b] rounded-lg">
+                        <table className="table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Seq</th>
+                                    <th>Material Title</th>
+                                    <th>Type</th>
+                                    <th>Duration</th>
+                                    <th>Resource</th>
+                                    <th className="text-center">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {[...courseContents].sort((a, b) => a.sequence - b.sequence || a.id - b.id).map((content, idx) => (
+                                    <tr key={content.id}>
+                                        <td>
+                                            <div className="flex items-center gap-1.5">
+                                                <span className="font-bold text-primary">{content.sequence}</span>
+                                                <div className="flex flex-col">
+                                                    <button type="button" disabled={idx === 0} className="disabled:opacity-25 disabled:cursor-not-allowed text-gray-400 hover:text-primary leading-none" title="Move up" onClick={() => handleMoveContent(content, 'up')}>▲</button>
+                                                    <button type="button" disabled={idx === courseContents.length - 1} className="disabled:opacity-25 disabled:cursor-not-allowed text-gray-400 hover:text-primary leading-none" title="Move down" onClick={() => handleMoveContent(content, 'down')}>▼</button>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td className="font-semibold text-gray-800 dark:text-gray-200">{content.title}</td>
+                                        <td>
+                                            <span className="badge badge-outline-primary text-[10px] font-bold uppercase rounded px-1.5 py-0.5">
+                                                {content.content_type}
+                                            </span>
+                                        </td>
+                                        <td>{content.duration_minutes} mins</td>
+                                        <td>
+                                            {content.content_type === 'link' ? (
+                                                <a href={content.external_url || ''} target="_blank" rel="noreferrer" className="text-primary hover:underline text-xs truncate max-w-[150px] block">
+                                                    {content.external_url}
+                                                </a>
+                                            ) : (
+                                                <a href={content.file_url || ''} target="_blank" rel="noreferrer" className="text-primary hover:underline text-xs truncate max-w-[150px] block">
+                                                    {content.filename || 'Download'}
+                                                </a>
+                                            )}
+                                        </td>
+                                        <td className="text-center">
+                                            <button type="button" className="text-danger hover:text-danger-dark" onClick={() => handleDeleteContent(content)}>
+                                                <IconTrashLines className="w-4.5 h-4.5" />
+                                            </button>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                )}
+
+                <div className="flex justify-between items-center mb-4 mt-8 pt-6 border-t border-[#ebedf2] dark:border-[#1b2e4b]">
+                    <div>
+                        <h4 className="font-extrabold text-sm uppercase text-gray-400 tracking-wider">Quiz / Assessment</h4>
+                        <p className="text-[11px] text-gray-400 mt-0.5">Unlocks for learners only after all lesson materials above are marked complete.</p>
+                    </div>
+                    <Button size="sm" type="button"  onClick={() => { resetQuizForm(); setAddQuizOpen(true); }}>
+                        <IconPlus className="w-3.5 h-3.5" /> Add Quiz
+                    </Button>
+                </div>
+
+                {assessmentsLoading ? (
+                    <div className="py-6 text-center text-gray-400 animate-pulse">Loading quizzes...</div>
+                ) : courseAssessments.length === 0 ? (
+                    <div className="py-6 text-center text-gray-400 italic bg-gray-50 dark:bg-[#0e1726]/20 border border-dashed rounded-lg border-gray-200 dark:border-gray-800">
+                        No quiz added for this course yet.
+                    </div>
+                ) : (
+                    <div className="table-responsive border border-[#e0e6ed] dark:border-[#1b2e4b] rounded-lg">
+                        <table className="table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Quiz Title</th>
+                                    <th>Pass %</th>
+                                    <th>Time Limit</th>
+                                    <th>Max Attempts</th>
+                                    <th>Questions</th>
+                                    <th className="text-center">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {courseAssessments.map((a) => (
+                                    <tr key={a.id}>
+                                        <td className="font-semibold text-gray-800 dark:text-gray-200">{a.title}</td>
+                                        <td>{a.pass_marks}%</td>
+                                        <td>{a.time_limit_minutes ? `${a.time_limit_minutes} mins` : '—'}</td>
+                                        <td>{a.max_attempts}</td>
+                                        <td>{a.questions_count}</td>
+                                        <td className="text-center">
+                                            <div className="flex items-center justify-center gap-3">
+                                                <button type="button" className="text-primary hover:underline text-xs font-bold" onClick={() => openQuestionsModal(a)}>
+                                                    Questions
+                                                </button>
+                                                <button type="button" className="text-primary hover:text-primary-dark" onClick={() => openEditQuizModal(a)}>
+                                                    <IconPencil className="w-4 h-4" />
+                                                </button>
+                                                <button type="button" className="text-danger hover:text-danger-dark" onClick={() => handleDeleteQuiz(a)}>
+                                                    <IconTrashLines className="w-4.5 h-4.5" />
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                )}
+
+                <div className="flex justify-end pt-6 border-t border-[#ebedf2] dark:border-[#1b2e4b] mt-6">
+                    <Button variant="outline-danger" type="button"  onClick={() => setContentModalOpen(false)}>Close Manager</Button>
+                </div>
+
+            </Modal>
 
             {/* Upload Material Modal */}
-            <Transition appear show={addContentOpen} as={Fragment}>
-                <Dialog as="div" open={addContentOpen} onClose={() => setAddContentOpen(false)} className="relative z-[60]">
-                    <Transition.Child as={Fragment} enter="ease-out duration-300" enterFrom="opacity-0" enterTo="opacity-100" leave="ease-in duration-200" leaveFrom="opacity-100" leaveTo="opacity-0">
-                        <div className="fixed inset-0 bg-[black]/65 backdrop-blur-sm" />
-                    </Transition.Child>
-                    <div className="fixed inset-0 overflow-y-auto">
-                        <div className="flex min-h-full items-center justify-center px-4 py-8">
-                            <Transition.Child as={Fragment} enter="ease-out duration-300" enterFrom="opacity-0 scale-95" enterTo="opacity-100 scale-100" leave="ease-in duration-200" leaveFrom="opacity-100 scale-100" leaveTo="opacity-0 scale-95">
-                                <Dialog.Panel className="panel border-0 p-0 rounded-xl overflow-hidden w-full max-w-lg text-black dark:text-white-dark shadow-2xl relative">
-                                    <button type="button" onClick={() => setAddContentOpen(false)} className="absolute top-4 right-4 text-gray-400 hover:text-gray-800 dark:hover:text-gray-250 outline-none">
-                                        <IconX className="w-5 h-5" />
-                                    </button>
-                                    <div className="text-lg font-bold bg-[#fbfbfb] dark:bg-[#121c2c] py-4 px-6 border-b border-[#ebedf2] dark:border-[#1b2e4b]">
-                                        Upload Lesson Material
-                                    </div>
-                                    <div className="p-6">
-                                        <form onSubmit={handleAddContent} className="space-y-4">
-                                            <div>
-                                                <label className="font-semibold mb-1 block">Material Title <span className="text-danger">*</span></label>
-                                                <input className="form-input rounded-lg" required placeholder="e.g. Introduction & Basic Syntax" value={contentForm.title} onChange={(e) => setContentForm({ ...contentForm, title: e.target.value })} />
-                                            </div>
+            <Modal open={addContentOpen} onClose={() => setAddContentOpen(false)} title="Upload Lesson Material" size="lg">
+                <form onSubmit={handleAddContent} className="space-y-4">
+                    <div>
+                        <label className="font-semibold mb-1 block">Material Title <span className="text-danger">*</span></label>
+                        <input className="form-input rounded-lg" required placeholder="e.g. Introduction & Basic Syntax" value={contentForm.title} onChange={(e) => setContentForm({ ...contentForm, title: e.target.value })} />
+                    </div>
 
-                                            <div className="grid grid-cols-2 gap-4">
-                                                <div>
-                                                    <label className="font-semibold mb-1 block">Content Type</label>
-                                                    <select className="form-select rounded-lg" value={contentForm.content_type} onChange={(e) => setContentForm({ ...contentForm, content_type: e.target.value as any })}>
-                                                        <option value="video">Video Lecture</option>
-                                                        <option value="pdf">PDF Document</option>
-                                                        <option value="ppt">PowerPoint (PPT)</option>
-                                                        <option value="audio">Audio Resource</option>
-                                                        <option value="scorm">SCORM Package</option>
-                                                        <option value="link">External URL Link</option>
-                                                    </select>
-                                                </div>
-                                                <div>
-                                                    <label className="font-semibold mb-1 block">Sequence Order</label>
-                                                    <input type="number" className="form-input rounded-lg" min="1" value={contentForm.sequence} onChange={(e) => setContentForm({ ...contentForm, sequence: Number(e.target.value) })} />
-                                                </div>
-                                            </div>
-
-                                            {contentForm.content_type === 'link' ? (
-                                                <div>
-                                                    <label className="font-semibold mb-1 block">External URL Link <span className="text-danger">*</span></label>
-                                                    <input type="url" className="form-input rounded-lg" required placeholder="e.g. https://www.youtube.com/watch?..." value={contentForm.external_url} onChange={(e) => setContentForm({ ...contentForm, external_url: e.target.value })} />
-                                                </div>
-                                            ) : (
-                                                <div>
-                                                    <label className="font-semibold mb-1 block">Upload File <span className="text-danger">*</span></label>
-                                                    <input type="file" className="form-input text-xs rounded-lg" required onChange={(e) => setContentFile(e.target.files ? e.target.files[0] : null)} />
-                                                </div>
-                                            )}
-
-                                            <div>
-                                                <label className="font-semibold mb-1 block">Est. Duration (Minutes)</label>
-                                                <input type="number" className="form-input rounded-lg" min="0" value={contentForm.duration_minutes} onChange={(e) => setContentForm({ ...contentForm, duration_minutes: Number(e.target.value) })} />
-                                            </div>
-
-                                            <div className="flex justify-end gap-3 pt-4 border-t border-[#ebedf2] dark:border-[#1b2e4b] mt-6">
-                                                <button type="button" className="btn btn-outline-danger rounded-lg" onClick={() => setAddContentOpen(false)}>Cancel</button>
-                                                <button type="submit" className="btn btn-primary rounded-lg px-5 shadow-md" disabled={saving}>
-                                                    {saving ? 'Uploading...' : 'Upload Material'}
-                                                </button>
-                                            </div>
-                                        </form>
-                                    </div>
-                                </Dialog.Panel>
-                            </Transition.Child>
+                    <div className="grid grid-cols-2 gap-4">
+                        <div>
+                            <label className="font-semibold mb-1 block">Content Type</label>
+                            <select className="form-select rounded-lg" value={contentForm.content_type} onChange={(e) => setContentForm({ ...contentForm, content_type: e.target.value as any })}>
+                                <option value="video">Video Lecture</option>
+                                <option value="pdf">PDF Document</option>
+                                <option value="ppt">PowerPoint (PPT)</option>
+                                <option value="audio">Audio Resource</option>
+                                <option value="scorm">SCORM Package</option>
+                                <option value="link">External URL Link</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label className="font-semibold mb-1 block">Sequence Order</label>
+                            <input type="number" className="form-input rounded-lg" min="1" value={contentForm.sequence} onChange={(e) => setContentForm({ ...contentForm, sequence: Number(e.target.value) })} />
                         </div>
                     </div>
-                </Dialog>
-            </Transition>
+
+                    {contentForm.content_type === 'link' ? (
+                        <div>
+                            <label className="font-semibold mb-1 block">External URL Link <span className="text-danger">*</span></label>
+                            <input type="url" className="form-input rounded-lg" required placeholder="e.g. https://www.youtube.com/watch?..." value={contentForm.external_url} onChange={(e) => setContentForm({ ...contentForm, external_url: e.target.value })} />
+                        </div>
+                    ) : (
+                        <div>
+                            <label className="font-semibold mb-1 block">Upload File <span className="text-danger">*</span></label>
+                            <input type="file" className="form-input text-xs rounded-lg" required onChange={(e) => setContentFile(e.target.files ? e.target.files[0] : null)} />
+                        </div>
+                    )}
+
+                    <div>
+                        <label className="font-semibold mb-1 block">Est. Duration (Minutes)</label>
+                        <input type="number" className="form-input rounded-lg" min="0" value={contentForm.duration_minutes} onChange={(e) => setContentForm({ ...contentForm, duration_minutes: Number(e.target.value) })} />
+                    </div>
+
+                    <div className="flex justify-end gap-3 pt-4 border-t border-[#ebedf2] dark:border-[#1b2e4b] mt-6">
+                        <Button variant="outline-danger" type="button"  onClick={() => setAddContentOpen(false)}>Cancel</Button>
+                        <Button className="!px-5" type="submit"  disabled={saving}>
+                            {saving ? 'Uploading...' : 'Upload Material'}
+                        </Button>
+                    </div>
+                </form>
+
+            </Modal>
 
             {/* Add Quiz Modal */}
-            <Transition appear show={addQuizOpen} as={Fragment}>
-                <Dialog as="div" open={addQuizOpen} onClose={() => setAddQuizOpen(false)} className="relative z-[60]">
-                    <Transition.Child as={Fragment} enter="ease-out duration-300" enterFrom="opacity-0" enterTo="opacity-100" leave="ease-in duration-200" leaveFrom="opacity-100" leaveTo="opacity-0">
-                        <div className="fixed inset-0 bg-[black]/65 backdrop-blur-sm" />
-                    </Transition.Child>
-                    <div className="fixed inset-0 overflow-y-auto">
-                        <div className="flex min-h-full items-center justify-center px-4 py-8">
-                            <Transition.Child as={Fragment} enter="ease-out duration-300" enterFrom="opacity-0 scale-95" enterTo="opacity-100 scale-100" leave="ease-in duration-200" leaveFrom="opacity-100 scale-100" leaveTo="opacity-0 scale-95">
-                                <Dialog.Panel className="panel border-0 p-0 rounded-xl overflow-hidden w-full max-w-lg text-black dark:text-white-dark shadow-2xl relative">
-                                    <button type="button" onClick={() => setAddQuizOpen(false)} className="absolute top-4 right-4 text-gray-400 hover:text-gray-800 dark:hover:text-gray-250 outline-none">
-                                        <IconX className="w-5 h-5" />
-                                    </button>
-                                    <div className="text-lg font-bold bg-[#fbfbfb] dark:bg-[#121c2c] py-4 px-6 border-b border-[#ebedf2] dark:border-[#1b2e4b]">
-                                        {editingQuiz ? 'Edit Quiz' : 'Add Quiz'}
-                                    </div>
-                                    <div className="p-6">
-                                        <form onSubmit={handleSaveQuiz} className="space-y-4">
-                                            <div>
-                                                <label className="font-semibold mb-1 block">Quiz Title <span className="text-danger">*</span></label>
-                                                <input className="form-input rounded-lg" required placeholder="e.g. Module 1 Assessment" value={quizForm.title} onChange={(e) => setQuizForm({ ...quizForm, title: e.target.value })} />
-                                            </div>
+            <Modal open={addQuizOpen} onClose={() => setAddQuizOpen(false)} title={editingQuiz ? 'Edit Quiz' : 'Add Quiz'} size="lg">
+                <form onSubmit={handleSaveQuiz} className="space-y-4">
+                    <div>
+                        <label className="font-semibold mb-1 block">Quiz Title <span className="text-danger">*</span></label>
+                        <input className="form-input rounded-lg" required placeholder="e.g. Module 1 Assessment" value={quizForm.title} onChange={(e) => setQuizForm({ ...quizForm, title: e.target.value })} />
+                    </div>
 
-                                            <div className="grid grid-cols-2 gap-4">
-                                                <div>
-                                                    <label className="font-semibold mb-1 block">Pass Marks (%)</label>
-                                                    <input type="number" className="form-input rounded-lg" min="0" max="100" value={quizForm.pass_marks} onChange={(e) => setQuizForm({ ...quizForm, pass_marks: Number(e.target.value) })} />
-                                                </div>
-                                                <div>
-                                                    <label className="font-semibold mb-1 block">Time Limit (Minutes)</label>
-                                                    <input type="number" className="form-input rounded-lg" min="0" placeholder="No limit" value={quizForm.time_limit_minutes} onChange={(e) => setQuizForm({ ...quizForm, time_limit_minutes: e.target.value })} />
-                                                </div>
-                                            </div>
-
-                                            <div>
-                                                <label className="font-semibold mb-1 block">Max Attempts</label>
-                                                <input type="number" className="form-input rounded-lg" min="1" value={quizForm.max_attempts} onChange={(e) => setQuizForm({ ...quizForm, max_attempts: Number(e.target.value) })} />
-                                            </div>
-
-                                            <div className="flex justify-end gap-3 pt-4 border-t border-[#ebedf2] dark:border-[#1b2e4b] mt-6">
-                                                <button type="button" className="btn btn-outline-danger rounded-lg" onClick={() => setAddQuizOpen(false)}>Cancel</button>
-                                                <button type="submit" className="btn btn-primary rounded-lg px-5 shadow-md" disabled={saving}>
-                                                    {saving ? 'Saving...' : editingQuiz ? 'Update Quiz' : 'Add Quiz'}
-                                                </button>
-                                            </div>
-                                        </form>
-                                    </div>
-                                </Dialog.Panel>
-                            </Transition.Child>
+                    <div className="grid grid-cols-2 gap-4">
+                        <div>
+                            <label className="font-semibold mb-1 block">Pass Marks (%)</label>
+                            <input type="number" className="form-input rounded-lg" min="0" max="100" value={quizForm.pass_marks} onChange={(e) => setQuizForm({ ...quizForm, pass_marks: Number(e.target.value) })} />
+                        </div>
+                        <div>
+                            <label className="font-semibold mb-1 block">Time Limit (Minutes)</label>
+                            <input type="number" className="form-input rounded-lg" min="0" placeholder="No limit" value={quizForm.time_limit_minutes} onChange={(e) => setQuizForm({ ...quizForm, time_limit_minutes: e.target.value })} />
                         </div>
                     </div>
-                </Dialog>
-            </Transition>
+
+                    <div>
+                        <label className="font-semibold mb-1 block">Max Attempts</label>
+                        <input type="number" className="form-input rounded-lg" min="1" value={quizForm.max_attempts} onChange={(e) => setQuizForm({ ...quizForm, max_attempts: Number(e.target.value) })} />
+                    </div>
+
+                    <div className="flex justify-end gap-3 pt-4 border-t border-[#ebedf2] dark:border-[#1b2e4b] mt-6">
+                        <Button variant="outline-danger" type="button"  onClick={() => setAddQuizOpen(false)}>Cancel</Button>
+                        <Button className="!px-5" type="submit"  disabled={saving}>
+                            {saving ? 'Saving...' : editingQuiz ? 'Update Quiz' : 'Add Quiz'}
+                        </Button>
+                    </div>
+                </form>
+
+            </Modal>
 
             {/* Manage Questions Modal */}
-            <Transition appear show={questionsModalOpen} as={Fragment}>
-                <Dialog as="div" open={questionsModalOpen} onClose={() => setQuestionsModalOpen(false)} className="relative z-[60]">
-                    <Transition.Child as={Fragment} enter="ease-out duration-300" enterFrom="opacity-0" enterTo="opacity-100" leave="ease-in duration-200" leaveFrom="opacity-100" leaveTo="opacity-0">
-                        <div className="fixed inset-0 bg-[black]/65 backdrop-blur-sm" />
-                    </Transition.Child>
-                    <div className="fixed inset-0 overflow-y-auto">
-                        <div className="flex min-h-full items-center justify-center px-4 py-8">
-                            <Transition.Child as={Fragment} enter="ease-out duration-300" enterFrom="opacity-0 scale-95" enterTo="opacity-100 scale-100" leave="ease-in duration-200" leaveFrom="opacity-100 scale-100" leaveTo="opacity-0 scale-95">
-                                <Dialog.Panel className="panel border-0 p-0 rounded-xl overflow-hidden w-full max-w-2xl text-black dark:text-white-dark shadow-2xl relative">
-                                    <button type="button" onClick={() => setQuestionsModalOpen(false)} className="absolute top-4 right-4 text-gray-400 hover:text-gray-800 dark:hover:text-gray-250 outline-none">
-                                        <IconX className="w-5 h-5" />
-                                    </button>
-                                    <div className="text-lg font-bold bg-[#fbfbfb] dark:bg-[#121c2c] py-4 px-6 border-b border-[#ebedf2] dark:border-[#1b2e4b]">
-                                        Questions: {selectedAssessment?.title}
-                                    </div>
-                                    <div className="p-6">
-                                        <div className="flex justify-between items-center mb-4">
-                                            <h4 className="font-extrabold text-sm uppercase text-gray-400 tracking-wider">Question Bank</h4>
-                                            <button type="button" className="btn btn-primary btn-sm gap-1" onClick={() => { resetQuestionForm(); setAddQuestionOpen(true); }}>
-                                                <IconPlus className="w-3.5 h-3.5" /> Add Question
-                                            </button>
-                                        </div>
+            <Modal open={questionsModalOpen} onClose={() => setQuestionsModalOpen(false)} title={<>Questions: {selectedAssessment?.title}</>} size="2xl">
+                <div className="flex justify-between items-center mb-4">
+                    <h4 className="font-extrabold text-sm uppercase text-gray-400 tracking-wider">Question Bank</h4>
+                    <Button size="sm" type="button"  onClick={() => { resetQuestionForm(); setAddQuestionOpen(true); }}>
+                        <IconPlus className="w-3.5 h-3.5" /> Add Question
+                    </Button>
+                </div>
 
-                                        {questionsLoading ? (
-                                            <div className="py-10 text-center text-gray-400 animate-pulse">Loading questions...</div>
-                                        ) : questions.length === 0 ? (
-                                            <div className="py-10 text-center text-gray-400 italic bg-gray-50 dark:bg-[#0e1726]/20 border border-dashed rounded-lg border-gray-200 dark:border-gray-800">
-                                                No questions added yet.
-                                            </div>
-                                        ) : (
-                                            <div className="space-y-3 max-h-[400px] overflow-y-auto pr-1">
-                                                {questions.map((q, idx) => (
-                                                    <div key={q.id} className="p-3 border border-[#e0e6ed] dark:border-[#1b2e4b] rounded-lg">
-                                                        <div className="flex justify-between items-start gap-3">
-                                                            <div className="text-sm font-semibold text-gray-800 dark:text-gray-200">
-                                                                {idx + 1}. {q.question_text}
-                                                                <span className="ml-2 badge badge-outline-primary text-[10px] font-bold uppercase rounded px-1.5 py-0.5">{q.question_type}</span>
-                                                                <span className="ml-1 text-[10px] text-gray-400">({q.marks} marks)</span>
-                                                            </div>
-                                                            <div className="flex items-center gap-3 shrink-0">
-                                                                <button type="button" className="text-primary hover:text-primary-dark" onClick={() => { setEditingQuestion(q); setQuestionForm({ question_text: q.question_text, question_type: q.question_type, optionsRaw: q.options ? q.options.join(', ') : '', correct_answer: q.correct_answer, marks: q.marks }); setAddQuestionOpen(true); }}>
-                                                                    <IconPencil className="w-4 h-4" />
-                                                                </button>
-                                                                <button type="button" className="text-danger hover:text-danger-dark" onClick={() => handleDeleteQuestion(q)}>
-                                                                    <IconTrashLines className="w-4.5 h-4.5" />
-                                                                </button>
-                                                            </div>
-                                                        </div>
-                                                        {q.options && q.options.length > 0 && (
-                                                            <div className="text-xs text-gray-500 mt-1.5">Options: {q.options.join(' | ')}</div>
-                                                        )}
-                                                        <div className="text-xs font-bold text-success mt-1.5">Correct: {q.correct_answer}</div>
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        )}
-
-                                        <div className="flex justify-end pt-6 border-t border-[#ebedf2] dark:border-[#1b2e4b] mt-6">
-                                            <button type="button" className="btn btn-outline-danger rounded-lg" onClick={() => setQuestionsModalOpen(false)}>Close</button>
-                                        </div>
-                                    </div>
-                                </Dialog.Panel>
-                            </Transition.Child>
-                        </div>
+                {questionsLoading ? (
+                    <div className="py-10 text-center text-gray-400 animate-pulse">Loading questions...</div>
+                ) : questions.length === 0 ? (
+                    <div className="py-10 text-center text-gray-400 italic bg-gray-50 dark:bg-[#0e1726]/20 border border-dashed rounded-lg border-gray-200 dark:border-gray-800">
+                        No questions added yet.
                     </div>
-                </Dialog>
-            </Transition>
+                ) : (
+                    <div className="space-y-3 max-h-[400px] overflow-y-auto pr-1">
+                        {questions.map((q, idx) => (
+                            <div key={q.id} className="p-3 border border-[#e0e6ed] dark:border-[#1b2e4b] rounded-lg">
+                                <div className="flex justify-between items-start gap-3">
+                                    <div className="text-sm font-semibold text-gray-800 dark:text-gray-200">
+                                        {idx + 1}. {q.question_text}
+                                        <span className="ml-2 badge badge-outline-primary text-[10px] font-bold uppercase rounded px-1.5 py-0.5">{q.question_type}</span>
+                                        <span className="ml-1 text-[10px] text-gray-400">({q.marks} marks)</span>
+                                    </div>
+                                    <div className="flex items-center gap-3 shrink-0">
+                                        <button type="button" className="text-primary hover:text-primary-dark" onClick={() => { setEditingQuestion(q); setQuestionForm({ question_text: q.question_text, question_type: q.question_type, optionsRaw: q.options ? q.options.join(', ') : '', correct_answer: q.correct_answer, marks: q.marks }); setAddQuestionOpen(true); }}>
+                                            <IconPencil className="w-4 h-4" />
+                                        </button>
+                                        <button type="button" className="text-danger hover:text-danger-dark" onClick={() => handleDeleteQuestion(q)}>
+                                            <IconTrashLines className="w-4.5 h-4.5" />
+                                        </button>
+                                    </div>
+                                </div>
+                                {q.options && q.options.length > 0 && (
+                                    <div className="text-xs text-gray-500 mt-1.5">Options: {q.options.join(' | ')}</div>
+                                )}
+                                <div className="text-xs font-bold text-success mt-1.5">Correct: {q.correct_answer}</div>
+                            </div>
+                        ))}
+                    </div>
+                )}
+
+                <div className="flex justify-end pt-6 border-t border-[#ebedf2] dark:border-[#1b2e4b] mt-6">
+                    <Button variant="outline-danger" type="button"  onClick={() => setQuestionsModalOpen(false)}>Close</Button>
+                </div>
+
+            </Modal>
 
             {/* Add/Edit Question Modal */}
-            <Transition appear show={addQuestionOpen} as={Fragment}>
-                <Dialog as="div" open={addQuestionOpen} onClose={() => setAddQuestionOpen(false)} className="relative z-[70]">
-                    <Transition.Child as={Fragment} enter="ease-out duration-300" enterFrom="opacity-0" enterTo="opacity-100" leave="ease-in duration-200" leaveFrom="opacity-100" leaveTo="opacity-0">
-                        <div className="fixed inset-0 bg-[black]/65 backdrop-blur-sm" />
-                    </Transition.Child>
-                    <div className="fixed inset-0 overflow-y-auto">
-                        <div className="flex min-h-full items-center justify-center px-4 py-8">
-                            <Transition.Child as={Fragment} enter="ease-out duration-300" enterFrom="opacity-0 scale-95" enterTo="opacity-100 scale-100" leave="ease-in duration-200" leaveFrom="opacity-100 scale-100" leaveTo="opacity-0 scale-95">
-                                <Dialog.Panel className="panel border-0 p-0 rounded-xl overflow-hidden w-full max-w-lg text-black dark:text-white-dark shadow-2xl relative">
-                                    <button type="button" onClick={() => setAddQuestionOpen(false)} className="absolute top-4 right-4 text-gray-400 hover:text-gray-800 dark:hover:text-gray-250 outline-none">
-                                        <IconX className="w-5 h-5" />
-                                    </button>
-                                    <div className="text-lg font-bold bg-[#fbfbfb] dark:bg-[#121c2c] py-4 px-6 border-b border-[#ebedf2] dark:border-[#1b2e4b]">
-                                        {editingQuestion ? 'Edit Question' : 'Add Question'}
-                                    </div>
-                                    <div className="p-6">
-                                        <form onSubmit={handleSaveQuestion} className="space-y-4">
-                                            <div>
-                                                <label className="font-semibold mb-1 block">Question Text <span className="text-danger">*</span></label>
-                                                <textarea className="form-textarea rounded-lg" required value={questionForm.question_text} onChange={(e) => setQuestionForm({ ...questionForm, question_text: e.target.value })} />
-                                            </div>
+            <Modal open={addQuestionOpen} onClose={() => setAddQuestionOpen(false)} title={editingQuestion ? 'Edit Question' : 'Add Question'} size="lg">
+                <form onSubmit={handleSaveQuestion} className="space-y-4">
+                    <div>
+                        <label className="font-semibold mb-1 block">Question Text <span className="text-danger">*</span></label>
+                        <textarea className="form-textarea rounded-lg" required value={questionForm.question_text} onChange={(e) => setQuestionForm({ ...questionForm, question_text: e.target.value })} />
+                    </div>
 
-                                            <div className="grid grid-cols-2 gap-4">
-                                                <div>
-                                                    <label className="font-semibold mb-1 block">Question Type</label>
-                                                    <select className="form-select rounded-lg" value={questionForm.question_type} onChange={(e) => setQuestionForm({ ...questionForm, question_type: e.target.value as any })}>
-                                                        <option value="mcq">Multiple Choice</option>
-                                                        <option value="true_false">True / False</option>
-                                                        <option value="short_answer">Short Answer</option>
-                                                        <option value="coding">Coding</option>
-                                                    </select>
-                                                </div>
-                                                <div>
-                                                    <label className="font-semibold mb-1 block">Marks</label>
-                                                    <input type="number" className="form-input rounded-lg" min="1" value={questionForm.marks} onChange={(e) => setQuestionForm({ ...questionForm, marks: Number(e.target.value) })} />
-                                                </div>
-                                            </div>
-
-                                            {questionForm.question_type === 'mcq' && (
-                                                <div>
-                                                    <label className="font-semibold mb-1 block">Options (comma-separated)</label>
-                                                    <input className="form-input rounded-lg" placeholder="Option A, Option B, Option C, Option D" value={questionForm.optionsRaw} onChange={(e) => setQuestionForm({ ...questionForm, optionsRaw: e.target.value })} />
-                                                </div>
-                                            )}
-
-                                            <div>
-                                                <label className="font-semibold mb-1 block">Correct Answer <span className="text-danger">*</span></label>
-                                                <input className="form-input rounded-lg" required placeholder={questionForm.question_type === 'true_false' ? 'True or False' : 'e.g. Option A'} value={questionForm.correct_answer} onChange={(e) => setQuestionForm({ ...questionForm, correct_answer: e.target.value })} />
-                                            </div>
-
-                                            <div className="flex justify-end gap-3 pt-4 border-t border-[#ebedf2] dark:border-[#1b2e4b] mt-6">
-                                                <button type="button" className="btn btn-outline-danger rounded-lg" onClick={() => setAddQuestionOpen(false)}>Cancel</button>
-                                                <button type="submit" className="btn btn-primary rounded-lg px-5 shadow-md" disabled={saving}>
-                                                    {saving ? 'Saving...' : 'Save Question'}
-                                                </button>
-                                            </div>
-                                        </form>
-                                    </div>
-                                </Dialog.Panel>
-                            </Transition.Child>
+                    <div className="grid grid-cols-2 gap-4">
+                        <div>
+                            <label className="font-semibold mb-1 block">Question Type</label>
+                            <select className="form-select rounded-lg" value={questionForm.question_type} onChange={(e) => setQuestionForm({ ...questionForm, question_type: e.target.value as any })}>
+                                <option value="mcq">Multiple Choice</option>
+                                <option value="true_false">True / False</option>
+                                <option value="short_answer">Short Answer</option>
+                                <option value="coding">Coding</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label className="font-semibold mb-1 block">Marks</label>
+                            <input type="number" className="form-input rounded-lg" min="1" value={questionForm.marks} onChange={(e) => setQuestionForm({ ...questionForm, marks: Number(e.target.value) })} />
                         </div>
                     </div>
-                </Dialog>
-            </Transition>
+
+                    {questionForm.question_type === 'mcq' && (
+                        <div>
+                            <label className="font-semibold mb-1 block">Options (comma-separated)</label>
+                            <input className="form-input rounded-lg" placeholder="Option A, Option B, Option C, Option D" value={questionForm.optionsRaw} onChange={(e) => setQuestionForm({ ...questionForm, optionsRaw: e.target.value })} />
+                        </div>
+                    )}
+
+                    <div>
+                        <label className="font-semibold mb-1 block">Correct Answer <span className="text-danger">*</span></label>
+                        <input className="form-input rounded-lg" required placeholder={questionForm.question_type === 'true_false' ? 'True or False' : 'e.g. Option A'} value={questionForm.correct_answer} onChange={(e) => setQuestionForm({ ...questionForm, correct_answer: e.target.value })} />
+                    </div>
+
+                    <div className="flex justify-end gap-3 pt-4 border-t border-[#ebedf2] dark:border-[#1b2e4b] mt-6">
+                        <Button variant="outline-danger" type="button"  onClick={() => setAddQuestionOpen(false)}>Cancel</Button>
+                        <Button className="!px-5" type="submit"  disabled={saving}>
+                            {saving ? 'Saving...' : 'Save Question'}
+                        </Button>
+                    </div>
+                </form>
+
+            </Modal>
             {/* Reviews Dialog Modal */}
-            <Transition appear show={reviewsModalOpen} as={Fragment}>
-                <Dialog as="div" open={reviewsModalOpen} onClose={() => setReviewsModalOpen(false)} className="relative z-50">
-                    <Transition.Child as={Fragment} enter="ease-out duration-300" enterFrom="opacity-0" enterTo="opacity-100" leave="ease-in duration-200" leaveFrom="opacity-100" leaveTo="opacity-0">
-                        <div className="fixed inset-0 bg-[black]/65 backdrop-blur-sm" />
-                    </Transition.Child>
-                    <div className="fixed inset-0 overflow-y-auto">
-                        <div className="flex min-h-full items-center justify-center px-4 py-8">
-                            <Transition.Child as={Fragment} enter="ease-out duration-300" enterFrom="opacity-0 scale-95" enterTo="opacity-100 scale-100" leave="ease-in duration-200" leaveFrom="opacity-100 scale-100" leaveTo="opacity-0 scale-95">
-                                <Dialog.Panel className="panel border-0 p-0 rounded-xl overflow-hidden w-full max-w-2xl text-black dark:text-white-dark shadow-2xl relative">
-                                    <button type="button" onClick={() => setReviewsModalOpen(false)} className="absolute top-4 right-4 text-gray-400 hover:text-gray-800 dark:hover:text-gray-250 outline-none">
-                                        <IconX className="w-5 h-5" />
-                                    </button>
-                                    <div className="text-lg font-bold bg-[#fbfbfb] dark:bg-[#121c2c] py-4 px-6 border-b border-[#ebedf2] dark:border-[#1b2e4b]">
-                                        Feedback Reviews: {selectedCourseForReviews?.title}
-                                    </div>
-                                    <div className="p-6">
-                                        {reviewsLoading ? (
-                                            <div className="py-10 text-center text-gray-400 animate-pulse">Loading feedback reviews...</div>
-                                        ) : reviewsList.length === 0 ? (
-                                            <div className="py-10 text-center text-gray-400 italic bg-gray-50 dark:bg-[#0e1726]/20 border border-dashed rounded-lg border-gray-200 dark:border-gray-800">
-                                                No feedback reviews submitted yet by employees.
-                                            </div>
-                                        ) : (
-                                            <div className="space-y-4 max-h-[400px] overflow-y-auto pr-2">
-                                                <div className="bg-[#8b5cf6]/5 border border-[#8b5cf6]/20 rounded-xl p-4 flex items-center justify-between">
-                                                    <span className="text-xs font-bold text-gray-500">Average Rating:</span>
-                                                    <div className="flex items-center gap-2">
-                                                        <span className="text-xl font-extrabold text-amber-500">
-                                                            {(reviewsList.reduce((acc, r) => acc + r.rating, 0) / reviewsList.length).toFixed(1)} ★
-                                                        </span>
-                                                        <span className="text-[10px] text-gray-400">({reviewsList.length} reviews)</span>
-                                                    </div>
-                                                </div>
-
-                                                {reviewsList.map((review) => (
-                                                    <div key={review.id} className="p-4 border border-[#e0e6ed] dark:border-[#1b2e4b] rounded-xl bg-white dark:bg-[#0e1726]/20 shadow-sm">
-                                                        <div className="flex justify-between items-start mb-2">
-                                                            <div>
-                                                                <h5 className="font-extrabold text-xs text-gray-800 dark:text-white-light">{review.employee_name}</h5>
-                                                                <span className="text-[10px] text-gray-400">{new Date(review.created_at).toLocaleDateString()}</span>
-                                                            </div>
-                                                            <div className="flex gap-0.5">
-                                                                {[1, 2, 3, 4, 5].map((star) => (
-                                                                    <span
-                                                                        key={star}
-                                                                        className={`text-sm ${review.rating >= star ? 'text-amber-400' : 'text-gray-200 dark:text-gray-700'
-                                                                            }`}
-                                                                    >
-                                                                        ★
-                                                                    </span>
-                                                                ))}
-                                                            </div>
-                                                        </div>
-                                                        <p className="text-xs text-gray-655 dark:text-gray-355 leading-relaxed italic mt-2">
-                                                            "{review.review_text}"
-                                                        </p>
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        )}
-
-                                        <div className="flex justify-end pt-6 border-t border-[#ebedf2] dark:border-[#1b2e4b] mt-6">
-                                            <button type="button" className="btn btn-outline-danger rounded-lg" onClick={() => setReviewsModalOpen(false)}>Close Reviews</button>
-                                        </div>
-                                    </div>
-                                </Dialog.Panel>
-                            </Transition.Child>
-                        </div>
+            <Modal open={reviewsModalOpen} onClose={() => setReviewsModalOpen(false)} title={<>Feedback Reviews: {selectedCourseForReviews?.title}</>} size="2xl">
+                {reviewsLoading ? (
+                    <div className="py-10 text-center text-gray-400 animate-pulse">Loading feedback reviews...</div>
+                ) : reviewsList.length === 0 ? (
+                    <div className="py-10 text-center text-gray-400 italic bg-gray-50 dark:bg-[#0e1726]/20 border border-dashed rounded-lg border-gray-200 dark:border-gray-800">
+                        No feedback reviews submitted yet by employees.
                     </div>
-                </Dialog>
-            </Transition>
+                ) : (
+                    <div className="space-y-4 max-h-[400px] overflow-y-auto pr-2">
+                        <div className="bg-[#8b5cf6]/5 border border-[#8b5cf6]/20 rounded-xl p-4 flex items-center justify-between">
+                            <span className="text-xs font-bold text-gray-500">Average Rating:</span>
+                            <div className="flex items-center gap-2">
+                                <span className="text-xl font-extrabold text-amber-500">
+                                    {(reviewsList.reduce((acc, r) => acc + r.rating, 0) / reviewsList.length).toFixed(1)} ★
+                                </span>
+                                <span className="text-[10px] text-gray-400">({reviewsList.length} reviews)</span>
+                            </div>
+                        </div>
+
+                        {reviewsList.map((review) => (
+                            <div key={review.id} className="p-4 border border-[#e0e6ed] dark:border-[#1b2e4b] rounded-xl bg-white dark:bg-[#0e1726]/20 shadow-sm">
+                                <div className="flex justify-between items-start mb-2">
+                                    <div>
+                                        <h5 className="font-extrabold text-xs text-gray-800 dark:text-white-light">{review.employee_name}</h5>
+                                        <span className="text-[10px] text-gray-400">{new Date(review.created_at).toLocaleDateString()}</span>
+                                    </div>
+                                    <div className="flex gap-0.5">
+                                        {[1, 2, 3, 4, 5].map((star) => (
+                                            <span
+                                                key={star}
+                                                className={`text-sm ${review.rating >= star ? 'text-amber-400' : 'text-gray-200 dark:text-gray-700'
+                                                    }`}
+                                            >
+                                                ★
+                                            </span>
+                                        ))}
+                                    </div>
+                                </div>
+                                <p className="text-xs text-gray-655 dark:text-gray-355 leading-relaxed italic mt-2">
+                                    "{review.review_text}"
+                                </p>
+                            </div>
+                        ))}
+                    </div>
+                )}
+
+                <div className="flex justify-end pt-6 border-t border-[#ebedf2] dark:border-[#1b2e4b] mt-6">
+                    <Button variant="outline-danger" type="button"  onClick={() => setReviewsModalOpen(false)}>Close Reviews</Button>
+                </div>
+
+            </Modal>
 
             {/* Enrolled Students Modal */}
-            <Transition appear show={enrolledModalOpen} as={Fragment}>
-                <Dialog as="div" open={enrolledModalOpen} onClose={() => setEnrolledModalOpen(false)} className="relative z-50">
-                    <Transition.Child as={Fragment} enter="ease-out duration-300" enterFrom="opacity-0" enterTo="opacity-100" leave="ease-in duration-200" leaveFrom="opacity-100" leaveTo="opacity-0">
-                        <div className="fixed inset-0 bg-[black]/65 backdrop-blur-sm" />
-                    </Transition.Child>
-                    <div className="fixed inset-0 overflow-y-auto">
-                        <div className="flex min-h-full items-center justify-center px-4 py-8">
-                            <Transition.Child as={Fragment} enter="ease-out duration-300" enterFrom="opacity-0 scale-95" enterTo="opacity-100 scale-100" leave="ease-in duration-200" leaveFrom="opacity-100 scale-100" leaveTo="opacity-0 scale-95">
-                                <Dialog.Panel className="panel border-0 p-0 rounded-xl overflow-hidden w-full max-w-3xl text-black dark:text-white-dark shadow-2xl relative">
-                                    <button type="button" onClick={() => setEnrolledModalOpen(false)} className="absolute top-4 right-4 text-gray-400 hover:text-gray-800 dark:hover:text-gray-250 outline-none">
-                                        <IconX className="w-5 h-5" />
-                                    </button>
-                                    <div className="text-lg font-bold bg-[#fbfbfb] dark:bg-[#121c2c] py-4 px-6 border-b border-[#ebedf2] dark:border-[#1b2e4b]">
-                                        Enrolled Students: {selectedCourseForEnrollment?.title}
-                                    </div>
-                                    <div className="p-6">
-                                        {enrolledLoading ? (
-                                            <div className="py-10 text-center text-gray-400 animate-pulse">Loading enrolled students...</div>
-                                        ) : enrolledList.length === 0 ? (
-                                            <div className="py-10 text-center text-gray-400 italic bg-gray-50 dark:bg-[#0e1726]/20 border border-dashed rounded-lg border-gray-200 dark:border-gray-800">
-                                                No students enrolled in this course yet.
-                                            </div>
-                                        ) : (
-                                            <div className="table-responsive border border-[#e0e6ed] dark:border-[#1b2e4b] rounded-lg max-h-[420px] overflow-y-auto">
-                                                <table className="table-hover">
-                                                    <thead>
-                                                        <tr>
-                                                            <th>Employee ID</th>
-                                                            <th>Name</th>
-                                                            <th>Department</th>
-                                                            <th>Status</th>
-                                                            <th>Progress</th>
-                                                            <th>Enrolled On</th>
-                                                        </tr>
-                                                    </thead>
-                                                    <tbody>
-                                                        {enrolledList.map((en) => (
-                                                            <tr key={en.id}>
-                                                                <td className="font-bold text-primary">{en.employee_code || '—'}</td>
-                                                                <td className="font-semibold text-gray-800 dark:text-gray-200">{en.employee_name}</td>
-                                                                <td>{en.department_name || '—'}</td>
-                                                                <td>
-                                                                    <span className="badge badge-outline-primary text-[10px] font-bold uppercase rounded px-1.5 py-0.5">
-                                                                        {en.status.replace('_', ' ')}
-                                                                    </span>
-                                                                </td>
-                                                                <td>{en.progress_percentage}%</td>
-                                                                <td className="text-xs text-gray-500">{new Date(en.enrolled_at).toLocaleDateString()}</td>
-                                                            </tr>
-                                                        ))}
-                                                    </tbody>
-                                                </table>
-                                            </div>
-                                        )}
-
-                                        <div className="flex justify-end pt-6 border-t border-[#ebedf2] dark:border-[#1b2e4b] mt-6">
-                                            <button type="button" className="btn btn-outline-danger rounded-lg" onClick={() => setEnrolledModalOpen(false)}>Close</button>
-                                        </div>
-                                    </div>
-                                </Dialog.Panel>
-                            </Transition.Child>
-                        </div>
+            <Modal open={enrolledModalOpen} onClose={() => setEnrolledModalOpen(false)} title={<>Enrolled Students: {selectedCourseForEnrollment?.title}</>} size="3xl">
+                {enrolledLoading ? (
+                    <div className="py-10 text-center text-gray-400 animate-pulse">Loading enrolled students...</div>
+                ) : enrolledList.length === 0 ? (
+                    <div className="py-10 text-center text-gray-400 italic bg-gray-50 dark:bg-[#0e1726]/20 border border-dashed rounded-lg border-gray-200 dark:border-gray-800">
+                        No students enrolled in this course yet.
                     </div>
-                </Dialog>
-            </Transition>
+                ) : (
+                    <div className="table-responsive border border-[#e0e6ed] dark:border-[#1b2e4b] rounded-lg max-h-[420px] overflow-y-auto">
+                        <table className="table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Employee ID</th>
+                                    <th>Name</th>
+                                    <th>Department</th>
+                                    <th>Status</th>
+                                    <th>Progress</th>
+                                    <th>Enrolled On</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {enrolledList.map((en) => (
+                                    <tr key={en.id}>
+                                        <td className="font-bold text-primary">{en.employee_code || '—'}</td>
+                                        <td className="font-semibold text-gray-800 dark:text-gray-200">{en.employee_name}</td>
+                                        <td>{en.department_name || '—'}</td>
+                                        <td>
+                                            <span className="badge badge-outline-primary text-[10px] font-bold uppercase rounded px-1.5 py-0.5">
+                                                {en.status.replace('_', ' ')}
+                                            </span>
+                                        </td>
+                                        <td>{en.progress_percentage}%</td>
+                                        <td className="text-xs text-gray-500">{new Date(en.enrolled_at).toLocaleDateString()}</td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                )}
+
+                <div className="flex justify-end pt-6 border-t border-[#ebedf2] dark:border-[#1b2e4b] mt-6">
+                    <Button variant="outline-danger" type="button"  onClick={() => setEnrolledModalOpen(false)}>Close</Button>
+                </div>
+
+            </Modal>
 
             {/* Certificate Preview Modal (auto-generated on course completion) */}
-            <Transition appear show={certModalOpen} as={Fragment}>
-                <Dialog as="div" open={certModalOpen} onClose={() => setCertModalOpen(false)} className="relative z-50">
-                    <Transition.Child as={Fragment} enter="ease-out duration-300" enterFrom="opacity-0" enterTo="opacity-100" leave="ease-in duration-200" leaveFrom="opacity-100" leaveTo="opacity-0">
-                        <div className="fixed inset-0 bg-[black]/65 backdrop-blur-sm" />
-                    </Transition.Child>
-                    <div className="fixed inset-0 overflow-y-auto">
-                        <div className="flex min-h-full items-center justify-center px-4 py-8">
-                            <Transition.Child as={Fragment} enter="ease-out duration-300" enterFrom="opacity-0 scale-95" enterTo="opacity-100 scale-100" leave="ease-in duration-200" leaveFrom="opacity-100 scale-100" leaveTo="opacity-0 scale-95">
-                                <Dialog.Panel className="panel border-0 p-0 rounded-xl overflow-hidden w-full max-w-3xl text-black dark:text-white-dark shadow-2xl relative">
-                                    <button type="button" onClick={() => setCertModalOpen(false)} className="absolute top-4 right-4 text-gray-400 hover:text-gray-800 dark:hover:text-gray-250 outline-none">
-                                        <IconX className="w-5 h-5" />
-                                    </button>
-                                    <div className="text-lg font-bold bg-[#fbfbfb] dark:bg-[#121c2c] py-4 px-6 border-b border-[#ebedf2] dark:border-[#1b2e4b]">
-                                        Certificate Preview: {selectedCourseForCert?.title}
-                                    </div>
-                                    <div className="p-6">
-                                        <p className="text-[11px] text-gray-400 mb-4">
-                                            Auto-generated when a learner completes every lesson and passes the course quiz — this is a sample using placeholder data.
-                                        </p>
-                                        {certPreviewLoading ? (
-                                            <div className="py-16 text-center text-gray-400 animate-pulse">Generating certificate preview...</div>
-                                        ) : certPreviewUrl ? (
-                                            <div className="border border-[#e0e6ed] dark:border-[#1b2e4b] rounded-lg overflow-hidden bg-gray-50 dark:bg-[#0e1726]/20">
-                                                <iframe src={certPreviewUrl} title="Certificate Preview" className="w-full h-[450px] border-0"></iframe>
-                                            </div>
-                                        ) : (
-                                            <div className="py-10 text-center text-gray-400 italic bg-gray-50 dark:bg-[#0e1726]/20 border border-dashed rounded-lg border-gray-200 dark:border-gray-800">
-                                                Could not generate certificate preview.
-                                            </div>
-                                        )}
-
-                                        <div className="flex justify-end pt-6 border-t border-[#ebedf2] dark:border-[#1b2e4b] mt-6">
-                                            <button type="button" className="btn btn-outline-danger rounded-lg" onClick={() => setCertModalOpen(false)}>Close</button>
-                                        </div>
-                                    </div>
-                                </Dialog.Panel>
-                            </Transition.Child>
-                        </div>
+            <Modal open={certModalOpen} onClose={() => setCertModalOpen(false)} title={<>Certificate Preview: {selectedCourseForCert?.title}</>} size="3xl">
+                <p className="text-[11px] text-gray-400 mb-4">
+                    Auto-generated when a learner completes every lesson and passes the course quiz — this is a sample using placeholder data.
+                </p>
+                {certPreviewLoading ? (
+                    <div className="py-16 text-center text-gray-400 animate-pulse">Generating certificate preview...</div>
+                ) : certPreviewUrl ? (
+                    <div className="border border-[#e0e6ed] dark:border-[#1b2e4b] rounded-lg overflow-hidden bg-gray-50 dark:bg-[#0e1726]/20">
+                        <iframe src={certPreviewUrl} title="Certificate Preview" className="w-full h-[450px] border-0"></iframe>
                     </div>
-                </Dialog>
-            </Transition>
+                ) : (
+                    <div className="py-10 text-center text-gray-400 italic bg-gray-50 dark:bg-[#0e1726]/20 border border-dashed rounded-lg border-gray-200 dark:border-gray-800">
+                        Could not generate certificate preview.
+                    </div>
+                )}
+
+                <div className="flex justify-end pt-6 border-t border-[#ebedf2] dark:border-[#1b2e4b] mt-6">
+                    <Button variant="outline-danger" type="button"  onClick={() => setCertModalOpen(false)}>Close</Button>
+                </div>
+
+            </Modal>
         </div>
     );
 };

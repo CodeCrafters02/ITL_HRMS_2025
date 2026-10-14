@@ -2,8 +2,11 @@ import { useEffect, useState } from 'react';
 import { useDispatch } from 'react-redux';
 import Swal from 'sweetalert2';
 import { setPageTitle } from '../../store/themeConfigSlice';
+import IconLogout from '../../components/Icon/IconLogout';
 import DataTable, { Column } from '../../components/Common/DataTable';
+import PageHeader from '../../components/Common/PageHeader';
 
+import Button from '../../components/Common/Button';
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000';
 const RELIEVED_API_URL = `${API_BASE_URL}/app/relieved-employees/`;
 const SEARCH_EMPLOYEE_URL = `${API_BASE_URL}/app/relieved-employees/search-employee/`;
@@ -203,13 +206,13 @@ const AdminRelievedEmployees = () => {
 
     return (
         <div>
-            <div className="bg-gradient-to-r from-[#0e1726] to-[#ef4444] p-6 rounded-xl shadow-lg mb-6 relative overflow-hidden">
-                <div className="relative z-10">
-                    <h1 className="text-3xl font-extrabold text-white tracking-tight">Relieved Employees</h1>
-                    <p className="text-white/80 mt-1 text-sm font-medium">Search an active employee and relieve them. View relieved list below.</p>
-                </div>
-                <div className="absolute top-0 right-0 -mt-10 -mr-10 w-48 h-48 bg-white opacity-5 rounded-full blur-2xl"></div>
-            </div>
+            <PageHeader
+                title="Relieved Employees"
+                subtitle="Search active employees for formal relieving, process exit formalities, and audit historical offboarding records."
+                icon={<IconLogout />}
+                badge="Offboarding & Relieving"
+                variant="rose"
+            />
 
             <div className="panel mb-6">
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
@@ -252,9 +255,9 @@ const AdminRelievedEmployees = () => {
                     </div>
                 </div>
                 <div className="mt-4 flex justify-end">
-                    <button type="button" className="btn btn-danger" onClick={relieveEmployee}>
+                    <Button variant="danger" type="button"  onClick={relieveEmployee}>
                         Relieve Employee
-                    </button>
+                    </Button>
                 </div>
             </div>
             {/* Reusable Data Table */}

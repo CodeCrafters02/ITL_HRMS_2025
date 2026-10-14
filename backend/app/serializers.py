@@ -80,6 +80,7 @@ class UserSerializer(serializers.ModelSerializer):
         allow_null=True
     )
     company_name = serializers.SerializerMethodField(read_only=True)
+    company_logo = serializers.SerializerMethodField(read_only=True)
     designation = serializers.SerializerMethodField(read_only=True)
     mobile = serializers.SerializerMethodField(read_only=True)
     address = serializers.SerializerMethodField(read_only=True)
@@ -106,7 +107,7 @@ class UserSerializer(serializers.ModelSerializer):
         model = UserRegister
         fields = [
             'id', 'username', 'email', 'password', 'role', 'is_active', 
-            'first_name', 'last_name', 'company', 'company_name', 
+            'first_name', 'last_name', 'company', 'company_name', 'company_logo', 
             'designation', 'mobile', 'address', 'location', 'photo',
             'employee_id', 'department_name', 'reporting_manager_name', 
             'date_of_joining', 'gender', 'aadhar_no', 'pan_no', 
@@ -118,6 +119,13 @@ class UserSerializer(serializers.ModelSerializer):
 
     def get_company_name(self, obj):
         return obj.company.name if obj.company else None
+
+    def get_company_logo(self, obj):
+        logo = getattr(obj.company, 'logo', None) if obj.company else None
+        if not logo:
+            return None
+        request = self.context.get('request')
+        return request.build_absolute_uri(logo.url) if request else logo.url
 
     def get_designation(self, obj):
         try:
@@ -499,6 +507,10 @@ class CompanySerializer(serializers.ModelSerializer):
             'account_no',
             'ifsc_code',
             'branch_name',
+            'theme_preset',
+            'theme_primary',
+            'theme_mid',
+            'theme_accent',
             'created_at',
             'updated_at',
         ]
@@ -511,6 +523,21 @@ class CompanySerializer(serializers.ModelSerializer):
             elif obj.logo:
                 return obj.logo.url
             return None
+
+
+class CompanyBrandingSerializer(serializers.ModelSerializer):
+    """Company identity + brand theme. Readable by everyone in the company; writable by the company admin only (see view)."""
+    logo_url = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Company
+        fields = ['id', 'name', 'logo_url', 'theme_preset', 'theme_primary', 'theme_mid', 'theme_accent']
+
+    def get_logo_url(self, obj):
+        if not obj.logo:
+            return None
+        request = self.context.get('request')
+        return request.build_absolute_uri(obj.logo.url) if request else obj.logo.url
 
 
 class DepartmentSerializer(serializers.ModelSerializer):

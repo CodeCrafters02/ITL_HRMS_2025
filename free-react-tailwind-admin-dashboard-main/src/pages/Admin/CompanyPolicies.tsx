@@ -1,6 +1,5 @@
 import { Fragment, useEffect, useMemo, useRef, useState } from 'react';
 import { useDispatch } from 'react-redux';
-import { Dialog, Transition } from '@headlessui/react';
 import Swal from 'sweetalert2';
 import { setPageTitle } from '../../store/themeConfigSlice';
 import IconPlus from '../../components/Icon/IconPlus';
@@ -12,6 +11,10 @@ import IconClock from '../../components/Icon/IconClock';
 import IconDownload from '../../components/Icon/IconDownload';
 import DataTable, { Column } from '../../components/Common/DataTable';
 
+import PageHeader from '../../components/Common/PageHeader';
+import IconTxtFile from '../../components/Icon/IconTxtFile';
+import Modal from '../../components/Common/Modal';
+import Button, { IconButton } from '../../components/Common/Button';
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000';
 const API_URL = `${API_BASE_URL}/app/policies/`;
 const ACCEPT = '.pdf,.doc,.docx,.txt';
@@ -317,12 +320,12 @@ const AdminCompanyPolicies = () => {
                     <button type="button" className="p-1.5 rounded-lg text-success hover:bg-success/10 transition-colors" onClick={() => openUpload(p)} title={`Upload new version (v${nextVersion(p.version)})`}>
                         <IconDownload className="w-4 h-4 rotate-180" />
                     </button>
-                    <button type="button" className="p-1.5 rounded-lg text-primary hover:bg-primary/10 transition-colors" onClick={() => openEdit(p)} title="Edit">
+                    <IconButton tone="primary" type="button"  onClick={() => openEdit(p)} title="Edit">
                         <IconPencil className="w-4 h-4" />
-                    </button>
-                    <button type="button" className="p-1.5 rounded-lg text-danger hover:bg-danger/10 transition-colors" onClick={() => del(p)} title="Delete">
+                    </IconButton>
+                    <IconButton tone="danger" type="button"  onClick={() => del(p)} title="Delete">
                         <IconTrashLines className="w-4 h-4" />
-                    </button>
+                    </IconButton>
                 </div>
             ),
         },
@@ -331,13 +334,12 @@ const AdminCompanyPolicies = () => {
     return (
         <div className="space-y-6">
             {/* Gradient Banner Header */}
-            <div className="bg-gradient-to-r from-[#4c0519] to-[#e11d48] p-6 rounded-xl shadow-lg relative overflow-hidden">
-                <div className="relative z-10">
-                    <h1 className="text-3xl font-extrabold text-white tracking-tight">Company Policies</h1>
-                    <p className="text-white/80 mt-1 text-sm font-medium">Upload policy documents and control visibility.</p>
-                </div>
-                <div className="absolute top-0 right-0 -mt-10 -mr-10 w-48 h-48 bg-white opacity-10 rounded-full blur-2xl"></div>
-            </div>
+            <PageHeader
+                icon={<IconTxtFile />}
+                title="Company Policies"
+                subtitle="Upload policy documents and control visibility."
+                variant="rose"
+            />
 
             <DataTable
                 columns={columns}
@@ -360,7 +362,7 @@ const AdminCompanyPolicies = () => {
                 searchPlaceholder="Search policies by name or version..."
                 filters={
                     <select
-                        className="form-select text-xs py-1.5 px-3 rounded-lg border-[#cbd5e1] dark:border-[#1e293b] dark:bg-[#121e32] focus:border-[#0062E0] focus:ring-1 focus:ring-[#0062E0] font-semibold"
+                        className="form-select text-xs py-1.5 px-3 rounded-lg border-[#cbd5e1] dark:border-[#1e293b] dark:bg-[#121e32] focus:border-brand focus:ring-1 focus:ring-brand font-semibold"
                         value={filter}
                         onChange={(e) => {
                             setFilter(e.target.value as any);
@@ -373,164 +375,121 @@ const AdminCompanyPolicies = () => {
                     </select>
                 }
                 actionButton={
-                    <button type="button" className="btn btn-primary gap-2" onClick={openAdd}>
+                    <Button type="button"  onClick={openAdd}>
                         <IconPlus className="w-4 h-4" /> Add Policy
-                    </button>
+                    </Button>
                 }
             />
 
-            <Transition appear show={modalOpen} as={Fragment}>
-                <Dialog as="div" open={modalOpen} onClose={() => setModalOpen(false)} className="relative z-50">
-                    <Transition.Child as={Fragment} enter="ease-out duration-300" enterFrom="opacity-0" enterTo="opacity-100" leave="ease-in duration-200" leaveFrom="opacity-100" leaveTo="opacity-0">
-                        <div className="fixed inset-0 bg-[black]/60" />
-                    </Transition.Child>
-                    <div className="fixed inset-0 overflow-y-auto">
-                        <div className="flex min-h-full items-center justify-center px-4 py-8">
-                            <Transition.Child as={Fragment} enter="ease-out duration-300" enterFrom="opacity-0 scale-95" enterTo="opacity-100 scale-100" leave="ease-in duration-200" leaveFrom="opacity-100 scale-100" leaveTo="opacity-0 scale-95">
-                                <Dialog.Panel className="panel border-0 p-0 rounded-lg overflow-hidden w-full max-w-xl text-black dark:text-white-dark">
-                                    <button type="button" onClick={() => setModalOpen(false)} className="absolute top-4 ltr:right-4 rtl:left-4 text-white-dark hover:text-dark">
-                                        <IconX />
-                                    </button>
-                                    <div className="text-lg font-medium bg-[#fbfbfb] dark:bg-[#121c2c] ltr:pl-5 rtl:pr-5 py-3 ltr:pr-[50px] rtl:pl-[50px]">
-                                        {uploadOnly ? `Upload New Version — ${editing?.name}` : editing?.id ? 'Edit Policy' : 'Add Policy'}
-                                    </div>
-                                    <div className="p-5 space-y-4">
-                                        {!uploadOnly && (
-                                            <>
-                                                <div>
-                                                    <label className="font-semibold">Policy Name</label>
-                                                    <input className="form-input" value={editing?.name || ''} onChange={(e) => setEditing((p) => (p ? { ...p, name: e.target.value } : p))} />
-                                                </div>
-                                                <div>
-                                                    <label className="font-semibold">Active</label>
-                                                    <select className="form-select" value={editing?.is_active ? 'true' : 'false'} onChange={(e) => setEditing((p) => (p ? { ...p, is_active: e.target.value === 'true' } : p))}>
-                                                        <option value="true">Yes</option>
-                                                        <option value="false">No</option>
-                                                    </select>
-                                                </div>
-                                            </>
-                                        )}
-                                        <div>
-                                            <label className="font-semibold">{uploadOnly ? 'Document' : editing?.id ? 'Upload New Version (optional)' : 'Document'}</label>
-                                            <input
-                                                ref={fileRef}
-                                                type="file"
-                                                accept={ACCEPT}
-                                                className="form-input"
-                                                onChange={(e) => setFile(e.target.files?.[0] || null)}
-                                            />
-                                            <div className="text-xs text-white-dark mt-1">PDF, Word (.doc/.docx) or text (.txt)</div>
-                                            {editing?.document && !file && (
-                                                <div className="text-xs text-white-dark mt-1">
-                                                    Current: <span className="underline">{String(editing.document).split('/').pop()}</span> (v{editing.version || '1.0'}, published {fmtPublished({ published_at: editing.published_at, created_at: editing.versions?.[0]?.created_at })})
-                                                </div>
-                                            )}
-                                        </div>
-                                        {(file || uploadOnly) && (
-                                            <>
-                                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                                    <div>
-                                                        <label className="font-semibold">Version</label>
-                                                        <input className="form-input" value={`v${editing?.id ? nextVersion(editing.version) : '1.0'}`} disabled readOnly />
-                                                    </div>
-                                                    <div>
-                                                        <label className="font-semibold">Publish Date</label>
-                                                        <input type="date" className="form-input" value={publishedAt} onChange={(e) => setPublishedAt(e.target.value)} />
-                                                    </div>
-                                                </div>
-                                                <div>
-                                                    <label className="font-semibold">Change Note (optional)</label>
-                                                    <input className="form-input" maxLength={500} placeholder="What changed in this version?" value={note} onChange={(e) => setNote(e.target.value)} />
-                                                </div>
-                                            </>
-                                        )}
-                                        <div className="flex justify-end gap-3 pt-2">
-                                            <button type="button" className="btn btn-outline-danger" onClick={() => setModalOpen(false)}>
-                                                Cancel
-                                            </button>
-                                            <button type="button" className="btn btn-primary" onClick={save}>
-                                                Save
-                                            </button>
-                                        </div>
-                                    </div>
-                                </Dialog.Panel>
-                            </Transition.Child>
-                        </div>
-                    </div>
-                </Dialog>
-            </Transition>
+            <Modal open={modalOpen} onClose={() => setModalOpen(false)} title={<>{uploadOnly ? `Upload New Version — ${editing?.name}` : editing?.id ? 'Edit Policy' : 'Add Policy'}</>} size="xl">
+                <div className="space-y-4">
+                                                        {!uploadOnly && (
+                                                            <>
+                                                                <div>
+                                                                    <label className="font-semibold">Policy Name</label>
+                                                                    <input className="form-input" value={editing?.name || ''} onChange={(e) => setEditing((p) => (p ? { ...p, name: e.target.value } : p))} />
+                                                                </div>
+                                                                <div>
+                                                                    <label className="font-semibold">Active</label>
+                                                                    <select className="form-select" value={editing?.is_active ? 'true' : 'false'} onChange={(e) => setEditing((p) => (p ? { ...p, is_active: e.target.value === 'true' } : p))}>
+                                                                        <option value="true">Yes</option>
+                                                                        <option value="false">No</option>
+                                                                    </select>
+                                                                </div>
+                                                            </>
+                                                        )}
+                                                        <div>
+                                                            <label className="font-semibold">{uploadOnly ? 'Document' : editing?.id ? 'Upload New Version (optional)' : 'Document'}</label>
+                                                            <input
+                                                                ref={fileRef}
+                                                                type="file"
+                                                                accept={ACCEPT}
+                                                                className="form-input"
+                                                                onChange={(e) => setFile(e.target.files?.[0] || null)}
+                                                            />
+                                                            <div className="text-xs text-white-dark mt-1">PDF, Word (.doc/.docx) or text (.txt)</div>
+                                                            {editing?.document && !file && (
+                                                                <div className="text-xs text-white-dark mt-1">
+                                                                    Current: <span className="underline">{String(editing.document).split('/').pop()}</span> (v{editing.version || '1.0'}, published {fmtPublished({ published_at: editing.published_at, created_at: editing.versions?.[0]?.created_at })})
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                        {(file || uploadOnly) && (
+                                                            <>
+                                                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                                                    <div>
+                                                                        <label className="font-semibold">Version</label>
+                                                                        <input className="form-input" value={`v${editing?.id ? nextVersion(editing.version) : '1.0'}`} disabled readOnly />
+                                                                    </div>
+                                                                    <div>
+                                                                        <label className="font-semibold">Publish Date</label>
+                                                                        <input type="date" className="form-input" value={publishedAt} onChange={(e) => setPublishedAt(e.target.value)} />
+                                                                    </div>
+                                                                </div>
+                                                                <div>
+                                                                    <label className="font-semibold">Change Note (optional)</label>
+                                                                    <input className="form-input" maxLength={500} placeholder="What changed in this version?" value={note} onChange={(e) => setNote(e.target.value)} />
+                                                                </div>
+                                                            </>
+                                                        )}
+                                                        <div className="flex justify-end gap-3 pt-2">
+                                                            <Button variant="outline-danger" type="button"  onClick={() => setModalOpen(false)}>
+                                                                Cancel
+                                                            </Button>
+                                                            <Button type="button"  onClick={save}>
+                                                                Save
+                                                            </Button>
+                                                        </div>
 
-            <Transition appear show={!!historyOf} as={Fragment}>
-                <Dialog as="div" open={!!historyOf} onClose={() => setHistoryOf(null)} className="relative z-50">
-                    <div className="fixed inset-0 bg-[black]/60" />
-                    <div className="fixed inset-0 overflow-y-auto">
-                        <div className="flex min-h-full items-center justify-center px-4 py-8">
-                            <Dialog.Panel className="panel border-0 p-0 rounded-lg overflow-hidden w-full max-w-3xl text-black dark:text-white-dark">
-                                <button type="button" onClick={() => setHistoryOf(null)} className="absolute top-4 ltr:right-4 rtl:left-4 text-white-dark hover:text-dark">
-                                    <IconX />
-                                </button>
-                                <div className="text-lg font-medium bg-[#fbfbfb] dark:bg-[#121c2c] ltr:pl-5 rtl:pr-5 py-3 ltr:pr-[50px] rtl:pl-[50px]">Version History — {historyOf?.name}</div>
-                                <div className="p-5 table-responsive">
-                                    <table>
-                                        <thead>
-                                            <tr>
-                                                <th>Version</th>
-                                                <th>Published</th>
-                                                <th>File</th>
-                                                <th>Uploaded By</th>
-                                                <th>Note</th>
-                                                <th className="text-center">View</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            {historyOf?.versions?.length ? (
-                                                historyOf.versions.map((v, i) => (
-                                                    <tr key={v.id}>
-                                                        <td className="whitespace-nowrap">
-                                                            <span className={`badge ${i === 0 ? 'badge-outline-success' : 'badge-outline-secondary'}`}>v{v.version}</span>
-                                                            {i === 0 && <span className="text-xs text-success ltr:ml-2 rtl:mr-2">Current</span>}
-                                                        </td>
-                                                        <td className="whitespace-nowrap">{fmtPublished(v)}</td>
-                                                        <td className="break-all">{v.file_name || '-'}</td>
-                                                        <td>{v.uploaded_by_name || '-'}</td>
-                                                        <td>{v.change_note || '-'}</td>
-                                                        <td className="text-center">
-                                                            <button type="button" className="text-primary" onClick={() => openView(historyOf, v.id)} title="View">
-                                                                <IconEye className="w-5 h-5" />
-                                                            </button>
-                                                        </td>
-                                                    </tr>
-                                                ))
-                                            ) : (
-                                                <tr>
-                                                    <td colSpan={6} className="text-center py-6 text-white-dark">
-                                                        No versions uploaded.
-                                                    </td>
-                                                </tr>
-                                            )}
-                                        </tbody>
-                                    </table>
-                                </div>
-                            </Dialog.Panel>
-                        </div>
-                    </div>
-                </Dialog>
-            </Transition>
+                </div>
+            </Modal>
 
-            <Transition appear show={!!viewing} as={Fragment}>
-                <Dialog as="div" open={!!viewing} onClose={() => setViewing(null)} className="relative z-50">
-                    <div className="fixed inset-0 bg-[black]/60" />
-                    <div className="fixed inset-0 overflow-y-auto">
-                        <div className="flex min-h-full items-center justify-center px-4 py-6">
-                            <Dialog.Panel className="panel border-0 p-0 rounded-lg overflow-hidden w-full max-w-5xl text-black dark:text-white-dark">
-                                <div className="flex flex-wrap items-center gap-3 bg-[#fbfbfb] dark:bg-[#121c2c] px-5 py-3">
-                                    <div className="min-w-0 flex-1">
-                                        <div className="text-lg font-medium truncate">{viewing?.policy.name}</div>
-                                        <div className="text-xs text-white-dark">
-                                            v{viewingVersion?.version || viewing?.policy.version || '1.0'} · Published {fmtPublished(viewingVersion || { published_at: viewing?.policy.published_at })}
-                                        </div>
-                                    </div>
-                                    {!!viewing?.policy.versions?.length && (
+            <Modal open={!!historyOf} onClose={() => setHistoryOf(null)} title={<>Version History — {historyOf?.name}</>} size="3xl">
+                <div className="table-responsive">
+                                                    <table>
+                                                        <thead>
+                                                            <tr>
+                                                                <th>Version</th>
+                                                                <th>Published</th>
+                                                                <th>File</th>
+                                                                <th>Uploaded By</th>
+                                                                <th>Note</th>
+                                                                <th className="text-center">View</th>
+                                                            </tr>
+                                                        </thead>
+                                                        <tbody>
+                                                            {historyOf?.versions?.length ? (
+                                                                historyOf.versions.map((v, i) => (
+                                                                    <tr key={v.id}>
+                                                                        <td className="whitespace-nowrap">
+                                                                            <span className={`badge ${i === 0 ? 'badge-outline-success' : 'badge-outline-secondary'}`}>v{v.version}</span>
+                                                                            {i === 0 && <span className="text-xs text-success ltr:ml-2 rtl:mr-2">Current</span>}
+                                                                        </td>
+                                                                        <td className="whitespace-nowrap">{fmtPublished(v)}</td>
+                                                                        <td className="break-all">{v.file_name || '-'}</td>
+                                                                        <td>{v.uploaded_by_name || '-'}</td>
+                                                                        <td>{v.change_note || '-'}</td>
+                                                                        <td className="text-center">
+                                                                            <button type="button" className="text-primary" onClick={() => openView(historyOf, v.id)} title="View">
+                                                                                <IconEye className="w-5 h-5" />
+                                                                            </button>
+                                                                        </td>
+                                                                    </tr>
+                                                                ))
+                                                            ) : (
+                                                                <tr>
+                                                                    <td colSpan={6} className="text-center py-6 text-white-dark">
+                                                                        No versions uploaded.
+                                                                    </td>
+                                                                </tr>
+                                                            )}
+                                                        </tbody>
+                                                    </table>
+
+                </div>
+            </Modal>
+
+            <Modal open={!!viewing} onClose={() => setViewing(null)} title={<>{!!viewing?.policy.versions?.length && (
                                         <select
                                             className="form-select w-auto"
                                             value={viewing.versionId ?? ''}
@@ -542,35 +501,24 @@ const AdminCompanyPolicies = () => {
                                                 </option>
                                             ))}
                                         </select>
-                                    )}
-                                    <button type="button" className="btn btn-outline-primary btn-sm gap-1" onClick={downloadPreview} disabled={!preview?.blob}>
-                                        <IconDownload className="w-4 h-4" /> Download
-                                    </button>
-                                    <button type="button" onClick={() => setViewing(null)} className="text-white-dark hover:text-dark">
-                                        <IconX />
-                                    </button>
-                                </div>
-                                <div className="h-[75vh] overflow-auto bg-white dark:bg-[#0e1726]">
-                                    {previewError ? (
-                                        <div className="p-10 text-center text-danger">{previewError}</div>
-                                    ) : !preview ? (
-                                        <div className="p-10 text-center text-white-dark">Loading document...</div>
-                                    ) : preview.kind === 'pdf' ? (
-                                        <iframe title={viewingFileName} src={preview.url} className="w-full h-full border-0" />
-                                    ) : preview.kind === 'text' ? (
-                                        <pre className="p-5 whitespace-pre-wrap break-words text-sm font-mono">{preview.text}</pre>
-                                    ) : preview.kind === 'none' ? (
-                                        <div className="p-10 text-center text-white-dark">
-                                            Preview is not available for this file type ({viewingFileName}). Use Download to open it.
-                                        </div>
-                                    ) : null}
-                                    <div ref={docxRef} className={preview?.kind === 'docx' && !previewError ? '' : 'hidden'} />
-                                </div>
-                            </Dialog.Panel>
-                        </div>
-                    </div>
-                </Dialog>
-            </Transition>
+                                    )}</>} icon={<IconDownload />} size="5xl">
+                <div className="h-[75vh] overflow-auto bg-white dark:bg-[#0e1726]">
+                                                    {previewError ? (
+                                                        <div className="p-10 text-center text-danger">{previewError}</div>
+                                                    ) : !preview ? (
+                                                        <div className="p-10 text-center text-white-dark">Loading document...</div>
+                                                    ) : preview.kind === 'pdf' ? (
+                                                        <iframe title={viewingFileName} src={preview.url} className="w-full h-full border-0" />
+                                                    ) : preview.kind === 'text' ? (
+                                                        <pre className="p-5 whitespace-pre-wrap break-words text-sm font-mono">{preview.text}</pre>
+                                                    ) : preview.kind === 'none' ? (
+                                                        <div className="p-10 text-center text-white-dark">
+                                                            Preview is not available for this file type ({viewingFileName}). Use Download to open it.
+                                                        </div>
+                                                    ) : null}
+                                                    <div ref={docxRef} className={preview?.kind === 'docx' && !previewError ? '' : 'hidden'} />
+                                                </div>
+            </Modal>
         </div>
     );
 };

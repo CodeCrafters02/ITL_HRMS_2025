@@ -3,6 +3,7 @@ import axios from 'axios';
 import IconSearch from '../../../components/Icon/IconSearch';
 import IconTrendingUp from '../../../components/Icon/IconTrendingUp';
 
+import PageHeader from '../../../components/Common/PageHeader';
 interface Employee {
     id: number;
     employee_id: string;
@@ -40,7 +41,7 @@ const CATEGORIES = [
 
 const CAT_STYLE: Record<string, string> = {
     appreciation: 'bg-emerald-500/10 text-emerald-600',
-    peer_recognition: 'bg-teal-500/10 text-teal-600',
+    peer_recognition: 'bg-brand/10 text-brand',
     manager_coaching: 'bg-indigo-500/10 text-indigo-600',
     constructive: 'bg-amber-500/10 text-amber-600',
     goal_progress: 'bg-sky-500/10 text-sky-600',
@@ -166,12 +167,10 @@ const TrackFeedback = () => {
 
     return (
         <div className="space-y-6 py-2 animate__animated animate__fadeIn">
-            <div className="bg-white dark:bg-gray-900 p-6 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm">
-                <h2 className="text-xl font-bold text-gray-800 dark:text-white">Track Feedback</h2>
-                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 leading-relaxed">
-                    Review all feedback received by an employee and share continuous feedback, recognition, or coaching.
-                </p>
-            </div>
+            <PageHeader
+                title="Track Feedback"
+                subtitle="Review all feedback received by an employee and share continuous feedback, recognition, or coaching."
+            />
 
             {errorMsg && <div className="bg-rose-500/10 border border-rose-500/20 text-rose-700 dark:text-rose-400 p-4 rounded-xl text-xs font-bold animate__animated animate__shakeX">⚠️ {errorMsg}</div>}
             {successMsg && <div className="bg-emerald-500/10 border border-emerald-500/20 text-emerald-700 dark:text-emerald-400 p-4 rounded-xl text-xs font-bold animate__animated animate__fadeIn">✓ {successMsg}</div>}
@@ -192,9 +191,9 @@ const TrackFeedback = () => {
                             const isSelected = selectedEmployee?.id === emp.id;
                             return (
                                 <div key={emp.id} onClick={() => setSelectedEmployee(emp)}
-                                    className={`p-3 rounded-xl border flex items-center justify-between cursor-pointer transition select-none ${isSelected ? 'bg-teal-500/10 border-teal-500 text-teal-900 dark:text-white' : 'bg-white dark:bg-gray-900 border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50'}`}>
+                                    className={`p-3 rounded-xl border flex items-center justify-between cursor-pointer transition select-none ${isSelected ? 'bg-brand/10 border-brand text-brand-900 dark:text-white' : 'bg-white dark:bg-gray-900 border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50'}`}>
                                     <div className="flex items-center gap-3">
-                                        <div className="w-8 h-8 rounded-full bg-teal-600 text-white flex items-center justify-center text-xs font-bold shrink-0">{emp.initials}</div>
+                                        <div className="w-8 h-8 rounded-full bg-brand text-white flex items-center justify-center text-xs font-bold shrink-0">{emp.initials}</div>
                                         <div>
                                             <span className="block text-xs font-bold leading-tight">{emp.full_name}</span>
                                             <span className="block text-[9px] text-gray-400 mt-0.5">{emp.designation_name || 'Designation Not Set'}</span>
@@ -215,7 +214,7 @@ const TrackFeedback = () => {
                             {/* Profile + stats */}
                             <div className="flex justify-between items-start border-b border-gray-100 dark:border-gray-800 pb-3 mb-3">
                                 <div className="flex items-center gap-3">
-                                    <div className="w-10 h-10 rounded-full bg-teal-600 text-white flex items-center justify-center text-sm font-bold shrink-0">{selectedEmployee.initials}</div>
+                                    <div className="w-10 h-10 rounded-full bg-brand text-white flex items-center justify-center text-sm font-bold shrink-0">{selectedEmployee.initials}</div>
                                     <div>
                                         <h3 className="text-sm font-bold text-gray-800 dark:text-white leading-tight">{selectedEmployee.full_name}</h3>
                                         <span className="text-[10px] text-gray-400 mt-0.5 block">{selectedEmployee.designation_name || 'Designation Not Set'} • {selectedEmployee.department_name || 'No Dept'}</span>
@@ -223,7 +222,7 @@ const TrackFeedback = () => {
                                 </div>
                                 <div className="flex gap-2 text-center">
                                     <div className="bg-gray-50 dark:bg-gray-800 rounded-xl px-3 py-1.5">
-                                        <span className="block text-sm font-black text-teal-600 dark:text-teal-400">{feedbacks.length}</span>
+                                        <span className="block text-sm font-black text-brand dark:text-brand-400">{feedbacks.length}</span>
                                         <span className="text-[8px] font-bold text-gray-400 uppercase">Total</span>
                                     </div>
                                     <div className="bg-gray-50 dark:bg-gray-800 rounded-xl px-3 py-1.5">
@@ -264,7 +263,7 @@ const TrackFeedback = () => {
                                 </div>
                                 <div className="flex justify-end">
                                     <button type="submit" disabled={!text.trim()}
-                                        className="px-4 py-2 bg-teal-500 hover:bg-teal-600 disabled:bg-gray-300 text-white rounded-xl text-xs font-bold shadow-md shadow-teal-500/10">Share Feedback</button>
+                                        className="px-4 py-2 bg-brand hover:bg-brand disabled:bg-gray-300 text-white rounded-xl text-xs font-bold shadow-md shadow-brand/10">Share Feedback</button>
                                 </div>
                             </form>
 
@@ -292,7 +291,7 @@ const TrackFeedback = () => {
                                             </div>
                                             <div className="flex gap-2 shrink-0">
                                                 <button onClick={() => toggleAck(f)} className="text-[9px] font-bold text-emerald-600 hover:underline">{f.acknowledged ? 'Un-ack' : 'Ack'}</button>
-                                                <button onClick={() => { setEditId(f.id); setEditText(f.feedback_text); }} className="text-[9px] font-bold text-teal-600 hover:underline">Edit</button>
+                                                <button onClick={() => { setEditId(f.id); setEditText(f.feedback_text); }} className="text-[9px] font-bold text-brand hover:underline">Edit</button>
                                                 <button onClick={() => handleDelete(f.id)} className="text-[9px] font-bold text-rose-500 hover:underline">Delete</button>
                                             </div>
                                         </div>
@@ -300,7 +299,7 @@ const TrackFeedback = () => {
                                             <div className="mt-2 flex gap-2">
                                                 <input value={editText} onChange={(e) => setEditText(e.target.value)}
                                                     className="flex-1 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 px-2 py-1.5 rounded-lg text-[11px] font-semibold text-gray-800 dark:text-white focus:outline-none" />
-                                                <button onClick={() => saveEdit(f.id)} className="px-2 text-teal-600 text-[11px] font-black">Save</button>
+                                                <button onClick={() => saveEdit(f.id)} className="px-2 text-brand text-[11px] font-black">Save</button>
                                                 <button onClick={() => setEditId(null)} className="px-2 text-gray-400 text-sm font-bold">×</button>
                                             </div>
                                         ) : (

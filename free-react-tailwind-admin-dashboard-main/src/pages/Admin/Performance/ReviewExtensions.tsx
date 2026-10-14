@@ -2,6 +2,12 @@ import { useState, useEffect, useMemo } from 'react';
 import axios from 'axios';
 import IconSearch from '../../../components/Icon/IconSearch';
 
+import PageHeader from '../../../components/Common/PageHeader';
+import StatCard, { StatGrid } from '../../../components/Common/StatCard';
+import IconClock from '../../../components/Icon/IconClock';
+import IconCircleCheck from '../../../components/Icon/IconCircleCheck';
+import IconXCircle from '../../../components/Icon/IconXCircle';
+import IconListCheck from '../../../components/Icon/IconListCheck';
 interface Cycle { id: number; name: string; status: string; }
 interface Employee { id: number; full_name: string; initials: string; designation_name: string | null; department_name: string | null; }
 
@@ -30,7 +36,7 @@ const STATUS_STYLE = {
     rejected: { badge: 'bg-rose-100 text-rose-700 dark:bg-rose-950/40 dark:text-rose-400',       dot: 'bg-rose-400',    label: 'Rejected' },
 };
 
-const AVATAR_COLORS = ['bg-teal-500','bg-violet-500','bg-rose-500','bg-amber-500','bg-indigo-500','bg-pink-500','bg-cyan-500'];
+const AVATAR_COLORS = ['bg-brand','bg-violet-500','bg-rose-500','bg-amber-500','bg-indigo-500','bg-pink-500','bg-cyan-500'];
 const avatarColor = (id: number) => AVATAR_COLORS[id % AVATAR_COLORS.length];
 
 const fmt = (d: string) => d ? new Date(d).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '—';
@@ -155,24 +161,26 @@ const ReviewExtensions = () => {
     return (
         <div className="space-y-5 py-2 animate__animated animate__fadeIn">
             {/* Header */}
-            <div className="bg-white dark:bg-gray-900 p-5 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                <div>
-                    <h2 className="text-xl font-bold text-gray-800 dark:text-white">Appraisal Review Extensions</h2>
-                    <p className="text-xs text-gray-400 mt-0.5">Approve or reject deadline extensions requested by employees or managers.</p>
-                </div>
-                <button onClick={() => setShowForm(s => !s)}
-                    className={`px-4 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition ${showForm ? 'bg-gray-100 dark:bg-gray-800 text-gray-500' : 'bg-teal-500 hover:bg-teal-600 text-white shadow-md shadow-teal-500/10'}`}>
+            <PageHeader
+                title="Appraisal Review Extensions"
+                subtitle="Approve or reject deadline extensions requested by employees or managers."
+                actions={
+                    <>
+                        <button onClick={() => setShowForm(s => !s)}
+                    className={`px-4 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition ${showForm ? 'bg-gray-100 dark:bg-gray-800 text-gray-500' : 'bg-brand hover:bg-brand text-white shadow-md shadow-brand/10'}`}>
                     {showForm ? '✕ Cancel' : '+ Grant Extension'}
                 </button>
-            </div>
+                    </>
+                }
+            />
 
             {errorMsg && <div className="bg-rose-500/10 border border-rose-500/20 text-rose-700 dark:text-rose-400 p-3 rounded-xl text-xs font-bold">⚠️ {errorMsg}</div>}
             {successMsg && <div className="bg-emerald-500/10 border border-emerald-500/20 text-emerald-700 dark:text-emerald-400 p-3 rounded-xl text-xs font-bold">✓ {successMsg}</div>}
 
             {/* Grant extension form */}
             {showForm && (
-                <div className="bg-white dark:bg-gray-900 border border-teal-200 dark:border-teal-900/40 rounded-3xl p-5 animate__animated animate__fadeIn">
-                    <div className="text-[10px] font-black uppercase tracking-wider text-teal-600 dark:text-teal-400 mb-4">Grant Extension (Admin)</div>
+                <div className="bg-white dark:bg-gray-900 border border-brand-200 dark:border-brand-900/40 rounded-3xl p-5 animate__animated animate__fadeIn">
+                    <div className="text-[10px] font-black uppercase tracking-wider text-brand dark:text-brand-400 mb-4">Grant Extension (Admin)</div>
                     <form onSubmit={handleGrantExtension} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                         <div>
                             <label className="block text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-1">Appraisal Cycle *</label>
@@ -194,7 +202,7 @@ const ReviewExtensions = () => {
                                 <div className="absolute z-30 mt-1 w-full max-h-44 overflow-y-auto bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl shadow-lg">
                                     {employees.filter(e => e.full_name.toLowerCase().includes(formEmpSearch.toLowerCase())).slice(0, 30).map(e => (
                                         <div key={e.id} onMouseDown={() => { setFormEmployee(String(e.id)); setFormEmpSearch(e.full_name); setShowEmpList(false); }}
-                                            className="px-3 py-2 text-[11px] font-semibold text-gray-700 dark:text-gray-300 hover:bg-teal-500/10 cursor-pointer">
+                                            className="px-3 py-2 text-[11px] font-semibold text-gray-700 dark:text-gray-300 hover:bg-brand/10 cursor-pointer">
                                             {e.full_name} <span className="text-gray-400">({e.designation_name || 'No Desig'})</span>
                                         </div>
                                     ))}
@@ -222,7 +230,7 @@ const ReviewExtensions = () => {
 
                         <div className="sm:col-span-full flex justify-end">
                             <button type="submit" disabled={saving || !formCycle || !formEmployee}
-                                className="px-5 py-2 bg-teal-500 hover:bg-teal-600 disabled:bg-gray-300 text-white rounded-xl text-xs font-bold">
+                                className="px-5 py-2 bg-brand hover:bg-brand disabled:bg-gray-300 text-white rounded-xl text-xs font-bold">
                                 {saving ? 'Granting...' : 'Grant & Approve Extension'}
                             </button>
                         </div>
@@ -231,28 +239,19 @@ const ReviewExtensions = () => {
             )}
 
             {/* Stats */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                {[
-                    { key: 'pending',  label: 'Pending',  icon: '⏳', val: counts.pending,  bg: 'bg-amber-50 dark:bg-amber-950/20',   num: 'text-amber-600 dark:text-amber-400' },
-                    { key: 'approved', label: 'Approved', icon: '✅', val: counts.approved, bg: 'bg-emerald-50 dark:bg-emerald-950/20', num: 'text-emerald-600 dark:text-emerald-400' },
-                    { key: 'rejected', label: 'Rejected', icon: '❌', val: counts.rejected, bg: 'bg-rose-50 dark:bg-rose-950/20',     num: 'text-rose-600 dark:text-rose-400' },
-                    { key: 'all',      label: 'Total',    icon: '📋', val: counts.all,      bg: 'bg-white dark:bg-gray-900',          num: 'text-gray-700 dark:text-white' },
-                ].map(s => (
-                    <button key={s.key} onClick={() => setTab(s.key as TabFilter)}
-                        className={`${s.bg} border rounded-2xl p-4 text-center transition ${tab === s.key ? 'border-teal-400 dark:border-teal-600' : 'border-gray-100 dark:border-gray-800'}`}>
-                        <div className="text-xl mb-1">{s.icon}</div>
-                        <div className={`text-2xl font-black ${s.num}`}>{s.val}</div>
-                        <div className="text-[9px] font-bold text-gray-400 uppercase tracking-wider">{s.label}</div>
-                    </button>
-                ))}
-            </div>
+            <StatGrid cols={4}>
+                <StatCard label="Pending" value={counts.pending} tone="warning" icon={<IconClock />} onClick={() => setTab('pending')} active={tab === 'pending'} />
+                <StatCard label="Approved" value={counts.approved} tone="success" icon={<IconCircleCheck />} onClick={() => setTab('approved')} active={tab === 'approved'} />
+                <StatCard label="Rejected" value={counts.rejected} tone="danger" icon={<IconXCircle />} onClick={() => setTab('rejected')} active={tab === 'rejected'} />
+                <StatCard label="Total" value={counts.all} tone="primary" icon={<IconListCheck />} onClick={() => setTab('all')} active={tab === 'all'} />
+            </StatGrid>
 
             {/* Filters */}
             <div className="bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-2xl p-4 flex flex-col sm:flex-row gap-3">
                 <div className="flex gap-2 flex-1 flex-wrap">
                     {TABS.map(t => (
                         <button key={t.key} onClick={() => setTab(t.key)}
-                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition ${tab === t.key ? 'bg-teal-500 text-white' : 'bg-gray-50 dark:bg-gray-800 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'}`}>
+                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition ${tab === t.key ? 'bg-brand text-white' : 'bg-gray-50 dark:bg-gray-800 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'}`}>
                             {t.label}
                             <span className={`text-[8px] font-black px-1.5 py-0.5 rounded-full ${tab === t.key ? 'bg-white/20 text-white' : 'bg-gray-200 dark:bg-gray-700 text-gray-500'}`}>
                                 {counts[t.key]}
@@ -311,7 +310,7 @@ const ReviewExtensions = () => {
                                 </div>
 
                                 {/* Cycle */}
-                                <div className="text-[10px] font-black text-teal-600 dark:text-teal-400 mb-3">📋 {ext.cycle_name}</div>
+                                <div className="text-[10px] font-black text-brand dark:text-brand-400 mb-3">📋 {ext.cycle_name}</div>
 
                                 {/* Timeline */}
                                 <div className="grid grid-cols-3 gap-2 mb-3">
@@ -319,9 +318,9 @@ const ReviewExtensions = () => {
                                         <div className="text-[8px] font-bold text-gray-400 uppercase mb-1">Original</div>
                                         <div className="text-[10px] font-bold text-gray-700 dark:text-gray-200">{fmt(ext.original_deadline)}</div>
                                     </div>
-                                    <div className="bg-teal-500/10 rounded-xl p-2.5 text-center">
-                                        <div className="text-[8px] font-bold text-teal-500 uppercase mb-1">Extended To</div>
-                                        <div className="text-[10px] font-bold text-teal-600 dark:text-teal-400">{fmt(ext.extended_deadline)}</div>
+                                    <div className="bg-brand/10 rounded-xl p-2.5 text-center">
+                                        <div className="text-[8px] font-bold text-brand uppercase mb-1">Extended To</div>
+                                        <div className="text-[10px] font-bold text-brand dark:text-brand-400">{fmt(ext.extended_deadline)}</div>
                                     </div>
                                     <div className={`rounded-xl p-2.5 text-center ${days > 7 ? 'bg-amber-500/10' : 'bg-gray-50 dark:bg-gray-800/50'}`}>
                                         <div className="text-[8px] font-bold text-gray-400 uppercase mb-1">Extra Days</div>

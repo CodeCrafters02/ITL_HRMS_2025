@@ -3,7 +3,10 @@ import { useDispatch } from 'react-redux';
 import Swal from 'sweetalert2';
 import { setPageTitle } from '../../store/themeConfigSlice';
 import DataTable, { Column } from '../../components/Common/DataTable';
+import PageHeader from '../../components/Common/PageHeader';
+import IconClock from '../../components/Icon/IconClock';
 
+import Button from '../../components/Common/Button';
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000';
 const EMPLOYEE_API_URL = `${API_BASE_URL}/app/employee/`;
 const SHIFT_API_URL = `${API_BASE_URL}/app/shift-policies/?page_size=1000`;
@@ -135,7 +138,7 @@ const AdminAssignShifts = () => {
             key: 'employee_id',
             title: 'Employee ID',
             sortable: true,
-            render: (_val, emp) => <span className="font-semibold text-[#0062E0]">{emp.employee_id || '-'}</span>,
+            render: (_val, emp) => <span className="font-semibold text-brand">{emp.employee_id || '-'}</span>,
         },
         {
             key: 'name',
@@ -157,7 +160,7 @@ const AdminAssignShifts = () => {
             title: 'Assign Shift',
             render: (_val, emp) => (
                 <select
-                    className="form-select min-w-[200px] text-xs py-1.5 px-3 rounded-lg border-[#cbd5e1] dark:border-[#1e293b] dark:bg-[#121e32] focus:border-[#0062E0]"
+                    className="form-select min-w-[200px] text-xs py-1.5 px-3 rounded-lg border-[#cbd5e1] dark:border-[#1e293b] dark:bg-[#121e32] focus:border-brand"
                     value={selectedShift[emp.id] ?? emp.shift_assigned?.id ?? ''}
                     onChange={(e) => setSelectedShift((prev) => ({ ...prev, [emp.id]: Number(e.target.value) }))}
                 >
@@ -176,22 +179,22 @@ const AdminAssignShifts = () => {
             align: 'center',
             width: '100px',
             render: (_val, emp) => (
-                <button type="button" className="btn btn-sm btn-success px-4" onClick={() => handleAssign(emp)}>
+                <Button variant="success" size="sm" className="!px-4" type="button"  onClick={() => handleAssign(emp)}>
                     Assign
-                </button>
+                </Button>
             ),
         },
     ];
 
     return (
         <div className="space-y-6">
-            <div className="bg-gradient-to-r from-[#0e1726] to-[#22c55e] p-6 rounded-xl shadow-lg relative overflow-hidden">
-                <div className="relative z-10">
-                    <h1 className="text-3xl font-extrabold text-white tracking-tight">Assign Shifts</h1>
-                    <p className="text-white/80 mt-1 text-sm font-medium">Search employees and assign shift policies.</p>
-                </div>
-                <div className="absolute top-0 right-0 -mt-10 -mr-10 w-48 h-48 bg-white opacity-5 rounded-full blur-2xl"></div>
-            </div>
+            <PageHeader
+                title="Assign Shifts"
+                subtitle="Search employees and assign personalized shift policies across your organization."
+                icon={<IconClock />}
+                badge="Workforce Scheduling"
+                variant="indigo"
+            />
 
             <DataTable
                 columns={columns}

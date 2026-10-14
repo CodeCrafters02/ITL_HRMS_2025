@@ -7,6 +7,9 @@ import IconPlus from '../../components/Icon/IconPlus';
 import IconX from '../../components/Icon/IconX';
 import IconTrashLines from '../../components/Icon/IconTrashLines';
 import IconPencil from '../../components/Icon/IconPencil';
+import IconClock from '../../components/Icon/IconClock';
+import DataTable, { Column } from '../../components/Common/DataTable';
+import PageHeader from '../../components/Common/PageHeader';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000';
 const API_URL = `${API_BASE_URL}/app/shift-policies/`;
@@ -108,6 +111,10 @@ const AdminShift = () => {
     const dispatch = useDispatch();
     const [items, setItems] = useState<ShiftPolicy[]>([]);
     const [loading, setLoading] = useState(false);
+    const [page, setPage] = useState(1);
+    const [pageSize, setPageSize] = useState(10);
+    const [totalCount, setTotalCount] = useState(0);
+    const [search, setSearch] = useState('');
     const [modalOpen, setModalOpen] = useState(false);
     const [editing, setEditing] = useState<ShiftPolicy | null>(null);
     const [errors, setErrors] = useState<Record<string, string>>({});
@@ -126,10 +133,22 @@ const AdminShift = () => {
     const fetchAll = async () => {
         setLoading(true);
         try {
-            const resp = await fetch(API_URL, { headers: hdrs() });
+            const url = new URL(API_URL);
+            url.searchParams.append('page', String(page));
+            url.searchParams.append('page_size', String(pageSize));
+            if (search.trim()) url.searchParams.append('search', search.trim());
+
+            const resp = await fetch(url.toString(), { headers: hdrs() });
             const data = await resp.json();
             if (!resp.ok) throw new Error(data?.detail || 'Failed to load shift policies');
-            setItems(Array.isArray(data) ? data : data?.results || []);
+            if (data.results) {
+                setItems(data.results);
+                setTotalCount(data.count ?? 0);
+            } else {
+                const arr = Array.isArray(data) ? data : [];
+                setItems(arr);
+                setTotalCount(arr.length);
+            }
         } catch (e: any) {
             Swal.fire('Error', e?.message || 'Failed to load', 'error');
         } finally {
@@ -138,9 +157,12 @@ const AdminShift = () => {
     };
 
     useEffect(() => {
-        fetchAll();
+        const handler = setTimeout(() => {
+            fetchAll();
+        }, 300);
+        return () => clearTimeout(handler);
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, []);
+    }, [page, pageSize, search]);
 
     // ─── Auto-calculate full_day when checkin/checkout changes ───
     useEffect(() => {
@@ -264,91 +286,129 @@ const AdminShift = () => {
     // Computed total hours for the editing modal
     const computedTotal = editing ? calcTotalHours(editing.checkin, editing.checkout) : '00:00:00';
 
-    return (
-        <div>
-            {/* Banner */}
-            <div className="bg-gradient-to-r from-[#0e1726] to-[#3b82f6] p-6 rounded-xl shadow-lg mb-6 relative overflow-hidden">
-                <div className="relative z-10">
-                    <h1 className="text-3xl font-extrabold text-white tracking-tight">Shift Policies</h1>
-                    <p className="text-white/80 mt-1 text-sm font-medium">Configure work shifts, check-in/check-out times and grace periods.</p>
-                </div>
-                <div className="absolute top-0 right-0 -mt-10 -mr-10 w-48 h-48 bg-white opacity-5 rounded-full blur-2xl"></div>
-            </div>
-
-            <div className="panel">
-                <div className="flex items-center justify-between mb-5">
-                    <div className="text-sm text-gray-500 dark:text-gray-400 font-semibold">{countLabel}</div>
-                    <button type="button" className="btn btn-primary gap-2" onClick={openAdd}>
-                        <IconPlus /> Add Shift
+    const columns: Column<ShiftPolicy>[] = [
+        {
+            key: 'index',
+            title: '#',
+            width: '70px',
+            align: 'center',
+            render: (_val, _item, index) => (
+                <span className="font-semibold text-gray-500">{(index ?? 0) + 1}</span>
+            ),
+        },
+        {
+            key: 'shift_type',
+            title: 'Shift Type',
+            sortable: true,
+            render: (val) => <span className="font-semibold text-gray-800 dark:text-white-light">{val}</span>,
+        },
+        {
+            key: 'checkin',
+            title: 'Check-in',
+            render: (val) => (
+                <span className="badge badge-outline-primary font-mono px-2.5 py-1">
+                    {formatTimeLabel(val)}
+                </span>
+            ),
+        },
+        {
+            key: 'checkout',
+            title: 'Check-out',
+            render: (val) => (
+                <span className="badge badge-outline-danger font-mono px-2.5 py-1">
+                    {formatTimeLabel(val)}
+                </span>
+            ),
+        },
+        {
+            key: 'full_day',
+            title: 'Total Hours',
+            render: (val) => (
+                <span className="badge badge-outline-success font-mono px-2.5 py-1">
+                    {formatDuration(val)}
+                </span>
+            ),
+        },
+        {
+            key: 'grace_period',
+            title: 'Grace Period',
+            render: (val) => <span className="font-mono text-gray-500">{formatDuration(val)}</span>,
+        },
+        {
+            key: 'half_day',
+            title: 'Half Day',
+            render: (val) => <span className="font-mono text-gray-500">{formatDuration(val)}</span>,
+        },
+        {
+            key: 'actions',
+            title: 'Actions',
+            align: 'center',
+            width: '120px',
+            render: (_val, s) => (
+                <div className="flex items-center justify-center gap-2">
+                    <button
+                        type="button"
+                        className="p-1.5 rounded-lg text-primary hover:text-white hover:bg-primary transition-colors"
+                        onClick={() => openEdit(s)}
+                        title="Edit Shift"
+                    >
+                        <IconPencil className="w-4 h-4" />
+                    </button>
+                    <button
+                        type="button"
+                        className="p-1.5 rounded-lg text-danger hover:text-white hover:bg-danger transition-colors"
+                        onClick={() => del(s)}
+                        title="Delete Shift"
+                    >
+                        <IconTrashLines className="w-4 h-4" />
                     </button>
                 </div>
+            ),
+        },
+    ];
 
-                <div className="table-responsive">
-                    <table className="table-hover">
-                        <thead>
-                            <tr>
-                                <th>#</th>
-                                <th>Shift Type</th>
-                                <th>Check-in</th>
-                                <th>Check-out</th>
-                                <th>Total Hours</th>
-                                <th>Grace</th>
-                                <th>Half Day</th>
-                                <th className="text-center">Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {loading ? (
-                                <tr>
-                                    <td colSpan={8} className="text-center py-6 text-white-dark">
-                                        <span className="animate-pulse">Loading...</span>
-                                    </td>
-                                </tr>
-                            ) : items.length ? (
-                                items.map((s, idx) => (
-                                    <tr key={s.id}>
-                                        <td>{idx + 1}</td>
-                                        <td className="font-semibold">{s.shift_type}</td>
-                                        <td>
-                                            <span className="badge badge-outline-primary font-mono px-2.5 py-1">
-                                                {formatTimeLabel(s.checkin)}
-                                            </span>
-                                        </td>
-                                        <td>
-                                            <span className="badge badge-outline-danger font-mono px-2.5 py-1">
-                                                {formatTimeLabel(s.checkout)}
-                                            </span>
-                                        </td>
-                                        <td>
-                                            <span className="badge badge-outline-success font-mono px-2.5 py-1">
-                                                {formatDuration(s.full_day)}
-                                            </span>
-                                        </td>
-                                        <td className="font-mono text-gray-500">{formatDuration(s.grace_period)}</td>
-                                        <td className="font-mono text-gray-500">{formatDuration(s.half_day)}</td>
-                                        <td className="text-center">
-                                            <div className="flex items-center justify-center gap-3">
-                                                <button type="button" className="text-primary hover:text-blue-700" onClick={() => openEdit(s)} title="Edit">
-                                                    <IconPencil className="w-5 h-5" />
-                                                </button>
-                                                <button type="button" className="text-danger hover:text-red-700" onClick={() => del(s)} title="Delete">
-                                                    <IconTrashLines className="w-5 h-5" />
-                                                </button>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                ))
-                            ) : (
-                                <tr>
-                                    <td colSpan={8} className="text-center py-6 text-white-dark">
-                                        No shift policies found.
-                                    </td>
-                                </tr>
-                            )}
-                        </tbody>
-                    </table>
-                </div>
-            </div>
+    return (
+        <div>
+            {/* Executive Page Header */}
+            <PageHeader
+                title="Shift Policies"
+                subtitle="Configure working shifts, core timings, grace periods, and attendance rules."
+                icon={<IconClock />}
+                badge="Workforce Scheduling"
+                variant="indigo"
+                actions={
+                    <button type="button" className="btn btn-primary gap-2 shadow-lg shadow-primary/20 backdrop-blur-sm" onClick={openAdd}>
+                        <IconPlus className="w-4 h-4" /> Add Shift Policy
+                    </button>
+                }
+            />
+
+            {/* Reusable Data Table */}
+            <DataTable
+                columns={columns}
+                data={items}
+                loading={loading}
+                page={page}
+                pageSize={pageSize}
+                totalCount={totalCount}
+                onPageChange={(p) => setPage(p)}
+                onPageSizeChange={(sz) => {
+                    setPageSize(sz);
+                    setPage(1);
+                }}
+                searchValue={search}
+                onSearchChange={(val) => {
+                    setSearch(val);
+                    setPage(1);
+                }}
+                onRefresh={fetchAll}
+                searchPlaceholder="Search shift policies..."
+                actionButton={
+                    <button type="button" className="btn btn-primary gap-2 shadow-md shadow-primary/20" onClick={openAdd}>
+                        <IconPlus className="w-4 h-4" /> Add Shift
+                    </button>
+                }
+            />
 
             {/* ─── Add/Edit Modal ─── */}
             <Transition appear show={modalOpen} as={Fragment}>

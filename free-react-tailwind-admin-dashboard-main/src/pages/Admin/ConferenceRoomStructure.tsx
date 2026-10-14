@@ -10,6 +10,8 @@ import IconHome from '../../components/Icon/IconHome';
 import IconMenuComponents from '../../components/Icon/Menu/IconMenuComponents';
 import Swal from 'sweetalert2';
 
+import PageHeader from '../../components/Common/PageHeader';
+import Button from '../../components/Common/Button';
 interface LayoutElement {
     id: string;
     type: 'seat' | 'door' | 'zone' | 'room' | 'label';
@@ -306,15 +308,12 @@ const ConferenceRoomStructure = () => {
 
     return (
         <div className="flex flex-col h-[calc(var(--app-vh)_-_90px)] space-y-4">
-            <div className="bg-gradient-to-r from-blue-600 to-indigo-600 rounded-xl p-4 text-white shadow-lg overflow-hidden relative">
-                <div className="relative z-10">
-                    <h2 className="text-3xl font-extrabold mb-0.5">Conference Room Structure</h2>
-                    <p className="text-white/80 text-sm font-medium">Define and place conference rooms on floor maps to enable employee bookings.</p>
-                </div>
-                <div className="absolute right-[-20px] top-[-20px] opacity-10">
-                    <IconHome className="w-48 h-48" />
-                </div>
-            </div>
+            <PageHeader
+                icon={<IconHome />}
+                title="Conference Room Structure"
+                subtitle="Define and place conference rooms on floor maps to enable employee bookings."
+                variant="cyan"
+            />
 
             <div className="flex flex-col sm:flex-row items-center justify-between gap-4 bg-white dark:bg-[#0e1726] p-4 rounded-xl shadow-sm border border-gray-100 dark:border-gray-800">
                 <div className="flex items-center gap-4 overflow-x-auto w-full sm:w-auto">
@@ -364,9 +363,9 @@ const ConferenceRoomStructure = () => {
                 </div>
 
                 <div className="flex items-center gap-2">
-                    <button onClick={handleSave} disabled={!selectedFloor} className="btn btn-primary gap-2 px-6">
+                    <Button className="!px-6" onClick={handleSave} disabled={!selectedFloor}>
                         <IconSave className="w-5 h-5" /> Save Layout
-                    </button>
+                    </Button>
                 </div>
             </div>
 

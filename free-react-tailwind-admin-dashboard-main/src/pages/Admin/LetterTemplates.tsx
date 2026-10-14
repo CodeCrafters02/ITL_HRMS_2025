@@ -1,14 +1,17 @@
 import { useEffect, useState, Fragment } from 'react';
 import { useDispatch } from 'react-redux';
-import { Dialog, Transition } from '@headlessui/react';
 import Swal from 'sweetalert2';
 import { setPageTitle } from '../../store/themeConfigSlice';
 import IconPlus from '../../components/Icon/IconPlus';
 import IconTrashLines from '../../components/Icon/IconTrashLines';
 import IconPencil from '../../components/Icon/IconPencil';
 import IconX from '../../components/Icon/IconX';
+import IconTxtFile from '../../components/Icon/IconTxtFile';
 import DataTable, { Column } from '../../components/Common/DataTable';
+import PageHeader from '../../components/Common/PageHeader';
 
+import Modal from '../../components/Common/Modal';
+import Button, { IconButton } from '../../components/Common/Button';
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000';
 const API_URL = `${API_BASE_URL}/app/letter-templates/`;
 
@@ -188,22 +191,22 @@ const AdminLetterTemplates = () => {
             width: '120px',
             render: (_val, row) => (
                 <div className="flex items-center justify-center gap-2">
-                    <button
+                    <IconButton tone="primary"
                         type="button"
-                        className="p-1.5 rounded-lg text-primary hover:bg-primary/10 transition-colors"
+                        
                         onClick={() => openEdit(row)}
                         title="Edit Template"
                     >
                         <IconPencil className="w-4 h-4" />
-                    </button>
-                    <button
+                    </IconButton>
+                    <IconButton tone="danger"
                         type="button"
-                        className="p-1.5 rounded-lg text-danger hover:bg-danger/10 transition-colors"
+                        
                         onClick={() => del(row)}
                         title="Delete Template"
                     >
                         <IconTrashLines className="w-4 h-4" />
-                    </button>
+                    </IconButton>
                 </div>
             ),
         },
@@ -211,13 +214,18 @@ const AdminLetterTemplates = () => {
 
     return (
         <div className="space-y-6">
-            <div className="bg-gradient-to-r from-[#0e1726] to-[#8b5cf6] p-6 rounded-xl shadow-lg relative overflow-hidden">
-                <div className="relative z-10">
-                    <h1 className="text-3xl font-extrabold text-white tracking-tight">Letter Templates</h1>
-                    <p className="text-white/80 mt-1 text-sm font-medium">Create and manage templates for offer/appointment/relieving letters.</p>
-                </div>
-                <div className="absolute top-0 right-0 -mt-10 -mr-10 w-48 h-48 bg-white opacity-5 rounded-full blur-2xl"></div>
-            </div>
+            <PageHeader
+                title="Letter Templates"
+                subtitle="Create, configure, and standardize official templates for offers, promotions, and relieving documentation."
+                icon={<IconTxtFile />}
+                badge="HR Documentation"
+                variant="purple"
+                actions={
+                    <Button type="button"  onClick={openAdd}>
+                        <IconPlus className="w-4 h-4" /> Add Template
+                    </Button>
+                }
+            />
 
             <DataTable
                 columns={columns}
@@ -233,75 +241,55 @@ const AdminLetterTemplates = () => {
                 searchPlaceholder="Search letter templates..."
                 onRefresh={fetchTemplates}
                 actionButton={
-                    <button type="button" className="btn btn-primary gap-2" onClick={openAdd}>
+                    <Button type="button"  onClick={openAdd}>
                         <IconPlus className="w-4 h-4" /> Add Template
-                    </button>
+                    </Button>
                 }
             />
 
-            <Transition appear show={isModalOpen} as={Fragment}>
-                <Dialog as="div" open={isModalOpen} onClose={() => setIsModalOpen(false)} className="relative z-50">
-                    <Transition.Child as={Fragment} enter="ease-out duration-300" enterFrom="opacity-0" enterTo="opacity-100" leave="ease-in duration-200" leaveFrom="opacity-100" leaveTo="opacity-0">
-                        <div className="fixed inset-0 bg-[black]/60" />
-                    </Transition.Child>
-                    <div className="fixed inset-0 overflow-y-auto">
-                        <div className="flex min-h-full items-center justify-center px-4 py-8">
-                            <Transition.Child as={Fragment} enter="ease-out duration-300" enterFrom="opacity-0 scale-95" enterTo="opacity-100 scale-100" leave="ease-in duration-200" leaveFrom="opacity-100 scale-100" leaveTo="opacity-0 scale-95">
-                                <Dialog.Panel className="panel border-0 p-0 rounded-lg overflow-hidden w-full max-w-2xl text-black dark:text-white-dark shadow-xl">
-                                    <button type="button" onClick={() => setIsModalOpen(false)} className="absolute top-4 ltr:right-4 rtl:left-4 text-gray-400 hover:text-gray-800 dark:hover:text-gray-600 outline-none">
-                                        <IconX />
-                                    </button>
-                                    <div className="text-lg font-medium bg-[#fbfbfb] dark:bg-[#121c2c] ltr:pl-5 rtl:pr-5 py-3 ltr:pr-[50px] rtl:pl-[50px]">
-                                        {editMode ? 'Edit Template' : 'Add New Template'}
-                                    </div>
-                                    <div className="p-5">
-                                        <form onSubmit={save}>
-                                            <div className="mb-5">
-                                                <label htmlFor="title" className="font-semibold mb-1 block">Title *</label>
-                                                <input
-                                                    id="title"
-                                                    type="text"
-                                                    className="form-input"
-                                                    required
-                                                    value={formData.title}
-                                                    onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                                                />
-                                            </div>
-                                            <div className="mb-5">
-                                                <label htmlFor="content" className="font-semibold mb-1 block">Letter Content *</label>
-                                                <textarea
-                                                    id="content"
-                                                    className="form-textarea min-h-[220px]"
-                                                    required
-                                                    value={formData.content}
-                                                    onChange={(e) => setFormData({ ...formData, content: e.target.value })}
-                                                />
-                                            </div>
-                                            <div className="mb-5">
-                                                <label htmlFor="email_content" className="font-semibold mb-1 block">Email Content</label>
-                                                <textarea
-                                                    id="email_content"
-                                                    className="form-textarea min-h-[120px]"
-                                                    value={formData.email_content}
-                                                    onChange={(e) => setFormData({ ...formData, email_content: e.target.value })}
-                                                />
-                                            </div>
-                                            <div className="flex justify-end items-center gap-3 mt-8">
-                                                <button type="button" className="btn btn-outline-danger" onClick={() => setIsModalOpen(false)}>
-                                                    Cancel
-                                                </button>
-                                                <button type="submit" className="btn btn-primary">
-                                                    {editMode ? 'Update' : 'Create'}
-                                                </button>
-                                            </div>
-                                        </form>
-                                    </div>
-                                </Dialog.Panel>
-                            </Transition.Child>
-                        </div>
+            <Modal open={isModalOpen} onClose={() => setIsModalOpen(false)} title={editMode ? 'Edit Template' : 'Add New Template'} size="2xl">
+                <form onSubmit={save}>
+                    <div className="mb-5">
+                        <label htmlFor="title" className="font-semibold mb-1 block">Title *</label>
+                        <input
+                            id="title"
+                            type="text"
+                            className="form-input"
+                            required
+                            value={formData.title}
+                            onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                        />
                     </div>
-                </Dialog>
-            </Transition>
+                    <div className="mb-5">
+                        <label htmlFor="content" className="font-semibold mb-1 block">Letter Content *</label>
+                        <textarea
+                            id="content"
+                            className="form-textarea min-h-[220px]"
+                            required
+                            value={formData.content}
+                            onChange={(e) => setFormData({ ...formData, content: e.target.value })}
+                        />
+                    </div>
+                    <div className="mb-5">
+                        <label htmlFor="email_content" className="font-semibold mb-1 block">Email Content</label>
+                        <textarea
+                            id="email_content"
+                            className="form-textarea min-h-[120px]"
+                            value={formData.email_content}
+                            onChange={(e) => setFormData({ ...formData, email_content: e.target.value })}
+                        />
+                    </div>
+                    <div className="flex justify-end items-center gap-3 mt-8">
+                        <Button variant="outline-danger" type="button"  onClick={() => setIsModalOpen(false)}>
+                            Cancel
+                        </Button>
+                        <Button type="submit">
+                            {editMode ? 'Update' : 'Create'}
+                        </Button>
+                    </div>
+                </form>
+
+            </Modal>
         </div>
     );
 };

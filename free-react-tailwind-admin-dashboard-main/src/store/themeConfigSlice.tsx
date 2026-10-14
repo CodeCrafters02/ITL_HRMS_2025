@@ -1,4 +1,4 @@
-import { createSlice } from '@reduxjs/toolkit';
+import { createSlice, PayloadAction } from '@reduxjs/toolkit';
 import i18next from 'i18next';
 import themeConfig from '../theme.config';
 
@@ -35,7 +35,7 @@ const defaultState = {
 };
 
 const initialState = {
-    theme: localStorage.getItem('theme') || themeConfig.theme,
+    theme: 'light',
     menu: localStorage.getItem('menu') || themeConfig.menu,
     layout: localStorage.getItem('layout') || themeConfig.layout,
     rtlClass: localStorage.getItem('rtlClass') || themeConfig.rtlClass,
@@ -44,7 +44,7 @@ const initialState = {
     locale: localStorage.getItem('i18nextLng') || themeConfig.locale,
     isDarkMode: false,
     sidebar: localStorage.getItem('sidebar') || defaultState.sidebar,
-    semidark: localStorage.getItem('semidark') || themeConfig.semidark,
+    semidark: false,
     isQuizActive: false,
     languageList: [
         { code: 'zh', name: 'Chinese' },
@@ -70,27 +70,12 @@ const themeConfigSlice = createSlice({
     name: 'auth',
     initialState: initialState,
     reducers: {
-        toggleTheme(state, { payload }) {
-            payload = payload || state.theme; // light | dark | system
-            localStorage.setItem('theme', payload);
-            state.theme = payload;
-            if (payload === 'light') {
-                state.isDarkMode = false;
-            } else if (payload === 'dark') {
-                state.isDarkMode = true;
-            } else if (payload === 'system') {
-                if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
-                    state.isDarkMode = true;
-                } else {
-                    state.isDarkMode = false;
-                }
-            }
-
-            if (state.isDarkMode) {
-                document.querySelector('body')?.classList.add('dark');
-            } else {
-                document.querySelector('body')?.classList.remove('dark');
-            }
+        // Dark mode has been removed: the app is always light. The action is kept so existing callers keep working.
+        toggleTheme(state, _action: PayloadAction<any>) {
+            localStorage.setItem('theme', 'light');
+            state.theme = 'light';
+            state.isDarkMode = false;
+            document.querySelector('body')?.classList.remove('dark');
         },
         toggleMenu(state, { payload }) {
             payload = payload || state.menu; // vertical, collapsible-vertical, horizontal
@@ -120,10 +105,9 @@ const themeConfigSlice = createSlice({
             localStorage.setItem('navbar', payload);
             state.navbar = payload;
         },
-        toggleSemidark(state, { payload }) {
-            payload = payload === true || payload === 'true' ? true : false;
-            localStorage.setItem('semidark', payload);
-            state.semidark = payload;
+        toggleSemidark(state, _action: PayloadAction<any>) {
+            localStorage.setItem('semidark', 'false');
+            state.semidark = false;
         },
         toggleLocale(state, { payload }) {
             payload = payload || state.locale;

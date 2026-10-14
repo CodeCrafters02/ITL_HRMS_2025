@@ -9,8 +9,11 @@ import IconPlus from '../../components/Icon/IconPlus';
 import IconPencil from '../../components/Icon/IconPencil';
 import IconTrashLines from '../../components/Icon/IconTrashLines';
 import IconSearch from '../../components/Icon/IconSearch';
+import IconServer from '../../components/Icon/IconServer';
 import DataTable, { Column } from '../../components/Common/DataTable';
+import PageHeader from '../../components/Common/PageHeader';
 
+import Button from '../../components/Common/Button';
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000';
 
 type EmployeeOpt = { id: number; employee_id: string | null; first_name: string | null; last_name: string | null };
@@ -613,16 +616,16 @@ const AdminAssetsInventory = () => {
             align: 'right',
             render: (_val, row) => (
                 <div className="flex justify-end gap-2">
-                    <button
+                    <Button variant="outline" size="sm"
                         type="button"
-                        className="btn btn-outline-primary btn-sm"
+                        
                         onClick={() => openDocs({ kind: 'fixed', id: row.id, label: row.asset_tag })}
                     >
                         Docs
-                    </button>
-                    <button
+                    </Button>
+                    <Button variant="outline" size="sm" className="!p-2"
                         type="button"
-                        className="btn btn-outline-primary btn-sm p-2"
+                        
                         onClick={() => {
                             setFaEditId(row.id);
                             setFaForm({
@@ -643,14 +646,14 @@ const AdminAssetsInventory = () => {
                         }}
                     >
                         <IconPencil className="w-4 h-4" />
-                    </button>
-                    <button
+                    </Button>
+                    <Button variant="outline-danger" size="sm" className="!p-2"
                         type="button"
-                        className="btn btn-outline-danger btn-sm p-2"
+                        
                         onClick={() => deleteFa(row.id)}
                     >
                         <IconTrashLines className="w-4 h-4" />
-                    </button>
+                    </Button>
                 </div>
             ),
         },
@@ -755,16 +758,16 @@ const AdminAssetsInventory = () => {
             align: 'right',
             render: (_val, row) => (
                 <div className="flex justify-end gap-2">
-                    <button
+                    <Button variant="outline" size="sm"
                         type="button"
-                        className="btn btn-outline-primary btn-sm"
+                        
                         onClick={() => openDocs({ kind: 'supply', id: row.id, label: row.item_code })}
                     >
                         Docs
-                    </button>
-                    <button
+                    </Button>
+                    <Button variant="outline" size="sm" className="!p-2"
                         type="button"
-                        className="btn btn-outline-primary btn-sm p-2"
+                        
                         onClick={() => {
                             setSiEditId(row.id);
                             setSiForm({
@@ -785,10 +788,10 @@ const AdminAssetsInventory = () => {
                         }}
                     >
                         <IconPencil className="w-4 h-4" />
-                    </button>
-                    <button type="button" className="btn btn-outline-danger btn-sm p-2" onClick={() => deleteSi(row.id)}>
+                    </Button>
+                    <Button variant="outline-danger" size="sm" className="!p-2" type="button"  onClick={() => deleteSi(row.id)}>
                         <IconTrashLines className="w-4 h-4" />
-                    </button>
+                    </Button>
                 </div>
             ),
         },
@@ -796,15 +799,13 @@ const AdminAssetsInventory = () => {
 
     return (
         <div className="space-y-6 animate__animated animate__fadeIn">
-            <div className="bg-gradient-to-r from-[#0e1726] to-[#3b82f6] p-6 rounded-xl shadow-lg mb-2 relative overflow-hidden">
-                <div className="relative z-10">
-                    <h1 className="text-3xl font-extrabold text-white tracking-tight">Assets &amp; Inventory</h1>
-                    <p className="text-white/80 mt-1 text-sm font-medium">
-                        Core (serialized) units, variable SKU catalog (supply stack), and requests. Link a core asset to a variable SKU when they match.
-                    </p>
-                </div>
-                <div className="absolute top-0 right-0 -mt-10 -mr-10 w-48 h-48 bg-white opacity-5 rounded-full blur-2xl"></div>
-            </div>
+            <PageHeader
+                title="Assets & Inventory"
+                subtitle="Core (serialized) units, variable SKU catalog (supply stack), and employee procurement requests."
+                icon={<IconServer />}
+                badge="Facilities & IT Assets"
+                variant="cyan"
+            />
 
             <div className="panel">
                 <Tab.Group>
@@ -844,16 +845,16 @@ const AdminAssetsInventory = () => {
                                 searchPlaceholder="Search tag, serial, model..."
                                 onRefresh={fetchFixed}
                                 actionButton={
-                                    <button
+                                    <Button
                                         type="button"
-                                        className="btn btn-primary gap-2"
+                                        
                                         onClick={() => {
                                             resetFa();
                                             setFaModal(true);
                                         }}
                                     >
                                         <IconPlus /> Add fixed asset
-                                    </button>
+                                    </Button>
                                 }
                                 renderSubRow={(row) => expandedFa.includes(row.id) ? (
                                     <div className="bg-gray-50 dark:bg-white-dark/5 p-4 border-l-4 border-primary">
@@ -910,16 +911,16 @@ const AdminAssetsInventory = () => {
                                 searchPlaceholder="Search code, name, vendor..."
                                 onRefresh={fetchSupply}
                                 actionButton={
-                                    <button
+                                    <Button
                                         type="button"
-                                        className="btn btn-primary gap-2"
+                                        
                                         onClick={() => {
                                             resetSi();
                                             setSiModal(true);
                                         }}
                                     >
                                         <IconPlus /> Add supply item
-                                    </button>
+                                    </Button>
                                 }
                             />
                         </Tab.Panel>
@@ -955,16 +956,16 @@ const AdminAssetsInventory = () => {
                                         <option value="">All Requests</option>
                                     </select>
                                 </div>
-                                <button
+                                <Button
                                     type="button"
-                                    className="btn btn-primary gap-2"
+                                    
                                     onClick={() => {
                                         resetAr();
                                         setArModal(true);
                                     }}
                                 >
                                     <IconPlus /> New request
-                                </button>
+                                </Button>
                             </div>
                             <div className="table-responsive">
                                 <table className="table-hover">
@@ -1022,8 +1023,8 @@ const AdminAssetsInventory = () => {
                                                             <td className="text-xs italic text-gray-500 truncate max-w-[200px]">{row.remarks || '—'}</td>
                                                             <td className="text-end">
                                                                 <div className="flex justify-end gap-1">
-                                                                    <button onClick={() => processBatch(row.batch_id || String(row.id), 'approved')} className="btn btn-sm btn-outline-success p-1 text-[10px] uppercase font-black">Approve</button>
-                                                                    <button onClick={() => processBatch(row.batch_id || String(row.id), 'rejected')} className="btn btn-sm btn-outline-danger p-1 text-[10px] uppercase font-black">Reject</button>
+                                                                    <Button variant="outline-success" size="sm" className="!p-1 font-black" onClick={() => processBatch(row.batch_id || String(row.id), 'approved')} >Approve</Button>
+                                                                    <Button variant="outline-danger" size="sm" className="!p-1 font-black" onClick={() => processBatch(row.batch_id || String(row.id), 'rejected')} >Reject</Button>
                                                                 </div>
                                                             </td>
                                                         </tr>
@@ -1062,14 +1063,14 @@ const AdminAssetsInventory = () => {
                                                             <td className="text-xs italic text-gray-500 truncate max-w-[200px]">{g.items[0]?.remarks || '—'}</td>
                                                             <td className="text-end">
                                                                 <div className="flex justify-end gap-2" onClick={e => e.stopPropagation()}>
-                                                                    <button 
+                                                                    <Button variant="success" size="sm" className="!px-3 !py-1 text-[9px] font-black italic" 
                                                                         onClick={() => processBatch(g.id, 'approved')}
-                                                                        className="btn btn-sm btn-success px-3 py-1 text-[9px] uppercase font-black italic tracking-widest shadow-md"
-                                                                    >Approve Order</button>
-                                                                    <button 
+                                                                        
+                                                                    >Approve Order</Button>
+                                                                    <Button variant="danger" size="sm" className="!px-3 !py-1 text-[9px] font-black italic" 
                                                                         onClick={() => processBatch(g.id, 'rejected')}
-                                                                        className="btn btn-sm btn-danger px-3 py-1 text-[9px] uppercase font-black italic tracking-widest shadow-md"
-                                                                    >Reject Order</button>
+                                                                        
+                                                                    >Reject Order</Button>
                                                                 </div>
                                                             </td>
                                                         </tr>
@@ -1144,17 +1145,17 @@ const AdminAssetsInventory = () => {
                                     Total: {arTotal} — Page {arPage} / {Math.max(1, Math.ceil(arTotal / 10))}
                                 </span>
                                 <div className="flex gap-2">
-                                    <button type="button" className="btn btn-outline-primary btn-sm" disabled={arPage <= 1} onClick={() => setArPage((p) => p - 1)}>
+                                    <Button variant="outline" size="sm" type="button"  disabled={arPage <= 1} onClick={() => setArPage((p) => p - 1)}>
                                         Prev
-                                    </button>
-                                    <button
+                                    </Button>
+                                    <Button variant="outline" size="sm"
                                         type="button"
-                                        className="btn btn-outline-primary btn-sm"
-                                        disabled={arPage >= Math.max(1, Math.ceil(arTotal / 10))}
+                                        
+                                        disabled={arPage>= Math.max(1, Math.ceil(arTotal / 10))}
                                         onClick={() => setArPage((p) => p + 1)}
                                     >
                                         Next
-                                    </button>
+                                    </Button>
                                 </div>
                             </div>
                         </Tab.Panel>
@@ -1265,12 +1266,12 @@ const AdminAssetsInventory = () => {
                                             <textarea className="form-textarea" rows={2} value={faForm.notes} onChange={(e) => setFaForm({ ...faForm, notes: e.target.value })} />
                                         </div>
                                         <div className="flex justify-end gap-2 pt-2">
-                                            <button type="button" className="btn btn-outline-danger" onClick={() => setFaModal(false)}>
+                                            <Button variant="outline-danger" type="button"  onClick={() => setFaModal(false)}>
                                                 Cancel
-                                            </button>
-                                            <button type="submit" className="btn btn-primary">
+                                            </Button>
+                                            <Button type="submit">
                                                 Save
-                                            </button>
+                                            </Button>
                                         </div>
                                     </form>
                                 </Dialog.Panel>
@@ -1396,12 +1397,12 @@ const AdminAssetsInventory = () => {
                                             <textarea className="form-textarea" rows={2} value={siForm.notes} onChange={(e) => setSiForm({ ...siForm, notes: e.target.value })} />
                                         </div>
                                         <div className="flex justify-end gap-2 pt-2">
-                                            <button type="button" className="btn btn-outline-danger" onClick={() => setSiModal(false)}>
+                                            <Button variant="outline-danger" type="button"  onClick={() => setSiModal(false)}>
                                                 Cancel
-                                            </button>
-                                            <button type="submit" className="btn btn-primary">
+                                            </Button>
+                                            <Button type="submit">
                                                 Save
-                                            </button>
+                                            </Button>
                                         </div>
                                     </form>
                                 </Dialog.Panel>
@@ -1506,12 +1507,12 @@ const AdminAssetsInventory = () => {
                                             </div>
                                         ) : null}
                                         <div className="flex justify-end gap-2 pt-2">
-                                            <button type="button" className="btn btn-outline-danger" onClick={() => setArModal(false)}>
+                                            <Button variant="outline-danger" type="button"  onClick={() => setArModal(false)}>
                                                 Cancel
-                                            </button>
-                                            <button type="submit" className="btn btn-primary">
+                                            </Button>
+                                            <Button type="submit">
                                                 Save
-                                            </button>
+                                            </Button>
                                         </div>
                                     </form>
                                 </Dialog.Panel>
@@ -1555,9 +1556,9 @@ const AdminAssetsInventory = () => {
                                                 <label className="form-label">File</label>
                                                 <input type="file" className="form-input" onChange={(e) => setDocFile(e.target.files?.[0] || null)} />
                                             </div>
-                                            <button type="button" className="btn btn-primary mb-0.5" onClick={uploadDoc}>
+                                            <Button className="mb-0.5" type="button"  onClick={uploadDoc}>
                                                 Upload
-                                            </button>
+                                            </Button>
                                         </div>
                                         <div className="border-t border-gray-100 dark:border-[#191e3a] pt-3">
                                             {docLoading ? (
@@ -1571,9 +1572,9 @@ const AdminAssetsInventory = () => {
                                                             <a href={d.file_url || '#'} className="text-primary hover:underline truncate" target="_blank" rel="noreferrer">
                                                                 {d.title || d.file || 'file'}
                                                             </a>
-                                                            <button type="button" className="btn btn-outline-danger btn-xs p-1" onClick={() => deleteDoc(d.id)}>
+                                                            <Button variant="outline-danger" size="xs" className="!p-1" type="button"  onClick={() => deleteDoc(d.id)}>
                                                                 <IconTrashLines className="w-3 h-3" />
-                                                            </button>
+                                                            </Button>
                                                         </li>
                                                     ))}
                                                 </ul>
@@ -1654,13 +1655,13 @@ const AdminAssetsInventory = () => {
                                             >
                                                 Cancel
                                             </button>
-                                            <button 
+                                            <Button className="flex-1 font-black text-xs italic shadow-indigo-500/20" 
                                                 type="button" 
-                                                className="btn btn-primary flex-1 uppercase font-black text-xs italic tracking-widest shadow-lg shadow-indigo-500/20"
+                                                
                                                 onClick={() => processBatch(approvalData.batchId, 'approved', approvalData)}
                                             >
                                                 Confirm & Approve
-                                            </button>
+                                            </Button>
                                         </div>
                                     </div>
                                 </Dialog.Panel>

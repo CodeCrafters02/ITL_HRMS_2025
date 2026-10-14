@@ -1,13 +1,16 @@
 import { useEffect, useState, Fragment } from 'react';
 import { useDispatch } from 'react-redux';
 import Swal from 'sweetalert2';
-import { Dialog, Transition } from '@headlessui/react';
 import { setPageTitle } from '../../store/themeConfigSlice';
 import IconTrashLines from '../../components/Icon/IconTrashLines';
 import IconPencil from '../../components/Icon/IconPencil';
 import IconX from '../../components/Icon/IconX';
+import IconUserPlus from '../../components/Icon/IconUserPlus';
 import DataTable, { Column } from '../../components/Common/DataTable';
+import PageHeader from '../../components/Common/PageHeader';
 
+import Modal from '../../components/Common/Modal';
+import Button, { IconButton } from '../../components/Common/Button';
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000';
 const API_URL = `${API_BASE_URL}/app/recruitment/`;
 
@@ -201,22 +204,22 @@ const AdminRecruitment = () => {
             width: '120px',
             render: (_val, r) => (
                 <div className="flex items-center justify-center gap-2">
-                    <button
+                    <IconButton tone="primary"
                         type="button"
-                        className="p-1.5 rounded-lg text-primary hover:bg-primary/10 transition-colors"
+                        
                         onClick={() => openEdit(r)}
                         title="Edit Status"
                     >
                         <IconPencil className="w-4 h-4" />
-                    </button>
-                    <button
+                    </IconButton>
+                    <IconButton tone="danger"
                         type="button"
-                        className="p-1.5 rounded-lg text-danger hover:bg-danger/10 transition-colors"
+                        
                         onClick={() => handleDelete(r)}
                         title="Delete"
                     >
                         <IconTrashLines className="w-4 h-4" />
-                    </button>
+                    </IconButton>
                 </div>
             ),
         },
@@ -224,13 +227,13 @@ const AdminRecruitment = () => {
 
     return (
         <div className="space-y-6">
-            <div className="bg-gradient-to-r from-[#0e1726] to-[#f59e0b] p-6 rounded-xl shadow-lg relative overflow-hidden">
-                <div className="relative z-10">
-                    <h1 className="text-3xl font-extrabold text-white tracking-tight">Recruitment</h1>
-                    <p className="text-white/80 mt-1 text-sm font-medium">Track candidates and update their status.</p>
-                </div>
-                <div className="absolute top-0 right-0 -mt-10 -mr-10 w-48 h-48 bg-white opacity-5 rounded-full blur-2xl"></div>
-            </div>
+            <PageHeader
+                title="Recruitment & Hiring"
+                subtitle="Track talent pipelines, interview progress, applicant portfolios, and candidate hiring status."
+                icon={<IconUserPlus />}
+                badge="Talent Acquisition"
+                variant="amber"
+            />
 
             <DataTable
                 columns={columns}
@@ -247,45 +250,25 @@ const AdminRecruitment = () => {
                 onRefresh={fetchRecruitments}
             />
 
-            <Transition appear show={isEditOpen} as={Fragment}>
-                <Dialog as="div" open={isEditOpen} onClose={() => setIsEditOpen(false)} className="relative z-50">
-                    <Transition.Child as={Fragment} enter="ease-out duration-300" enterFrom="opacity-0" enterTo="opacity-100" leave="ease-in duration-200" leaveFrom="opacity-100" leaveTo="opacity-0">
-                        <div className="fixed inset-0 bg-[black]/60" />
-                    </Transition.Child>
-                    <div className="fixed inset-0 overflow-y-auto">
-                        <div className="flex min-h-full items-center justify-center px-4 py-8">
-                            <Transition.Child as={Fragment} enter="ease-out duration-300" enterFrom="opacity-0 scale-95" enterTo="opacity-100 scale-100" leave="ease-in duration-200" leaveFrom="opacity-100 scale-100" leaveTo="opacity-0 scale-95">
-                                <Dialog.Panel className="panel border-0 p-0 rounded-lg overflow-hidden w-full max-w-md text-black dark:text-white-dark shadow-xl">
-                                    <button type="button" onClick={() => setIsEditOpen(false)} className="absolute top-4 ltr:right-4 rtl:left-4 text-gray-400 hover:text-gray-800 dark:hover:text-gray-600 outline-none">
-                                        <IconX />
-                                    </button>
-                                    <div className="text-lg font-medium bg-[#fbfbfb] dark:bg-[#121c2c] ltr:pl-5 rtl:pr-5 py-3 ltr:pr-[50px] rtl:pl-[50px]">
-                                        Update Status
-                                    </div>
-                                    <div className="p-5">
-                                        <div className="mb-5">
-                                            <label className="font-semibold mb-1 block">Status</label>
-                                            <select className="form-select" value={editStatus} onChange={(e) => setEditStatus(e.target.value as any)}>
-                                                <option value="waiting">waiting</option>
-                                                <option value="selected">selected</option>
-                                                <option value="rejected">rejected</option>
-                                            </select>
-                                        </div>
-                                        <div className="flex justify-end items-center gap-3 mt-8">
-                                            <button type="button" className="btn btn-outline-danger" onClick={() => setIsEditOpen(false)}>
-                                                Cancel
-                                            </button>
-                                            <button type="button" className="btn btn-primary" onClick={saveEdit}>
-                                                Save
-                                            </button>
-                                        </div>
-                                    </div>
-                                </Dialog.Panel>
-                            </Transition.Child>
-                        </div>
-                    </div>
-                </Dialog>
-            </Transition>
+            <Modal open={isEditOpen} onClose={() => setIsEditOpen(false)} title="Update Status" size="md">
+                <div className="mb-5">
+                    <label className="font-semibold mb-1 block">Status</label>
+                    <select className="form-select" value={editStatus} onChange={(e) => setEditStatus(e.target.value as any)}>
+                        <option value="waiting">waiting</option>
+                        <option value="selected">selected</option>
+                        <option value="rejected">rejected</option>
+                    </select>
+                </div>
+                <div className="flex justify-end items-center gap-3 mt-8">
+                    <Button variant="outline-danger" type="button"  onClick={() => setIsEditOpen(false)}>
+                        Cancel
+                    </Button>
+                    <Button type="button"  onClick={saveEdit}>
+                        Save
+                    </Button>
+                </div>
+
+            </Modal>
         </div>
     );
 };

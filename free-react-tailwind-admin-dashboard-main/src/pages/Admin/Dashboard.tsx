@@ -25,6 +25,8 @@ import IconMoon from '../../components/Icon/IconMoon';
 import IconListCheck from '../../components/Icon/IconListCheck';
 import confetti from 'canvas-confetti';
 
+import HeroBanner, { HeroPill } from '../../components/Common/HeroBanner';
+import StatCard, { StatGrid } from '../../components/Common/StatCard';
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000';
 
 interface DashboardData {
@@ -243,183 +245,70 @@ const AdminDashboard = () => {
 
     return (
         <div className="space-y-5">
-            {/* ─── Executive Welcome Bar ─── */}
-            <div className="relative bg-gradient-to-r from-[#4361ee] via-[#536dfe] to-[#7c3aed] rounded-2xl p-4 sm:p-5 text-white shadow-sm overflow-hidden">
-                <div className="absolute top-0 right-0 -mt-8 -mr-8 w-40 h-40 bg-white/10 rounded-full blur-xl pointer-events-none"></div>
-                <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-3">
-                    <div className="flex flex-wrap items-center gap-3">
-                        <div className="w-10 h-10 rounded-xl bg-white/20 backdrop-blur-md flex items-center justify-center text-xl shadow-inner border border-white/25 shrink-0">
-                            {GreetingEmoji}
-                        </div>
-                        <div>
-                            <div className="flex items-center gap-2">
-                                <h1 className="text-base sm:text-lg font-bold leading-tight">
-                                    {greeting}, {formattedName}
-                                </h1>
-                                {data.birthday_message && (
-                                    <span className="hidden sm:inline-flex items-center gap-1 px-2.5 py-0.5 bg-pink-500/90 rounded-full text-[11px] font-bold shadow-sm animate-pulse border border-white/20">
-                                        🎂 Birthday Special!
-                                    </span>
-                                )}
-                            </div>
-                            <div className="flex flex-wrap items-center gap-2 text-xs text-white/80 mt-0.5">
-                                <span>{todayFormatted}</span>
-                                <span className="w-1 h-1 rounded-full bg-white/50"></span>
-                                <div className="flex items-center gap-1.5">
-                                    <span className="text-[11px] text-white/70">Status:</span>
-                                    <select
-                                        className="bg-white/15 text-white text-xs font-semibold py-0.5 px-2 rounded-lg border border-white/25 outline-none focus:border-white/50 cursor-pointer"
-                                        value={currentStatus}
-                                        onChange={(e) => handleStatusUpdate(e.target.value)}
-                                    >
-                                        <option value="online" className="text-black">🟢 Online</option>
-                                        <option value="away" className="text-black">🟡 Away</option>
-                                        <option value="dnd" className="text-black">🔴 Do Not Disturb</option>
-                                        <option value="offline" className="text-black">⚪ Offline</option>
-                                    </select>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Header Quick Pills */}
-                    <div className="flex items-center gap-2 flex-wrap text-xs">
-                        {nextHoliday && (
-                            <Link
-                                to="/admin/calendar"
-                                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/15 hover:bg-white/25 backdrop-blur-md border border-white/20 transition-all text-white"
-                            >
-                                <IconCalendar className="w-3.5 h-3.5 text-amber-300" />
-                                <span>Holiday: <strong>{formatDateShort(nextHoliday.date)}</strong> ({getDaysUntil(nextHoliday.date)})</span>
-                            </Link>
+            {/* ─── Welcome banner (follows the company brand theme) ─── */}
+            <HeroBanner
+                title={
+                    <>
+                        {greeting}, {formattedName} <span className="ml-1">{GreetingEmoji}</span>
+                        {data.birthday_message && (
+                            <span className="ml-2 hidden animate-pulse items-center gap-1 rounded-full border border-white/20 bg-pink-500/90 px-2.5 py-0.5 align-middle text-[11px] font-bold shadow-sm sm:inline-flex">🎂 Birthday Special!</span>
                         )}
-                        <Link
-                            to="/admin/approved-leaves"
-                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/15 hover:bg-white/25 backdrop-blur-md border border-white/20 transition-all text-white"
-                        >
-                            <IconBell className="w-3.5 h-3.5 text-rose-300" />
-                            <span>Pending Approvals: <strong>{data.pending_leave_requests}</strong></span>
-                        </Link>
-                    </div>
-                </div>
-            </div>
-
-            {/* ─── Compact Key Metrics Row ─── */}
-            <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-3.5">
-                {/* Total Employees */}
-                <Link
-                    to="/admin/employee-register"
-                    className="panel !p-3.5 hover:shadow-md hover:-translate-y-0.5 transition-all border-l-4 border-l-primary flex flex-col justify-between"
-                >
-                    <div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
-                        <span className="font-semibold uppercase tracking-wider text-[11px]">Employees</span>
-                        <div className="p-1.5 bg-primary/10 rounded-lg text-primary">
-                            <IconUsersGroup className="w-4 h-4" />
-                        </div>
-                    </div>
-                    <div className="mt-2 flex items-baseline justify-between">
-                        <span className="text-2xl font-bold text-slate-900 dark:text-white">{data.employee_overview.total}</span>
-                        <span className="text-xs text-success font-medium bg-success/10 px-1.5 py-0.5 rounded">
-                            {data.employee_overview.active} active
+                    </>
+                }
+                subtitle={
+                    <span className="flex flex-wrap items-center gap-x-2.5 gap-y-1">
+                        <span>{todayFormatted}</span>
+                        <span className="h-1 w-1 rounded-full bg-white/50" />
+                        <span className="inline-flex items-center gap-1.5">
+                            <span className="text-white/70">Status:</span>
+                            <select
+                                className="cursor-pointer rounded-lg border border-white/25 bg-white/15 px-2 py-0.5 text-xs font-semibold text-white outline-none focus:border-white/50"
+                                value={currentStatus}
+                                onChange={(e) => handleStatusUpdate(e.target.value)}
+                            >
+                                <option value="online" className="text-black">🟢 Online</option>
+                                <option value="away" className="text-black">🟡 Away</option>
+                                <option value="dnd" className="text-black">🔴 Do Not Disturb</option>
+                                <option value="offline" className="text-black">⚪ Offline</option>
+                            </select>
                         </span>
-                    </div>
-                </Link>
+                    </span>
+                }
+                aside={
+                    <>
+                        {nextHoliday && (
+                            <HeroPill as={Link} to="/admin/calendar">
+                                <IconCalendar className="h-3.5 w-3.5 text-amber-300" />
+                                <span>
+                                    Holiday: <strong>{formatDateShort(nextHoliday.date)}</strong> ({getDaysUntil(nextHoliday.date)})
+                                </span>
+                            </HeroPill>
+                        )}
+                        <HeroPill as={Link} to="/admin/approved-leaves">
+                            <IconBell className="h-3.5 w-3.5 text-rose-200" />
+                            <span>
+                                Pending Approvals: <strong>{data.pending_leave_requests}</strong>
+                            </span>
+                        </HeroPill>
+                    </>
+                }
+            />
 
-                {/* Today's Attendance */}
-                <Link
-                    to="/admin/attendance-details"
-                    className="panel !p-3.5 hover:shadow-md hover:-translate-y-0.5 transition-all border-l-4 border-l-success flex flex-col justify-between"
-                >
-                    <div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
-                        <span className="font-semibold uppercase tracking-wider text-[11px]">Present Today</span>
-                        <div className="p-1.5 bg-success/10 rounded-lg text-success">
-                            <IconClock className="w-4 h-4" />
-                        </div>
-                    </div>
-                    <div className="mt-2 flex items-baseline justify-between">
-                        <span className="text-2xl font-bold text-success">{data.attendance_snapshot.present}</span>
-                        <span className="text-xs font-semibold text-slate-700 dark:text-slate-300">
-                            {presentPercentage}% rate
-                        </span>
-                    </div>
-                    <div className="mt-1.5 w-full h-1.5 bg-slate-100 dark:bg-slate-700 rounded-full overflow-hidden">
-                        <div className="h-full bg-success rounded-full transition-all duration-500" style={{ width: `${presentPercentage}%` }} />
-                    </div>
-                </Link>
-
-                {/* Leaves & Absences */}
-                <Link
-                    to="/admin/leave-history"
-                    className="panel !p-3.5 hover:shadow-md hover:-translate-y-0.5 transition-all border-l-4 border-l-warning flex flex-col justify-between"
-                >
-                    <div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
-                        <span className="font-semibold uppercase tracking-wider text-[11px]">Leaves & Absences</span>
-                        <div className="p-1.5 bg-warning/10 rounded-lg text-warning">
-                            <IconListCheck className="w-4 h-4" />
-                        </div>
-                    </div>
-                    <div className="mt-2 flex items-baseline justify-between">
-                        <span className="text-2xl font-bold text-warning">{data.leaves_today}</span>
-                        <span className="text-xs text-danger font-medium">
-                            {data.attendance_snapshot.absent} absent
-                        </span>
-                    </div>
-                    <div className="mt-1 flex items-center justify-between text-[11px] text-slate-400">
-                        <span>On leave today</span>
-                        <span className="text-danger font-medium">{absentPercentage}% absent</span>
-                    </div>
-                </Link>
-
-                {/* Departments & Joinees */}
-                <Link
-                    to="/admin/branch-mgt/department"
-                    className="panel !p-3.5 hover:shadow-md hover:-translate-y-0.5 transition-all border-l-4 border-l-info flex flex-col justify-between"
-                >
-                    <div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
-                        <span className="font-semibold uppercase tracking-wider text-[11px]">Departments</span>
-                        <div className="p-1.5 bg-info/10 rounded-lg text-info">
-                            <IconServer className="w-4 h-4" />
-                        </div>
-                    </div>
-                    <div className="mt-2 flex items-baseline justify-between">
-                        <span className="text-2xl font-bold text-slate-900 dark:text-white">{data.department_count}</span>
-                        <span className="text-xs text-info font-medium bg-info/10 px-1.5 py-0.5 rounded">
-                            +{data.employee_overview.new_joinees} new
-                        </span>
-                    </div>
-                    <div className="mt-1 text-[11px] text-slate-400">
-                        Active business units
-                    </div>
-                </Link>
-
-                {/* Payroll Status */}
-                <Link
+            {/* ─── Key metrics ─── */}
+            <StatGrid cols={5} className="!mb-0">
+                <StatCard to="/admin/employee-register" label="Employees" value={data.employee_overview.total} tone="primary" icon={<IconUsersGroup />} hint={`${data.employee_overview.active} active`} />
+                <StatCard to="/admin/attendance-details" label="Present Today" value={data.attendance_snapshot.present} tone="success" icon={<IconClock />} hint={`${presentPercentage}% attendance rate`} progress={presentPercentage} />
+                <StatCard to="/admin/leave-history" label="Leaves & Absences" value={data.leaves_today} tone="warning" icon={<IconListCheck />} hint={`${data.attendance_snapshot.absent} absent · ${absentPercentage}% of staff`} />
+                <StatCard to="/admin/branch-mgt/department" label="Departments" value={data.department_count} tone="info" icon={<IconServer />} hint={`+${data.employee_overview.new_joinees} new joiners`} />
+                <StatCard
                     to="/admin/payroll-batches"
-                    className="col-span-2 sm:col-span-2 lg:col-span-4 xl:col-span-1 panel !p-3.5 hover:shadow-md hover:-translate-y-0.5 transition-all border-l-4 border-l-secondary flex flex-col justify-between"
-                >
-                    <div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
-                        <span className="font-semibold uppercase tracking-wider text-[11px]">Payroll Cycle</span>
-                        <div className="p-1.5 bg-secondary/10 rounded-lg text-secondary">
-                            <IconMenuInvoice className="w-4 h-4" />
-                        </div>
-                    </div>
-                    <div className="mt-2 flex items-baseline justify-between">
-                        <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${
-                            data.payroll_status === 'completed'
-                                ? 'bg-success/15 text-success'
-                                : 'bg-warning/15 text-warning'
-                        }`}>
-                            {data.payroll_status === 'completed' ? '✓ Completed' : '⏳ In Progress'}
-                        </span>
-                        <span className="text-[11px] text-slate-400 truncate">
-                            {data.next_salary_release_date ? new Date(data.next_salary_release_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : 'Pending'}
-                        </span>
-                    </div>
-                    <div className="mt-1 text-[11px] text-slate-400">
-                        Next salary release
-                    </div>
-                </Link>
-            </div>
+                    label="Payroll Cycle"
+                    value={data.payroll_status === 'completed' ? 'Completed' : 'In progress'}
+                    tone={data.payroll_status === 'completed' ? 'success' : 'purple'}
+                    icon={<IconMenuInvoice />}
+                    hint={`Next release: ${data.next_salary_release_date ? new Date(data.next_salary_release_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : 'Pending'}`}
+                />
+            </StatGrid>
 
             {/* ─── Outlook Workspace (Calendar & Mail Side-by-Side) ─── */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 items-stretch">
@@ -432,7 +321,7 @@ const AdminDashboard = () => {
                         </h5>
                         <Link
                             to="/admin/calendar"
-                            className="text-primary hover:underline text-xs font-semibold flex items-center gap-1"
+                            className="text-brand hover:underline text-xs font-semibold flex items-center gap-1"
                         >
                             <span>Full Calendar</span>
                             <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -452,14 +341,14 @@ const AdminDashboard = () => {
             {/* ─── Operational Insights & Actions (3 Columns) ─── */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
                 {/* Column 1: Workforce Breakdown */}
-                <div className="panel p-4 sm:p-5 flex flex-col justify-between">
+                <div className="panel p-4 sm:p-5 flex flex-col justify-between !rounded-2xl border border-slate-200/90">
                     <div>
                         <div className="flex items-center justify-between mb-3.5">
                             <h3 className="text-sm font-bold text-gray-800 dark:text-white flex items-center gap-2">
-                                <span className="w-1 h-4 bg-primary rounded-full"></span>
+                                <span className="w-1 h-4 bg-brand rounded-full"></span>
                                 Workforce Breakdown
                             </h3>
-                            <Link to="/admin/employee-register" className="text-xs text-primary hover:underline font-medium">
+                            <Link to="/admin/employee-register" className="text-xs text-brand hover:underline font-medium">
                                 View Registry
                             </Link>
                         </div>
@@ -473,7 +362,7 @@ const AdminDashboard = () => {
                             ].map((item) => (
                                 <div
                                     key={item.label}
-                                    className="flex items-center justify-between p-2.5 bg-slate-50 dark:bg-[#1a2941] rounded-xl hover:bg-primary/5 dark:hover:bg-primary/10 transition-colors"
+                                    className="flex items-center justify-between p-2.5 bg-slate-50 dark:bg-[#1a2941] rounded-xl hover:bg-brand/5 transition-colors"
                                 >
                                     <div className="flex items-center gap-2.5">
                                         <span className={`w-2 h-2 rounded-full ${item.dot}`}></span>
@@ -494,11 +383,11 @@ const AdminDashboard = () => {
                 </div>
 
                 {/* Column 2: Quick Actions */}
-                <div className="panel p-4 sm:p-5 flex flex-col justify-between">
+                <div className="panel p-4 sm:p-5 flex flex-col justify-between !rounded-2xl border border-slate-200/90">
                     <div>
                         <div className="flex items-center justify-between mb-3.5">
                             <h3 className="text-sm font-bold text-gray-800 dark:text-white flex items-center gap-2">
-                                <span className="w-1 h-4 bg-indigo-500 rounded-full"></span>
+                                <span className="w-1 h-4 bg-brand-mid rounded-full"></span>
                                 Quick Actions
                             </h3>
                             <span className="text-xs text-slate-400">Shortcuts</span>
@@ -506,15 +395,15 @@ const AdminDashboard = () => {
 
                         <div className="grid grid-cols-3 gap-2">
                             {[
-                                { label: 'Employees', icon: <IconMenuUsers className="w-4 h-4" />, to: '/admin/employee-register', color: 'text-primary', bg: 'bg-primary/10 hover:bg-primary/20' },
-                                { label: 'Attendance', icon: <IconBarChart className="w-4 h-4" />, to: '/admin/attendance-logs', color: 'text-secondary', bg: 'bg-secondary/10 hover:bg-secondary/20' },
-                                { label: 'Leaves', icon: <IconMenuCalendar className="w-4 h-4" />, to: '/admin/leave-history', color: 'text-success', bg: 'bg-success/10 hover:bg-success/20' },
-                                { label: 'Payroll', icon: <IconMenuInvoice className="w-4 h-4" />, to: '/admin/payroll-batches', color: 'text-warning', bg: 'bg-warning/10 hover:bg-warning/20' },
-                                { label: 'Calendar', icon: <IconCalendar className="w-4 h-4" />, to: '/admin/calendar', color: 'text-indigo-500', bg: 'bg-indigo-500/10 hover:bg-indigo-500/20' },
-                                { label: 'Departments', icon: <IconMenuContacts className="w-4 h-4" />, to: '/admin/branch-mgt/department', color: 'text-danger', bg: 'bg-danger/10 hover:bg-danger/20' },
-                                { label: 'Shifts', icon: <IconSettings className="w-4 h-4" />, to: '/admin/configuration/shift', color: 'text-info', bg: 'bg-info/10 hover:bg-info/20' },
-                                { label: 'Reportees', icon: <IconMenuUsers className="w-4 h-4" />, to: '/admin/reportees', color: 'text-emerald-500', bg: 'bg-emerald-500/10 hover:bg-emerald-500/20' },
-                                { label: 'Tasks', icon: <IconListCheck className="w-4 h-4" />, to: '/admin/assign-task', color: 'text-purple-500', bg: 'bg-purple-500/10 hover:bg-purple-500/20' },
+                                { label: 'Employees', icon: <IconMenuUsers className="w-4 h-4" />, to: '/admin/employee-register', color: 'text-brand', bg: 'bg-brand/10 hover:bg-brand/20' },
+                                { label: 'Attendance', icon: <IconBarChart className="w-4 h-4" />, to: '/admin/attendance-logs', color: 'text-brand', bg: 'bg-brand/10 hover:bg-brand/20' },
+                                { label: 'Leaves', icon: <IconMenuCalendar className="w-4 h-4" />, to: '/admin/leave-history', color: 'text-brand', bg: 'bg-brand/10 hover:bg-brand/20' },
+                                { label: 'Payroll', icon: <IconMenuInvoice className="w-4 h-4" />, to: '/admin/payroll-batches', color: 'text-brand', bg: 'bg-brand/10 hover:bg-brand/20' },
+                                { label: 'Calendar', icon: <IconCalendar className="w-4 h-4" />, to: '/admin/calendar', color: 'text-brand', bg: 'bg-brand/10 hover:bg-brand/20' },
+                                { label: 'Departments', icon: <IconMenuContacts className="w-4 h-4" />, to: '/admin/branch-mgt/department', color: 'text-brand', bg: 'bg-brand/10 hover:bg-brand/20' },
+                                { label: 'Shifts', icon: <IconSettings className="w-4 h-4" />, to: '/admin/configuration/shift', color: 'text-brand', bg: 'bg-brand/10 hover:bg-brand/20' },
+                                { label: 'Reportees', icon: <IconMenuUsers className="w-4 h-4" />, to: '/admin/reportees', color: 'text-brand', bg: 'bg-brand/10 hover:bg-brand/20' },
+                                { label: 'Tasks', icon: <IconListCheck className="w-4 h-4" />, to: '/admin/assign-task', color: 'text-brand', bg: 'bg-brand/10 hover:bg-brand/20' },
                             ].map((action) => (
                                 <Link
                                     key={action.label}
@@ -530,15 +419,15 @@ const AdminDashboard = () => {
                 </div>
 
                 {/* Column 3: Upcoming Schedule & Birthdays */}
-                <div className="panel p-4 sm:p-5 flex flex-col justify-between">
+                <div className="panel p-4 sm:p-5 flex flex-col justify-between !rounded-2xl border border-slate-200/90">
                     {/* Events Sub-section */}
                     <div>
                         <div className="flex items-center justify-between mb-3">
                             <h3 className="text-sm font-bold text-gray-800 dark:text-white flex items-center gap-2">
-                                <span className="w-1 h-4 bg-amber-500 rounded-full"></span>
+                                <span className="w-1 h-4 bg-brand-accent rounded-full"></span>
                                 Upcoming Events
                             </h3>
-                            <Link to="/admin/calendar" className="text-xs text-primary hover:underline font-medium">
+                            <Link to="/admin/calendar" className="text-xs text-brand hover:underline font-medium">
                                 View all
                             </Link>
                         </div>
@@ -555,7 +444,7 @@ const AdminDashboard = () => {
                                         className="flex items-center justify-between p-2 bg-slate-50 dark:bg-[#1a2941] rounded-xl text-xs"
                                     >
                                         <div className="flex items-center gap-2 truncate">
-                                            <span className={`w-2 h-2 rounded-full shrink-0 ${event.is_holiday ? 'bg-amber-500' : 'bg-primary'}`} />
+                                            <span className={`w-2 h-2 rounded-full shrink-0 ${event.is_holiday ? 'bg-amber-500' : 'bg-brand'}`} />
                                             <span className="font-semibold text-slate-800 dark:text-white truncate" title={event.name}>
                                                 {event.name}
                                             </span>

@@ -4,6 +4,7 @@ import axios from 'axios';
 import IconSearch from '../../../components/Icon/IconSearch';
 import IconTrendingUp from '../../../components/Icon/IconTrendingUp';
 
+import PageHeader from '../../../components/Common/PageHeader';
 interface Employee {
     id: number;
     employee_id: string;
@@ -441,12 +442,10 @@ const KRAsAssign = () => {
     return (
         <div className="space-y-6 py-2 animate__animated animate__fadeIn">
             {/* Header */}
-            <div className="bg-white dark:bg-gray-900 p-6 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm">
-                <h2 className="text-xl font-bold text-gray-800 dark:text-white">Assign KRAs & Goals</h2>
-                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 leading-relaxed">
-                    Create KRAs (with KPIs) per department, then assign them to employees with a reviewer.
-                </p>
-            </div>
+            <PageHeader
+                title="Assign KRAs & Goals"
+                subtitle="Create KRAs (with KPIs) per department, then assign them to employees with a reviewer."
+            />
 
             {/* Notification Toast */}
             {errorMsg && (
@@ -464,13 +463,13 @@ const KRAsAssign = () => {
             <div className="flex gap-2">
                 <button
                     onClick={() => setTab('assign')}
-                    className={`px-4 py-2 rounded-xl text-xs font-bold transition ${tab === 'assign' ? 'bg-teal-500 text-white shadow-md shadow-teal-500/20' : 'bg-white dark:bg-gray-900 text-gray-500 border border-gray-200 dark:border-gray-800'}`}
+                    className={`px-4 py-2 rounded-xl text-xs font-bold transition ${tab === 'assign' ? 'bg-brand text-white shadow-md shadow-brand/20' : 'bg-white dark:bg-gray-900 text-gray-500 border border-gray-200 dark:border-gray-800'}`}
                 >
                     Assign to Employees
                 </button>
                 <button
                     onClick={() => setTab('manage')}
-                    className={`px-4 py-2 rounded-xl text-xs font-bold transition ${tab === 'manage' ? 'bg-teal-500 text-white shadow-md shadow-teal-500/20' : 'bg-white dark:bg-gray-900 text-gray-500 border border-gray-200 dark:border-gray-800'}`}
+                    className={`px-4 py-2 rounded-xl text-xs font-bold transition ${tab === 'manage' ? 'bg-brand text-white shadow-md shadow-brand/20' : 'bg-white dark:bg-gray-900 text-gray-500 border border-gray-200 dark:border-gray-800'}`}
                 >
                     Manage KRA &amp; KPIs
                 </button>
@@ -508,12 +507,12 @@ const KRAsAssign = () => {
                                     onClick={() => setSelectedEmployee(emp)}
                                     className={`p-3 rounded-xl border flex items-center justify-between cursor-pointer transition duration-200 select-none ${
                                         isSelected 
-                                        ? 'bg-teal-500/10 border-teal-500 text-teal-900 dark:text-white' 
+                                        ? 'bg-brand/10 border-brand text-brand-900 dark:text-white' 
                                         : 'bg-white dark:bg-gray-900 border-gray-100 dark:border-gray-805 hover:bg-gray-50 dark:hover:bg-gray-850'
                                     }`}
                                 >
                                     <div className="flex items-center gap-3">
-                                        <div className="w-8 h-8 rounded-full bg-teal-600 text-white flex items-center justify-center text-xs font-bold shrink-0">
+                                        <div className="w-8 h-8 rounded-full bg-brand text-white flex items-center justify-center text-xs font-bold shrink-0">
                                             {emp.initials}
                                         </div>
                                         <div>
@@ -542,7 +541,7 @@ const KRAsAssign = () => {
                                 {/* Selected Employee profile */}
                                 <div className="flex justify-between items-start border-b border-gray-100 dark:border-gray-800 pb-3 mb-3">
                                     <div className="flex items-center gap-3">
-                                        <div className="w-10 h-10 rounded-full bg-teal-600 text-white flex items-center justify-center text-sm font-bold shadow-sm shrink-0">
+                                        <div className="w-10 h-10 rounded-full bg-brand text-white flex items-center justify-center text-sm font-bold shadow-sm shrink-0">
                                             {selectedEmployee.initials}
                                         </div>
                                         <div>
@@ -557,7 +556,7 @@ const KRAsAssign = () => {
                                     <>
                                         <div className="flex justify-between items-center mb-3">
                                             <span className="text-xs font-bold text-gray-400 uppercase">Assigned KRA Metrics ({employeeKras.length})</span>
-                                            <span className={`text-xs font-black ${totalWeightage > 100 ? 'text-rose-500' : 'text-teal-600 dark:text-teal-400'}`}>
+                                            <span className={`text-xs font-black ${totalWeightage > 100 ? 'text-rose-500' : 'text-brand dark:text-brand-400'}`}>
                                                 Total Weight: {totalWeightage}% / 100%
                                             </span>
                                         </div>
@@ -570,10 +569,10 @@ const KRAsAssign = () => {
                                                 <div className="flex justify-between items-center mb-1">
                                                     <label className="block text-[10px] font-bold uppercase tracking-wider text-gray-400">Reviewer / Master (reviews these KRAs)</label>
                                                     <div className="flex gap-3">
-                                                        <button type="button" onClick={() => { setShowCreateKra(s => !s); setShowAddKpi(false); }} className="text-[10px] font-black text-teal-600 dark:text-teal-400 hover:underline">
+                                                        <button type="button" onClick={() => { setShowCreateKra(s => !s); setShowAddKpi(false); }} className="text-[10px] font-black text-brand dark:text-brand-400 hover:underline">
                                                             {showCreateKra ? '× Cancel' : '＋ New KRA'}
                                                         </button>
-                                                        <button type="button" onClick={() => { setShowAddKpi(s => !s); setShowCreateKra(false); }} className="text-[10px] font-black text-teal-600 dark:text-teal-400 hover:underline">
+                                                        <button type="button" onClick={() => { setShowAddKpi(s => !s); setShowCreateKra(false); }} className="text-[10px] font-black text-brand dark:text-brand-400 hover:underline">
                                                             {showAddKpi ? '× Cancel' : '＋ KPI to KRA'}
                                                         </button>
                                                     </div>
@@ -596,7 +595,7 @@ const KRAsAssign = () => {
                                                                 .map(emp => (
                                                                     <div key={emp.id}
                                                                         onMouseDown={() => { setAssignReviewerId(String(emp.id)); setReviewerSearch(`${emp.full_name} (${emp.designation_name || 'No Desig'})`); setShowReviewerList(false); }}
-                                                                        className="px-3 py-2 text-[11px] font-semibold text-gray-700 dark:text-gray-300 hover:bg-teal-500/10 cursor-pointer">
+                                                                        className="px-3 py-2 text-[11px] font-semibold text-gray-700 dark:text-gray-300 hover:bg-brand/10 cursor-pointer">
                                                                         {emp.full_name} <span className="text-gray-400">({emp.designation_name || 'No Desig'})</span>
                                                                     </div>
                                                                 ))}
@@ -610,8 +609,8 @@ const KRAsAssign = () => {
 
                                             {/* Create New KRA + nested KPIs */}
                                             {showCreateKra && (
-                                                <div className="bg-white dark:bg-gray-900 border border-teal-200 dark:border-teal-900/40 p-3 rounded-2xl space-y-2 animate__animated animate__fadeIn">
-                                                    <span className="text-[10px] font-black uppercase tracking-wider text-teal-600 dark:text-teal-400">Create New KRA (with KPIs)</span>
+                                                <div className="bg-white dark:bg-gray-900 border border-brand-200 dark:border-brand-900/40 p-3 rounded-2xl space-y-2 animate__animated animate__fadeIn">
+                                                    <span className="text-[10px] font-black uppercase tracking-wider text-brand dark:text-brand-400">Create New KRA (with KPIs)</span>
                                                     <input
                                                         type="text" placeholder="KRA title e.g. Customer Satisfaction"
                                                         value={newKraTitle} onChange={(e) => setNewKraTitle(e.target.value)}
@@ -634,7 +633,7 @@ const KRAsAssign = () => {
                                                     <div className="space-y-1.5">
                                                         <div className="flex justify-between items-center">
                                                             <label className="block text-[9px] font-bold uppercase tracking-wider text-gray-400">KPIs under this KRA</label>
-                                                            <button type="button" onClick={addKpiRow} className="text-[10px] font-black text-teal-600 dark:text-teal-400 hover:underline">＋ Add KPI</button>
+                                                            <button type="button" onClick={addKpiRow} className="text-[10px] font-black text-brand dark:text-brand-400 hover:underline">＋ Add KPI</button>
                                                         </div>
                                                         {newKraKpis.map((kpi, i) => (
                                                             <div key={i} className="grid grid-cols-12 gap-1.5 items-center">
@@ -651,7 +650,7 @@ const KRAsAssign = () => {
 
                                                     <div className="flex justify-end">
                                                         <button type="button" onClick={handleCreateKra} disabled={!newKraTitle.trim() || savingKra}
-                                                            className="px-3 py-1.5 bg-teal-600 hover:bg-teal-700 disabled:bg-gray-300 text-white rounded-lg text-[10px] font-bold">
+                                                            className="px-3 py-1.5 bg-brand hover:bg-brand-dark disabled:bg-gray-300 text-white rounded-lg text-[10px] font-bold">
                                                             Save KRA & KPIs
                                                         </button>
                                                     </div>
@@ -660,8 +659,8 @@ const KRAsAssign = () => {
 
                                             {/* Add KPI(s) to an existing KRA */}
                                             {showAddKpi && (
-                                                <div className="bg-white dark:bg-gray-900 border border-teal-200 dark:border-teal-900/40 p-3 rounded-2xl space-y-2 animate__animated animate__fadeIn">
-                                                    <span className="text-[10px] font-black uppercase tracking-wider text-teal-600 dark:text-teal-400">Add KPI to Existing KRA</span>
+                                                <div className="bg-white dark:bg-gray-900 border border-brand-200 dark:border-brand-900/40 p-3 rounded-2xl space-y-2 animate__animated animate__fadeIn">
+                                                    <span className="text-[10px] font-black uppercase tracking-wider text-brand dark:text-brand-400">Add KPI to Existing KRA</span>
                                                     <select value={addKpiKraId} onChange={(e) => setAddKpiKraId(e.target.value)}
                                                         className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 px-3 py-2 rounded-xl text-xs font-semibold text-gray-800 dark:text-white focus:outline-none">
                                                         <option value="">-- Select existing KRA ({selectedEmployee.department_name || 'dept'}) --</option>
@@ -671,7 +670,7 @@ const KRAsAssign = () => {
                                                     <div className="space-y-1.5">
                                                         <div className="flex justify-between items-center">
                                                             <label className="block text-[9px] font-bold uppercase tracking-wider text-gray-400">New KPIs</label>
-                                                            <button type="button" onClick={addAddKpiRow} className="text-[10px] font-black text-teal-600 dark:text-teal-400 hover:underline">＋ Add KPI</button>
+                                                            <button type="button" onClick={addAddKpiRow} className="text-[10px] font-black text-brand dark:text-brand-400 hover:underline">＋ Add KPI</button>
                                                         </div>
                                                         {addKpiRows.map((kpi, i) => (
                                                             <div key={i} className="grid grid-cols-12 gap-1.5 items-center">
@@ -692,7 +691,7 @@ const KRAsAssign = () => {
                                                     )}
                                                     <div className="flex justify-end">
                                                         <button type="button" onClick={handleAddKpisToKra} disabled={!addKpiKraId}
-                                                            className="px-3 py-1.5 bg-teal-600 hover:bg-teal-700 disabled:bg-gray-300 text-white rounded-lg text-[10px] font-bold">
+                                                            className="px-3 py-1.5 bg-brand hover:bg-brand-dark disabled:bg-gray-300 text-white rounded-lg text-[10px] font-bold">
                                                             Save KPIs
                                                         </button>
                                                     </div>
@@ -714,12 +713,12 @@ const KRAsAssign = () => {
                                                         return (
                                                             <div key={k.id} className="flex items-center gap-2 p-2">
                                                                 <input type="checkbox" checked={checked}
-                                                                    onChange={() => toggleAssignKra(k.id)} className="accent-teal-600" />
+                                                                    onChange={() => toggleAssignKra(k.id)} className="accent-brand" />
                                                                 <span className="flex-1 text-[11px] font-semibold text-gray-800 dark:text-white">
                                                                     {k.title}
                                                                 </span>
                                                                 {timesAssigned > 0 && (
-                                                                    <span className="text-[8px] font-black text-teal-600 bg-teal-500/10 px-2 py-0.5 rounded-full shrink-0">×{timesAssigned}</span>
+                                                                    <span className="text-[8px] font-black text-brand bg-brand/10 px-2 py-0.5 rounded-full shrink-0">×{timesAssigned}</span>
                                                                 )}
                                                                 <input type="number" min="1" max="100" placeholder="wt%" disabled={!checked}
                                                                     value={assignWeights[k.id] || ''}
@@ -746,7 +745,7 @@ const KRAsAssign = () => {
                                                 <button
                                                     type="submit"
                                                     disabled={assignChecked.length === 0 || !assignReviewerId}
-                                                    className="px-4 py-2 bg-teal-500 hover:bg-teal-600 disabled:bg-gray-300 text-white rounded-xl text-xs font-bold shadow-md shadow-teal-500/10 transition duration-300"
+                                                    className="px-4 py-2 bg-brand hover:bg-brand disabled:bg-gray-300 text-white rounded-xl text-xs font-bold shadow-md shadow-brand/10 transition duration-300"
                                                 >
                                                     Assign {assignChecked.length || ''} KRA(s) to {selectedEmployee.first_name}
                                                 </button>
@@ -776,7 +775,7 @@ const KRAsAssign = () => {
                                                     ) : employeeKras.map((k) => (
                                                         <tr key={k.id} className="hover:bg-gray-50/50 dark:hover:bg-gray-800/10">
                                                             <td className="p-3 pl-4 font-bold text-gray-800 dark:text-white">{k.kra_title}</td>
-                                                            <td className="p-3 font-extrabold text-teal-600 dark:text-teal-400">{k.weightage}%</td>
+                                                            <td className="p-3 font-extrabold text-brand dark:text-brand-400">{k.weightage}%</td>
                                                             <td className="p-3">{k.reviewer_name || '—'}</td>
                                                             <td className="p-3 whitespace-nowrap">
                                                                 {k.created_at ? (
@@ -842,7 +841,7 @@ const KRAsAssign = () => {
                     </div>
                     <button
                         onClick={() => { setShowKraForm(s => !s); setShowCreateKra(false); }}
-                        className="px-4 py-2 bg-teal-500 hover:bg-teal-600 text-white rounded-xl text-xs font-bold shadow-md shadow-teal-500/10 whitespace-nowrap"
+                        className="px-4 py-2 bg-brand hover:bg-brand text-white rounded-xl text-xs font-bold shadow-md shadow-brand/10 whitespace-nowrap"
                     >
                         {showKraForm ? '× Cancel' : '＋ Create KRA'}
                     </button>
@@ -850,8 +849,8 @@ const KRAsAssign = () => {
 
                 {/* Create KRA panel (reuses create state + nested KPIs) */}
                 {showKraForm && (
-                    <div className="bg-white dark:bg-gray-900 border border-teal-200 dark:border-teal-900/40 p-4 rounded-3xl space-y-2 animate__animated animate__fadeIn">
-                        <span className="text-[10px] font-black uppercase tracking-wider text-teal-600 dark:text-teal-400">Create New KRA (with KPIs)</span>
+                    <div className="bg-white dark:bg-gray-900 border border-brand-200 dark:border-brand-900/40 p-4 rounded-3xl space-y-2 animate__animated animate__fadeIn">
+                        <span className="text-[10px] font-black uppercase tracking-wider text-brand dark:text-brand-400">Create New KRA (with KPIs)</span>
                         <input type="text" placeholder="KRA title e.g. Customer Satisfaction" value={newKraTitle} onChange={(e) => setNewKraTitle(e.target.value)}
                             className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 px-3 py-2 rounded-xl text-xs font-semibold text-gray-800 dark:text-white focus:outline-none" />
                         <textarea placeholder="Description (optional)" rows={2} value={newKraDesc} onChange={(e) => setNewKraDesc(e.target.value)}
@@ -866,7 +865,7 @@ const KRAsAssign = () => {
                         <div className="space-y-1.5">
                             <div className="flex justify-between items-center">
                                 <label className="block text-[9px] font-bold uppercase tracking-wider text-gray-400">KPIs under this KRA</label>
-                                <button type="button" onClick={addKpiRow} className="text-[10px] font-black text-teal-600 dark:text-teal-400 hover:underline">＋ Add KPI</button>
+                                <button type="button" onClick={addKpiRow} className="text-[10px] font-black text-brand dark:text-brand-400 hover:underline">＋ Add KPI</button>
                             </div>
                             {newKraKpis.map((kpi, i) => (
                                 <div key={i} className="grid grid-cols-12 gap-1.5 items-center">
@@ -882,7 +881,7 @@ const KRAsAssign = () => {
                         </div>
                         <div className="flex justify-end">
                             <button type="button" onClick={handleCreateKra} disabled={!newKraTitle.trim() || savingKra}
-                                className="px-3 py-1.5 bg-teal-600 hover:bg-teal-700 disabled:bg-gray-300 text-white rounded-lg text-[10px] font-bold">Save KRA &amp; KPIs</button>
+                                className="px-3 py-1.5 bg-brand hover:bg-brand-dark disabled:bg-gray-300 text-white rounded-lg text-[10px] font-bold">Save KRA &amp; KPIs</button>
                         </div>
                     </div>
                 )}
@@ -912,7 +911,7 @@ const KRAsAssign = () => {
                                         </select>
                                         <div className="flex gap-2 justify-end">
                                             <button onClick={cancelEditKra} className="px-3 py-1.5 bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 rounded-lg text-[10px] font-bold">Cancel</button>
-                                            <button onClick={handleUpdateKra} disabled={!editKraTitle.trim()} className="px-3 py-1.5 bg-teal-600 hover:bg-teal-700 disabled:bg-gray-300 text-white rounded-lg text-[10px] font-bold">Save</button>
+                                            <button onClick={handleUpdateKra} disabled={!editKraTitle.trim()} className="px-3 py-1.5 bg-brand hover:bg-brand-dark disabled:bg-gray-300 text-white rounded-lg text-[10px] font-bold">Save</button>
                                         </div>
                                     </div>
                                 ) : (
@@ -923,12 +922,12 @@ const KRAsAssign = () => {
                                             <div className="flex flex-wrap gap-1 mt-2">
                                                 {(kra.departments || []).length === 0 && <span className="text-[8px] font-bold text-gray-400 bg-gray-50 dark:bg-gray-800 px-2 py-0.5 rounded-full">All depts</span>}
                                                 {(kra.departments || []).map(id => (
-                                                    <span key={id} className="text-[8px] font-bold text-teal-600 bg-teal-500/10 px-2 py-0.5 rounded-full">{deptName(id)}</span>
+                                                    <span key={id} className="text-[8px] font-bold text-brand bg-brand/10 px-2 py-0.5 rounded-full">{deptName(id)}</span>
                                                 ))}
                                             </div>
                                         </div>
                                         <div className="flex gap-2 shrink-0">
-                                            <button onClick={() => startEditKra(kra)} className="text-[9px] font-bold text-teal-600 hover:underline">Edit</button>
+                                            <button onClick={() => startEditKra(kra)} className="text-[9px] font-bold text-brand hover:underline">Edit</button>
                                             <button onClick={() => handleDeleteKra(kra.id)} className="text-[9px] font-bold text-rose-500 hover:underline">Delete</button>
                                         </div>
                                     </div>
@@ -939,7 +938,7 @@ const KRAsAssign = () => {
                                     <div className="flex justify-between items-center mb-2">
                                         <span className="text-[9px] font-black uppercase tracking-wider text-gray-400">KPIs ({kraKpis.length})</span>
                                         <button onClick={() => { setAddKpiForKra(addKpiForKra === kra.id ? null : kra.id); setInlineKpi({ name: '', target: '', unit: '' }); }}
-                                            className="text-[10px] font-black text-teal-600 dark:text-teal-400 hover:underline">
+                                            className="text-[10px] font-black text-brand dark:text-brand-400 hover:underline">
                                             {addKpiForKra === kra.id ? '× Cancel' : '＋ Add KPI'}
                                         </button>
                                     </div>
@@ -952,7 +951,7 @@ const KRAsAssign = () => {
                                                 className="col-span-3 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 px-2 py-1.5 rounded-lg text-[11px] font-semibold text-gray-800 dark:text-white focus:outline-none" />
                                             <input type="text" placeholder="Unit" value={inlineKpi.unit} onChange={(e) => setInlineKpi(p => ({ ...p, unit: e.target.value }))}
                                                 className="col-span-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 px-2 py-1.5 rounded-lg text-[11px] font-semibold text-gray-800 dark:text-white focus:outline-none" />
-                                            <button onClick={() => handleAddInlineKpi(kra)} disabled={!inlineKpi.name.trim()} className="col-span-2 bg-teal-600 hover:bg-teal-700 disabled:bg-gray-300 text-white rounded-lg text-[10px] font-bold py-1.5">Add</button>
+                                            <button onClick={() => handleAddInlineKpi(kra)} disabled={!inlineKpi.name.trim()} className="col-span-2 bg-brand hover:bg-brand-dark disabled:bg-gray-300 text-white rounded-lg text-[10px] font-bold py-1.5">Add</button>
                                         </div>
                                     )}
 
@@ -967,17 +966,17 @@ const KRAsAssign = () => {
                                                         className="col-span-3 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 px-2 py-1.5 rounded-lg text-[11px] font-semibold text-gray-800 dark:text-white focus:outline-none" />
                                                     <input type="text" value={editKpiUnit} onChange={(e) => setEditKpiUnit(e.target.value)} placeholder="Unit"
                                                         className="col-span-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 px-2 py-1.5 rounded-lg text-[11px] font-semibold text-gray-800 dark:text-white focus:outline-none" />
-                                                    <button onClick={handleUpdateKpi} className="col-span-1 text-teal-600 text-[10px] font-black">✓</button>
+                                                    <button onClick={handleUpdateKpi} className="col-span-1 text-brand text-[10px] font-black">✓</button>
                                                     <button onClick={cancelEditKpi} className="col-span-1 text-gray-400 text-sm font-bold">×</button>
                                                 </div>
                                             ) : (
                                                 <div key={kpi.id} className="flex items-center justify-between bg-gray-50 dark:bg-gray-800/40 rounded-lg px-3 py-1.5">
                                                     <span className="text-[11px] font-semibold text-gray-700 dark:text-gray-300">
                                                         {kpi.name}
-                                                        {kpi.target_value && <span className="text-teal-600 dark:text-teal-400 font-bold"> · {kpi.target_value}{kpi.measurement_unit ? ` ${kpi.measurement_unit}` : ''}</span>}
+                                                        {kpi.target_value && <span className="text-brand dark:text-brand-400 font-bold"> · {kpi.target_value}{kpi.measurement_unit ? ` ${kpi.measurement_unit}` : ''}</span>}
                                                     </span>
                                                     <div className="flex gap-2 shrink-0">
-                                                        <button onClick={() => startEditKpi(kpi)} className="text-[9px] font-bold text-teal-600 hover:underline">Edit</button>
+                                                        <button onClick={() => startEditKpi(kpi)} className="text-[9px] font-bold text-brand hover:underline">Edit</button>
                                                         <button onClick={() => handleDeleteKpi(kpi.id)} className="text-[9px] font-bold text-rose-500 hover:underline">Delete</button>
                                                     </div>
                                                 </div>

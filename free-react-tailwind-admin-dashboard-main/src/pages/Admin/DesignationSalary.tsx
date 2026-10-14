@@ -5,6 +5,8 @@ import Swal from 'sweetalert2';
 import IconSave from '../../components/Icon/IconSave';
 import DataTable, { Column } from '../../components/Common/DataTable';
 
+import PageHeader from '../../components/Common/PageHeader';
+import IconCashBanknotes from '../../components/Icon/IconCashBanknotes';
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000';
 const SALARY_API_URL = `${API_BASE_URL}/app/designation-salaries/`;
 const DESIGNATION_API_URL = `${API_BASE_URL}/app/designations/`;
@@ -270,13 +272,12 @@ const DesignationSalary = () => {
     return (
         <div>
             {/* Header Banner */}
-            <div className="bg-gradient-to-r from-[#1e3a5f] to-[#14b8a6] p-6 rounded-xl shadow-lg mb-6 relative overflow-hidden">
-                <div className="relative z-10">
-                    <h1 className="text-3xl font-extrabold text-white tracking-tight">Designation Salary Configuration</h1>
-                    <p className="text-white/80 mt-1 text-sm font-medium">Manage and set basic pay standards for designations across different departments.</p>
-                </div>
-                <div className="absolute top-0 right-0 -mt-10 -mr-10 w-48 h-48 bg-white opacity-5 rounded-full blur-2xl"></div>
-            </div>
+            <PageHeader
+                icon={<IconCashBanknotes />}
+                title="Designation Salary Configuration"
+                subtitle="Manage and set basic pay standards for designations across different departments."
+                variant="amber"
+            />
 
             {/* Reusable Data Table */}
             <DataTable

@@ -11,6 +11,8 @@ import IconX from '../../components/Icon/IconX';
 import IconClock from '../../components/Icon/IconClock';
 import IconTrash from '../../components/Icon/IconTrash';
 import Swal from 'sweetalert2';
+import DataTable, { Column } from '../../components/Common/DataTable';
+import PageHeader from '../../components/Common/PageHeader';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000';
 
@@ -38,6 +40,9 @@ const AdminSeatBookingsOverview = () => {
     const [historyBookings, setHistoryBookings] = useState<any[]>([]);
     const [loadingHistory, setLoadingHistory] = useState(false);
     const [historySearch, setHistorySearch] = useState('');
+    const [historyPage, setHistoryPage] = useState(1);
+    const [historyPageSize, setHistoryPageSize] = useState(10);
+    const [historyTotalCount, setHistoryTotalCount] = useState(0);
 
     const stageRef = useRef<any>(null);
 
@@ -126,13 +131,13 @@ const AdminSeatBookingsOverview = () => {
     const fetchBookings = async (floorId: number, date: string) => {
         try {
             const token = localStorage.getItem('access_token');
-            const url = `${API_BASE_URL}/app/seat-bookings/?date=${date}&floor=${floorId}&status=approved`;
+            const url = `${API_BASE_URL}/app/seat-bookings/?date=${date}&floor=${floorId}`;
             const res = await fetch(url, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
             if (res.ok) {
                 const data = await res.json();
-                setBookings(data || []);
+                setBookings(Array.isArray(data) ? data : (data.results || []));
             }
         } catch (error) {
             console.error('Error fetching bookings:', error);
@@ -182,12 +187,20 @@ const AdminSeatBookingsOverview = () => {
         setLoadingHistory(true);
         try {
             const token = localStorage.getItem('access_token');
-            const res = await fetch(`${API_BASE_URL}/app/seat-bookings/?history=true`, {
+            const url = new URL(`${API_BASE_URL}/app/seat-bookings/`);
+            url.searchParams.set('history', 'true');
+            url.searchParams.set('page', String(historyPage));
+            url.searchParams.set('page_size', String(historyPageSize));
+            if (historySearch.trim()) url.searchParams.set('search', historySearch.trim());
+
+            const res = await fetch(url.toString(), {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
             if (res.ok) {
                 const data = await res.json();
-                setHistoryBookings(data || []);
+                const list = data.results || (Array.isArray(data) ? data : []);
+                setHistoryBookings(list);
+                setHistoryTotalCount(data.count !== undefined ? data.count : list.length);
             }
         } catch (error) {
             console.error('Error fetching history:', error);
@@ -195,6 +208,15 @@ const AdminSeatBookingsOverview = () => {
             setLoadingHistory(false);
         }
     };
+
+    useEffect(() => {
+        if (showHistoryModal) {
+            const timer = setTimeout(() => {
+                fetchHistory();
+            }, 300);
+            return () => clearTimeout(timer);
+        }
+    }, [showHistoryModal, historyPage, historyPageSize, historySearch]);
 
     const handleCancelBooking = async (bookingId: number) => {
         try {
@@ -252,9 +274,12 @@ const AdminSeatBookingsOverview = () => {
     const getSeatColor = (el: any) => {
         const booking = bookings.find(b => b.seat_details.seat_number === el.name);
         if (booking) {
-            return booking.booking_type === 'permanent' ? '#F472B6' : '#FB923C';
+            if (booking.status === 'pending') {
+                return '#FBBF24'; // Yellow for Pending
+            }
+            return booking.booking_type === 'permanent' ? '#F472B6' : '#FB923C'; // Pink for Permanent, Orange for Temp/Weekly
         }
-        return '#10B981';
+        return '#10B981'; // Green for Available
     };
 
     // Calculate Summary
@@ -264,32 +289,27 @@ const AdminSeatBookingsOverview = () => {
     const weeklyCount = bookings.filter(b => b.booking_type === 'weekly').length;
     const dailyCount = bookings.filter(b => b.booking_type === 'daily').length;
 
-    const filteredHistory = historyBookings.filter(b =>
-        b.employee_details.name.toLowerCase().includes(historySearch.toLowerCase()) ||
-        b.seat_details.seat_number.toLowerCase().includes(historySearch.toLowerCase())
-    );
 
     return (
-        <div className="flex flex-col h-[calc(100vh-90px)] space-y-4">
-            {/* Header Banner - Restored with better spacing */}
-            <div className="bg-gradient-to-r from-emerald-500 to-teal-600 rounded-xl p-4 text-white shadow-lg overflow-hidden relative">
-                <div className="relative z-10 flex items-center justify-between">
-                    <div>
-                        <h2 className="text-3xl font-extrabold mb-0.5 tracking-tight">Seat Management Insights</h2>
-                        <p className="text-white/80 text-sm font-medium">Real-time office occupancy tracking and booking history.</p>
-                    </div>
-                     <button 
+        <div className="flex flex-col h-[calc(var(--app-vh)_-_90px)] space-y-4">
+            {/* Executive Page Header */}
+            <PageHeader
+                title="Seat Management Insights"
+                subtitle="Real-time office occupancy tracking, interactive floor plans, and employee workspace allocation."
+                icon={<IconInfoCircle />}
+                badge="Facilities & Seating"
+                variant="emerald"
+                className="mb-0"
+                actions={
+                    <button 
                         onClick={() => setShowHistoryModal(true)}
-                        className="bg-white/20 hover:bg-white/30 backdrop-blur-md text-white px-5 py-2 rounded-xl font-bold transition-all border border-white/20 flex items-center gap-2"
+                        className="btn btn-outline-light gap-2 backdrop-blur-md bg-white/10 hover:bg-white/20 border-white/20 text-white font-semibold"
                     >
                         <IconClock className="w-4 h-4" />
                         View History
                     </button>
-                </div>
-                <div className="absolute right-[-20px] top-[-20px] opacity-10">
-                    <IconInfoCircle className="w-48 h-48" />
-                </div>
-            </div>
+                }
+            />
 
             <div className="flex flex-col md:flex-row justify-between items-center bg-white dark:bg-[#0e1726] p-4 rounded-xl shadow-sm gap-4 border border-gray-100 dark:border-gray-800">
                 <div className="flex items-center gap-4">
@@ -633,8 +653,9 @@ const AdminSeatBookingsOverview = () => {
                             <div className="mt-8 text-left w-full space-y-3">
                                 <p className="text-xs uppercase font-bold border-b pb-1 dark:border-[#1b2e4b]">Legend</p>
                                 <div className="flex items-center gap-2 text-sm font-bold"><span className="w-3 h-3 rounded-sm bg-[#10B981]"></span> Available</div>
-                                <div className="flex items-center gap-2 text-sm font-bold"><span className="w-3 h-3 rounded-sm bg-[#FB923C]"></span> Temp Booking</div>
+                                <div className="flex items-center gap-2 text-sm font-bold"><span className="w-3 h-3 rounded-sm bg-[#FB923C]"></span> Daily/Weekly</div>
                                 <div className="flex items-center gap-2 text-sm font-bold"><span className="w-3 h-3 rounded-sm bg-[#F472B6]"></span> Permanent</div>
+                                <div className="flex items-center gap-2 text-sm font-bold"><span className="w-3 h-3 rounded-sm bg-[#FBBF24]"></span> Pending Approval</div>
                             </div>
                         </div>
                     )}
@@ -655,96 +676,113 @@ const AdminSeatBookingsOverview = () => {
                             </button>
                         </div>
 
-                        <div className="flex flex-col md:flex-row gap-4 mb-6">
-                            <div className="relative flex-1">
-                                <input
-                                    type="text"
-                                    className="form-input pl-10"
-                                    placeholder="Search by employee or seat..."
-                                    value={historySearch}
-                                    onChange={(e) => setHistorySearch(e.target.value)}
-                                />
-                                <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
-                                    <IconSearch className="w-4 h-4" />
-                                </div>
-                            </div>
-                            <button onClick={fetchHistory} className="btn btn-primary flex items-center gap-2">
-                                <IconRefresh className={loadingHistory ? 'animate-spin' : ''} />
-                                Refresh Data
-                            </button>
-                        </div>
-
-                        <div className="table-responsive h-[500px] overflow-y-auto rounded-lg border border-gray-200 dark:border-gray-800">
-                            {loadingHistory ? (
-                                <div className="flex items-center justify-center h-40">
-                                    <span className="animate-spin border-4 border-primary border-l-transparent rounded-full w-10 h-10"></span>
-                                </div>
-                            ) : (
-                                <table className="table-hover">
-                                    <thead>
-                                        <tr>
-                                            <th>Employee</th>
-                                            <th>Seat Info</th>
-                                            <th>Date & Time</th>
-                                            <th>Type</th>
-                                            <th>Status</th>
-                                            <th className="text-center">Action</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {filteredHistory.length > 0 ? (
-                                            filteredHistory.map((b: any) => (
-                                                <tr key={b.id}>
-                                                    <td>
-                                                        <div className="font-bold">{b.employee_details.name}</div>
-                                                        <div className="text-[10px] text-gray-400 font-bold uppercase">ID: {b.employee_details.employee_id}</div>
-                                                    </td>
-                                                    <td>
-                                                        <div className="font-bold text-primary">Seat {b.seat_details.seat_number}</div>
-                                                        <div className="text-[10px] text-gray-400 font-bold uppercase">Floor {b.seat_details.floor} - {b.seat_details.section}</div>
-                                                    </td>
-                                                    <td>
-                                                        <div className="text-sm font-bold">{b.start_date} {b.end_date && ` to ${b.end_date}`}</div>
-                                                        <div className="text-[10px] text-gray-500 font-bold italic">
-                                                            {b.start_time?.substring(0, 5) || '00:00'} - {b.end_time?.substring(0, 5) || '23:59'}
-                                                        </div>
-                                                    </td>
-                                                    <td>
-                                                        <span className={`badge capitalize ${b.booking_type === 'permanent' ? 'badge-outline-secondary' : 'badge-outline-info'}`}>
-                                                            {b.booking_type}
-                                                        </span>
-                                                    </td>
-                                                    <td>
-                                                        <span className={`badge capitalize ${b.status === 'approved' ? 'badge-outline-success' :
-                                                                b.status === 'rejected' ? 'badge-outline-danger' :
-                                                                    b.status === 'cancelled' ? 'badge-outline-dark' :
-                                                                        'badge-outline-warning'
-                                                            }`}>
-                                                            {b.status === 'pending' ? 'Pending Approval' : b.status}
-                                                        </span>
-                                                    </td>
-                                                    <td className="text-center">
-                                                        {(b.status === 'approved' || b.status === 'pending') && (
-                                                            <button 
-                                                                onClick={() => handleCancelBooking(b.id)}
-                                                                className="p-2 bg-danger/10 text-danger rounded-lg hover:bg-danger hover:text-white transition-all shadow-sm"
-                                                                title="Cancel Booking"
-                                                            >
-                                                                <IconTrash className="w-4 h-4" />
-                                                            </button>
-                                                        )}
-                                                    </td>
-                                                </tr>
-                                            ))
-                                        ) : (
-                                            <tr>
-                                                <td colSpan={6} className="text-center py-10 opacity-50 font-bold">No booking history found matching your filters.</td>
-                                            </tr>
-                                        )}
-                                    </tbody>
-                                </table>
-                            )}
-                        </div>
+                        <DataTable
+                            columns={[
+                                {
+                                    key: 'index',
+                                    title: '#',
+                                    width: '60px',
+                                    align: 'center',
+                                    render: (_val: any, _b: any, idx: number) => (
+                                        <span className="font-semibold text-gray-500">{(historyPage - 1) * historyPageSize + (idx ?? 0) + 1}</span>
+                                    ),
+                                },
+                                {
+                                    key: 'employee',
+                                    title: 'Employee',
+                                    sortable: true,
+                                    render: (_val: any, b: any) => (
+                                        <div>
+                                            <div className="font-bold text-gray-800 dark:text-white-light">{b.employee_details?.name}</div>
+                                            <div className="text-[10px] text-gray-400 font-bold uppercase">ID: {b.employee_details?.employee_id}</div>
+                                        </div>
+                                    ),
+                                },
+                                {
+                                    key: 'seat_number',
+                                    title: 'Seat Info',
+                                    sortable: true,
+                                    render: (_val: any, b: any) => (
+                                        <div>
+                                            <div className="font-bold text-primary">Seat {b.seat_details?.seat_number}</div>
+                                            <div className="text-[10px] text-gray-400 font-bold uppercase">Floor {b.seat_details?.floor} - {b.seat_details?.section}</div>
+                                        </div>
+                                    ),
+                                },
+                                {
+                                    key: 'start_date',
+                                    title: 'Date & Time',
+                                    sortable: true,
+                                    render: (_val: any, b: any) => (
+                                        <div>
+                                            <div className="text-sm font-bold">{b.start_date} {b.end_date && ` to ${b.end_date}`}</div>
+                                            <div className="text-[10px] text-gray-500 font-bold italic">
+                                                {b.start_time?.substring(0, 5) || '00:00'} - {b.end_time?.substring(0, 5) || '23:59'}
+                                            </div>
+                                        </div>
+                                    ),
+                                },
+                                {
+                                    key: 'booking_type',
+                                    title: 'Type',
+                                    sortable: true,
+                                    render: (_val: any, b: any) => (
+                                        <span className={`badge capitalize ${b.booking_type === 'permanent' ? 'badge-outline-secondary' : 'badge-outline-info'}`}>
+                                            {b.booking_type}
+                                        </span>
+                                    ),
+                                },
+                                {
+                                    key: 'status',
+                                    title: 'Status',
+                                    sortable: true,
+                                    render: (_val: any, b: any) => (
+                                        <span className={`badge capitalize ${
+                                            b.status === 'approved' ? 'badge-outline-success text-success bg-success/10' :
+                                            b.status === 'rejected' ? 'badge-outline-danger text-danger bg-danger/10' :
+                                            b.status === 'cancelled' ? 'badge-outline-dark text-dark dark:text-gray-400' :
+                                            'badge-outline-warning text-warning bg-warning/10'
+                                        }`}>
+                                            {b.status === 'pending' ? 'Pending Approval' : b.status}
+                                        </span>
+                                    ),
+                                },
+                                {
+                                    key: 'actions',
+                                    title: 'Action',
+                                    align: 'center',
+                                    width: '80px',
+                                    render: (_val: any, b: any) => (
+                                        (b.status === 'approved' || b.status === 'pending') ? (
+                                             <button 
+                                                onClick={() => handleCancelBooking(b.id)}
+                                                className="p-1.5 bg-danger/10 text-danger rounded-lg hover:bg-danger hover:text-white transition-all shadow-sm"
+                                                title="Cancel Booking"
+                                            >
+                                                <IconTrash className="w-4 h-4" />
+                                            </button>
+                                        ) : null
+                                    ),
+                                },
+                            ]}
+                            data={historyBookings}
+                            loading={loadingHistory}
+                            page={historyPage}
+                            pageSize={historyPageSize}
+                            totalCount={historyTotalCount}
+                            onPageChange={(p) => setHistoryPage(p)}
+                            onPageSizeChange={(sz) => {
+                                setHistoryPageSize(sz);
+                                setHistoryPage(1);
+                            }}
+                            onRefresh={fetchHistory}
+                            searchValue={historySearch}
+                            onSearchChange={(val) => {
+                                setHistorySearch(val);
+                                setHistoryPage(1);
+                            }}
+                            searchPlaceholder="Search by employee or seat..."
+                        />
 
                         <div className="mt-6 flex justify-end">
                             <button onClick={() => setShowHistoryModal(false)} className="btn btn-secondary">Close History</button>

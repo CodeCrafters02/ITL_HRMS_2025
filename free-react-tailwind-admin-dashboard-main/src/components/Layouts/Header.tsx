@@ -40,6 +40,8 @@ import { notificationService } from '../../services/notificationService';
 import OutlookHeaderButton from '../Outlook/OutlookHeaderButton';
 import UpcomingEventsTicker from './UpcomingEventsTicker';
 
+import { useBranding } from '../../theme/brandingStore';
+import { openTeamsChat } from '../../utils/teams';
 const Header = () => {
     const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000';
     const location = useLocation();
@@ -130,6 +132,7 @@ const Header = () => {
     const storedEmail = (localStorage.getItem('user_email') || '').trim();
     const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
     const [profileName, setProfileName] = useState<string>('');
+    const { name: companyName, logoUrl: companyLogo } = useBranding();
     const [profileEmail, setProfileEmail] = useState<string>('');
     const [currentStatus, setCurrentStatus] = useState<string>('online');
     const [notificationUnreadCount, setNotificationUnreadCount] = useState(0);
@@ -549,7 +552,7 @@ const Header = () => {
                     <div className="horizontal-logo flex lg:hidden justify-between items-center ltr:mr-2 rtl:ml-2">
                         <Link to="/" className="main-logo flex items-center shrink-0">
                             <img className="w-14 ltr:-ml-1 rtl:-mr-1 inline object-contain" src={hrmsLogo} alt="logo" />
-                            <span className="text-2xl ltr:ml-1.5 rtl:mr-1.5 font-bold align-middle hidden md:inline dark:text-white-light transition-all duration-300 tracking-tight pb-1">HRMS</span>
+                            <span className="text-2xl ltr:ml-1.5 rtl:mr-1.5 font-bold align-middle hidden md:inline dark:text-white-light transition-all duration-300 tracking-tight pb-1">People Suite</span>
                         </Link>
                         <button
                             type="button"
@@ -564,6 +567,18 @@ const Header = () => {
 
                     <div className="ltr:mr-2 rtl:ml-2">
                         <ul className="flex items-center space-x-2 rtl:space-x-reverse dark:text-[#d0d2d6]">
+                            {userRole === 'admin' && companyName && (
+                                <li className="min-w-0">
+                                    <div className="flex items-center gap-2.5 rounded-xl border border-slate-200/90 bg-slate-50/70 py-1 pl-1 pr-3 dark:border-slate-700/80 dark:bg-slate-800/40" title={companyName}>
+                                        {companyLogo ? (
+                                            <img src={companyLogo} alt={companyName} className="h-8 w-8 rounded-lg border border-slate-200 bg-white object-contain p-0.5 dark:border-slate-700" />
+                                        ) : (
+                                            <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-brand to-brand-mid text-sm font-extrabold uppercase text-white shadow-sm">{companyName.charAt(0)}</span>
+                                        )}
+                                        <span className="max-w-[140px] truncate text-sm font-bold tracking-tight text-slate-800 dark:text-white sm:max-w-[220px]">{companyName}</span>
+                                    </div>
+                                </li>
+                            )}
                             {userRole === 'admin' && location.pathname !== '/admin/hub' && (
                                 <li className="hidden sm:block">
                                     <Link 
@@ -597,6 +612,7 @@ const Header = () => {
                                             <IconCalendar />
                                         </Link>
                                     </li>
+                                    {userRole !== 'admin' && (
                                     <li className="relative hidden sm:block">
                                         <span ref={leaveIntroAnchorRef} className="relative inline-flex">
                                             <Link
@@ -630,11 +646,12 @@ const Header = () => {
                                             </Link>
                                         </span>
                                     </li>
-                                    {userRole !== 'employee' && (
+                                    )}
+                                    {userRole !== 'employee' && userRole !== 'admin' && (
                                         <li className="hidden sm:block">
-                                            <Link to="/apps/chat" className="block p-2 rounded-full bg-white-light/40 dark:bg-dark/40 hover:text-primary hover:bg-white-light/90 dark:hover:bg-dark/60">
+                                            <button type="button" title="Chat in Microsoft Teams" onClick={() => openTeamsChat()} className="block p-2 rounded-full bg-white-light/40 dark:bg-dark/40 hover:text-primary hover:bg-white-light/90 dark:hover:bg-dark/60">
                                                 <IconChatNotification />
-                                            </Link>
+                                            </button>
                                         </li>
                                     )}
                                 </>
@@ -643,7 +660,7 @@ const Header = () => {
                     </div>
                     <div className="sm:flex-1 ltr:sm:ml-0 ltr:ml-auto sm:rtl:mr-0 rtl:mr-auto flex items-center space-x-1.5 lg:space-x-2 rtl:space-x-reverse dark:text-[#d0d2d6]">
                         <div className="sm:ltr:mr-auto sm:rtl:ml-auto">
-                            {!hideHRQuickLinks && (
+                            {!hideHRQuickLinks && userRole !== 'admin' && (
                                 <>
                                     <form
                                         className={`${search && '!block'} sm:relative absolute inset-x-0 sm:top-0 top-1/2 sm:translate-y-0 -translate-y-1/2 sm:mx-0 mx-4 z-10 sm:block hidden`}
@@ -651,7 +668,8 @@ const Header = () => {
                                             e.preventDefault();
                                             const firstMatch = filteredSidebarItems[0];
                                             if (firstMatch) {
-                                                navigate(firstMatch.path);
+                                                if (/\/chat$/.test(firstMatch.path)) openTeamsChat();
+                                                else navigate(firstMatch.path);
                                                 setMenuSearchQuery('');
                                                 setSearch(false);
                                             }
@@ -681,7 +699,8 @@ const Header = () => {
                                                                         type="button"
                                                                         className="w-full text-left px-3 py-2 text-sm hover:bg-gray-100 dark:hover:bg-[#253b5c] dark:text-white-dark"
                                                                         onClick={() => {
-                                                                            navigate(item.path);
+                                                                            if (/\/chat$/.test(item.path)) openTeamsChat();
+                                                                            else navigate(item.path);
                                                                             setMenuSearchQuery('');
                                                                             setSearch(false);
                                                                         }}
@@ -709,49 +728,6 @@ const Header = () => {
                             )}
                         </div>
                         {!hideHRQuickLinks && <UpcomingEventsTicker calendarRoute={calendarRoute} />}
-                        <div>
-                            {themeConfig.theme === 'light' ? (
-                                <button
-                                    className={`${
-                                        themeConfig.theme === 'light' &&
-                                        'flex items-center p-2 rounded-full bg-white-light/40 dark:bg-dark/40 hover:text-primary hover:bg-white-light/90 dark:hover:bg-dark/60'
-                                    }`}
-                                    onClick={() => {
-                                        dispatch(toggleTheme('dark'));
-                                    }}
-                                >
-                                    <IconSun />
-                                </button>
-                            ) : (
-                                ''
-                            )}
-                            {themeConfig.theme === 'dark' && (
-                                <button
-                                    className={`${
-                                        themeConfig.theme === 'dark' &&
-                                        'flex items-center p-2 rounded-full bg-white-light/40 dark:bg-dark/40 hover:text-primary hover:bg-white-light/90 dark:hover:bg-dark/60'
-                                    }`}
-                                    onClick={() => {
-                                        dispatch(toggleTheme('system'));
-                                    }}
-                                >
-                                    <IconMoon />
-                                </button>
-                            )}
-                            {themeConfig.theme === 'system' && (
-                                <button
-                                    className={`${
-                                        themeConfig.theme === 'system' &&
-                                        'flex items-center p-2 rounded-full bg-white-light/40 dark:bg-dark/40 hover:text-primary hover:bg-white-light/90 dark:hover:bg-dark/60'
-                                    }`}
-                                    onClick={() => {
-                                        dispatch(toggleTheme('light'));
-                                    }}
-                                >
-                                    <IconLaptop />
-                                </button>
-                            )}
-                        </div>
                         {(userRole === 'admin' || userRole === 'employee') && <OutlookHeaderButton isRtl={isRtl} />}
                         <div className="shrink-0">
                             <Link 

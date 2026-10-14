@@ -327,7 +327,7 @@ const LoginBoxed = () => {
                         type="button"
                         onClick={handleMicrosoftLogin}
                         disabled={loading}
-                        className={`w-full group relative flex items-center justify-between px-5 py-3.5 rounded-xl bg-[#0062E0] hover:bg-[#0051ba] active:scale-[0.99] text-white font-bold text-sm shadow-[0_8px_20px_-4px_rgba(0,98,224,0.38)] hover:shadow-[0_12px_24px_-4px_rgba(0,98,224,0.5)] transition-all duration-200 ${
+                        className={`w-full group relative flex items-center justify-between px-5 py-3.5 rounded-xl bg-brand hover:bg-[#0051ba] active:scale-[0.99] text-white font-bold text-sm shadow-[0_8px_20px_-4px_rgba(0,98,224,0.38)] hover:shadow-[0_12px_24px_-4px_rgba(0,98,224,0.5)] transition-all duration-200 ${
                             loading ? 'opacity-85 cursor-wait' : ''
                         }`}
                         title="Sign in with Microsoft SSO"
@@ -378,7 +378,7 @@ const LoginBoxed = () => {
 
                     {/* Bottom Shield & Security Notice */}
                     <div className="flex flex-col items-center justify-center space-y-2 pt-1">
-                        <div className="h-8 w-8 flex items-center justify-center text-[#0062E0]">
+                        <div className="h-8 w-8 flex items-center justify-center text-brand">
                             <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.6">
                                 <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75 11.25 15 15 9.75m-3-7.036A11.959 11.959 0 0 1 3.598 6 11.99 11.99 0 0 0 3 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285Z" />
                             </svg>

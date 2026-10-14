@@ -7,6 +7,8 @@ import IconTrendingUp from '../../../components/Icon/IconTrendingUp';
 import IconLayoutGrid from '../../../components/Icon/IconLayoutGrid';
 import IconMenuCharts from '../../../components/Icon/Menu/IconMenuCharts';
 
+import PageHeader from '../../../components/Common/PageHeader';
+import CardGrid from '../../../components/Common/CardGrid';
 interface Employee {
     id: number;
     employee_id: string;
@@ -274,187 +276,104 @@ const SearchProfile = () => {
     return (
         <div className="space-y-6 py-2 animate__animated animate__fadeIn">
             {/* Header banner */}
-            <div className="bg-white dark:bg-gray-900 p-6 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm flex justify-between items-center">
-                <div>
-                    <h2 className="text-xl font-bold text-gray-800 dark:text-white">Search Employee Profile</h2>
-                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 leading-relaxed">
-                        Access individual employee performance records, KRA score indices, competencies, and 9-box matrices.
-                    </p>
-                </div>
-                {selectedEmployee && (
-                    <button
+            <PageHeader
+                title="Search Employee Profile"
+                subtitle="Access individual employee performance records, KRA score indices, competencies, and 9-box matrices."
+                actions={
+                    <>
+                        {selectedEmployee && (
+                        <button
                         onClick={() => setSelectedEmployee(null)}
                         className="btn bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-400 rounded-xl text-xs font-bold px-4 py-2"
                     >
                         ← Back to Directory
                     </button>
-                )}
-            </div>
+                        )}
+                    </>
+                }
+            />
 
             {/* View switcher based on selection */}
             {!selectedEmployee ? (
                 /* Directory Grid View */
                 <div className="space-y-6">
-                    {/* Filters bar */}
-                    <div className="bg-white dark:bg-gray-900 p-5 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm flex flex-col md:flex-row gap-4 items-center">
-                        <div className="relative w-full md:flex-1">
-                            <input 
-                                type="text" 
-                                placeholder="Search by name, ID, or designation..." 
-                                value={searchQuery}
-                                onChange={(e) => handleSearchChange(e.target.value)}
-                                className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 pl-9 pr-4 py-2.5 rounded-xl text-xs font-semibold text-gray-800 dark:text-white focus:outline-none"
-                            />
-                            <IconSearch className="w-4 h-4 text-gray-400 absolute left-3 top-3" />
-                        </div>
-                        
-                        <div className="w-full md:w-64">
+                    <CardGrid
+                        items={employees}
+                        loading={loadingList}
+                        page={page}
+                        pageSize={pageSize}
+                        totalCount={totalRecords}
+                        pageSizeOptions={[6, 12, 24, 48]}
+                        onPageChange={handlePageChange}
+                        onPageSizeChange={(sz) => { setPageSize(sz); handlePageChange(1); }}
+                        searchValue={searchQuery}
+                        onSearchChange={(v) => { handleSearchChange(v); handlePageChange(1); }}
+                        searchPlaceholder="Search by name, ID, or designation..."
+                        emptyMessage="No employees match the filter criteria"
+                        entityLabel="employees"
+                        cols={4}
+                        onRefresh={() => fetchEmployees(searchQuery, selectedDept, page, pageSize)}
+                        filters={
+                            <>
                             <select
                                 value={selectedDept}
                                 onChange={(e) => handleDeptChange(e.target.value)}
-                                className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 px-4 py-2.5 rounded-xl text-xs font-bold text-gray-800 dark:text-white focus:outline-none cursor-pointer"
+                                className="form-select h-10 w-full rounded-xl md:w-64"
                             >
                                 <option value="">All Departments</option>
-                                {departmentsList.map(d => (
+                                {departmentsList.map((d) => (
                                     <option key={d} value={d || ''}>{d}</option>
                                 ))}
                             </select>
-                        </div>
-                    </div>
-
-                    {/* Employee Directory Grid */}
-                    {loadingList ? (
-                        <div className="text-center py-20 text-xs text-gray-400">Loading workspace directory...</div>
-                    ) : (
-                        <>
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                                {employees.map(emp => (
-                                    <div
-                                        key={emp.id}
-                                        onClick={() => loadPerformanceProfile(emp)}
-                                        className="bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 p-5 rounded-3xl shadow-sm hover:shadow-md hover:border-teal-500/20 cursor-pointer transition duration-300 flex flex-col justify-between"
-                                    >
-                                        <div className="space-y-4">
-                                            {/* Avatar / Photo */}
-                                            <div className="flex items-center gap-3.5">
-                                                {emp.photo ? (
-                                                    <img 
-                                                        src={emp.photo} 
-                                                        alt={emp.full_name} 
-                                                        className="w-12 h-12 rounded-2xl object-cover shadow-sm border border-gray-100 dark:border-gray-850"
-                                                    />
-                                                ) : (
-                                                    <div className="w-12 h-12 rounded-2xl bg-teal-500 text-white font-black text-sm flex items-center justify-center shadow-sm">
-                                                        {emp.initials}
-                                                    </div>
-                                                )}
-                                                <div>
-                                                    <span className="block font-bold text-sm text-gray-800 dark:text-white leading-snug">{emp.full_name}</span>
-                                                    <span className="block text-[10px] text-gray-400 dark:text-gray-500 mt-0.5">{emp.designation_name || 'Designation Not Set'}</span>
+                            </>
+                        }
+                        renderCard={(emp) => (
+                                <div
+                                    onClick={() => loadPerformanceProfile(emp)}
+                                    className="bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 p-5 rounded-3xl shadow-sm hover:shadow-md hover:border-brand/20 cursor-pointer transition duration-300 flex flex-col justify-between"
+                                >
+                                    <div className="space-y-4">
+                                        {/* Avatar / Photo */}
+                                        <div className="flex items-center gap-3.5">
+                                            {emp.photo ? (
+                                                <img 
+                                                    src={emp.photo} 
+                                                    alt={emp.full_name} 
+                                                    className="w-12 h-12 rounded-2xl object-cover shadow-sm border border-gray-100 dark:border-gray-850"
+                                                />
+                                            ) : (
+                                                <div className="w-12 h-12 rounded-2xl bg-brand text-white font-black text-sm flex items-center justify-center shadow-sm">
+                                                    {emp.initials}
                                                 </div>
-                                            </div>
-
-                                            {/* Meta badges */}
-                                            <div className="flex flex-wrap gap-2">
-                                                <span className="bg-gray-100 dark:bg-gray-850 text-gray-600 dark:text-gray-400 text-[9px] font-black uppercase tracking-wider px-2.5 py-1 rounded-lg">
-                                                    ID: {emp.employee_id}
-                                                </span>
-                                                <span className="bg-teal-500/10 text-teal-600 dark:text-teal-400 text-[9px] font-black uppercase tracking-wider px-2.5 py-1 rounded-lg">
-                                                    {emp.department_name || 'No Dept'}
-                                                </span>
+                                            )}
+                                            <div>
+                                                <span className="block font-bold text-sm text-gray-800 dark:text-white leading-snug">{emp.full_name}</span>
+                                                <span className="block text-[10px] text-gray-400 dark:text-gray-500 mt-0.5">{emp.designation_name || 'Designation Not Set'}</span>
                                             </div>
                                         </div>
 
-                                        {/* Reporting Manager */}
-                                        <div className="border-t border-gray-100 dark:border-gray-850 pt-3 mt-4 flex items-center justify-between text-[10px] font-bold text-gray-400 dark:text-gray-500">
-                                            <span>Reporting Mgr:</span>
-                                            <span className="text-gray-700 dark:text-gray-300">
-                                                {emp.reporting_manager_name || 'Not Mapped'}
+                                        {/* Meta badges */}
+                                        <div className="flex flex-wrap gap-2">
+                                            <span className="bg-gray-100 dark:bg-gray-850 text-gray-600 dark:text-gray-400 text-[9px] font-black uppercase tracking-wider px-2.5 py-1 rounded-lg">
+                                                ID: {emp.employee_id}
+                                            </span>
+                                            <span className="bg-brand/10 text-brand dark:text-brand-400 text-[9px] font-black uppercase tracking-wider px-2.5 py-1 rounded-lg">
+                                                {emp.department_name || 'No Dept'}
                                             </span>
                                         </div>
                                     </div>
-                                ))}
 
-                                {employees.length === 0 && (
-                                    <div className="col-span-full bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 p-12 rounded-3xl text-center text-gray-400 italic">
-                                        No employees match the filter criteria.
+                                    {/* Reporting Manager */}
+                                    <div className="border-t border-gray-100 dark:border-gray-850 pt-3 mt-4 flex items-center justify-between text-[10px] font-bold text-gray-400 dark:text-gray-500">
+                                        <span>Reporting Mgr:</span>
+                                        <span className="text-gray-700 dark:text-gray-300">
+                                            {emp.reporting_manager_name || 'Not Mapped'}
+                                        </span>
                                     </div>
-                                )}
-                            </div>
-
-                            {/* Pagination Controls */}
-                            <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mt-6 bg-white dark:bg-gray-900 p-4 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm">
-                                <div className="flex items-center gap-2 text-xs font-bold text-gray-500 dark:text-gray-400">
-                                    <span>Show</span>
-                                    <select
-                                        value={pageSize}
-                                        onChange={(e) => handlePageSizeChange(Number(e.target.value))}
-                                        className="bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 px-3 py-1.5 rounded-lg text-xs font-bold text-gray-800 dark:text-white focus:outline-none cursor-pointer"
-                                    >
-                                        <option value={5}>5</option>
-                                        <option value={10}>10</option>
-                                        <option value={20}>20</option>
-                                        <option value={50}>50</option>
-                                    </select>
-                                    <span>records per page</span>
-                                    <span className="ml-2 text-gray-400">| Total: {totalRecords} records</span>
                                 </div>
 
-                                {totalPages > 1 && (
-                                    <ul className="flex items-center gap-2">
-                                        <li>
-                                            <button
-                                                type="button"
-                                                disabled={page === 1}
-                                                onClick={() => handlePageChange(page - 1)}
-                                                className="flex justify-center font-bold px-3 py-2 rounded-xl transition bg-white-light text-dark hover:text-white hover:bg-teal-500 dark:text-white-light dark:bg-[#191e3a] dark:hover:bg-teal-500 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
-                                            >
-                                                Prev
-                                            </button>
-                                        </li>
-                                        {getPageNumbers().map((p, idx) => {
-                                            if (p === 'left-ellipsis' || p === 'right-ellipsis') {
-                                                const jumpPage = p === 'left-ellipsis' ? Math.max(1, page - 5) : Math.min(totalPages, page + 5);
-                                                return (
-                                                    <li key={`${p}-${idx}`}>
-                                                        <button
-                                                            type="button"
-                                                            title={p === 'left-ellipsis' ? "Previous 5 pages" : "Next 5 pages"}
-                                                            className="flex justify-center font-bold px-3 py-2 rounded-xl transition bg-white-light text-dark hover:text-white hover:bg-teal-500 dark:text-white-light dark:bg-[#191e3a] dark:hover:bg-teal-500 cursor-pointer"
-                                                            onClick={() => handlePageChange(jumpPage)}
-                                                        >
-                                                            ...
-                                                        </button>
-                                                    </li>
-                                                );
-                                            }
-                                            return (
-                                                <li key={p}>
-                                                    <button
-                                                        type="button"
-                                                        className={`flex justify-center font-bold px-3.5 py-2 rounded-xl transition ${page === p ? 'bg-teal-500 text-white shadow-[0_10px_20px_-10px_rgba(20,184,166,0.44)]' : 'bg-white-light text-dark hover:text-white hover:bg-teal-500 dark:text-white-light dark:bg-[#191e3a] dark:hover:bg-teal-500 cursor-pointer'}`}
-                                                        onClick={() => handlePageChange(p as number)}
-                                                    >
-                                                        {p}
-                                                    </button>
-                                                </li>
-                                            );
-                                        })}
-                                        <li>
-                                            <button
-                                                type="button"
-                                                disabled={page === totalPages}
-                                                onClick={() => handlePageChange(page + 1)}
-                                                className="flex justify-center font-bold px-3 py-2 rounded-xl transition bg-white-light text-dark hover:text-white hover:bg-teal-500 dark:text-white-light dark:bg-[#191e3a] dark:hover:bg-teal-500 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
-                                            >
-                                                Next
-                                            </button>
-                                        </li>
-                                    </ul>
-                                )}
-                            </div>
-                        </>
-                    )}
+                            )}
+                    />
                 </div>
             ) : (
                 /* Profile Workspace Details View */
@@ -470,13 +389,13 @@ const SearchProfile = () => {
                                     className="w-24 h-24 rounded-3xl object-cover shadow-md border border-gray-100 dark:border-gray-800"
                                 />
                             ) : (
-                                <div className="w-24 h-24 rounded-3xl bg-teal-500 text-white font-black text-2xl flex items-center justify-center shadow-md">
+                                <div className="w-24 h-24 rounded-3xl bg-brand text-white font-black text-2xl flex items-center justify-center shadow-md">
                                     {selectedEmployee.initials}
                                 </div>
                             )}
                             <h3 className="text-base font-black text-gray-800 dark:text-white mt-4 leading-tight">{selectedEmployee.full_name}</h3>
                             <span className="text-xs text-gray-400 mt-1 block">{selectedEmployee.designation_name || 'Designation Not Set'}</span>
-                            <span className="text-[10px] bg-teal-500/10 text-teal-600 px-3 py-1 rounded-full font-black uppercase tracking-wider mt-2 block w-fit">
+                            <span className="text-[10px] bg-brand/10 text-brand px-3 py-1 rounded-full font-black uppercase tracking-wider mt-2 block w-fit">
                                 {selectedEmployee.department_name || 'No Dept'}
                             </span>
                         </div>
@@ -517,7 +436,7 @@ const SearchProfile = () => {
                                         onClick={() => setActiveTab(tab.key as any)}
                                         className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl text-xs font-bold transition duration-200 ${
                                             isCurrent 
-                                            ? 'bg-teal-500 text-white shadow-md shadow-teal-500/10' 
+                                            ? 'bg-brand text-white shadow-md shadow-brand/10' 
                                             : 'bg-gray-50 hover:bg-gray-100 dark:bg-gray-850 dark:hover:bg-gray-800 text-gray-600 dark:text-gray-400'
                                         }`}
                                     >
@@ -562,7 +481,7 @@ const SearchProfile = () => {
                                                         </span>
                                                         <span className="block text-xs font-black">{cell.label}</span>
                                                         {isCurrent ? (
-                                                            <span className="text-[8px] bg-teal-500 text-white font-extrabold px-2 py-0.5 rounded-full uppercase tracking-wider">
+                                                            <span className="text-[8px] bg-brand text-white font-extrabold px-2 py-0.5 rounded-full uppercase tracking-wider">
                                                                 Positioned
                                                             </span>
                                                         ) : <div className="h-3" />}
@@ -594,14 +513,14 @@ const SearchProfile = () => {
                                                 <div className="space-y-3 pt-2">
                                                     <div className="flex gap-3">
                                                         <button onClick={() => setBreakdownOpen(breakdownOpen === 'perf' ? null : 'perf')}
-                                                            className={`flex-1 flex items-center justify-between px-4 py-3 rounded-2xl border text-xs font-bold transition ${breakdownOpen === 'perf' ? 'bg-teal-500 text-white border-teal-500 shadow-md' : 'bg-gray-50 dark:bg-gray-850 border-gray-200 dark:border-gray-800 text-gray-700 dark:text-gray-300 hover:border-teal-400'}`}>
+                                                            className={`flex-1 flex items-center justify-between px-4 py-3 rounded-2xl border text-xs font-bold transition ${breakdownOpen === 'perf' ? 'bg-brand text-white border-brand shadow-md' : 'bg-gray-50 dark:bg-gray-850 border-gray-200 dark:border-gray-800 text-gray-700 dark:text-gray-300 hover:border-brand-400'}`}>
                                                             <div>
                                                                 <span className="block">Perf Score</span>
-                                                                <span className={`text-[9px] font-bold ${breakdownOpen === 'perf' ? 'text-teal-100' : 'text-gray-400'}`}>KRA · Appraisal · Feedback</span>
+                                                                <span className={`text-[9px] font-bold ${breakdownOpen === 'perf' ? 'text-brand-100' : 'text-gray-400'}`}>KRA · Appraisal · Feedback</span>
                                                             </div>
                                                             <span className="flex items-center gap-1.5">
-                                                                <span className={`text-base font-black ${breakdownOpen === 'perf' ? 'text-white' : 'text-teal-600 dark:text-teal-400'}`}>{profile.nine_box.performance_score.toFixed(1)}</span>
-                                                                <span className={`text-[10px] ${breakdownOpen === 'perf' ? 'text-teal-100' : 'text-gray-400'}`}>/ 5 {breakdownOpen === 'perf' ? '▲' : '▼'}</span>
+                                                                <span className={`text-base font-black ${breakdownOpen === 'perf' ? 'text-white' : 'text-brand dark:text-brand-400'}`}>{profile.nine_box.performance_score.toFixed(1)}</span>
+                                                                <span className={`text-[10px] ${breakdownOpen === 'perf' ? 'text-brand-100' : 'text-gray-400'}`}>/ 5 {breakdownOpen === 'perf' ? '▲' : '▼'}</span>
                                                             </span>
                                                         </button>
                                                         <button onClick={() => setBreakdownOpen(breakdownOpen === 'pot' ? null : 'pot')}
@@ -619,10 +538,10 @@ const SearchProfile = () => {
 
                                                     {/* Perf Breakdown */}
                                                     {breakdownOpen === 'perf' && (
-                                                        <div className="border border-teal-200 dark:border-teal-900/50 rounded-2xl overflow-hidden text-xs">
-                                                            <div className="bg-teal-50 dark:bg-teal-950/30 px-4 py-2.5 flex items-center justify-between">
-                                                                <span className="text-[10px] font-black uppercase tracking-widest text-teal-700 dark:text-teal-400">Performance Score Breakdown</span>
-                                                                <span className="text-[10px] text-teal-500 font-bold">Blended from {activeW}% active weight</span>
+                                                        <div className="border border-brand-200 dark:border-brand-900/50 rounded-2xl overflow-hidden text-xs">
+                                                            <div className="bg-brand-50 dark:bg-brand-950/30 px-4 py-2.5 flex items-center justify-between">
+                                                                <span className="text-[10px] font-black uppercase tracking-widest text-brand-dark dark:text-brand-400">Performance Score Breakdown</span>
+                                                                <span className="text-[10px] text-brand font-bold">Blended from {activeW}% active weight</span>
                                                             </div>
 
                                                             {/* KRA Section */}
@@ -638,9 +557,9 @@ const SearchProfile = () => {
                                                                         </div>
                                                                         <span className="text-[9px] text-gray-400 shrink-0">{item.weightage}% wt</span>
                                                                         <div className="w-16 h-1 bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden shrink-0">
-                                                                            <div className="h-full bg-teal-500 rounded-full" style={{ width: `${(item.score / 5) * 100}%` }} />
+                                                                            <div className="h-full bg-brand rounded-full" style={{ width: `${(item.score / 5) * 100}%` }} />
                                                                         </div>
-                                                                        <span className="font-black text-teal-600 dark:text-teal-400 w-8 text-right shrink-0">{item.score.toFixed(1)}</span>
+                                                                        <span className="font-black text-brand dark:text-brand-400 w-8 text-right shrink-0">{item.score.toFixed(1)}</span>
                                                                     </div>
                                                                 ))}
                                                             </div>
@@ -678,9 +597,9 @@ const SearchProfile = () => {
                                                                 ))}
                                                             </div>
 
-                                                            <div className="px-4 py-3 bg-teal-50/50 dark:bg-teal-950/20 flex items-center justify-between border-t border-teal-100 dark:border-teal-900/30">
-                                                                <span className="text-[10px] font-black uppercase tracking-wider text-teal-700 dark:text-teal-400">Blended Perf Score</span>
-                                                                <span className="text-sm font-black text-teal-600 dark:text-teal-400">{profile.nine_box.performance_score.toFixed(2)} / 5.00</span>
+                                                            <div className="px-4 py-3 bg-brand-50/50 dark:bg-brand-950/20 flex items-center justify-between border-t border-brand-100 dark:border-brand-900/30">
+                                                                <span className="text-[10px] font-black uppercase tracking-wider text-brand-dark dark:text-brand-400">Blended Perf Score</span>
+                                                                <span className="text-sm font-black text-brand dark:text-brand-400">{profile.nine_box.performance_score.toFixed(2)} / 5.00</span>
                                                             </div>
                                                         </div>
                                                     )}
@@ -706,7 +625,7 @@ const SearchProfile = () => {
                                                                     <div key={i} className="flex items-center gap-2 py-2.5">
                                                                         <div className="w-2 h-2 rounded-full bg-indigo-400 shrink-0" />
                                                                         <span className="flex-1 font-semibold text-gray-700 dark:text-gray-300">{s.name}</span>
-                                                                        <span className={`text-[9px] uppercase font-black px-1.5 py-0.5 rounded-full ${s.level?.toLowerCase() === 'expert' ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400' : s.level?.toLowerCase() === 'intermediate' ? 'bg-teal-100 text-teal-700 dark:bg-teal-950/40 dark:text-teal-400' : 'bg-gray-100 text-gray-500'}`}>{s.level || '—'}</span>
+                                                                        <span className={`text-[9px] uppercase font-black px-1.5 py-0.5 rounded-full ${s.level?.toLowerCase() === 'expert' ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400' : s.level?.toLowerCase() === 'intermediate' ? 'bg-brand-100 text-brand-dark dark:bg-brand-950/40 dark:text-brand-400' : 'bg-gray-100 text-gray-500'}`}>{s.level || '—'}</span>
                                                                         <div className="w-16 h-1 bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden shrink-0">
                                                                             <div className="h-full bg-indigo-500 rounded-full" style={{ width: `${(s.mapped / 5) * 100}%` }} />
                                                                         </div>
@@ -780,9 +699,9 @@ const SearchProfile = () => {
                                                                             <div key={i} className="flex items-center gap-3 py-2.5">
                                                                                 <span className="flex-1 font-semibold text-gray-700 dark:text-gray-300 text-[11px] font-bold">{k.title}</span>
                                                                                 <div className="w-16 h-1 bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden shrink-0">
-                                                                                    <div className="h-full bg-teal-500 rounded-full" style={{ width: `${(k.score / 5) * 100}%` }} />
+                                                                                    <div className="h-full bg-brand rounded-full" style={{ width: `${(k.score / 5) * 100}%` }} />
                                                                                 </div>
-                                                                                <span className="font-black text-teal-600 dark:text-teal-400 w-8 text-right shrink-0">{k.score.toFixed(1)}</span>
+                                                                                <span className="font-black text-brand dark:text-brand-400 w-8 text-right shrink-0">{k.score.toFixed(1)}</span>
                                                                             </div>
                                                                         ))}
                                                                     </div>
@@ -831,7 +750,7 @@ const SearchProfile = () => {
                                                                 <td className="p-3">
                                                                     <div className="flex items-center gap-3">
                                                                         <div className="w-20 bg-gray-100 dark:bg-gray-800 h-1.5 rounded-full overflow-hidden shrink-0">
-                                                                            <div className="bg-teal-500 h-full rounded-full" style={{ width: `${Math.min(progress, 100)}%` }} />
+                                                                            <div className="bg-brand h-full rounded-full" style={{ width: `${Math.min(progress, 100)}%` }} />
                                                                         </div>
                                                                         <span className="font-bold">{progress.toFixed(0)}%</span>
                                                                     </div>
@@ -950,11 +869,11 @@ const SearchProfile = () => {
                                                                         return ev.id;
                                                                     });
                                                                 }}
-                                                                    className="px-2.5 py-1 text-[9px] font-bold text-teal-600 dark:text-teal-400 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition border border-teal-500/20">
+                                                                    className="px-2.5 py-1 text-[9px] font-bold text-brand dark:text-brand-400 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition border border-brand/20">
                                                                     {isExpanded ? 'Hide Details ▲' : 'View Full Details ▼'}
                                                                 </button>
                                                             </div>
-                                                            <span className="bg-teal-500/10 text-teal-600 px-3 py-1 rounded-xl text-[10px] font-black uppercase tracking-wider self-start sm:self-auto">
+                                                            <span className="bg-brand/10 text-brand px-3 py-1 rounded-xl text-[10px] font-black uppercase tracking-wider self-start sm:self-auto">
                                                                 Final Score: {ev.final_rating ? ev.final_rating.toFixed(2) : 'Awaiting Review'}
                                                             </span>
                                                         </div>
@@ -989,7 +908,7 @@ const SearchProfile = () => {
                                                                             <button key={role} type="button" onClick={() => setEvalActiveTab(role)}
                                                                                 className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[10px] font-bold transition ${
                                                                                     isTabActive 
-                                                                                        ? 'bg-teal-500 text-white shadow-md shadow-teal-500/10' 
+                                                                                        ? 'bg-brand text-white shadow-md shadow-brand/10' 
                                                                                         : 'bg-gray-50 dark:bg-gray-800 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-755'
                                                                                 }`}>
                                                                                 <span>{meta.icon}</span>
@@ -1029,7 +948,7 @@ const SearchProfile = () => {
                                                                                                 <span className={`text-[11px] font-black shrink-0 whitespace-nowrap px-2 py-0.5 rounded-full ${
                                                                                                     ans.question_type === 'yes_no'
                                                                                                         ? isYes
-                                                                                                            ? 'bg-teal-500/10 text-teal-600 dark:text-teal-400 border border-teal-500/10'
+                                                                                                            ? 'bg-brand/10 text-brand dark:text-brand-400 border border-brand/10'
                                                                                                             : 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/10'
                                                                                                         : 'text-amber-500 bg-amber-500/5 border border-amber-500/10'
                                                                                                 }`}>
@@ -1041,7 +960,7 @@ const SearchProfile = () => {
                                                                                             )}
                                                                                         </div>
                                                                                         {ans.comment && (
-                                                                                            <div className="pl-4 border-l-2 border-teal-500/20 text-[11px] text-gray-500 dark:text-gray-400 italic">
+                                                                                            <div className="pl-4 border-l-2 border-brand/20 text-[11px] text-gray-500 dark:text-gray-400 italic">
                                                                                                 "{ans.comment}"
                                                                                             </div>
                                                                                         )}
@@ -1074,7 +993,7 @@ const SearchProfile = () => {
                                             {profile.feedbacks.map(f => (
                                                 <div key={f.id} className="relative space-y-1.5">
                                                     {/* Timeline node */}
-                                                    <div className="absolute -left-[31px] top-1.5 w-3.5 h-3.5 rounded-full bg-teal-500 border-2 border-white dark:border-gray-900" />
+                                                    <div className="absolute -left-[31px] top-1.5 w-3.5 h-3.5 rounded-full bg-brand border-2 border-white dark:border-gray-900" />
                                                     
                                                     <div className="flex items-center gap-2.5">
                                                         <span className="text-[10px] text-gray-400 font-bold">{f.created_at || 'Date Not Set'}</span>

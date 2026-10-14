@@ -6,7 +6,6 @@ import 'flatpickr/dist/flatpickr.css';
 import Swal from 'sweetalert2';
 import Tippy from '@tippyjs/react';
 import 'tippy.js/dist/tippy.css';
-import { Dialog, Transition, Tab } from '@headlessui/react';
 import IconPlus from '../../components/Icon/IconPlus';
 import IconX from '../../components/Icon/IconX';
 import IconChecks from '../../components/Icon/IconChecks';
@@ -14,7 +13,11 @@ import IconInfoCircle from '../../components/Icon/IconInfoCircle';
 import IconCalendar from '../../components/Icon/IconCalendar';
 import IconRefresh from '../../components/Icon/IconRefresh';
 import DataTable, { Column } from '../../components/Common/DataTable';
+import PageHeader from '../../components/Common/PageHeader';
 
+import Modal from '../../components/Common/Modal';
+import { Tab } from '@headlessui/react';
+import Button from '../../components/Common/Button';
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000';
 
 /** Calendar date in local timezone (do not use toISOString() — it shifts dates in non-UTC zones). */
@@ -335,12 +338,12 @@ const WFHRequest = () => {
             width: '120px',
             render: (_val, req) => (
                 <div className="flex items-center justify-center gap-2">
-                    <button type="button" onClick={() => handleApprove(req.id)} className="btn btn-sm btn-outline-success p-2 rounded-lg" title="Approve">
+                    <Button variant="outline-success" size="sm" className="!p-2" type="button" onClick={() => handleApprove(req.id)}  title="Approve">
                         <IconChecks className="w-4 h-4" />
-                    </button>
-                    <button type="button" onClick={() => handleReject(req.id)} className="btn btn-sm btn-outline-danger p-2 rounded-lg" title="Reject">
+                    </Button>
+                    <Button variant="outline-danger" size="sm" className="!p-2" type="button" onClick={() => handleReject(req.id)}  title="Reject">
                         <IconX className="w-4 h-4" />
-                    </button>
+                    </Button>
                 </div>
             ),
         },
@@ -437,29 +440,25 @@ const WFHRequest = () => {
     return (
         <div className="pb-10">
             {/* Unified Header */}
-            <div className="bg-gradient-to-r from-[#4338ca] via-[#3b82f6] to-[#0ea5e9] p-10 rounded-3xl shadow-2xl mb-10 relative overflow-hidden">
-                <div className="relative z-10 flex flex-col md:flex-row justify-between items-center gap-8">
-                    <div className="text-center md:text-left">
-                        <h1 className="text-4xl md:text-5xl font-black text-white tracking-tight uppercase italic drop-shadow-lg">WFH Hub</h1>
-                        <p className="text-white/90 mt-4 text-lg font-bold max-w-2xl italic leading-relaxed">
-                            {isAdmin ? 'Global oversight & policy management center.' : 'Track your presence and see who\'s in the office today.'}
-                        </p>
-                    </div>
-                    <div className="flex flex-col sm:flex-row items-center gap-4">
-                        <div className="flex gap-4 mr-4">
-                            <div className="text-center bg-white/10 p-3 px-5 rounded-2xl backdrop-blur-md border border-white/20">
-                                <p className="text-2xl font-black text-white leading-none">{homeCount}</p>
-                                <p className="text-[9px] font-black uppercase tracking-widest text-indigo-200 mt-1">At Home</p>
-                            </div>
-                            <div className="text-center bg-white/10 p-3 px-5 rounded-2xl backdrop-blur-md border border-white/20">
-                                <p className="text-2xl font-black text-white leading-none">{officeCount}</p>
-                                <p className="text-[9px] font-black uppercase tracking-widest text-emerald-200 mt-1">In Office</p>
-                            </div>
+            <PageHeader
+                title="WFH Management Hub"
+                subtitle={isAdmin ? 'Global organizational presence tracking, flexible work policies, and approval workflows.' : 'Track your presence and see who\'s working remotely or in the office today.'}
+                icon={<IconCalendar />}
+                badge="Workforce Flexibility"
+                variant="indigo"
+                stats={
+                    <div className="flex items-center gap-3">
+                        <div className="text-center bg-white/10 p-2.5 px-4 rounded-xl backdrop-blur-md border border-white/20">
+                            <p className="text-xl font-black text-white leading-none">{homeCount}</p>
+                            <p className="text-[9px] font-black uppercase tracking-wider text-indigo-200 mt-1">At Home</p>
+                        </div>
+                        <div className="text-center bg-white/10 p-2.5 px-4 rounded-xl backdrop-blur-md border border-white/20">
+                            <p className="text-xl font-black text-white leading-none">{officeCount}</p>
+                            <p className="text-[9px] font-black uppercase tracking-wider text-emerald-200 mt-1">In Office</p>
                         </div>
                     </div>
-                </div>
-                <div className="absolute top-0 right-0 -mt-20 -mr-20 w-[500px] h-[500px] bg-white/5 rounded-full blur-3xl"></div>
-            </div>
+                }
+            />
 
             <Tab.Group>
                 <Tab.List className="flex flex-wrap gap-8 mb-8 border-b border-gray-100 dark:border-gray-800 pb-1">
@@ -566,80 +565,65 @@ const WFHRequest = () => {
             </Tab.Group>
 
             {/* Request Modal */}
-            <Transition appear show={showModal} as={Fragment}>
-                <Dialog as="div" open={showModal} onClose={() => setShowModal(false)} className="relative z-50">
-                    <Transition.Child as={Fragment} enter="ease-out duration-300" enterFrom="opacity-0" enterTo="opacity-100" leave="ease-in duration-200" leaveFrom="opacity-100" leaveTo="opacity-0"><div className="fixed inset-0 bg-[black]/60" /></Transition.Child>
-                    <div className="fixed inset-0 overflow-y-auto">
-                        <div className="flex min-h-full items-center justify-center px-4 py-8">
-                            <Transition.Child as={Fragment} enter="ease-out duration-300" enterFrom="opacity-0 scale-95" enterTo="opacity-100 scale-100" leave="ease-in duration-200" leaveFrom="opacity-100 scale-100" leaveTo="opacity-0 scale-95">
-                                <Dialog.Panel className="panel border-0 p-0 rounded-2xl overflow-hidden w-full max-w-lg bg-white dark:bg-[#0e1726] shadow-2xl">
-                                    <div className="flex bg-[#fbfbfb] dark:bg-[#121c2c] items-center justify-between px-6 py-4 border-b border-gray-100 dark:border-gray-800">
-                                        <h5 className="text-xl font-black text-indigo-600 uppercase tracking-tight italic">New Request</h5>
-                                        <button onClick={() => setShowModal(false)} className="text-gray-400 hover:text-red-500"><IconX /></button>
-                                    </div>
-                                    <form onSubmit={handleSubmit}>
-                                        <div className="p-6 space-y-6">
-                                            <div>
-                                                <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1 block">Reason</label>
-                                                <textarea className="form-textarea min-h-[120px] text-sm" placeholder="Details..." required value={formData.reason} onChange={(e) => setFormData({ ...formData, reason: e.target.value })}></textarea>
-                                            </div>
-                                            <div className="grid grid-cols-2 gap-5">
-                                                <div>
-                                                    <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1 block">From</label>
-                                                    <Flatpickr
-                                                        value={formData.from_date || undefined}
-                                                        options={{ dateFormat: 'Y-m-d' }}
-                                                        className="form-input"
-                                                        onChange={(date: Date[]) => {
-                                                            const picked = date[0];
-                                                            if (!picked) {
-                                                                setFormData((prev) => ({ ...prev, from_date: '' }));
-                                                                return;
-                                                            }
-                                                            const from = dateToLocalYmd(picked);
-                                                            setFormData((prev) => ({
-                                                                ...prev,
-                                                                from_date: from,
-                                                                to_date: prev.to_date && prev.to_date < from ? from : prev.to_date,
-                                                            }));
-                                                        }}
-                                                    />
-                                                </div>
-                                                <div>
-                                                    <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1 block">To</label>
-                                                    <Flatpickr
-                                                        value={formData.to_date || undefined}
-                                                        options={{ dateFormat: 'Y-m-d' }}
-                                                        className="form-input"
-                                                        onChange={(date: Date[]) => {
-                                                            const picked = date[0];
-                                                            if (!picked) {
-                                                                setFormData((prev) => ({ ...prev, to_date: '' }));
-                                                                return;
-                                                            }
-                                                            let to = dateToLocalYmd(picked);
-                                                            setFormData((prev) => {
-                                                                if (prev.from_date && to < prev.from_date) {
-                                                                    to = prev.from_date;
-                                                                }
-                                                                return { ...prev, to_date: to };
-                                                            });
-                                                        }}
-                                                    />
-                                                </div>
-                                            </div>
-                                        </div>
-                                        <div className="flex items-center justify-end px-6 py-4 bg-gray-50/50 dark:bg-gray-900/20 gap-3">
-                                            <button type="button" onClick={() => setShowModal(false)} className="btn btn-outline-danger">Cancel</button>
-                                            <button type="submit" className="btn btn-primary">Submit</button>
-                                        </div>
-                                    </form>
-                                </Dialog.Panel>
-                            </Transition.Child>
-                        </div>
-                    </div>
-                </Dialog>
-            </Transition>
+            <Modal open={showModal} onClose={() => setShowModal(false)} title="New Request" size="lg">
+                <form onSubmit={handleSubmit}>
+                                                        <div className="p-6 space-y-6">
+                                                            <div>
+                                                                <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1 block">Reason</label>
+                                                                <textarea className="form-textarea min-h-[120px] text-sm" placeholder="Details..." required value={formData.reason} onChange={(e) => setFormData({ ...formData, reason: e.target.value })}></textarea>
+                                                            </div>
+                                                            <div className="grid grid-cols-2 gap-5">
+                                                                <div>
+                                                                    <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1 block">From</label>
+                                                                    <Flatpickr
+                                                                        value={formData.from_date || undefined}
+                                                                        options={{ dateFormat: 'Y-m-d' }}
+                                                                        className="form-input"
+                                                                        onChange={(date: Date[]) => {
+                                                                            const picked = date[0];
+                                                                            if (!picked) {
+                                                                                setFormData((prev) => ({ ...prev, from_date: '' }));
+                                                                                return;
+                                                                            }
+                                                                            const from = dateToLocalYmd(picked);
+                                                                            setFormData((prev) => ({
+                                                                                ...prev,
+                                                                                from_date: from,
+                                                                                to_date: prev.to_date && prev.to_date < from ? from : prev.to_date,
+                                                                            }));
+                                                                        }}
+                                                                    />
+                                                                </div>
+                                                                <div>
+                                                                    <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1 block">To</label>
+                                                                    <Flatpickr
+                                                                        value={formData.to_date || undefined}
+                                                                        options={{ dateFormat: 'Y-m-d' }}
+                                                                        className="form-input"
+                                                                        onChange={(date: Date[]) => {
+                                                                            const picked = date[0];
+                                                                            if (!picked) {
+                                                                                setFormData((prev) => ({ ...prev, to_date: '' }));
+                                                                                return;
+                                                                            }
+                                                                            let to = dateToLocalYmd(picked);
+                                                                            setFormData((prev) => {
+                                                                                if (prev.from_date && to < prev.from_date) {
+                                                                                    to = prev.from_date;
+                                                                                }
+                                                                                return { ...prev, to_date: to };
+                                                                            });
+                                                                        }}
+                                                                    />
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                        <div className="flex items-center justify-end px-6 py-4 bg-gray-50/50 dark:bg-gray-900/20 gap-3">
+                                                            <Button variant="outline-danger" type="button" onClick={() => setShowModal(false)} >Cancel</Button>
+                                                            <Button type="submit">Submit</Button>
+                                                        </div>
+                                                    </form>
+            </Modal>
         </div>
     );
 };

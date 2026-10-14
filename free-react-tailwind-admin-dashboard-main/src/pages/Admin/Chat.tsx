@@ -8,6 +8,7 @@ import IconSend from '../../components/Icon/IconSend';
 import IconPlus from '../../components/Icon/IconPlus';
 import IconUserPlus from '../../components/Icon/IconUserPlus';
 
+import Button from '../../components/Common/Button';
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000';
 
 type ChatUser = { id: number; username: string; email: string; first_name?: string; last_name?: string; status?: string; photo?: string | null };
@@ -840,12 +841,12 @@ ${filtered
                                 <IconSearch className="w-4 h-4" />
                             </span>
                         </div>
-                        <button type="button" className="btn btn-primary px-3" onClick={createGroup} title="Create group">
+                        <Button className="!px-3" type="button"  onClick={createGroup} title="Create group">
                             <IconPlus />
-                        </button>
-                        <button type="button" className="btn btn-outline-primary px-3" onClick={openNewChat} title="New chat">
+                        </Button>
+                        <Button variant="outline" className="!px-3" type="button"  onClick={openNewChat} title="New chat">
                             <IconUserPlus />
-                        </button>
+                        </Button>
                     </div>
                     <div className="px-4 pb-3 flex gap-2">
                         <button
@@ -864,9 +865,9 @@ ${filtered
                         </button>
                     </div>
                     <div className="px-4 pb-3">
-                        <button type="button" className="btn btn-outline-primary w-full btn-sm" onClick={fetchConversations} disabled={loading}>
+                        <Button variant="outline" size="sm" className="w-full" type="button"  onClick={fetchConversations} disabled={loading}>
                             {loading ? 'Loading...' : 'Refresh List'}
-                        </button>
+                        </Button>
                     </div>
                     <PerfectScrollbar className="flex-1">
                         <div className="space-y-1 p-2">
@@ -961,9 +962,9 @@ ${filtered
                             </div>
                             {/* Everyone can open Manage to view members; actions inside are permission-gated */}
                             {activeConv?.type === 'group' && (
-                                <button type="button" className="btn btn-outline-primary btn-sm" onClick={manageGroup}>
+                                <Button variant="outline" size="sm" type="button"  onClick={manageGroup}>
                                     Manage
-                                </button>
+                                </Button>
                             )}
                         </div>
                     </div>
@@ -1054,15 +1055,15 @@ ${filtered
                                 setPending(f);
                             }}
                         />
-                        <button
+                        <Button variant="outline" className="!px-3"
                             type="button"
-                            className="btn btn-outline-primary px-3"
+                            
                             title="Attach"
                             onClick={() => fileInputRef.current?.click()}
                             disabled={!activeId}
                         >
                             +
-                        </button>
+                        </Button>
                         <input
                             className="form-input flex-1"
                             placeholder="Type a message..."
@@ -1087,9 +1088,9 @@ ${filtered
                             }}
                             disabled={!activeId}
                         />
-                        <button type="button" className="btn btn-primary px-4" onClick={handleSend} disabled={!activeId}>
+                        <Button className="!px-4" type="button"  onClick={handleSend} disabled={!activeId}>
                             <IconSend className="w-5 h-5" />
-                        </button>
+                        </Button>
                         </div>
                     )}
                     {(pendingFile || pendingPreviewUrl) && (
@@ -1106,9 +1107,9 @@ ${filtered
                                     <div className="font-semibold truncate">{pendingFile?.name}</div>
                                     <div className="text-xs text-white-dark truncate">{pendingFile?.type || 'document'}</div>
                                 </div>
-                                <button type="button" className="btn btn-outline-danger px-3" onClick={() => setPending(null)}>
+                                <Button variant="outline-danger" className="!px-3" type="button"  onClick={() => setPending(null)}>
                                     Remove
-                                </button>
+                                </Button>
                             </div>
                         </div>
                     )}

@@ -1,6 +1,5 @@
 import { Fragment, useEffect, useMemo, useState } from 'react';
 import { useDispatch } from 'react-redux';
-import { Dialog, Transition } from '@headlessui/react';
 import Swal from 'sweetalert2';
 import { setPageTitle } from '../../store/themeConfigSlice';
 import IconPlus from '../../components/Icon/IconPlus';
@@ -9,6 +8,10 @@ import IconPencil from '../../components/Icon/IconPencil';
 import IconTrashLines from '../../components/Icon/IconTrashLines';
 import DataTable, { Column } from '../../components/Common/DataTable';
 
+import PageHeader from '../../components/Common/PageHeader';
+import IconCalendar from '../../components/Icon/IconCalendar';
+import Modal from '../../components/Common/Modal';
+import Button, { IconButton } from '../../components/Common/Button';
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000';
 const API_URL = `${API_BASE_URL}/app/department-working-days/`;
 const API_DEPTS = `${API_BASE_URL}/app/departments/?page_size=1000`;
@@ -251,22 +254,22 @@ const AdminDeptWorkingDays = () => {
             width: '120px',
             render: (_val, row) => (
                 <div className="flex items-center justify-center gap-2">
-                    <button
+                    <IconButton tone="primary"
                         type="button"
-                        className="p-1.5 rounded-lg text-primary hover:bg-primary/10 transition-colors"
+                        
                         onClick={() => openEdit(row)}
                         title="Edit"
                     >
                         <IconPencil className="w-4 h-4" />
-                    </button>
-                    <button
+                    </IconButton>
+                    <IconButton tone="danger"
                         type="button"
-                        className="p-1.5 rounded-lg text-danger hover:bg-danger/10 transition-colors"
+                        
                         onClick={() => del(row)}
                         title="Delete"
                     >
                         <IconTrashLines className="w-4 h-4" />
-                    </button>
+                    </IconButton>
                 </div>
             ),
         },
@@ -275,13 +278,12 @@ const AdminDeptWorkingDays = () => {
     return (
         <div className="space-y-6">
             {/* Gradient Banner Header */}
-            <div className="bg-gradient-to-r from-[#0f172a] to-[#3b82f6] p-6 rounded-xl shadow-lg relative overflow-hidden">
-                <div className="relative z-10">
-                    <h1 className="text-3xl font-extrabold text-white tracking-tight">Dept Working Days</h1>
-                    <p className="text-white/80 mt-1 text-sm font-medium">Configure department-wise working days and default shift.</p>
-                </div>
-                <div className="absolute top-0 right-0 -mt-10 -mr-10 w-48 h-48 bg-white opacity-10 rounded-full blur-2xl"></div>
-            </div>
+            <PageHeader
+                icon={<IconCalendar />}
+                title="Dept Working Days"
+                subtitle="Configure department-wise working days and default shift."
+                variant="indigo"
+            />
 
             <DataTable
                 columns={columns}
@@ -303,102 +305,84 @@ const AdminDeptWorkingDays = () => {
                 onRefresh={fetchAll}
                 searchPlaceholder="Search working day configurations..."
                 actionButton={
-                    <button type="button" className="btn btn-primary gap-2" onClick={openAdd}>
+                    <Button type="button"  onClick={openAdd}>
                         <IconPlus className="w-4 h-4" /> Add
-                    </button>
+                    </Button>
                 }
             />
 
-            <Transition appear show={modalOpen} as={Fragment}>
-                <Dialog as="div" open={modalOpen} onClose={() => setModalOpen(false)} className="relative z-50">
-                    <Transition.Child as={Fragment} enter="ease-out duration-300" enterFrom="opacity-0" enterTo="opacity-100" leave="ease-in duration-200" leaveFrom="opacity-100" leaveTo="opacity-0">
-                        <div className="fixed inset-0 bg-[black]/60" />
-                    </Transition.Child>
-                    <div className="fixed inset-0 overflow-y-auto">
-                        <div className="flex min-h-full items-center justify-center px-4 py-8">
-                            <Transition.Child as={Fragment} enter="ease-out duration-300" enterFrom="opacity-0 scale-95" enterTo="opacity-100 scale-100" leave="ease-in duration-200" leaveFrom="opacity-100 scale-100" leaveTo="opacity-0 scale-95">
-                                <Dialog.Panel className="panel border-0 p-0 rounded-lg overflow-hidden w-full max-w-xl text-black dark:text-white-dark">
-                                    <button type="button" onClick={() => setModalOpen(false)} className="absolute top-4 ltr:right-4 rtl:left-4 text-white-dark hover:text-dark">
-                                        <IconX />
-                                    </button>
-                                    <div className="text-lg font-medium bg-[#fbfbfb] dark:bg-[#121c2c] ltr:pl-5 rtl:pr-5 py-3 ltr:pr-[50px] rtl:pl-[50px]">
-                                        {form.id ? 'Edit' : 'Add'} Dept Working Days
-                                    </div>
-                                    <div className="p-5 space-y-4">
-                                        <div>
-                                            <label className="font-semibold">Department</label>
-                                            <select className="form-select" value={form.department_id} onChange={(e) => setForm({ ...form, department_id: e.target.value })}>
-                                                <option value="">Select department</option>
-                                                {departments.map((d) => (
-                                                    <option key={d.id} value={d.id}>
-                                                        {d.department_name}
-                                                    </option>
-                                                ))}
-                                            </select>
-                                        </div>
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                                            <div>
-                                                <label className="font-semibold">Shift (optional)</label>
-                                                <select className="form-select" value={form.shift_id} onChange={(e) => setForm({ ...form, shift_id: e.target.value })}>
-                                                    <option value="">All / None</option>
-                                                    {shifts.map((s) => (
-                                                        <option key={s.id} value={s.id}>
-                                                            {shiftLabel(s)}
-                                                        </option>
-                                                    ))}
-                                                </select>
-                                            </div>
-                                            <div>
-                                                <label className="font-semibold">Working Days Count</label>
-                                                <input className="form-input" type="number" min={1} max={7} value={form.working_days_count} onChange={(e) => {
-                                                    const count = Number(e.target.value);
-                                                    let currentDays = [...(form.working_days || [])];
-                                                    // Truncate if we lower the count
-                                                    if (currentDays.length > count) {
-                                                        currentDays = currentDays.slice(0, count);
-                                                    }
-                                                    setForm({ ...form, working_days_count: count, working_days: currentDays });
-                                                }} />
-                                            </div>
-                                        </div>
-                                        
-                                        <div className="mt-4">
-                                            <label className="font-semibold">Select Specific Working Days</label>
-                                            <div className="flex flex-wrap gap-2 mt-2">
-                                                {DAYS_OF_WEEK.map(day => {
-                                                    const isSelected = (form.working_days || []).includes(day);
-                                                    return (
-                                                        <button 
-                                                        key={day} 
-                                                        type="button" 
-                                                        onClick={() => toggleDay(day)}
-                                                        className={`btn btn-sm ${isSelected ? 'btn-primary' : 'btn-outline-primary'}`}
-                                                        >
-                                                            {day.substring(0,3)}
-                                                        </button>
-                                                    )
-                                                })}
-                                            </div>
-                                            <div className="text-xs text-white-dark mt-2">
-                                                Selected <strong>{(form.working_days || []).length} / {form.working_days_count}</strong> days. Unselected days will automatically be evaluated as weekends.
-                                            </div>
-                                        </div>
+            <Modal open={modalOpen} onClose={() => setModalOpen(false)} title={<>{form.id ? 'Edit' : 'Add'} Dept Working Days</>} size="xl">
+                <div className="space-y-4">
+                                                        <div>
+                                                            <label className="font-semibold">Department</label>
+                                                            <select className="form-select" value={form.department_id} onChange={(e) => setForm({ ...form, department_id: e.target.value })}>
+                                                                <option value="">Select department</option>
+                                                                {departments.map((d) => (
+                                                                    <option key={d.id} value={d.id}>
+                                                                        {d.department_name}
+                                                                    </option>
+                                                                ))}
+                                                            </select>
+                                                        </div>
+                                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                                            <div>
+                                                                <label className="font-semibold">Shift (optional)</label>
+                                                                <select className="form-select" value={form.shift_id} onChange={(e) => setForm({ ...form, shift_id: e.target.value })}>
+                                                                    <option value="">All / None</option>
+                                                                    {shifts.map((s) => (
+                                                                        <option key={s.id} value={s.id}>
+                                                                            {shiftLabel(s)}
+                                                                        </option>
+                                                                    ))}
+                                                                </select>
+                                                            </div>
+                                                            <div>
+                                                                <label className="font-semibold">Working Days Count</label>
+                                                                <input className="form-input" type="number" min={1} max={7} value={form.working_days_count} onChange={(e) => {
+                                                                    const count = Number(e.target.value);
+                                                                    let currentDays = [...(form.working_days || [])];
+                                                                    // Truncate if we lower the count
+                                                                    if (currentDays.length > count) {
+                                                                        currentDays = currentDays.slice(0, count);
+                                                                    }
+                                                                    setForm({ ...form, working_days_count: count, working_days: currentDays });
+                                                                }} />
+                                                            </div>
+                                                        </div>
 
-                                        <div className="flex justify-end gap-3 pt-4">
-                                            <button type="button" className="btn btn-outline-danger" onClick={() => setModalOpen(false)}>
-                                                Cancel
-                                            </button>
-                                            <button type="button" className="btn btn-primary" onClick={save}>
-                                                Save
-                                            </button>
-                                        </div>
-                                    </div>
-                                </Dialog.Panel>
-                            </Transition.Child>
-                        </div>
-                    </div>
-                </Dialog>
-            </Transition>
+                                                        <div className="mt-4">
+                                                            <label className="font-semibold">Select Specific Working Days</label>
+                                                            <div className="flex flex-wrap gap-2 mt-2">
+                                                                {DAYS_OF_WEEK.map(day => {
+                                                                    const isSelected = (form.working_days || []).includes(day);
+                                                                    return (
+                                                                        <button 
+                                                                        key={day} 
+                                                                        type="button" 
+                                                                        onClick={() => toggleDay(day)}
+                                                                        className={`btn btn-sm ${isSelected ? 'btn-primary' : 'btn-outline-primary'}`}
+                                                                        >
+                                                                            {day.substring(0,3)}
+                                                                        </button>
+                                                                    )
+                                                                })}
+                                                            </div>
+                                                            <div className="text-xs text-white-dark mt-2">
+                                                                Selected <strong>{(form.working_days || []).length} / {form.working_days_count}</strong> days. Unselected days will automatically be evaluated as weekends.
+                                                            </div>
+                                                        </div>
+
+                                                        <div className="flex justify-end gap-3 pt-4">
+                                                            <Button variant="outline-danger" type="button"  onClick={() => setModalOpen(false)}>
+                                                                Cancel
+                                                            </Button>
+                                                            <Button type="button"  onClick={save}>
+                                                                Save
+                                                            </Button>
+                                                        </div>
+
+                </div>
+            </Modal>
         </div>
     );
 };

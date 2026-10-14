@@ -8,6 +8,7 @@ import IconCalendar from '../../components/Icon/IconCalendar';
 import IconClock from '../../components/Icon/IconClock';
 import DataTable, { Column } from '../../components/Common/DataTable';
 
+import PageHeader from '../../components/Common/PageHeader';
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000';
 
 interface RoomBooking {
@@ -194,15 +195,12 @@ const ConferenceRoomApproval = () => {
     return (
         <div className="space-y-4">
             {/* Header Banner */}
-            <div className="bg-gradient-to-r from-violet-600 to-indigo-600 rounded-xl p-6 text-white shadow-lg overflow-hidden relative">
-                <div className="relative z-10">
-                    <h2 className="text-3xl font-extrabold mb-1">Room Booking Approvals</h2>
-                    <p className="text-white/80 text-sm font-medium">Review and manage conference room requests that exceed the auto-approval time limit.</p>
-                </div>
-                <div className="absolute right-[-20px] top-[-20px] opacity-10">
-                    <IconChecks className="w-48 h-48" />
-                </div>
-            </div>
+            <PageHeader
+                icon={<IconChecks />}
+                title="Room Booking Approvals"
+                subtitle="Review and manage conference room requests that exceed the auto-approval time limit."
+                variant="rose"
+            />
 
             {/* Reusable Data Table */}
             <DataTable

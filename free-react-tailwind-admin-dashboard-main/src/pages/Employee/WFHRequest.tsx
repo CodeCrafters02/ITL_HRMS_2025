@@ -14,6 +14,7 @@ import IconInfoCircle from '../../components/Icon/IconInfoCircle';
 import IconCalendar from '../../components/Icon/IconCalendar';
 import IconRefresh from '../../components/Icon/IconRefresh';
 import IconSearch from '../../components/Icon/IconSearch';
+import PageHeader from '../../components/Common/PageHeader';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000';
 
@@ -182,37 +183,34 @@ const WFHRequest = () => {
 
     return (
         <div className="pb-10 space-y-7">
-            <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-indigo-700 via-blue-600 to-cyan-500 p-6 shadow-2xl">
-                <div className="relative z-10 flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
-                    <div>
-                        <p className="text-[11px] font-extrabold tracking-[0.25em] uppercase text-white/80">Flexible Work</p>
-                        <h1 className="mt-1 text-2xl md:text-3xl font-black text-white tracking-tight">Work From Home</h1>
-                        <p className="mt-1.5 max-w-3xl text-sm text-white/90">
-                            Submit requests, track approvals, and stay synced with team availability from one unified workspace.
-                        </p>
-                    </div>
+            <PageHeader
+                title="Work From Home"
+                subtitle="Submit requests, track approvals, and stay synced with team availability from one unified workspace."
+                icon={<IconCalendar />}
+                badge="Flexible Work"
+                variant="indigo"
+                actions={
                     <div className="flex items-center gap-3">
                         {myLocation && (
-                            <div className="rounded-2xl border border-white/25 bg-white/10 px-4 py-3 backdrop-blur-md">
+                            <div className="rounded-xl border border-white/20 bg-white/10 px-4 py-2 backdrop-blur-md">
                                 <p className="text-[10px] uppercase tracking-widest font-bold text-white/80">Current Work Mode</p>
-                                <p className="mt-1 flex items-center gap-2 text-sm font-extrabold text-white">
-                                    <span className={`h-2.5 w-2.5 rounded-full ${myLocation === 'home' ? 'bg-indigo-300' : 'bg-emerald-300'} animate-pulse`} />
+                                <p className="mt-0.5 flex items-center gap-2 text-xs font-extrabold text-white">
+                                    <span className={`h-2 w-2 rounded-full ${myLocation === 'home' ? 'bg-indigo-300' : 'bg-emerald-300'} animate-pulse`} />
                                     {myLocation === 'home' ? 'At Home' : 'In Office'}
                                 </p>
                             </div>
                         )}
                         <button
                             type="button"
-                            className="btn border-0 bg-white text-indigo-700 hover:bg-indigo-50 font-extrabold rounded-xl px-5"
+                            className="btn btn-primary gap-2 shadow-lg shadow-primary/20 backdrop-blur-sm"
                             onClick={() => setShowModal(true)}
                         >
-                            <IconPlus className="w-4 h-4 mr-2" />
+                            <IconPlus className="w-4 h-4" />
                             New Request
                         </button>
                     </div>
-                </div>
-                <div className="pointer-events-none absolute -top-20 -right-20 h-72 w-72 rounded-full bg-white/15 blur-3xl" />
-            </div>
+                }
+            />
 
             <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
                 <div className="panel border border-indigo-100/70 dark:border-indigo-900/40 shadow-sm">

@@ -9,6 +9,9 @@ import IconPencil from '../../components/Icon/IconPencil';
 import IconEye from '../../components/Icon/IconEye';
 import IconX from '../../components/Icon/IconX';
 import IconPlus from '../../components/Icon/IconPlus';
+import IconUsers from '../../components/Icon/IconUsers';
+import DataTable, { Column } from '../../components/Common/DataTable';
+import PageHeader from '../../components/Common/PageHeader';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000';
 const API_URL = `${API_BASE_URL}/app/employee/`;
@@ -41,6 +44,7 @@ type EmployeeRecord = {
     department?: number | null;
     designation?: number | null;
     level?: number | null;
+    reporting_manager?: number | null;
     reporting_level_name?: string | null;
     reporting_manager_name?: string | null;
     payment_method?: string | null;
@@ -54,6 +58,7 @@ type EmployeeRecord = {
     date_of_releaving?: string | null;
     previous_designation_name?: string | null;
     previous_salary?: string | number | null;
+    basic_salary?: string | number | null;
     ctc?: string | number | null;
     gross_salary?: string | number | null;
     epf_status?: string | null;
@@ -73,6 +78,7 @@ type DesignationOption = {
     designation_name: string;
     department?: number | null;
     level?: number | null;
+    basic_pay?: string | number;
 };
 
 type LevelOption = {
@@ -110,6 +116,7 @@ const AdminEmployeeRegister = () => {
         department: '',
         designation: '',
         level: '',
+        reporting_manager: '',
         date_of_joining: '',
         aadhar_no: '',
         pan_no: '',
@@ -123,6 +130,7 @@ const AdminEmployeeRegister = () => {
         previous_employer: '',
         previous_designation_name: '',
         previous_salary: '',
+        basic_salary: '',
         ctc: '',
         gross_salary: '',
         epf_status: '',
@@ -144,7 +152,10 @@ const AdminEmployeeRegister = () => {
     const [departments, setDepartments] = useState<DepartmentOption[]>([]);
     const [designations, setDesignations] = useState<DesignationOption[]>([]);
     const [levels, setLevels] = useState<LevelOption[]>([]);
+    const [allEmployees, setAllEmployees] = useState<{ id: number; full_name: string; level?: number }[]>([]);
     const [adminCompanyName, setAdminCompanyName] = useState('');
+    const [selectedDeptFilter, setSelectedDeptFilter] = useState('');
+    const [selectedStatusFilter, setSelectedStatusFilter] = useState('');
 
     useEffect(() => {
         dispatch(setPageTitle('Employee Register'));
@@ -152,12 +163,13 @@ const AdminEmployeeRegister = () => {
     }, [dispatch]);
 
     useEffect(() => {
+        setLoading(true);
         const handler = setTimeout(() => {
             fetchEmployees();
-        }, 400);
+        }, 300);
         return () => clearTimeout(handler);
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [search, page, pageSize]);
+    }, [search, page, pageSize, selectedDeptFilter, selectedStatusFilter]);
 
     const getHeaders = () => {
         const token = localStorage.getItem('access_token');
@@ -166,13 +178,20 @@ const AdminEmployeeRegister = () => {
         return headers;
     };
 
-    const fetchEmployees = async () => {
+    const fetchEmployees = async (overrideParams?: { page?: number; dept?: string; status?: string; query?: string }) => {
         setLoading(true);
         try {
             const url = new URL(API_URL);
-            url.searchParams.append('page', page.toString());
+            const currentPage = overrideParams?.page !== undefined ? overrideParams.page : page;
+            const currentDept = overrideParams?.dept !== undefined ? overrideParams.dept : selectedDeptFilter;
+            const currentStatus = overrideParams?.status !== undefined ? overrideParams.status : selectedStatusFilter;
+            const currentSearch = overrideParams?.query !== undefined ? overrideParams.query : search;
+
+            url.searchParams.append('page', currentPage.toString());
             url.searchParams.append('page_size', pageSize.toString());
-            if (search.trim()) url.searchParams.append('search', search.trim());
+            if (currentSearch.trim()) url.searchParams.append('search', currentSearch.trim());
+            if (currentDept) url.searchParams.append('department', currentDept);
+            if (currentStatus) url.searchParams.append('is_active', currentStatus === 'active' ? 'true' : 'false');
 
             const res = await fetch(url.toString(), { headers: getHeaders() });
             if (res.ok) {
@@ -193,8 +212,6 @@ const AdminEmployeeRegister = () => {
             setLoading(false);
         }
     };
-
-    const displayEmployees = useMemo(() => employees, [employees]);
     const photoUrl = selectedEmployee?.photo ? (String(selectedEmployee.photo).startsWith('http') ? selectedEmployee.photo : `${API_BASE_URL}${selectedEmployee.photo}`) : null;
     const aadharUrl = selectedEmployee?.aadhar_card ? (String(selectedEmployee.aadhar_card).startsWith('http') ? selectedEmployee.aadhar_card : `${API_BASE_URL}${selectedEmployee.aadhar_card}`) : null;
     const panUrl = selectedEmployee?.pan_card ? (String(selectedEmployee.pan_card).startsWith('http') ? selectedEmployee.pan_card : `${API_BASE_URL}${selectedEmployee.pan_card}`) : null;
@@ -212,7 +229,7 @@ const AdminEmployeeRegister = () => {
             const headers: Record<string, string> = {};
             if (token) headers['Authorization'] = `Bearer ${token}`;
             const [profileRes, depRes, desRes, levelRes] = await Promise.all([
-                fetch(`${API_BASE_URL}/app/profile/`, { headers }),
+                fetch(`${API_BASE_URL}/app/user-profile/`, { headers }),
                 fetch(`${API_BASE_URL}/app/departments/?page_size=1000`, { headers }),
                 fetch(`${API_BASE_URL}/app/designations/?page_size=1000`, { headers }),
                 fetch(`${API_BASE_URL}/app/levels/?page_size=1000`, { headers }),
@@ -233,6 +250,18 @@ const AdminEmployeeRegister = () => {
             if (levelRes.ok) {
                 const levelData = await levelRes.json();
                 setLevels(levelData.results || levelData);
+            }
+
+            // Fetch all employees (including admins) for manager dropdown
+            const empRes = await fetch(`${API_URL}?page_size=1000&include_admins=true`, { headers });
+            if (empRes.ok) {
+                const empData = await empRes.json();
+                const list = (empData.results || empData).map((e: any) => ({
+                    id: e.id,
+                    full_name: [e.first_name, e.last_name].filter(Boolean).join(' '),
+                    level: e.level,
+                }));
+                setAllEmployees(list);
             }
         } catch (e) {
             console.error('Error fetching dependencies', e);
@@ -310,6 +339,7 @@ const AdminEmployeeRegister = () => {
             department: '',
             designation: '',
             level: '',
+            reporting_manager: '',
             date_of_joining: '',
             aadhar_no: '',
             pan_no: '',
@@ -323,6 +353,7 @@ const AdminEmployeeRegister = () => {
             previous_employer: '',
             previous_designation_name: '',
             previous_salary: '',
+            basic_salary: '',
             ctc: '',
             gross_salary: '',
             epf_status: '',
@@ -357,6 +388,7 @@ const AdminEmployeeRegister = () => {
             department: emp.department ? String(emp.department) : '',
             designation: emp.designation ? String(emp.designation) : '',
             level: emp.level ? String(emp.level) : '',
+            reporting_manager: emp.reporting_manager ? String(emp.reporting_manager) : '',
             date_of_joining: emp.date_of_joining || '',
             aadhar_no: emp.aadhar_no || '',
             pan_no: emp.pan_no || '',
@@ -370,6 +402,7 @@ const AdminEmployeeRegister = () => {
             previous_employer: emp.previous_employer || '',
             previous_designation_name: emp.previous_designation_name || '',
             previous_salary: emp.previous_salary ? String(emp.previous_salary) : '',
+            basic_salary: emp.basic_salary ? String(emp.basic_salary) : '',
             ctc: emp.ctc ? String(emp.ctc) : '',
             gross_salary: emp.gross_salary ? String(emp.gross_salary) : '',
             epf_status: emp.epf_status || '',
@@ -402,6 +435,13 @@ const AdminEmployeeRegister = () => {
             Object.entries(formData).forEach(([key, value]) => {
                 if (value !== '') payload.append(key, value);
             });
+
+            if (formData.reporting_manager) {
+                const mgr = allEmployees.find(e => String(e.id) === formData.reporting_manager);
+                if (mgr?.level) {
+                    payload.append('reporting_level', String(mgr.level));
+                }
+            }
             if (files.photo) payload.append('photo', files.photo);
             if (files.aadhar_card) payload.append('aadhar_card', files.aadhar_card);
             if (files.pan_card) payload.append('pan_card', files.pan_card);
@@ -447,6 +487,13 @@ const AdminEmployeeRegister = () => {
             Object.entries(formData).forEach(([key, value]) => {
                 if (value !== '') payload.append(key, value);
             });
+
+            if (formData.reporting_manager) {
+                const mgr = allEmployees.find(e => String(e.id) === formData.reporting_manager);
+                if (mgr?.level) {
+                    payload.append('reporting_level', String(mgr.level));
+                }
+            }
             if (files.photo) payload.append('photo', files.photo);
             if (files.aadhar_card) payload.append('aadhar_card', files.aadhar_card);
             if (files.pan_card) payload.append('pan_card', files.pan_card);
@@ -503,167 +550,267 @@ const AdminEmployeeRegister = () => {
         }
     };
 
+    const toggleStatus = async (emp: EmployeeRecord) => {
+        try {
+            const token = localStorage.getItem('access_token');
+            const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+            if (token) headers['Authorization'] = `Bearer ${token}`;
+
+            const res = await fetch(`${API_URL}${emp.id}/`, {
+                method: 'PATCH',
+                headers,
+                body: JSON.stringify({ is_active: !emp.is_active }),
+            });
+
+            if (res.ok) {
+                // Optimistically update the UI
+                setEmployees((prev) =>
+                    prev.map((e) => (e.id === emp.id ? { ...e, is_active: !e.is_active } : e))
+                );
+                Swal.fire({
+                    title: 'Status Updated!',
+                    text: `Employee status changed to ${!emp.is_active ? 'Active' : 'Inactive'}.`,
+                    icon: 'success',
+                    toast: true,
+                    position: 'top-end',
+                    showConfirmButton: false,
+                    timer: 3000,
+                    customClass: { popup: 'sweet-alerts' },
+                });
+            } else {
+                const err = await res.json().catch(() => null);
+                Swal.fire({
+                    title: 'Error!',
+                    text: err ? JSON.stringify(err) : 'Failed to update status.',
+                    icon: 'error',
+                    customClass: { popup: 'sweet-alerts' },
+                });
+            }
+        } catch {
+            Swal.fire({
+                title: 'Error!',
+                text: 'Failed to update status.',
+                icon: 'error',
+                customClass: { popup: 'sweet-alerts' },
+            });
+        }
+    };
+
     const fullName = (e: EmployeeRecord) => [e.first_name, e.middle_name, e.last_name].filter(Boolean).join(' ') || '-';
+
+    const columns: Column<EmployeeRecord>[] = [
+        {
+            key: 'id',
+            title: '#',
+            width: '60px',
+            align: 'center',
+            render: (_val, _item, index) => (
+                <span className="font-semibold text-gray-500">{index + 1}</span>
+            ),
+        },
+        {
+            key: 'employee_id',
+            title: 'Emp ID',
+            sortable: true,
+            render: (empId) => (
+                <span className="font-mono text-xs font-bold text-primary">{empId || '-'}</span>
+            ),
+        },
+        {
+            key: 'name',
+            title: 'Name',
+            sortable: true,
+            render: (_val, emp) => (
+                <div className="flex items-center gap-2">
+                    {emp.photo ? (
+                        <img
+                            src={String(emp.photo).startsWith('http') ? emp.photo : `${API_BASE_URL}${emp.photo}`}
+                            alt={fullName(emp)}
+                            className="w-7 h-7 rounded-full object-cover border border-gray-200 dark:border-gray-700"
+                        />
+                    ) : (
+                        <div className="w-7 h-7 rounded-full bg-gradient-to-tr from-[#0062E0] to-[#38bdf8] text-white flex items-center justify-center font-bold text-[10px]">
+                            {(emp.first_name?.[0] || 'E').toUpperCase()}
+                        </div>
+                    )}
+                    <span className="font-semibold text-gray-800 dark:text-white-light">{fullName(emp)}</span>
+                </div>
+            ),
+        },
+        {
+            key: 'email',
+            title: 'Email',
+            sortable: true,
+            render: (email) => <span className="text-gray-500 dark:text-gray-400">{email || '-'}</span>,
+        },
+        {
+            key: 'mobile',
+            title: 'Mobile',
+            render: (mobile) => <span className="text-gray-500 dark:text-gray-400">{mobile || '-'}</span>,
+        },
+        {
+            key: 'department_name',
+            title: 'Department',
+            sortable: true,
+            render: (dept) => (
+                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">
+                    {dept || '-'}
+                </span>
+            ),
+        },
+        {
+            key: 'designation_name',
+            title: 'Designation',
+            sortable: true,
+            render: (desig) => (
+                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-purple-50 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300">
+                    {desig || '-'}
+                </span>
+            ),
+        },
+        {
+            key: 'is_active',
+            title: 'Status',
+            align: 'center',
+            render: (_val, emp) => (
+                <button
+                    type="button"
+                    onClick={() => toggleStatus(emp)}
+                    className={`badge ${emp.is_active ? 'badge-outline-success hover:bg-success hover:text-white' : 'badge-outline-danger hover:bg-danger hover:text-white'} transition-all duration-200 cursor-pointer`}
+                    title={`Click to mark as ${emp.is_active ? 'Inactive' : 'Active'}`}
+                >
+                    {emp.is_active ? 'Active' : 'Inactive'}
+                </button>
+            ),
+        },
+        {
+            key: 'actions',
+            title: 'Actions',
+            align: 'center',
+            width: '130px',
+            render: (_val, emp) => (
+                <div className="flex items-center justify-center gap-2">
+                    <button
+                        type="button"
+                        className="p-1.5 rounded-lg text-info hover:text-white hover:bg-info transition-colors"
+                        onClick={() => openProfileModal(emp.id)}
+                        title="View Profile"
+                    >
+                        <IconEye className="w-4 h-4" />
+                    </button>
+                    <button
+                        type="button"
+                        className="p-1.5 rounded-lg text-primary hover:text-white hover:bg-primary transition-colors"
+                        onClick={() => openEditModal(emp.id)}
+                        title="Edit"
+                    >
+                        <IconPencil className="w-4 h-4" />
+                    </button>
+                    <button
+                        type="button"
+                        className="p-1.5 rounded-lg text-danger hover:text-white hover:bg-danger transition-colors"
+                        onClick={() => handleDelete(emp)}
+                        title="Delete"
+                    >
+                        <IconTrashLines className="w-4 h-4" />
+                    </button>
+                </div>
+            ),
+        },
+    ];
 
     return (
         <div>
-            <div className="bg-gradient-to-r from-[#0e1726] to-[#3b82f6] p-6 rounded-xl shadow-lg mb-6 relative overflow-hidden">
-                <div className="relative z-10">
-                    <h1 className="text-3xl font-extrabold text-white tracking-tight">Employee Register</h1>
-                    <p className="text-white/80 mt-1 text-sm font-medium">Browse and manage employee records.</p>
-                </div>
-                <div className="absolute top-0 right-0 -mt-10 -mr-10 w-48 h-48 bg-white opacity-5 rounded-full blur-2xl"></div>
-            </div>
+            <PageHeader
+                title="Employee Register"
+                subtitle="Browse, filter, and audit verified employee records, organizational departments, and employment status."
+                icon={<IconUsers />}
+                badge="Workforce Master"
+                variant="primary"
+            />
 
-            <div className="flex flex-wrap items-center justify-between gap-4 mb-5">
-                <div className="relative">
-                    <input
-                        type="text"
-                        className="form-input pr-10 w-72"
-                        placeholder="Search employees..."
-                        value={search}
-                        onChange={(e) => {
-                            setSearch(e.target.value);
-                            setPage(1);
-                        }}
-                    />
-                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400">
-                        <IconSearch className="w-4 h-4" />
-                    </span>
-                </div>
-                <button type="button" className="btn btn-primary gap-2" onClick={openCreateModal}>
-                    <IconPlus /> Register Employee
-                </button>
-            </div>
-
-            <div className="panel p-0 border-0 overflow-hidden">
-                <div className="table-responsive">
-                    <table className="table-hover">
-                        <thead>
-                            <tr>
-                                <th>#</th>
-                                <th>Name</th>
-                                <th>Email</th>
-                                <th>Mobile</th>
-                                <th>Department</th>
-                                <th>Designation</th>
-                                <th>Status</th>
-                                <th className="text-center">Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {loading ? (
-                                <tr>
-                                    <td colSpan={8} className="text-center py-5">
-                                        <span className="animate-pulse text-gray-400">Loading employees...</span>
-                                    </td>
-                                </tr>
-                            ) : displayEmployees.length > 0 ? (
-                                displayEmployees.map((emp, index) => (
-                                    <tr key={emp.id}>
-                                        <td>{(page - 1) * pageSize + index + 1}</td>
-                                        <td className="font-semibold">{fullName(emp)}</td>
-                                        <td className="text-gray-500">{emp.email || '-'}</td>
-                                        <td className="text-gray-500">{emp.mobile || '-'}</td>
-                                        <td className="text-gray-500">{emp.department_name || '-'}</td>
-                                        <td className="text-gray-500">{emp.designation_name || '-'}</td>
-                                        <td>
-                                            <span className={`badge ${emp.is_active ? 'badge-outline-success' : 'badge-outline-danger'}`}>
-                                                {emp.is_active ? 'Active' : 'Inactive'}
-                                            </span>
-                                        </td>
-                                        <td className="text-center">
-                                            <div className="flex items-center justify-center gap-3">
-                                                <button
-                                                    type="button"
-                                                    className="text-info hover:text-cyan-700"
-                                                    onClick={() => openProfileModal(emp.id)}
-                                                    title="View Profile"
-                                                >
-                                                    <IconEye className="w-5 h-5" />
-                                                </button>
-                                                <button
-                                                    type="button"
-                                                    className="text-primary hover:text-blue-700"
-                                                    onClick={() => openEditModal(emp.id)}
-                                                    title="Edit"
-                                                >
-                                                    <IconPencil className="w-5 h-5" />
-                                                </button>
-                                                <button type="button" className="text-danger hover:text-red-700" onClick={() => handleDelete(emp)} title="Delete">
-                                                    <IconTrashLines className="w-5 h-5" />
-                                                </button>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                ))
-                            ) : (
-                                <tr>
-                                    <td colSpan={8} className="text-center py-5 text-gray-400">No employees found.</td>
-                                </tr>
-                            )}
-                        </tbody>
-                    </table>
-                </div>
-
-                {totalCount > 0 && (
-                    <div className="flex justify-between items-center p-4 border-t border-[#e0e6ed] dark:border-[#1b2e4b]">
-                        <div className="flex items-center gap-4">
-                            <div className="text-sm text-gray-500 font-semibold dark:text-gray-400">
-                                Showing <span className="text-primary">{(page - 1) * pageSize + 1}</span> to <span className="text-primary">{Math.min(page * pageSize, totalCount)}</span> of <span className="text-primary">{totalCount}</span> entries
-                            </div>
-                            <div className="flex items-center gap-2">
-                                <span className="text-sm font-semibold">Per page:</span>
-                                <select
-                                    className="form-select w-20 text-sm font-semibold py-1"
-                                    value={pageSize}
-                                    onChange={(e) => {
-                                        setPageSize(Number(e.target.value));
-                                        setPage(1);
-                                    }}
-                                >
-                                    <option value="10">10</option>
-                                    <option value="20">20</option>
-                                    <option value="50">50</option>
-                                </select>
-                            </div>
-                        </div>
-                        <ul className="inline-flex items-center space-x-1 font-semibold">
-                            <li>
-                                <button
-                                    type="button"
-                                    className="flex justify-center font-semibold p-2 rounded-full transition bg-white-light text-dark hover:text-white hover:bg-primary dark:text-white-light dark:bg-[#191e3a] dark:hover:bg-primary disabled:opacity-50 disabled:cursor-not-allowed"
-                                    onClick={() => setPage(page > 1 ? page - 1 : 1)}
-                                    disabled={page === 1}
-                                >
-                                    Prev
-                                </button>
-                            </li>
-                            {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
-                                <li key={p}>
-                                    <button
-                                        type="button"
-                                        className={`flex justify-center font-semibold px-3.5 py-2 rounded-full transition ${page === p ? 'bg-primary text-white shadow-[0_10px_20px_-10px_rgba(67,97,238,0.44)]' : 'bg-white-light text-dark hover:text-white hover:bg-primary dark:text-white-light dark:bg-[#191e3a] dark:hover:bg-primary'}`}
-                                        onClick={() => setPage(p)}
-                                    >
-                                        {p}
-                                    </button>
-                                </li>
+            {/* Reusable Data Table */}
+            <DataTable
+                columns={columns}
+                data={employees}
+                totalCount={totalCount}
+                page={page}
+                pageSize={pageSize}
+                loading={loading}
+                search={search}
+                searchPlaceholder="Search employees by name, email, ID..."
+                onSearchChange={(val) => {
+                    setSearch(val);
+                    setLoading(true);
+                    setPage(1);
+                }}
+                onPageChange={(p) => {
+                    setPage(p);
+                    setLoading(true);
+                }}
+                onPageSizeChange={(sz) => {
+                    setPageSize(sz);
+                    setLoading(true);
+                    setPage(1);
+                }}
+                onRefresh={fetchEmployees}
+                filters={
+                    <div className="flex items-center gap-2.5 flex-wrap sm:flex-nowrap">
+                        <select
+                            className="form-select text-xs sm:text-sm h-10 px-3.5 rounded-xl border-[#cbd5e1] dark:border-[#1e293b] bg-white dark:bg-[#121e32] font-medium shadow-sm min-w-[170px] focus:border-[#0062E0] focus:ring-2 focus:ring-[#0062E0]/20"
+                            value={selectedDeptFilter}
+                            onChange={(e) => {
+                                const val = e.target.value;
+                                setSelectedDeptFilter(val);
+                                setLoading(true);
+                                setPage(1);
+                            }}
+                        >
+                            <option value="">All Departments</option>
+                            {departments.map((d) => (
+                                <option key={d.id} value={d.id}>
+                                    {d.department_name}
+                                </option>
                             ))}
-                            <li>
-                                <button
-                                    type="button"
-                                    className="flex justify-center font-semibold p-2 rounded-full transition bg-white-light text-dark hover:text-white hover:bg-primary dark:text-white-light dark:bg-[#191e3a] dark:hover:bg-primary disabled:opacity-50 disabled:cursor-not-allowed"
-                                    onClick={() => setPage(page < totalPages ? page + 1 : totalPages)}
-                                    disabled={page === totalPages || totalPages === 0}
-                                >
-                                    Next
-                                </button>
-                            </li>
-                        </ul>
+                        </select>
+                        <select
+                            className="form-select text-xs sm:text-sm h-10 px-3.5 rounded-xl border-[#cbd5e1] dark:border-[#1e293b] bg-white dark:bg-[#121e32] font-medium shadow-sm min-w-[150px] focus:border-[#0062E0] focus:ring-2 focus:ring-[#0062E0]/20"
+                            value={selectedStatusFilter}
+                            onChange={(e) => {
+                                const val = e.target.value;
+                                setSelectedStatusFilter(val);
+                                setLoading(true);
+                                setPage(1);
+                            }}
+                        >
+                            <option value="">All Statuses</option>
+                            <option value="active">Active</option>
+                            <option value="inactive">Inactive</option>
+                        </select>
+                        {(selectedDeptFilter || selectedStatusFilter || search) && (
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    setSelectedDeptFilter('');
+                                    setSelectedStatusFilter('');
+                                    setSearch('');
+                                    setLoading(true);
+                                    setPage(1);
+                                }}
+                                className="h-10 px-3 text-xs font-semibold text-gray-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/20 rounded-xl border border-gray-200 dark:border-gray-700 transition-colors whitespace-nowrap shadow-sm"
+                                title="Reset all filters"
+                            >
+                                Reset
+                            </button>
+                        )}
                     </div>
-                )}
-            </div>
+                }
+                actions={
+                    <button type="button" className="btn btn-primary gap-2 shadow-md shadow-primary/20" onClick={openCreateModal}>
+                        <IconPlus className="w-4 h-4" /> Register Employee
+                    </button>
+                }
+            />
 
             <Transition appear show={profileModalOpen} as={Fragment}>
                 <Dialog as="div" open={profileModalOpen} onClose={() => setProfileModalOpen(false)} className="relative z-50">
@@ -759,6 +906,7 @@ const AdminEmployeeRegister = () => {
                                                             <div><span className="font-semibold">Previous Employer:</span> {selectedEmployee.previous_employer || '-'}</div>
                                                             <div><span className="font-semibold">Previous Designation:</span> {selectedEmployee.previous_designation_name || '-'}</div>
                                                             <div><span className="font-semibold">Previous Salary:</span> {selectedEmployee.previous_salary || '-'}</div>
+                                                            <div><span className="font-semibold">Basic Salary:</span> {selectedEmployee.basic_salary || '-'}</div>
                                                             <div><span className="font-semibold">CTC:</span> {selectedEmployee.ctc || '-'}</div>
                                                             <div><span className="font-semibold">Gross Salary:</span> {selectedEmployee.gross_salary || '-'}</div>
                                                             <div><span className="font-semibold">EPF / UAN:</span> {selectedEmployee.epf_status || '-'} / {selectedEmployee.uan || '-'}</div>
@@ -844,6 +992,7 @@ const AdminEmployeeRegister = () => {
                                                                 department: nextDepartment,
                                                                 designation: nextDesignation ? String(nextDesignation.id) : '',
                                                                 level: nextDesignation?.level ? String(nextDesignation.level) : '',
+                                                                basic_salary: nextDesignation?.basic_pay ? String(nextDesignation.basic_pay) : formData.basic_salary,
                                                             });
                                                         }}
                                                     >
@@ -853,7 +1002,21 @@ const AdminEmployeeRegister = () => {
                                                 </div>
                                                 <div>
                                                     <label className="font-semibold mb-1 block">Designation</label>
-                                                    <select className="form-select" value={formData.designation} onChange={(e) => setFormData({ ...formData, designation: e.target.value })}>
+                                                    <select
+                                                        className="form-select"
+                                                        value={formData.designation}
+                                                        onChange={(e) => {
+                                                            const nextDesignationId = e.target.value;
+                                                            const des = filteredDesignations.find((d) => String(d.id) === nextDesignationId);
+                                                            setFormData({
+                                                                ...formData,
+                                                                designation: nextDesignationId,
+                                                                department: des?.department ? String(des.department) : formData.department,
+                                                                level: des?.level ? String(des.level) : formData.level,
+                                                                basic_salary: des?.basic_pay ? String(des.basic_pay) : formData.basic_salary,
+                                                            });
+                                                        }}
+                                                    >
                                                         <option value="">Select</option>
                                                         {filteredDesignations.map((d) => <option key={d.id} value={d.id}>{d.designation_name}</option>)}
                                                     </select>
@@ -863,6 +1026,20 @@ const AdminEmployeeRegister = () => {
                                                     <select className="form-select" value={formData.level} onChange={(e) => setFormData({ ...formData, level: e.target.value })}>
                                                         <option value="">Select</option>
                                                         {levels.map((l) => <option key={l.id} value={l.id}>{l.level_name}</option>)}
+                                                    </select>
+                                                </div>
+                                            </div>
+
+                                            <div className="grid grid-cols-1 md:grid-cols-1 gap-4">
+                                                <div>
+                                                    <label className="font-semibold mb-1 block">Reporting Manager</label>
+                                                    <select className="form-select" value={formData.reporting_manager} onChange={(e) => setFormData({ ...formData, reporting_manager: e.target.value })}>
+                                                        <option value="">Select Manager (Optional)</option>
+                                                        {allEmployees.filter(emp => emp.id !== selectedEmployee?.id).map((emp) => (
+                                                            <option key={emp.id} value={emp.id}>
+                                                                {emp.full_name}
+                                                            </option>
+                                                        ))}
                                                     </select>
                                                 </div>
                                             </div>
@@ -895,6 +1072,7 @@ const AdminEmployeeRegister = () => {
                                                 <div><label className="font-semibold mb-1 block">Previous Employer</label><input className="form-input" value={formData.previous_employer} onChange={(e) => setFormData({ ...formData, previous_employer: e.target.value })} /></div>
                                                 <div><label className="font-semibold mb-1 block">Previous Designation</label><input className="form-input" value={formData.previous_designation_name} onChange={(e) => setFormData({ ...formData, previous_designation_name: e.target.value })} /></div>
                                                 <div><label className="font-semibold mb-1 block">Previous Salary</label><input className="form-input" value={formData.previous_salary} onChange={(e) => setFormData({ ...formData, previous_salary: e.target.value })} /></div>
+                                                <div><label className="font-semibold mb-1 block">Basic Salary</label><input className="form-input" value={formData.basic_salary} onChange={(e) => setFormData({ ...formData, basic_salary: e.target.value })} /></div>
                                                 <div><label className="font-semibold mb-1 block">CTC</label><input className="form-input" value={formData.ctc} onChange={(e) => setFormData({ ...formData, ctc: e.target.value })} /></div>
                                             </div>
 
@@ -1037,6 +1215,7 @@ const AdminEmployeeRegister = () => {
                                                                 department: nextDepartment,
                                                                 designation: nextDesignation ? String(nextDesignation.id) : '',
                                                                 level: nextDesignation?.level ? String(nextDesignation.level) : '',
+                                                                basic_salary: nextDesignation?.basic_pay ? String(nextDesignation.basic_pay) : formData.basic_salary,
                                                             });
                                                         }}
                                                     >
@@ -1050,12 +1229,14 @@ const AdminEmployeeRegister = () => {
                                                         className="form-select"
                                                         value={formData.designation}
                                                         onChange={(e) => {
-                                                            const nextDesignation = filteredDesignations.find((d) => String(d.id) === e.target.value);
+                                                            const nextDesignationId = e.target.value;
+                                                            const nextDesignation = filteredDesignations.find((d) => String(d.id) === nextDesignationId);
                                                             setFormData({
                                                                 ...formData,
-                                                                designation: e.target.value,
+                                                                designation: nextDesignationId,
                                                                 department: nextDesignation?.department ? String(nextDesignation.department) : formData.department,
                                                                 level: nextDesignation?.level ? String(nextDesignation.level) : formData.level,
+                                                                basic_salary: nextDesignation?.basic_pay ? String(nextDesignation.basic_pay) : formData.basic_salary,
                                                             });
                                                         }}
                                                     >
@@ -1076,6 +1257,22 @@ const AdminEmployeeRegister = () => {
                                                     This designation is fetched from the current admin company.
                                                 </div>
                                             )}
+
+                                            <div className="grid grid-cols-1 md:grid-cols-1 gap-4">
+                                                <div>
+                                                    <label className="font-semibold mb-1 block">Reporting Manager</label>
+                                                    <select className="form-select" value={formData.reporting_manager} onChange={(e) => setFormData({ ...formData, reporting_manager: e.target.value })}>
+                                                        <option value="">Select Manager (Optional)</option>
+                                                        {allEmployees
+                                                            .filter(emp => !selectedEmployee || emp.id !== selectedEmployee.id)
+                                                            .map((emp) => (
+                                                                <option key={emp.id} value={emp.id}>
+                                                                    {emp.full_name}
+                                                                </option>
+                                                            ))}
+                                                    </select>
+                                                </div>
+                                            </div>
 
                                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                                 <div><label className="font-semibold mb-1 block">Temporary Address</label><input className="form-input" value={formData.temporary_address} onChange={(e) => setFormData({ ...formData, temporary_address: e.target.value })} /></div>
@@ -1105,6 +1302,7 @@ const AdminEmployeeRegister = () => {
                                                 <div><label className="font-semibold mb-1 block">Previous Employer</label><input className="form-input" value={formData.previous_employer} onChange={(e) => setFormData({ ...formData, previous_employer: e.target.value })} /></div>
                                                 <div><label className="font-semibold mb-1 block">Previous Designation</label><input className="form-input" value={formData.previous_designation_name} onChange={(e) => setFormData({ ...formData, previous_designation_name: e.target.value })} /></div>
                                                 <div><label className="font-semibold mb-1 block">Previous Salary</label><input className="form-input" value={formData.previous_salary} onChange={(e) => setFormData({ ...formData, previous_salary: e.target.value })} /></div>
+                                                <div><label className="font-semibold mb-1 block">Basic Salary</label><input className="form-input" value={formData.basic_salary} onChange={(e) => setFormData({ ...formData, basic_salary: e.target.value })} /></div>
                                                 <div><label className="font-semibold mb-1 block">CTC</label><input className="form-input" value={formData.ctc} onChange={(e) => setFormData({ ...formData, ctc: e.target.value })} /></div>
                                             </div>
 

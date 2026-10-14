@@ -27,6 +27,11 @@ class Company(models.Model):
     account_no = models.CharField(max_length=50, blank=True, null=True)
     ifsc_code = models.CharField(max_length=20, blank=True, null=True)
     branch_name = models.CharField(max_length=255, blank=True, null=True)
+    # Brand theme chosen by the company admin (blank = Innovyx default)
+    theme_preset = models.CharField(max_length=30, blank=True, default='')
+    theme_primary = models.CharField(max_length=7, blank=True, default='')
+    theme_mid = models.CharField(max_length=7, blank=True, default='')
+    theme_accent = models.CharField(max_length=7, blank=True, default='')
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

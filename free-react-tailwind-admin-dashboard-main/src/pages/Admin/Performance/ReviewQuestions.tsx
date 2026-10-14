@@ -3,6 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import axios from 'axios';
 import IconSearch from '../../../components/Icon/IconSearch';
 
+import PageHeader from '../../../components/Common/PageHeader';
 interface Cycle {
     id: number;
     name: string;
@@ -29,7 +30,7 @@ type QType = 'scale' | 'yes_no';
 
 const ROLE_META: Record<RoleTab, { label: string; color: string; badge: string; icon: string }> = {
     self:    { label: 'Self',    color: 'text-violet-600 dark:text-violet-400', badge: 'bg-violet-500/10 text-violet-600 dark:text-violet-400', icon: '👤' },
-    manager: { label: 'Manager', color: 'text-teal-600 dark:text-teal-400',     badge: 'bg-teal-500/10 text-teal-600 dark:text-teal-400',     icon: '👔' },
+    manager: { label: 'Manager', color: 'text-brand dark:text-brand-400',     badge: 'bg-brand/10 text-brand dark:text-brand-400',     icon: '👔' },
     peer:    { label: 'Peer',    color: 'text-amber-600 dark:text-amber-400',   badge: 'bg-amber-500/10 text-amber-600 dark:text-amber-400',   icon: '🤝' },
     hr:      { label: 'Admin/HR', color: 'text-rose-600 dark:text-rose-400',     badge: 'bg-rose-500/10 text-rose-600 dark:text-rose-400',     icon: '🛡️' },
 };
@@ -208,12 +209,10 @@ const ReviewQuestions = () => {
     return (
         <div className="space-y-5 py-2 animate__animated animate__fadeIn">
             {/* Header */}
-            <div className="bg-white dark:bg-gray-900 p-5 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm">
-                <h2 className="text-xl font-bold text-gray-800 dark:text-white">Review Questions Builder</h2>
-                <p className="text-xs text-gray-400 mt-0.5">
-                    Build question sets for each reviewer role per appraisal cycle. Employees will answer these during their appraisal.
-                </p>
-            </div>
+            <PageHeader
+                title="Review Questions Builder"
+                subtitle="Build question sets for each reviewer role per appraisal cycle. Employees will answer these during their appraisal."
+            />
 
             {errorMsg && <div className="bg-rose-500/10 border border-rose-500/20 text-rose-700 dark:text-rose-400 p-3 rounded-xl text-xs font-bold">⚠️ {errorMsg}</div>}
             {successMsg && <div className="bg-emerald-500/10 border border-emerald-500/20 text-emerald-700 dark:text-emerald-400 p-3 rounded-xl text-xs font-bold">✓ {successMsg}</div>}
@@ -229,8 +228,8 @@ const ReviewQuestions = () => {
                             <button key={c.id} onClick={() => setSelectedCycleId(c.id)}
                                 className={`flex items-center gap-2 px-3 py-2 rounded-xl border text-xs font-bold transition ${
                                     selectedCycleId === c.id
-                                        ? 'bg-teal-500 border-teal-500 text-white shadow-md shadow-teal-500/20'
-                                        : 'border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 hover:border-teal-400'
+                                        ? 'bg-brand border-brand text-white shadow-md shadow-brand/20'
+                                        : 'border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 hover:border-brand-400'
                                 }`}>
                                 <span>{c.name}</span>
                                 <span className={`text-[8px] font-black uppercase px-1.5 py-0.5 rounded-full ${selectedCycleId === c.id ? 'bg-white/20 text-white' : STATUS_STYLE[c.status]}`}>{c.status}</span>
@@ -253,7 +252,7 @@ const ReviewQuestions = () => {
                                     <button key={role} onClick={() => { setActiveTab(role); setShowAdd(false); setEditId(null); }}
                                         className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition ${
                                             activeTab === role
-                                                ? 'bg-teal-500 text-white shadow-md shadow-teal-500/20'
+                                                ? 'bg-brand text-white shadow-md shadow-brand/20'
                                                 : 'bg-gray-50 dark:bg-gray-800 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'
                                         }`}>
                                         <span>{meta.icon}</span>
@@ -281,7 +280,7 @@ const ReviewQuestions = () => {
                                         <IconSearch className="w-3.5 h-3.5 text-gray-400 absolute left-2.5 top-2" />
                                     </div>
                                     <button onClick={() => { setShowAdd(s => !s); setEditId(null); setNewText(''); setNewType('scale'); }}
-                                        className={`px-3 py-1.5 rounded-xl text-[10px] font-bold transition ${showAdd ? 'bg-gray-100 dark:bg-gray-800 text-gray-500' : 'bg-teal-500 hover:bg-teal-600 text-white'}`}>
+                                        className={`px-3 py-1.5 rounded-xl text-[10px] font-bold transition ${showAdd ? 'bg-gray-100 dark:bg-gray-800 text-gray-500' : 'bg-brand hover:bg-brand text-white'}`}>
                                         {showAdd ? '✕ Cancel' : '+ Add Question'}
                                     </button>
                                 </div>
@@ -289,7 +288,7 @@ const ReviewQuestions = () => {
 
                             {/* Add form */}
                             {showAdd && (
-                                <div className="bg-gray-50 dark:bg-gray-800/50 border border-teal-200 dark:border-teal-900/40 rounded-2xl p-4 mb-4 space-y-3 animate__animated animate__fadeIn">
+                                <div className="bg-gray-50 dark:bg-gray-800/50 border border-brand-200 dark:border-brand-900/40 rounded-2xl p-4 mb-4 space-y-3 animate__animated animate__fadeIn">
                                     <textarea rows={3} placeholder={`Write a ${ROLE_META[activeTab].label.toLowerCase()} appraisal question...`}
                                         value={newText} onChange={e => setNewText(e.target.value)}
                                         className="w-full bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 px-3 py-2.5 rounded-xl text-xs font-semibold text-gray-800 dark:text-white focus:outline-none resize-none" />
@@ -297,7 +296,7 @@ const ReviewQuestions = () => {
                                         <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Answer type:</span>
                                         {(Object.entries(QTYPE_META) as [QType, typeof QTYPE_META[QType]][]).map(([type, meta]) => (
                                             <button key={type} type="button" onClick={() => setNewType(type)}
-                                                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[10px] font-bold transition ${newType === type ? 'bg-teal-500 text-white' : 'bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400'}`}>
+                                                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[10px] font-bold transition ${newType === type ? 'bg-brand text-white' : 'bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400'}`}>
                                                 <span>{meta.icon}</span><span>{meta.label}</span>
                                             </button>
                                         ))}
@@ -308,7 +307,7 @@ const ReviewQuestions = () => {
                                             <div className="flex gap-1.5">
                                                 {[3, 5, 7, 10].map(n => (
                                                     <button key={n} type="button" onClick={() => setNewMaxScore(n)}
-                                                        className={`w-8 h-8 rounded-lg text-[11px] font-black transition ${newMaxScore === n ? 'bg-teal-500 text-white' : 'bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400'}`}>
+                                                        className={`w-8 h-8 rounded-lg text-[11px] font-black transition ${newMaxScore === n ? 'bg-brand text-white' : 'bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400'}`}>
                                                         {n}
                                                     </button>
                                                 ))}
@@ -318,7 +317,7 @@ const ReviewQuestions = () => {
                                     )}
                                     <div className="flex justify-end">
                                         <button onClick={handleAddQuestion} disabled={!newText.trim() || savingQ}
-                                            className="px-4 py-1.5 bg-teal-500 hover:bg-teal-600 disabled:bg-gray-300 text-white rounded-xl text-[10px] font-bold">
+                                            className="px-4 py-1.5 bg-brand hover:bg-brand disabled:bg-gray-300 text-white rounded-xl text-[10px] font-bold">
                                             {savingQ ? 'Saving...' : 'Save Question'}
                                         </button>
                                     </div>
@@ -342,7 +341,7 @@ const ReviewQuestions = () => {
                                                 <div className="flex items-center gap-2 flex-wrap">
                                                     {(Object.entries(QTYPE_META) as [QType, typeof QTYPE_META[QType]][]).map(([type, meta]) => (
                                                         <button key={type} type="button" onClick={() => setEditType(type)}
-                                                            className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[10px] font-bold transition ${editType === type ? 'bg-teal-500 text-white' : 'bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400'}`}>
+                                                            className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[10px] font-bold transition ${editType === type ? 'bg-brand text-white' : 'bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400'}`}>
                                                             <span>{meta.icon}</span><span>{meta.label}</span>
                                                         </button>
                                                     ))}
@@ -353,7 +352,7 @@ const ReviewQuestions = () => {
                                                         <div className="flex gap-1.5">
                                                             {[3, 5, 7, 10].map(n => (
                                                                 <button key={n} type="button" onClick={() => setEditMaxScore(n)}
-                                                                    className={`w-8 h-8 rounded-lg text-[11px] font-black transition ${editMaxScore === n ? 'bg-teal-500 text-white' : 'bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400'}`}>
+                                                                    className={`w-8 h-8 rounded-lg text-[11px] font-black transition ${editMaxScore === n ? 'bg-brand text-white' : 'bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400'}`}>
                                                                     {n}
                                                                 </button>
                                                             ))}
@@ -363,7 +362,7 @@ const ReviewQuestions = () => {
                                                 )}
                                                 <div className="flex justify-end gap-2">
                                                     <button onClick={cancelEdit} className="px-3 py-1 bg-gray-100 dark:bg-gray-800 text-gray-500 rounded-lg text-[10px] font-bold">Cancel</button>
-                                                    <button onClick={() => handleUpdateQuestion(q.id)} className="px-3 py-1 bg-teal-500 text-white rounded-lg text-[10px] font-bold">Save</button>
+                                                    <button onClick={() => handleUpdateQuestion(q.id)} className="px-3 py-1 bg-brand text-white rounded-lg text-[10px] font-bold">Save</button>
                                                 </div>
                                             </div>
                                         ) : (
@@ -383,7 +382,7 @@ const ReviewQuestions = () => {
                                                     </div>
                                                 </div>
                                                 <div className="flex gap-2 shrink-0">
-                                                    <button onClick={() => startEdit(q)} className="text-[9px] font-bold text-teal-600 dark:text-teal-400 hover:underline">Edit</button>
+                                                    <button onClick={() => startEdit(q)} className="text-[9px] font-bold text-brand dark:text-brand-400 hover:underline">Edit</button>
                                                     <button onClick={() => handleDeleteQuestion(q.id)} className="text-[9px] font-bold text-rose-500 hover:underline">Delete</button>
                                                 </div>
                                             </div>
@@ -403,7 +402,7 @@ const ReviewQuestions = () => {
                                     <div className="text-xs font-bold text-gray-800 dark:text-white leading-tight">{selectedCycle.name}</div>
                                     <span className={`inline-block mt-1 text-[8px] font-black uppercase px-2 py-0.5 rounded-full ${STATUS_STYLE[selectedCycle.status]}`}>{selectedCycle.status}</span>
                                 </div>
-                                <span className="text-xl font-black text-teal-500">{selectedCycle.question_count}</span>
+                                <span className="text-xl font-black text-brand">{selectedCycle.question_count}</span>
                             </div>
                             <div className="space-y-2">
                                 {(Object.entries(ROLE_META) as [RoleTab, typeof ROLE_META[RoleTab]][]).map(([role, meta]) => {
@@ -416,7 +415,7 @@ const ReviewQuestions = () => {
                                                 <span className="text-gray-400">{count}Q</span>
                                             </div>
                                             <div className="h-1.5 bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden">
-                                                <div className="h-full bg-teal-500 rounded-full transition-all duration-500" style={{ width: `${pct}%` }} />
+                                                <div className="h-full bg-brand rounded-full transition-all duration-500" style={{ width: `${pct}%` }} />
                                             </div>
                                         </div>
                                     );
@@ -432,10 +431,10 @@ const ReviewQuestions = () => {
                             </div>
                             <div className="space-y-2">
                                 {TEMPLATES[activeTab].map((t, i) => (
-                                    <div key={i} className="flex items-start gap-2 p-2.5 bg-gray-50 dark:bg-gray-800/50 rounded-xl hover:bg-teal-500/5 dark:hover:bg-teal-900/20 transition group">
+                                    <div key={i} className="flex items-start gap-2 p-2.5 bg-gray-50 dark:bg-gray-800/50 rounded-xl hover:bg-brand/5 dark:hover:bg-brand-900/20 transition group">
                                         <p className="flex-1 text-[11px] text-gray-600 dark:text-gray-300 leading-relaxed">{t}</p>
                                         <button onClick={() => useTemplate(t)}
-                                            className="shrink-0 text-[9px] font-black text-teal-600 dark:text-teal-400 opacity-0 group-hover:opacity-100 transition hover:underline">
+                                            className="shrink-0 text-[9px] font-black text-brand dark:text-brand-400 opacity-0 group-hover:opacity-100 transition hover:underline">
                                             Use
                                         </button>
                                     </div>

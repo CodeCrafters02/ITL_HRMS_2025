@@ -7,6 +7,12 @@ import Flatpickr from 'react-flatpickr';
 import 'flatpickr/dist/flatpickr.css';
 import { formatLeaveRequestDate } from '../../utils/formatLeaveRequestDate';
 
+import PageHeader from '../../components/Common/PageHeader';
+import IconClock from '../../components/Icon/IconClock';
+import StatCard, { StatGrid } from '../../components/Common/StatCard';
+import IconBarChart from '../../components/Icon/IconBarChart';
+import IconChecks from '../../components/Icon/IconChecks';
+import IconXCircle from '../../components/Icon/IconXCircle';
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000';
 
 type LeaveRecord = {
@@ -133,39 +139,18 @@ const LeaveHistory = () => {
     return (
         <div className="space-y-6">
             {/* Premium Header Banner */}
-            <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-700 p-8 text-white shadow-xl">
-                <div className="relative z-10">
-                    <h1 className="text-3xl font-extrabold tracking-tight md:text-4xl">Leave History Archives</h1>
-                    <p className="mt-2 text-lg text-blue-50 opacity-90">View and audit all processed leave applications across the company.</p>
-                </div>
-                <div className="absolute right-0 top-0 -mr-16 -mt-16 h-64 w-64 rounded-full bg-white/10 blur-3xl"></div>
-                <div className="absolute bottom-0 left-0 -ml-16 -mb-16 h-64 w-64 rounded-full bg-purple-400/20 blur-3xl"></div>
-            </div>
+            <PageHeader
+                icon={<IconClock />}
+                title="Leave History Archives"
+                subtitle="View and audit all processed leave applications across the company."
+            />
 
             {/* Quick Stats Placeholder */}
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-                <div className="panel bg-white dark:bg-gray-800 border-none shadow-sm flex items-center gap-4 p-4 rounded-2xl">
-                    <div className="p-3 bg-blue-100 dark:bg-blue-900/30 rounded-xl text-blue-600">📊</div>
-                    <div>
-                        <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">Total Logs</p>
-                        <h4 className="text-xl font-bold dark:text-white-light">{totalCount}</h4>
-                    </div>
-                </div>
-                <div className="panel bg-white dark:bg-gray-800 border-none shadow-sm flex items-center gap-4 p-4 rounded-2xl">
-                    <div className="p-3 bg-green-100 dark:bg-green-900/30 rounded-xl text-green-600">✅</div>
-                    <div>
-                        <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">Approved</p>
-                        <h4 className="text-xl font-bold dark:text-white-light">{approvedCount}</h4>
-                    </div>
-                </div>
-                <div className="panel bg-white dark:bg-gray-800 border-none shadow-sm flex items-center gap-4 p-4 rounded-2xl">
-                    <div className="p-3 bg-red-100 dark:bg-red-900/30 rounded-xl text-red-600">❌</div>
-                    <div>
-                        <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">Rejected</p>
-                        <h4 className="text-xl font-bold dark:text-white-light">{rejectedCount}</h4>
-                    </div>
-                </div>
-            </div>
+            <StatGrid cols={3}>
+                <StatCard label="Total Logs" value={totalCount} loading={loading} tone="primary" icon={<IconBarChart />} />
+                <StatCard label="Approved" value={approvedCount} loading={loading} tone="success" icon={<IconChecks />} />
+                <StatCard label="Rejected" value={rejectedCount} loading={loading} tone="danger" icon={<IconXCircle />} />
+            </StatGrid>
 
             {/* Reusable Data Table */}
             <DataTable

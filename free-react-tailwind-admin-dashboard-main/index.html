@@ -23,6 +23,16 @@
     -->
         <title>People Suite</title>
 
+        <!-- Company brand theme: applied before first paint so there is no flash of the default colours -->
+        <script>
+            (function () {
+                try {
+                    var vars = JSON.parse(localStorage.getItem('company_theme_vars') || 'null');
+                    if (vars) for (var k in vars) document.documentElement.style.setProperty(k, vars[k]);
+                } catch (e) {}
+            })();
+        </script>
+
         <!-- Stale-build guard: a cached copy of this page (Teams keeps one for a long time) points at chunk files a newer deploy deleted -->
         <script>
             (function () {

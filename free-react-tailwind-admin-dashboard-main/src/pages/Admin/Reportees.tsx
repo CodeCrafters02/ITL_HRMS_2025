@@ -8,6 +8,12 @@ import IconUser from '../../components/Icon/IconUser';
 import DataTable, { Column } from '../../components/Common/DataTable';
 import { Reportee, fetchMyReportees } from '../Employee/Reportees/api';
 
+import PageHeader from '../../components/Common/PageHeader';
+import IconUsersGroup from '../../components/Icon/IconUsersGroup';
+import StatCard, { StatGrid } from '../../components/Common/StatCard';
+import IconChecks from '../../components/Icon/IconChecks';
+import Button from '../../components/Common/Button';
+import CardGrid from '../../components/Common/CardGrid';
 type ViewMode = 'card' | 'table';
 
 const statusBadgeClass = (status?: string) => {
@@ -158,14 +164,11 @@ const AdminReportees = () => {
 
     return (
         <div className="space-y-6 animate__animated animate__fadeIn">
-            <div className="panel bg-gradient-to-r from-[#220fb6] via-[#4f6be5] to-[#0f52af] text-white border-0">
-                <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-                    <div>
-                        <h1 className="text-2xl md:text-3xl font-extrabold">Reportees</h1>
-                        <p className="mt-1 text-white/80">Quickly view your direct reportees with status and attendance presence.</p>
-                    </div>
-                </div>
-            </div>
+            <PageHeader
+                icon={<IconUsersGroup />}
+                title="Reportees"
+                subtitle="Quickly view your direct reportees with status and attendance presence."
+            />
 
             {error && (
                 <div className="panel border border-danger/30 bg-danger-light text-danger">
@@ -173,20 +176,11 @@ const AdminReportees = () => {
                 </div>
             )}
 
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <div className="panel">
-                    <p className="text-white-dark text-xs uppercase tracking-wide">Total Reportees</p>
-                    <p className="text-2xl font-bold mt-2">{totalCount}</p>
-                </div>
-                <div className="panel">
-                    <p className="text-white-dark text-xs uppercase tracking-wide">Online</p>
-                    <p className="text-2xl font-bold mt-2 text-success">{onlineCount}</p>
-                </div>
-                <div className="panel">
-                    <p className="text-white-dark text-xs uppercase tracking-wide">Checked In</p>
-                    <p className="text-2xl font-bold mt-2 text-primary">{checkedInCount}</p>
-                </div>
-            </div>
+            <StatGrid cols={3}>
+                <StatCard label="Total Reportees" value={totalCount} loading={loading} tone="primary" icon={<IconUsersGroup />} />
+                <StatCard label="Online" value={onlineCount} loading={loading} tone="success" icon={<IconUser />} />
+                <StatCard label="Checked In" value={checkedInCount} loading={loading} tone="info" icon={<IconChecks />} />
+            </StatGrid>
 
             {viewMode === 'table' ? (
                 <DataTable
@@ -212,37 +206,25 @@ const AdminReportees = () => {
                 />
             ) : (
                 <>
-                    <div className="panel">
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                            <div className="md:col-span-2 relative">
-                                <input
-                                    type="text"
-                                    className="form-input pl-10"
-                                    value={search}
-                                    onChange={(e) => {
-                                        setSearch(e.target.value);
-                                        setPage(1);
-                                    }}
-                                    placeholder="Search by name, employee id, department or designation..."
-                                />
-                                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-white-dark">
-                                    <IconSearch className="w-4 h-4" />
-                                </span>
-                            </div>
-                            <div className="flex items-center justify-end">
-                                {viewModeSwitcher}
-                            </div>
-                        </div>
-                    </div>
-
-                    {loading ? (
-                        <div className="panel text-center py-12 text-white-dark">Loading reportees...</div>
-                    ) : items.length === 0 ? (
-                        <div className="panel text-center py-12 text-white-dark">No reportees found.</div>
-                    ) : (
-                        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
-                            {items.map((item) => (
-                                <div key={item.id} className="panel border border-white-light dark:border-[#1b2e4b]">
+                    <CardGrid
+                        items={items}
+                        loading={loading}
+                        page={page}
+                        pageSize={pageSize}
+                        totalCount={totalCount}
+                        pageSizeOptions={[6, 9, 12, 24]}
+                        onPageChange={setPage}
+                        onPageSizeChange={(sz) => { setPageSize(sz); setPage(1); }}
+                        searchValue={search}
+                        onSearchChange={(v) => { setSearch(v); setPage(1); }}
+                        searchPlaceholder="Search by name, employee id, department or designation..."
+                        emptyMessage="No reportees found"
+                        entityLabel="reportees"
+                        cols={3}
+                        onRefresh={loadReportees}
+                        actions={viewModeSwitcher}
+                        renderCard={(item) => (
+                                <div className="panel border border-white-light dark:border-[#1b2e4b]">
                                     <div className="flex items-start justify-between gap-3">
                                         <div className="flex items-center gap-3 min-w-0">
                                             <div className="w-12 h-12 rounded-full overflow-hidden bg-primary-light text-primary flex items-center justify-center shrink-0">
@@ -271,67 +253,10 @@ const AdminReportees = () => {
                                         </span>
                                     </div>
                                 </div>
-                            ))}
-                        </div>
-                    )}
 
-                    {totalCount > 0 && (
-                        <div className="panel">
-                            <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
-                                <div className="text-xs text-white-dark">
-                                    Showing <span className="text-primary font-semibold">{(page - 1) * pageSize + 1}</span> to{' '}
-                                    <span className="text-primary font-semibold">{Math.min(page * pageSize, totalCount)}</span> of{' '}
-                                    <span className="text-primary font-semibold">{totalCount}</span> entries
-                                </div>
-                                <div className="flex items-center gap-2">
-                                    <label className="text-xs text-white-dark">Per page</label>
-                                    <select
-                                        className="form-select w-20 text-xs"
-                                        value={pageSize}
-                                        onChange={(e) => {
-                                            setPageSize(Number(e.target.value));
-                                            setPage(1);
-                                        }}
-                                    >
-                                        <option value={10}>10</option>
-                                        <option value={20}>20</option>
-                                        <option value={50}>50</option>
-                                    </select>
-                                </div>
+                            )}
+                    />
 
-                                <ul className="inline-flex items-center gap-1">
-                                    <li>
-                                        <button type="button" className="btn btn-sm btn-outline-primary px-2.5" onClick={() => setPage(page > 1 ? page - 1 : 1)} disabled={page === 1}>
-                                            Prev
-                                        </button>
-                                    </li>
-                                    {getPageNumbers().map((p, idx) =>
-                                        p === '...' ? <li key={`dots-${idx}`} className="px-2 text-white-dark">...</li> : (
-                                            <li key={p}>
-                                                <button
-                                                    type="button"
-                                                    className={`btn btn-sm ${page === p ? 'btn-primary' : 'btn-outline-primary'} min-w-[34px]`}
-                                                    onClick={() => setPage(p as number)}
-                                                >
-                                                    {p}
-                                                </button>
-                                            </li>
-                                        ),
-                                    )}
-                                    <li>
-                                        <button
-                                            type="button"
-                                            className="btn btn-sm btn-outline-primary px-2.5"
-                                            onClick={() => setPage(page < totalPages ? page + 1 : totalPages)}
-                                            disabled={page === totalPages || totalPages === 0}
-                                        >
-                                            Next
-                                        </button>
-                                    </li>
-                                </ul>
-                            </div>
-                        </div>
-                    )}
                 </>
             )}
 

@@ -113,6 +113,23 @@ export const bootstrapTeams = async (onTheme: (dark: boolean) => void): Promise<
     app.notifySuccess();
 };
 
+/** Microsoft Teams chat deep link. With `email` it opens a 1:1 chat with that person. */
+export const teamsChatUrl = (email?: string) => `https://teams.microsoft.com/l/chat/0/0${email ? `?users=${encodeURIComponent(email)}` : ''}`;
+
+/**
+ * Opens Microsoft Teams chat. Call it directly from a click handler (so popup blockers allow it).
+ * Inside the Teams app it uses Teams' own link opener; in a normal browser it opens a new tab.
+ * Returns false if the browser blocked the new tab.
+ */
+export const openTeamsChat = (email?: string): boolean => {
+    const url = teamsChatUrl(email);
+    if (inTeams) {
+        app.openLink(url).catch(() => window.open(url, '_blank', 'noopener'));
+        return true;
+    }
+    return !!window.open(url, '_blank', 'noopener');
+};
+
 export const landingPath = (page: TeamsPage, role: string | null): string => {
     if (role === 'employee') {
         return {

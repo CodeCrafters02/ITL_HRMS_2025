@@ -5,6 +5,7 @@ import Swal from 'sweetalert2';
 import IconChecks from '../../components/Icon/IconChecks';
 import IconX from '../../components/Icon/IconX';
 import DataTable, { Column } from '../../components/Common/DataTable';
+import PageHeader from '../../components/Common/PageHeader';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000';
 
@@ -214,15 +215,13 @@ const SeatApprovals = () => {
     return (
         <div className="space-y-4">
             {/* Header Banner */}
-            <div className="bg-gradient-to-r from-rose-500 to-orange-500 rounded-xl p-6 text-white shadow-lg overflow-hidden relative">
-                <div className="relative z-10">
-                    <h2 className="text-3xl font-extrabold mb-1">Seat Booking Approvals</h2>
-                    <p className="text-white/80 text-sm font-medium">Review and manage pending seat requests. Approve or reject applications to ensure optimal office utilization.</p>
-                </div>
-                <div className="absolute right-[-20px] top-[-20px] opacity-10">
-                    <IconChecks className="w-48 h-48" />
-                </div>
-            </div>
+            <PageHeader
+                title="Seat Booking Approvals"
+                subtitle="Review and process pending seat requests. Approve or reject employee workspace applications to optimize office floor capacity."
+                icon={<IconChecks />}
+                badge="Facilities & Seating"
+                variant="rose"
+            />
 
             {/* Reusable Data Table */}
             <DataTable

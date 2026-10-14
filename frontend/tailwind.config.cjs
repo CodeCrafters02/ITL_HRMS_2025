@@ -69,6 +69,7 @@ module.exports = {
                 4.5: '18px',
             },
             boxShadow: {
+                xs: '0 1px 2px 0 rgba(0, 0, 0, 0.05)',
                 '3xl': '0 2px 2px rgb(224 230 237 / 46%), 1px 6px 7px rgb(224 230 237 / 46%)',
             },
             typography: ({ theme }) => ({

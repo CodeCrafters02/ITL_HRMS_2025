@@ -1,7 +1,6 @@
 import { useEffect, useState, Fragment } from 'react';
 import { useDispatch } from 'react-redux';
 import { setPageTitle } from '../../store/themeConfigSlice';
-import { Dialog, Transition } from '@headlessui/react';
 import Swal from 'sweetalert2';
 import IconX from '../../components/Icon/IconX';
 import IconPlus from '../../components/Icon/IconPlus';
@@ -10,6 +9,10 @@ import IconTrashLines from '../../components/Icon/IconTrashLines';
 import IconSearch from '../../components/Icon/IconSearch';
 import DataTable, { Column } from '../../components/Common/DataTable';
 
+import PageHeader from '../../components/Common/PageHeader';
+import IconBarChart from '../../components/Icon/IconBarChart';
+import Modal from '../../components/Common/Modal';
+import Button, { IconButton } from '../../components/Common/Button';
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000';
 const API_URL = `${API_BASE_URL}/app/levels/`;
 
@@ -206,22 +209,22 @@ const AdminLevel = () => {
             width: '120px',
             render: (_val, level) => (
                 <div className="flex items-center justify-center gap-2">
-                    <button
+                    <IconButton tone="primary"
                         type="button"
-                        className="p-1.5 rounded-lg text-primary hover:text-white hover:bg-primary transition-colors"
+                        
                         onClick={() => openEditModal(level)}
                         title="Edit Level"
                     >
                         <IconPencil className="w-4 h-4" />
-                    </button>
-                    <button
+                    </IconButton>
+                    <IconButton tone="danger"
                         type="button"
-                        className="p-1.5 rounded-lg text-danger hover:text-white hover:bg-danger transition-colors"
+                        
                         onClick={() => handleDelete(level)}
                         title="Delete Level"
                     >
                         <IconTrashLines className="w-4 h-4" />
-                    </button>
+                    </IconButton>
                 </div>
             ),
         },
@@ -229,13 +232,11 @@ const AdminLevel = () => {
 
     return (
         <div>
-            <div className="bg-gradient-to-r from-[#1e3a5f] to-[#8b5cf6] p-6 rounded-xl shadow-lg mb-6 relative overflow-hidden">
-                <div className="relative z-10">
-                    <h1 className="text-3xl font-extrabold text-white tracking-tight">Level Management</h1>
-                    <p className="text-white/80 mt-1 text-sm font-medium">Create, edit, and manage employee levels in your organization.</p>
-                </div>
-                <div className="absolute top-0 right-0 -mt-10 -mr-10 w-48 h-48 bg-white opacity-5 rounded-full blur-2xl"></div>
-            </div>
+            <PageHeader
+                icon={<IconBarChart />}
+                title="Level Management"
+                subtitle="Create, edit, and manage employee levels in your organization."
+            />
 
             {/* Reusable Data Table */}
             <DataTable
@@ -263,83 +264,43 @@ const AdminLevel = () => {
                 }}
                 onRefresh={fetchLevels}
                 actions={
-                    <button type="button" className="btn btn-primary gap-2 shadow-md shadow-primary/20" onClick={openAddModal}>
+                    <Button type="button"  onClick={openAddModal}>
                         <IconPlus className="w-4 h-4" /> Add Level
-                    </button>
+                    </Button>
                 }
             />
 
-            <Transition appear show={isModalOpen} as={Fragment}>
-                <Dialog as="div" open={isModalOpen} onClose={() => setIsModalOpen(false)} className="relative z-50">
-                    <Transition.Child
-                        as={Fragment}
-                        enter="ease-out duration-300"
-                        enterFrom="opacity-0"
-                        enterTo="opacity-100"
-                        leave="ease-in duration-200"
-                        leaveFrom="opacity-100"
-                        leaveTo="opacity-0"
-                    >
-                        <div className="fixed inset-0 bg-[black]/60" />
-                    </Transition.Child>
-                    <div className="fixed inset-0 overflow-y-auto">
-                        <div className="flex min-h-full items-center justify-center px-4 py-8">
-                            <Transition.Child
-                                as={Fragment}
-                                enter="ease-out duration-300"
-                                enterFrom="opacity-0 scale-95"
-                                enterTo="opacity-100 scale-100"
-                                leave="ease-in duration-200"
-                                leaveFrom="opacity-100 scale-100"
-                                leaveTo="opacity-0 scale-95"
-                            >
-                                <Dialog.Panel className="panel border-0 p-0 rounded-lg overflow-hidden w-full max-w-md text-black dark:text-white-dark shadow-xl">
-                                    <button
-                                        type="button"
-                                        onClick={() => setIsModalOpen(false)}
-                                        className="absolute top-4 ltr:right-4 rtl:left-4 text-gray-400 hover:text-gray-800 dark:hover:text-gray-600 outline-none"
-                                    >
-                                        <IconX />
-                                    </button>
-                                    <div className="text-lg font-medium bg-[#fbfbfb] dark:bg-[#121c2c] ltr:pl-5 rtl:pr-5 py-3 ltr:pr-[50px] rtl:pl-[50px]">
-                                        {editMode ? 'Edit Level' : 'Add New Level'}
-                                    </div>
-                                    <div className="p-5">
-                                        <form onSubmit={handleSave}>
-                                            <div className="mb-5">
-                                                <label htmlFor="level_name" className="font-semibold mb-1 block">Level Name *</label>
-                                                <input
-                                                    id="level_name"
-                                                    type="text"
-                                                    className="form-input"
-                                                    placeholder="e.g. Senior"
-                                                    required
-                                                    value={formData.level_name}
-                                                    onChange={(e) => setFormData({ ...formData, level_name: e.target.value })}
-                                                />
-                                            </div>
-                                            <div className="mb-5">
-                                                <label htmlFor="description" className="font-semibold mb-1 block">Description</label>
-                                                <textarea
-                                                    id="description"
-                                                    className="form-textarea min-h-[100px]"
-                                                    placeholder="Optional description"
-                                                    value={formData.description}
-                                                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                                                />
-                                            </div>
-                                            <div className="flex justify-end items-center gap-3 mt-8">
-                                                <button type="button" className="btn btn-outline-danger" onClick={() => setIsModalOpen(false)}>Cancel</button>
-                                                <button type="submit" className="btn btn-primary">{editMode ? 'Update' : 'Create'}</button>
-                                            </div>
-                                        </form>
-                                    </div>
-                                </Dialog.Panel>
-                            </Transition.Child>
-                        </div>
+            <Modal open={isModalOpen} onClose={() => setIsModalOpen(false)} title={editMode ? 'Edit Level' : 'Add New Level'} size="md">
+                <form onSubmit={handleSave}>
+                    <div className="mb-5">
+                        <label htmlFor="level_name" className="font-semibold mb-1 block">Level Name *</label>
+                        <input
+                            id="level_name"
+                            type="text"
+                            className="form-input"
+                            placeholder="e.g. Senior"
+                            required
+                            value={formData.level_name}
+                            onChange={(e) => setFormData({ ...formData, level_name: e.target.value })}
+                        />
                     </div>
-                </Dialog>
-            </Transition>
+                    <div className="mb-5">
+                        <label htmlFor="description" className="font-semibold mb-1 block">Description</label>
+                        <textarea
+                            id="description"
+                            className="form-textarea min-h-[100px]"
+                            placeholder="Optional description"
+                            value={formData.description}
+                            onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                        />
+                    </div>
+                    <div className="flex justify-end items-center gap-3 mt-8">
+                        <Button variant="outline-danger" type="button"  onClick={() => setIsModalOpen(false)}>Cancel</Button>
+                        <Button type="submit">{editMode ? 'Update' : 'Create'}</Button>
+                    </div>
+                </form>
+
+            </Modal>
         </div>
     );
 };

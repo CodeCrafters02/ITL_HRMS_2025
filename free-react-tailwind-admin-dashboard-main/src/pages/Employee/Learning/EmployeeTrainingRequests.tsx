@@ -7,6 +7,8 @@ import { setPageTitle } from '../../../store/themeConfigSlice';
 import { authFetch } from '../../../utils/authFetch';
 import IconPlus from '../../../components/Icon/IconPlus';
 import IconSearch from '../../../components/Icon/IconSearch';
+import IconOpenBook from '../../../components/Icon/IconOpenBook';
+import PageHeader from '../../../components/Common/PageHeader';
 import SearchableSelect from '../../Elements/SearchableSelect';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000';
@@ -242,15 +244,13 @@ const EmployeeTrainingRequests = () => {
     return (
         <div>
             {/* Header Banner */}
-            <div className="bg-gradient-to-r from-[#0e1726] to-[#8b5cf6] p-6 rounded-xl shadow-lg mb-6 relative overflow-hidden">
-                <div className="relative z-10">
-                    <h1 className="text-3xl font-extrabold text-white tracking-tight">Training Requests</h1>
-                    <p className="text-white/80 mt-1 text-sm font-medium">
-                        Request custom corporate certifications, view supervisor comments, and audit pending approvals.
-                    </p>
-                </div>
-                <div className="absolute top-0 right-0 -mt-10 -mr-10 w-48 h-48 bg-white opacity-5 rounded-full blur-2xl"></div>
-            </div>
+            <PageHeader
+                title="Training Requests"
+                subtitle="Request corporate training sponsorships, track supervisor approvals, and audit pending learning applications."
+                icon={<IconOpenBook />}
+                badge="Upskilling Applications"
+                variant="purple"
+            />
 
             {/* Actions Bar */}
             <div className="flex flex-wrap items-center justify-between gap-4 mb-6">

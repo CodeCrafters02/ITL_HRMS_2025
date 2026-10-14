@@ -9,6 +9,10 @@ import Flatpickr from 'react-flatpickr';
 import 'flatpickr/dist/flatpickr.css';
 import DataTable, { Column } from '../../components/Common/DataTable';
 
+import PageHeader from '../../components/Common/PageHeader';
+import StatCard, { StatGrid } from '../../components/Common/StatCard';
+import IconClipboardText from '../../components/Icon/IconClipboardText';
+import IconInfoTriangle from '../../components/Icon/IconInfoTriangle';
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000';
 
 type LeaveRequest = {
@@ -204,40 +208,18 @@ const LeaveApproval = () => {
     return (
         <div className="space-y-6">
             {/* Premium Header Banner */}
-            <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-cyan-500 via-blue-500 to-indigo-600 p-8 text-white shadow-xl">
-                <div className="relative z-10">
-                    <h1 className="text-3xl font-extrabold tracking-tight md:text-4xl">Leave Approval Management</h1>
-                    <p className="mt-2 text-lg text-cyan-50 opacity-90">Review and manage pending leave requests from your workforce.</p>
-                </div>
-                <div className="absolute right-0 top-0 -mr-16 -mt-16 h-64 w-64 rounded-full bg-white/10 blur-3xl"></div>
-                <div className="absolute bottom-0 left-0 -ml-16 -mb-16 h-64 w-64 rounded-full bg-indigo-400/20 blur-3xl"></div>
-            </div>
+            <PageHeader
+                icon={<IconChecks />}
+                title="Leave Approval Management"
+                subtitle="Review and manage pending leave requests from your workforce."
+                variant="rose"
+            />
 
             {/* Quick Stats */}
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <div className="panel bg-gradient-to-br from-white to-blue-50/30 dark:from-gray-800 dark:to-blue-900/10 border-none shadow-sm h-full">
-                    <div className="flex items-center justify-between">
-                        <div>
-                            <p className="text-sm font-semibold text-blue-600 dark:text-blue-400">Pending Requests</p>
-                            <h3 className="text-2xl font-bold dark:text-white-light">{totalCount}</h3>
-                        </div>
-                        <div className="p-3 bg-blue-100 dark:bg-blue-800/30 rounded-xl text-blue-600">
-                             <div className="w-6 h-6 flex items-center justify-center">📋</div>
-                        </div>
-                    </div>
-                </div>
-                <div className="panel bg-gradient-to-br from-white to-orange-50/30 dark:from-gray-800 dark:to-orange-900/10 border-none shadow-sm h-full">
-                    <div className="flex items-center justify-between">
-                        <div>
-                            <p className="text-sm font-semibold text-orange-600 dark:text-orange-400">Needs Attention</p>
-                            <h3 className="text-2xl font-bold dark:text-white-light">{totalCount > 10 ? 'High' : 'Normal'}</h3>
-                        </div>
-                        <div className="p-3 bg-orange-100 dark:bg-orange-800/30 rounded-xl text-orange-600">
-                             <div className="w-6 h-6 flex items-center justify-center">⚠️</div>
-                        </div>
-                    </div>
-                </div>
-            </div>
+            <StatGrid cols={2}>
+                <StatCard label="Pending Requests" value={totalCount} loading={loading} tone="primary" icon={<IconClipboardText />} hint="Awaiting your decision" />
+                <StatCard label="Needs Attention" value={totalCount > 10 ? 'High' : 'Normal'} loading={loading} tone="warning" icon={<IconInfoTriangle />} hint="Based on queue size" />
+            </StatGrid>
 
             {/* Reusable Data Table */}
             <DataTable
@@ -269,7 +251,7 @@ const LeaveApproval = () => {
                         <div className="w-64">
                             <Flatpickr
                                 options={{ mode: 'range', dateFormat: 'Y-m-d' }}
-                                className="form-input h-10 text-xs sm:text-sm px-3.5 rounded-xl border-[#cbd5e1] dark:border-[#1e293b] bg-white dark:bg-[#121e32] focus:border-[#0062E0] focus:ring-2 focus:ring-[#0062E0]/20 font-medium shadow-sm w-full"
+                                className="form-input h-10 text-xs sm:text-sm px-3.5 rounded-xl border-[#cbd5e1] dark:border-[#1e293b] bg-white dark:bg-[#121e32] focus:border-brand focus:ring-2 focus:ring-brand/20 font-medium shadow-sm w-full"
                                 placeholder="Date Range Filter"
                                 value={dateRange}
                                 onChange={(date) => {

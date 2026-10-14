@@ -8,6 +8,8 @@ import IconPlus from '../../components/Icon/IconPlus';
 import IconEdit from '../../components/Icon/IconEdit';
 import IconTrash from '../../components/Icon/IconTrash';
 import IconEye from '../../components/Icon/IconEye';
+import IconUsers from '../../components/Icon/IconUsers';
+import PageHeader from '../../components/Common/PageHeader';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000';
 const API_URL = `${API_BASE_URL}/app/employee/`;
@@ -243,13 +245,25 @@ const MasterEmployee = () => {
 
     return (
         <div>
-            <div className="bg-gradient-to-r from-[#0d9488] to-[#14b8a6] p-6 rounded-xl shadow-lg mb-6 relative overflow-hidden">
-                <div className="relative z-10">
-                    <h1 className="text-3xl font-extrabold text-white tracking-tight">Employee Management</h1>
-                    <p className="text-white/80 mt-1 text-sm font-medium">Manage and view the list of all employees in the organization.</p>
-                </div>
-                <div className="absolute top-0 right-0 -mt-10 -mr-10 w-48 h-48 bg-white opacity-5 rounded-full blur-2xl"></div>
-            </div>
+            <PageHeader
+                title="Employee Management"
+                subtitle="Manage and view the complete organizational employee registry, department roles, and designations."
+                icon={<IconUsers />}
+                badge="Workforce Master"
+                variant="primary"
+                actions={
+                    <button
+                        type="button"
+                        className="btn btn-primary gap-2 shadow-lg shadow-primary/20 backdrop-blur-sm"
+                        onClick={() => {
+                            resetForm();
+                            setIsAddModalOpen(true);
+                        }}
+                    >
+                        <IconPlus className="w-4 h-4" /> Add Employee
+                    </button>
+                }
+            />
 
             <div className="flex flex-wrap items-center justify-end gap-4 mb-5">
                 <div className="flex items-center gap-2 w-full sm:w-auto">

@@ -62,6 +62,7 @@ urlpatterns = [
     path('salary-disbursement-statement/', SalaryDisbursementStatementView.as_view(), name='salary-disbursement-statement'),
     # --- Manual API Views (Checked First) ---
     path('chat/users/', ChatCompanyUsersAPIView.as_view(), name='chat-company-users'),
+    path('company-branding/', CompanyBrandingAPIView.as_view(), name='company-branding'),
     path('company-update/', CompanyUpdateAPIView.as_view(), name='company_get'),
     path('company-update/<int:pk>/', CompanyUpdateAPIView.as_view(), name='company_update'),
     path('change-password/', CustomPasswordChangeAPIView.as_view(), name='custom-password-change'),

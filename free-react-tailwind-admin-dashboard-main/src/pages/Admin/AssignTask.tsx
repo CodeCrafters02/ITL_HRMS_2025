@@ -7,6 +7,8 @@ import IconListCheck from '../../components/Icon/IconListCheck';
 import IconTrashLines from '../../components/Icon/IconTrashLines';
 import DataTable, { Column } from '../../components/Common/DataTable';
 import { fetchMyReportees, Reportee } from '../Employee/Reportees/api';
+import PageHeader from '../../components/Common/PageHeader';
+import Button from '../../components/Common/Button';
 import {
     createManagerSubtask,
     createManagerTask,
@@ -507,18 +509,13 @@ const AdminAssignTask = () => {
 
     return (
         <div className="space-y-6 animate__animated animate__fadeIn">
-            <div className="panel bg-gradient-to-r from-[#220fb6] via-[#4f6be5] to-[#0f52af] text-white border-0">
-                <div className="flex items-start justify-between gap-4">
-                    <div className="flex items-start gap-4">
-                        <div className="w-10 h-10 rounded-lg bg-white/15 flex items-center justify-center shrink-0">
-                            <IconListCheck className="w-5 h-5" />
-                        </div>
-                        <div>
-                            <h1 className="text-2xl md:text-3xl font-bold">Assign Task</h1>
-                            <p className="mt-1 text-white/75 text-sm md:text-base">Create tasks for your reportees and track team execution in one place.</p>
-                        </div>
-                    </div>
-                    <button
+            <PageHeader
+                title="Assign Task"
+                subtitle="Create tasks for your reportees and track team execution in one place."
+                icon={<IconListCheck />}
+                actions={
+                    <>
+                        <button
                         type="button"
                         className={`btn ${showCreateForm ? 'btn-outline-danger border-white text-white hover:bg-white/10' : 'btn-primary'}`}
                         onClick={() => {
@@ -538,8 +535,9 @@ const AdminAssignTask = () => {
                     >
                         {showCreateForm ? (editingTaskId ? 'Cancel Edit' : 'Close') : '+ New Task'}
                     </button>
-                </div>
-            </div>
+                    </>
+                }
+            />
 
             {showCreateForm && (
                 <div className="panel">
@@ -613,9 +611,9 @@ const AdminAssignTask = () => {
                                 <>
                                     <div className="flex items-center justify-between gap-3">
                                         <h4 className="font-semibold">{editingTaskId ? 'Manage Subtasks' : 'Subtasks for Parent Task'}</h4>
-                                        <button type="button" className="btn btn-outline-primary btn-sm" onClick={addSubtask}>
+                                        <Button variant="outline" size="sm" type="button"  onClick={addSubtask}>
                                             Add Subtask
-                                        </button>
+                                        </Button>
                                     </div>
                                     <div className="space-y-3">
                                         {subtasks.length === 0 ? (
@@ -625,16 +623,16 @@ const AdminAssignTask = () => {
                                                 <div key={`${sub.id || 'new'}-${idx}`} className="rounded-md border border-white-light dark:border-[#1b2e4b] p-3 space-y-3">
                                                     <div className="flex items-center justify-between gap-3">
                                                         <p className="font-semibold text-sm">Subtask {idx + 1}</p>
-                                                        <button
+                                                        <Button variant="outline-danger" size="sm" className="!p-2"
                                                             type="button"
-                                                            className="btn btn-sm btn-outline-danger p-2"
+                                                            
                                                             onClick={() => (sub.id ? deleteSubtask(idx) : removeSubtask(idx))}
                                                             title="Delete subtask"
                                                             aria-label="Delete subtask"
                                                             disabled={submitting}
                                                         >
                                                             <IconTrashLines className="h-4 w-4" />
-                                                        </button>
+                                                        </Button>
                                                     </div>
                                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                                                         <input
@@ -710,9 +708,9 @@ const AdminAssignTask = () => {
                     )}
                     {showCreateForm && (
                         <div className="mt-5 flex justify-start">
-                            <button type="button" className="btn btn-primary min-w-[150px]" onClick={submitTask} disabled={submitting}>
+                            <Button className="min-w-[150px]" type="button"  onClick={submitTask} disabled={submitting}>
                                 {submitting ? (editingTaskId ? 'Updating...' : 'Creating...') : (editingTaskId ? 'Update Task' : 'Create Task')}
-                            </button>
+                            </Button>
                         </div>
                     )}
                 </div>
@@ -802,16 +800,16 @@ const AdminAssignTask = () => {
                             align: 'center',
                             width: '100px',
                             render: (_val: any, task: ManagerTask) => (
-                                <button
+                                <Button variant="outline" size="sm"
                                     type="button"
-                                    className="btn btn-sm btn-outline-primary"
+                                    
                                     onClick={(e) => {
                                         e.stopPropagation();
                                         startEditTask(task.id);
                                     }}
                                 >
                                     Edit
-                                </button>
+                                </Button>
                             ),
                         },
                     ]}
@@ -838,9 +836,9 @@ const AdminAssignTask = () => {
                                 <h3 className="text-xl font-bold leading-tight">Task Details</h3>
                                 <p className="text-xs text-white-dark mt-1">Parent task and subtask breakdown</p>
                             </div>
-                            <button type="button" className="btn btn-sm btn-outline-danger" onClick={() => setSelectedTask(null)}>
+                            <Button variant="outline-danger" size="sm" type="button"  onClick={() => setSelectedTask(null)}>
                                 Close
-                            </button>
+                            </Button>
                         </div>
                         {detailLoading ? (
                             <div className="text-center py-12 text-white-dark">Loading details...</div>

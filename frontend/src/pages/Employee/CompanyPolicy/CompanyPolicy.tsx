@@ -4,6 +4,7 @@ import { setPageTitle } from '../../../store/themeConfigSlice';
 import IconSearch from '../../../components/Icon/IconSearch';
 import IconDownload from '../../../components/Icon/IconDownload';
 import IconFile from '../../../components/Icon/IconFile';
+import PageHeader from '../../../components/Common/PageHeader';
 import { CompanyPolicy, fetchCompanyPolicies } from './api';
 
 const CompanyPolicyPage = () => {
@@ -64,17 +65,13 @@ const CompanyPolicyPage = () => {
 
     return (
         <div className="space-y-6 animate__animated animate__fadeIn">
-            <div className="panel bg-gradient-to-r from-[#220fb6] via-[#4f6be5] to-[#0f52af] text-white border-0">
-                <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-                    <div>
-                        <h1 className="text-2xl md:text-3xl font-extrabold">Company Policies</h1>
-                        <p className="mt-1 text-white/80">Review and download official company policy documents.</p>
-                    </div>
-                    {/* <button type="button" className="btn btn-outline-light w-full md:w-auto" onClick={loadPolicies}>
-                        Refresh
-                    </button> */}
-                </div>
-            </div>
+            <PageHeader
+                title="Company Policies"
+                subtitle="Review, search, and download official organizational policies, employee guidelines, and compliance handbooks."
+                icon={<IconFile />}
+                badge="Governance & Policies"
+                variant="primary"
+            />
 
             {error && (
                 <div className="panel border border-danger/30 bg-danger-light text-danger">

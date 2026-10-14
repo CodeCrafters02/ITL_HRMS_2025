@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import { useDispatch } from 'react-redux';
 import { setPageTitle } from '../../../store/themeConfigSlice';
+import IconSettings from '../../../components/Icon/IconSettings';
+import PageHeader from '../../../components/Common/PageHeader';
 import CourseCategory from './CourseCategory';
 import AssessmentManager from './AssessmentManager';
 
@@ -15,15 +17,13 @@ const LMSAdministration = () => {
     return (
         <div>
             {/* Header Banner */}
-            <div className="bg-gradient-to-r from-[#0e1726] to-[#8b5cf6] p-6 rounded-xl shadow-lg mb-6 relative overflow-hidden">
-                <div className="relative z-10">
-                    <h1 className="text-3xl font-extrabold text-white tracking-tight">LMS Administration</h1>
-                    <p className="text-white/80 mt-1 text-sm font-medium">
-                        Configure learning options, organise course categories, and evaluate quizzes.
-                    </p>
-                </div>
-                <div className="absolute top-0 right-0 -mt-10 -mr-10 w-48 h-48 bg-white opacity-5 rounded-full blur-2xl"></div>
-            </div>
+            <PageHeader
+                title="LMS Administration"
+                subtitle="Configure learning taxonomy, organize course categories, curate question banks, and administer evaluations."
+                icon={<IconSettings />}
+                badge="LMS Governance"
+                variant="purple"
+            />
 
             {/* Tabbed Navigation */}
             <div className="flex border-b border-[#ebedf2] dark:border-[#1b2e4b] mb-6 overflow-x-auto">

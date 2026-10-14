@@ -1,12 +1,15 @@
 import { Fragment, useEffect, useState } from 'react';
 import { useDispatch } from 'react-redux';
-import { Dialog, Transition } from '@headlessui/react';
 import Swal from 'sweetalert2';
 import { setPageTitle } from '../../store/themeConfigSlice';
 import IconPencil from '../../components/Icon/IconPencil';
 import IconX from '../../components/Icon/IconX';
+import IconUsersGroup from '../../components/Icon/IconUsersGroup';
 import DataTable, { Column } from '../../components/Common/DataTable';
+import PageHeader from '../../components/Common/PageHeader';
 
+import Modal from '../../components/Common/Modal';
+import Button, { IconButton } from '../../components/Common/Button';
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000';
 const API_URL = `${API_BASE_URL}/employee/employeereference/`;
 
@@ -189,7 +192,7 @@ const AdminEmployeeReferences = () => {
             title: 'Resume',
             render: (_val, ref) => (
                 resolveUrl(ref.resume) ? (
-                    <a className="text-[#0062E0] hover:underline font-semibold" href={resolveUrl(ref.resume)!} target="_blank" rel="noreferrer">
+                    <a className="text-brand hover:underline font-semibold" href={resolveUrl(ref.resume)!} target="_blank" rel="noreferrer">
                         View Resume
                     </a>
                 ) : (
@@ -232,27 +235,27 @@ const AdminEmployeeReferences = () => {
             align: 'center',
             width: '100px',
             render: (_val, ref) => (
-                <button
+                <IconButton tone="primary"
                     type="button"
-                    className="p-1.5 rounded-lg text-primary hover:bg-primary/10 transition-colors"
+                    
                     onClick={() => openEditModal(ref.id)}
                     title="Review Referral"
                 >
                     <IconPencil className="w-4 h-4" />
-                </button>
+                </IconButton>
             ),
         },
     ];
 
     return (
         <div className="space-y-6">
-            <div className="bg-gradient-to-r from-[#0e1726] to-[#6366f1] p-6 rounded-xl shadow-lg relative overflow-hidden">
-                <div className="relative z-10">
-                    <h1 className="text-3xl font-extrabold text-white tracking-tight">Employee References</h1>
-                    <p className="text-white/80 mt-1 text-sm font-medium">Review employee referrals from people referred by employees in your company.</p>
-                </div>
-                <div className="absolute top-0 right-0 -mt-10 -mr-10 w-48 h-48 bg-white opacity-5 rounded-full blur-2xl"></div>
-            </div>
+            <PageHeader
+                title="Employee References"
+                subtitle="Review and process candidate referrals submitted by internal company team members."
+                icon={<IconUsersGroup />}
+                badge="Employee Referrals"
+                variant="indigo"
+            />
 
             <DataTable
                 columns={columns}
@@ -269,7 +272,7 @@ const AdminEmployeeReferences = () => {
                 onRefresh={fetchReferences}
                 filters={
                     <select
-                        className="form-select text-xs py-1.5 px-3 rounded-lg border-[#cbd5e1] dark:border-[#1e293b] dark:bg-[#121e32] focus:border-[#0062E0] focus:ring-1 focus:ring-[#0062E0] font-semibold"
+                        className="form-select text-xs py-1.5 px-3 rounded-lg border-[#cbd5e1] dark:border-[#1e293b] dark:bg-[#121e32] focus:border-brand focus:ring-1 focus:ring-brand font-semibold"
                         value={statusFilter}
                         onChange={(e) => {
                             setStatusFilter(e.target.value as any);
@@ -284,71 +287,51 @@ const AdminEmployeeReferences = () => {
                 }
             />
 
-            <Transition appear show={editModalOpen} as={Fragment}>
-                <Dialog as="div" open={editModalOpen} onClose={() => setEditModalOpen(false)} className="relative z-50">
-                    <Transition.Child as={Fragment} enter="ease-out duration-300" enterFrom="opacity-0" enterTo="opacity-100" leave="ease-in duration-200" leaveFrom="opacity-100" leaveTo="opacity-0">
-                        <div className="fixed inset-0 bg-[black]/60" />
-                    </Transition.Child>
-                    <div className="fixed inset-0 overflow-y-auto">
-                        <div className="flex min-h-full items-center justify-center px-4 py-8">
-                            <Transition.Child as={Fragment} enter="ease-out duration-300" enterFrom="opacity-0 scale-95" enterTo="opacity-100 scale-100" leave="ease-in duration-200" leaveFrom="opacity-100 scale-100" leaveTo="opacity-0 scale-95">
-                                <Dialog.Panel className="panel border-0 p-0 rounded-lg overflow-hidden w-full max-w-2xl text-black dark:text-white-dark shadow-xl">
-                                    <button type="button" onClick={() => setEditModalOpen(false)} className="absolute top-4 ltr:right-4 rtl:left-4 text-gray-400 hover:text-gray-800 dark:hover:text-gray-600 outline-none">
-                                        <IconX />
-                                    </button>
-                                    <div className="text-lg font-medium bg-[#fbfbfb] dark:bg-[#121c2c] ltr:pl-5 rtl:pr-5 py-3 ltr:pr-[50px] rtl:pl-[50px]">
-                                        Review Employee Reference
-                                    </div>
-                                    <div className="p-5">
-                                        {selectedRef && (
-                                            <form onSubmit={saveReview} className="space-y-5">
-                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                                    <div><label className="font-semibold mb-1 block">Employee</label><input className="form-input" value={selectedRef.employee_name || ''} disabled /></div>
-                                                    <div><label className="font-semibold mb-1 block">Reference Name</label><input className="form-input" value={selectedRef.name} disabled /></div>
-                                                    <div><label className="font-semibold mb-1 block">Designation</label><input className="form-input" value={selectedRef.designation} disabled /></div>
-                                                    <div><label className="font-semibold mb-1 block">Contact</label><input className="form-input" value={selectedRef.contact_number} disabled /></div>
-                                                    <div><label className="font-semibold mb-1 block">Email</label><input className="form-input" value={selectedRef.email} disabled /></div>
-                                                    <div>
-                                                        <label className="font-semibold mb-1 block">Resume</label>
-                                                        {resolveUrl(selectedRef.resume) ? (
-                                                            <a className="text-primary underline" href={resolveUrl(selectedRef.resume)!} target="_blank" rel="noreferrer">
-                                                                View Resume
-                                                            </a>
-                                                        ) : (
-                                                            <div className="text-gray-400 text-sm">No resume</div>
-                                                        )}
-                                                    </div>
-                                                </div>
-
-                                                <div>
-                                                    <label className="font-semibold mb-1 block">Status</label>
-                                                    <select className="form-select" value={editStatus} onChange={(e) => setEditStatus(e.target.value as any)} disabled={saving}>
-                                                        <option value="Pending">Pending</option>
-                                                        <option value="Approved">Approved</option>
-                                                        <option value="Rejected">Rejected</option>
-                                                    </select>
-                                                </div>
-
-                                                <div>
-                                                    <label className="font-semibold mb-1 block">Admin Comment</label>
-                                                    <textarea className="form-textarea min-h-[120px]" value={adminComment} onChange={(e) => setAdminComment(e.target.value)} disabled={saving} />
-                                                </div>
-
-                                                <div className="flex justify-end items-center gap-3 mt-8">
-                                                    <button type="button" className="btn btn-outline-danger" onClick={() => setEditModalOpen(false)}>Cancel</button>
-                                                    <button type="submit" className="btn btn-primary" disabled={saving}>
-                                                        {saving ? 'Saving...' : 'Save Review'}
-                                                    </button>
-                                                </div>
-                                            </form>
-                                        )}
-                                    </div>
-                                </Dialog.Panel>
-                            </Transition.Child>
+            <Modal open={editModalOpen} onClose={() => setEditModalOpen(false)} title="Review Employee Reference" size="2xl">
+                {selectedRef && (
+                    <form onSubmit={saveReview} className="space-y-5">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div><label className="font-semibold mb-1 block">Employee</label><input className="form-input" value={selectedRef.employee_name || ''} disabled /></div>
+                            <div><label className="font-semibold mb-1 block">Reference Name</label><input className="form-input" value={selectedRef.name} disabled /></div>
+                            <div><label className="font-semibold mb-1 block">Designation</label><input className="form-input" value={selectedRef.designation} disabled /></div>
+                            <div><label className="font-semibold mb-1 block">Contact</label><input className="form-input" value={selectedRef.contact_number} disabled /></div>
+                            <div><label className="font-semibold mb-1 block">Email</label><input className="form-input" value={selectedRef.email} disabled /></div>
+                            <div>
+                                <label className="font-semibold mb-1 block">Resume</label>
+                                {resolveUrl(selectedRef.resume) ? (
+                                    <a className="text-primary underline" href={resolveUrl(selectedRef.resume)!} target="_blank" rel="noreferrer">
+                                        View Resume
+                                    </a>
+                                ) : (
+                                    <div className="text-gray-400 text-sm">No resume</div>
+                                )}
+                            </div>
                         </div>
-                    </div>
-                </Dialog>
-            </Transition>
+
+                        <div>
+                            <label className="font-semibold mb-1 block">Status</label>
+                            <select className="form-select" value={editStatus} onChange={(e) => setEditStatus(e.target.value as any)} disabled={saving}>
+                                <option value="Pending">Pending</option>
+                                <option value="Approved">Approved</option>
+                                <option value="Rejected">Rejected</option>
+                            </select>
+                        </div>
+
+                        <div>
+                            <label className="font-semibold mb-1 block">Admin Comment</label>
+                            <textarea className="form-textarea min-h-[120px]" value={adminComment} onChange={(e) => setAdminComment(e.target.value)} disabled={saving} />
+                        </div>
+
+                        <div className="flex justify-end items-center gap-3 mt-8">
+                            <Button variant="outline-danger" type="button"  onClick={() => setEditModalOpen(false)}>Cancel</Button>
+                            <Button type="submit"  disabled={saving}>
+                                {saving ? 'Saving...' : 'Save Review'}
+                            </Button>
+                        </div>
+                    </form>
+                )}
+
+            </Modal>
         </div>
     );
 };

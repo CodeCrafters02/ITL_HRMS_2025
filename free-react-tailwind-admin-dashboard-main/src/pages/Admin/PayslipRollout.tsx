@@ -14,6 +14,8 @@ import DataTable, { Column } from '../../components/Common/DataTable';
 import Flatpickr from 'react-flatpickr';
 import 'flatpickr/dist/flatpickr.css';
 
+import PageHeader from '../../components/Common/PageHeader';
+import Button from '../../components/Common/Button';
 const PayslipRollout = () => {
     const dispatch = useDispatch();
     useEffect(() => {
@@ -433,52 +435,36 @@ const PayslipRollout = () => {
 
     return (
         <div className="space-y-6">
-            <div className="bg-gradient-to-r from-[#0f172a] via-[#1e293b] to-[#334155] p-8 rounded-2xl shadow-2xl relative overflow-hidden">
-                <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-6">
-                    <div className="flex items-center gap-5">
-                        <div className="bg-white/10 p-3 rounded-xl backdrop-blur-md border border-white/20">
-                            <IconFile className="w-10 h-10 text-blue-400" />
-                        </div>
-                        <div>
-                            <h1 className="text-3xl font-black text-white tracking-tight uppercase">Payslip Rollout</h1>
-                            <p className="text-blue-200/80 mt-1 text-sm font-bold tracking-wide">Review and distribute salary statements with precision.</p>
-                        </div>
-                    </div>
-                    <div className="flex flex-wrap items-center gap-4 bg-white/5 p-2 rounded-2xl backdrop-blur-sm border border-white/10">
-                        <div className="flex items-center gap-3 px-4 py-2">
-                            <span className="text-white/60 text-xs font-black uppercase tracking-widest">Period</span>
+            <PageHeader
+                title="Payslip Rollout"
+                subtitle="Review and distribute salary statements with precision."
+                variant="amber"
+                icon={<IconFile />}
+                actions={
+                    <>
+                        <div className="flex items-center gap-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-[#121e32] px-3 h-10">
+                            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Period</span>
                             <Flatpickr
                                 value={dateRange}
-                                options={{
-                                    mode: 'range',
-                                    dateFormat: 'Y-m-d',
-                                }}
-                                className="form-input bg-transparent border-none text-white font-black text-xs focus:ring-0 w-64 cursor-pointer p-0"
+                                options={{ mode: 'range', dateFormat: 'Y-m-d' }}
+                                className="form-input border-0 bg-transparent p-0 h-auto w-56 text-xs font-bold focus:ring-0 cursor-pointer"
                                 onChange={(date) => setDateRange(date)}
                             />
                         </div>
-                        <div className="h-10 w-[1px] bg-white/10 hidden md:block"></div>
-                        <button 
+                        <Button 
                             onClick={handleGenerateAll}
-                            disabled={!!actionLoading || loading}
-                            className="btn bg-emerald-600 hover:bg-emerald-500 text-white font-black px-8 py-3 rounded-xl shadow-xl shadow-emerald-900/20 transition-all active:scale-95 flex items-center gap-3"
-                        >
+                            disabled={!!actionLoading || loading}>
                             {actionLoading === 'generate-all' ? <span className="animate-spin border-2 border-white border-l-transparent rounded-full w-5 h-5"></span> : <IconFile className="w-5 h-5" />}
                             Generate All
-                        </button>
-                        <button 
-                            onClick={handleBulkSend}
-                            className="btn bg-blue-600 hover:bg-blue-500 text-white font-black px-8 py-3 rounded-xl shadow-xl shadow-blue-900/20 transition-all active:scale-95 flex items-center gap-3"
-                        >
+                        </Button>
+                        <Button variant="outline" 
+                            onClick={handleBulkSend}>
                             <IconSend className="w-5 h-5" />
                             Send Verified
-                        </button>
-                    </div>
-                </div>
-                {/* Decorative Elements */}
-                <div className="absolute top-0 right-0 -mt-20 -mr-20 w-64 h-64 bg-blue-500 opacity-10 rounded-full blur-3xl"></div>
-                <div className="absolute bottom-0 left-0 -mb-20 -ml-20 w-64 h-64 bg-purple-500 opacity-10 rounded-full blur-3xl"></div>
-            </div>
+                        </Button>
+                    </>
+                }
+            />
 
             <DataTable
                 title="Employees Dashboard"

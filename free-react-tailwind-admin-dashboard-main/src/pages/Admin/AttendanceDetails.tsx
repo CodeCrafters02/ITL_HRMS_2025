@@ -6,6 +6,11 @@ import IconCalendar from '../../components/Icon/IconCalendar';
 import IconFile from '../../components/Icon/IconFile';
 import DataTable, { Column } from '../../components/Common/DataTable';
 
+import PageHeader from '../../components/Common/PageHeader';
+import StatCard, { StatGrid } from '../../components/Common/StatCard';
+import IconChecks from '../../components/Icon/IconChecks';
+import IconXCircle from '../../components/Icon/IconXCircle';
+import Button from '../../components/Common/Button';
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000';
 
 type AttendanceRow = {
@@ -251,60 +256,32 @@ const AdminAttendanceDetails = () => {
     return (
         <div className="space-y-6 animate__animated animate__fadeIn">
             {/* ─── Premium Header Banner ─── */}
-            <div className="relative bg-gradient-to-r from-cyan-500 to-blue-600 rounded-2xl p-6 md:p-8 text-white overflow-hidden shadow-lg border-0">
-                <div className="absolute top-0 right-0 -mt-12 -mr-12 w-48 h-48 bg-white/10 rounded-full blur-2xl"></div>
-                <div className="absolute bottom-0 left-1/4 -mb-8 w-32 h-32 bg-white/10 rounded-full blur-2xl"></div>
-                
-                <div className="relative z-10 flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
-                    <div className="flex items-center gap-5">
-                        <div className="p-3.5 bg-white/20 backdrop-blur-md rounded-2xl shadow-inner border border-white/20">
-                            <IconCalendar className="w-8 h-8" />
-                        </div>
-                        <div>
-                            <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight">Attendance Analytics</h1>
-                            <p className="text-white/80 mt-1 font-medium max-w-lg">
-                                Comprehensive logs and engagement tracking for your entire workforce.
-                            </p>
-                        </div>
-                    </div>
-                    <div className="flex items-center gap-3">
-                         <button 
+            <PageHeader
+                title="Attendance Analytics"
+                subtitle="Comprehensive logs and engagement tracking for your entire workforce."
+                variant="indigo"
+                icon={<IconCalendar />}
+                actions={
+                    <>
+                        <Button 
                             type="button" 
-                            className="btn bg-white/20 hover:bg-white/30 backdrop-blur-md border-0 text-white rounded-xl py-2.5 px-5 font-bold shadow-lg transition-all flex items-center gap-2"
+                            
                             onClick={exportCsv}
-                            disabled={items.length === 0}
-                        >
+                            disabled={items.length === 0}>
                             <IconFile className="w-4 h-4" />
                             <span>Export CSV</span>
-                        </button>
-                    </div>
-                </div>
-            </div>
+                        </Button>
+                    </>
+                }
+            />
 
             {/* ─── Statistic Dashboard ─── */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                {[
-                    { label: 'Total Records', value: summary?.total ?? 0, color: 'primary', icon: 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2' },
-                    { label: 'Present', value: summary?.present ?? 0, color: 'success', icon: 'M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z' },
-                    { label: 'Absent', value: summary?.absent ?? 0, color: 'danger', icon: 'M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z' },
-                    { label: 'On Leave', value: summary?.leave ?? 0, color: 'info', icon: 'M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z' },
-                ].map((stat, i) => (
-                    <div key={i} className="panel p-5 bg-white dark:bg-[#111c2d] border-0 shadow-md transform transition-all hover:scale-[1.02]">
-                        <div className="flex items-center justify-between">
-                            <div className={`p-2.5 bg-${stat.color}/10 rounded-xl`}>
-                                <svg className={`w-5 h-5 text-${stat.color}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d={stat.icon} />
-                                </svg>
-                            </div>
-                            <span className="text-[10px] font-black uppercase tracking-widest text-white-dark uppercase tracking-tight">Real-time</span>
-                        </div>
-                        <div className="mt-4">
-                            <h4 className="text-2xl font-black text-gray-800 dark:text-white-light font-mono">{loading ? '...' : stat.value}</h4>
-                            <p className="text-xs font-bold text-white-dark mt-1 uppercase tracking-tight">{stat.label}</p>
-                        </div>
-                    </div>
-                ))}
-            </div>
+            <StatGrid cols={4}>
+                <StatCard label="Total Records" value={summary?.total ?? 0} loading={loading} tone="primary" icon={<IconFile />} />
+                <StatCard label="Present" value={summary?.present ?? 0} loading={loading} tone="success" icon={<IconChecks />} />
+                <StatCard label="Absent" value={summary?.absent ?? 0} loading={loading} tone="danger" icon={<IconXCircle />} />
+                <StatCard label="On Leave" value={summary?.leave ?? 0} loading={loading} tone="info" icon={<IconCalendar />} />
+            </StatGrid>
 
             {/* ─── Attendance Records Table ─── */}
             <DataTable

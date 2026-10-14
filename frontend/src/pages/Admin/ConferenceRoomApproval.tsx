@@ -4,11 +4,9 @@ import { setPageTitle } from '../../store/themeConfigSlice';
 import Swal from 'sweetalert2';
 import IconChecks from '../../components/Icon/IconChecks';
 import IconX from '../../components/Icon/IconX';
-import IconRefresh from '../../components/Icon/IconRefresh';
 import IconCalendar from '../../components/Icon/IconCalendar';
 import IconClock from '../../components/Icon/IconClock';
-import IconUsers from '../../components/Icon/IconUsers';
-import IconInfoCircle from '../../components/Icon/IconInfoCircle';
+import DataTable, { Column } from '../../components/Common/DataTable';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000';
 
@@ -34,22 +32,35 @@ const ConferenceRoomApproval = () => {
     const dispatch = useDispatch();
     const [bookings, setBookings] = useState<RoomBooking[]>([]);
     const [loading, setLoading] = useState(true);
+    const [search, setSearch] = useState('');
+    const [page, setPage] = useState(1);
+    const [pageSize, setPageSize] = useState(10);
+    const [totalCount, setTotalCount] = useState(0);
 
     useEffect(() => {
         dispatch(setPageTitle('Conference Room Approvals'));
-        fetchPendingBookings();
     }, []);
+
+    useEffect(() => {
+        const t = setTimeout(fetchPendingBookings, 400);
+        return () => clearTimeout(t);
+    }, [search, page, pageSize]);
 
     const fetchPendingBookings = async () => {
         setLoading(true);
         try {
             const token = localStorage.getItem('access_token');
-            const res = await fetch(`${API_BASE_URL}/app/conference-room-bookings/?status=pending`, {
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
+            const url = new URL(`${API_BASE_URL}/app/conference-room-bookings/`);
+            url.searchParams.set('status', 'pending');
+            url.searchParams.set('page', String(page));
+            url.searchParams.set('page_size', String(pageSize));
+            if (search.trim()) url.searchParams.set('search', search.trim());
+            const res = await fetch(url.toString(), { headers: { 'Authorization': `Bearer ${token}` } });
             if (res.ok) {
                 const data = await res.json();
-                setBookings(data || []);
+                const list = Array.isArray(data) ? data : data?.results || [];
+                setBookings(list);
+                setTotalCount(Array.isArray(data) ? list.length : data?.count ?? list.length);
             }
         } catch (error) {
             console.error('Error fetching bookings:', error);
@@ -87,9 +98,51 @@ const ConferenceRoomApproval = () => {
         }
     };
 
+    const columns: Column<RoomBooking>[] = [
+        {
+            key: 'employee_details', title: 'Employee',
+            render: (_v, b) => (
+                <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold">{b.employee_details.name.charAt(0)}</div>
+                    <div>
+                        <p className="font-bold">{b.employee_details.name}</p>
+                        <p className="text-xs text-gray-400">ID: {b.employee_details.employee_id}</p>
+                    </div>
+                </div>
+            ),
+        },
+        {
+            key: 'room_details', title: 'Room / Floor',
+            render: (_v, b) => (
+                <div>
+                    <p className="font-bold text-sm">{b.room_details.name}</p>
+                    <p className="text-[10px] uppercase text-gray-400 font-bold">{b.room_details.floor}</p>
+                </div>
+            ),
+        },
+        {
+            key: 'date', title: 'Schedule',
+            render: (_v, b) => (
+                <div className="text-xs space-y-1">
+                    <div className="flex items-center gap-2"><IconCalendar className="w-3 h-3 text-gray-400" /><span className="font-bold">{b.date}</span></div>
+                    <div className="flex items-center gap-2"><IconClock className="w-3 h-3 text-gray-400" /><span className="font-bold">{b.start_time.substring(0, 5)} - {b.end_time.substring(0, 5)}</span></div>
+                </div>
+            ),
+        },
+        { key: 'purpose', title: 'Purpose', render: (v) => <div className="max-w-[200px] truncate text-xs" title={v}>{v || 'No purpose provided'}</div> },
+        {
+            key: 'actions', title: 'Actions', align: 'center',
+            render: (_v, b) => (
+                <div className="flex items-center justify-center gap-2">
+                    <button onClick={() => handleAction(b.id, 'approve')} className="p-2 bg-success/10 text-success rounded-lg hover:bg-success hover:text-white transition-all" title="Approve"><IconChecks className="w-4 h-4" /></button>
+                    <button onClick={() => handleAction(b.id, 'reject')} className="p-2 bg-danger/10 text-danger rounded-lg hover:bg-danger hover:text-white transition-all" title="Reject"><IconX className="w-4 h-4" /></button>
+                </div>
+            ),
+        },
+    ];
+
     return (
-        <div className="flex flex-col h-[calc(100vh-90px)] space-y-4">
-            {/* Header Banner */}
+        <div className="space-y-4">
             <div className="bg-gradient-to-r from-violet-600 to-indigo-600 rounded-xl p-4 text-white shadow-lg overflow-hidden relative">
                 <div className="relative z-10">
                     <h2 className="text-3xl font-extrabold mb-0.5">Room Booking Approvals</h2>
@@ -100,103 +153,23 @@ const ConferenceRoomApproval = () => {
                 </div>
             </div>
 
-            <div className="panel flex flex-1 flex-col overflow-hidden">
-                <div className="flex items-center justify-between mb-6">
-                    <h5 className="font-bold text-xl dark:text-white-light">Pending Requests</h5>
-                    <button onClick={fetchPendingBookings} className="btn btn-outline-primary btn-sm flex items-center gap-2">
-                        <IconRefresh className="w-4 h-4" />
-                        Refresh
-                    </button>
-                </div>
-
-                <div className="flex-1 overflow-auto">
-                    {loading ? (
-                        <div className="flex items-center justify-center h-full">
-                            <span className="animate-spin border-4 border-primary border-t-transparent rounded-full w-10 h-10"></span>
-                        </div>
-                    ) : bookings.length === 0 ? (
-                        <div className="flex flex-col items-center justify-center h-full opacity-50">
-                            <div className="w-20 h-20 bg-gray-100 dark:bg-gray-800 rounded-full flex items-center justify-center mb-4">
-                                <IconCalendar className="w-10 h-10 text-gray-400" />
-                            </div>
-                            <p className="font-bold text-lg">No pending requests</p>
-                            <p className="text-sm">All room bookings are up to date!</p>
-                        </div>
-                    ) : (
-                        <div className="table-responsive">
-                            <table className="table-hover table-striped">
-                                <thead>
-                                    <tr>
-                                        <th>Employee</th>
-                                        <th>Room / Floor</th>
-                                        <th>Schedule</th>
-                                        <th>Purpose</th>
-                                        <th className="text-center">Actions</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {bookings.map((booking) => (
-                                        <tr key={booking.id}>
-                                            <td>
-                                                <div className="flex items-center gap-3">
-                                                    <div className="w-10 h-10 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold">
-                                                        {booking.employee_details.name.charAt(0)}
-                                                    </div>
-                                                    <div>
-                                                        <p className="font-bold">{booking.employee_details.name}</p>
-                                                        <p className="text-xs text-gray-400">ID: {booking.employee_details.employee_id}</p>
-                                                    </div>
-                                                </div>
-                                            </td>
-                                            <td>
-                                                <p className="font-bold text-sm">{booking.room_details.name}</p>
-                                                <p className="text-[10px] uppercase text-gray-400 font-bold">{booking.room_details.floor}</p>
-                                            </td>
-                                            <td>
-                                                <div className="text-xs space-y-1">
-                                                    <div className="flex items-center gap-2">
-                                                        <IconCalendar className="w-3 h-3 text-gray-400" />
-                                                        <span className="font-bold">{booking.date}</span>
-                                                    </div>
-                                                    <div className="flex items-center gap-2">
-                                                        <IconClock className="w-3 h-3 text-gray-400" />
-                                                        <span className="font-bold">
-                                                            {booking.start_time.substring(0, 5)} - {booking.end_time.substring(0, 5)}
-                                                        </span>
-                                                    </div>
-                                                </div>
-                                            </td>
-                                            <td>
-                                                <div className="max-w-[200px] truncate" title={booking.purpose}>
-                                                    <span className="text-xs">{booking.purpose || 'No purpose provided'}</span>
-                                                </div>
-                                            </td>
-                                            <td className="text-center">
-                                                <div className="flex items-center justify-center gap-2">
-                                                    <button 
-                                                        onClick={() => handleAction(booking.id, 'approve')}
-                                                        className="p-2 bg-success/10 text-success rounded-lg hover:bg-success hover:text-white transition-all shadow-sm"
-                                                        title="Approve"
-                                                    >
-                                                        <IconChecks className="w-4 h-4" />
-                                                    </button>
-                                                    <button 
-                                                        onClick={() => handleAction(booking.id, 'reject')}
-                                                        className="p-2 bg-danger/10 text-danger rounded-lg hover:bg-danger hover:text-white transition-all shadow-sm"
-                                                        title="Reject"
-                                                    >
-                                                        <IconX className="w-4 h-4" />
-                                                    </button>
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                        </div>
-                    )}
-                </div>
-            </div>
+            <DataTable
+                title="Pending Requests"
+                columns={columns}
+                data={bookings}
+                loading={loading}
+                page={page}
+                pageSize={pageSize}
+                totalCount={totalCount}
+                onPageChange={setPage}
+                onPageSizeChange={(sz) => { setPageSize(sz); setPage(1); }}
+                searchValue={search}
+                onSearchChange={(v) => { setSearch(v); setPage(1); }}
+                onRefresh={fetchPendingBookings}
+                searchPlaceholder="Search by employee, room or purpose..."
+                emptyMessage="No pending requests"
+                emptySubtitle="All room bookings are up to date!"
+            />
         </div>
     );
 };

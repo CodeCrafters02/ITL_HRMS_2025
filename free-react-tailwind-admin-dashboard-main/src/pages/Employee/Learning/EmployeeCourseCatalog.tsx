@@ -7,6 +7,7 @@ import { authFetch } from '../../../utils/authFetch';
 import IconSearch from '../../../components/Icon/IconSearch';
 import IconClock from '../../../components/Icon/IconClock';
 import IconOpenBook from '../../../components/Icon/IconOpenBook';
+import PageHeader from '../../../components/Common/PageHeader';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000';
 const COURSES_API = `${API_BASE_URL}/employee/courses/`;
@@ -313,15 +314,13 @@ const EmployeeCourseCatalog = () => {
     return (
         <div>
             {/* Header Banner */}
-            <div className="bg-gradient-to-r from-[#0e1726] to-[#8b5cf6] p-6 rounded-xl shadow-lg mb-6 relative overflow-hidden">
-                <div className="relative z-10">
-                    <h1 className="text-3xl font-extrabold text-white tracking-tight">Interactive Course Catalog</h1>
-                    <p className="text-white/80 mt-1 text-sm font-medium">
-                        Browse, request enrollment, and upgrade your skills. Enrollment requires manager or admin approval.
-                    </p>
-                </div>
-                <div className="absolute top-0 right-0 -mt-10 -mr-10 w-48 h-48 bg-white opacity-5 rounded-full blur-2xl"></div>
-            </div>
+            <PageHeader
+                title="Interactive Course Catalog"
+                subtitle="Browse corporate learning materials, request course enrollments, and advance your professional skills."
+                icon={<IconOpenBook />}
+                badge="Employee Learning"
+                variant="purple"
+            />
 
             {/* Filter and search controls */}
             <div className="flex flex-wrap items-center justify-between gap-4 mb-6">

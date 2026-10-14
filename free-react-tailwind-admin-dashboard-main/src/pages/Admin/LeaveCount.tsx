@@ -1,6 +1,5 @@
 import { Fragment, useEffect, useState } from 'react';
 import { useDispatch } from 'react-redux';
-import { Dialog, Transition } from '@headlessui/react';
 import Swal from 'sweetalert2';
 import { setPageTitle } from '../../store/themeConfigSlice';
 import IconX from '../../components/Icon/IconX';
@@ -9,6 +8,10 @@ import IconPencil from '../../components/Icon/IconPencil';
 import IconTrashLines from '../../components/Icon/IconTrashLines';
 import DataTable, { Column } from '../../components/Common/DataTable';
 
+import PageHeader from '../../components/Common/PageHeader';
+import IconCalendar from '../../components/Icon/IconCalendar';
+import Modal from '../../components/Common/Modal';
+import Button, { IconButton } from '../../components/Common/Button';
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000';
 const API_URL = `${API_BASE_URL}/app/leaves/`;
 
@@ -163,22 +166,22 @@ const AdminLeaveCount = () => {
             width: '120px',
             render: (_val, row) => (
                 <div className="flex items-center justify-center gap-2">
-                    <button
+                    <IconButton tone="primary"
                         type="button"
-                        className="p-1.5 rounded-lg text-primary hover:bg-primary/10 transition-colors"
+                        
                         onClick={() => openEdit(row)}
                         title="Edit Leave"
                     >
                         <IconPencil className="w-4 h-4" />
-                    </button>
-                    <button
+                    </IconButton>
+                    <IconButton tone="danger"
                         type="button"
-                        className="p-1.5 rounded-lg text-danger hover:bg-danger/10 transition-colors"
+                        
                         onClick={() => del(row)}
                         title="Delete Leave"
                     >
                         <IconTrashLines className="w-4 h-4" />
-                    </button>
+                    </IconButton>
                 </div>
             ),
         },
@@ -187,13 +190,11 @@ const AdminLeaveCount = () => {
     return (
         <div className="space-y-6">
             {/* Gradient Banner Header */}
-            <div className="bg-gradient-to-r from-[#022c22] to-[#10b981] p-6 rounded-xl shadow-lg relative overflow-hidden">
-                <div className="relative z-10">
-                    <h1 className="text-3xl font-extrabold text-white tracking-tight">Leave Count</h1>
-                    <p className="text-white/80 mt-1 text-sm font-medium">Configure leave types and counts.</p>
-                </div>
-                <div className="absolute top-0 right-0 -mt-10 -mr-10 w-48 h-48 bg-white opacity-10 rounded-full blur-2xl"></div>
-            </div>
+            <PageHeader
+                icon={<IconCalendar />}
+                title="Leave Count"
+                subtitle="Configure leave types and counts."
+            />
 
             <DataTable
                 columns={columns}
@@ -215,58 +216,40 @@ const AdminLeaveCount = () => {
                 onRefresh={fetchAll}
                 searchPlaceholder="Search leave policies..."
                 actionButton={
-                    <button type="button" className="btn btn-primary gap-2" onClick={openAdd}>
+                    <Button type="button"  onClick={openAdd}>
                         <IconPlus className="w-4 h-4" /> Add Leave
-                    </button>
+                    </Button>
                 }
             />
 
-            <Transition appear show={modalOpen} as={Fragment}>
-                <Dialog as="div" open={modalOpen} onClose={() => setModalOpen(false)} className="relative z-50">
-                    <Transition.Child as={Fragment} enter="ease-out duration-300" enterFrom="opacity-0" enterTo="opacity-100" leave="ease-in duration-200" leaveFrom="opacity-100" leaveTo="opacity-0">
-                        <div className="fixed inset-0 bg-[black]/60" />
-                    </Transition.Child>
-                    <div className="fixed inset-0 overflow-y-auto">
-                        <div className="flex min-h-full items-center justify-center px-4 py-8">
-                            <Transition.Child as={Fragment} enter="ease-out duration-300" enterFrom="opacity-0 scale-95" enterTo="opacity-100 scale-100" leave="ease-in duration-200" leaveFrom="opacity-100 scale-100" leaveTo="opacity-0 scale-95">
-                                <Dialog.Panel className="panel border-0 p-0 rounded-lg overflow-hidden w-full max-w-lg text-black dark:text-white-dark">
-                                    <button type="button" onClick={() => setModalOpen(false)} className="absolute top-4 ltr:right-4 rtl:left-4 text-white-dark hover:text-dark">
-                                        <IconX />
-                                    </button>
-                                    <div className="text-lg font-medium bg-[#fbfbfb] dark:bg-[#121c2c] ltr:pl-5 rtl:pr-5 py-3 ltr:pr-[50px] rtl:pl-[50px]">
-                                        {form.id ? 'Edit Leave' : 'Add Leave'}
-                                    </div>
-                                    <div className="p-5 space-y-4">
-                                        <div>
-                                            <label className="font-semibold">Leave Name</label>
-                                            <input className="form-input" value={form.leave_name || ''} onChange={(e) => setForm({ ...form, leave_name: e.target.value })} />
-                                        </div>
-                                        <div>
-                                            <label className="font-semibold">Count</label>
-                                            <input className="form-input" type="number" min={0} value={Number(form.count || 0)} onChange={(e) => setForm({ ...form, count: Number(e.target.value) })} />
-                                        </div>
-                                        <div>
-                                            <label className="font-semibold">Paid?</label>
-                                            <select className="form-select" value={form.is_paid ? 'true' : 'false'} onChange={(e) => setForm({ ...form, is_paid: e.target.value === 'true' })}>
-                                                <option value="true">Yes</option>
-                                                <option value="false">No</option>
-                                            </select>
-                                        </div>
-                                        <div className="flex justify-end gap-3 pt-2">
-                                            <button type="button" className="btn btn-outline-danger" onClick={() => setModalOpen(false)}>
-                                                Cancel
-                                            </button>
-                                            <button type="button" className="btn btn-primary" onClick={save}>
-                                                Save
-                                            </button>
-                                        </div>
-                                    </div>
-                                </Dialog.Panel>
-                            </Transition.Child>
-                        </div>
-                    </div>
-                </Dialog>
-            </Transition>
+            <Modal open={modalOpen} onClose={() => setModalOpen(false)} title={form.id ? 'Edit Leave' : 'Add Leave'} size="lg">
+                <div className="space-y-4">
+                                                        <div>
+                                                            <label className="font-semibold">Leave Name</label>
+                                                            <input className="form-input" value={form.leave_name || ''} onChange={(e) => setForm({ ...form, leave_name: e.target.value })} />
+                                                        </div>
+                                                        <div>
+                                                            <label className="font-semibold">Count</label>
+                                                            <input className="form-input" type="number" min={0} value={Number(form.count || 0)} onChange={(e) => setForm({ ...form, count: Number(e.target.value) })} />
+                                                        </div>
+                                                        <div>
+                                                            <label className="font-semibold">Paid?</label>
+                                                            <select className="form-select" value={form.is_paid ? 'true' : 'false'} onChange={(e) => setForm({ ...form, is_paid: e.target.value === 'true' })}>
+                                                                <option value="true">Yes</option>
+                                                                <option value="false">No</option>
+                                                            </select>
+                                                        </div>
+                                                        <div className="flex justify-end gap-3 pt-2">
+                                                            <Button variant="outline-danger" type="button"  onClick={() => setModalOpen(false)}>
+                                                                Cancel
+                                                            </Button>
+                                                            <Button type="button"  onClick={save}>
+                                                                Save
+                                                            </Button>
+                                                        </div>
+
+                </div>
+            </Modal>
         </div>
     );
 };

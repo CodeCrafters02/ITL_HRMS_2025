@@ -1,15 +1,18 @@
 import { Fragment, useEffect, useMemo, useState } from 'react';
 import { useDispatch } from 'react-redux';
-import { Dialog, Transition } from '@headlessui/react';
 import Swal from 'sweetalert2';
 import { setPageTitle } from '../../../store/themeConfigSlice';
 import { authFetch } from '../../../utils/authFetch';
 import IconPlus from '../../../components/Icon/IconPlus';
-import IconSearch from '../../../components/Icon/IconSearch';
+import DataTable, { Column } from '../../../components/Common/DataTable';
 import IconTrashLines from '../../../components/Icon/IconTrashLines';
 import IconX from '../../../components/Icon/IconX';
+import IconOpenBook from '../../../components/Icon/IconOpenBook';
+import PageHeader from '../../../components/Common/PageHeader';
 import SearchableSelect from '../../Elements/SearchableSelect';
 
+import Modal from '../../../components/Common/Modal';
+import Button, { IconButton } from '../../../components/Common/Button';
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000';
 const CERTIFICATES_API = `${API_BASE_URL}/employee/certificates/`;
 const EMPLOYEES_API = `${API_BASE_URL}/employee/employee-options/`;
@@ -249,34 +252,82 @@ const Certifications = () => {
         }
     };
 
+    const columns: Column<CertificateType>[] = [
+        {
+            key: 'employee_name', title: 'Employee',
+            render: (_v, c) => (
+                <div>
+                    <div className="font-semibold text-gray-800 dark:text-gray-200">{c.employee_name}</div>
+                    <span className="text-xs text-gray-400 block truncate max-w-[150px]">{c.employee_email}</span>
+                </div>
+            ),
+        },
+        {
+            key: 'certificate_name', title: 'Certificate Name',
+            render: (_v, c) => (
+                <div>
+                    <div className="font-extrabold text-primary">{c.certificate_name}</div>
+                    {c.course_title && <span className="text-[10px] text-gray-400 block mt-0.5">Course: {c.course_title}</span>}
+                </div>
+            ),
+        },
+        { key: 'issuing_authority', title: 'Issuing Authority', hideBelow: 'lg', className: 'font-semibold text-xs' },
+        { key: 'certificate_number', title: 'Credential No.', hideBelow: 'lg', className: 'font-mono text-xs' },
+        {
+            key: 'issue_date', title: 'Issue / Expiry Date', hideBelow: 'md',
+            render: (_v, c) => (
+                <div className="text-xs font-semibold">
+                    {c.issue_date}
+                    {c.expiry_date ? <span className="text-danger block text-[10px]">Exp: {c.expiry_date}</span> : <span className="text-emerald-500 block text-[10px]">Lifetime Validity</span>}
+                </div>
+            ),
+        },
+        { key: 'source', title: 'Source', hideBelow: 'xl', render: (v) => <span className="capitalize text-xs font-semibold">{v}</span> },
+        { key: 'status', title: 'Status', render: (v) => <span className={`badge text-[10px] font-bold px-2 py-0.5 rounded-full ${v === 'valid' ? 'bg-success text-white' : 'bg-danger text-white'}`}>{v}</span> },
+        {
+            key: 'certificate_file_url', title: 'File Attachment', hideBelow: 'md',
+            render: (v) => (v ? <a href={v} target="_blank" rel="noreferrer" className="text-primary hover:underline font-bold text-xs">Download Certificate</a> : <span className="text-gray-400 text-xs italic">No document</span>),
+        },
+        {
+            key: 'actions', title: 'Action', align: 'center', width: '90px',
+            render: (_v, c) => (
+                <IconButton tone="danger" type="button"  title="Delete" onClick={() => handleDelete(c)}><IconTrashLines className="w-4 h-4" /></IconButton>
+            ),
+        },
+    ];
+
     return (
         <div>
             {/* Header Banner */}
-            <div className="bg-gradient-to-r from-[#0e1726] to-[#8b5cf6] p-6 rounded-xl shadow-lg mb-6 relative overflow-hidden">
-                <div className="relative z-10">
-                    <h1 className="text-3xl font-extrabold text-white tracking-tight">Employee Certifications</h1>
-                    <p className="text-white/80 mt-1 text-sm font-medium">
-                        Log and verify academic, compliance, and custom certifications achieved by team members.
-                    </p>
-                </div>
-                <div className="absolute top-0 right-0 -mt-10 -mr-10 w-48 h-48 bg-white opacity-5 rounded-full blur-2xl"></div>
-            </div>
+            <PageHeader
+                title="Employee Certifications"
+                subtitle="Log, authenticate, and audit accredited certifications, compliance licenses, and specialized skills achieved by staff."
+                icon={<IconOpenBook />}
+                badge="Credentials & Certifications"
+                variant="purple"
+            />
 
-            {/* Top Toolbar */}
-            <div className="flex flex-wrap items-center justify-between gap-4 mb-5">
-                <div className="flex flex-wrap items-center gap-3">
-                    <div className="relative">
-                        <input
-                            type="text"
-                            className="form-input pr-10 w-72"
-                            placeholder="Search employee, cert or ID..."
-                            value={search}
-                            onChange={(e) => { setSearch(e.target.value); setPage(1); }}
-                        />
-                        <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400">
-                            <IconSearch className="w-4 h-4" />
-                        </span>
-                    </div>
+            <DataTable
+                columns={columns}
+                data={certificates}
+                loading={loading}
+                page={page}
+                pageSize={limit}
+                pageSizeOptions={[5, 10, 20, 50]}
+                totalCount={totalCount}
+                onPageChange={setPage}
+                onPageSizeChange={(sz) => { setLimit(sz); setPage(1); }}
+                searchValue={search}
+                onSearchChange={(v) => { setSearch(v); setPage(1); }}
+                onRefresh={fetchCertificates}
+                searchPlaceholder="Search employee, cert or ID..."
+                emptyMessage="No certifications registered"
+                actionButton={
+                    <Button type="button"  onClick={openUploadModal}>
+                        <IconPlus className="w-4 h-4" /> Add Certificate
+                    </Button>
+                }
+                filters={
                     <SearchableSelect
                         className="w-44"
                         options={[
@@ -288,284 +339,98 @@ const Certifications = () => {
                         onChange={(val) => { setFilterSource(String(val)); setPage(1); }}
                         placeholder="Filter by Source"
                     />
-                </div>
-            </div>
-
-            {/* List Table */}
-            {loading ? (
-                <div className="panel text-center py-10">
-                    <span className="animate-pulse text-gray-400">Loading certifications...</span>
-                </div>
-            ) : certificates.length === 0 ? (
-                <div className="panel text-center py-10 text-gray-500 font-medium">No certifications registered.</div>
-            ) : (
-                <div className="space-y-6">
-                    <div className="panel p-0 border-0 overflow-hidden shadow-md">
-                        <div className="table-responsive">
-                            <table className="table-hover">
-                                <thead>
-                                    <tr>
-                                        <th>Employee</th>
-                                        <th>Certificate Name</th>
-                                        <th>Issuing Authority</th>
-                                        <th>Credential No.</th>
-                                        <th>Issue / Expiry Date</th>
-                                        <th>Source</th>
-                                        <th>Status</th>
-                                        <th>File Attachment</th>
-                                        <th className="text-center">Action</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {certificates.map((c) => (
-                                        <tr key={c.id}>
-                                            <td>
-                                                <div className="font-semibold text-gray-800 dark:text-gray-200">{c.employee_name}</div>
-                                                <span className="text-xs text-gray-450 block truncate max-w-[150px]">{c.employee_email}</span>
-                                            </td>
-                                            <td>
-                                                <div className="font-extrabold text-primary">{c.certificate_name}</div>
-                                                {c.course_title && (
-                                                    <span className="text-[10px] text-gray-400 block mt-0.5">Course: {c.course_title}</span>
-                                                )}
-                                            </td>
-                                            <td className="font-semibold text-xs text-gray-650">{c.issuing_authority}</td>
-                                            <td className="font-mono text-xs">{c.certificate_number}</td>
-                                            <td className="text-xs font-semibold">
-                                                {c.issue_date}
-                                                {c.expiry_date ? (
-                                                    <span className="text-danger block text-[10px]">Exp: {c.expiry_date}</span>
-                                                ) : (
-                                                    <span className="text-emerald-500 block text-[10px]">Lifetime Validity</span>
-                                                )}
-                                            </td>
-                                            <td className="capitalize text-xs font-semibold">{c.source}</td>
-                                            <td>
-                                                <span className={`badge text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                                                    c.status === 'valid' ? 'bg-success text-white' : 'bg-danger text-white'
-                                                }`}>
-                                                    {c.status}
-                                                </span>
-                                            </td>
-                                            <td>
-                                                {c.certificate_file_url ? (
-                                                    <a href={c.certificate_file_url} target="_blank" rel="noreferrer" className="text-primary hover:underline font-bold text-xs">
-                                                        Download Certificate
-                                                    </a>
-                                                ) : (
-                                                    <span className="text-gray-450 text-xs italic">No document</span>
-                                                )}
-                                            </td>
-                                            <td className="text-center">
-                                                <button type="button" className="text-danger hover:text-danger-dark p-2" onClick={() => handleDelete(c)}>
-                                                    <IconTrashLines className="w-4.5 h-4.5" />
-                                                </button>
-                                            </td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-
-                    {totalCount > 0 && (
-                        <div className="flex flex-col sm:flex-row justify-between items-center gap-4 p-4 panel border border-[#e0e6ed] dark:border-[#1b2e4b] rounded-xl mt-6">
-                            <div className="flex items-center gap-4">
-                                <div className="text-sm text-gray-500 font-semibold dark:text-gray-400">
-                                    Showing <span className="text-primary">{((page - 1) * limit) + 1}</span> to <span className="text-primary">{Math.min(page * limit, totalCount)}</span> of <span className="text-primary">{totalCount}</span> entries
-                                </div>
-                                <div className="flex items-center gap-2">
-                                    <span className="text-sm font-semibold">Per page:</span>
-                                    <select
-                                        className="form-select w-20 text-sm font-semibold py-1"
-                                        value={limit}
-                                        onChange={(e) => { setLimit(Number(e.target.value)); setPage(1); }}
-                                    >
-                                        <option value="5">5</option>
-                                        <option value="10">10</option>
-                                        <option value="20">20</option>
-                                        <option value="50">50</option>
-                                    </select>
-                                </div>
-                            </div>
-                            <ul className="inline-flex items-center space-x-1 font-semibold">
-                                <li>
-                                    <button
-                                        type="button"
-                                        className="flex justify-center font-semibold px-3 py-1.5 rounded-lg transition bg-white-light text-dark hover:text-white hover:bg-primary dark:text-white-light dark:bg-[#191e3a] dark:hover:bg-primary disabled:opacity-50 disabled:cursor-not-allowed text-xs"
-                                        onClick={() => setPage(page > 1 ? page - 1 : 1)}
-                                        disabled={page === 1}
-                                    >
-                                        Prev
-                                    </button>
-                                </li>
-                                {(() => {
-                                    const pages: (number | string)[] = [];
-                                    if (totalPages <= 3) {
-                                        for (let i = 1; i <= totalPages; i++) pages.push(i);
-                                    } else {
-                                        if (page <= 2) {
-                                            pages.push(1, 2, 3, 'right-ellipsis', totalPages);
-                                        } else if (page >= totalPages - 1) {
-                                            pages.push(1, 'left-ellipsis', totalPages - 2, totalPages - 1, totalPages);
-                                        } else {
-                                            pages.push(1, 'left-ellipsis', page, 'right-ellipsis', totalPages);
-                                        }
-                                    }
-                                    return pages.map((p, idx) => {
-                                        if (p === 'left-ellipsis' || p === 'right-ellipsis') {
-                                            const jumpPage = p === 'left-ellipsis' ? Math.max(1, page - 3) : Math.min(totalPages, page + 3);
-                                            return (
-                                                <li key={`${p}-${idx}`}>
-                                                    <button
-                                                        type="button"
-                                                        title={p === 'left-ellipsis' ? "Previous 3 pages" : "Next 3 pages"}
-                                                        className="flex justify-center font-semibold px-3 py-1.5 rounded-lg transition bg-white-light text-dark hover:text-white hover:bg-primary dark:text-white-light dark:bg-[#191e3a] dark:hover:bg-primary cursor-pointer text-xs"
-                                                        onClick={() => setPage(jumpPage)}
-                                                    >
-                                                        ...
-                                                    </button>
-                                                </li>
-                                            );
-                                        }
-                                        return (
-                                            <li key={p}>
-                                                <button
-                                                    type="button"
-                                                    className={`flex justify-center font-semibold px-3 py-1.5 rounded-lg transition text-xs ${page === p ? 'bg-primary text-white shadow-md' : 'bg-white-light text-dark hover:text-white hover:bg-primary dark:text-white-light dark:bg-[#191e3a] dark:hover:bg-primary'}`}
-                                                    onClick={() => setPage(p as number)}
-                                                >
-                                                    {p}
-                                                </button>
-                                            </li>
-                                        );
-                                    });
-                                })()}
-                                <li>
-                                    <button
-                                        type="button"
-                                        className="flex justify-center font-semibold px-3 py-1.5 rounded-lg transition bg-white-light text-dark hover:text-white hover:bg-primary dark:text-white-light dark:bg-[#191e3a] dark:hover:bg-primary disabled:opacity-50 disabled:cursor-not-allowed text-xs"
-                                        onClick={() => setPage(page < totalPages ? page + 1 : totalPages)}
-                                        disabled={page === totalPages || totalPages === 0}
-                                    >
-                                        Next
-                                    </button>
-                                </li>
-                            </ul>
-                        </div>
-                    )}
-                </div>
-            )}
+                }
+            />
 
             {/* Upload Certificate Modal */}
-            <Transition appear show={modalOpen} as={Fragment}>
-                <Dialog as="div" open={modalOpen} onClose={() => setModalOpen(false)} className="relative z-50">
-                    <Transition.Child as={Fragment} enter="ease-out duration-300" enterFrom="opacity-0" enterTo="opacity-100" leave="ease-in duration-200" leaveFrom="opacity-100" leaveTo="opacity-0">
-                        <div className="fixed inset-0 bg-[black]/65 backdrop-blur-sm" />
-                    </Transition.Child>
-                    <div className="fixed inset-0 overflow-y-auto">
-                        <div className="flex min-h-full items-center justify-center px-4 py-8">
-                            <Transition.Child as={Fragment} enter="ease-out duration-300" enterFrom="opacity-0 scale-95" enterTo="opacity-100 scale-100" leave="ease-in duration-200" leaveFrom="opacity-100 scale-100" leaveTo="opacity-0 scale-95">
-                                <Dialog.Panel className="panel border-0 p-0 rounded-xl overflow-hidden w-full max-w-2xl text-black dark:text-white-dark shadow-2xl relative">
-                                    <button type="button" onClick={() => setModalOpen(false)} className="absolute top-4 right-4 text-gray-400 hover:text-gray-800 dark:hover:text-gray-250 outline-none">
-                                        <IconX className="w-5 h-5" />
-                                    </button>
-                                    <div className="text-lg font-bold bg-[#fbfbfb] dark:bg-[#121c2c] py-4 px-6 border-b border-[#ebedf2] dark:border-[#1b2e4b]">
-                                        Upload External Certificate
-                                    </div>
-                                    <div className="p-6">
-                                        <form onSubmit={handleUploadCertificate} className="space-y-4">
-                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                                <div>
-                                                    <label className="font-semibold mb-1 block">Employee <span className="text-danger">*</span></label>
-                                                    <SearchableSelect
-                                                        options={employees.map(emp => ({
-                                                            value: String(emp.id),
-                                                            label: `${emp.full_name} (${emp.designation_name || 'No Dept'})`,
-                                                        }))}
-                                                        value={certForm.employee}
-                                                        onChange={(val) => setCertForm({ ...certForm, employee: String(val) })}
-                                                        placeholder="Search & select employee..."
-                                                        required
-                                                    />
-                                                </div>
-                                                <div>
-                                                    <label className="font-semibold mb-1 block">Related Course (Optional)</label>
-                                                    <SearchableSelect
-                                                        options={[
-                                                            { value: '', label: '-- No Course --' },
-                                                            ...courses.map(course => ({
-                                                                value: String(course.id),
-                                                                label: course.title,
-                                                            }))
-                                                        ]}
-                                                        value={certForm.course}
-                                                        onChange={(val) => setCertForm({ ...certForm, course: String(val) })}
-                                                        placeholder="Search & select course..."
-                                                    />
-                                                </div>
-                                            </div>
-
-                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                                <div>
-                                                    <label className="font-semibold mb-1 block">Certificate Name <span className="text-danger">*</span></label>
-                                                    <input className="form-input rounded-lg" required placeholder="e.g. AWS Solutions Architect" value={certForm.certificate_name} onChange={(e) => setCertForm({ ...certForm, certificate_name: e.target.value })} />
-                                                </div>
-                                                <div>
-                                                    <label className="font-semibold mb-1 block">Issuing Authority <span className="text-danger">*</span></label>
-                                                    <input className="form-input rounded-lg" required value={certForm.issuing_authority} onChange={(e) => setCertForm({ ...certForm, issuing_authority: e.target.value })} />
-                                                </div>
-                                            </div>
-
-                                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                                <div>
-                                                    <label className="font-semibold mb-1 block">Credential Number <span className="text-danger">*</span></label>
-                                                    <input className="form-input rounded-lg" required value={certForm.certificate_number} onChange={(e) => setCertForm({ ...certForm, certificate_number: e.target.value })} />
-                                                </div>
-                                                <div>
-                                                    <label className="font-semibold mb-1 block">Issue Date <span className="text-danger">*</span></label>
-                                                    <input type="date" className="form-input rounded-lg" required value={certForm.issue_date} onChange={(e) => setCertForm({ ...certForm, issue_date: e.target.value })} />
-                                                </div>
-                                                <div>
-                                                    <label className="font-semibold mb-1 block">Expiry Date</label>
-                                                    <input type="date" className="form-input rounded-lg" value={certForm.expiry_date} onChange={(e) => setCertForm({ ...certForm, expiry_date: e.target.value })} />
-                                                </div>
-                                            </div>
-
-                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                                <div>
-                                                    <label className="font-semibold mb-1 block">Status</label>
-                                                    <SearchableSelect
-                                                        options={[
-                                                            { value: 'valid', label: 'Valid' },
-                                                            { value: 'expired', label: 'Expired' },
-                                                            { value: 'revoked', label: 'Revoked' },
-                                                        ]}
-                                                        value={certForm.status}
-                                                        onChange={(val) => setCertForm({ ...certForm, status: val as any })}
-                                                        placeholder="Select status"
-                                                    />
-                                                </div>
-                                                <div>
-                                                    <label className="font-semibold mb-1 block">Certificate File Document <span className="text-danger">*</span></label>
-                                                    <input type="file" className="form-input text-xs rounded-lg" required onChange={(e) => setCertFile(e.target.files ? e.target.files[0] : null)} />
-                                                </div>
-                                            </div>
-
-                                            <div className="flex justify-end gap-3 pt-4 border-t border-[#ebedf2] dark:border-[#1b2e4b] mt-6">
-                                                <button type="button" className="btn btn-outline-danger rounded-lg" onClick={() => setModalOpen(false)}>Cancel</button>
-                                                <button type="submit" className="btn btn-primary rounded-lg px-5 shadow-md" disabled={saving}>
-                                                    {saving ? 'Uploading...' : 'Upload Credentials'}
-                                                </button>
-                                            </div>
-                                        </form>
-                                    </div>
-                                </Dialog.Panel>
-                            </Transition.Child>
+            <Modal open={modalOpen} onClose={() => setModalOpen(false)} title="Upload External Certificate" size="2xl">
+                <form onSubmit={handleUploadCertificate} className="space-y-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label className="font-semibold mb-1 block">Employee <span className="text-danger">*</span></label>
+                            <SearchableSelect
+                                options={employees.map(emp => ({
+                                    value: String(emp.id),
+                                    label: `${emp.full_name} (${emp.designation_name || 'No Dept'})`,
+                                }))}
+                                value={certForm.employee}
+                                onChange={(val) => setCertForm({ ...certForm, employee: String(val) })}
+                                placeholder="Search & select employee..."
+                                required
+                            />
+                        </div>
+                        <div>
+                            <label className="font-semibold mb-1 block">Related Course (Optional)</label>
+                            <SearchableSelect
+                                options={[
+                                    { value: '', label: '-- No Course --' },
+                                    ...courses.map(course => ({
+                                        value: String(course.id),
+                                        label: course.title,
+                                    }))
+                                ]}
+                                value={certForm.course}
+                                onChange={(val) => setCertForm({ ...certForm, course: String(val) })}
+                                placeholder="Search & select course..."
+                            />
                         </div>
                     </div>
-                </Dialog>
-            </Transition>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label className="font-semibold mb-1 block">Certificate Name <span className="text-danger">*</span></label>
+                            <input className="form-input rounded-lg" required placeholder="e.g. AWS Solutions Architect" value={certForm.certificate_name} onChange={(e) => setCertForm({ ...certForm, certificate_name: e.target.value })} />
+                        </div>
+                        <div>
+                            <label className="font-semibold mb-1 block">Issuing Authority <span className="text-danger">*</span></label>
+                            <input className="form-input rounded-lg" required value={certForm.issuing_authority} onChange={(e) => setCertForm({ ...certForm, issuing_authority: e.target.value })} />
+                        </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div>
+                            <label className="font-semibold mb-1 block">Credential Number <span className="text-danger">*</span></label>
+                            <input className="form-input rounded-lg" required value={certForm.certificate_number} onChange={(e) => setCertForm({ ...certForm, certificate_number: e.target.value })} />
+                        </div>
+                        <div>
+                            <label className="font-semibold mb-1 block">Issue Date <span className="text-danger">*</span></label>
+                            <input type="date" className="form-input rounded-lg" required value={certForm.issue_date} onChange={(e) => setCertForm({ ...certForm, issue_date: e.target.value })} />
+                        </div>
+                        <div>
+                            <label className="font-semibold mb-1 block">Expiry Date</label>
+                            <input type="date" className="form-input rounded-lg" value={certForm.expiry_date} onChange={(e) => setCertForm({ ...certForm, expiry_date: e.target.value })} />
+                        </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label className="font-semibold mb-1 block">Status</label>
+                            <SearchableSelect
+                                options={[
+                                    { value: 'valid', label: 'Valid' },
+                                    { value: 'expired', label: 'Expired' },
+                                    { value: 'revoked', label: 'Revoked' },
+                                ]}
+                                value={certForm.status}
+                                onChange={(val) => setCertForm({ ...certForm, status: val as any })}
+                                placeholder="Select status"
+                            />
+                        </div>
+                        <div>
+                            <label className="font-semibold mb-1 block">Certificate File Document <span className="text-danger">*</span></label>
+                            <input type="file" className="form-input text-xs rounded-lg" required onChange={(e) => setCertFile(e.target.files ? e.target.files[0] : null)} />
+                        </div>
+                    </div>
+
+                    <div className="flex justify-end gap-3 pt-4 border-t border-[#ebedf2] dark:border-[#1b2e4b] mt-6">
+                        <Button variant="outline-danger" type="button"  onClick={() => setModalOpen(false)}>Cancel</Button>
+                        <Button className="!px-5" type="submit"  disabled={saving}>
+                            {saving ? 'Uploading...' : 'Upload Credentials'}
+                        </Button>
+                    </div>
+                </form>
+
+            </Modal>
         </div>
     );
 };

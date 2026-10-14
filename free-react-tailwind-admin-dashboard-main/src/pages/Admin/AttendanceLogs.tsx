@@ -2,11 +2,14 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useDispatch } from 'react-redux';
 import Swal from 'sweetalert2';
 import { setPageTitle } from '../../store/themeConfigSlice';
-import IconSearch from '../../components/Icon/IconSearch';
+import DataTable, { Column } from '../../components/Common/DataTable';
 import { Fragment } from 'react';
-import { Dialog, Transition } from '@headlessui/react';
 import IconX from '../../components/Icon/IconX';
+import IconCalendar from '../../components/Icon/IconCalendar';
+import PageHeader from '../../components/Common/PageHeader';
 
+import Modal from '../../components/Common/Modal';
+import Button from '../../components/Common/Button';
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000';
 
 type DeptWorkingDayConfig = {
@@ -319,7 +322,7 @@ const AdminAttendanceLogs = () => {
         }
 
         return (
-            <td key={day.iso} className={`px-0.5 py-1.5 text-center ${isFuture && !isHolidayCell ? 'opacity-35' : ''}`}>
+            <div className={isFuture && !isHolidayCell ? 'opacity-35' : ''}>
                 <div
                     className={`${chip.cls} mx-auto hover:scale-110 hover:shadow-sm cursor-pointer`}
                     onMouseEnter={(ev) => showTip(ev, tipParts.join('\n'))}
@@ -346,7 +349,7 @@ const AdminAttendanceLogs = () => {
                 >
                     {chip.label}
                 </div>
-            </td>
+            </div>
         );
     };
 
@@ -364,427 +367,212 @@ const AdminAttendanceLogs = () => {
 
     const isCurrentOrFutureMonth = year > now.getFullYear() || (year === now.getFullYear() && month0 >= now.getMonth());
 
-    // Generate smart page numbers
-    const getPageNumbers = () => {
-        const pages: (number | '...')[] = [];
-        if (totalPages <= 7) {
-            for (let i = 1; i <= totalPages; i++) pages.push(i);
-        } else {
-            pages.push(1);
-            if (page > 3) pages.push('...');
-            for (let i = Math.max(2, page - 1); i <= Math.min(totalPages - 1, page + 1); i++) pages.push(i);
-            if (page < totalPages - 2) pages.push('...');
-            pages.push(totalPages);
-        }
-        return pages;
-    };
+    const columns: Column<AttendanceRecord>[] = [
+        {
+            key: 'employee_name', title: 'Employee', sticky: true, width: '200px',
+            render: (_v, r) => (
+                <div className="flex items-center gap-2.5">
+                    <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center text-white text-xs font-bold shrink-0">
+                        {(r.employee_name || '?').charAt(0).toUpperCase()}
+                    </div>
+                    <span className="font-semibold text-sm truncate max-w-[140px]" title={r.employee_name}>{r.employee_name || '-'}</span>
+                </div>
+            ),
+        },
+        { key: 'employee_id', title: 'ID', render: (v) => <span className="text-xs font-mono text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-800 px-2 py-0.5 rounded">{v || '-'}</span> },
+        { key: 'department', title: 'Department', render: (v) => <span className="text-xs text-gray-500 dark:text-gray-400">{v || '-'}</span> },
+        {
+            key: 'percentage_present', title: 'Attendance', align: 'center',
+            render: (_v, r) => {
+                const pct = typeof r.percentage_present === 'number' ? r.percentage_present : 0;
+                return (
+                    <div className="flex flex-col items-center gap-1">
+                        <span className={`text-sm font-bold ${pctColor(pct)}`}>{pct}%</span>
+                        <div className="w-16 h-1.5 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+                            <div className={`h-full rounded-full transition-all duration-700 ${pctBg(pct)}`} style={{ width: `${Math.min(pct, 100)}%` }}></div>
+                        </div>
+                    </div>
+                );
+            },
+        },
+        ...monthDates.map((d): Column<AttendanceRecord> => ({
+            key: `day-${d.iso}`,
+            align: 'center',
+            headerClassName: `!px-1 !py-2 min-w-[36px] ${d.iso > todayISO ? 'opacity-40' : ''}`,
+            className: '!px-0.5 !py-1.5',
+            header: (
+                <div className="flex flex-col items-center leading-none gap-0.5">
+                    <span className={`text-[9px] font-semibold uppercase tracking-wider ${d.iso === todayISO ? 'text-blue-500' : 'text-gray-400'}`}>{d.dayName}</span>
+                    <span className={`text-xs font-bold ${d.iso === todayISO ? 'text-blue-600 dark:text-blue-400' : ''}`}>{pad2(d.dayNum)}</span>
+                    {d.iso === todayISO && <span className="w-1 h-1 rounded-full bg-blue-500 mt-0.5"></span>}
+                </div>
+            ),
+            render: (_v, r) => renderDayCell(r, d),
+        })),
+    ];
 
     return (
         <div className="space-y-6">
-            {/* ─── Gradient Banner ─── */}
-            <div className="bg-gradient-to-r from-[#0e1726] to-[#3b82f6] p-6 rounded-xl shadow-lg relative overflow-hidden">
-                <div className="relative z-10">
-                    <h1 className="text-3xl font-extrabold text-white tracking-tight">Attendance Logs</h1>
-                    <p className="text-white/80 mt-1 text-sm font-medium">
-                        {MONTH_NAMES[month0]} {year} — Monthly attendance overview for all employees.
-                    </p>
-                </div>
-                <div className="absolute top-0 right-0 -mt-10 -mr-10 w-48 h-48 bg-white opacity-5 rounded-full blur-2xl"></div>
-                <div className="absolute bottom-0 right-32 -mb-8 w-32 h-32 bg-cyan-400 opacity-10 rounded-full blur-2xl"></div>
-            </div>
+            {/* ─── Executive Page Header ─── */}
+            <PageHeader
+                title="Attendance Logs"
+                subtitle={`${MONTH_NAMES[month0]} ${year} — Monthly attendance overview, check-in logs, and workforce punctuality records.`}
+                icon={<IconCalendar />}
+                badge="Time & Attendance"
+                variant="indigo"
+            />
 
-            {/* ─── Filters Bar ─── */}
-            <div className="panel p-4">
-                <div className="flex flex-wrap items-center gap-3">
-                    {/* Month */}
-                    <div className="flex items-center gap-1.5">
-                        <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Month</label>
-                        <select className="form-select w-28 text-sm py-1.5" value={month0} onChange={(e) => { setMonth0(Number(e.target.value)); resetPage(); }}>
+            {tooltip && (
+                <div
+                    ref={tooltipRef}
+                    className="fixed z-50 whitespace-pre-line rounded-lg bg-[#0e1726] text-white text-xs px-4 py-2.5 shadow-xl border border-white/10 max-w-xs"
+                    style={{ left: tooltip.x, top: tooltip.y, transform: 'translate(-50%, -100%)' }}
+                >
+                    {tooltip.text}
+                    <div className="absolute left-1/2 -translate-x-1/2 top-full w-0 h-0 border-x-4 border-x-transparent border-t-4 border-t-[#0e1726]"></div>
+                </div>
+            )}
+
+            <DataTable
+                columns={columns}
+                data={records}
+                loading={loading}
+                rowKey={(r) => `${r.employee_id}-${r.month}`}
+                compact
+                entityLabel="employees"
+                page={page}
+                pageSize={pageSize}
+                totalCount={totalCount}
+                onPageChange={setPage}
+                onPageSizeChange={(sz) => { setPageSize(sz); setPage(1); }}
+                searchValue={search}
+                onSearchChange={(v) => { setSearch(v); resetPage(); }}
+                onRefresh={fetchMonth}
+                searchPlaceholder="Search by name or ID..."
+                emptyMessage="No attendance records found"
+                filters={
+                    <>
+                        <select className="form-select w-24 h-10 text-sm rounded-xl" value={month0} onChange={(e) => { setMonth0(Number(e.target.value)); resetPage(); }} title="Month">
                             {Array.from({ length: 12 }).map((_, i) => (
                                 <option key={i} value={i}>{new Date(2000, i, 1).toLocaleString(undefined, { month: 'short' })}</option>
                             ))}
                         </select>
+                        <input className="form-input w-24 h-10 text-sm rounded-xl" type="number" title="Year" value={year} min={2000} max={2100} onChange={(e) => { setYear(Number(e.target.value || now.getFullYear())); resetPage(); }} />
+                        <select className="form-select w-44 h-10 text-sm rounded-xl" value={selectedDept} onChange={(e) => { setSelectedDept(e.target.value); resetPage(); }}>
+                            <option value="all">All Departments</option>
+                            {departments.map((d) => <option key={d} value={d}>{d}</option>)}
+                        </select>
+                        <select className="form-select w-36 h-10 text-sm rounded-xl" value={selectedStatus} onChange={(e) => { setSelectedStatus(e.target.value); resetPage(); }}>
+                            <option value="all">All Status</option>
+                            <option value="Present">Present</option>
+                            <option value="Absent">Absent</option>
+                            <option value="Leave">Leave</option>
+                            <option value="Half Day">Half Day</option>
+                        </select>
+                    </>
+                }
+            />
+
+            <div className="flex flex-wrap items-center gap-5 px-1">
+                {[
+                    { label: 'Present', cls: 'bg-emerald-500/15 text-emerald-600 ring-1 ring-emerald-500/30', char: 'P' },
+                    { label: 'Absent', cls: 'bg-red-500/15 text-red-600 ring-1 ring-red-500/30', char: 'A' },
+                    { label: 'Leave', cls: 'bg-blue-500/15 text-blue-600 ring-1 ring-blue-500/30', char: 'L' },
+                    { label: 'Half Day', cls: 'bg-amber-500/15 text-amber-600 ring-1 ring-amber-500/30', char: 'H' },
+                    { label: 'Holiday / off day', cls: 'bg-purple-500/15 text-purple-600 ring-1 ring-purple-500/30', char: '★' },
+                    ...(isCurrentOrFutureMonth ? [{ label: 'Upcoming', cls: 'bg-gray-100 text-gray-300 border border-dashed border-gray-200', char: '—' }] : []),
+                ].map((item) => (
+                    <div key={item.label} className="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400">
+                        <span className={`w-5 h-5 rounded-md text-[9px] font-bold flex items-center justify-center ${item.cls}`}>{item.char}</span>
+                        {item.label}
                     </div>
-
-                    {/* Year */}
-                    <div className="flex items-center gap-1.5">
-                        <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Year</label>
-                        <input
-                            className="form-input w-24 text-sm py-1.5"
-                            type="number"
-                            value={year}
-                            onChange={(e) => { setYear(Number(e.target.value || now.getFullYear())); resetPage(); }}
-                            min={2000}
-                            max={2100}
-                        />
-                    </div>
-
-                    <div className="w-px h-8 bg-gray-200 dark:bg-gray-700 mx-1"></div>
-
-                    {/* Department */}
-                    <select
-                        className="form-select w-44 text-sm py-1.5"
-                        value={selectedDept}
-                        onChange={(e) => { setSelectedDept(e.target.value); resetPage(); }}
-                    >
-                        <option value="all">All Departments</option>
-                        {departments.map((d) => (
-                            <option key={d} value={d}>{d}</option>
-                        ))}
-                    </select>
-
-                    {/* Status */}
-                    <select
-                        className="form-select w-36 text-sm py-1.5"
-                        value={selectedStatus}
-                        onChange={(e) => { setSelectedStatus(e.target.value); resetPage(); }}
-                    >
-                        <option value="all">All Status</option>
-                        <option value="Present">Present</option>
-                        <option value="Absent">Absent</option>
-                        <option value="Leave">Leave</option>
-                        <option value="Half Day">Half Day</option>
-                    </select>
-
-                    {/* Search */}
-                    <div className="relative ml-auto">
-                        <input
-                            className="form-input w-64 pr-10 text-sm py-1.5"
-                            placeholder="Search by name or ID..."
-                            value={search}
-                            onChange={(e) => { setSearch(e.target.value); resetPage(); }}
-                        />
-                        <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400">
-                            <IconSearch className="w-4 h-4" />
-                        </span>
-                    </div>
-                </div>
-
-                {/* Legend */}
-                <div className="flex flex-wrap items-center gap-5 mt-3 pt-3 border-t border-gray-100 dark:border-gray-800">
-                    {[
-                        { label: 'Present', cls: 'bg-emerald-500/15 text-emerald-600 ring-1 ring-emerald-500/30', char: 'P' },
-                        { label: 'Absent', cls: 'bg-red-500/15 text-red-600 ring-1 ring-red-500/30', char: 'A' },
-                        { label: 'Leave', cls: 'bg-blue-500/15 text-blue-600 ring-1 ring-blue-500/30', char: 'L' },
-                        { label: 'Half Day', cls: 'bg-amber-500/15 text-amber-600 ring-1 ring-amber-500/30', char: 'H' },
-                        { label: 'Holiday / off day', cls: 'bg-purple-500/15 text-purple-600 ring-1 ring-purple-500/30', char: '★' },
-                        ...(isCurrentOrFutureMonth ? [{ label: 'Upcoming', cls: 'bg-gray-100 text-gray-300 border border-dashed border-gray-200', char: '—' }] : []),
-                    ].map((item) => (
-                        <div key={item.label} className="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400">
-                            <span className={`w-5 h-5 rounded-md text-[9px] font-bold flex items-center justify-center ${item.cls}`}>{item.char}</span>
-                            {item.label}
-                        </div>
-                    ))}
-                </div>
-            </div>
-
-            {/* ─── Attendance Grid ─── */}
-            <div className="panel p-0 border-0 overflow-hidden">
-                <div className="relative">
-                    {tooltip && (
-                        <div
-                            ref={tooltipRef}
-                            className="fixed z-50 whitespace-pre-line rounded-lg bg-[#0e1726] text-white text-xs px-4 py-2.5 shadow-xl border border-white/10 max-w-xs"
-                            style={{ left: tooltip.x, top: tooltip.y, transform: 'translate(-50%, -100%)' }}
-                        >
-                            {tooltip.text}
-                            <div className="absolute left-1/2 -translate-x-1/2 top-full w-0 h-0 border-x-4 border-x-transparent border-t-4 border-t-[#0e1726]"></div>
-                        </div>
-                    )}
-
-                    <div className="table-responsive">
-                        <table className="table-hover text-sm">
-                            <thead>
-                                <tr className="bg-gray-50 dark:bg-[#1a2941]">
-                                    <th className="!py-3 w-[200px] sticky left-0 bg-gray-50 dark:bg-[#1a2941] z-10">
-                                        <span className="text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">Employee</span>
-                                    </th>
-                                    <th className="!py-3 w-[100px]">
-                                        <span className="text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">ID</span>
-                                    </th>
-                                    <th className="!py-3 w-[140px]">
-                                        <span className="text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">Department</span>
-                                    </th>
-                                    <th className="!py-3 w-[100px] text-center">
-                                        <span className="text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">Attendance</span>
-                                    </th>
-                                    {monthDates.map((d) => (
-                                        <th
-                                            key={d.iso}
-                                            className={`!py-2 text-center min-w-[36px] ${d.iso > todayISO ? 'opacity-35' : ''} ${d.iso === todayISO ? 'bg-blue-50 dark:bg-blue-900/20' : ''
-                                                }`}
-                                        >
-                                            <div className="flex flex-col items-center leading-none gap-0.5">
-                                                <span className={`text-[9px] font-semibold uppercase tracking-wider ${d.iso === todayISO ? 'text-blue-500' : 'text-gray-400 dark:text-gray-500'
-                                                    }`}>
-                                                    {d.dayName}
-                                                </span>
-                                                <span className={`text-xs font-bold ${d.iso === todayISO ? 'text-blue-600 dark:text-blue-400' : ''
-                                                    }`}>
-                                                    {pad2(d.dayNum)}
-                                                </span>
-                                                {d.iso === todayISO && (
-                                                    <span className="w-1 h-1 rounded-full bg-blue-500 mt-0.5"></span>
-                                                )}
-                                            </div>
-                                        </th>
-                                    ))}
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {loading ? (
-                                    <tr>
-                                        <td colSpan={4 + monthDates.length} className="text-center py-16">
-                                            <div className="flex flex-col items-center gap-3">
-                                                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-                                                <span className="text-sm text-gray-400">Loading attendance data...</span>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                ) : records.length === 0 ? (
-                                    <tr>
-                                        <td colSpan={4 + monthDates.length} className="text-center py-16">
-                                            <div className="flex flex-col items-center gap-2">
-                                                <svg className="w-12 h-12 text-gray-300 dark:text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-                                                </svg>
-                                                <span className="text-sm font-medium text-gray-400">No attendance records found</span>
-                                                <span className="text-xs text-gray-300 dark:text-gray-600">Try adjusting your filters or search criteria.</span>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                ) : (
-                                    records.map((r) => {
-                                        const pct = typeof r.percentage_present === 'number' ? r.percentage_present : 0;
-                                        return (
-                                            <tr key={`${r.employee_id}-${r.month}`} className="hover:bg-gray-50/50 dark:hover:bg-[#1b2e4b]/50 transition-colors">
-                                                <td className="!py-3 sticky left-0 bg-white dark:bg-[#0e1726] z-10">
-                                                    <div className="flex items-center gap-2.5">
-                                                        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center text-white text-xs font-bold shrink-0">
-                                                            {(r.employee_name || '?').charAt(0).toUpperCase()}
-                                                        </div>
-                                                        <span className="font-semibold text-sm truncate max-w-[140px]" title={r.employee_name}>
-                                                            {r.employee_name || '-'}
-                                                        </span>
-                                                    </div>
-                                                </td>
-                                                <td className="!py-3">
-                                                    <span className="text-xs font-mono text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-800 px-2 py-0.5 rounded">
-                                                        {r.employee_id || '-'}
-                                                    </span>
-                                                </td>
-                                                <td className="!py-3">
-                                                    <span className="text-xs text-gray-500 dark:text-gray-400">{r.department || '-'}</span>
-                                                </td>
-                                                <td className="!py-3 text-center">
-                                                    <div className="flex flex-col items-center gap-1">
-                                                        <span className={`text-sm font-bold ${pctColor(pct)}`}>{pct}%</span>
-                                                        <div className="w-16 h-1.5 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
-                                                            <div
-                                                                className={`h-full rounded-full transition-all duration-700 ${pctBg(pct)}`}
-                                                                style={{ width: `${Math.min(pct, 100)}%` }}
-                                                            ></div>
-                                                        </div>
-                                                    </div>
-                                                </td>
-                                                {monthDates.map((d) => renderDayCell(r, d))}
-                                            </tr>
-                                        );
-                                    })
-                                )}
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-
-                {/* ─── Pagination ─── */}
-                {totalCount > 0 && (
-                    <div className="flex justify-between items-center p-4 border-t border-[#e0e6ed] dark:border-[#1b2e4b]">
-                        <div className="flex items-center gap-4">
-                            <div className="text-sm text-gray-500 font-semibold dark:text-gray-400">
-                                Showing <span className="text-primary">{(page - 1) * pageSize + 1}</span> to{' '}
-                                <span className="text-primary">{Math.min(page * pageSize, totalCount)}</span> of{' '}
-                                <span className="text-primary">{totalCount}</span> employees
-                            </div>
-                            <div className="flex items-center gap-2">
-                                <span className="text-sm font-semibold">Per page:</span>
-                                <select
-                                    className="form-select w-20 text-sm font-semibold py-1"
-                                    value={pageSize}
-                                    onChange={(e) => { setPageSize(Number(e.target.value)); setPage(1); }}
-                                >
-                                    <option value="10">10</option>
-                                    <option value="20">20</option>
-                                    <option value="50">50</option>
-                                </select>
-                            </div>
-                        </div>
-                        <ul className="inline-flex items-center space-x-1 font-semibold">
-                            <li>
-                                <button
-                                    type="button"
-                                    className="flex justify-center font-semibold p-2 rounded-full transition bg-white-light text-dark hover:text-white hover:bg-primary dark:text-white-light dark:bg-[#191e3a] dark:hover:bg-primary disabled:opacity-50 disabled:cursor-not-allowed"
-                                    onClick={() => setPage(page > 1 ? page - 1 : 1)}
-                                    disabled={page === 1}
-                                >
-                                    Prev
-                                </button>
-                            </li>
-                            {getPageNumbers().map((p, idx) =>
-                                p === '...' ? (
-                                    <li key={`dots-${idx}`}>
-                                        <span className="px-2 text-gray-400">…</span>
-                                    </li>
-                                ) : (
-                                    <li key={p}>
-                                        <button
-                                            type="button"
-                                            className={`flex justify-center font-semibold px-3.5 py-2 rounded-full transition ${page === p
-                                                ? 'bg-primary text-white shadow-[0_10px_20px_-10px_rgba(67,97,238,0.44)]'
-                                                : 'bg-white-light text-dark hover:text-white hover:bg-primary dark:text-white-light dark:bg-[#191e3a] dark:hover:bg-primary'
-                                                }`}
-                                            onClick={() => setPage(p as number)}
-                                        >
-                                            {p}
-                                        </button>
-                                    </li>
-                                )
-                            )}
-                            <li>
-                                <button
-                                    type="button"
-                                    className="flex justify-center font-semibold p-2 rounded-full transition bg-white-light text-dark hover:text-white hover:bg-primary dark:text-white-light dark:bg-[#191e3a] dark:hover:bg-primary disabled:opacity-50 disabled:cursor-not-allowed"
-                                    onClick={() => setPage(page < totalPages ? page + 1 : totalPages)}
-                                    disabled={page === totalPages || totalPages === 0}
-                                >
-                                    Next
-                                </button>
-                            </li>
-                        </ul>
-                    </div>
-                )}
+                ))}
             </div>
 
             {/* ─── Edit Attendance Modal ─── */}
-            <Transition appear show={editModalOpen} as={Fragment}>
-                <Dialog as="div" open={editModalOpen} onClose={() => setEditModalOpen(false)} className="relative z-[51]">
-                    <Transition.Child
-                        as={Fragment}
-                        enter="ease-out duration-300"
-                        enterFrom="opacity-0"
-                        enterTo="opacity-100"
-                        leave="ease-in duration-200"
-                        leaveFrom="opacity-100"
-                        leaveTo="opacity-0"
-                    >
-                        <div className="fixed inset-0 bg-[black]/60" />
-                    </Transition.Child>
-
-                    <div className="fixed inset-0 overflow-y-auto">
-                        <div className="flex min-h-full items-center justify-center px-4 py-8">
-                            <Transition.Child
-                                as={Fragment}
-                                enter="ease-out duration-300"
-                                enterFrom="opacity-0 scale-95"
-                                enterTo="opacity-100 scale-100"
-                                leave="ease-in duration-200"
-                                leaveFrom="opacity-100 scale-100"
-                                leaveTo="opacity-0 scale-95"
-                            >
-                                <Dialog.Panel className="panel border-0 p-0 rounded-2xl overflow-hidden w-full max-w-lg text-black dark:text-white-dark shadow-2xl">
-                                    <div className="flex items-center justify-between p-5 border-b border-[#ebedf2] dark:border-[#1b2e4b]">
-                                        <h5 className="text-lg font-bold">Manual Attendance Adjustment</h5>
-                                        <button type="button" onClick={() => setEditModalOpen(false)} className="text-white-dark hover:text-dark">
-                                            <IconX />
-                                        </button>
-                                    </div>
-                                    <div className="p-6 space-y-5">
-                                        <div className="flex items-center gap-4 p-3 bg-gray-50 dark:bg-gray-800/50 rounded-xl">
-                                            <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-xl">
-                                                {editingData?.employee.employee_name.charAt(0).toUpperCase()}
-                                            </div>
-                                            <div>
-                                                <p className="font-bold text-gray-900 dark:text-white-light">{editingData?.employee.employee_name}</p>
-                                                <p className="text-xs text-white-dark">
-                                                    ID: {editingData?.employee.employee_id} • Date: {editingData?.date}
-                                                </p>
-                                            </div>
-                                        </div>
-
-                                        <div className="space-y-4">
-                                            <div>
-                                                <label className="text-sm font-bold mb-2 block text-gray-700 dark:text-gray-300 uppercase tracking-wider">Attendance Status</label>
-                                                <div className="grid grid-cols-2 gap-3">
-                                                    {['Present', 'Absent'].map((s) => (
-                                                        <button
-                                                            key={s}
-                                                            type="button"
-                                                            className={`py-2.5 rounded-xl border-2 font-bold transition-all duration-200 ${
-                                                                editForm.status === s
-                                                                    ? 'border-primary bg-primary text-white shadow-lg'
-                                                                    : 'border-gray-200 dark:border-gray-700 hover:border-primary/50 text-gray-500'
-                                                            }`}
-                                                            onClick={() => setEditForm({ ...editForm, status: s })}
-                                                        >
-                                                            {s}
-                                                        </button>
-                                                    ))}
-                                                </div>
-                                            </div>
-
-                                            {editForm.status === 'Present' && (
-                                                <div className="space-y-4">
-                                                    <div className="grid grid-cols-2 gap-4">
-                                                        <div>
-                                                            <label className="text-sm font-bold mb-2 block text-gray-700 dark:text-gray-300">Login Time</label>
-                                                            <input
-                                                                type="time"
-                                                                className="form-input"
-                                                                value={editForm.check_in}
-                                                                onChange={(e) => setEditForm({ ...editForm, check_in: e.target.value })}
-                                                            />
+            <Modal open={editModalOpen} onClose={() => setEditModalOpen(false)} title="Manual Attendance Adjustment" size="lg">
+                <div className="space-y-5">
+                                                        <div className="flex items-center gap-4 p-3 bg-gray-50 dark:bg-gray-800/50 rounded-xl">
+                                                            <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-xl">
+                                                                {editingData?.employee.employee_name.charAt(0).toUpperCase()}
+                                                            </div>
+                                                            <div>
+                                                                <p className="font-bold text-gray-900 dark:text-white-light">{editingData?.employee.employee_name}</p>
+                                                                <p className="text-xs text-white-dark">
+                                                                    ID: {editingData?.employee.employee_id} • Date: {editingData?.date}
+                                                                </p>
+                                                            </div>
                                                         </div>
-                                                        <div>
-                                                            <label className="text-sm font-bold mb-2 block text-gray-700 dark:text-gray-300">Logout Time</label>
-                                                            <input
-                                                                type="time"
-                                                                className="form-input"
-                                                                value={editForm.check_out}
-                                                                onChange={(e) => setEditForm({ ...editForm, check_out: e.target.value })}
-                                                            />
-                                                        </div>
-                                                    </div>
-                                                    <div className="text-[11px] text-white-dark bg-gray-50 dark:bg-gray-800/50 p-2 rounded-lg border border-dashed border-gray-200 dark:border-gray-700">
-                                                        Standard Shift: <span className="font-bold">{editingData?.employee?.shift_info?.checkin} - {editingData?.employee?.shift_info?.checkout}</span>
-                                                    </div>
-                                                </div>
-                                            )}
-                                        </div>
 
-                                            <div>
-                                                <label className="text-sm font-bold mb-2 block text-gray-700 dark:text-gray-300">Administrative Remarks</label>
-                                                <textarea
-                                                    className="form-textarea min-h-[100px]"
-                                                    placeholder="Reason for manual adjustment..."
-                                                    value={editForm.remarks}
-                                                    onChange={(e) => setEditForm({ ...editForm, remarks: e.target.value })}
-                                                ></textarea>
-                                            </div>
-                                        </div>
-                                    <div className="flex items-center justify-end p-5 border-t border-[#ebedf2] dark:border-[#1b2e4b] gap-3">
-                                        <button type="button" className="btn btn-outline-danger" onClick={() => setEditModalOpen(false)}>
-                                            Cancel
-                                        </button>
-                                        <button type="button" className="btn btn-primary" onClick={handleSaveAttendance} disabled={saving}>
-                                            {saving ? 'Updating...' : 'Update Attendance'}
-                                        </button>
-                                    </div>
-                                </Dialog.Panel>
-                            </Transition.Child>
-                        </div>
-                    </div>
-                </Dialog>
-            </Transition>
+                                                        <div className="space-y-4">
+                                                            <div>
+                                                                <label className="text-sm font-bold mb-2 block text-gray-700 dark:text-gray-300 uppercase tracking-wider">Attendance Status</label>
+                                                                <div className="grid grid-cols-2 gap-3">
+                                                                    {['Present', 'Absent'].map((s) => (
+                                                                        <button
+                                                                            key={s}
+                                                                            type="button"
+                                                                            className={`py-2.5 rounded-xl border-2 font-bold transition-all duration-200 ${
+                                                                                editForm.status === s
+                                                                                    ? 'border-primary bg-primary text-white shadow-lg'
+                                                                                    : 'border-gray-200 dark:border-gray-700 hover:border-primary/50 text-gray-500'
+                                                                            }`}
+                                                                            onClick={() => setEditForm({ ...editForm, status: s })}
+                                                                        >
+                                                                            {s}
+                                                                        </button>
+                                                                    ))}
+                                                                </div>
+                                                            </div>
+
+                                                            {editForm.status === 'Present' && (
+                                                                <div className="space-y-4">
+                                                                    <div className="grid grid-cols-2 gap-4">
+                                                                        <div>
+                                                                            <label className="text-sm font-bold mb-2 block text-gray-700 dark:text-gray-300">Login Time</label>
+                                                                            <input
+                                                                                type="time"
+                                                                                className="form-input"
+                                                                                value={editForm.check_in}
+                                                                                onChange={(e) => setEditForm({ ...editForm, check_in: e.target.value })}
+                                                                            />
+                                                                        </div>
+                                                                        <div>
+                                                                            <label className="text-sm font-bold mb-2 block text-gray-700 dark:text-gray-300">Logout Time</label>
+                                                                            <input
+                                                                                type="time"
+                                                                                className="form-input"
+                                                                                value={editForm.check_out}
+                                                                                onChange={(e) => setEditForm({ ...editForm, check_out: e.target.value })}
+                                                                            />
+                                                                        </div>
+                                                                    </div>
+                                                                    <div className="text-[11px] text-white-dark bg-gray-50 dark:bg-gray-800/50 p-2 rounded-lg border border-dashed border-gray-200 dark:border-gray-700">
+                                                                        Standard Shift: <span className="font-bold">{editingData?.employee?.shift_info?.checkin} - {editingData?.employee?.shift_info?.checkout}</span>
+                                                                    </div>
+                                                                </div>
+                                                            )}
+                                                        </div>
+
+                                                            <div>
+                                                                <label className="text-sm font-bold mb-2 block text-gray-700 dark:text-gray-300">Administrative Remarks</label>
+                                                                <textarea
+                                                                    className="form-textarea min-h-[100px]"
+                                                                    placeholder="Reason for manual adjustment..."
+                                                                    value={editForm.remarks}
+                                                                    onChange={(e) => setEditForm({ ...editForm, remarks: e.target.value })}
+                                                                ></textarea>
+                                                            </div>
+                                                        </div>
+                                                    <div className="flex items-center justify-end p-5 border-t border-[#ebedf2] dark:border-[#1b2e4b] gap-3">
+                                                        <Button variant="outline-danger" type="button"  onClick={() => setEditModalOpen(false)}>
+                                                            Cancel
+                                                        </Button>
+                                                        <Button type="button"  onClick={handleSaveAttendance} disabled={saving}>
+                                                            {saving ? 'Updating...' : 'Update Attendance'}
+                                                        </Button>
+                                                    </div>
+            </Modal>
         </div>
     );
 };

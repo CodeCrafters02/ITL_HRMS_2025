@@ -11,6 +11,7 @@ import Portals from '../../components/Portals';
 import ChatFloatingButton from '../ChatFloatingButton';
 import { isSessionValid, initTabSession, clearAllSessionData } from '../../utils/sessionManager';
 
+import { loadBranding } from '../../theme/brandingStore';
 const DefaultLayout = ({ children }: PropsWithChildren) => {
     const themeConfig = useSelector((state: IRootState) => state.themeConfig);
     const dispatch = useDispatch();
@@ -36,6 +37,10 @@ const DefaultLayout = ({ children }: PropsWithChildren) => {
             setShowTopButton(false);
         }
     };
+
+    useEffect(() => {
+        loadBranding();
+    }, []);
 
     useEffect(() => {
         window.addEventListener('scroll', onScrollHandler);

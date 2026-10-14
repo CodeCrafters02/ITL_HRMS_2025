@@ -3,6 +3,7 @@ import { useDispatch } from 'react-redux';
 import { setPageTitle } from '../../../store/themeConfigSlice';
 import IconCalendar from '../../../components/Icon/IconCalendar';
 import IconSearch from '../../../components/Icon/IconSearch';
+import PageHeader from '../../../components/Common/PageHeader';
 import {
     LeaveBalance,
     LeaveDuration,
@@ -27,7 +28,10 @@ const formatDate = (date?: string) => {
     if (!date) return '-';
     const parsed = new Date(date);
     if (Number.isNaN(parsed.getTime())) return date;
-    return parsed.toLocaleDateString();
+    const day = String(parsed.getDate()).padStart(2, '0');
+    const month = String(parsed.getMonth() + 1).padStart(2, '0');
+    const year = parsed.getFullYear();
+    return `${day}/${month}/${year}`;
 };
 
 const dateDiff = (fromDate: string, toDate: string) => {
@@ -44,6 +48,7 @@ const getLocalTodayISO = (): string => {
     return `${n.getFullYear()}-${String(n.getMonth() + 1).padStart(2, '0')}-${String(n.getDate()).padStart(2, '0')}`;
 };
 
+/** Compare yyyy-mm-dd to local calendar "today" (avoids UTC midnight parsing issues). */
 const isLocalDateBeforeToday = (isoDate: string): boolean => {
     const parts = isoDate.split('-').map(Number);
     if (parts.length !== 3 || parts.some((n) => Number.isNaN(n))) return false;
@@ -63,6 +68,18 @@ const requestDayUnits = (fromDate: string, toDate: string, leaveDuration?: strin
     return days;
 };
 
+const canCancelLeaveRequest = (request: LeaveRequest) => {
+    if (!(request.status === 'Pending' || request.status === 'Approved')) return false;
+    if (!request.from_date) return false;
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const from = new Date(request.from_date);
+    from.setHours(0, 0, 0, 0);
+    if (Number.isNaN(from.getTime())) return false;
+    // Allow cancellation only before leave starts, or on the start date.
+    return today.getTime() <= from.getTime();
+};
+
 const ApplyLeave = () => {
     const dispatch = useDispatch();
     const [leaveBalances, setLeaveBalances] = useState<LeaveBalance[]>([]);
@@ -71,6 +88,7 @@ const ApplyLeave = () => {
     const [submitting, setSubmitting] = useState(false);
     const [cancellingId, setCancellingId] = useState<number | null>(null);
     const [error, setError] = useState<string | null>(null);
+    const [formError, setFormError] = useState<string | null>(null);
     const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
     const [search, setSearch] = useState('');
     const [isApplyModalOpen, setIsApplyModalOpen] = useState(false);
@@ -171,34 +189,35 @@ const ApplyLeave = () => {
         setToDate('');
         setReason('');
         setLeaveDuration('full_day');
+        setFormError(null);
     };
 
     const submitLeave = async (event: FormEvent) => {
         event.preventDefault();
-        setError(null);
+        setFormError(null);
 
         if (!leaveType) {
-            setError('Please select a leave type.');
+            setFormError('Please select a leave type.');
             return;
         }
         if (!fromDate || !toDate) {
-            setError('Please choose both from and to dates.');
+            setFormError('Please choose both from and to dates.');
             return;
         }
         if (isLocalDateBeforeToday(fromDate)) {
-            setError('From date cannot be in the past.');
+            setFormError('From date cannot be in the past.');
             return;
         }
         if (isLocalDateBeforeToday(toDate)) {
-            setError('To date cannot be in the past.');
+            setFormError('To date cannot be in the past.');
             return;
         }
         if (new Date(fromDate).getTime() > new Date(toDate).getTime()) {
-            setError('From date cannot be after to date.');
+            setFormError('From date cannot be after to date.');
             return;
         }
         if (leaveDuration === 'half_day' && fromDate !== toDate) {
-            setError('Half day leave must use the same from and to date.');
+            setFormError('Half day leave must use the same from and to date.');
             return;
         }
 
@@ -217,7 +236,7 @@ const ApplyLeave = () => {
             await loadData();
         } catch (err) {
             const message = err instanceof Error ? err.message : 'Failed to apply leave';
-            setError(message);
+            setFormError(message);
         } finally {
             setSubmitting(false);
         }
@@ -239,30 +258,26 @@ const ApplyLeave = () => {
 
     return (
         <div className="space-y-6 animate__animated animate__fadeIn">
-            <div className="panel bg-gradient-to-r from-[#220fb6] via-[#4f6be5] to-[#0f52af] text-white border-0">
-                <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-                    <div className="flex items-start gap-4">
-                        <div className="w-11 h-11 rounded-lg bg-white/15 flex items-center justify-center shrink-0">
-                            <IconCalendar className="w-6 h-6" />
-                        </div>
-                        <div>
-                            <h1 className="text-2xl md:text-3xl font-extrabold">Leave Application</h1>
-                            <p className="mt-1 text-white/80">Apply for leave, monitor approvals, and manage balance usage.</p>
-                        </div>
-                    </div>
+            <PageHeader
+                title="Leave Application"
+                subtitle="Apply for leave, track manager approvals, check your available leave balances, and review history."
+                icon={<IconCalendar />}
+                badge="Time Off & Leaves"
+                variant="primary"
+                actions={
                     <button
                         type="button"
-                        className="btn btn-primary w-full md:w-auto"
+                        className="btn btn-primary shadow-lg shadow-primary/20 backdrop-blur-sm w-full md:w-auto"
                         onClick={() => {
                             setLeaveDuration('full_day');
-                            setError(null);
+                            setFormError(null);
                             setIsApplyModalOpen(true);
                         }}
                     >
                         Apply Leave
                     </button>
-                </div>
-            </div>
+                }
+            />
 
             {error && (
                 <div className="panel border border-danger/30 bg-danger-light text-danger">
@@ -459,7 +474,7 @@ const ApplyLeave = () => {
                                             )}
                                         </td>
                                         <td className="text-center">
-                                            {(request.status === 'Pending' || request.status === 'Approved') ? (
+                                            {canCancelLeaveRequest(request) ? (
                                                 <button
                                                     type="button"
                                                     className="btn btn-sm btn-outline-danger"
@@ -490,6 +505,11 @@ const ApplyLeave = () => {
                                 Close
                             </button>
                         </div>
+                        {formError && (
+                            <div className="mb-4 rounded-md border border-danger/30 bg-danger-light text-danger px-3 py-2 text-sm whitespace-pre-line">
+                                {formError}
+                            </div>
+                        )}
                         <form className="space-y-4" onSubmit={submitLeave}>
                             <div>
                                 <label className="form-label">Leave Type</label>

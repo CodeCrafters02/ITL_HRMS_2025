@@ -1,6 +1,5 @@
 import { Fragment, useEffect, useMemo, useState } from 'react';
 import { useDispatch } from 'react-redux';
-import { Dialog, Transition } from '@headlessui/react';
 import Swal from 'sweetalert2';
 import { setPageTitle } from '../../store/themeConfigSlice';
 import IconPlus from '../../components/Icon/IconPlus';
@@ -9,9 +8,12 @@ import IconTrashLines from '../../components/Icon/IconTrashLines';
 import IconX from '../../components/Icon/IconX';
 import IconBell from '../../components/Icon/IconBell';
 import DataTable, { Column } from '../../components/Common/DataTable';
+import PageHeader from '../../components/Common/PageHeader';
 import Flatpickr from 'react-flatpickr';
 import 'flatpickr/dist/flatpickr.css';
 
+import Modal from '../../components/Common/Modal';
+import Button, { IconButton } from '../../components/Common/Button';
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000';
 const API_URL = `${API_BASE_URL}/app/notifications/`;
 
@@ -251,22 +253,22 @@ const AdminNotifications = () => {
             width: '120px',
             render: (_val, item) => (
                 <div className="flex items-center justify-center gap-2">
-                    <button
+                    <IconButton tone="primary"
                         type="button"
-                        className="p-1.5 rounded-lg text-primary hover:bg-primary/10 transition-colors"
+                        
                         onClick={() => openEditModal(item)}
                         title="Edit Notification"
                     >
                         <IconPencil className="w-4 h-4" />
-                    </button>
-                    <button
+                    </IconButton>
+                    <IconButton tone="danger"
                         type="button"
-                        className="p-1.5 rounded-lg text-danger hover:bg-danger/10 transition-colors"
+                        
                         onClick={() => handleDelete(item)}
                         title="Delete Notification"
                     >
                         <IconTrashLines className="w-4 h-4" />
-                    </button>
+                    </IconButton>
                 </div>
             ),
         },
@@ -274,13 +276,18 @@ const AdminNotifications = () => {
 
     return (
         <div className="space-y-6">
-            <div className="bg-gradient-to-r from-[#0e1726] to-[#3b82f6] p-6 rounded-xl shadow-lg relative overflow-hidden">
-                <div className="relative z-10">
-                    <h1 className="text-3xl font-extrabold text-white tracking-tight">Company Notifications</h1>
-                    <p className="text-white/80 mt-1 text-sm font-medium">Create and manage announcements for your company employees.</p>
-                </div>
-                <div className="absolute top-0 right-0 -mt-10 -mr-10 w-48 h-48 bg-white opacity-5 rounded-full blur-2xl"></div>
-            </div>
+            <PageHeader
+                title="Company Notifications"
+                subtitle="Broadcast company announcements, event notices, and general policy updates to all active personnel."
+                icon={<IconBell />}
+                badge="Communications"
+                variant="primary"
+                actions={
+                    <Button type="button"  onClick={openCreateModal}>
+                        <IconPlus className="w-4 h-4" /> Add Notification
+                    </Button>
+                }
+            />
 
             <DataTable
                 columns={columns}
@@ -296,116 +303,93 @@ const AdminNotifications = () => {
                 searchPlaceholder="Search notifications by title or message..."
                 onRefresh={fetchNotifications}
                 actionButton={
-                    <button type="button" className="btn btn-primary gap-2" onClick={openCreateModal}>
+                    <Button type="button"  onClick={openCreateModal}>
                         <IconPlus className="w-4 h-4" /> Add Notification
-                    </button>
+                    </Button>
                 }
             />
 
-            <Transition appear show={modalOpen} as={Fragment}>
-                <Dialog as="div" open={modalOpen} onClose={() => setModalOpen(false)} className="relative z-50">
-                    <Transition.Child as={Fragment} enter="ease-out duration-300" enterFrom="opacity-0" enterTo="opacity-100" leave="ease-in duration-200" leaveFrom="opacity-100" leaveTo="opacity-0">
-                        <div className="fixed inset-0 bg-[black]/60" />
-                    </Transition.Child>
-                    <div className="fixed inset-0 overflow-y-auto">
-                        <div className="flex min-h-full items-center justify-center px-4 py-8">
-                            <Transition.Child as={Fragment} enter="ease-out duration-300" enterFrom="opacity-0 scale-95" enterTo="opacity-100 scale-100" leave="ease-in duration-200" leaveFrom="opacity-100 scale-100" leaveTo="opacity-0 scale-95">
-                                <Dialog.Panel className="panel border-0 p-0 rounded-lg overflow-hidden w-full max-w-lg text-black dark:text-white-dark shadow-xl">
-                                    <button type="button" onClick={() => setModalOpen(false)} className="absolute top-4 ltr:right-4 rtl:left-4 text-gray-400 hover:text-gray-800 dark:hover:text-gray-600 outline-none">
-                                        <IconX />
-                                    </button>
-                                    <div className="text-xl font-bold bg-[#fbfbfb] dark:bg-[#121c2c] py-4 px-5 flex items-center gap-3">
-                                        <div className="p-2 bg-primary-light rounded-lg">
-                                            <IconBell className="text-primary w-6 h-6" />
-                                        </div>
-                                        {editingItem ? 'Edit Notification' : 'Create Notification'}
-                                    </div>
-                                    <div className="p-5">
-                                        <form onSubmit={handleSave} className="space-y-4">
-                                            <div>
-                                                <label className="font-semibold mb-1 block">Title</label>
-                                                <input
-                                                    className="form-input"
-                                                    required
-                                                    placeholder="Enter notification title"
-                                                    value={formData.title}
-                                                    onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                                                />
-                                            </div>
-                                            <div>
-                                                <label className="font-semibold mb-1 block">Date</label>
-                                                <Flatpickr
-                                                    value={formData.date}
-                                                    options={{ dateFormat: 'Y-m-d' }}
-                                                    className="form-input"
-                                                    onChange={(date) => {
-                                                        if (date.length > 0) {
-                                                            const d = date[0];
-                                                            const formatted = d.toISOString().split('T')[0];
-                                                            setFormData({ ...formData, date: formatted });
-                                                        }
-                                                    }}
-                                                />
-                                            </div>
-                                            <div>
-                                                <label className="font-semibold mb-1 block">Message</label>
-                                                <textarea
-                                                    className="form-textarea min-h-[150px]"
-                                                    required
-                                                    placeholder="Describe the announcement..."
-                                                    value={formData.description}
-                                                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                                                />
-                                            </div>
-                                            <div>
-                                                <label className="font-semibold mb-1 block">Image (Optional)</label>
-                                                <input
-                                                    type="file"
-                                                    accept="image/*"
-                                                    className="form-input"
-                                                    onChange={handleImageChange}
-                                                />
-                                                {imagePreview && (
-                                                    <div className="mt-2 relative inline-block">
-                                                        <img
-                                                            src={imagePreview}
-                                                            alt="Preview"
-                                                            className="max-h-32 rounded-lg border border-gray-200"
-                                                        />
-                                                        <button
-                                                            type="button"
-                                                            className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs hover:bg-red-600"
-                                                            onClick={() => {
-                                                                setImageFile(null);
-                                                                setImagePreview(null);
-                                                            }}
-                                                        >
-                                                            ×
-                                                        </button>
-                                                    </div>
-                                                )}
-                                            </div>
-                                            <div className="flex justify-end gap-3 pt-4 border-t border-[#e0e6ed] dark:border-[#1b2e4b] -mx-5 px-5 mt-5">
-                                                <button type="button" className="btn btn-outline-danger" onClick={() => setModalOpen(false)}>
-                                                    Cancel
-                                                </button>
-                                                <button type="submit" className="btn btn-primary min-w-[120px]" disabled={saving}>
-                                                    {saving ? (
-                                                        <span className="flex items-center gap-2">
-                                                            <span className="animate-spin border-2 border-white border-l-transparent rounded-full w-4 h-4"></span>
-                                                            Saving...
-                                                        </span>
-                                                    ) : editingItem ? 'Update' : 'Publish'}
-                                                </button>
-                                            </div>
-                                        </form>
-                                    </div>
-                                </Dialog.Panel>
-                            </Transition.Child>
-                        </div>
+            <Modal open={modalOpen} onClose={() => setModalOpen(false)} title={editingItem ? 'Edit Notification' : 'Create Notification'} icon={<IconBell />} size="lg">
+                <form onSubmit={handleSave} className="space-y-4">
+                    <div>
+                        <label className="font-semibold mb-1 block">Title</label>
+                        <input
+                            className="form-input"
+                            required
+                            placeholder="Enter notification title"
+                            value={formData.title}
+                            onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                        />
                     </div>
-                </Dialog>
-            </Transition>
+                    <div>
+                        <label className="font-semibold mb-1 block">Date</label>
+                        <Flatpickr
+                            value={formData.date}
+                            options={{ dateFormat: 'Y-m-d' }}
+                            className="form-input"
+                            onChange={(date) => {
+                                if (date.length > 0) {
+                                    const d = date[0];
+                                    const formatted = d.toISOString().split('T')[0];
+                                    setFormData({ ...formData, date: formatted });
+                                }
+                            }}
+                        />
+                    </div>
+                    <div>
+                        <label className="font-semibold mb-1 block">Message</label>
+                        <textarea
+                            className="form-textarea min-h-[150px]"
+                            required
+                            placeholder="Describe the announcement..."
+                            value={formData.description}
+                            onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                        />
+                    </div>
+                    <div>
+                        <label className="font-semibold mb-1 block">Image (Optional)</label>
+                        <input
+                            type="file"
+                            accept="image/*"
+                            className="form-input"
+                            onChange={handleImageChange}
+                        />
+                        {imagePreview && (
+                            <div className="mt-2 relative inline-block">
+                                <img
+                                    src={imagePreview}
+                                    alt="Preview"
+                                    className="max-h-32 rounded-lg border border-gray-200"
+                                />
+                                <button
+                                    type="button"
+                                    className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs hover:bg-red-600"
+                                    onClick={() => {
+                                        setImageFile(null);
+                                        setImagePreview(null);
+                                    }}
+                                >
+                                    ×
+                                </button>
+                            </div>
+                        )}
+                    </div>
+                    <div className="flex justify-end gap-3 pt-4 border-t border-[#e0e6ed] dark:border-[#1b2e4b] -mx-5 px-5 mt-5">
+                        <Button variant="outline-danger" type="button"  onClick={() => setModalOpen(false)}>
+                            Cancel
+                        </Button>
+                        <Button className="min-w-[120px]" type="submit"  disabled={saving}>
+                            {saving ? (
+                                <span className="flex items-center gap-2">
+                                    <span className="animate-spin border-2 border-white border-l-transparent rounded-full w-4 h-4"></span>
+                                    Saving...
+                                </span>
+                            ) : editingItem ? 'Update' : 'Publish'}
+                        </Button>
+                    </div>
+                </form>
+
+            </Modal>
         </div>
     );
 };

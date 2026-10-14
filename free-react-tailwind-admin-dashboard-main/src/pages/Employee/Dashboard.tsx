@@ -20,6 +20,7 @@ import Dropdown from '../../components/Dropdown';
 import IconXCircle from '../../components/Icon/IconXCircle';
 import { fetchMyLeaveRequests, type LeaveRequest } from './LeaveApplication/api';
 
+import { openTeamsChat } from '../../utils/teams';
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000';
 
 const pickLatestLeaveRequest = (results: LeaveRequest[]): LeaveRequest | null => {
@@ -1418,15 +1419,15 @@ const EmployeeDashboard = () => {
                         <span className="text-[11px] font-semibold px-2 py-1 rounded-full bg-violet-100 text-violet-700 dark:bg-violet-500/15 dark:text-violet-300">Shortcuts</span>
                     </div>
                     <div className="space-y-3">
-                        <Link to="/employee/chat" className="group flex items-center gap-3 p-3.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-gradient-to-r from-white to-slate-50 dark:from-[#172036] dark:to-[#101827] hover:shadow-md transition-all">
+                        <button type="button" onClick={() => openTeamsChat()} className="group flex w-full items-center text-left gap-3 p-3.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-gradient-to-r from-white to-slate-50 dark:from-[#172036] dark:to-[#101827] hover:shadow-md transition-all" >
                             <div className="w-10 h-10 rounded-lg bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300 flex items-center justify-center group-hover:scale-105 transition-transform">
                                 <IconMenuChat className="w-5 h-5" />
                             </div>
                             <div>
                                 <p className="text-sm font-semibold text-slate-900 dark:text-white">Chat System</p>
-                                <p className="text-xs text-slate-500">Message your team</p>
+                                <p className="text-xs text-slate-500">Opens in Microsoft Teams</p>
                             </div>
-                        </Link>
+                        </button>
                         <Link to="/employee/calendar" className="group flex items-center gap-3 p-3.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-gradient-to-r from-white to-slate-50 dark:from-[#172036] dark:to-[#101827] hover:shadow-md transition-all">
                             <div className="w-10 h-10 rounded-lg bg-cyan-100 text-cyan-700 dark:bg-cyan-500/15 dark:text-cyan-300 flex items-center justify-center group-hover:scale-105 transition-transform">
                                 <IconCalendar className="w-5 h-5" />

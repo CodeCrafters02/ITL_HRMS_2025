@@ -8,6 +8,9 @@ import IconEdit from '../../components/Icon/IconEdit';
 import IconSave from '../../components/Icon/IconSave';
 import IconX from '../../components/Icon/IconX';
 
+import PageHeader from '../../components/Common/PageHeader';
+import IconDollarSign from '../../components/Icon/IconDollarSign';
+import Button from '../../components/Common/Button';
 const API = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000';
 
 type CompanyInfo = {
@@ -135,24 +138,23 @@ const SalaryDisbursement = () => {
     return (
         <div className="space-y-6">
 
-            <div className="bg-gradient-to-r from-[#1e3a5f] to-[#14b8a6] p-6 rounded-xl shadow-lg mb-6 relative overflow-hidden">
-                <div className="relative z-10">
-                    <h1 className="text-3xl font-extrabold text-white tracking-tight">Salary Disbursement Statement</h1>
-                    <p className="text-white/80 mt-1 text-sm font-medium">Generate and manage professional salary transfer letters for bank disbursements.</p>
-                </div>
-                <div className="absolute top-0 right-0 -mt-10 -mr-10 w-48 h-48 bg-white opacity-5 rounded-full blur-2xl"></div>
-            </div>
+            <PageHeader
+                icon={<IconDollarSign />}
+                title="Salary Disbursement Statement"
+                subtitle="Generate and manage professional salary transfer letters for bank disbursements."
+                variant="amber"
+            />
 
             <div className="flex flex-wrap items-center justify-end gap-4 mb-6 print:hidden">
                 <div className="flex items-center gap-2">
-                    <button onClick={handleDownloadExcel} className="btn btn-outline-success gap-2">
+                    <Button variant="outline-success" onClick={handleDownloadExcel}>
                         <IconDownload className="w-5 h-5" />
                         Download Excel
-                    </button>
-                    <button onClick={handlePrint} className="btn btn-primary gap-2">
+                    </Button>
+                    <Button onClick={handlePrint}>
                         <IconPrinter className="w-5 h-5" />
                         Print Letter
-                    </button>
+                    </Button>
                 </div>
             </div>
 
@@ -167,14 +169,14 @@ const SalaryDisbursement = () => {
                         <label className="text-xs font-bold text-gray-500 uppercase">To Date</label>
                         <input type="date" className="form-input py-1.5" value={toDate} onChange={(e) => setToDate(e.target.value)} />
                     </div>
-                    <button className="btn btn-primary mt-5" onClick={fetchData} disabled={loading}>
+                    <Button className="mt-5"  onClick={fetchData} disabled={loading}>
                         {loading ? 'Fetching...' : 'Generate Statement'}
-                    </button>
+                    </Button>
                 </div>
                 <div className="flex items-center gap-2">
-                    <button className="btn btn-outline-primary" onClick={handlePrint}>
+                    <Button variant="outline"  onClick={handlePrint}>
                         <IconPrinter className="mr-2" /> Print Letter
-                    </button>
+                    </Button>
                 </div>
             </div>
 
@@ -221,7 +223,7 @@ const SalaryDisbursement = () => {
                                     <div><label className="text-xs font-bold uppercase">IFSC Code</label><input className="form-input" value={editCompany?.ifsc_code} onChange={e => setEditCompany({...editCompany!, ifsc_code: e.target.value})} /></div>
                                 </div>
                                 <div className="mt-4 flex justify-end">
-                                    <button className="btn btn-primary" onClick={handleUpdateCompany}><IconSave className="mr-2" /> Save Details</button>
+                                    <Button  onClick={handleUpdateCompany}><IconSave className="mr-2" /> Save Details</Button>
                                 </div>
                             </div>
                         )}

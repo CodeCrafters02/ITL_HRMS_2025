@@ -3,6 +3,7 @@ import { useDispatch } from 'react-redux';
 import { setPageTitle } from '../../../store/themeConfigSlice';
 import IconCalendar from '../../../components/Icon/IconCalendar';
 import IconSearch from '../../../components/Icon/IconSearch';
+import PageHeader from '../../../components/Common/PageHeader';
 import {
     LeaveBalance,
     LeaveDuration,
@@ -257,20 +258,16 @@ const ApplyLeave = () => {
 
     return (
         <div className="space-y-6 animate__animated animate__fadeIn">
-            <div className="panel bg-gradient-to-r from-[#220fb6] via-[#4f6be5] to-[#0f52af] text-white border-0">
-                <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-                    <div className="flex items-start gap-4">
-                        <div className="w-11 h-11 rounded-lg bg-white/15 flex items-center justify-center shrink-0">
-                            <IconCalendar className="w-6 h-6" />
-                        </div>
-                        <div>
-                            <h1 className="text-2xl md:text-3xl font-extrabold">Leave Application</h1>
-                            <p className="mt-1 text-white/80">Apply for leave, monitor approvals, and manage balance usage.</p>
-                        </div>
-                    </div>
+            <PageHeader
+                title="Leave Application"
+                subtitle="Apply for leave, track manager approvals, check your available leave balances, and review history."
+                icon={<IconCalendar />}
+                badge="Time Off & Leaves"
+                variant="primary"
+                actions={
                     <button
                         type="button"
-                        className="btn btn-primary w-full md:w-auto"
+                        className="btn btn-primary shadow-lg shadow-primary/20 backdrop-blur-sm w-full md:w-auto"
                         onClick={() => {
                             setLeaveDuration('full_day');
                             setFormError(null);
@@ -279,8 +276,8 @@ const ApplyLeave = () => {
                     >
                         Apply Leave
                     </button>
-                </div>
-            </div>
+                }
+            />
 
             {error && (
                 <div className="panel border border-danger/30 bg-danger-light text-danger">

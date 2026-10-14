@@ -14,6 +14,8 @@ import IconMail from '../../components/Icon/IconMail';
 import IconPhone from '../../components/Icon/IconPhone';
 import DataTable, { Column } from '../../components/Common/DataTable';
 
+import PageHeader from '../../components/Common/PageHeader';
+import Button, { IconButton } from '../../components/Common/Button';
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000';
 const API = `${API_BASE_URL}/employee/registration-requests/`;
 
@@ -183,7 +185,7 @@ const RegistrationRequests = () => {
             sortable: true,
             render: (_val, r) => (
                 <div className="flex items-center gap-3">
-                    <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-[#0062E0] to-[#38bdf8] text-white flex items-center justify-center font-bold text-xs shadow-sm">
+                    <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-brand to-brand-accent text-white flex items-center justify-center font-bold text-xs shadow-sm">
                         {r.first_name.charAt(0).toUpperCase()}
                         {(r.last_name || '').charAt(0).toUpperCase()}
                     </div>
@@ -203,7 +205,7 @@ const RegistrationRequests = () => {
             render: (_val, r) => (
                 <div>
                     <p className="text-xs font-semibold flex items-center gap-1.5 text-gray-800 dark:text-gray-300">
-                        <IconMail className="w-3.5 h-3.5 text-[#0062E0]" />
+                        <IconMail className="w-3.5 h-3.5 text-brand" />
                         {r.email}
                     </p>
                     <p className="text-xs text-gray-500 flex items-center gap-1.5 mt-1">
@@ -261,13 +263,13 @@ const RegistrationRequests = () => {
             width: '120px',
             render: (_val, r) => (
                 <div className="flex items-center justify-center gap-2">
-                    <button
+                    <IconButton tone="primary"
                         onClick={() => setSelected(r)}
-                        className="p-1.5 bg-primary/10 text-primary rounded-lg hover:bg-primary hover:text-white transition-all shadow-sm"
+                        
                         title="View details"
                     >
                         <IconEye className="w-4 h-4" />
-                    </button>
+                    </IconButton>
                     {tab === 'pending' && (
                         <>
                             <button
@@ -278,14 +280,14 @@ const RegistrationRequests = () => {
                             >
                                 <IconChecks className="w-4 h-4" />
                             </button>
-                            <button
+                            <IconButton tone="danger"
                                 onClick={() => dismiss(r)}
                                 disabled={busyId === r.id}
-                                className="p-1.5 bg-danger/10 text-danger rounded-lg hover:bg-danger hover:text-white transition-all shadow-sm disabled:opacity-50"
+                                
                                 title="Dismiss for my company"
                             >
                                 <IconX className="w-4 h-4" />
-                            </button>
+                            </IconButton>
                         </>
                     )}
                 </div>
@@ -296,17 +298,12 @@ const RegistrationRequests = () => {
     return (
         <div className="flex flex-col space-y-4">
             {/* Header Banner */}
-            <div className="bg-gradient-to-r from-indigo-500 to-violet-600 rounded-xl p-4 text-white shadow-lg overflow-hidden relative">
-                <div className="relative z-10">
-                    <h2 className="text-3xl font-extrabold mb-0.5">Registration Requests</h2>
-                    <p className="text-white/80 text-sm font-medium">
-                        People who registered from the mobile app. The first company admin to accept a request adds that person to their company.
-                    </p>
-                </div>
-                <div className="absolute right-[-20px] top-[-20px] opacity-10">
-                    <IconUserPlus className="w-48 h-48" />
-                </div>
-            </div>
+            <PageHeader
+                icon={<IconUserPlus />}
+                title="Registration Requests"
+                subtitle="People who registered from the mobile app. The first company admin to accept a request adds that person to their company."
+                variant="rose"
+            />
 
             {/* Reusable Data Table */}
             <DataTable
@@ -340,7 +337,7 @@ const RegistrationRequests = () => {
                                 }}
                                 className={`h-8 px-3.5 rounded-lg text-xs font-bold transition-all flex items-center ${
                                     tab === t
-                                        ? 'bg-[#0062E0] text-white shadow-sm'
+                                        ? 'bg-brand text-white shadow-sm'
                                         : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
                                 }`}
                             >
@@ -428,13 +425,13 @@ const RegistrationRequests = () => {
 
                         {selected.status === 'pending' && (
                             <div className="flex justify-end gap-3 border-t border-gray-100 dark:border-gray-800 p-4">
-                                <button onClick={() => dismiss(selected)} disabled={busyId === selected.id} className="btn btn-outline-danger">
+                                <Button variant="outline-danger" onClick={() => dismiss(selected)} disabled={busyId === selected.id} >
                                     Dismiss
-                                </button>
-                                <button onClick={() => approve(selected)} disabled={busyId === selected.id} className="btn btn-success flex items-center gap-2">
+                                </Button>
+                                <Button variant="success" onClick={() => approve(selected)} disabled={busyId === selected.id} >
                                     <IconChecks className="w-4 h-4" />
                                     Accept into my company
-                                </button>
+                                </Button>
                             </div>
                         )}
                     </div>

@@ -1,6 +1,5 @@
 import { Fragment, useEffect, useState } from 'react';
 import { useDispatch } from 'react-redux';
-import { Dialog, Transition } from '@headlessui/react';
 import Swal from 'sweetalert2';
 import { setPageTitle } from '../../../store/themeConfigSlice';
 import { authFetch } from '../../../utils/authFetch';
@@ -9,6 +8,8 @@ import IconPencil from '../../../components/Icon/IconPencil';
 import IconTrashLines from '../../../components/Icon/IconTrashLines';
 import IconX from '../../../components/Icon/IconX';
 
+import Modal from '../../../components/Common/Modal';
+import Button from '../../../components/Common/Button';
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000';
 const API_URL = `${API_BASE_URL}/employee/certificate-signatures/`;
 
@@ -155,9 +156,9 @@ const CertificateSignature = () => {
                 <div className="panel text-center py-14 border border-dashed border-[#e0e6ed] dark:border-[#1b2e4b] rounded-xl">
                     <span className="text-4xl block mb-3">✍️</span>
                     <p className="text-gray-500 mb-4">No signature uploaded yet.</p>
-                    <button type="button" className="btn btn-primary gap-2 mx-auto" onClick={openAddModal}>
+                    <Button className="mx-auto" type="button"  onClick={openAddModal}>
                         <IconPlus /> Add Signature
-                    </button>
+                    </Button>
                 </div>
             ) : (
                 <div className="panel border border-[#e0e6ed] dark:border-[#1b2e4b] rounded-xl p-6 max-w-md">
@@ -173,71 +174,51 @@ const CertificateSignature = () => {
                         {signature.signatory_title && <div className="text-xs text-gray-500">{signature.signatory_title}</div>}
                     </div>
                     <div className="flex gap-2 justify-center border-t border-[#f1f2f3] dark:border-[#191e3a] pt-4">
-                        <button type="button" className="btn btn-outline-primary btn-sm gap-1" onClick={openEditModal}>
+                        <Button variant="outline" size="sm" type="button"  onClick={openEditModal}>
                             <IconPencil className="w-4 h-4" /> Edit
-                        </button>
-                        <button type="button" className="btn btn-outline-danger btn-sm gap-1" onClick={handleDelete}>
+                        </Button>
+                        <Button variant="outline-danger" size="sm" type="button"  onClick={handleDelete}>
                             <IconTrashLines className="w-4 h-4" /> Delete
-                        </button>
+                        </Button>
                     </div>
                 </div>
             )}
 
             {/* Add/Edit Modal */}
-            <Transition appear show={modalOpen} as={Fragment}>
-                <Dialog as="div" open={modalOpen} onClose={() => setModalOpen(false)} className="relative z-50">
-                    <Transition.Child as={Fragment} enter="ease-out duration-300" enterFrom="opacity-0" enterTo="opacity-100" leave="ease-in duration-200" leaveFrom="opacity-100" leaveTo="opacity-0">
-                        <div className="fixed inset-0 bg-[black]/65 backdrop-blur-sm" />
-                    </Transition.Child>
-                    <div className="fixed inset-0 overflow-y-auto">
-                        <div className="flex min-h-full items-center justify-center px-4 py-8">
-                            <Transition.Child as={Fragment} enter="ease-out duration-300" enterFrom="opacity-0 scale-95" enterTo="opacity-100 scale-100" leave="ease-in duration-200" leaveFrom="opacity-100 scale-100" leaveTo="opacity-0 scale-95">
-                                <Dialog.Panel className="panel border-0 p-0 rounded-xl overflow-hidden w-full max-w-lg text-black dark:text-white-dark shadow-2xl relative">
-                                    <button type="button" onClick={() => setModalOpen(false)} className="absolute top-4 right-4 text-gray-400 hover:text-gray-800 dark:hover:text-gray-250 outline-none">
-                                        <IconX className="w-5 h-5" />
-                                    </button>
-                                    <div className="text-lg font-bold bg-[#fbfbfb] dark:bg-[#121c2c] py-4 px-6 border-b border-[#ebedf2] dark:border-[#1b2e4b]">
-                                        {signature ? 'Edit Signature' : 'Add Signature'}
+            <Modal open={modalOpen} onClose={() => setModalOpen(false)} title={signature ? 'Edit Signature' : 'Add Signature'} size="lg">
+                <form onSubmit={handleSave} className="space-y-4">
+                    <div>
+                        <label className="font-semibold mb-1 block">Signature Image {!signature && <span className="text-danger">*</span>}</label>
+                        <input type="file" accept="image/*" required={!signature} className="form-input rounded-lg text-xs" onChange={(e) => setSignatureFile(e.target.files ? e.target.files[0] : null)} />
+                        {signature && (
+                            <>
+                                {signature.signature_image_url && (
+                                    <div className="mt-2 p-2 border border-gray-200 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-800 flex items-center gap-3">
+                                        <span className="text-[11px] font-semibold text-gray-500 uppercase">Current:</span>
+                                        <img src={signature.signature_image_url} alt="Current Signature" className="max-h-[50px] max-w-[150px] object-contain border border-dashed border-gray-300 dark:border-gray-600 p-1 bg-white" />
                                     </div>
-                                    <div className="p-6">
-                                        <form onSubmit={handleSave} className="space-y-4">
-                                            <div>
-                                                <label className="font-semibold mb-1 block">Signature Image {!signature && <span className="text-danger">*</span>}</label>
-                                                <input type="file" accept="image/*" required={!signature} className="form-input rounded-lg text-xs" onChange={(e) => setSignatureFile(e.target.files ? e.target.files[0] : null)} />
-                                                {signature && (
-                                                    <>
-                                                        {signature.signature_image_url && (
-                                                            <div className="mt-2 p-2 border border-gray-200 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-800 flex items-center gap-3">
-                                                                <span className="text-[11px] font-semibold text-gray-500 uppercase">Current:</span>
-                                                                <img src={signature.signature_image_url} alt="Current Signature" className="max-h-[50px] max-w-[150px] object-contain border border-dashed border-gray-300 dark:border-gray-600 p-1 bg-white" />
-                                                            </div>
-                                                        )}
-                                                        <p className="text-[11px] text-gray-400 mt-1">Leave empty to keep the current image.</p>
-                                                    </>
-                                                )}
-                                            </div>
-                                            <div>
-                                                <label className="font-semibold mb-1 block">Signatory Name</label>
-                                                <input className="form-input rounded-lg" placeholder="e.g. Rajesh Kumar" value={formData.signatory_name} onChange={(e) => setFormData({ ...formData, signatory_name: e.target.value })} />
-                                            </div>
-                                            <div>
-                                                <label className="font-semibold mb-1 block">Signatory Title</label>
-                                                <input className="form-input rounded-lg" placeholder="e.g. Director of Training" value={formData.signatory_title} onChange={(e) => setFormData({ ...formData, signatory_title: e.target.value })} />
-                                            </div>
-                                            <div className="flex justify-end gap-3 pt-4 border-t border-[#ebedf2] dark:border-[#1b2e4b] mt-6">
-                                                <button type="button" className="btn btn-outline-danger rounded-lg" onClick={() => setModalOpen(false)}>Cancel</button>
-                                                <button type="submit" className="btn btn-primary rounded-lg px-5 shadow-md" disabled={saving}>
-                                                    {saving ? 'Saving...' : signature ? 'Save Changes' : 'Add Signature'}
-                                                </button>
-                                            </div>
-                                        </form>
-                                    </div>
-                                </Dialog.Panel>
-                            </Transition.Child>
-                        </div>
+                                )}
+                                <p className="text-[11px] text-gray-400 mt-1">Leave empty to keep the current image.</p>
+                            </>
+                        )}
                     </div>
-                </Dialog>
-            </Transition>
+                    <div>
+                        <label className="font-semibold mb-1 block">Signatory Name</label>
+                        <input className="form-input rounded-lg" placeholder="e.g. Rajesh Kumar" value={formData.signatory_name} onChange={(e) => setFormData({ ...formData, signatory_name: e.target.value })} />
+                    </div>
+                    <div>
+                        <label className="font-semibold mb-1 block">Signatory Title</label>
+                        <input className="form-input rounded-lg" placeholder="e.g. Director of Training" value={formData.signatory_title} onChange={(e) => setFormData({ ...formData, signatory_title: e.target.value })} />
+                    </div>
+                    <div className="flex justify-end gap-3 pt-4 border-t border-[#ebedf2] dark:border-[#1b2e4b] mt-6">
+                        <Button variant="outline-danger" type="button"  onClick={() => setModalOpen(false)}>Cancel</Button>
+                        <Button className="!px-5" type="submit"  disabled={saving}>
+                            {saving ? 'Saving...' : signature ? 'Save Changes' : 'Add Signature'}
+                        </Button>
+                    </div>
+                </form>
+
+            </Modal>
         </div>
     );
 };

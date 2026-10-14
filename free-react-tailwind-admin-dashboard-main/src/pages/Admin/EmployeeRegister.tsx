@@ -1,6 +1,5 @@
 import { Fragment, useEffect, useMemo, useState } from 'react';
 import { useDispatch } from 'react-redux';
-import { Dialog, Transition } from '@headlessui/react';
 import Swal from 'sweetalert2';
 import { setPageTitle } from '../../store/themeConfigSlice';
 import IconSearch from '../../components/Icon/IconSearch';
@@ -9,8 +8,12 @@ import IconPencil from '../../components/Icon/IconPencil';
 import IconEye from '../../components/Icon/IconEye';
 import IconX from '../../components/Icon/IconX';
 import IconPlus from '../../components/Icon/IconPlus';
+import IconUsers from '../../components/Icon/IconUsers';
 import DataTable, { Column } from '../../components/Common/DataTable';
+import PageHeader from '../../components/Common/PageHeader';
 
+import Modal from '../../components/Common/Modal';
+import Button, { IconButton } from '../../components/Common/Button';
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000';
 const API_URL = `${API_BASE_URL}/app/employee/`;
 
@@ -627,7 +630,7 @@ const AdminEmployeeRegister = () => {
                             className="w-7 h-7 rounded-full object-cover border border-gray-200 dark:border-gray-700"
                         />
                     ) : (
-                        <div className="w-7 h-7 rounded-full bg-gradient-to-tr from-[#0062E0] to-[#38bdf8] text-white flex items-center justify-center font-bold text-[10px]">
+                        <div className="w-7 h-7 rounded-full bg-gradient-to-tr from-brand to-brand-accent text-white flex items-center justify-center font-bold text-[10px]">
                             {(emp.first_name?.[0] || 'E').toUpperCase()}
                         </div>
                     )}
@@ -696,22 +699,22 @@ const AdminEmployeeRegister = () => {
                     >
                         <IconEye className="w-4 h-4" />
                     </button>
-                    <button
+                    <IconButton tone="primary"
                         type="button"
-                        className="p-1.5 rounded-lg text-primary hover:text-white hover:bg-primary transition-colors"
+                        
                         onClick={() => openEditModal(emp.id)}
                         title="Edit"
                     >
                         <IconPencil className="w-4 h-4" />
-                    </button>
-                    <button
+                    </IconButton>
+                    <IconButton tone="danger"
                         type="button"
-                        className="p-1.5 rounded-lg text-danger hover:text-white hover:bg-danger transition-colors"
+                        
                         onClick={() => handleDelete(emp)}
                         title="Delete"
                     >
                         <IconTrashLines className="w-4 h-4" />
-                    </button>
+                    </IconButton>
                 </div>
             ),
         },
@@ -719,13 +722,13 @@ const AdminEmployeeRegister = () => {
 
     return (
         <div>
-            <div className="bg-gradient-to-r from-[#0e1726] to-[#3b82f6] p-6 rounded-xl shadow-lg mb-6 relative overflow-hidden">
-                <div className="relative z-10">
-                    <h1 className="text-3xl font-extrabold text-white tracking-tight">Employee Register</h1>
-                    <p className="text-white/80 mt-1 text-sm font-medium">Browse and manage employee records.</p>
-                </div>
-                <div className="absolute top-0 right-0 -mt-10 -mr-10 w-48 h-48 bg-white opacity-5 rounded-full blur-2xl"></div>
-            </div>
+            <PageHeader
+                title="Employee Register"
+                subtitle="Browse, filter, and audit verified employee records, organizational departments, and employment status."
+                icon={<IconUsers />}
+                badge="Workforce Master"
+                variant="primary"
+            />
 
             {/* Reusable Data Table */}
             <DataTable
@@ -755,7 +758,7 @@ const AdminEmployeeRegister = () => {
                 filters={
                     <div className="flex items-center gap-2.5 flex-wrap sm:flex-nowrap">
                         <select
-                            className="form-select text-xs sm:text-sm h-10 px-3.5 rounded-xl border-[#cbd5e1] dark:border-[#1e293b] bg-white dark:bg-[#121e32] font-medium shadow-sm min-w-[170px] focus:border-[#0062E0] focus:ring-2 focus:ring-[#0062E0]/20"
+                            className="form-select text-xs sm:text-sm h-10 px-3.5 rounded-xl border-[#cbd5e1] dark:border-[#1e293b] bg-white dark:bg-[#121e32] font-medium shadow-sm min-w-[170px] focus:border-brand focus:ring-2 focus:ring-brand/20"
                             value={selectedDeptFilter}
                             onChange={(e) => {
                                 const val = e.target.value;
@@ -772,7 +775,7 @@ const AdminEmployeeRegister = () => {
                             ))}
                         </select>
                         <select
-                            className="form-select text-xs sm:text-sm h-10 px-3.5 rounded-xl border-[#cbd5e1] dark:border-[#1e293b] bg-white dark:bg-[#121e32] font-medium shadow-sm min-w-[150px] focus:border-[#0062E0] focus:ring-2 focus:ring-[#0062E0]/20"
+                            className="form-select text-xs sm:text-sm h-10 px-3.5 rounded-xl border-[#cbd5e1] dark:border-[#1e293b] bg-white dark:bg-[#121e32] font-medium shadow-sm min-w-[150px] focus:border-brand focus:ring-2 focus:ring-brand/20"
                             value={selectedStatusFilter}
                             onChange={(e) => {
                                 const val = e.target.value;
@@ -804,551 +807,497 @@ const AdminEmployeeRegister = () => {
                     </div>
                 }
                 actions={
-                    <button type="button" className="btn btn-primary gap-2 shadow-md shadow-primary/20" onClick={openCreateModal}>
+                    <Button type="button"  onClick={openCreateModal}>
                         <IconPlus className="w-4 h-4" /> Register Employee
-                    </button>
+                    </Button>
                 }
             />
 
-            <Transition appear show={profileModalOpen} as={Fragment}>
-                <Dialog as="div" open={profileModalOpen} onClose={() => setProfileModalOpen(false)} className="relative z-50">
-                    <Transition.Child as={Fragment} enter="ease-out duration-300" enterFrom="opacity-0" enterTo="opacity-100" leave="ease-in duration-200" leaveFrom="opacity-100" leaveTo="opacity-0">
-                        <div className="fixed inset-0 bg-[black]/60" />
-                    </Transition.Child>
-                    <div className="fixed inset-0 overflow-y-auto">
-                        <div className="flex min-h-full items-center justify-center px-4 py-8">
-                            <Transition.Child as={Fragment} enter="ease-out duration-300" enterFrom="opacity-0 scale-95" enterTo="opacity-100 scale-100" leave="ease-in duration-200" leaveFrom="opacity-100 scale-100" leaveTo="opacity-0 scale-95">
-                                <Dialog.Panel className="panel border-0 p-0 rounded-lg overflow-hidden w-full max-w-5xl text-black dark:text-white-dark shadow-xl">
-                                    <button type="button" onClick={() => setProfileModalOpen(false)} className="absolute top-4 ltr:right-4 rtl:left-4 text-gray-400 hover:text-gray-800 dark:hover:text-gray-600 outline-none">
-                                        <IconX />
-                                    </button>
-                                    <div className="text-lg font-medium bg-[#fbfbfb] dark:bg-[#121c2c] ltr:pl-5 rtl:pr-5 py-3 ltr:pr-[50px] rtl:pl-[50px]">
-                                        Employee Profile
-                                    </div>
-                                    <div className="p-5 max-h-[80vh] overflow-y-auto">
-                                        {selectedEmployee && (
-                                            <div className="space-y-6">
-                                                <div className="flex flex-wrap items-center justify-between gap-4">
-                                                    <div className="flex items-center gap-4">
-                                                        <div className="w-20 h-20 rounded-full overflow-hidden bg-gray-100 dark:bg-[#191e3a] flex items-center justify-center">
-                                                            {photoUrl ? <img src={photoUrl} alt="Profile" className="w-full h-full object-cover" /> : <span className="text-gray-400">No Image</span>}
-                                                        </div>
-                                                        <div>
-                                                            <div className="text-xl font-bold">{fullName(selectedEmployee)}</div>
-                                                        </div>
-                                                    </div>
-                                                    <button type="button" className="btn btn-primary" onClick={() => { setProfileModalOpen(false); openEditModal(selectedEmployee.id); }}>
-                                                        Edit Employee
-                                                    </button>
-                                                </div>
+            <Modal open={profileModalOpen} onClose={() => setProfileModalOpen(false)} title="Employee Profile" size="5xl">
+                <div className="max-h-[80vh] overflow-y-auto">
+                                                        {selectedEmployee && (
+                                                            <div className="space-y-6">
+                                                                <div className="flex flex-wrap items-center justify-between gap-4">
+                                                                    <div className="flex items-center gap-4">
+                                                                        <div className="w-20 h-20 rounded-full overflow-hidden bg-gray-100 dark:bg-[#191e3a] flex items-center justify-center">
+                                                                            {photoUrl ? <img src={photoUrl} alt="Profile" className="w-full h-full object-cover" /> : <span className="text-gray-400">No Image</span>}
+                                                                        </div>
+                                                                        <div>
+                                                                            <div className="text-xl font-bold">{fullName(selectedEmployee)}</div>
+                                                                        </div>
+                                                                    </div>
+                                                                    <Button type="button"  onClick={() => { setProfileModalOpen(false); openEditModal(selectedEmployee.id); }}>
+                                                                        Edit Employee
+                                                                    </Button>
+                                                                </div>
 
-                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                                    <div className="panel">
-                                                        <div className="text-lg font-bold mb-4">Basic Details</div>
-                                                        <div className="space-y-2 text-sm">
-                                                            <div><span className="font-semibold">Email:</span> {selectedEmployee.email || '-'}</div>
-                                                            <div><span className="font-semibold">Mobile:</span> {selectedEmployee.mobile || '-'}</div>
-                                                            <div><span className="font-semibold">Gender:</span> {selectedEmployee.gender || '-'}</div>
-                                                            <div><span className="font-semibold">DOB:</span> {selectedEmployee.date_of_birth || '-'}</div>
-                                                            <div><span className="font-semibold">Category:</span> {selectedEmployee.category || '-'}</div>
-                                                            <div><span className="font-semibold">Status:</span> {selectedEmployee.is_active ? 'Active' : 'Inactive'}</div>
-                                                        </div>
-                                                    </div>
-                                                    <div className="panel">
-                                                        <div className="text-lg font-bold mb-4">Organization</div>
-                                                        <div className="space-y-2 text-sm">
-                                                            <div><span className="font-semibold">Department:</span> {selectedEmployee.department_name || '-'}</div>
-                                                            <div><span className="font-semibold">Designation:</span> {selectedEmployee.designation_name || '-'}</div>
-                                                            <div><span className="font-semibold">Level:</span> {selectedEmployee.level_name || '-'}</div>
-                                                            <div><span className="font-semibold">Reporting Level:</span> {selectedEmployee.reporting_level_name || '-'}</div>
-                                                            <div><span className="font-semibold">Reporting Manager:</span> {selectedEmployee.reporting_manager_name || '-'}</div>
-                                                            <div><span className="font-semibold">Joining Date:</span> {selectedEmployee.date_of_joining || '-'}</div>
-                                                        </div>
-                                                    </div>
-                                                    <div className="panel">
-                                                        <div className="text-lg font-bold mb-4">Address & Family</div>
-                                                        <div className="space-y-2 text-sm">
-                                                            <div><span className="font-semibold">Temporary Address:</span> {selectedEmployee.temporary_address || '-'}</div>
-                                                            <div><span className="font-semibold">Permanent Address:</span> {selectedEmployee.permanent_address || '-'}</div>
-                                                            <div><span className="font-semibold">Guardian Name:</span> {selectedEmployee.guardian_name || '-'}</div>
-                                                            <div><span className="font-semibold">Guardian Mobile:</span> {selectedEmployee.guardian_mobile || '-'}</div>
-                                                        </div>
-                                                    </div>
-                                                    <div className="panel">
-                                                        <div className="text-lg font-bold mb-4">Documents</div>
-                                                        <div className="space-y-2 text-sm">
-                                                            <div><span className="font-semibold">Aadhar No:</span> {selectedEmployee.aadhar_no || '-'}</div>
-                                                            <div>
-                                                                <span className="font-semibold">Aadhar Card:</span>{' '}
-                                                                {aadharUrl ? <a className="text-primary underline" href={aadharUrl} target="_blank" rel="noreferrer">View / Download</a> : '-'}
+                                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                                                    <div className="panel">
+                                                                        <div className="text-lg font-bold mb-4">Basic Details</div>
+                                                                        <div className="space-y-2 text-sm">
+                                                                            <div><span className="font-semibold">Email:</span> {selectedEmployee.email || '-'}</div>
+                                                                            <div><span className="font-semibold">Mobile:</span> {selectedEmployee.mobile || '-'}</div>
+                                                                            <div><span className="font-semibold">Gender:</span> {selectedEmployee.gender || '-'}</div>
+                                                                            <div><span className="font-semibold">DOB:</span> {selectedEmployee.date_of_birth || '-'}</div>
+                                                                            <div><span className="font-semibold">Category:</span> {selectedEmployee.category || '-'}</div>
+                                                                            <div><span className="font-semibold">Status:</span> {selectedEmployee.is_active ? 'Active' : 'Inactive'}</div>
+                                                                        </div>
+                                                                    </div>
+                                                                    <div className="panel">
+                                                                        <div className="text-lg font-bold mb-4">Organization</div>
+                                                                        <div className="space-y-2 text-sm">
+                                                                            <div><span className="font-semibold">Department:</span> {selectedEmployee.department_name || '-'}</div>
+                                                                            <div><span className="font-semibold">Designation:</span> {selectedEmployee.designation_name || '-'}</div>
+                                                                            <div><span className="font-semibold">Level:</span> {selectedEmployee.level_name || '-'}</div>
+                                                                            <div><span className="font-semibold">Reporting Level:</span> {selectedEmployee.reporting_level_name || '-'}</div>
+                                                                            <div><span className="font-semibold">Reporting Manager:</span> {selectedEmployee.reporting_manager_name || '-'}</div>
+                                                                            <div><span className="font-semibold">Joining Date:</span> {selectedEmployee.date_of_joining || '-'}</div>
+                                                                        </div>
+                                                                    </div>
+                                                                    <div className="panel">
+                                                                        <div className="text-lg font-bold mb-4">Address & Family</div>
+                                                                        <div className="space-y-2 text-sm">
+                                                                            <div><span className="font-semibold">Temporary Address:</span> {selectedEmployee.temporary_address || '-'}</div>
+                                                                            <div><span className="font-semibold">Permanent Address:</span> {selectedEmployee.permanent_address || '-'}</div>
+                                                                            <div><span className="font-semibold">Guardian Name:</span> {selectedEmployee.guardian_name || '-'}</div>
+                                                                            <div><span className="font-semibold">Guardian Mobile:</span> {selectedEmployee.guardian_mobile || '-'}</div>
+                                                                        </div>
+                                                                    </div>
+                                                                    <div className="panel">
+                                                                        <div className="text-lg font-bold mb-4">Documents</div>
+                                                                        <div className="space-y-2 text-sm">
+                                                                            <div><span className="font-semibold">Aadhar No:</span> {selectedEmployee.aadhar_no || '-'}</div>
+                                                                            <div>
+                                                                                <span className="font-semibold">Aadhar Card:</span>{' '}
+                                                                                {aadharUrl ? <a className="text-primary underline" href={aadharUrl} target="_blank" rel="noreferrer">View / Download</a> : '-'}
+                                                                            </div>
+                                                                            <div><span className="font-semibold">PAN No:</span> {selectedEmployee.pan_no || '-'}</div>
+                                                                            <div>
+                                                                                <span className="font-semibold">PAN Card:</span>{' '}
+                                                                                {panUrl ? <a className="text-primary underline" href={panUrl} target="_blank" rel="noreferrer">View / Download</a> : '-'}
+                                                                            </div>
+                                                                        </div>
+                                                                    </div>
+                                                                    <div className="panel">
+                                                                        <div className="text-lg font-bold mb-4">Bank & Payment</div>
+                                                                        <div className="space-y-2 text-sm">
+                                                                            <div><span className="font-semibold">Payment Method:</span> {selectedEmployee.payment_method || '-'}</div>
+                                                                            <div><span className="font-semibold">Bank Name:</span> {selectedEmployee.bank_name || '-'}</div>
+                                                                            <div><span className="font-semibold">Account No:</span> {selectedEmployee.account_no || '-'}</div>
+                                                                            <div><span className="font-semibold">IFSC:</span> {selectedEmployee.ifsc_code || '-'}</div>
+                                                                        </div>
+                                                                    </div>
+                                                                    <div className="panel">
+                                                                        <div className="text-lg font-bold mb-4">Employment Details</div>
+                                                                        <div className="space-y-2 text-sm">
+                                                                            <div><span className="font-semibold">Previous Employer:</span> {selectedEmployee.previous_employer || '-'}</div>
+                                                                            <div><span className="font-semibold">Previous Designation:</span> {selectedEmployee.previous_designation_name || '-'}</div>
+                                                                            <div><span className="font-semibold">Previous Salary:</span> {selectedEmployee.previous_salary || '-'}</div>
+                                                                            <div><span className="font-semibold">Basic Salary:</span> {selectedEmployee.basic_salary || '-'}</div>
+                                                                            <div><span className="font-semibold">CTC:</span> {selectedEmployee.ctc || '-'}</div>
+                                                                            <div><span className="font-semibold">Gross Salary:</span> {selectedEmployee.gross_salary || '-'}</div>
+                                                                            <div><span className="font-semibold">EPF / UAN:</span> {selectedEmployee.epf_status || '-'} / {selectedEmployee.uan || '-'}</div>
+                                                                            <div><span className="font-semibold">ESIC / No:</span> {selectedEmployee.esic_status || '-'} / {selectedEmployee.esic_no || '-'}</div>
+                                                                            <div><span className="font-semibold">Source / Referred:</span> {selectedEmployee.source_of_employment || '-'} / {selectedEmployee.who_referred || '-'}</div>
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
                                                             </div>
-                                                            <div><span className="font-semibold">PAN No:</span> {selectedEmployee.pan_no || '-'}</div>
-                                                            <div>
-                                                                <span className="font-semibold">PAN Card:</span>{' '}
-                                                                {panUrl ? <a className="text-primary underline" href={panUrl} target="_blank" rel="noreferrer">View / Download</a> : '-'}
+                                                        )}
+
+                </div>
+            </Modal>
+
+            <Modal open={editModalOpen} onClose={() => setEditModalOpen(false)} title="Edit Employee" size="5xl">
+                <div className="max-h-[80vh] overflow-y-auto">
+                                                        <form onSubmit={handleSaveEdit} className="space-y-6">
+                                                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                                                <div><label className="font-semibold mb-1 block">First Name</label><input className="form-input" value={formData.first_name} onChange={(e) => setFormData({ ...formData, first_name: e.target.value })} /></div>
+                                                                <div><label className="font-semibold mb-1 block">Middle Name</label><input className="form-input" value={formData.middle_name} onChange={(e) => setFormData({ ...formData, middle_name: e.target.value })} /></div>
+                                                                <div><label className="font-semibold mb-1 block">Last Name</label><input className="form-input" value={formData.last_name} onChange={(e) => setFormData({ ...formData, last_name: e.target.value })} /></div>
                                                             </div>
-                                                        </div>
-                                                    </div>
-                                                    <div className="panel">
-                                                        <div className="text-lg font-bold mb-4">Bank & Payment</div>
-                                                        <div className="space-y-2 text-sm">
-                                                            <div><span className="font-semibold">Payment Method:</span> {selectedEmployee.payment_method || '-'}</div>
-                                                            <div><span className="font-semibold">Bank Name:</span> {selectedEmployee.bank_name || '-'}</div>
-                                                            <div><span className="font-semibold">Account No:</span> {selectedEmployee.account_no || '-'}</div>
-                                                            <div><span className="font-semibold">IFSC:</span> {selectedEmployee.ifsc_code || '-'}</div>
-                                                        </div>
-                                                    </div>
-                                                    <div className="panel">
-                                                        <div className="text-lg font-bold mb-4">Employment Details</div>
-                                                        <div className="space-y-2 text-sm">
-                                                            <div><span className="font-semibold">Previous Employer:</span> {selectedEmployee.previous_employer || '-'}</div>
-                                                            <div><span className="font-semibold">Previous Designation:</span> {selectedEmployee.previous_designation_name || '-'}</div>
-                                                            <div><span className="font-semibold">Previous Salary:</span> {selectedEmployee.previous_salary || '-'}</div>
-                                                            <div><span className="font-semibold">Basic Salary:</span> {selectedEmployee.basic_salary || '-'}</div>
-                                                            <div><span className="font-semibold">CTC:</span> {selectedEmployee.ctc || '-'}</div>
-                                                            <div><span className="font-semibold">Gross Salary:</span> {selectedEmployee.gross_salary || '-'}</div>
-                                                            <div><span className="font-semibold">EPF / UAN:</span> {selectedEmployee.epf_status || '-'} / {selectedEmployee.uan || '-'}</div>
-                                                            <div><span className="font-semibold">ESIC / No:</span> {selectedEmployee.esic_status || '-'} / {selectedEmployee.esic_no || '-'}</div>
-                                                            <div><span className="font-semibold">Source / Referred:</span> {selectedEmployee.source_of_employment || '-'} / {selectedEmployee.who_referred || '-'}</div>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        )}
-                                    </div>
-                                </Dialog.Panel>
-                            </Transition.Child>
-                        </div>
-                    </div>
-                </Dialog>
-            </Transition>
 
-            <Transition appear show={editModalOpen} as={Fragment}>
-                <Dialog as="div" open={editModalOpen} onClose={() => setEditModalOpen(false)} className="relative z-50">
-                    <Transition.Child as={Fragment} enter="ease-out duration-300" enterFrom="opacity-0" enterTo="opacity-100" leave="ease-in duration-200" leaveFrom="opacity-100" leaveTo="opacity-0">
-                        <div className="fixed inset-0 bg-[black]/60" />
-                    </Transition.Child>
-                    <div className="fixed inset-0 overflow-y-auto">
-                        <div className="flex min-h-full items-center justify-center px-4 py-8">
-                            <Transition.Child as={Fragment} enter="ease-out duration-300" enterFrom="opacity-0 scale-95" enterTo="opacity-100 scale-100" leave="ease-in duration-200" leaveFrom="opacity-100 scale-100" leaveTo="opacity-0 scale-95">
-                                <Dialog.Panel className="panel border-0 p-0 rounded-lg overflow-hidden w-full max-w-5xl text-black dark:text-white-dark shadow-xl">
-                                    <button type="button" onClick={() => setEditModalOpen(false)} className="absolute top-4 ltr:right-4 rtl:left-4 text-gray-400 hover:text-gray-800 dark:hover:text-gray-600 outline-none">
-                                        <IconX />
-                                    </button>
-                                    <div className="text-lg font-medium bg-[#fbfbfb] dark:bg-[#121c2c] ltr:pl-5 rtl:pr-5 py-3 ltr:pr-[50px] rtl:pl-[50px]">
-                                        Edit Employee
-                                    </div>
-                                    <div className="p-5 max-h-[80vh] overflow-y-auto">
-                                        <form onSubmit={handleSaveEdit} className="space-y-6">
-                                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                                <div><label className="font-semibold mb-1 block">First Name</label><input className="form-input" value={formData.first_name} onChange={(e) => setFormData({ ...formData, first_name: e.target.value })} /></div>
-                                                <div><label className="font-semibold mb-1 block">Middle Name</label><input className="form-input" value={formData.middle_name} onChange={(e) => setFormData({ ...formData, middle_name: e.target.value })} /></div>
-                                                <div><label className="font-semibold mb-1 block">Last Name</label><input className="form-input" value={formData.last_name} onChange={(e) => setFormData({ ...formData, last_name: e.target.value })} /></div>
-                                            </div>
+                                                            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                                                                <div>
+                                                                    <label className="font-semibold mb-1 block">Gender</label>
+                                                                    <select className="form-select" value={formData.gender} onChange={(e) => setFormData({ ...formData, gender: e.target.value })}>
+                                                                        <option value="">Select</option>
+                                                                        <option value="male">male</option>
+                                                                        <option value="female">female</option>
+                                                                        <option value="other">other</option>
+                                                                    </select>
+                                                                </div>
+                                                                <div><label className="font-semibold mb-1 block">DOB</label><input type="date" className="form-input" value={formData.date_of_birth} onChange={(e) => setFormData({ ...formData, date_of_birth: e.target.value })} /></div>
+                                                                <div><label className="font-semibold mb-1 block">Email</label><input className="form-input" value={formData.email} onChange={(e) => setFormData({ ...formData, email: e.target.value })} /></div>
+                                                                <div><label className="font-semibold mb-1 block">Mobile</label><input className="form-input" value={formData.mobile} onChange={(e) => setFormData({ ...formData, mobile: e.target.value })} /></div>
+                                                            </div>
 
-                                            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                                                <div>
-                                                    <label className="font-semibold mb-1 block">Gender</label>
-                                                    <select className="form-select" value={formData.gender} onChange={(e) => setFormData({ ...formData, gender: e.target.value })}>
-                                                        <option value="">Select</option>
-                                                        <option value="male">male</option>
-                                                        <option value="female">female</option>
-                                                        <option value="other">other</option>
-                                                    </select>
-                                                </div>
-                                                <div><label className="font-semibold mb-1 block">DOB</label><input type="date" className="form-input" value={formData.date_of_birth} onChange={(e) => setFormData({ ...formData, date_of_birth: e.target.value })} /></div>
-                                                <div><label className="font-semibold mb-1 block">Email</label><input className="form-input" value={formData.email} onChange={(e) => setFormData({ ...formData, email: e.target.value })} /></div>
-                                                <div><label className="font-semibold mb-1 block">Mobile</label><input className="form-input" value={formData.mobile} onChange={(e) => setFormData({ ...formData, mobile: e.target.value })} /></div>
-                                            </div>
+                                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                                <div>
+                                                                    <label className="font-semibold mb-1 block">Company</label>
+                                                                    <input className="form-input bg-[#f5f5f5] dark:bg-[#1b2e4b]" value={selectedEmployee?.company_name || adminCompanyName || 'Current admin company'} readOnly />
+                                                                </div>
+                                                                <div>
+                                                                    <label className="font-semibold mb-1 block">Role</label>
+                                                                    <input className="form-input bg-[#f5f5f5] dark:bg-[#1b2e4b]" value="Employee" readOnly />
+                                                                </div>
+                                                            </div>
 
-                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                                <div>
-                                                    <label className="font-semibold mb-1 block">Company</label>
-                                                    <input className="form-input bg-[#f5f5f5] dark:bg-[#1b2e4b]" value={selectedEmployee?.company_name || adminCompanyName || 'Current admin company'} readOnly />
-                                                </div>
-                                                <div>
-                                                    <label className="font-semibold mb-1 block">Role</label>
-                                                    <input className="form-input bg-[#f5f5f5] dark:bg-[#1b2e4b]" value="Employee" readOnly />
-                                                </div>
-                                            </div>
+                                                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                                                <div>
+                                                                    <label className="font-semibold mb-1 block">Department</label>
+                                                                    <select
+                                                                        className="form-select"
+                                                                        value={formData.department}
+                                                                        onChange={(e) => {
+                                                                            const nextDepartment = e.target.value;
+                                                                            const nextDesignation =
+                                                                                designations.find((d) => String(d.department ?? '') === nextDepartment && String(d.id) === formData.designation) ||
+                                                                                designations.find((d) => String(d.department ?? '') === nextDepartment && d.designation_name?.toLowerCase() === 'employee') ||
+                                                                                designations.find((d) => String(d.department ?? '') === nextDepartment);
 
-                                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                                <div>
-                                                    <label className="font-semibold mb-1 block">Department</label>
-                                                    <select
-                                                        className="form-select"
-                                                        value={formData.department}
-                                                        onChange={(e) => {
-                                                            const nextDepartment = e.target.value;
-                                                            const nextDesignation =
-                                                                designations.find((d) => String(d.department ?? '') === nextDepartment && String(d.id) === formData.designation) ||
-                                                                designations.find((d) => String(d.department ?? '') === nextDepartment && d.designation_name?.toLowerCase() === 'employee') ||
-                                                                designations.find((d) => String(d.department ?? '') === nextDepartment);
+                                                                            setFormData({
+                                                                                ...formData,
+                                                                                department: nextDepartment,
+                                                                                designation: nextDesignation ? String(nextDesignation.id) : '',
+                                                                                level: nextDesignation?.level ? String(nextDesignation.level) : '',
+                                                                                basic_salary: nextDesignation?.basic_pay ? String(nextDesignation.basic_pay) : formData.basic_salary,
+                                                                            });
+                                                                        }}
+                                                                    >
+                                                                        <option value="">Select</option>
+                                                                        {departments.map((d) => <option key={d.id} value={d.id}>{d.department_name}</option>)}
+                                                                    </select>
+                                                                </div>
+                                                                <div>
+                                                                    <label className="font-semibold mb-1 block">Designation</label>
+                                                                    <select
+                                                                        className="form-select"
+                                                                        value={formData.designation}
+                                                                        onChange={(e) => {
+                                                                            const nextDesignationId = e.target.value;
+                                                                            const des = filteredDesignations.find((d) => String(d.id) === nextDesignationId);
+                                                                            setFormData({
+                                                                                ...formData,
+                                                                                designation: nextDesignationId,
+                                                                                department: des?.department ? String(des.department) : formData.department,
+                                                                                level: des?.level ? String(des.level) : formData.level,
+                                                                                basic_salary: des?.basic_pay ? String(des.basic_pay) : formData.basic_salary,
+                                                                            });
+                                                                        }}
+                                                                    >
+                                                                        <option value="">Select</option>
+                                                                        {filteredDesignations.map((d) => <option key={d.id} value={d.id}>{d.designation_name}</option>)}
+                                                                    </select>
+                                                                </div>
+                                                                <div>
+                                                                    <label className="font-semibold mb-1 block">Level</label>
+                                                                    <select className="form-select" value={formData.level} onChange={(e) => setFormData({ ...formData, level: e.target.value })}>
+                                                                        <option value="">Select</option>
+                                                                        {levels.map((l) => <option key={l.id} value={l.id}>{l.level_name}</option>)}
+                                                                    </select>
+                                                                </div>
+                                                            </div>
 
-                                                            setFormData({
-                                                                ...formData,
-                                                                department: nextDepartment,
-                                                                designation: nextDesignation ? String(nextDesignation.id) : '',
-                                                                level: nextDesignation?.level ? String(nextDesignation.level) : '',
-                                                                basic_salary: nextDesignation?.basic_pay ? String(nextDesignation.basic_pay) : formData.basic_salary,
-                                                            });
-                                                        }}
-                                                    >
-                                                        <option value="">Select</option>
-                                                        {departments.map((d) => <option key={d.id} value={d.id}>{d.department_name}</option>)}
-                                                    </select>
-                                                </div>
-                                                <div>
-                                                    <label className="font-semibold mb-1 block">Designation</label>
-                                                    <select
-                                                        className="form-select"
-                                                        value={formData.designation}
-                                                        onChange={(e) => {
-                                                            const nextDesignationId = e.target.value;
-                                                            const des = filteredDesignations.find((d) => String(d.id) === nextDesignationId);
-                                                            setFormData({
-                                                                ...formData,
-                                                                designation: nextDesignationId,
-                                                                department: des?.department ? String(des.department) : formData.department,
-                                                                level: des?.level ? String(des.level) : formData.level,
-                                                                basic_salary: des?.basic_pay ? String(des.basic_pay) : formData.basic_salary,
-                                                            });
-                                                        }}
-                                                    >
-                                                        <option value="">Select</option>
-                                                        {filteredDesignations.map((d) => <option key={d.id} value={d.id}>{d.designation_name}</option>)}
-                                                    </select>
-                                                </div>
-                                                <div>
-                                                    <label className="font-semibold mb-1 block">Level</label>
-                                                    <select className="form-select" value={formData.level} onChange={(e) => setFormData({ ...formData, level: e.target.value })}>
-                                                        <option value="">Select</option>
-                                                        {levels.map((l) => <option key={l.id} value={l.id}>{l.level_name}</option>)}
-                                                    </select>
-                                                </div>
-                                            </div>
+                                                            <div className="grid grid-cols-1 md:grid-cols-1 gap-4">
+                                                                <div>
+                                                                    <label className="font-semibold mb-1 block">Reporting Manager</label>
+                                                                    <select className="form-select" value={formData.reporting_manager} onChange={(e) => setFormData({ ...formData, reporting_manager: e.target.value })}>
+                                                                        <option value="">Select Manager (Optional)</option>
+                                                                        {allEmployees.filter(emp => emp.id !== selectedEmployee?.id).map((emp) => (
+                                                                            <option key={emp.id} value={emp.id}>
+                                                                                {emp.full_name}
+                                                                            </option>
+                                                                        ))}
+                                                                    </select>
+                                                                </div>
+                                                            </div>
 
-                                            <div className="grid grid-cols-1 md:grid-cols-1 gap-4">
-                                                <div>
-                                                    <label className="font-semibold mb-1 block">Reporting Manager</label>
-                                                    <select className="form-select" value={formData.reporting_manager} onChange={(e) => setFormData({ ...formData, reporting_manager: e.target.value })}>
-                                                        <option value="">Select Manager (Optional)</option>
-                                                        {allEmployees.filter(emp => emp.id !== selectedEmployee?.id).map((emp) => (
-                                                            <option key={emp.id} value={emp.id}>
-                                                                {emp.full_name}
-                                                            </option>
-                                                        ))}
-                                                    </select>
-                                                </div>
-                                            </div>
+                                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                                <div><label className="font-semibold mb-1 block">Temporary Address</label><input className="form-input" value={formData.temporary_address} onChange={(e) => setFormData({ ...formData, temporary_address: e.target.value })} /></div>
+                                                                <div><label className="font-semibold mb-1 block">Permanent Address</label><input className="form-input" value={formData.permanent_address} onChange={(e) => setFormData({ ...formData, permanent_address: e.target.value })} /></div>
+                                                            </div>
 
-                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                                <div><label className="font-semibold mb-1 block">Temporary Address</label><input className="form-input" value={formData.temporary_address} onChange={(e) => setFormData({ ...formData, temporary_address: e.target.value })} /></div>
-                                                <div><label className="font-semibold mb-1 block">Permanent Address</label><input className="form-input" value={formData.permanent_address} onChange={(e) => setFormData({ ...formData, permanent_address: e.target.value })} /></div>
-                                            </div>
+                                                            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                                                                <div><label className="font-semibold mb-1 block">Joining Date</label><input type="date" className="form-input" value={formData.date_of_joining} onChange={(e) => setFormData({ ...formData, date_of_joining: e.target.value })} /></div>
+                                                                <div><label className="font-semibold mb-1 block">Aadhar No</label><input className="form-input" value={formData.aadhar_no} onChange={(e) => setFormData({ ...formData, aadhar_no: e.target.value })} /></div>
+                                                                <div><label className="font-semibold mb-1 block">PAN No</label><input className="form-input" value={formData.pan_no} onChange={(e) => setFormData({ ...formData, pan_no: e.target.value })} /></div>
+                                                                <div><label className="font-semibold mb-1 block">Category</label><input className="form-input" value={formData.category} onChange={(e) => setFormData({ ...formData, category: e.target.value })} /></div>
+                                                            </div>
 
-                                            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                                                <div><label className="font-semibold mb-1 block">Joining Date</label><input type="date" className="form-input" value={formData.date_of_joining} onChange={(e) => setFormData({ ...formData, date_of_joining: e.target.value })} /></div>
-                                                <div><label className="font-semibold mb-1 block">Aadhar No</label><input className="form-input" value={formData.aadhar_no} onChange={(e) => setFormData({ ...formData, aadhar_no: e.target.value })} /></div>
-                                                <div><label className="font-semibold mb-1 block">PAN No</label><input className="form-input" value={formData.pan_no} onChange={(e) => setFormData({ ...formData, pan_no: e.target.value })} /></div>
-                                                <div><label className="font-semibold mb-1 block">Category</label><input className="form-input" value={formData.category} onChange={(e) => setFormData({ ...formData, category: e.target.value })} /></div>
-                                            </div>
+                                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                                <div><label className="font-semibold mb-1 block">Guardian Name</label><input className="form-input" value={formData.guardian_name} onChange={(e) => setFormData({ ...formData, guardian_name: e.target.value })} /></div>
+                                                                <div><label className="font-semibold mb-1 block">Guardian Mobile</label><input className="form-input" value={formData.guardian_mobile} onChange={(e) => setFormData({ ...formData, guardian_mobile: e.target.value })} /></div>
+                                                            </div>
 
-                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                                <div><label className="font-semibold mb-1 block">Guardian Name</label><input className="form-input" value={formData.guardian_name} onChange={(e) => setFormData({ ...formData, guardian_name: e.target.value })} /></div>
-                                                <div><label className="font-semibold mb-1 block">Guardian Mobile</label><input className="form-input" value={formData.guardian_mobile} onChange={(e) => setFormData({ ...formData, guardian_mobile: e.target.value })} /></div>
-                                            </div>
+                                                            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                                                                <div><label className="font-semibold mb-1 block">Payment Method</label><input className="form-input" value={formData.payment_method} onChange={(e) => setFormData({ ...formData, payment_method: e.target.value })} /></div>
+                                                                <div><label className="font-semibold mb-1 block">Account No</label><input className="form-input" value={formData.account_no} onChange={(e) => setFormData({ ...formData, account_no: e.target.value })} /></div>
+                                                                <div><label className="font-semibold mb-1 block">IFSC</label><input className="form-input" value={formData.ifsc_code} onChange={(e) => setFormData({ ...formData, ifsc_code: e.target.value })} /></div>
+                                                                <div><label className="font-semibold mb-1 block">Bank Name</label><input className="form-input" value={formData.bank_name} onChange={(e) => setFormData({ ...formData, bank_name: e.target.value })} /></div>
+                                                            </div>
 
-                                            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                                                <div><label className="font-semibold mb-1 block">Payment Method</label><input className="form-input" value={formData.payment_method} onChange={(e) => setFormData({ ...formData, payment_method: e.target.value })} /></div>
-                                                <div><label className="font-semibold mb-1 block">Account No</label><input className="form-input" value={formData.account_no} onChange={(e) => setFormData({ ...formData, account_no: e.target.value })} /></div>
-                                                <div><label className="font-semibold mb-1 block">IFSC</label><input className="form-input" value={formData.ifsc_code} onChange={(e) => setFormData({ ...formData, ifsc_code: e.target.value })} /></div>
-                                                <div><label className="font-semibold mb-1 block">Bank Name</label><input className="form-input" value={formData.bank_name} onChange={(e) => setFormData({ ...formData, bank_name: e.target.value })} /></div>
-                                            </div>
+                                                            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                                                                <div><label className="font-semibold mb-1 block">Previous Employer</label><input className="form-input" value={formData.previous_employer} onChange={(e) => setFormData({ ...formData, previous_employer: e.target.value })} /></div>
+                                                                <div><label className="font-semibold mb-1 block">Previous Designation</label><input className="form-input" value={formData.previous_designation_name} onChange={(e) => setFormData({ ...formData, previous_designation_name: e.target.value })} /></div>
+                                                                <div><label className="font-semibold mb-1 block">Previous Salary</label><input className="form-input" value={formData.previous_salary} onChange={(e) => setFormData({ ...formData, previous_salary: e.target.value })} /></div>
+                                                                <div><label className="font-semibold mb-1 block">Basic Salary</label><input className="form-input" value={formData.basic_salary} onChange={(e) => setFormData({ ...formData, basic_salary: e.target.value })} /></div>
+                                                                <div><label className="font-semibold mb-1 block">CTC</label><input className="form-input" value={formData.ctc} onChange={(e) => setFormData({ ...formData, ctc: e.target.value })} /></div>
+                                                            </div>
 
-                                            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                                                <div><label className="font-semibold mb-1 block">Previous Employer</label><input className="form-input" value={formData.previous_employer} onChange={(e) => setFormData({ ...formData, previous_employer: e.target.value })} /></div>
-                                                <div><label className="font-semibold mb-1 block">Previous Designation</label><input className="form-input" value={formData.previous_designation_name} onChange={(e) => setFormData({ ...formData, previous_designation_name: e.target.value })} /></div>
-                                                <div><label className="font-semibold mb-1 block">Previous Salary</label><input className="form-input" value={formData.previous_salary} onChange={(e) => setFormData({ ...formData, previous_salary: e.target.value })} /></div>
-                                                <div><label className="font-semibold mb-1 block">Basic Salary</label><input className="form-input" value={formData.basic_salary} onChange={(e) => setFormData({ ...formData, basic_salary: e.target.value })} /></div>
-                                                <div><label className="font-semibold mb-1 block">CTC</label><input className="form-input" value={formData.ctc} onChange={(e) => setFormData({ ...formData, ctc: e.target.value })} /></div>
-                                            </div>
+                                                            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                                                                <div><label className="font-semibold mb-1 block">Gross Salary</label><input className="form-input" value={formData.gross_salary} onChange={(e) => setFormData({ ...formData, gross_salary: e.target.value })} /></div>
+                                                                <div><label className="font-semibold mb-1 block">EPF Status</label><input className="form-input" value={formData.epf_status} onChange={(e) => setFormData({ ...formData, epf_status: e.target.value })} /></div>
+                                                                <div><label className="font-semibold mb-1 block">UAN</label><input className="form-input" value={formData.uan} onChange={(e) => setFormData({ ...formData, uan: e.target.value })} /></div>
+                                                                <div><label className="font-semibold mb-1 block">ESIC Status</label><input className="form-input" value={formData.esic_status} onChange={(e) => setFormData({ ...formData, esic_status: e.target.value })} /></div>
+                                                            </div>
 
-                                            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                                                <div><label className="font-semibold mb-1 block">Gross Salary</label><input className="form-input" value={formData.gross_salary} onChange={(e) => setFormData({ ...formData, gross_salary: e.target.value })} /></div>
-                                                <div><label className="font-semibold mb-1 block">EPF Status</label><input className="form-input" value={formData.epf_status} onChange={(e) => setFormData({ ...formData, epf_status: e.target.value })} /></div>
-                                                <div><label className="font-semibold mb-1 block">UAN</label><input className="form-input" value={formData.uan} onChange={(e) => setFormData({ ...formData, uan: e.target.value })} /></div>
-                                                <div><label className="font-semibold mb-1 block">ESIC Status</label><input className="form-input" value={formData.esic_status} onChange={(e) => setFormData({ ...formData, esic_status: e.target.value })} /></div>
-                                            </div>
+                                                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                                                <div><label className="font-semibold mb-1 block">ESIC No</label><input className="form-input" value={formData.esic_no} onChange={(e) => setFormData({ ...formData, esic_no: e.target.value })} /></div>
+                                                                <div><label className="font-semibold mb-1 block">Source of Employment</label><input className="form-input" value={formData.source_of_employment} onChange={(e) => setFormData({ ...formData, source_of_employment: e.target.value })} /></div>
+                                                                <div><label className="font-semibold mb-1 block">Who Referred</label><input className="form-input" value={formData.who_referred} onChange={(e) => setFormData({ ...formData, who_referred: e.target.value })} /></div>
+                                                            </div>
 
-                                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                                <div><label className="font-semibold mb-1 block">ESIC No</label><input className="form-input" value={formData.esic_no} onChange={(e) => setFormData({ ...formData, esic_no: e.target.value })} /></div>
-                                                <div><label className="font-semibold mb-1 block">Source of Employment</label><input className="form-input" value={formData.source_of_employment} onChange={(e) => setFormData({ ...formData, source_of_employment: e.target.value })} /></div>
-                                                <div><label className="font-semibold mb-1 block">Who Referred</label><input className="form-input" value={formData.who_referred} onChange={(e) => setFormData({ ...formData, who_referred: e.target.value })} /></div>
-                                            </div>
+                                                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                                                <div>
+                                                                    <label className="font-semibold mb-1 block">Profile Image</label>
+                                                                    {photoUrl ? (
+                                                                        <div className="mb-2 flex items-center gap-3">
+                                                                            <img src={photoUrl} alt="Current profile" className="w-12 h-12 rounded-full object-cover border border-gray-200 dark:border-[#1b2e4b]" />
+                                                                            <span className="text-xs text-gray-500">Current image</span>
+                                                                        </div>
+                                                                    ) : (
+                                                                        <div className="mb-2 text-xs text-gray-400">No image uploaded</div>
+                                                                    )}
+                                                                    <input type="file" accept="image/*" className="form-input" onChange={(e) => setFiles({ ...files, photo: e.target.files?.[0] || null })} />
+                                                                    {files.photo && <div className="text-xs text-gray-500 mt-1">Selected: {files.photo.name}</div>}
+                                                                </div>
+                                                                <div>
+                                                                    <label className="font-semibold mb-1 block">Aadhar Card</label>
+                                                                    {aadharUrl ? (
+                                                                        <div className="mb-2 text-xs">
+                                                                            <a className="text-primary underline" href={aadharUrl} target="_blank" rel="noreferrer">
+                                                                                View current Aadhar
+                                                                            </a>
+                                                                        </div>
+                                                                    ) : (
+                                                                        <div className="mb-2 text-xs text-gray-400">No Aadhar uploaded</div>
+                                                                    )}
+                                                                    <input type="file" className="form-input" onChange={(e) => setFiles({ ...files, aadhar_card: e.target.files?.[0] || null })} />
+                                                                    {files.aadhar_card && <div className="text-xs text-gray-500 mt-1">Selected: {files.aadhar_card.name}</div>}
+                                                                </div>
+                                                                <div>
+                                                                    <label className="font-semibold mb-1 block">PAN Card</label>
+                                                                    {panUrl ? (
+                                                                        <div className="mb-2 text-xs">
+                                                                            <a className="text-primary underline" href={panUrl} target="_blank" rel="noreferrer">
+                                                                                View current PAN
+                                                                            </a>
+                                                                        </div>
+                                                                    ) : (
+                                                                        <div className="mb-2 text-xs text-gray-400">No PAN uploaded</div>
+                                                                    )}
+                                                                    <input type="file" className="form-input" onChange={(e) => setFiles({ ...files, pan_card: e.target.files?.[0] || null })} />
+                                                                    {files.pan_card && <div className="text-xs text-gray-500 mt-1">Selected: {files.pan_card.name}</div>}
+                                                                </div>
+                                                            </div>
 
-                                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                                <div>
-                                                    <label className="font-semibold mb-1 block">Profile Image</label>
-                                                    {photoUrl ? (
-                                                        <div className="mb-2 flex items-center gap-3">
-                                                            <img src={photoUrl} alt="Current profile" className="w-12 h-12 rounded-full object-cover border border-gray-200 dark:border-[#1b2e4b]" />
-                                                            <span className="text-xs text-gray-500">Current image</span>
-                                                        </div>
-                                                    ) : (
-                                                        <div className="mb-2 text-xs text-gray-400">No image uploaded</div>
-                                                    )}
-                                                    <input type="file" accept="image/*" className="form-input" onChange={(e) => setFiles({ ...files, photo: e.target.files?.[0] || null })} />
-                                                    {files.photo && <div className="text-xs text-gray-500 mt-1">Selected: {files.photo.name}</div>}
-                                                </div>
-                                                <div>
-                                                    <label className="font-semibold mb-1 block">Aadhar Card</label>
-                                                    {aadharUrl ? (
-                                                        <div className="mb-2 text-xs">
-                                                            <a className="text-primary underline" href={aadharUrl} target="_blank" rel="noreferrer">
-                                                                View current Aadhar
-                                                            </a>
-                                                        </div>
-                                                    ) : (
-                                                        <div className="mb-2 text-xs text-gray-400">No Aadhar uploaded</div>
-                                                    )}
-                                                    <input type="file" className="form-input" onChange={(e) => setFiles({ ...files, aadhar_card: e.target.files?.[0] || null })} />
-                                                    {files.aadhar_card && <div className="text-xs text-gray-500 mt-1">Selected: {files.aadhar_card.name}</div>}
-                                                </div>
-                                                <div>
-                                                    <label className="font-semibold mb-1 block">PAN Card</label>
-                                                    {panUrl ? (
-                                                        <div className="mb-2 text-xs">
-                                                            <a className="text-primary underline" href={panUrl} target="_blank" rel="noreferrer">
-                                                                View current PAN
-                                                            </a>
-                                                        </div>
-                                                    ) : (
-                                                        <div className="mb-2 text-xs text-gray-400">No PAN uploaded</div>
-                                                    )}
-                                                    <input type="file" className="form-input" onChange={(e) => setFiles({ ...files, pan_card: e.target.files?.[0] || null })} />
-                                                    {files.pan_card && <div className="text-xs text-gray-500 mt-1">Selected: {files.pan_card.name}</div>}
-                                                </div>
-                                            </div>
+                                                            <div className="flex justify-end items-center gap-3 mt-8">
+                                                                <Button variant="outline-danger" type="button"  onClick={() => setEditModalOpen(false)}>Cancel</Button>
+                                                                <Button type="submit"  disabled={savingEdit}>
+                                                                    {savingEdit ? 'Saving...' : 'Save Changes'}
+                                                                </Button>
+                                                            </div>
+                                                        </form>
 
-                                            <div className="flex justify-end items-center gap-3 mt-8">
-                                                <button type="button" className="btn btn-outline-danger" onClick={() => setEditModalOpen(false)}>Cancel</button>
-                                                <button type="submit" className="btn btn-primary" disabled={savingEdit}>
-                                                    {savingEdit ? 'Saving...' : 'Save Changes'}
-                                                </button>
-                                            </div>
-                                        </form>
-                                    </div>
-                                </Dialog.Panel>
-                            </Transition.Child>
-                        </div>
-                    </div>
-                </Dialog>
-            </Transition>
+                </div>
+            </Modal>
 
-            <Transition appear show={createModalOpen} as={Fragment}>
-                <Dialog as="div" open={createModalOpen} onClose={() => setCreateModalOpen(false)} className="relative z-50">
-                    <Transition.Child as={Fragment} enter="ease-out duration-300" enterFrom="opacity-0" enterTo="opacity-100" leave="ease-in duration-200" leaveFrom="opacity-100" leaveTo="opacity-0">
-                        <div className="fixed inset-0 bg-[black]/60" />
-                    </Transition.Child>
-                    <div className="fixed inset-0 overflow-y-auto">
-                        <div className="flex min-h-full items-center justify-center px-4 py-8">
-                            <Transition.Child as={Fragment} enter="ease-out duration-300" enterFrom="opacity-0 scale-95" enterTo="opacity-100 scale-100" leave="ease-in duration-200" leaveFrom="opacity-100 scale-100" leaveTo="opacity-0 scale-95">
-                                <Dialog.Panel className="panel border-0 p-0 rounded-lg overflow-hidden w-full max-w-5xl text-black dark:text-white-dark shadow-xl">
-                                    <button type="button" onClick={() => setCreateModalOpen(false)} className="absolute top-4 ltr:right-4 rtl:left-4 text-gray-400 hover:text-gray-800 dark:hover:text-gray-600 outline-none">
-                                        <IconX />
-                                    </button>
-                                    <div className="text-lg font-medium bg-[#fbfbfb] dark:bg-[#121c2c] ltr:pl-5 rtl:pr-5 py-3 ltr:pr-[50px] rtl:pl-[50px]">
-                                        Register Employee
-                                    </div>
-                                    <div className="p-5 max-h-[80vh] overflow-y-auto">
-                                        <form onSubmit={handleCreateEmployee} className="space-y-6">
-                                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                                <div><label className="font-semibold mb-1 block">First Name</label><input className="form-input" value={formData.first_name} onChange={(e) => setFormData({ ...formData, first_name: e.target.value })} /></div>
-                                                <div><label className="font-semibold mb-1 block">Middle Name</label><input className="form-input" value={formData.middle_name} onChange={(e) => setFormData({ ...formData, middle_name: e.target.value })} /></div>
-                                                <div><label className="font-semibold mb-1 block">Last Name</label><input className="form-input" value={formData.last_name} onChange={(e) => setFormData({ ...formData, last_name: e.target.value })} /></div>
-                                            </div>
+            <Modal open={createModalOpen} onClose={() => setCreateModalOpen(false)} title="Register Employee" size="5xl">
+                <div className="max-h-[80vh] overflow-y-auto">
+                                                        <form onSubmit={handleCreateEmployee} className="space-y-6">
+                                                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                                                <div><label className="font-semibold mb-1 block">First Name</label><input className="form-input" value={formData.first_name} onChange={(e) => setFormData({ ...formData, first_name: e.target.value })} /></div>
+                                                                <div><label className="font-semibold mb-1 block">Middle Name</label><input className="form-input" value={formData.middle_name} onChange={(e) => setFormData({ ...formData, middle_name: e.target.value })} /></div>
+                                                                <div><label className="font-semibold mb-1 block">Last Name</label><input className="form-input" value={formData.last_name} onChange={(e) => setFormData({ ...formData, last_name: e.target.value })} /></div>
+                                                            </div>
 
-                                            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                                                <div>
-                                                    <label className="font-semibold mb-1 block">Gender</label>
-                                                    <select className="form-select" value={formData.gender} onChange={(e) => setFormData({ ...formData, gender: e.target.value })}>
-                                                        <option value="">Select</option>
-                                                        <option value="male">male</option>
-                                                        <option value="female">female</option>
-                                                        <option value="other">other</option>
-                                                    </select>
-                                                </div>
-                                                <div><label className="font-semibold mb-1 block">DOB</label><input type="date" className="form-input" value={formData.date_of_birth} onChange={(e) => setFormData({ ...formData, date_of_birth: e.target.value })} /></div>
-                                                <div><label className="font-semibold mb-1 block">Email *</label><input className="form-input" value={formData.email} onChange={(e) => setFormData({ ...formData, email: e.target.value })} required /></div>
-                                                <div><label className="font-semibold mb-1 block">Password *</label><input type="password" className="form-input" value={formData.password} onChange={(e) => setFormData({ ...formData, password: e.target.value })} required /></div>
-                                                <div><label className="font-semibold mb-1 block">Mobile</label><input className="form-input" value={formData.mobile} onChange={(e) => setFormData({ ...formData, mobile: e.target.value })} /></div>
-                                            </div>
+                                                            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                                                                <div>
+                                                                    <label className="font-semibold mb-1 block">Gender</label>
+                                                                    <select className="form-select" value={formData.gender} onChange={(e) => setFormData({ ...formData, gender: e.target.value })}>
+                                                                        <option value="">Select</option>
+                                                                        <option value="male">male</option>
+                                                                        <option value="female">female</option>
+                                                                        <option value="other">other</option>
+                                                                    </select>
+                                                                </div>
+                                                                <div><label className="font-semibold mb-1 block">DOB</label><input type="date" className="form-input" value={formData.date_of_birth} onChange={(e) => setFormData({ ...formData, date_of_birth: e.target.value })} /></div>
+                                                                <div><label className="font-semibold mb-1 block">Email *</label><input className="form-input" value={formData.email} onChange={(e) => setFormData({ ...formData, email: e.target.value })} required /></div>
+                                                                <div><label className="font-semibold mb-1 block">Password *</label><input type="password" className="form-input" value={formData.password} onChange={(e) => setFormData({ ...formData, password: e.target.value })} required /></div>
+                                                                <div><label className="font-semibold mb-1 block">Mobile</label><input className="form-input" value={formData.mobile} onChange={(e) => setFormData({ ...formData, mobile: e.target.value })} /></div>
+                                                            </div>
 
-                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                                <div>
-                                                    <label className="font-semibold mb-1 block">Company</label>
-                                                    <input className="form-input bg-[#f5f5f5] dark:bg-[#1b2e4b]" value={adminCompanyName || 'Current admin company'} readOnly />
-                                                </div>
-                                                <div>
-                                                    <label className="font-semibold mb-1 block">Role</label>
-                                                    <input className="form-input bg-[#f5f5f5] dark:bg-[#1b2e4b]" value="Employee" readOnly />
-                                                </div>
-                                            </div>
+                                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                                <div>
+                                                                    <label className="font-semibold mb-1 block">Company</label>
+                                                                    <input className="form-input bg-[#f5f5f5] dark:bg-[#1b2e4b]" value={adminCompanyName || 'Current admin company'} readOnly />
+                                                                </div>
+                                                                <div>
+                                                                    <label className="font-semibold mb-1 block">Role</label>
+                                                                    <input className="form-input bg-[#f5f5f5] dark:bg-[#1b2e4b]" value="Employee" readOnly />
+                                                                </div>
+                                                            </div>
 
-                                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                                <div>
-                                                    <label className="font-semibold mb-1 block">Department</label>
-                                                    <select
-                                                        className="form-select"
-                                                        value={formData.department}
-                                                        onChange={(e) => {
-                                                            const nextDepartment = e.target.value;
-                                                            const nextDesignation =
-                                                                designations.find((d) => String(d.department ?? '') === nextDepartment && d.designation_name?.toLowerCase() === 'employee') ||
-                                                                designations.find((d) => String(d.department ?? '') === nextDepartment);
+                                                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                                                <div>
+                                                                    <label className="font-semibold mb-1 block">Department</label>
+                                                                    <select
+                                                                        className="form-select"
+                                                                        value={formData.department}
+                                                                        onChange={(e) => {
+                                                                            const nextDepartment = e.target.value;
+                                                                            const nextDesignation =
+                                                                                designations.find((d) => String(d.department ?? '') === nextDepartment && d.designation_name?.toLowerCase() === 'employee') ||
+                                                                                designations.find((d) => String(d.department ?? '') === nextDepartment);
 
-                                                            setFormData({
-                                                                ...formData,
-                                                                department: nextDepartment,
-                                                                designation: nextDesignation ? String(nextDesignation.id) : '',
-                                                                level: nextDesignation?.level ? String(nextDesignation.level) : '',
-                                                                basic_salary: nextDesignation?.basic_pay ? String(nextDesignation.basic_pay) : formData.basic_salary,
-                                                            });
-                                                        }}
-                                                    >
-                                                        <option value="">Select</option>
-                                                        {departments.map((d) => <option key={d.id} value={d.id}>{d.department_name}</option>)}
-                                                    </select>
-                                                </div>
-                                                <div>
-                                                    <label className="font-semibold mb-1 block">Designation</label>
-                                                    <select
-                                                        className="form-select"
-                                                        value={formData.designation}
-                                                        onChange={(e) => {
-                                                            const nextDesignationId = e.target.value;
-                                                            const nextDesignation = filteredDesignations.find((d) => String(d.id) === nextDesignationId);
-                                                            setFormData({
-                                                                ...formData,
-                                                                designation: nextDesignationId,
-                                                                department: nextDesignation?.department ? String(nextDesignation.department) : formData.department,
-                                                                level: nextDesignation?.level ? String(nextDesignation.level) : formData.level,
-                                                                basic_salary: nextDesignation?.basic_pay ? String(nextDesignation.basic_pay) : formData.basic_salary,
-                                                            });
-                                                        }}
-                                                    >
-                                                        <option value="">Select</option>
-                                                        {filteredDesignations.map((d) => <option key={d.id} value={d.id}>{d.designation_name}</option>)}
-                                                    </select>
-                                                </div>
-                                                <div>
-                                                    <label className="font-semibold mb-1 block">Level</label>
-                                                    <select className="form-select" value={formData.level} onChange={(e) => setFormData({ ...formData, level: e.target.value })}>
-                                                        <option value="">Select</option>
-                                                        {levels.map((l) => <option key={l.id} value={l.id}>{l.level_name}</option>)}
-                                                    </select>
-                                                </div>
-                                            </div>
-                                            {selectedDesignation && (
-                                                <div className="text-xs text-gray-500">
-                                                    This designation is fetched from the current admin company.
-                                                </div>
-                                            )}
+                                                                            setFormData({
+                                                                                ...formData,
+                                                                                department: nextDepartment,
+                                                                                designation: nextDesignation ? String(nextDesignation.id) : '',
+                                                                                level: nextDesignation?.level ? String(nextDesignation.level) : '',
+                                                                                basic_salary: nextDesignation?.basic_pay ? String(nextDesignation.basic_pay) : formData.basic_salary,
+                                                                            });
+                                                                        }}
+                                                                    >
+                                                                        <option value="">Select</option>
+                                                                        {departments.map((d) => <option key={d.id} value={d.id}>{d.department_name}</option>)}
+                                                                    </select>
+                                                                </div>
+                                                                <div>
+                                                                    <label className="font-semibold mb-1 block">Designation</label>
+                                                                    <select
+                                                                        className="form-select"
+                                                                        value={formData.designation}
+                                                                        onChange={(e) => {
+                                                                            const nextDesignationId = e.target.value;
+                                                                            const nextDesignation = filteredDesignations.find((d) => String(d.id) === nextDesignationId);
+                                                                            setFormData({
+                                                                                ...formData,
+                                                                                designation: nextDesignationId,
+                                                                                department: nextDesignation?.department ? String(nextDesignation.department) : formData.department,
+                                                                                level: nextDesignation?.level ? String(nextDesignation.level) : formData.level,
+                                                                                basic_salary: nextDesignation?.basic_pay ? String(nextDesignation.basic_pay) : formData.basic_salary,
+                                                                            });
+                                                                        }}
+                                                                    >
+                                                                        <option value="">Select</option>
+                                                                        {filteredDesignations.map((d) => <option key={d.id} value={d.id}>{d.designation_name}</option>)}
+                                                                    </select>
+                                                                </div>
+                                                                <div>
+                                                                    <label className="font-semibold mb-1 block">Level</label>
+                                                                    <select className="form-select" value={formData.level} onChange={(e) => setFormData({ ...formData, level: e.target.value })}>
+                                                                        <option value="">Select</option>
+                                                                        {levels.map((l) => <option key={l.id} value={l.id}>{l.level_name}</option>)}
+                                                                    </select>
+                                                                </div>
+                                                            </div>
+                                                            {selectedDesignation && (
+                                                                <div className="text-xs text-gray-500">
+                                                                    This designation is fetched from the current admin company.
+                                                                </div>
+                                                            )}
 
-                                            <div className="grid grid-cols-1 md:grid-cols-1 gap-4">
-                                                <div>
-                                                    <label className="font-semibold mb-1 block">Reporting Manager</label>
-                                                    <select className="form-select" value={formData.reporting_manager} onChange={(e) => setFormData({ ...formData, reporting_manager: e.target.value })}>
-                                                        <option value="">Select Manager (Optional)</option>
-                                                        {allEmployees
-                                                            .filter(emp => !selectedEmployee || emp.id !== selectedEmployee.id)
-                                                            .map((emp) => (
-                                                                <option key={emp.id} value={emp.id}>
-                                                                    {emp.full_name}
-                                                                </option>
-                                                            ))}
-                                                    </select>
-                                                </div>
-                                            </div>
+                                                            <div className="grid grid-cols-1 md:grid-cols-1 gap-4">
+                                                                <div>
+                                                                    <label className="font-semibold mb-1 block">Reporting Manager</label>
+                                                                    <select className="form-select" value={formData.reporting_manager} onChange={(e) => setFormData({ ...formData, reporting_manager: e.target.value })}>
+                                                                        <option value="">Select Manager (Optional)</option>
+                                                                        {allEmployees
+                                                                            .filter(emp => !selectedEmployee || emp.id !== selectedEmployee.id)
+                                                                            .map((emp) => (
+                                                                                <option key={emp.id} value={emp.id}>
+                                                                                    {emp.full_name}
+                                                                                </option>
+                                                                            ))}
+                                                                    </select>
+                                                                </div>
+                                                            </div>
 
-                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                                <div><label className="font-semibold mb-1 block">Temporary Address</label><input className="form-input" value={formData.temporary_address} onChange={(e) => setFormData({ ...formData, temporary_address: e.target.value })} /></div>
-                                                <div><label className="font-semibold mb-1 block">Permanent Address</label><input className="form-input" value={formData.permanent_address} onChange={(e) => setFormData({ ...formData, permanent_address: e.target.value })} /></div>
-                                            </div>
+                                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                                <div><label className="font-semibold mb-1 block">Temporary Address</label><input className="form-input" value={formData.temporary_address} onChange={(e) => setFormData({ ...formData, temporary_address: e.target.value })} /></div>
+                                                                <div><label className="font-semibold mb-1 block">Permanent Address</label><input className="form-input" value={formData.permanent_address} onChange={(e) => setFormData({ ...formData, permanent_address: e.target.value })} /></div>
+                                                            </div>
 
-                                            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                                                <div><label className="font-semibold mb-1 block">Joining Date</label><input type="date" className="form-input" value={formData.date_of_joining} onChange={(e) => setFormData({ ...formData, date_of_joining: e.target.value })} /></div>
-                                                <div><label className="font-semibold mb-1 block">Aadhar No</label><input className="form-input" value={formData.aadhar_no} onChange={(e) => setFormData({ ...formData, aadhar_no: e.target.value })} /></div>
-                                                <div><label className="font-semibold mb-1 block">PAN No</label><input className="form-input" value={formData.pan_no} onChange={(e) => setFormData({ ...formData, pan_no: e.target.value })} /></div>
-                                                <div><label className="font-semibold mb-1 block">Category</label><input className="form-input" value={formData.category} onChange={(e) => setFormData({ ...formData, category: e.target.value })} /></div>
-                                            </div>
+                                                            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                                                                <div><label className="font-semibold mb-1 block">Joining Date</label><input type="date" className="form-input" value={formData.date_of_joining} onChange={(e) => setFormData({ ...formData, date_of_joining: e.target.value })} /></div>
+                                                                <div><label className="font-semibold mb-1 block">Aadhar No</label><input className="form-input" value={formData.aadhar_no} onChange={(e) => setFormData({ ...formData, aadhar_no: e.target.value })} /></div>
+                                                                <div><label className="font-semibold mb-1 block">PAN No</label><input className="form-input" value={formData.pan_no} onChange={(e) => setFormData({ ...formData, pan_no: e.target.value })} /></div>
+                                                                <div><label className="font-semibold mb-1 block">Category</label><input className="form-input" value={formData.category} onChange={(e) => setFormData({ ...formData, category: e.target.value })} /></div>
+                                                            </div>
 
-                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                                <div><label className="font-semibold mb-1 block">Guardian Name</label><input className="form-input" value={formData.guardian_name} onChange={(e) => setFormData({ ...formData, guardian_name: e.target.value })} /></div>
-                                                <div><label className="font-semibold mb-1 block">Guardian Mobile</label><input className="form-input" value={formData.guardian_mobile} onChange={(e) => setFormData({ ...formData, guardian_mobile: e.target.value })} /></div>
-                                            </div>
+                                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                                <div><label className="font-semibold mb-1 block">Guardian Name</label><input className="form-input" value={formData.guardian_name} onChange={(e) => setFormData({ ...formData, guardian_name: e.target.value })} /></div>
+                                                                <div><label className="font-semibold mb-1 block">Guardian Mobile</label><input className="form-input" value={formData.guardian_mobile} onChange={(e) => setFormData({ ...formData, guardian_mobile: e.target.value })} /></div>
+                                                            </div>
 
-                                            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                                                <div><label className="font-semibold mb-1 block">Payment Method</label><input className="form-input" value={formData.payment_method} onChange={(e) => setFormData({ ...formData, payment_method: e.target.value })} /></div>
-                                                <div><label className="font-semibold mb-1 block">Account No</label><input className="form-input" value={formData.account_no} onChange={(e) => setFormData({ ...formData, account_no: e.target.value })} /></div>
-                                                <div><label className="font-semibold mb-1 block">IFSC</label><input className="form-input" value={formData.ifsc_code} onChange={(e) => setFormData({ ...formData, ifsc_code: e.target.value })} /></div>
-                                                <div><label className="font-semibold mb-1 block">Bank Name</label><input className="form-input" value={formData.bank_name} onChange={(e) => setFormData({ ...formData, bank_name: e.target.value })} /></div>
-                                            </div>
+                                                            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                                                                <div><label className="font-semibold mb-1 block">Payment Method</label><input className="form-input" value={formData.payment_method} onChange={(e) => setFormData({ ...formData, payment_method: e.target.value })} /></div>
+                                                                <div><label className="font-semibold mb-1 block">Account No</label><input className="form-input" value={formData.account_no} onChange={(e) => setFormData({ ...formData, account_no: e.target.value })} /></div>
+                                                                <div><label className="font-semibold mb-1 block">IFSC</label><input className="form-input" value={formData.ifsc_code} onChange={(e) => setFormData({ ...formData, ifsc_code: e.target.value })} /></div>
+                                                                <div><label className="font-semibold mb-1 block">Bank Name</label><input className="form-input" value={formData.bank_name} onChange={(e) => setFormData({ ...formData, bank_name: e.target.value })} /></div>
+                                                            </div>
 
-                                            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                                                <div><label className="font-semibold mb-1 block">Previous Employer</label><input className="form-input" value={formData.previous_employer} onChange={(e) => setFormData({ ...formData, previous_employer: e.target.value })} /></div>
-                                                <div><label className="font-semibold mb-1 block">Previous Designation</label><input className="form-input" value={formData.previous_designation_name} onChange={(e) => setFormData({ ...formData, previous_designation_name: e.target.value })} /></div>
-                                                <div><label className="font-semibold mb-1 block">Previous Salary</label><input className="form-input" value={formData.previous_salary} onChange={(e) => setFormData({ ...formData, previous_salary: e.target.value })} /></div>
-                                                <div><label className="font-semibold mb-1 block">Basic Salary</label><input className="form-input" value={formData.basic_salary} onChange={(e) => setFormData({ ...formData, basic_salary: e.target.value })} /></div>
-                                                <div><label className="font-semibold mb-1 block">CTC</label><input className="form-input" value={formData.ctc} onChange={(e) => setFormData({ ...formData, ctc: e.target.value })} /></div>
-                                            </div>
+                                                            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                                                                <div><label className="font-semibold mb-1 block">Previous Employer</label><input className="form-input" value={formData.previous_employer} onChange={(e) => setFormData({ ...formData, previous_employer: e.target.value })} /></div>
+                                                                <div><label className="font-semibold mb-1 block">Previous Designation</label><input className="form-input" value={formData.previous_designation_name} onChange={(e) => setFormData({ ...formData, previous_designation_name: e.target.value })} /></div>
+                                                                <div><label className="font-semibold mb-1 block">Previous Salary</label><input className="form-input" value={formData.previous_salary} onChange={(e) => setFormData({ ...formData, previous_salary: e.target.value })} /></div>
+                                                                <div><label className="font-semibold mb-1 block">Basic Salary</label><input className="form-input" value={formData.basic_salary} onChange={(e) => setFormData({ ...formData, basic_salary: e.target.value })} /></div>
+                                                                <div><label className="font-semibold mb-1 block">CTC</label><input className="form-input" value={formData.ctc} onChange={(e) => setFormData({ ...formData, ctc: e.target.value })} /></div>
+                                                            </div>
 
-                                            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                                                <div><label className="font-semibold mb-1 block">Gross Salary</label><input className="form-input" value={formData.gross_salary} onChange={(e) => setFormData({ ...formData, gross_salary: e.target.value })} /></div>
-                                                <div><label className="font-semibold mb-1 block">EPF Status</label><input className="form-input" value={formData.epf_status} onChange={(e) => setFormData({ ...formData, epf_status: e.target.value })} /></div>
-                                                <div><label className="font-semibold mb-1 block">UAN</label><input className="form-input" value={formData.uan} onChange={(e) => setFormData({ ...formData, uan: e.target.value })} /></div>
-                                                <div><label className="font-semibold mb-1 block">ESIC Status</label><input className="form-input" value={formData.esic_status} onChange={(e) => setFormData({ ...formData, esic_status: e.target.value })} /></div>
-                                            </div>
+                                                            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                                                                <div><label className="font-semibold mb-1 block">Gross Salary</label><input className="form-input" value={formData.gross_salary} onChange={(e) => setFormData({ ...formData, gross_salary: e.target.value })} /></div>
+                                                                <div><label className="font-semibold mb-1 block">EPF Status</label><input className="form-input" value={formData.epf_status} onChange={(e) => setFormData({ ...formData, epf_status: e.target.value })} /></div>
+                                                                <div><label className="font-semibold mb-1 block">UAN</label><input className="form-input" value={formData.uan} onChange={(e) => setFormData({ ...formData, uan: e.target.value })} /></div>
+                                                                <div><label className="font-semibold mb-1 block">ESIC Status</label><input className="form-input" value={formData.esic_status} onChange={(e) => setFormData({ ...formData, esic_status: e.target.value })} /></div>
+                                                            </div>
 
-                                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                                <div><label className="font-semibold mb-1 block">ESIC No</label><input className="form-input" value={formData.esic_no} onChange={(e) => setFormData({ ...formData, esic_no: e.target.value })} /></div>
-                                                <div><label className="font-semibold mb-1 block">Source of Employment</label><input className="form-input" value={formData.source_of_employment} onChange={(e) => setFormData({ ...formData, source_of_employment: e.target.value })} /></div>
-                                                <div><label className="font-semibold mb-1 block">Who Referred</label><input className="form-input" value={formData.who_referred} onChange={(e) => setFormData({ ...formData, who_referred: e.target.value })} /></div>
-                                            </div>
+                                                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                                                <div><label className="font-semibold mb-1 block">ESIC No</label><input className="form-input" value={formData.esic_no} onChange={(e) => setFormData({ ...formData, esic_no: e.target.value })} /></div>
+                                                                <div><label className="font-semibold mb-1 block">Source of Employment</label><input className="form-input" value={formData.source_of_employment} onChange={(e) => setFormData({ ...formData, source_of_employment: e.target.value })} /></div>
+                                                                <div><label className="font-semibold mb-1 block">Who Referred</label><input className="form-input" value={formData.who_referred} onChange={(e) => setFormData({ ...formData, who_referred: e.target.value })} /></div>
+                                                            </div>
 
-                                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                                <div>
-                                                    <label className="font-semibold mb-1 block">Profile Image</label>
-                                                    <input type="file" accept="image/*" className="form-input" onChange={(e) => setFiles({ ...files, photo: e.target.files?.[0] || null })} />
-                                                    {files.photo && <div className="text-xs text-gray-500 mt-1">Selected: {files.photo.name}</div>}
-                                                </div>
-                                                <div>
-                                                    <label className="font-semibold mb-1 block">Aadhar Card</label>
-                                                    <input type="file" className="form-input" onChange={(e) => setFiles({ ...files, aadhar_card: e.target.files?.[0] || null })} />
-                                                    {files.aadhar_card && <div className="text-xs text-gray-500 mt-1">Selected: {files.aadhar_card.name}</div>}
-                                                </div>
-                                                <div>
-                                                    <label className="font-semibold mb-1 block">PAN Card</label>
-                                                    <input type="file" className="form-input" onChange={(e) => setFiles({ ...files, pan_card: e.target.files?.[0] || null })} />
-                                                    {files.pan_card && <div className="text-xs text-gray-500 mt-1">Selected: {files.pan_card.name}</div>}
-                                                </div>
-                                            </div>
+                                                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                                                <div>
+                                                                    <label className="font-semibold mb-1 block">Profile Image</label>
+                                                                    <input type="file" accept="image/*" className="form-input" onChange={(e) => setFiles({ ...files, photo: e.target.files?.[0] || null })} />
+                                                                    {files.photo && <div className="text-xs text-gray-500 mt-1">Selected: {files.photo.name}</div>}
+                                                                </div>
+                                                                <div>
+                                                                    <label className="font-semibold mb-1 block">Aadhar Card</label>
+                                                                    <input type="file" className="form-input" onChange={(e) => setFiles({ ...files, aadhar_card: e.target.files?.[0] || null })} />
+                                                                    {files.aadhar_card && <div className="text-xs text-gray-500 mt-1">Selected: {files.aadhar_card.name}</div>}
+                                                                </div>
+                                                                <div>
+                                                                    <label className="font-semibold mb-1 block">PAN Card</label>
+                                                                    <input type="file" className="form-input" onChange={(e) => setFiles({ ...files, pan_card: e.target.files?.[0] || null })} />
+                                                                    {files.pan_card && <div className="text-xs text-gray-500 mt-1">Selected: {files.pan_card.name}</div>}
+                                                                </div>
+                                                            </div>
 
-                                            <div className="flex justify-end items-center gap-3 mt-8">
-                                                <button type="button" className="btn btn-outline-danger" onClick={() => setCreateModalOpen(false)}>Cancel</button>
-                                                <button type="submit" className="btn btn-primary" disabled={savingCreate}>
-                                                    {savingCreate ? 'Registering...' : 'Register Employee'}
-                                                </button>
-                                            </div>
-                                        </form>
-                                    </div>
-                                </Dialog.Panel>
-                            </Transition.Child>
-                        </div>
-                    </div>
-                </Dialog>
-            </Transition>
+                                                            <div className="flex justify-end items-center gap-3 mt-8">
+                                                                <Button variant="outline-danger" type="button"  onClick={() => setCreateModalOpen(false)}>Cancel</Button>
+                                                                <Button type="submit"  disabled={savingCreate}>
+                                                                    {savingCreate ? 'Registering...' : 'Register Employee'}
+                                                                </Button>
+                                                            </div>
+                                                        </form>
+
+                </div>
+            </Modal>
         </div>
     );
 };

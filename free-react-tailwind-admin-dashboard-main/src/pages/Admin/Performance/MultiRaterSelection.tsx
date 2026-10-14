@@ -3,6 +3,7 @@ import axios from 'axios';
 import IconSearch from '../../../components/Icon/IconSearch';
 import IconUsers from '../../../components/Icon/IconUsers';
 
+import PageHeader from '../../../components/Common/PageHeader';
 interface Employee {
     id: number;
     employee_id: string;
@@ -156,13 +157,12 @@ const MultiRaterSelection = () => {
     return (
         <div className="space-y-6 py-2 animate__animated animate__fadeIn">
             {/* Header */}
-            <div className="bg-white dark:bg-gray-900 p-5 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                <div>
-                    <h2 className="text-xl font-bold text-gray-800 dark:text-white">Multi-Rater Review Selection</h2>
-                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Map peer reviewers to employees for 360° feedback. Assignments are cycle-specific.</p>
-                </div>
-                <div className="flex items-center gap-2 shrink-0">
-                    <label className="text-[10px] font-black uppercase tracking-wider text-gray-400">Cycle</label>
+            <PageHeader
+                title="Multi-Rater Review Selection"
+                subtitle="Map peer reviewers to employees for 360° feedback. Assignments are cycle-specific."
+                actions={
+                    <div className="flex items-center gap-2">
+                        <label className="text-[10px] font-black uppercase tracking-wider text-slate-400">Cycle</label>
                     <select value={selectedCycleId ?? ''} onChange={e => setSelectedCycleId(Number(e.target.value))}
                         className="bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 px-3 py-2 rounded-xl text-xs font-semibold text-gray-800 dark:text-white focus:outline-none">
                         {cycles.map(c => (
@@ -172,8 +172,9 @@ const MultiRaterSelection = () => {
                         ))}
                         {cycles.length === 0 && <option value="">No cycles found</option>}
                     </select>
-                </div>
-            </div>
+                    </div>
+                }
+            />
 
             {/* Error Message Panel */}
             {errorMsg && (
@@ -214,12 +215,12 @@ const MultiRaterSelection = () => {
                                     onClick={() => { setSelectedEmployee(emp); setErrorMsg(''); setPeerSearch(''); }}
                                     className={`p-3 rounded-xl border flex items-center justify-between cursor-pointer transition duration-200 select-none ${
                                         isSelected 
-                                        ? 'bg-teal-500/10 border-teal-500 text-teal-900 dark:text-white' 
+                                        ? 'bg-brand/10 border-brand text-brand-900 dark:text-white' 
                                         : 'bg-white dark:bg-gray-900 border-gray-100 dark:border-gray-800/80 hover:bg-gray-50 dark:hover:bg-gray-800'
                                     }`}
                                 >
                                     <div className="flex items-center gap-3">
-                                        <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold bg-teal-600 text-white shadow-sm shrink-0`}>
+                                        <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold bg-brand text-white shadow-sm shrink-0`}>
                                             {emp.initials}
                                         </div>
                                         <div>
@@ -247,19 +248,19 @@ const MultiRaterSelection = () => {
                             {/* Header */}
                             <div className="flex justify-between items-start border-b border-gray-100 dark:border-gray-800 pb-4 mb-4 shrink-0">
                                 <div className="flex items-center gap-3">
-                                    <div className="w-10 h-10 rounded-full bg-teal-600 text-white flex items-center justify-center text-sm font-bold shadow-sm shrink-0">
+                                    <div className="w-10 h-10 rounded-full bg-brand text-white flex items-center justify-center text-sm font-bold shadow-sm shrink-0">
                                         {selectedEmployee.initials}
                                     </div>
                                     <div>
                                         <h3 className="text-sm font-bold text-gray-800 dark:text-white leading-tight">{selectedEmployee.full_name}</h3>
                                         <span className="text-[10px] text-gray-400 mt-0.5 block">
-                                            {selectedEmployee.designation_name || 'Designation Not Set'} · <strong className="text-teal-600 dark:text-teal-400">{selectedEmployee.department_name || 'No Dept'}</strong>
+                                            {selectedEmployee.designation_name || 'Designation Not Set'} · <strong className="text-brand dark:text-brand-400">{selectedEmployee.department_name || 'No Dept'}</strong>
                                         </span>
                                     </div>
                                 </div>
                                 <div className="flex flex-col items-end gap-2 shrink-0">
                                     <div className="flex items-center gap-2">
-                                        <span className="text-[9px] font-black uppercase tracking-wider text-teal-600 bg-teal-500/10 px-3 py-1 rounded-full">
+                                        <span className="text-[9px] font-black uppercase tracking-wider text-brand bg-brand/10 px-3 py-1 rounded-full">
                                             Peer Role · Same Department
                                         </span>
                                         <span className="text-[9px] text-gray-400">
@@ -295,7 +296,7 @@ const MultiRaterSelection = () => {
                                         return (
                                             <div className={`flex items-center justify-between gap-3 p-3 rounded-2xl border transition ${
                                                 isAssigned
-                                                    ? 'border-teal-300 dark:border-teal-700 bg-teal-500/5'
+                                                    ? 'border-brand-300 dark:border-brand-dark bg-brand/5'
                                                     : 'border-gray-100 dark:border-gray-800 hover:border-gray-200 dark:hover:border-gray-700'
                                             }`}>
                                                 <div className="flex items-center gap-3 min-w-0">
@@ -312,7 +313,7 @@ const MultiRaterSelection = () => {
                                                         <span className={`text-[8px] font-black uppercase px-2 py-0.5 rounded-full ${
                                                             mapping.status === 'completed' ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400'
                                                             : mapping.status === 'approved' ? 'bg-blue-100 text-blue-700 dark:bg-blue-950/40 dark:text-blue-400'
-                                                            : 'bg-teal-100 text-teal-700 dark:bg-teal-950/40 dark:text-teal-400'
+                                                            : 'bg-brand-100 text-brand-dark dark:bg-brand-950/40 dark:text-brand-400'
                                                         }`}>{mapping.status}</span>
                                                         <button onClick={() => handleRemoveReviewer(mapping.id, peer.id)} disabled={isActioning}
                                                             className="text-[9px] font-bold text-rose-500 hover:text-rose-700 disabled:opacity-40">
@@ -321,7 +322,7 @@ const MultiRaterSelection = () => {
                                                     </div>
                                                 ) : (
                                                     <button onClick={() => handleAssignPeer(peer.id)} disabled={isActioning}
-                                                        className="shrink-0 px-3 py-1.5 bg-teal-500 hover:bg-teal-600 disabled:bg-gray-200 text-white rounded-xl text-[9px] font-black transition">
+                                                        className="shrink-0 px-3 py-1.5 bg-brand hover:bg-brand disabled:bg-gray-200 text-white rounded-xl text-[9px] font-black transition">
                                                         {isActioning ? '...' : '+ Assign'}
                                                     </button>
                                                 )}
@@ -335,8 +336,8 @@ const MultiRaterSelection = () => {
                                             {assignedPeers.length > 0 && (
                                                 <div>
                                                     <div className="flex items-center gap-2 mb-2">
-                                                        <span className="text-[10px] font-black uppercase tracking-wider text-teal-600 dark:text-teal-400">Assigned Peers</span>
-                                                        <span className="text-[9px] font-bold bg-teal-500/10 text-teal-600 dark:text-teal-400 px-1.5 py-0.5 rounded-full">{assignedPeers.length}</span>
+                                                        <span className="text-[10px] font-black uppercase tracking-wider text-brand dark:text-brand-400">Assigned Peers</span>
+                                                        <span className="text-[9px] font-bold bg-brand/10 text-brand dark:text-brand-400 px-1.5 py-0.5 rounded-full">{assignedPeers.length}</span>
                                                     </div>
                                                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                                                         {assignedPeers.map(peer => <PeerCard key={peer.id} peer={peer} />)}

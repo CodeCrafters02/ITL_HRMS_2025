@@ -361,12 +361,87 @@ class CompanyUpdateAPIView(APIView):
         except Company.DoesNotExist:
             return Response({"detail": "Company not found."}, status=status.HTTP_404_NOT_FOUND)
 
-        
+        if company.pk != getattr(request.user, 'company_id', None):
+            return Response({"detail": "You can only update your own company."}, status=status.HTTP_403_FORBIDDEN)
+
         serializer = CompanySerializer(company, data=request.data, partial=True)
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+_HEX_RE = re.compile(r'^#[0-9a-fA-F]{6}$')
+_LOGO_TYPES = {'image/png', 'image/jpeg', 'image/webp', 'image/gif'}
+_LOGO_MAX_BYTES = 2 * 1024 * 1024
+_THEME_PRESETS = {'', 'emerald', 'indigo', 'sunset', 'rose', 'teal', 'violet', 'crimson', 'navy', 'slate'}
+
+
+class CompanyBrandingAPIView(APIView):
+    """GET: any authenticated user of the company. PATCH: company admin only."""
+    parser_classes = [MultiPartParser, FormParser, JSONParser]
+
+    def get_permissions(self):
+        if self.request.method == 'GET':
+            return [IsAuthenticated()]
+        return [IsAuthenticated(), IsAdminUser()]
+
+    def _company(self, request):
+        return getattr(request.user, 'company', None)
+
+    def get(self, request):
+        company = self._company(request)
+        if not company:
+            return Response({"detail": "No company found for user."}, status=status.HTTP_404_NOT_FOUND)
+        return Response(CompanyBrandingSerializer(company, context={"request": request}).data)
+
+    def patch(self, request):
+        company = self._company(request)
+        if not company:
+            return Response({"detail": "No company found for user."}, status=status.HTTP_404_NOT_FOUND)
+
+        data = request.data
+        errors = {}
+
+        if 'name' in data:
+            name = (data.get('name') or '').strip()
+            if len(name) < 2 or len(name) > 100:
+                errors['name'] = 'Company name must be between 2 and 100 characters.'
+            else:
+                company.name = name
+
+        for field in ('theme_primary', 'theme_mid', 'theme_accent'):
+            if field in data:
+                val = (data.get(field) or '').strip()
+                if val and not _HEX_RE.match(val):
+                    errors[field] = 'Use a 6-digit hex colour such as #0062E0.'
+                else:
+                    setattr(company, field, val.lower())
+        if 'theme_preset' in data:
+            preset = (data.get('theme_preset') or '').strip()
+            if preset not in _THEME_PRESETS:
+                errors['theme_preset'] = 'Unknown theme preset.'
+            else:
+                company.theme_preset = preset
+
+        logo = request.FILES.get('logo')
+        if logo:
+            if logo.content_type not in _LOGO_TYPES:
+                errors['logo'] = 'Logo must be a PNG, JPG, WebP or GIF image.'
+            elif logo.size > _LOGO_MAX_BYTES:
+                errors['logo'] = 'Logo must be 2 MB or smaller.'
+
+        if errors:
+            return Response(errors, status=status.HTTP_400_BAD_REQUEST)
+
+        remove_logo = str(data.get('remove_logo', '')).lower() in ('1', 'true', 'yes')
+        if logo or remove_logo:
+            if company.logo:
+                company.logo.delete(save=False)
+            company.logo = logo if logo else None
+
+        company.save()
+        return Response(CompanyBrandingSerializer(company, context={"request": request}).data)
 
 
 class AdminDashboardAPIView(APIView):
@@ -1336,7 +1411,14 @@ class LearningCornerViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         user = self.request.user
-        return LearningCorner.objects.filter(company=user.company).prefetch_related('media_items').order_by('id')
+        qs = LearningCorner.objects.filter(company=user.company).prefetch_related('media_items')
+        media_type = self.request.query_params.get('media_type')
+        if media_type in ('image', 'video', 'document'):
+            legacy = {'image': 'image', 'video': 'video', 'document': 'document'}[media_type]
+            qs = qs.filter(Q(media_items__media_type=media_type) | (Q(**{legacy + '__isnull': False}) & ~Q(**{legacy: ''}))).distinct()
+        sort = self.request.query_params.get('sort')
+        ordering = {'newest': '-id', 'oldest': 'id', 'az': 'title'}.get(sort, 'id')
+        return qs.order_by(ordering)
 
     def perform_create(self, serializer):
         serializer.save(company=self.request.user.company)
@@ -6687,6 +6769,8 @@ class LoanCategoryViewSet(viewsets.ModelViewSet):
     serializer_class = LoanCategorySerializer
     permission_classes = [IsAuthenticated]
     pagination_class = CustomPagination
+    filter_backends = [filters.SearchFilter]
+    search_fields = ['name', 'description']
 
     def get_queryset(self):
         user = self.request.user

@@ -1,14 +1,17 @@
 import { Fragment, useEffect, useMemo, useState } from 'react';
 import { useDispatch } from 'react-redux';
-import { Dialog, Transition } from '@headlessui/react';
 import Swal from 'sweetalert2';
 import { setPageTitle } from '../../store/themeConfigSlice';
 import IconPlus from '../../components/Icon/IconPlus';
 import IconX from '../../components/Icon/IconX';
 import IconTrashLines from '../../components/Icon/IconTrashLines';
 import IconPencil from '../../components/Icon/IconPencil';
+import IconClock from '../../components/Icon/IconClock';
 import DataTable, { Column } from '../../components/Common/DataTable';
+import PageHeader from '../../components/Common/PageHeader';
 
+import Modal from '../../components/Common/Modal';
+import Button, { IconButton } from '../../components/Common/Button';
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000';
 const API_URL = `${API_BASE_URL}/app/shift-policies/`;
 
@@ -344,22 +347,22 @@ const AdminShift = () => {
             width: '120px',
             render: (_val, s) => (
                 <div className="flex items-center justify-center gap-2">
-                    <button
+                    <IconButton tone="primary"
                         type="button"
-                        className="p-1.5 rounded-lg text-primary hover:text-white hover:bg-primary transition-colors"
+                        
                         onClick={() => openEdit(s)}
                         title="Edit Shift"
                     >
                         <IconPencil className="w-4 h-4" />
-                    </button>
-                    <button
+                    </IconButton>
+                    <IconButton tone="danger"
                         type="button"
-                        className="p-1.5 rounded-lg text-danger hover:text-white hover:bg-danger transition-colors"
+                        
                         onClick={() => del(s)}
                         title="Delete Shift"
                     >
                         <IconTrashLines className="w-4 h-4" />
-                    </button>
+                    </IconButton>
                 </div>
             ),
         },
@@ -367,14 +370,19 @@ const AdminShift = () => {
 
     return (
         <div>
-            {/* Banner */}
-            <div className="bg-gradient-to-r from-[#0e1726] to-[#3b82f6] p-6 rounded-xl shadow-lg mb-6 relative overflow-hidden">
-                <div className="relative z-10">
-                    <h1 className="text-3xl font-extrabold text-white tracking-tight">Shift Policies</h1>
-                    <p className="text-white/80 mt-1 text-sm font-medium">Configure work shifts, check-in/check-out times and grace periods.</p>
-                </div>
-                <div className="absolute top-0 right-0 -mt-10 -mr-10 w-48 h-48 bg-white opacity-5 rounded-full blur-2xl"></div>
-            </div>
+            {/* Executive Page Header */}
+            <PageHeader
+                title="Shift Policies"
+                subtitle="Configure working shifts, core timings, grace periods, and attendance rules."
+                icon={<IconClock />}
+                badge="Workforce Scheduling"
+                variant="indigo"
+                actions={
+                    <Button type="button"  onClick={openAdd}>
+                        <IconPlus className="w-4 h-4" /> Add Shift Policy
+                    </Button>
+                }
+            />
 
             {/* Reusable Data Table */}
             <DataTable
@@ -397,176 +405,158 @@ const AdminShift = () => {
                 onRefresh={fetchAll}
                 searchPlaceholder="Search shift policies..."
                 actionButton={
-                    <button type="button" className="btn btn-primary gap-2 shadow-md shadow-primary/20" onClick={openAdd}>
+                    <Button type="button"  onClick={openAdd}>
                         <IconPlus className="w-4 h-4" /> Add Shift
-                    </button>
+                    </Button>
                 }
             />
 
             {/* ─── Add/Edit Modal ─── */}
-            <Transition appear show={modalOpen} as={Fragment}>
-                <Dialog as="div" open={modalOpen} onClose={() => setModalOpen(false)} className="relative z-50">
-                    <Transition.Child as={Fragment} enter="ease-out duration-300" enterFrom="opacity-0" enterTo="opacity-100" leave="ease-in duration-200" leaveFrom="opacity-100" leaveTo="opacity-0">
-                        <div className="fixed inset-0 bg-[black]/60" />
-                    </Transition.Child>
-                    <div className="fixed inset-0 overflow-y-auto">
-                        <div className="flex min-h-full items-center justify-center px-4 py-8">
-                            <Transition.Child as={Fragment} enter="ease-out duration-300" enterFrom="opacity-0 scale-95" enterTo="opacity-100 scale-100" leave="ease-in duration-200" leaveFrom="opacity-100 scale-100" leaveTo="opacity-0 scale-95">
-                                <Dialog.Panel className="panel border-0 p-0 rounded-lg overflow-hidden w-full max-w-2xl text-black dark:text-white-dark shadow-xl">
-                                    <button type="button" onClick={() => setModalOpen(false)} className="absolute top-4 ltr:right-4 rtl:left-4 text-white-dark hover:text-dark">
-                                        <IconX />
-                                    </button>
-                                    <div className="text-lg font-medium bg-[#fbfbfb] dark:bg-[#121c2c] ltr:pl-5 rtl:pr-5 py-3 ltr:pr-[50px] rtl:pl-[50px]">
-                                        {editing?.id ? 'Edit Shift' : 'Add New Shift'}
-                                    </div>
-                                    <div className="p-5 space-y-5">
-                                        {/* Shift Type */}
-                                        <div>
-                                            <label className="font-semibold text-sm mb-1 block">
-                                                Shift Type <span className="text-danger">*</span>
-                                            </label>
-                                            <input
-                                                className={`form-input ${errors.shift_type ? 'border-danger' : ''}`}
-                                                placeholder="e.g., Morning, General, Night"
-                                                value={editing?.shift_type || ''}
-                                                onChange={(e) => {
-                                                    setEditing((p) => (p ? { ...p, shift_type: e.target.value } : p));
-                                                    setErrors((prev) => ({ ...prev, shift_type: '' }));
-                                                }}
-                                            />
-                                            {errors.shift_type && <p className="text-danger text-xs mt-1">{errors.shift_type}</p>}
-                                        </div>
+            <Modal open={modalOpen} onClose={() => setModalOpen(false)} title={editing?.id ? 'Edit Shift' : 'Add New Shift'} size="2xl">
+                <div className="space-y-5">
+                                                        {/* Shift Type */}
+                                                        <div>
+                                                            <label className="font-semibold text-sm mb-1 block">
+                                                                Shift Type <span className="text-danger">*</span>
+                                                            </label>
+                                                            <input
+                                                                className={`form-input ${errors.shift_type ? 'border-danger' : ''}`}
+                                                                placeholder="e.g., Morning, General, Night"
+                                                                value={editing?.shift_type || ''}
+                                                                onChange={(e) => {
+                                                                    setEditing((p) => (p ? { ...p, shift_type: e.target.value } : p));
+                                                                    setErrors((prev) => ({ ...prev, shift_type: '' }));
+                                                                }}
+                                                            />
+                                                            {errors.shift_type && <p className="text-danger text-xs mt-1">{errors.shift_type}</p>}
+                                                        </div>
 
-                                        {/* Check-in & Check-out */}
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                            <div>
-                                                <label className="font-semibold text-sm mb-1 block">
-                                                    Check-in Time <span className="text-danger">*</span>
-                                                </label>
-                                                <select
-                                                    className={`form-select font-mono ${errors.checkin ? 'border-danger' : ''}`}
-                                                    value={toHHMM(editing?.checkin || '09:00')}
-                                                    onChange={(e) => {
-                                                        setEditing((p) => (p ? { ...p, checkin: `${e.target.value}:00` } : p));
-                                                        setErrors((prev) => ({ ...prev, checkin: '', checkout: '' }));
-                                                    }}
-                                                >
-                                                    {TIME_OPTIONS.map((t) => (
-                                                        <option key={`ci-${t}`} value={t}>
-                                                            {formatTimeLabel(t)}
-                                                        </option>
-                                                    ))}
-                                                </select>
-                                                {errors.checkin && <p className="text-danger text-xs mt-1">{errors.checkin}</p>}
-                                            </div>
-                                            <div>
-                                                <label className="font-semibold text-sm mb-1 block">
-                                                    Check-out Time <span className="text-danger">*</span>
-                                                </label>
-                                                <select
-                                                    className={`form-select font-mono ${errors.checkout ? 'border-danger' : ''}`}
-                                                    value={toHHMM(editing?.checkout || '18:00')}
-                                                    onChange={(e) => {
-                                                        setEditing((p) => (p ? { ...p, checkout: `${e.target.value}:00` } : p));
-                                                        setErrors((prev) => ({ ...prev, checkout: '' }));
-                                                    }}
-                                                >
-                                                    {TIME_OPTIONS.map((t) => (
-                                                        <option key={`co-${t}`} value={t}>
-                                                            {formatTimeLabel(t)}
-                                                        </option>
-                                                    ))}
-                                                </select>
-                                                {errors.checkout && <p className="text-danger text-xs mt-1">{errors.checkout}</p>}
-                                            </div>
-                                        </div>
+                                                        {/* Check-in & Check-out */}
+                                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                            <div>
+                                                                <label className="font-semibold text-sm mb-1 block">
+                                                                    Check-in Time <span className="text-danger">*</span>
+                                                                </label>
+                                                                <select
+                                                                    className={`form-select font-mono ${errors.checkin ? 'border-danger' : ''}`}
+                                                                    value={toHHMM(editing?.checkin || '09:00')}
+                                                                    onChange={(e) => {
+                                                                        setEditing((p) => (p ? { ...p, checkin: `${e.target.value}:00` } : p));
+                                                                        setErrors((prev) => ({ ...prev, checkin: '', checkout: '' }));
+                                                                    }}
+                                                                >
+                                                                    {TIME_OPTIONS.map((t) => (
+                                                                        <option key={`ci-${t}`} value={t}>
+                                                                            {formatTimeLabel(t)}
+                                                                        </option>
+                                                                    ))}
+                                                                </select>
+                                                                {errors.checkin && <p className="text-danger text-xs mt-1">{errors.checkin}</p>}
+                                                            </div>
+                                                            <div>
+                                                                <label className="font-semibold text-sm mb-1 block">
+                                                                    Check-out Time <span className="text-danger">*</span>
+                                                                </label>
+                                                                <select
+                                                                    className={`form-select font-mono ${errors.checkout ? 'border-danger' : ''}`}
+                                                                    value={toHHMM(editing?.checkout || '18:00')}
+                                                                    onChange={(e) => {
+                                                                        setEditing((p) => (p ? { ...p, checkout: `${e.target.value}:00` } : p));
+                                                                        setErrors((prev) => ({ ...prev, checkout: '' }));
+                                                                    }}
+                                                                >
+                                                                    {TIME_OPTIONS.map((t) => (
+                                                                        <option key={`co-${t}`} value={t}>
+                                                                            {formatTimeLabel(t)}
+                                                                        </option>
+                                                                    ))}
+                                                                </select>
+                                                                {errors.checkout && <p className="text-danger text-xs mt-1">{errors.checkout}</p>}
+                                                            </div>
+                                                        </div>
 
-                                        {/* Auto-calculated Total Hours (read-only display) */}
-                                        <div className="bg-gray-50 dark:bg-[#1a2941] rounded-xl p-4">
-                                            <div className="flex items-center gap-3">
-                                                <div className="w-10 h-10 rounded-lg bg-success/20 flex items-center justify-center">
-                                                    <svg className="w-5 h-5 text-success" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                                    </svg>
-                                                </div>
-                                                <div>
-                                                    <p className="text-xs text-gray-500 dark:text-gray-400">Total Shift Hours (auto-calculated)</p>
-                                                    <p className="text-lg font-bold text-success">{formatDuration(computedTotal)}</p>
-                                                </div>
-                                            </div>
-                                        </div>
+                                                        {/* Auto-calculated Total Hours (read-only display) */}
+                                                        <div className="bg-gray-50 dark:bg-[#1a2941] rounded-xl p-4">
+                                                            <div className="flex items-center gap-3">
+                                                                <div className="w-10 h-10 rounded-lg bg-success/20 flex items-center justify-center">
+                                                                    <svg className="w-5 h-5 text-success" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                                                    </svg>
+                                                                </div>
+                                                                <div>
+                                                                    <p className="text-xs text-gray-500 dark:text-gray-400">Total Shift Hours (auto-calculated)</p>
+                                                                    <p className="text-lg font-bold text-success">{formatDuration(computedTotal)}</p>
+                                                                </div>
+                                                            </div>
+                                                        </div>
 
-                                        {/* Half Day — editable dropdown */}
-                                        <div>
-                                            <label className="font-semibold text-sm mb-1 block">
-                                                Half Day Hours <span className="text-danger">*</span>
-                                            </label>
-                                            <select
-                                                className={`form-select font-mono ${errors.half_day ? 'border-danger' : ''}`}
-                                                value={toHHMM(editing?.half_day || '04:00')}
-                                                onChange={(e) => {
-                                                    setEditing((p) => (p ? { ...p, half_day: `${e.target.value}:00` } : p));
-                                                    setErrors((prev) => ({ ...prev, half_day: '' }));
-                                                }}
-                                            >
-                                                {(() => {
-                                                    const totalMins = timeToMinutes(computedTotal);
-                                                    const opts: string[] = [];
-                                                    for (let m = 15; m < totalMins; m += 15) {
-                                                        const hh = Math.floor(m / 60);
-                                                        const mm = m % 60;
-                                                        opts.push(`${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}`);
-                                                    }
-                                                    return opts.map((t) => (
-                                                        <option key={`hd-${t}`} value={t}>
-                                                            {formatDuration(`${t}:00`)}
-                                                        </option>
-                                                    ));
-                                                })()}
-                                            </select>
-                                            {errors.half_day && <p className="text-danger text-xs mt-1">{errors.half_day}</p>}
-                                            <p className="text-xs text-gray-400 mt-1">Must be less than total shift hours ({formatDuration(computedTotal)})</p>
-                                        </div>
+                                                        {/* Half Day — editable dropdown */}
+                                                        <div>
+                                                            <label className="font-semibold text-sm mb-1 block">
+                                                                Half Day Hours <span className="text-danger">*</span>
+                                                            </label>
+                                                            <select
+                                                                className={`form-select font-mono ${errors.half_day ? 'border-danger' : ''}`}
+                                                                value={toHHMM(editing?.half_day || '04:00')}
+                                                                onChange={(e) => {
+                                                                    setEditing((p) => (p ? { ...p, half_day: `${e.target.value}:00` } : p));
+                                                                    setErrors((prev) => ({ ...prev, half_day: '' }));
+                                                                }}
+                                                            >
+                                                                {(() => {
+                                                                    const totalMins = timeToMinutes(computedTotal);
+                                                                    const opts: string[] = [];
+                                                                    for (let m = 15; m < totalMins; m += 15) {
+                                                                        const hh = Math.floor(m / 60);
+                                                                        const mm = m % 60;
+                                                                        opts.push(`${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}`);
+                                                                    }
+                                                                    return opts.map((t) => (
+                                                                        <option key={`hd-${t}`} value={t}>
+                                                                            {formatDuration(`${t}:00`)}
+                                                                        </option>
+                                                                    ));
+                                                                })()}
+                                                            </select>
+                                                            {errors.half_day && <p className="text-danger text-xs mt-1">{errors.half_day}</p>}
+                                                            <p className="text-xs text-gray-400 mt-1">Must be less than total shift hours ({formatDuration(computedTotal)})</p>
+                                                        </div>
 
-                                        {/* Grace Period */}
-                                        <div>
-                                            <label className="font-semibold text-sm mb-1 block">
-                                                Grace Period <span className="text-danger">*</span>
-                                            </label>
-                                            <select
-                                                className={`form-select font-mono ${errors.grace_period ? 'border-danger' : ''}`}
-                                                value={toHHMM(editing?.grace_period || '00:15')}
-                                                onChange={(e) => {
-                                                    setEditing((p) => (p ? { ...p, grace_period: `${e.target.value}:00` } : p));
-                                                    setErrors((prev) => ({ ...prev, grace_period: '' }));
-                                                }}
-                                            >
-                                                {GRACE_OPTIONS.map((t) => (
-                                                    <option key={`gp-${t}`} value={t}>
-                                                        {formatDuration(`${t}:00`)}
-                                                    </option>
-                                                ))}
-                                            </select>
-                                            {errors.grace_period && <p className="text-danger text-xs mt-1">{errors.grace_period}</p>}
-                                            <p className="text-xs text-gray-400 mt-1">Allowed late check-in buffer time</p>
-                                        </div>
+                                                        {/* Grace Period */}
+                                                        <div>
+                                                            <label className="font-semibold text-sm mb-1 block">
+                                                                Grace Period <span className="text-danger">*</span>
+                                                            </label>
+                                                            <select
+                                                                className={`form-select font-mono ${errors.grace_period ? 'border-danger' : ''}`}
+                                                                value={toHHMM(editing?.grace_period || '00:15')}
+                                                                onChange={(e) => {
+                                                                    setEditing((p) => (p ? { ...p, grace_period: `${e.target.value}:00` } : p));
+                                                                    setErrors((prev) => ({ ...prev, grace_period: '' }));
+                                                                }}
+                                                            >
+                                                                {GRACE_OPTIONS.map((t) => (
+                                                                    <option key={`gp-${t}`} value={t}>
+                                                                        {formatDuration(`${t}:00`)}
+                                                                    </option>
+                                                                ))}
+                                                            </select>
+                                                            {errors.grace_period && <p className="text-danger text-xs mt-1">{errors.grace_period}</p>}
+                                                            <p className="text-xs text-gray-400 mt-1">Allowed late check-in buffer time</p>
+                                                        </div>
 
-                                        {/* Actions */}
-                                        <div className="flex justify-end gap-3 pt-2 border-t border-gray-100 dark:border-gray-700">
-                                            <button type="button" className="btn btn-outline-danger" onClick={() => setModalOpen(false)}>
-                                                Cancel
-                                            </button>
-                                            <button type="button" className="btn btn-primary" onClick={save}>
-                                                {editing?.id ? 'Update Shift' : 'Create Shift'}
-                                            </button>
-                                        </div>
-                                    </div>
-                                </Dialog.Panel>
-                            </Transition.Child>
-                        </div>
-                    </div>
-                </Dialog>
-            </Transition>
+                                                        {/* Actions */}
+                                                        <div className="flex justify-end gap-3 pt-2 border-t border-gray-100 dark:border-gray-700">
+                                                            <Button variant="outline-danger" type="button"  onClick={() => setModalOpen(false)}>
+                                                                Cancel
+                                                            </Button>
+                                                            <Button type="button"  onClick={save}>
+                                                                {editing?.id ? 'Update Shift' : 'Create Shift'}
+                                                            </Button>
+                                                        </div>
+
+                </div>
+            </Modal>
         </div>
     );
 };

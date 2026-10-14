@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useMemo, useState } from 'react';
+import { Fragment, useEffect, useState } from 'react';
 import { useDispatch } from 'react-redux';
 import { Dialog, Transition } from '@headlessui/react';
 import Swal from 'sweetalert2';
@@ -7,11 +7,12 @@ import IconPlus from '../../components/Icon/IconPlus';
 import IconX from '../../components/Icon/IconX';
 import IconPencil from '../../components/Icon/IconPencil';
 import IconTrashLines from '../../components/Icon/IconTrashLines';
+import DataTable, { Column } from '../../components/Common/DataTable';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000';
 const API_URL = `${API_BASE_URL}/app/department-working-days/`;
 const API_DEPTS = `${API_BASE_URL}/app/departments/?page_size=1000`;
-const API_SHIFTS = `${API_BASE_URL}/app/shift-policies/`;
+const API_SHIFTS = `${API_BASE_URL}/app/shift-policies/?page_size=1000`;
 
 const DAYS_OF_WEEK = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 
@@ -35,6 +36,10 @@ const AdminDeptWorkingDays = () => {
     const [departments, setDepartments] = useState<Department[]>([]);
     const [shifts, setShifts] = useState<Shift[]>([]);
     const [loading, setLoading] = useState(false);
+    const [search, setSearch] = useState('');
+    const [page, setPage] = useState(1);
+    const [pageSize, setPageSize] = useState(10);
+    const [totalCount, setTotalCount] = useState(0);
     const [modalOpen, setModalOpen] = useState(false);
     const [form, setForm] = useState<any>({
         id: null,
@@ -55,21 +60,31 @@ const AdminDeptWorkingDays = () => {
         return h;
     };
 
-    const fetchAll = async () => {
-        setLoading(true);
+    const fetchOptions = async () => {
         try {
-            const [wdRes, depRes, shRes] = await Promise.all([
-                fetch(API_URL, { headers: headers() }),
-                fetch(API_DEPTS, { headers: headers() }),
-                fetch(API_SHIFTS, { headers: headers() }),
-            ]);
-            const wdData = await wdRes.json();
+            const [depRes, shRes] = await Promise.all([fetch(API_DEPTS, { headers: headers() }), fetch(API_SHIFTS, { headers: headers() })]);
             const depData = await depRes.json();
             const shData = await shRes.json();
-            if (!wdRes.ok) throw new Error(wdData?.detail || 'Failed to load working days');
-            setItems(Array.isArray(wdData) ? wdData : wdData?.results || []);
             setDepartments(Array.isArray(depData) ? depData : depData?.results || []);
             setShifts(Array.isArray(shData) ? shData : shData?.results || []);
+        } catch {
+            /* options optional */
+        }
+    };
+
+    const fetchList = async () => {
+        setLoading(true);
+        try {
+            const url = new URL(API_URL);
+            url.searchParams.append('page', String(page));
+            url.searchParams.append('page_size', String(pageSize));
+            if (search.trim()) url.searchParams.append('search', search.trim());
+            const res = await fetch(url.toString(), { headers: headers() });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data?.detail || 'Failed to load working days');
+            const list = Array.isArray(data) ? data : data?.results || [];
+            setItems(list);
+            setTotalCount(Array.isArray(data) ? list.length : data?.count ?? list.length);
         } catch (e: any) {
             Swal.fire('Error', e?.message || 'Failed to load', 'error');
         } finally {
@@ -78,9 +93,14 @@ const AdminDeptWorkingDays = () => {
     };
 
     useEffect(() => {
-        fetchAll();
-        // eslint-disable-next-line react-hooks/exhaustive-deps
+        fetchOptions();
     }, []);
+
+    useEffect(() => {
+        const t = setTimeout(fetchList, 400);
+        return () => clearTimeout(t);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [search, page, pageSize]);
 
     const deptName = (d: any) => (typeof d === 'object' ? d?.department_name : departments.find((x) => x.id === d)?.department_name) || '-';
     const shiftLabel = (s: any) => {
@@ -159,7 +179,7 @@ const AdminDeptWorkingDays = () => {
             const data = await resp.json();
             if (!resp.ok) throw new Error(data?.detail || 'Failed to save');
             setModalOpen(false);
-            await fetchAll();
+            await fetchList();
         } catch (e: any) {
             Swal.fire('Error', e?.message || 'Failed to save', 'error');
         }
@@ -174,13 +194,33 @@ const AdminDeptWorkingDays = () => {
                 const data = await resp.json().catch(() => ({}));
                 throw new Error(data?.detail || 'Failed to delete');
             }
-            await fetchAll();
+            await fetchList();
         } catch (e: any) {
             Swal.fire('Error', e?.message || 'Failed to delete', 'error');
         }
     };
 
-    const rows = useMemo(() => items, [items]);
+    const columns: Column<WorkingDay>[] = [
+        { key: 'index', title: '#', width: '60px', render: (_v, _r, i) => i + 1 },
+        { key: 'department', title: 'Department', render: (_v, it) => <span className="font-semibold">{deptName(it.department)}</span> },
+        { key: 'shifts', title: 'Shift', render: (_v, it) => (Array.isArray(it.shifts) && it.shifts.length ? shiftLabel((it.shifts as any)[0]) : '-') },
+        { key: 'working_days_count', title: 'Count' },
+        {
+            key: 'working_days', title: 'Active Working Days',
+            render: (_v, it) => (Array.isArray(it.working_days) && it.working_days.length > 0 ? it.working_days.map((d) => d.substring(0, 3)).join(', ') : `${it.week_start_day || ''} to ${it.week_end_day || ''}`),
+        },
+        {
+            key: 'actions', title: 'Actions', align: 'center', width: '120px',
+            render: (_v, it) => (
+                <div className="flex items-center justify-center gap-2">
+                    <button type="button" className="p-1.5 rounded-lg text-primary hover:text-white hover:bg-primary transition-colors" onClick={() => openEdit(it)} title="Edit"><IconPencil className="w-4 h-4" /></button>
+                    <button type="button" className="p-1.5 rounded-lg text-danger hover:text-white hover:bg-danger transition-colors" onClick={() => del(it)} title="Delete"><IconTrashLines className="w-4 h-4" /></button>
+                </div>
+            ),
+        },
+    ];
+
+    const rows = items;
 
     return (
         <div className="space-y-6">
@@ -193,66 +233,22 @@ const AdminDeptWorkingDays = () => {
                 <div className="absolute top-0 right-0 -mt-10 -mr-10 w-48 h-48 bg-white opacity-10 rounded-full blur-2xl"></div>
             </div>
 
-            <div className="panel">
-                <div className="flex flex-wrap items-center justify-end gap-3 mb-4">
-                    <button type="button" className="btn btn-primary gap-2" onClick={openAdd}>
-                        <IconPlus /> Add
-                    </button>
-                </div>
-
-            <div className="table-responsive">
-                <table className="table-hover">
-                    <thead>
-                        <tr>
-                            <th>#</th>
-                            <th>Department</th>
-                            <th>Shift</th>
-                            <th>Count</th>
-                            <th>Active Working Days</th>
-                            <th className="text-center">Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {loading ? (
-                            <tr>
-                                <td colSpan={6} className="text-center py-6 text-white-dark">
-                                    Loading...
-                                </td>
-                            </tr>
-                        ) : rows.length ? (
-                            rows.map((it, idx) => (
-                                <tr key={it.id}>
-                                    <td>{idx + 1}</td>
-                                    <td className="font-semibold">{deptName(it.department)}</td>
-                                    <td>{Array.isArray(it.shifts) && it.shifts.length ? shiftLabel((it.shifts as any)[0]) : '-'}</td>
-                                    <td>{it.working_days_count}</td>
-                                    <td>
-                                        {Array.isArray(it.working_days) && it.working_days.length > 0 
-                                            ? it.working_days.map(d => d.substring(0,3)).join(', ') 
-                                            : `${it.week_start_day || ''} to ${it.week_end_day || ''}`}
-                                    </td>
-                                    <td className="text-center">
-                                        <div className="flex items-center justify-center gap-3">
-                                            <button type="button" className="text-primary" onClick={() => openEdit(it)} title="Edit">
-                                                <IconPencil className="w-5 h-5" />
-                                            </button>
-                                            <button type="button" className="text-danger" onClick={() => del(it)} title="Delete">
-                                                <IconTrashLines className="w-5 h-5" />
-                                            </button>
-                                        </div>
-                                    </td>
-                                </tr>
-                            ))
-                        ) : (
-                            <tr>
-                                <td colSpan={6} className="text-center py-6 text-white-dark">
-                                    No configurations found.
-                                </td>
-                            </tr>
-                        )}
-                    </tbody>
-                </table>
-            </div>
+            <DataTable
+                columns={columns}
+                data={rows}
+                loading={loading}
+                page={page}
+                pageSize={pageSize}
+                totalCount={totalCount}
+                onPageChange={setPage}
+                onPageSizeChange={(sz) => { setPageSize(sz); setPage(1); }}
+                searchValue={search}
+                onSearchChange={(v) => { setSearch(v); setPage(1); }}
+                onRefresh={fetchList}
+                searchPlaceholder="Search by department or shift..."
+                emptyMessage="No configurations found"
+                actionButton={<button type="button" className="btn btn-primary gap-2" onClick={openAdd}><IconPlus /> Add</button>}
+            />
 
             <Transition appear show={modalOpen} as={Fragment}>
                 <Dialog as="div" open={modalOpen} onClose={() => setModalOpen(false)} className="relative z-50">
@@ -344,7 +340,6 @@ const AdminDeptWorkingDays = () => {
                     </div>
                 </Dialog>
             </Transition>
-        </div>
         </div>
     );
 };
