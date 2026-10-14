@@ -6,6 +6,7 @@ import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import PlatformOverview from "@/components/PlatformOverview";
 import BookDemoModal from "@/components/BookDemoModal";
+import { ProductMedia } from "@/components/home/HomeSections";
 
 const beforeList = [
   "Sourcing credits wasted on candidates already in your database.",
@@ -145,22 +146,17 @@ export default function TalentFlowPage() {
     <div className="min-h-screen bg-white text-[#0B0F2E] flex flex-col selection:bg-[#EAF0FF] selection:text-[#0B5BD3]">
       <Navbar onOpenDemo={openDemo} />
 
-      <main className="w-full pt-[72px]">
+      <main className="w-full pt-[76px]">
         {/* ============================================================== */}
         {/* 1. HERO SECTION                                                */}
         {/* ============================================================== */}
         <section className="bg-white border-b border-[#DCE4F5]/60 overflow-hidden">
           <div className="max-w-7xl mx-auto px-6 lg:px-12 py-16 lg:py-24 grid lg:grid-cols-2 gap-12 items-center">
             <div className="space-y-6">
-              <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-[#EAF0FF] border border-[#DCE4F5] text-[#0B5BD3] text-xs font-semibold">
-                <span className="w-2 h-2 rounded-full bg-[#0B5BD3] animate-pulse"></span>
-                <span>⚡ Next-Generation Recruitment Operations Platform • by Innovyx Tech Labs LLP</span>
-              </div>
-
-              <h1 className="font-display text-4xl sm:text-5xl lg:text-6xl leading-[1.05] tracking-tight text-[#0B0F2E]">
+              <h1 className="font-display text-3xl sm:text-4xl lg:text-[40px] leading-[1.12] tracking-tight text-[#0B0F2E]">
                 Stop sourcing in silos.
                 <br />
-                <span className="text-[#5B6488]">Start closing hires at scale.</span>
+                <span className="text-shimmer">Start closing hires at scale.</span>
               </h1>
 
               <p className="text-lg text-[#5B6488] max-w-xl leading-relaxed">
@@ -171,14 +167,14 @@ export default function TalentFlowPage() {
                 <button
                   type="button"
                   onClick={openDemo}
-                  className="px-6 py-3.5 rounded-xl bg-[#141834] hover:bg-[#232A4E] hover:border-[#7DC8FF] hover:shadow-[0_6px_20px_rgba(20,24,52,0.35)] text-white border border-[#4A6CFF]/40 font-semibold transition-all shadow-md cursor-pointer flex items-center gap-2"
+                  className="px-6 py-3 rounded-full bg-[#141834] hover:bg-[#232A4E] hover:border-[#7DC8FF] hover:shadow-[0_6px_20px_rgba(20,24,52,0.35)] text-white border border-[#4A6CFF]/40 font-semibold transition-all shadow-md cursor-pointer flex items-center gap-2"
                 >
                   <span>Book a Product Demo</span>
                   <span className="material-symbols-outlined text-[18px]">arrow_forward</span>
                 </button>
                 <a
                   href="#how"
-                  className="px-6 py-3.5 rounded-xl border border-[#DCE4F5] hover:border-[#0B5BD3] hover:bg-[#F5F8FF] text-[#0B0F2E] font-semibold transition-all cursor-pointer flex items-center gap-1.5"
+                  className="px-6 py-3 rounded-full border border-[#C9D3EE] hover:border-[#0B5BD3] text-[#0B0F2E] font-semibold transition-all cursor-pointer flex items-center gap-1.5"
                 >
                   <span>See 2-Minute Workflow Demo</span>
                   <span className="material-symbols-outlined text-[18px]">play_circle</span>
@@ -193,7 +189,7 @@ export default function TalentFlowPage() {
             </div>
 
             {/* Interactive Candidate Dossier Card */}
-            <div className="bg-[#F5F8FF] rounded-[2.5rem] p-6 sm:p-8 border border-[#DCE4F5]">
+            <div>
               <div className="bg-[#141834] text-[#E8ECFF] border border-[#232A4E] rounded-2xl p-6 shadow-2xl space-y-5">
                 <div className="flex items-center justify-between pb-3 border-b border-[#232A4E]">
                   <div>
@@ -240,6 +236,8 @@ export default function TalentFlowPage() {
         {/* ============================================================== */}
         {/* 2. BEFORE VS. AFTER TALENTFLOW                                 */}
         {/* ============================================================== */}
+        <ProductMedia product="ats" onDemo={openDemo} />
+
         <section className="bg-[#F5F8FF] py-20 border-b border-[#DCE4F5]">
           <div className="max-w-7xl mx-auto px-6 lg:px-12">
             <div className="max-w-2xl mb-12">

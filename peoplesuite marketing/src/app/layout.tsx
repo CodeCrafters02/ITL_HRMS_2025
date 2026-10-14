@@ -1,6 +1,12 @@
 import type { Metadata, Viewport } from "next";
-import { Inter } from "next/font/google";
+import { Inter, Sora } from "next/font/google";
 import "./globals.css";
+
+const sora = Sora({
+  subsets: ["latin"],
+  variable: "--font-display",
+  display: "swap",
+});
 
 const inter = Inter({
   subsets: ["latin"],
@@ -14,9 +20,9 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
-  title: "PeopleSuite + TalentFlow | Unified People & Talent Cloud by Innovyx Tech Labs LLP",
+  title: "Unified HRMS + ATS Platform | People & Talent Cloud by Innovyx Tech Labs LLP",
   description:
-    "The unified platform combining TalentFlow (1-click Naukri sync, 3-tier dedup, AI fit scoring, tokenized client portals) with PeopleSuite (geofenced attendance, Indian statutory payroll, 2D hot desking, IT assets, and LMS). Engineered by Innovyx Tech Labs LLP.",
+    "Innovyx Tech Labs People & Talent Cloud: TalentFlow (1-click Naukri sync, 3-tier dedup, AI fit scoring, tokenized client portals) with PeopleSuite (geofenced attendance, Indian statutory payroll, 2D hot desking, IT assets, and LMS). Engineered by Innovyx Tech Labs LLP.",
   keywords: [
     "Innovyx Tech Labs",
     "Innovyx Tech Labs LLP",
@@ -49,7 +55,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className={`${inter.variable} scroll-smooth`}>
+    <html lang="en" className={`${inter.variable} ${sora.variable} scroll-smooth`}>
       <head>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />

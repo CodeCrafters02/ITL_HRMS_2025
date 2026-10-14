@@ -2,14 +2,16 @@
 
 import React, { useState, useEffect, useRef } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 
 interface NavbarProps {
   onOpenDemo?: () => void;
+  onSelectProduct?: (p: "hrms" | "ats") => void;
 }
 
-export default function Navbar({ onOpenDemo }: NavbarProps) {
+export default function Navbar({ onOpenDemo, onSelectProduct }: NavbarProps) {
   const pathname = usePathname();
+  const router = useRouter();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
@@ -64,17 +66,17 @@ export default function Navbar({ onOpenDemo }: NavbarProps) {
           : "bg-white/95 backdrop-blur-md shadow-[0_1px_8px_rgba(11,91,211,0.06)] border-b border-[#DCE4F5]/70"
       }`}
     >
-      <div className="h-[72px] max-w-7xl mx-auto px-6 lg:px-12 flex items-center justify-between gap-6">
+      <div className="h-[76px] max-w-7xl mx-auto px-6 lg:px-12 flex items-center justify-between gap-6">
         {/* Brand Logo & Name */}
         <div className="flex items-center gap-7">
           <Link href="/" onClick={closeDropdown} className="flex items-center gap-3">
-            <img src="/logo.png" alt="PeopleSuite" className="h-12 w-auto bg-white rounded-lg p-1" />
+            <img src="/logo.png" alt="Innovyx Tech Labs" className="h-14 w-auto bg-white rounded-lg p-0.5 object-contain" />
             <div className="hidden sm:flex flex-col">
               <span className="font-bold text-sm tracking-tight text-[#0B0F2E] leading-tight">
-                PeopleSuite <span className="text-[#0B5BD3]">+ TalentFlow</span>
+                Innovyx <span className="text-[#0B5BD3]">Tech Labs</span>
               </span>
               <span className="text-[10px] text-[#5B6488] font-medium leading-none">
-                by Innovyx Tech Labs LLP
+                People & Talent Cloud
               </span>
             </div>
           </Link>
@@ -90,9 +92,11 @@ export default function Navbar({ onOpenDemo }: NavbarProps) {
             >
               <button
                 type="button"
-                onClick={() =>
-                  setActiveDropdown((prev) => (prev === "talentflow" ? null : "talentflow"))
-                }
+                onClick={() => {
+                  onSelectProduct?.("ats");
+                  router.push("/talentflow");
+                  setActiveDropdown((prev) => (prev === "talentflow" ? null : "talentflow"));
+                }}
                 aria-expanded={activeDropdown === "talentflow"}
                 aria-haspopup="true"
                 className={`flex items-center gap-1 font-label-lg text-label-lg transition-colors cursor-pointer select-none ${
@@ -124,7 +128,7 @@ export default function Navbar({ onOpenDemo }: NavbarProps) {
                   </div>
 
                   <Link
-                    href="/#talentflow"
+                    href="/talentflow"
                     onClick={closeDropdown}
                     className="flex items-start gap-3 p-2.5 rounded-xl font-body-sm text-body-sm transition-colors cursor-pointer text-[#0B0F2E] hover:bg-[#F5F8FF] hover:text-[#0B5BD3]"
                   >
@@ -140,7 +144,7 @@ export default function Navbar({ onOpenDemo }: NavbarProps) {
                   </Link>
 
                   <Link
-                    href="/#talentflow"
+                    href="/talentflow"
                     onClick={closeDropdown}
                     className="flex items-start gap-3 p-2.5 rounded-xl font-body-sm text-body-sm transition-colors cursor-pointer text-[#0B0F2E] hover:bg-[#F5F8FF] hover:text-[#0B5BD3]"
                   >
@@ -156,7 +160,7 @@ export default function Navbar({ onOpenDemo }: NavbarProps) {
                   </Link>
 
                   <Link
-                    href="/#talentflow"
+                    href="/talentflow"
                     onClick={closeDropdown}
                     className="flex items-start gap-3 p-2.5 rounded-xl font-body-sm text-body-sm transition-colors cursor-pointer text-[#0B0F2E] hover:bg-[#F5F8FF] hover:text-[#0B5BD3]"
                   >
@@ -172,7 +176,7 @@ export default function Navbar({ onOpenDemo }: NavbarProps) {
                   </Link>
 
                   <Link
-                    href="/#talentflow"
+                    href="/talentflow"
                     onClick={closeDropdown}
                     className="flex items-start gap-3 p-2.5 rounded-xl font-body-sm text-body-sm transition-colors cursor-pointer text-[#0B0F2E] hover:bg-[#F5F8FF] hover:text-[#0B5BD3]"
                   >
@@ -188,7 +192,7 @@ export default function Navbar({ onOpenDemo }: NavbarProps) {
                   </Link>
 
                   <Link
-                    href="/#talentflow"
+                    href="/talentflow"
                     onClick={closeDropdown}
                     className="flex items-start gap-3 p-2.5 rounded-xl font-body-sm text-body-sm transition-colors cursor-pointer text-[#0B0F2E] hover:bg-[#F5F8FF] hover:text-[#0B5BD3]"
                   >
@@ -226,9 +230,11 @@ export default function Navbar({ onOpenDemo }: NavbarProps) {
             >
               <button
                 type="button"
-                onClick={() =>
-                  setActiveDropdown((prev) => (prev === "product" ? null : "product"))
-                }
+                onClick={() => {
+                  onSelectProduct?.("hrms");
+                  router.push("/peoplesuite");
+                  setActiveDropdown((prev) => (prev === "product" ? null : "product"));
+                }}
                 aria-expanded={activeDropdown === "product"}
                 aria-haspopup="true"
                 className={`flex items-center gap-1 font-label-lg text-label-lg transition-colors cursor-pointer select-none ${
@@ -255,7 +261,7 @@ export default function Navbar({ onOpenDemo }: NavbarProps) {
               >
                 <div className="rounded-2xl p-4 shadow-xl border grid grid-cols-2 gap-2 bg-white border-[#DCE4F5] shadow-[0_10px_25px_-5px_rgba(11,91,211,0.12)]">
                   <Link
-                    href="/#pillars"
+                    href="/peoplesuite#modules"
                     onClick={closeDropdown}
                     className="flex items-start gap-3 p-2.5 rounded-xl font-body-sm text-body-sm transition-colors cursor-pointer text-[#0B0F2E] hover:bg-[#F5F8FF] hover:text-[#0B5BD3]"
                   >
@@ -269,7 +275,7 @@ export default function Navbar({ onOpenDemo }: NavbarProps) {
                   </Link>
 
                   <Link
-                    href="/#attendance"
+                    href="/peoplesuite#attendance"
                     onClick={closeDropdown}
                     className="flex items-start gap-3 p-2.5 rounded-xl font-body-sm text-body-sm transition-colors cursor-pointer text-[#0B0F2E] hover:bg-[#F5F8FF] hover:text-[#0B5BD3]"
                   >
@@ -283,7 +289,7 @@ export default function Navbar({ onOpenDemo }: NavbarProps) {
                   </Link>
 
                   <Link
-                    href="/#payroll"
+                    href="/peoplesuite#payroll"
                     onClick={closeDropdown}
                     className="flex items-start gap-3 p-2.5 rounded-xl font-body-sm text-body-sm transition-colors cursor-pointer text-[#0B0F2E] hover:bg-[#F5F8FF] hover:text-[#0B5BD3]"
                   >
@@ -297,7 +303,7 @@ export default function Navbar({ onOpenDemo }: NavbarProps) {
                   </Link>
 
                   <Link
-                    href="/#workspace"
+                    href="/peoplesuite#workspace"
                     onClick={closeDropdown}
                     className="flex items-start gap-3 p-2.5 rounded-xl font-body-sm text-body-sm transition-colors cursor-pointer text-[#0B0F2E] hover:bg-[#F5F8FF] hover:text-[#0B5BD3]"
                   >
@@ -311,7 +317,7 @@ export default function Navbar({ onOpenDemo }: NavbarProps) {
                   </Link>
 
                   <Link
-                    href="/#assets"
+                    href="/peoplesuite#assets"
                     onClick={closeDropdown}
                     className="flex items-start gap-3 p-2.5 rounded-xl font-body-sm text-body-sm transition-colors cursor-pointer text-[#0B0F2E] hover:bg-[#F5F8FF] hover:text-[#0B5BD3]"
                   >
@@ -325,7 +331,7 @@ export default function Navbar({ onOpenDemo }: NavbarProps) {
                   </Link>
 
                   <Link
-                    href="/#performance"
+                    href="/peoplesuite#performance"
                     onClick={closeDropdown}
                     className="flex items-start gap-3 p-2.5 rounded-xl font-body-sm text-body-sm transition-colors cursor-pointer text-[#0B0F2E] hover:bg-[#F5F8FF] hover:text-[#0B5BD3]"
                   >
@@ -339,7 +345,7 @@ export default function Navbar({ onOpenDemo }: NavbarProps) {
                   </Link>
 
                   <Link
-                    href="/#lms"
+                    href="/peoplesuite#lms"
                     onClick={closeDropdown}
                     className="flex items-start gap-3 p-2.5 rounded-xl font-body-sm text-body-sm transition-colors cursor-pointer text-[#0B0F2E] hover:bg-[#F5F8FF] hover:text-[#0B5BD3]"
                   >
@@ -353,7 +359,7 @@ export default function Navbar({ onOpenDemo }: NavbarProps) {
                   </Link>
 
                   <Link
-                    href="/#payroll"
+                    href="/peoplesuite#payroll"
                     onClick={closeDropdown}
                     className="flex items-start gap-3 p-2.5 rounded-xl font-body-sm text-body-sm transition-colors cursor-pointer text-[#0B0F2E] hover:bg-[#F5F8FF] hover:text-[#0B5BD3]"
                   >
@@ -369,18 +375,10 @@ export default function Navbar({ onOpenDemo }: NavbarProps) {
               </div>
             </div>
 
-            {/* Unified Pipeline Link */}
-            <Link
-              href="/#pipeline"
-              onClick={closeDropdown}
-              className="font-label-lg text-label-lg text-[#5B6488] hover:text-[#0B0F2E] transition-colors cursor-pointer"
-            >
-              Unified Pipeline
-            </Link>
 
             {/* Direct 2D Desk Link */}
             <Link
-              href="/#workspace"
+              href="/peoplesuite#workspace"
               onClick={closeDropdown}
               className="font-label-lg text-label-lg text-[#5B6488] hover:text-[#0B0F2E] transition-colors cursor-pointer"
             >
@@ -406,7 +404,7 @@ export default function Navbar({ onOpenDemo }: NavbarProps) {
               closeDropdown();
               onOpenDemo?.();
             }}
-            className="inline-flex items-center justify-center bg-[#141834] hover:bg-[#232A4E] hover:border-[#7DC8FF] hover:shadow-[0_6px_20px_rgba(20,24,52,0.35)] text-white border border-[#4A6CFF]/40 font-label-lg text-label-lg px-5 py-2.5 rounded-xl shadow-[0_4px_16px_rgba(11,91,211,0.4)] transition-all active:scale-[0.98] cursor-pointer"
+            className="inline-flex items-center justify-center bg-[#141834] hover:bg-[#232A4E] hover:shadow-lg hover:shadow-[#4A6CFF]/30 text-white font-label-lg text-label-lg px-5 py-2.5 rounded-full shadow-md transition-all active:scale-[0.98] cursor-pointer"
           >
             Book a Demo
           </button>
@@ -442,7 +440,7 @@ export default function Navbar({ onOpenDemo }: NavbarProps) {
             </div>
 
             <Link
-              href="/#talentflow"
+              href="/talentflow"
               onClick={() => setMobileMenuOpen(false)}
               className="py-1 hover:text-[#0B5BD3] transition-colors cursor-pointer flex items-center justify-between"
             >
@@ -452,13 +450,6 @@ export default function Navbar({ onOpenDemo }: NavbarProps) {
               </span>
             </Link>
 
-            <Link
-              href="/#pipeline"
-              onClick={() => setMobileMenuOpen(false)}
-              className="py-1 hover:text-[#0B5BD3] transition-colors cursor-pointer"
-            >
-              Unified Sourcing-to-Payroll Flow
-            </Link>
 
             <Link
               href="/talentflow"
@@ -467,55 +458,62 @@ export default function Navbar({ onOpenDemo }: NavbarProps) {
             >
               ➔ Dedicated TalentFlow Page
             </Link>
+            <Link
+              href="/peoplesuite"
+              onClick={() => setMobileMenuOpen(false)}
+              className="py-1 text-sm text-[#5B6488] hover:text-[#0B5BD3] transition-colors cursor-pointer pl-3"
+            >
+              ➔ Dedicated PeopleSuite Page
+            </Link>
 
             <div className="pt-2 pb-1 border-t border-gray-100 font-bold text-xs text-[#0B5BD3] uppercase tracking-wider">
               PeopleSuite (Workforce Operations)
             </div>
 
             <Link
-              href="/#pillars"
+              href="/peoplesuite#modules"
               onClick={() => setMobileMenuOpen(false)}
               className="py-1 hover:text-[#0B5BD3] transition-colors cursor-pointer"
             >
               All 12 Modules
             </Link>
             <Link
-              href="/#attendance"
+              href="/peoplesuite#attendance"
               onClick={() => setMobileMenuOpen(false)}
               className="py-1 hover:text-[#0B5BD3] transition-colors cursor-pointer"
             >
               Attendance & Geofencing
             </Link>
             <Link
-              href="/#payroll"
+              href="/peoplesuite#payroll"
               onClick={() => setMobileMenuOpen(false)}
               className="py-1 hover:text-[#0B5BD3] transition-colors cursor-pointer"
             >
               Statutory Payroll Engine
             </Link>
             <Link
-              href="/#workspace"
+              href="/peoplesuite#workspace"
               onClick={() => setMobileMenuOpen(false)}
               className="py-1 hover:text-[#0B5BD3] transition-colors cursor-pointer"
             >
               2D Desk & Room Booking
             </Link>
             <Link
-              href="/#assets"
+              href="/peoplesuite#assets"
               onClick={() => setMobileMenuOpen(false)}
               className="py-1 hover:text-[#0B5BD3] transition-colors cursor-pointer"
             >
               Fixed IT Assets & Consumables
             </Link>
             <Link
-              href="/#performance"
+              href="/peoplesuite#performance"
               onClick={() => setMobileMenuOpen(false)}
               className="py-1 hover:text-[#0B5BD3] transition-colors cursor-pointer"
             >
               Performance & Appraisals
             </Link>
             <Link
-              href="/#lms"
+              href="/peoplesuite#lms"
               onClick={() => setMobileMenuOpen(false)}
               className="py-1 hover:text-[#0B5BD3] transition-colors cursor-pointer"
             >

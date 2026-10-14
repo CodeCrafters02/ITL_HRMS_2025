@@ -16,7 +16,7 @@ export default function Footer({ theme = "dark", onOpenDemo }: FooterProps) {
     <footer
       className={`w-full pt-16 pb-12 transition-colors ${
         isDark
-          ? "bg-[#0A0B14] border-t border-[#4A6CFF]/25 text-[#9AA3D1]"
+          ? "bg-[#141834] border-t border-[#4A6CFF]/25 text-[#9AA3D1]"
           : "bg-white border-t border-[#DCE4F5] text-[#5B6488]"
       }`}
     >
@@ -26,11 +26,11 @@ export default function Footer({ theme = "dark", onOpenDemo }: FooterProps) {
           {/* Brand info column */}
           <div className="lg:col-span-1 space-y-5">
             <Link href="/" className="inline-block">
-              <img src="/logo.png" alt="PeopleSuite" className="h-14 w-auto bg-white rounded-lg p-1" />
+              <img src="/logo.png" alt="Innovyx Tech Labs" className="h-14 w-auto bg-white rounded-lg p-1.5 object-contain" />
             </Link>
 
             <p className="font-body-sm text-body-sm leading-relaxed">
-              Everything People. One Suite. Enterprise Cloud Platform combining <strong>TalentFlow</strong> and <strong>PeopleSuite</strong>, developed and engineered by <strong>Innovyx Tech Labs LLP</strong>.
+              Everything People. One Suite. Enterprise People &amp; Talent Cloud with <strong>TalentFlow</strong> and <strong>PeopleSuite</strong>, developed and engineered by <strong>Innovyx Tech Labs LLP</strong>.
             </p>
 
             {/* Live Operational Status */}
@@ -76,7 +76,7 @@ export default function Footer({ theme = "dark", onOpenDemo }: FooterProps) {
                 <span className="material-symbols-outlined text-[19px]">code</span>
               </a>
               <Link
-                href="/#features"
+                href="/peoplesuite"
                 aria-label="Feature Walkthroughs"
                 title="Feature Walkthroughs"
                 className={`w-8 h-8 rounded-lg flex items-center justify-center transition-colors cursor-pointer ${
@@ -138,38 +138,43 @@ export default function Footer({ theme = "dark", onOpenDemo }: FooterProps) {
             </h4>
             <ul className="space-y-2.5 font-body-sm text-body-sm">
               <li>
-                <Link href="/#talentflow" className={`transition-colors cursor-pointer ${linkHoverClass}`}>
+                <Link href="/talentflow" className={`transition-colors cursor-pointer ${linkHoverClass}`}>
                   1-Click Sourcing Gateway
                 </Link>
               </li>
               <li>
-                <Link href="/#talentflow" className={`transition-colors cursor-pointer ${linkHoverClass}`}>
+                <Link href="/talentflow" className={`transition-colors cursor-pointer ${linkHoverClass}`}>
                   3-Tier Deduplication Engine
                 </Link>
               </li>
               <li>
-                <Link href="/#talentflow" className={`transition-colors cursor-pointer ${linkHoverClass}`}>
+                <Link href="/talentflow" className={`transition-colors cursor-pointer ${linkHoverClass}`}>
                   AI Fit Score & Skill Gap
                 </Link>
               </li>
               <li>
-                <Link href="/#talentflow" className={`transition-colors cursor-pointer ${linkHoverClass}`}>
+                <Link href="/talentflow" className={`transition-colors cursor-pointer ${linkHoverClass}`}>
                   Playwright Chromium Dossiers
                 </Link>
               </li>
               <li>
-                <Link href="/#talentflow" className={`transition-colors cursor-pointer ${linkHoverClass}`}>
+                <Link href="/talentflow" className={`transition-colors cursor-pointer ${linkHoverClass}`}>
                   Tokenized Client Review Portal
                 </Link>
               </li>
               <li>
-                <Link href="/#talentflow" className={`transition-colors cursor-pointer ${linkHoverClass}`}>
+                <Link href="/talentflow" className={`transition-colors cursor-pointer ${linkHoverClass}`}>
                   DPDP Pre-Onboarding Checklist
                 </Link>
               </li>
               <li>
                 <Link href="/talentflow" className={`transition-colors cursor-pointer font-semibold text-[#0B5BD3]`}>
                   ➔ Dedicated TalentFlow Page
+                </Link>
+              </li>
+              <li>
+                <Link href="/peoplesuite" className={`transition-colors cursor-pointer font-semibold text-[#0B5BD3]`}>
+                  ➔ Dedicated PeopleSuite Page
                 </Link>
               </li>
             </ul>
@@ -186,37 +191,37 @@ export default function Footer({ theme = "dark", onOpenDemo }: FooterProps) {
             </h4>
             <ul className="space-y-2.5 font-body-sm text-body-sm">
               <li>
-                <Link href="/#pillars" className={`transition-colors cursor-pointer ${linkHoverClass}`}>
+                <Link href="/peoplesuite#modules" className={`transition-colors cursor-pointer ${linkHoverClass}`}>
                   Core HR & Organization Vault
                 </Link>
               </li>
               <li>
-                <Link href="/#attendance" className={`transition-colors cursor-pointer ${linkHoverClass}`}>
+                <Link href="/peoplesuite#attendance" className={`transition-colors cursor-pointer ${linkHoverClass}`}>
                   Geofence Attendance & Shifts
                 </Link>
               </li>
               <li>
-                <Link href="/#payroll" className={`transition-colors cursor-pointer ${linkHoverClass}`}>
+                <Link href="/peoplesuite#payroll" className={`transition-colors cursor-pointer ${linkHoverClass}`}>
                   Statutory Payroll & Payslips
                 </Link>
               </li>
               <li>
-                <Link href="/#workspace" className={`transition-colors cursor-pointer ${linkHoverClass}`}>
+                <Link href="/peoplesuite#workspace" className={`transition-colors cursor-pointer ${linkHoverClass}`}>
                   2D Desk & Conference Booking
                 </Link>
               </li>
               <li>
-                <Link href="/#assets" className={`transition-colors cursor-pointer ${linkHoverClass}`}>
+                <Link href="/peoplesuite#assets" className={`transition-colors cursor-pointer ${linkHoverClass}`}>
                   Fixed IT Assets & Inventory
                 </Link>
               </li>
               <li>
-                <Link href="/#performance" className={`transition-colors cursor-pointer ${linkHoverClass}`}>
+                <Link href="/peoplesuite#performance" className={`transition-colors cursor-pointer ${linkHoverClass}`}>
                   Performance & 360° Appraisals
                 </Link>
               </li>
               <li>
-                <Link href="/#lms" className={`transition-colors cursor-pointer ${linkHoverClass}`}>
+                <Link href="/peoplesuite#lms" className={`transition-colors cursor-pointer ${linkHoverClass}`}>
                   Corporate LMS & Certifications
                 </Link>
               </li>
@@ -234,22 +239,22 @@ export default function Footer({ theme = "dark", onOpenDemo }: FooterProps) {
             </h4>
             <ul className="space-y-2.5 font-body-sm text-body-sm">
               <li>
-                <Link href="/#pipeline" className={`transition-colors cursor-pointer ${linkHoverClass}`}>
-                  Sourcing-to-Payroll Pipeline
+                <Link href="/talentflow" className={`transition-colors cursor-pointer ${linkHoverClass}`}>
+                  TalentFlow ATS Features
                 </Link>
               </li>
               <li>
-                <Link href="/#pillars" className={`transition-colors cursor-pointer ${linkHoverClass}`}>
+                <Link href="/peoplesuite#modules" className={`transition-colors cursor-pointer ${linkHoverClass}`}>
                   12 Platform Modules
                 </Link>
               </li>
               <li>
-                <Link href="/#workspace" className={`transition-colors cursor-pointer ${linkHoverClass}`}>
+                <Link href="/peoplesuite#workspace" className={`transition-colors cursor-pointer ${linkHoverClass}`}>
                   2D Desk & Floorplan Demo
                 </Link>
               </li>
               <li>
-                <Link href="/#features" className={`transition-colors cursor-pointer ${linkHoverClass}`}>
+                <Link href="/peoplesuite" className={`transition-colors cursor-pointer ${linkHoverClass}`}>
                   Feature Walkthroughs
                 </Link>
               </li>
@@ -291,18 +296,18 @@ export default function Footer({ theme = "dark", onOpenDemo }: FooterProps) {
                     Schedule 1-on-1 Walkthrough
                   </button>
                 ) : (
-                  <Link href="/#pillars" className={`transition-colors cursor-pointer ${linkHoverClass}`}>
+                  <Link href="/peoplesuite#modules" className={`transition-colors cursor-pointer ${linkHoverClass}`}>
                     Schedule 1-on-1 Walkthrough
                   </Link>
                 )}
               </li>
               <li>
-                <Link href="/#attendance" className={`transition-colors cursor-pointer ${linkHoverClass}`}>
+                <Link href="/peoplesuite#attendance" className={`transition-colors cursor-pointer ${linkHoverClass}`}>
                   Multi-Shift Setup Guide
                 </Link>
               </li>
               <li>
-                <Link href="/#pillars" className={`transition-colors cursor-pointer ${linkHoverClass}`}>
+                <Link href="/peoplesuite#modules" className={`transition-colors cursor-pointer ${linkHoverClass}`}>
                   Role-Based Security (Admin/Staff)
                 </Link>
               </li>
@@ -323,7 +328,7 @@ export default function Footer({ theme = "dark", onOpenDemo }: FooterProps) {
         >
           <div className="flex items-center gap-4 flex-wrap">
             <span>
-              © 2026 PeopleSuite + TalentFlow. Developed and engineered by{" "}
+              © 2026 Innovyx HRMS + ATS Platform. Developed and engineered by{" "}
               <strong className="font-semibold text-current">Innovyx Tech Labs LLP</strong>. All rights reserved.
             </span>
             <div
