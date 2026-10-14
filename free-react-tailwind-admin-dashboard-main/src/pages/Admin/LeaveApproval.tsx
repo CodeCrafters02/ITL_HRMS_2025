@@ -145,7 +145,7 @@ const LeaveApproval = () => {
             title: 'Type',
             sortable: true,
             render: (leaveType) => (
-                <span className="font-medium text-blue-600 dark:text-blue-400 bg-blue-50/50 dark:bg-blue-900/20 rounded-lg px-2.5 py-0.5 text-xs whitespace-nowrap">
+                <span className="font-medium text-brand-600 dark:text-brand-400 bg-brand-50/50 dark:bg-brand-900/20 rounded-lg px-2.5 py-0.5 text-xs whitespace-nowrap">
                     {leaveType}
                 </span>
             ),

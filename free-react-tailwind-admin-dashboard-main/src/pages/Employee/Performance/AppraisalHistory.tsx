@@ -3,6 +3,8 @@ import { useDispatch } from 'react-redux';
 import axios from 'axios';
 import { setPageTitle } from '../../../store/themeConfigSlice';
 
+import PageHeader from '../../../components/Common/PageHeader';
+import { buttonClasses } from '../../../components/Common/Button';
 interface RawAnswer {
     id: number;
     question: number;
@@ -31,16 +33,16 @@ interface Evaluation {
 type RoleKey = 'self' | 'manager' | 'peer' | 'hr';
 
 const ROLE_CFG: Record<RoleKey, { label: string; icon: string; ring: string; pill: string; text: string; border: string }> = {
-    self:    { label: 'Self',    icon: '👤', ring: 'stroke-violet-500', pill: 'bg-violet-100 text-violet-700 dark:bg-violet-950/40 dark:text-violet-300', text: 'text-violet-600 dark:text-violet-400', border: 'border-violet-200 dark:border-violet-900/50' },
-    manager: { label: 'Manager', icon: '👔', ring: 'stroke-teal-500',   pill: 'bg-teal-100 text-teal-700 dark:bg-teal-950/40 dark:text-teal-300',       text: 'text-teal-600 dark:text-teal-400',   border: 'border-teal-200 dark:border-teal-900/50' },
-    peer:    { label: 'Peer',    icon: '🤝', ring: 'stroke-indigo-500', pill: 'bg-indigo-100 text-indigo-700 dark:bg-indigo-950/40 dark:text-indigo-300', text: 'text-indigo-600 dark:text-indigo-400', border: 'border-indigo-200 dark:border-indigo-900/50' },
+    self:    { label: 'Self',    icon: '👤', ring: 'stroke-brand-accent', pill: 'bg-brand-100 text-brand-700 dark:bg-brand-950/40 dark:text-brand-300', text: 'text-brand-accent dark:text-brand-accent', border: 'border-brand-200 dark:border-brand-900/50' },
+    manager: { label: 'Manager', icon: '👔', ring: 'stroke-brand',   pill: 'bg-brand-100 text-brand-dark dark:bg-brand-950/40 dark:text-brand-300',       text: 'text-brand dark:text-brand-400',   border: 'border-brand-200 dark:border-brand-900/50' },
+    peer:    { label: 'Peer',    icon: '🤝', ring: 'stroke-brand-500', pill: 'bg-brand-100 text-brand-700 dark:bg-brand-950/40 dark:text-brand-300', text: 'text-brand-600 dark:text-brand-400', border: 'border-brand-200 dark:border-brand-900/50' },
     hr:      { label: 'HR',      icon: '🛡️', ring: 'stroke-rose-500',   pill: 'bg-rose-100 text-rose-700 dark:bg-rose-950/40 dark:text-rose-300',       text: 'text-rose-600 dark:text-rose-400',   border: 'border-rose-200 dark:border-rose-900/50' },
 };
 
 const STATUS_CFG: Record<string, { label: string; cls: string }> = {
     draft:             { label: 'Draft',           cls: 'bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400' },
-    submitted_self:    { label: 'Self Submitted',  cls: 'bg-violet-100 text-violet-600 dark:bg-violet-950/30 dark:text-violet-400' },
-    submitted_manager: { label: 'Mgr Reviewed',    cls: 'bg-teal-100 text-teal-600 dark:bg-teal-950/30 dark:text-teal-400' },
+    submitted_self:    { label: 'Self Submitted',  cls: 'bg-brand-100 text-brand-accent dark:bg-brand-950/30 dark:text-brand-accent' },
+    submitted_manager: { label: 'Mgr Reviewed',    cls: 'bg-brand-100 text-brand dark:bg-brand-950/30 dark:text-brand-400' },
     completed:         { label: 'Completed',       cls: 'bg-emerald-100 text-emerald-600 dark:bg-emerald-950/30 dark:text-emerald-400' },
 };
 
@@ -60,7 +62,7 @@ const avg5 = (answers: RawAnswer[]): number | null => {
 const ScoreRing = ({ score, roleKey, size = 64 }: { score: number | null; roleKey?: RoleKey; size?: number }) => {
     const pct = score !== null ? Math.min((score / 5) * 100, 100) : 0;
     const r = size * 0.4, c = 2 * Math.PI * r;
-    const strokeCls = roleKey ? ROLE_CFG[roleKey].ring : 'stroke-teal-500';
+    const strokeCls = roleKey ? ROLE_CFG[roleKey].ring : 'stroke-brand';
     return (
         <div className="relative" style={{ width: size, height: size }}>
             <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} className="-rotate-90" style={{ display: 'block' }}>
@@ -126,18 +128,17 @@ const AppraisalHistory = () => {
     if (error) return (
         <div className="flex flex-col items-center justify-center min-h-[40vh] text-center gap-3">
             <p className="text-sm text-rose-500">{error}</p>
-            <button onClick={load} className="px-4 py-2 bg-teal-500 text-white rounded-xl text-xs font-bold">Retry</button>
+            <button onClick={load} className={buttonClasses('primary', 'sm')}>Retry</button>
         </div>
     );
 
     return (
         <div className="space-y-5 py-2">
             {/* Page header */}
-            <div className="bg-white dark:bg-gray-900 px-5 py-4 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm">
-                <p className="text-[9px] font-black uppercase tracking-wider text-teal-600 dark:text-teal-400">Performance Records</p>
-                <h2 className="text-xl font-bold text-gray-800 dark:text-white mt-0.5">Appraisal History</h2>
-                <p className="text-[11px] text-gray-400 mt-0.5">Your scorecards with peer, manager, self & combined ratings. Yes/No answers count as 5★ or 0★.</p>
-            </div>
+            <PageHeader
+                title="Appraisal History"
+                subtitle="Your scorecards with peer, manager, self & combined ratings. Yes/No answers count as 5★ or 0★."
+            />
 
             {evaluations.length === 0 ? (
                 <div className="bg-white dark:bg-gray-900 border border-dashed border-gray-200 dark:border-gray-700 rounded-3xl py-16 text-center">
@@ -228,10 +229,10 @@ const AppraisalHistory = () => {
                                         <div className="mt-4">
                                             <div className="flex justify-between text-[9px] font-black text-gray-400 mb-1">
                                                 <span>Overall Rating</span>
-                                                <span className="text-teal-600 dark:text-teal-400">{combined.toFixed(2)} / 5.00</span>
+                                                <span className="text-brand dark:text-brand-400">{combined.toFixed(2)} / 5.00</span>
                                             </div>
                                             <div className="h-2 bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden">
-                                                <div className="h-full rounded-full bg-gradient-to-r from-teal-400 to-teal-600 transition-all duration-700"
+                                                <div className="h-full rounded-full bg-gradient-to-r from-brand-400 to-brand transition-all duration-700"
                                                     style={{ width: `${(combined / 5) * 100}%` }} />
                                             </div>
                                             <div className="flex justify-between text-[8px] text-gray-300 dark:text-gray-700 mt-0.5">
@@ -278,13 +279,13 @@ const AppraisalHistory = () => {
                                                     const pScore = avg5(answers);
                                                     const initials = reviewer.split(' ').map(n => n[0]).join('').slice(0,2).toUpperCase();
                                                     return (
-                                                        <div key={reviewer} className="border border-indigo-100 dark:border-indigo-900/40 rounded-2xl overflow-hidden">
+                                                        <div key={reviewer} className="border border-brand-100 dark:border-brand-900/40 rounded-2xl overflow-hidden">
                                                             {/* Reviewer header */}
-                                                            <div className="bg-indigo-50 dark:bg-indigo-950/20 px-4 py-3 flex items-center gap-3">
-                                                                <div className="w-8 h-8 rounded-xl bg-indigo-500 text-white text-[9px] font-black flex items-center justify-center shrink-0">{initials}</div>
+                                                            <div className="bg-brand-50 dark:bg-brand-950/20 px-4 py-3 flex items-center gap-3">
+                                                                <div className="w-8 h-8 rounded-xl bg-brand-500 text-white text-[9px] font-black flex items-center justify-center shrink-0">{initials}</div>
                                                                 <div className="flex-1 min-w-0">
-                                                                    <p className="text-xs font-black text-indigo-800 dark:text-indigo-200 truncate">{reviewer}</p>
-                                                                    <p className="text-[9px] text-indigo-400">{answers.length} question{answers.length !== 1 ? 's' : ''}</p>
+                                                                    <p className="text-xs font-black text-brand-800 dark:text-brand-200 truncate">{reviewer}</p>
+                                                                    <p className="text-[9px] text-brand-400">{answers.length} question{answers.length !== 1 ? 's' : ''}</p>
                                                                 </div>
                                                                 {pScore !== null && (
                                                                     <div className="shrink-0 text-right">

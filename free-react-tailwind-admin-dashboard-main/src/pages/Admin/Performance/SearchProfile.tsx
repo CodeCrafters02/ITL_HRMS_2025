@@ -9,6 +9,7 @@ import IconMenuCharts from '../../../components/Icon/Menu/IconMenuCharts';
 
 import PageHeader from '../../../components/Common/PageHeader';
 import CardGrid from '../../../components/Common/CardGrid';
+import { buttonClasses } from '../../../components/Common/Button';
 interface Employee {
     id: number;
     employee_id: string;
@@ -262,11 +263,11 @@ const SearchProfile = () => {
     const gridCells = [
         { key: 'High-High', label: 'Star Performer', pot: 'High', perf: 'High', color: 'bg-emerald-500/10 text-emerald-600 border-emerald-500' },
         { key: 'High-Medium', label: 'High Performer', pot: 'High', perf: 'Medium', color: 'bg-emerald-500/5 text-emerald-500 border-emerald-400/50' },
-        { key: 'High-Low', label: 'Solid Performer', pot: 'High', perf: 'Low', color: 'bg-blue-500/10 text-blue-600 border-blue-400' },
+        { key: 'High-Low', label: 'Solid Performer', pot: 'High', perf: 'Low', color: 'bg-brand-500/10 text-brand-600 border-brand-400' },
         
-        { key: 'Medium-High', label: 'High Potential', pot: 'Medium', perf: 'High', color: 'bg-indigo-500/10 text-indigo-600 border-indigo-500' },
+        { key: 'Medium-High', label: 'High Potential', pot: 'Medium', perf: 'High', color: 'bg-brand-500/10 text-brand-600 border-brand-500' },
         { key: 'Medium-Medium', label: 'Core Player', pot: 'Medium', perf: 'Medium', color: 'bg-slate-500/10 text-slate-600 border-slate-400' },
-        { key: 'Medium-Low', label: 'Average Performer', pot: 'Medium', perf: 'Low', color: 'bg-blue-500/5 text-blue-500 border-blue-300' },
+        { key: 'Medium-Low', label: 'Average Performer', pot: 'Medium', perf: 'Low', color: 'bg-brand-500/5 text-brand-500 border-brand-300' },
         
         { key: 'Low-High', label: 'Potential Gem', pot: 'Low', perf: 'High', color: 'bg-amber-500/10 text-amber-600 border-amber-500' },
         { key: 'Low-Medium', label: 'Inconsistent Player', pot: 'Low', perf: 'Medium', color: 'bg-rose-500/5 text-rose-500 border-rose-300' },
@@ -284,7 +285,7 @@ const SearchProfile = () => {
                         {selectedEmployee && (
                         <button
                         onClick={() => setSelectedEmployee(null)}
-                        className="btn bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-400 rounded-xl text-xs font-bold px-4 py-2"
+                        className={buttonClasses('secondary', 'sm')}
                     >
                         ← Back to Directory
                     </button>
@@ -524,14 +525,14 @@ const SearchProfile = () => {
                                                             </span>
                                                         </button>
                                                         <button onClick={() => setBreakdownOpen(breakdownOpen === 'pot' ? null : 'pot')}
-                                                            className={`flex-1 flex items-center justify-between px-4 py-3 rounded-2xl border text-xs font-bold transition ${breakdownOpen === 'pot' ? 'bg-indigo-500 text-white border-indigo-500 shadow-md' : 'bg-gray-50 dark:bg-gray-850 border-gray-200 dark:border-gray-800 text-gray-700 dark:text-gray-300 hover:border-indigo-400'}`}>
+                                                            className={`flex-1 flex items-center justify-between px-4 py-3 rounded-2xl border text-xs font-bold transition ${breakdownOpen === 'pot' ? 'bg-brand-500 text-white border-brand-500 shadow-md' : 'bg-gray-50 dark:bg-gray-850 border-gray-200 dark:border-gray-800 text-gray-700 dark:text-gray-300 hover:border-brand-400'}`}>
                                                             <div>
                                                                 <span className="block">Potential Score</span>
-                                                                <span className={`text-[9px] font-bold ${breakdownOpen === 'pot' ? 'text-indigo-100' : 'text-gray-400'}`}>Skills · Self-Rating · Mgr Feedback · KRA Review</span>
+                                                                <span className={`text-[9px] font-bold ${breakdownOpen === 'pot' ? 'text-brand-100' : 'text-gray-400'}`}>Skills · Self-Rating · Mgr Feedback · KRA Review</span>
                                                             </div>
                                                             <span className="flex items-center gap-1.5">
-                                                                <span className={`text-base font-black ${breakdownOpen === 'pot' ? 'text-white' : 'text-indigo-600 dark:text-indigo-400'}`}>{profile.nine_box.potential_score.toFixed(1)}</span>
-                                                                <span className={`text-[10px] ${breakdownOpen === 'pot' ? 'text-indigo-100' : 'text-gray-400'}`}>/ 5 {breakdownOpen === 'pot' ? '▲' : '▼'}</span>
+                                                                <span className={`text-base font-black ${breakdownOpen === 'pot' ? 'text-white' : 'text-brand-600 dark:text-brand-400'}`}>{profile.nine_box.potential_score.toFixed(1)}</span>
+                                                                <span className={`text-[10px] ${breakdownOpen === 'pot' ? 'text-brand-100' : 'text-gray-400'}`}>/ 5 {breakdownOpen === 'pot' ? '▲' : '▼'}</span>
                                                             </span>
                                                         </button>
                                                     </div>
@@ -592,7 +593,7 @@ const SearchProfile = () => {
                                                                     <div key={i} className="flex items-center gap-3 py-2.5">
                                                                         <span className="flex-1 font-semibold text-gray-700 dark:text-gray-300 truncate">{item.type}</span>
                                                                         <span className="text-amber-400 text-[10px]">{'★'.repeat(item.rating)}{'☆'.repeat(5 - item.rating)}</span>
-                                                                        <span className="font-black text-purple-600 dark:text-purple-400 w-8 text-right shrink-0">{item.rating}.0</span>
+                                                                        <span className="font-black text-brand-accent dark:text-brand-accent w-8 text-right shrink-0">{item.rating}.0</span>
                                                                     </div>
                                                                 ))}
                                                             </div>
@@ -606,10 +607,10 @@ const SearchProfile = () => {
 
                                                     {/* Potential Breakdown */}
                                                     {breakdownOpen === 'pot' && (
-                                                        <div className="border border-indigo-200 dark:border-indigo-900/50 rounded-2xl overflow-hidden text-xs">
-                                                            <div className="bg-indigo-50 dark:bg-indigo-950/30 px-4 py-2.5 flex items-center justify-between">
-                                                                <span className="text-[10px] font-black uppercase tracking-widest text-indigo-700 dark:text-indigo-400">Potential Score Breakdown</span>
-                                                                <span className="text-[10px] text-indigo-500 font-bold">
+                                                        <div className="border border-brand-200 dark:border-brand-900/50 rounded-2xl overflow-hidden text-xs">
+                                                            <div className="bg-brand-50 dark:bg-brand-950/30 px-4 py-2.5 flex items-center justify-between">
+                                                                <span className="text-[10px] font-black uppercase tracking-widest text-brand-700 dark:text-brand-400">Potential Score Breakdown</span>
+                                                                <span className="text-[10px] text-brand-500 font-bold">
                                                                     Skills {potb.skills.weight}% · Self-Appraisal {potb.self_appraisal.weight}% · Self-Feedback {potb.self_feedback.weight}%
                                                                     {potb.manager_feedback && ` · Mgr Feedback ${potb.manager_feedback.weight}%`}
                                                                     {potb.kra_review && ` · KRA Review ${potb.kra_review.weight}%`}
@@ -623,13 +624,13 @@ const SearchProfile = () => {
                                                                     <p className="text-[11px] text-gray-400 italic py-3">No skills added — add skills in the Skills tab to improve this score.</p>
                                                                 ) : potb.skills.items.map((s, i) => (
                                                                     <div key={i} className="flex items-center gap-2 py-2.5">
-                                                                        <div className="w-2 h-2 rounded-full bg-indigo-400 shrink-0" />
+                                                                        <div className="w-2 h-2 rounded-full bg-brand-400 shrink-0" />
                                                                         <span className="flex-1 font-semibold text-gray-700 dark:text-gray-300">{s.name}</span>
                                                                         <span className={`text-[9px] uppercase font-black px-1.5 py-0.5 rounded-full ${s.level?.toLowerCase() === 'expert' ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400' : s.level?.toLowerCase() === 'intermediate' ? 'bg-brand-100 text-brand-dark dark:bg-brand-950/40 dark:text-brand-400' : 'bg-gray-100 text-gray-500'}`}>{s.level || '—'}</span>
                                                                         <div className="w-16 h-1 bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden shrink-0">
-                                                                            <div className="h-full bg-indigo-500 rounded-full" style={{ width: `${(s.mapped / 5) * 100}%` }} />
+                                                                            <div className="h-full bg-brand-500 rounded-full" style={{ width: `${(s.mapped / 5) * 100}%` }} />
                                                                         </div>
-                                                                        <span className="font-black text-indigo-600 dark:text-indigo-400 w-8 text-right shrink-0">{s.mapped.toFixed(1)}</span>
+                                                                        <span className="font-black text-brand-600 dark:text-brand-400 w-8 text-right shrink-0">{s.mapped.toFixed(1)}</span>
                                                                     </div>
                                                                 ))}
                                                             </div>
@@ -643,9 +644,9 @@ const SearchProfile = () => {
                                                                     <div key={i} className="flex items-center gap-3 py-2.5">
                                                                         <span className="flex-1 font-semibold text-gray-700 dark:text-gray-300">{r.cycle}</span>
                                                                         <div className="w-16 h-1 bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden shrink-0">
-                                                                            <div className="h-full bg-violet-500 rounded-full" style={{ width: `${(r.rating / 5) * 100}%` }} />
+                                                                            <div className="h-full bg-brand-accent rounded-full" style={{ width: `${(r.rating / 5) * 100}%` }} />
                                                                         </div>
-                                                                        <span className="font-black text-violet-600 dark:text-violet-400 w-8 text-right shrink-0">{r.rating.toFixed(1)}</span>
+                                                                        <span className="font-black text-brand-accent dark:text-brand-accent w-8 text-right shrink-0">{r.rating.toFixed(1)}</span>
                                                                     </div>
                                                                 ))}
                                                             </div>
@@ -660,7 +661,7 @@ const SearchProfile = () => {
                                                                         <div className="flex items-center gap-3 mb-1">
                                                                             <span className="flex-1 font-semibold text-gray-700 dark:text-gray-300 text-[10px] uppercase tracking-wider">{f.type}</span>
                                                                             <span className="text-amber-400 text-[10px]">{'★'.repeat(f.rating)}{'☆'.repeat(5 - f.rating)}</span>
-                                                                            <span className="font-black text-fuchsia-600 dark:text-fuchsia-400 w-8 text-right shrink-0">{f.rating}.0</span>
+                                                                            <span className="font-black text-brand-accent dark:text-brand-accent w-8 text-right shrink-0">{f.rating}.0</span>
                                                                         </div>
                                                                         {f.text && <p className="text-[10px] text-gray-400 italic truncate">"{f.text}"</p>}
                                                                     </div>
@@ -708,9 +709,9 @@ const SearchProfile = () => {
                                                                 </>
                                                             )}
 
-                                                            <div className="px-4 py-3 bg-indigo-50/50 dark:bg-indigo-950/20 flex items-center justify-between border-t border-indigo-100 dark:border-indigo-900/30">
-                                                                <span className="text-[10px] font-black uppercase tracking-wider text-indigo-700 dark:text-indigo-400">Blended Potential Score</span>
-                                                                <span className="text-sm font-black text-indigo-600 dark:text-indigo-400">{profile.nine_box.potential_score.toFixed(2)} / 5.00</span>
+                                                            <div className="px-4 py-3 bg-brand-50/50 dark:bg-brand-950/20 flex items-center justify-between border-t border-brand-100 dark:border-brand-900/30">
+                                                                <span className="text-[10px] font-black uppercase tracking-wider text-brand-700 dark:text-brand-400">Blended Potential Score</span>
+                                                                <span className="text-sm font-black text-brand-600 dark:text-brand-400">{profile.nine_box.potential_score.toFixed(2)} / 5.00</span>
                                                             </div>
                                                         </div>
                                                     )}
@@ -787,7 +788,7 @@ const SearchProfile = () => {
                                                         s.proficiency_level === 'Expert' 
                                                         ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-400'
                                                         : s.proficiency_level === 'Intermediate'
-                                                        ? 'bg-blue-100 text-blue-800 dark:bg-blue-950/40 dark:text-blue-400'
+                                                        ? 'bg-brand-100 text-brand-800 dark:bg-brand-950/40 dark:text-brand-400'
                                                         : 'bg-slate-100 text-slate-800 dark:bg-slate-800 dark:text-slate-400'
                                                     }`}>
                                                         {s.proficiency_level}
@@ -826,7 +827,7 @@ const SearchProfile = () => {
                                                         {c.certificate_file && (
                                                             <a href={c.certificate_file.startsWith('http') ? c.certificate_file : `http://localhost:8000${c.certificate_file}`}
                                                                 target="_blank" rel="noopener noreferrer"
-                                                                className="text-[9px] font-black text-indigo-600 dark:text-indigo-400 hover:underline flex items-center gap-1 mt-2">
+                                                                className="text-[9px] font-black text-brand-600 dark:text-brand-400 hover:underline flex items-center gap-1 mt-2">
                                                                  <span>📄 View PDF</span>
                                                              </a>
                                                         )}
@@ -1000,7 +1001,7 @@ const SearchProfile = () => {
                                                         <span className={`px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-wider ${
                                                             f.feedback_type === 'Praise' 
                                                             ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-400' 
-                                                            : 'bg-blue-100 text-blue-800 dark:bg-blue-950/40 dark:text-blue-400'
+                                                            : 'bg-brand-100 text-brand-800 dark:bg-brand-950/40 dark:text-brand-400'
                                                         }`}>
                                                             {f.feedback_type}
                                                         </span>

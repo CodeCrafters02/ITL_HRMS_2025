@@ -7,6 +7,8 @@ import IconDownload from '../../components/Icon/IconDownload';
 import IconEye from '../../components/Icon/IconEye';
 import PageHeader from '../../components/Common/PageHeader';
 
+import Button from '../../components/Common/Button';
+import { buttonClasses } from '../../components/Common/Button';
 const MyPayslips = () => {
     const dispatch = useDispatch();
     useEffect(() => {
@@ -64,10 +66,10 @@ const MyPayslips = () => {
                         <div key={payslip.id} className="panel p-0 overflow-hidden hover:shadow-xl transition-shadow duration-300 border border-gray-100 dark:border-gray-800 flex flex-col">
                             <div className="bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-900 p-5 flex items-center justify-between">
                                 <div className="p-3 bg-white dark:bg-gray-700 rounded-xl shadow-sm">
-                                    <IconFile className="w-8 h-8 text-indigo-600 dark:text-indigo-400" />
+                                    <IconFile className="w-8 h-8 text-brand-600 dark:text-brand-400" />
                                 </div>
                                 <div className="text-right">
-                                    <p className="text-[10px] font-black text-indigo-600 dark:text-indigo-400 uppercase tracking-widest">{months[payslip.month]}</p>
+                                    <p className="text-[10px] font-black text-brand-600 dark:text-brand-400 uppercase tracking-widest">{months[payslip.month]}</p>
                                     <p className="text-2xl font-black text-gray-800 dark:text-white">{payslip.year}</p>
                                 </div>
                             </div>
@@ -81,21 +83,21 @@ const MyPayslips = () => {
                                         href={payslip.file ? (payslip.file.startsWith('http') ? payslip.file : `${import.meta.env.VITE_API_BASE_URL}${payslip.file}`) : '#'} 
                                         target="_blank" 
                                         rel="noreferrer"
-                                        className="btn btn-outline-primary btn-sm flex items-center justify-center gap-2 py-2"
+                                        className={buttonClasses('outline', 'sm', 'flex items-center justify-center gap-2')}
                                     >
                                         <IconEye className="w-4 h-4" />
                                         View
                                     </a>
-                                    <button 
+                                    <Button size="sm" className="!py-2" 
                                         onClick={() => {
                                             const url = payslip.file ? (payslip.file.startsWith('http') ? payslip.file : `${import.meta.env.VITE_API_BASE_URL}${payslip.file}`) : null;
                                             if (url) downloadPayslip(url);
                                         }}
-                                        className="btn btn-primary btn-sm flex items-center justify-center gap-2 py-2 shadow-md"
+                                        
                                     >
                                         <IconDownload className="w-4 h-4" />
                                         Download
-                                    </button>
+                                    </Button>
                                 </div>
                             </div>
                         </div>

@@ -32,6 +32,12 @@ class Company(models.Model):
     theme_primary = models.CharField(max_length=7, blank=True, default='')
     theme_mid = models.CharField(max_length=7, blank=True, default='')
     theme_accent = models.CharField(max_length=7, blank=True, default='')
+    # Microsoft Entra auto-sync (every 5 min, only applies when the Entra data changed)
+    entra_auto_sync = models.BooleanField(default=False)
+    entra_sync_hash = models.CharField(max_length=64, blank=True, default='')
+    entra_last_sync_at = models.DateTimeField(null=True, blank=True)
+    entra_last_checked_at = models.DateTimeField(null=True, blank=True)
+    entra_last_summary = models.TextField(blank=True, default='')
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

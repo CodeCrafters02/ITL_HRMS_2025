@@ -6,6 +6,7 @@ import IconSearch from '../../../components/Icon/IconSearch';
 import IconCalendar from '../../../components/Icon/IconCalendar';
 import PageHeader from '../../../components/Common/PageHeader';
 
+import { buttonClasses } from '../../../components/Common/Button';
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000';
 const SESSIONS_API = `${API_BASE_URL}/employee/training-sessions/`;
 
@@ -71,9 +72,9 @@ const EmployeeTrainingCalendar = () => {
         switch (type) {
             case 'online':
             case 'webinar':
-                return 'bg-blue-500 text-white';
+                return 'bg-brand-500 text-white';
             case 'classroom':
-                return 'bg-indigo-500 text-white';
+                return 'bg-brand-500 text-white';
             default:
                 return 'bg-gray-500 text-white';
         }
@@ -154,7 +155,7 @@ const EmployeeTrainingCalendar = () => {
                             <div className="mt-5 pt-4 border-t border-gray-100 dark:border-gray-800">
                                 {session.session_type === 'classroom' ? (
                                     <div className="text-xs text-gray-650 dark:text-gray-300 font-bold">
-                                        📍 Room/Location: <span className="text-indigo-600 dark:text-indigo-400">{session.location || 'Training Room A'}</span>
+                                        📍 Room/Location: <span className="text-brand-600 dark:text-brand-400">{session.location || 'Training Room A'}</span>
                                     </div>
                                 ) : (
                                     <div>
@@ -163,7 +164,7 @@ const EmployeeTrainingCalendar = () => {
                                                 href={session.meeting_link}
                                                 target="_blank"
                                                 rel="noreferrer"
-                                                className="btn btn-outline-primary btn-sm w-full text-xs font-bold py-1.5 rounded-lg text-center block"
+                                                className={buttonClasses('outline', 'sm', 'w-full text-center block')}
                                             >
                                                 Join Live Webinar / Call
                                             </a>

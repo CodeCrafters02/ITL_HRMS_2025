@@ -4,6 +4,7 @@ import IconSearch from '../../../components/Icon/IconSearch';
 import IconTrendingUp from '../../../components/Icon/IconTrendingUp';
 
 import PageHeader from '../../../components/Common/PageHeader';
+import { buttonClasses } from '../../../components/Common/Button';
 interface Employee {
     id: number;
     employee_id: string;
@@ -42,9 +43,9 @@ const CATEGORIES = [
 const CAT_STYLE: Record<string, string> = {
     appreciation: 'bg-emerald-500/10 text-emerald-600',
     peer_recognition: 'bg-brand/10 text-brand',
-    manager_coaching: 'bg-indigo-500/10 text-indigo-600',
+    manager_coaching: 'bg-brand-500/10 text-brand-600',
     constructive: 'bg-amber-500/10 text-amber-600',
-    goal_progress: 'bg-sky-500/10 text-sky-600',
+    goal_progress: 'bg-brand-500/10 text-brand-600',
 };
 
 const TrackFeedback = () => {
@@ -263,7 +264,7 @@ const TrackFeedback = () => {
                                 </div>
                                 <div className="flex justify-end">
                                     <button type="submit" disabled={!text.trim()}
-                                        className="px-4 py-2 bg-brand hover:bg-brand disabled:bg-gray-300 text-white rounded-xl text-xs font-bold shadow-md shadow-brand/10">Share Feedback</button>
+                                        className={buttonClasses('primary', 'sm')}>Share Feedback</button>
                                 </div>
                             </form>
 

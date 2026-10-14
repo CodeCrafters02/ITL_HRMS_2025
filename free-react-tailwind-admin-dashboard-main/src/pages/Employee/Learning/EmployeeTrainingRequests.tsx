@@ -11,6 +11,9 @@ import IconOpenBook from '../../../components/Icon/IconOpenBook';
 import PageHeader from '../../../components/Common/PageHeader';
 import SearchableSelect from '../../Elements/SearchableSelect';
 
+import Button from '../../../components/Common/Button';
+import DataTable, { Column } from '../../../components/Common/DataTable';
+import Modal from '../../../components/Common/Modal';
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000';
 const REQUESTS_API = `${API_BASE_URL}/employee/training-requests/`;
 const COURSES_API = `${API_BASE_URL}/employee/courses/`;
@@ -241,6 +244,58 @@ const EmployeeTrainingRequests = () => {
         }
     };
 
+    const columns: Column<RequestType>[] = [
+        {
+            key: 'course_title', title: 'Course Requested',
+            render: (_v, req) => (
+                <div>
+                    <p className="font-bold text-gray-800">{req.course_title || req.custom_course_title}</p>
+                    <span className={`block text-[10px] font-normal ${req.course_title ? 'text-gray-400' : 'text-primary'}`}>{req.course_title ? 'Catalog Course' : 'Custom Proposal'}</span>
+                </div>
+            ),
+        },
+        {
+            key: 'reason', title: 'Reason / Remarks', hideBelow: 'md',
+            render: (_v, req) => (
+                <div>
+                    <div className="max-w-[250px] truncate" title={req.reason}>{req.reason}</div>
+                    {req.manager_remarks && <div className="mt-1 text-[10px] text-amber-600"><strong>Manager Remark:</strong> {req.manager_remarks}</div>}
+                    {req.admin_remarks && <div className="mt-0.5 text-[10px] text-primary"><strong>Admin Remark:</strong> {req.admin_remarks}</div>}
+                </div>
+            ),
+        },
+        { key: 'budget_required', title: 'Budget Required', hideBelow: 'lg', render: (v) => <span className={`badge ${v ? 'bg-danger/10 text-danger' : 'bg-gray-100 text-gray-500'}`}>{v ? 'Yes' : 'No'}</span> },
+        {
+            key: 'final_status', title: 'Status',
+            render: (_v, req) => (
+                <div>
+                    <span className={`badge rounded px-2 py-0.5 text-[9px] font-bold uppercase ${getStatusBadge(req.final_status)}`}>{req.final_status}</span>
+                    {isReportingManager && req.decided_by && (
+                        <span className="mt-1 block text-[9px] capitalize text-gray-400">by {req.decided_by}{req.decided_by === 'manager' && req.manager_name ? ` (${req.manager_name})` : ''}</span>
+                    )}
+                </div>
+            ),
+        },
+        {
+            key: 'created_at', title: 'Requested On',
+            render: (_v, req) => (
+                <div className="space-y-2">
+                    <div>{new Date(req.created_at).toLocaleDateString()}</div>
+                    {isReportingManager && req.manager_status === 'pending' && (
+                        <div className="flex flex-col gap-2">
+                            <select className="form-select rounded-lg text-[10px]" value={managerDecision[req.id] || 'approved'} onChange={(e) => setManagerDecision((prev) => ({ ...prev, [req.id]: e.target.value as 'approved' | 'rejected' }))}>
+                                <option value="approved">Approve</option>
+                                <option value="rejected">Reject</option>
+                            </select>
+                            <textarea className="form-textarea min-h-[60px] rounded-lg text-[10px]" placeholder="Manager remarks" value={managerRemarks[req.id] || ''} onChange={(e) => setManagerRemarks((prev) => ({ ...prev, [req.id]: e.target.value }))} />
+                            <Button size="sm" onClick={() => handleManagerDecision(req.id)} disabled={savingDecisionId === req.id}>{savingDecisionId === req.id ? 'Saving...' : 'Submit'}</Button>
+                        </div>
+                    )}
+                </div>
+            ),
+        },
+    ];
+
     return (
         <div>
             {/* Header Banner */}
@@ -251,40 +306,6 @@ const EmployeeTrainingRequests = () => {
                 badge="Upskilling Applications"
                 variant="purple"
             />
-
-            {/* Actions Bar */}
-            <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
-                <div className="flex flex-wrap items-center gap-3">
-                    <div className="relative w-72">
-                        <input
-                            type="text"
-                            className="form-input pr-10 rounded-lg text-xs"
-                            placeholder="Search requests..."
-                            value={search}
-                            onChange={(e) => setSearch(e.target.value)}
-                        />
-                        <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400">
-                            <IconSearch className="w-4 h-4" />
-                        </span>
-                    </div>
-                    <select
-                        className="form-select rounded-lg text-xs w-36"
-                        value={statusTab}
-                        onChange={(e) => setStatusTab(e.target.value as 'all' | 'pending' | 'approved' | 'rejected')}
-                    >
-                        {statusTabs.map((tab) => (
-                            <option key={tab.key} value={tab.key}>{tab.label}</option>
-                        ))}
-                    </select>
-                </div>
-                <button
-                    type="button"
-                    className="btn btn-primary gap-2 rounded-lg text-xs py-2 font-bold"
-                    onClick={() => setModalOpen(true)}
-                >
-                    <IconPlus /> Submit Request
-                </button>
-            </div>
 
             {/* Status Tabs */}
             <div className="flex border-b border-[#ebedf2] dark:border-[#1b2e4b] mb-6 overflow-x-auto">
@@ -301,231 +322,33 @@ const EmployeeTrainingRequests = () => {
                 ))}
             </div>
 
-            {/* List Table */}
-            {loading ? (
-                <div className="panel text-center py-10">
-                    <span className="animate-pulse text-gray-400 font-semibold">Loading request lifecycle logs...</span>
-                </div>
-            ) : requests.length === 0 ? (
-                <div className="panel text-center py-10 text-gray-500 font-medium">
-                    {statusTab === 'all' ? 'No training requests submitted yet.' : `No ${statusTab} training requests.`}
-                </div>
-            ) : (
-                <div className="panel border border-[#e0e6ed] dark:border-[#1b2e4b] rounded-xl p-0 overflow-hidden bg-white dark:bg-[#0e1726]/40">
-                    <div className="table-responsive">
-                        <table className="table-hover text-xs">
-                            <thead>
-                                <tr>
-                                    <th>Course Requested</th>
-                                    <th>Reason / Remarks</th>
-                                    <th>Budget Required</th>
-                                    <th>Status</th>
-                                    <th>Requested On</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {requests.map((req) => (
-                                    <tr key={req.id}>
-                                        <td className="font-bold text-gray-800 dark:text-gray-250">
-                                            {req.course_title || req.custom_course_title}
-                                            {req.course_title && <span className="block text-[10px] text-gray-400 font-normal">Catalog Course</span>}
-                                            {!req.course_title && <span className="block text-[10px] text-primary font-normal">Custom Proposal</span>}
-                                        </td>
-                                        <td>
-                                            <div className="max-w-[250px] truncate" title={req.reason}>
-                                                {req.reason}
-                                            </div>
-                                            {req.manager_remarks && (
-                                                <div className="text-[10px] text-amber-600 mt-1">
-                                                    <strong>Manager Remark:</strong> {req.manager_remarks}
-                                                </div>
-                                            )}
-                                            {req.admin_remarks && (
-                                                <div className="text-[10px] text-primary mt-0.5">
-                                                    <strong>Admin Remark:</strong> {req.admin_remarks}
-                                                </div>
-                                            )}
-                                        </td>
-                                        <td>
-                                            <span className={`badge ${req.budget_required ? 'bg-danger/10 text-danger' : 'bg-gray-100 dark:bg-gray-800 text-gray-400'} text-[9px] uppercase font-bold`}>
-                                                {req.budget_required ? 'Yes' : 'No'}
-                                            </span>
-                                        </td>
-                                        <td>
-                                            <span className={`badge text-[9px] uppercase font-bold px-2 py-0.5 rounded ${getStatusBadge(req.final_status)}`}>
-                                                {req.final_status}
-                                            </span>
-                                            {/* Show manager decision only for managers */}
-                                            {isReportingManager && req.decided_by && (
-                                                <span className="block text-[9px] text-gray-400 mt-1 capitalize">
-                                                    by {req.decided_by}{req.decided_by === 'manager' && req.manager_name ? ` (${req.manager_name})` : ''}
-                                                </span>
-                                            )}
-                                        </td>
-                                        <td>
-                                            <div className="space-y-2">
-                                                <div>{new Date(req.created_at).toLocaleDateString()}</div>
-                                                {isReportingManager && req.manager_status === 'pending' && (
-                                                    <div className="flex flex-col gap-2">
-                                                        <select
-                                                            className="form-select rounded-lg text-[10px]"
-                                                            value={managerDecision[req.id] || 'approved'}
-                                                            onChange={(e) => setManagerDecision((prev) => ({ ...prev, [req.id]: e.target.value as 'approved' | 'rejected' }))}
-                                                        >
-                                                            <option value="approved">Approve</option>
-                                                            <option value="rejected">Reject</option>
-                                                        </select>
-                                                        <textarea
-                                                            className="form-textarea min-h-[60px] rounded-lg text-[10px]"
-                                                            placeholder="Manager remarks"
-                                                            value={managerRemarks[req.id] || ''}
-                                                            onChange={(e) => setManagerRemarks((prev) => ({ ...prev, [req.id]: e.target.value }))}
-                                                        />
-                                                        <button
-                                                            type="button"
-                                                            className="btn btn-primary btn-sm rounded-lg"
-                                                            onClick={() => handleManagerDecision(req.id)}
-                                                            disabled={savingDecisionId === req.id}
-                                                        >
-                                                            {savingDecisionId === req.id ? 'Saving...' : 'Submit'}
-                                                        </button>
-                                                    </div>
-                                                )}
-                                            </div>
-                                        </td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            )}
+            <DataTable
+                columns={columns}
+                data={requests}
+                loading={loading}
+                page={page}
+                pageSize={limit}
+                pageSizeOptions={[5, 10, 20, 50]}
+                totalCount={totalCount}
+                onPageChange={(pg) => { setPage(pg); setPageInput(String(pg)); fetchRequests(pg); }}
+                onPageSizeChange={(sz) => { setLimit(sz); setPage(1); setPageInput('1'); fetchRequests(1, sz); }}
+                searchValue={search}
+                onSearchChange={(v) => setSearch(v)}
+                onRefresh={() => fetchRequests()}
+                searchPlaceholder="Search requests..."
+                emptyMessage={statusTab === 'all' ? 'No training requests submitted yet' : `No ${statusTab} training requests`}
+                entityLabel="requests"
+                actionButton={
+                    <Button onClick={() => setModalOpen(true)}>
+                        <IconPlus /> Submit Request
+                    </Button>
+                }
+            />
 
-            {totalPages >= 1 && (
-                <div className="flex flex-wrap items-center justify-between gap-3 mt-4">
-                    <div className="flex items-center gap-4">
-                        <div className="text-xs text-gray-500">
-                            Showing <span className="text-primary font-semibold">{totalCount === 0 ? 0 : ((page - 1) * limit) + 1}</span> to <span className="text-primary font-semibold">{Math.min(page * limit, totalCount)}</span> of <span className="text-primary font-semibold">{totalCount}</span> requests
-                        </div>
-                        <div className="flex items-center gap-2">
-                            <span className="text-xs font-semibold text-gray-500">Per page:</span>
-                            <select
-                                className="form-select w-20 text-xs font-semibold py-1"
-                                value={limit}
-                                onChange={(e) => {
-                                    const newLimit = Number(e.target.value);
-                                    setLimit(newLimit);
-                                    setPage(1);
-                                    setPageInput('1');
-                                    fetchRequests(1, newLimit);
-                                }}
-                            >
-                                <option value="5">5</option>
-                                <option value="10">10</option>
-                                <option value="20">20</option>
-                                <option value="50">50</option>
-                            </select>
-                        </div>
-                    </div>
-                    <ul className="inline-flex items-center space-x-1 font-semibold">
-                        <li>
-                            <button
-                                type="button"
-                                className="flex justify-center font-semibold px-3 py-1.5 rounded-lg transition bg-white-light text-dark hover:text-white hover:bg-primary dark:text-white-light dark:bg-[#191e3a] dark:hover:bg-primary disabled:opacity-50 disabled:cursor-not-allowed text-xs"
-                                onClick={() => {
-                                    const prevPage = page > 1 ? page - 1 : 1;
-                                    setPage(prevPage);
-                                    fetchRequests(prevPage);
-                                }}
-                                disabled={page === 1}
-                            >
-                                Prev
-                            </button>
-                        </li>
-                        {(() => {
-                            const pages: (number | string)[] = [];
-                            if (totalPages <= 3) {
-                                for (let i = 1; i <= totalPages; i++) pages.push(i);
-                            } else {
-                                if (page <= 2) {
-                                    pages.push(1, 2, 3, 'right-ellipsis', totalPages);
-                                } else if (page >= totalPages - 1) {
-                                    pages.push(1, 'left-ellipsis', totalPages - 2, totalPages - 1, totalPages);
-                                } else {
-                                    pages.push(1, 'left-ellipsis', page, 'right-ellipsis', totalPages);
-                                }
-                            }
-                            return pages.map((p, idx) => {
-                                if (p === 'left-ellipsis' || p === 'right-ellipsis') {
-                                    const jumpPage = p === 'left-ellipsis' ? Math.max(1, page - 3) : Math.min(totalPages, page + 3);
-                                    return (
-                                        <li key={`${p}-${idx}`}>
-                                            <button
-                                                type="button"
-                                                title={p === 'left-ellipsis' ? "Previous 3 pages" : "Next 3 pages"}
-                                                className="flex justify-center font-semibold px-3 py-1.5 rounded-lg transition bg-white-light text-dark hover:text-white hover:bg-primary dark:text-white-light dark:bg-[#191e3a] dark:hover:bg-primary cursor-pointer text-xs"
-                                                onClick={() => {
-                                                    setPage(jumpPage);
-                                                    fetchRequests(jumpPage);
-                                                }}
-                                            >
-                                                ...
-                                            </button>
-                                        </li>
-                                    );
-                                }
-                                return (
-                                    <li key={p}>
-                                        <button
-                                            type="button"
-                                            className={`flex justify-center font-semibold px-3 py-1.5 rounded-lg transition text-xs ${
-                                                page === p
-                                                    ? 'bg-primary text-white shadow-md'
-                                                    : 'bg-white-light text-dark hover:text-white hover:bg-primary dark:text-white-light dark:bg-[#191e3a] dark:hover:bg-primary'
-                                            }`}
-                                            onClick={() => {
-                                                setPage(p as number);
-                                                fetchRequests(p as number);
-                                            }}
-                                        >
-                                            {p}
-                                        </button>
-                                    </li>
-                                );
-                            });
-                        })()}
-                        <li>
-                            <button
-                                type="button"
-                                className="flex justify-center font-semibold px-3 py-1.5 rounded-lg transition bg-white-light text-dark hover:text-white hover:bg-primary dark:text-white-light dark:bg-[#191e3a] dark:hover:bg-primary disabled:opacity-50 disabled:cursor-not-allowed text-xs"
-                                onClick={() => {
-                                    const nextPage = page < totalPages ? page + 1 : totalPages;
-                                    setPage(nextPage);
-                                    fetchRequests(nextPage);
-                                }}
-                                disabled={page === totalPages || totalPages === 0}
-                            >
-                                Next
-                            </button>
-                        </li>
-                    </ul>
-                </div>
-            )}
 
             {/* Request Modal */}
             {modalOpen && (
-                <div className="fixed inset-0 bg-[black]/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-                    <div className="panel border-0 p-0 rounded-xl overflow-hidden w-full max-w-lg text-black dark:text-white-dark shadow-2xl relative bg-white dark:bg-[#0e1726]">
-                        <button
-                            type="button"
-                            onClick={() => setModalOpen(false)}
-                            className="absolute top-4 right-4 text-gray-400 hover:text-gray-800 dark:hover:text-white"
-                        >
-                            ✕
-                        </button>
-                        <div className="text-lg font-bold bg-[#fbfbfb] dark:bg-[#121c2c] py-4 px-6 border-b border-[#ebedf2] dark:border-[#1b2e4b]">
-                            Submit Training Proposal
-                        </div>
+                <Modal open onClose={() => setModalOpen(false)} title="Submit Training Proposal" size="lg" dismissible={false}>
                         <form onSubmit={handleSubmitRequest} className="p-6 space-y-4">
                             <div>
                                 <label className="font-bold text-xs mb-1 block">Catalog Course</label>
@@ -577,24 +400,21 @@ const EmployeeTrainingRequests = () => {
                             </div>
 
                             <div className="flex justify-end gap-3 pt-4 border-t border-[#ebedf2] dark:border-[#1b2e4b]">
-                                <button
+                                <Button variant="outline-danger" size="sm"
                                     type="button"
-                                    className="btn btn-outline-danger btn-sm rounded-lg"
+                                    
                                     onClick={() => setModalOpen(false)}
                                 >
                                     Cancel
-                                </button>
-                                <button
+                                </Button>
+                                <Button size="sm" className="!px-5"
                                     type="submit"
-                                    disabled={saving}
-                                    className="btn btn-primary btn-sm rounded-lg px-5 shadow-md"
-                                >
+                                    disabled={saving}>
                                     {saving ? 'Submitting...' : 'Submit Request'}
-                                </button>
+                                </Button>
                             </div>
                         </form>
-                    </div>
-                </div>
+                </Modal>
             )}
         </div>
     );

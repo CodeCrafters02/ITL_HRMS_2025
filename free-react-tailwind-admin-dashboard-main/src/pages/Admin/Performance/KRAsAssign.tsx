@@ -5,6 +5,7 @@ import IconSearch from '../../../components/Icon/IconSearch';
 import IconTrendingUp from '../../../components/Icon/IconTrendingUp';
 
 import PageHeader from '../../../components/Common/PageHeader';
+import { buttonClasses } from '../../../components/Common/Button';
 interface Employee {
     id: number;
     employee_id: string;
@@ -650,7 +651,7 @@ const KRAsAssign = () => {
 
                                                     <div className="flex justify-end">
                                                         <button type="button" onClick={handleCreateKra} disabled={!newKraTitle.trim() || savingKra}
-                                                            className="px-3 py-1.5 bg-brand hover:bg-brand-dark disabled:bg-gray-300 text-white rounded-lg text-[10px] font-bold">
+                                                            className={buttonClasses('primary', 'sm')}>
                                                             Save KRA & KPIs
                                                         </button>
                                                     </div>
@@ -691,7 +692,7 @@ const KRAsAssign = () => {
                                                     )}
                                                     <div className="flex justify-end">
                                                         <button type="button" onClick={handleAddKpisToKra} disabled={!addKpiKraId}
-                                                            className="px-3 py-1.5 bg-brand hover:bg-brand-dark disabled:bg-gray-300 text-white rounded-lg text-[10px] font-bold">
+                                                            className={buttonClasses('primary', 'sm')}>
                                                             Save KPIs
                                                         </button>
                                                     </div>
@@ -745,7 +746,7 @@ const KRAsAssign = () => {
                                                 <button
                                                     type="submit"
                                                     disabled={assignChecked.length === 0 || !assignReviewerId}
-                                                    className="px-4 py-2 bg-brand hover:bg-brand disabled:bg-gray-300 text-white rounded-xl text-xs font-bold shadow-md shadow-brand/10 transition duration-300"
+                                                    className={buttonClasses('primary', 'sm')}
                                                 >
                                                     Assign {assignChecked.length || ''} KRA(s) to {selectedEmployee.first_name}
                                                 </button>
@@ -841,7 +842,7 @@ const KRAsAssign = () => {
                     </div>
                     <button
                         onClick={() => { setShowKraForm(s => !s); setShowCreateKra(false); }}
-                        className="px-4 py-2 bg-brand hover:bg-brand text-white rounded-xl text-xs font-bold shadow-md shadow-brand/10 whitespace-nowrap"
+                        className={buttonClasses('primary', 'sm')}
                     >
                         {showKraForm ? '× Cancel' : '＋ Create KRA'}
                     </button>
@@ -881,7 +882,7 @@ const KRAsAssign = () => {
                         </div>
                         <div className="flex justify-end">
                             <button type="button" onClick={handleCreateKra} disabled={!newKraTitle.trim() || savingKra}
-                                className="px-3 py-1.5 bg-brand hover:bg-brand-dark disabled:bg-gray-300 text-white rounded-lg text-[10px] font-bold">Save KRA &amp; KPIs</button>
+                                className={buttonClasses('primary', 'sm')}>Save KRA &amp; KPIs</button>
                         </div>
                     </div>
                 )}
@@ -911,7 +912,7 @@ const KRAsAssign = () => {
                                         </select>
                                         <div className="flex gap-2 justify-end">
                                             <button onClick={cancelEditKra} className="px-3 py-1.5 bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 rounded-lg text-[10px] font-bold">Cancel</button>
-                                            <button onClick={handleUpdateKra} disabled={!editKraTitle.trim()} className="px-3 py-1.5 bg-brand hover:bg-brand-dark disabled:bg-gray-300 text-white rounded-lg text-[10px] font-bold">Save</button>
+                                            <button onClick={handleUpdateKra} disabled={!editKraTitle.trim()} className={buttonClasses('primary', 'sm')}>Save</button>
                                         </div>
                                     </div>
                                 ) : (

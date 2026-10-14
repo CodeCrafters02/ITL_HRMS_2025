@@ -1,8 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { createPortal } from 'react-dom';
 import { useDispatch } from 'react-redux';
 import { setPageTitle } from '../../../store/themeConfigSlice';
-import IconSearch from '../../../components/Icon/IconSearch';
 import IconLayoutGrid from '../../../components/Icon/IconLayoutGrid';
 import IconListCheck from '../../../components/Icon/IconListCheck';
 import IconEye from '../../../components/Icon/IconEye';
@@ -14,6 +12,16 @@ import IconDownload from '../../../components/Icon/IconDownload';
 import { LearningMediaItem, LearningResource, fetchLearningResources } from './api';
 import { authFetch } from '../../../utils/authFetch';
 
+import Button from '../../../components/Common/Button';
+import PageHeader from '../../../components/Common/PageHeader';
+import DataTable, { Column } from '../../../components/Common/DataTable';
+import CardGrid from '../../../components/Common/CardGrid';
+import StatCard, { StatGrid } from '../../../components/Common/StatCard';
+import IconOpenBook from '../../../components/Icon/IconOpenBook';
+import IconVideo from '../../../components/Icon/IconVideo';
+import IconFile from '../../../components/Icon/IconFile';
+import { buttonClasses } from '../../../components/Common/Button';
+import Modal from '../../../components/Common/Modal';
 type ResourceFilter = 'all' | 'image' | 'video' | 'document';
 type ViewMode = 'card' | 'table';
 
@@ -203,37 +211,60 @@ const LearningCorner = () => {
         return () => clearTimeout(timer);
     }, [loadResources]);
 
-    const getPageNumbers = () => {
-        const pages: (number | '...')[] = [];
-        if (totalPages <= 7) {
-            for (let i = 1; i <= totalPages; i++) pages.push(i);
-        } else {
-            pages.push(1);
-            if (page > 3) pages.push('...');
-            for (let i = Math.max(2, page - 1); i <= Math.min(totalPages - 1, page + 1); i++) pages.push(i);
-            if (page < totalPages - 2) pages.push('...');
-            pages.push(totalPages);
-        }
-        return pages;
-    };
 
     const imageCount = useMemo(() => resources.filter((r) => resourceHasMediaType(r, 'image')).length, [resources]);
     const videoCount = useMemo(() => resources.filter((r) => resourceHasMediaType(r, 'video')).length, [resources]);
     const documentCount = useMemo(() => resources.filter((r) => resourceHasMediaType(r, 'document')).length, [resources]);
 
+    const filterControls = (
+        <select className="form-select h-10 w-44 rounded-xl" value={filter} onChange={(e) => { setFilter(e.target.value as ResourceFilter); setPage(1); }}>
+            <option value="all">All Types</option>
+            <option value="image">Images</option>
+            <option value="video">Videos</option>
+            <option value="document">Documents</option>
+        </select>
+    );
+
+    const viewSwitcher = (
+        <div className="flex items-center gap-1.5">
+            <Button size="sm" variant={viewMode === 'card' ? 'primary' : 'outline'} onClick={() => setViewMode('card')} aria-label="Card view"><IconLayoutGrid /></Button>
+            <Button size="sm" variant={viewMode === 'table' ? 'primary' : 'outline'} onClick={() => setViewMode('table')} aria-label="Table view"><IconListCheck /></Button>
+        </div>
+    );
+
+    const columns: Column<LearningResource>[] = [
+        { key: 'title', title: 'Title', render: (v) => <span className="font-semibold">{v}</span> },
+        { key: 'description', title: 'Description', hideBelow: 'md', render: (v) => <span className="block max-w-[360px] truncate text-white-dark">{v || '-'}</span> },
+        {
+            key: 'assets', title: 'Assets',
+            render: (_v, resource) => {
+                const m = mediaList(resource);
+                const ni = m.filter((x) => x.media_type === 'image').length;
+                const nv = m.filter((x) => x.media_type === 'video').length;
+                const nd = m.filter((x) => x.media_type === 'document').length;
+                const hasLinks = !!(resource.links && resource.links.length > 0);
+                const hasAny = ni + nv + nd > 0 || hasLinks;
+                return (
+                    <div className="flex flex-wrap gap-2">
+                        {ni > 0 && <span className="badge bg-info-light text-info">{ni === 1 ? 'Image' : `${ni} img`}</span>}
+                        {nv > 0 && <span className="badge bg-success-light text-success">{nv === 1 ? 'Video' : `${nv} vid`}</span>}
+                        {nd > 0 && <span className="badge bg-primary-light text-primary">{nd === 1 ? 'Doc' : `${nd} docs`}</span>}
+                        {hasLinks && <span className="badge bg-warning-light text-warning">{resource.links!.length} Link(s)</span>}
+                        {!hasAny && <span className="text-xs text-white-dark">No assets</span>}
+                    </div>
+                );
+            },
+        },
+        { key: 'preview', title: 'Preview', align: 'center', render: (_v, resource) => <Button variant="outline" size="sm" className="!p-2" onClick={() => openResourceDetail(resource)}><IconEye className="h-4 w-4" /></Button> },
+    ];
+
     return (
         <div className="space-y-6 animate__animated animate__fadeIn">
-            <div className="panel bg-gradient-to-r from-[#220fb6] via-[#4f6be5] to-[#0f52af] text-white border-0">
-                <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-                    <div>
-                        <h1 className="text-2xl md:text-3xl font-extrabold">Learning Platform</h1>
-                        <p className="mt-1 text-white/80">Explore curated resources, videos, and documents from your company knowledge base.</p>
-                    </div>
-                    {/* <button type="button" className="btn btn-outline-light w-full md:w-auto" onClick={loadResources}>
-                        Refresh
-                    </button> */}
-                </div>
-            </div>
+            <PageHeader
+                title="Learning Platform"
+                subtitle="Explore curated resources, videos, and documents from your company knowledge base."
+                variant="purple"
+            />
 
             {error && (
                 <div className="panel border border-danger/30 bg-danger-light text-danger">
@@ -241,156 +272,63 @@ const LearningCorner = () => {
                 </div>
             )}
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
-                <div className="panel">
-                    <p className="text-white-dark text-xs uppercase tracking-wide">Total Resources</p>
-                    <p className="text-2xl font-bold mt-2">{totalCount}</p>
-                </div>
-                <div className="panel">
-                    <p className="text-white-dark text-xs uppercase tracking-wide">Images</p>
-                    <p className="text-2xl font-bold mt-2 text-info">{imageCount}</p>
-                </div>
-                <div className="panel">
-                    <p className="text-white-dark text-xs uppercase tracking-wide">Videos</p>
-                    <p className="text-2xl font-bold mt-2 text-success">{videoCount}</p>
-                </div>
-                <div className="panel">
-                    <p className="text-white-dark text-xs uppercase tracking-wide">Documents</p>
-                    <p className="text-2xl font-bold mt-2 text-primary">{documentCount}</p>
-                </div>
-            </div>
+            <StatGrid cols={4} className="!mb-0">
+                <StatCard label="Total Resources" value={totalCount} loading={loading} tone="primary" icon={<IconOpenBook />} />
+                <StatCard label="Images" value={imageCount} loading={loading} tone="info" icon={<IconEye />} hint="on this page" />
+                <StatCard label="Videos" value={videoCount} loading={loading} tone="success" icon={<IconVideo />} hint="on this page" />
+                <StatCard label="Documents" value={documentCount} loading={loading} tone="purple" icon={<IconFile />} hint="on this page" />
+            </StatGrid>
 
-            <div className="panel">
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
-                    <div className="md:col-span-2">
-                        <div className="relative">
-                            <input
-                                type="text"
-                                className="form-input pl-10"
-                                placeholder="Search by title or description..."
-                                value={search}
-                                onChange={(e) => {
-                                    setSearch(e.target.value);
-                                    setPage(1);
-                                }}
-                            />
-                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-white-dark">
-                                <IconSearch className="h-4 w-4" />
-                            </span>
-                        </div>
-                    </div>
-
-                    <select
-                        className="form-select"
-                        value={filter}
-                        onChange={(e) => {
-                            setFilter(e.target.value as ResourceFilter);
-                            setPage(1);
-                        }}
-                    >
-                        <option value="all">All Types</option>
-                        <option value="image">Images</option>
-                        <option value="video">Videos</option>
-                        <option value="document">Documents</option>
-                    </select>
-
-                    <div className="flex items-center gap-2 justify-end">
-                        <button
-                            type="button"
-                            className={`btn btn-sm p-2 ${viewMode === 'card' ? 'btn-primary' : 'btn-outline-primary'}`}
-                            onClick={() => setViewMode('card')}
-                            aria-label="Card view"
-                        >
-                            <IconLayoutGrid className="h-5 w-5" />
-                        </button>
-                        <button
-                            type="button"
-                            className={`btn btn-sm p-2 ${viewMode === 'table' ? 'btn-primary' : 'btn-outline-primary'}`}
-                            onClick={() => setViewMode('table')}
-                            aria-label="Table view"
-                        >
-                            <IconListCheck className="h-5 w-5" />
-                        </button>
-                    </div>
-                </div>
-            </div>
-
-            {totalCount > 0 && (
-                <div className="panel">
-                    <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
-                        <div className="text-xs text-white-dark">
-                            Showing <span className="text-primary font-semibold">{(page - 1) * pageSize + 1}</span> to{' '}
-                            <span className="text-primary font-semibold">{Math.min(page * pageSize, totalCount)}</span> of{' '}
-                            <span className="text-primary font-semibold">{totalCount}</span> entries
-                        </div>
-                        <div className="flex items-center gap-2">
-                            <label className="text-xs text-white-dark">Per page</label>
-                            <select
-                                className="form-select w-20 text-xs"
-                                value={pageSize}
-                                onChange={(e) => {
-                                    setPageSize(Number(e.target.value));
-                                    setPage(1);
-                                }}
-                            >
-                                <option value={10}>10</option>
-                                <option value={20}>20</option>
-                                <option value={50}>50</option>
-                            </select>
-                        </div>
-
-                        <ul className="inline-flex items-center gap-1">
-                            <li>
-                                <button type="button" className="btn btn-sm btn-outline-primary px-2.5" onClick={() => setPage(page > 1 ? page - 1 : 1)} disabled={page === 1}>
-                                    Prev
-                                </button>
-                            </li>
-                            {getPageNumbers().map((p, idx) =>
-                                p === '...' ? <li key={`dots-${idx}`} className="px-2 text-white-dark">...</li> : (
-                                    <li key={p}>
-                                        <button
-                                            type="button"
-                                            className={`btn btn-sm ${page === p ? 'btn-primary' : 'btn-outline-primary'} min-w-[34px]`}
-                                            onClick={() => setPage(p as number)}
-                                        >
-                                            {p}
-                                        </button>
-                                    </li>
-                                ),
-                            )}
-                            <li>
-                                <button
-                                    type="button"
-                                    className="btn btn-sm btn-outline-primary px-2.5"
-                                    onClick={() => setPage(page < totalPages ? page + 1 : totalPages)}
-                                    disabled={page === totalPages || totalPages === 0}
-                                >
-                                    Next
-                                </button>
-                            </li>
-                        </ul>
-                    </div>
-                </div>
-            )}
-
-            {loading ? (
-                <div className="panel text-center py-12 text-white-dark">Loading learning resources...</div>
-            ) : resources.length === 0 ? (
-                <div className="panel text-center py-12 text-white-dark">No resources found for your current filters.</div>
-            ) : viewMode === 'card' ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
-                    {resources.map((resource) => {
+            {viewMode === 'table' ? (
+                <DataTable
+                    columns={columns}
+                    data={resources}
+                    loading={loading}
+                    page={page}
+                    pageSize={pageSize}
+                    pageSizeOptions={[6, 10, 20, 50]}
+                    totalCount={totalCount}
+                    onPageChange={setPage}
+                    onPageSizeChange={(sz) => { setPageSize(sz); setPage(1); }}
+                    searchValue={search}
+                    onSearchChange={(v) => { setSearch(v); setPage(1); }}
+                    onRefresh={loadResources}
+                    searchPlaceholder="Search by title or description..."
+                    emptyMessage="No resources found for your current filters"
+                    entityLabel="resources"
+                    filters={filterControls}
+                    actionButton={viewSwitcher}
+                />
+            ) : (
+                <CardGrid
+                    items={resources}
+                    loading={loading}
+                    page={page}
+                    pageSize={pageSize}
+                    pageSizeOptions={[6, 10, 20, 50]}
+                    totalCount={totalCount}
+                    onPageChange={setPage}
+                    onPageSizeChange={(sz) => { setPageSize(sz); setPage(1); }}
+                    searchValue={search}
+                    onSearchChange={(v) => { setSearch(v); setPage(1); }}
+                    onRefresh={loadResources}
+                    searchPlaceholder="Search by title or description..."
+                    emptyMessage="No resources found for your current filters"
+                    entityLabel="resources"
+                    filters={filterControls}
+                    actions={viewSwitcher}
+                    renderCard={(resource) => {
                         const m = mediaList(resource);
                         const imgItems = m.filter((x) => x.media_type === 'image');
                         const vidItems = m.filter((x) => x.media_type === 'video');
                         const docItems = m.filter((x) => x.media_type === 'document');
                         return (
-                            <div key={resource.id} className="panel border border-white-light dark:border-[#1b2e4b]">
+                            <div className="panel border border-white-light dark:border-[#1b2e4b]">
                                 <div className="flex items-start justify-between gap-3">
                                     <h3 className="text-base font-bold">{resource.title}</h3>
-                                    <button type="button" className="btn btn-sm btn-outline-primary p-2" onClick={() => openResourceDetail(resource)}>
+                                    <Button variant="outline" size="sm" className="!p-2" type="button"  onClick={() => openResourceDetail(resource)}>
                                         <IconEye className="w-4 h-4" />
-                                    </button>
+                                    </Button>
                                 </div>
                                 <p className="mt-2 text-sm text-white-dark min-h-[40px]">{resource.description || 'No description provided.'}</p>
                                 <div className="mt-3 flex flex-wrap gap-2">
@@ -407,69 +345,13 @@ const LearningCorner = () => {
                                 </div>
                             </div>
                         );
-                    })}
-                </div>
-            ) : (
-                <div className="panel p-0 overflow-hidden">
-                    <div className="table-responsive">
-                        <table className="table-hover">
-                            <thead>
-                                <tr>
-                                    <th>Title</th>
-                                    <th>Description</th>
-                                    <th>Assets</th>
-                                    <th className="text-center">Preview</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {resources.map((resource) => {
-                                    const m = mediaList(resource);
-                                    const ni = m.filter((x) => x.media_type === 'image').length;
-                                    const nv = m.filter((x) => x.media_type === 'video').length;
-                                    const nd = m.filter((x) => x.media_type === 'document').length;
-                                    const hasLinks = resource.links && resource.links.length > 0;
-                                    const hasAny = ni + nv + nd > 0 || hasLinks;
-                                    return (
-                                        <tr key={resource.id}>
-                                            <td className="font-semibold">{resource.title}</td>
-                                            <td className="max-w-[360px] truncate text-white-dark">{resource.description || '-'}</td>
-                                            <td>
-                                                <div className="flex flex-wrap gap-2">
-                                                    {ni > 0 && <span className="badge bg-info-light text-info">{ni === 1 ? 'Image' : `${ni} img`}</span>}
-                                                    {nv > 0 && <span className="badge bg-success-light text-success">{nv === 1 ? 'Video' : `${nv} vid`}</span>}
-                                                    {nd > 0 && <span className="badge bg-primary-light text-primary">{nd === 1 ? 'Doc' : `${nd} docs`}</span>}
-                                                    {hasLinks && <span className="badge bg-warning-light text-warning">{resource.links!.length} Link(s)</span>}
-                                                    {!hasAny && <span className="text-white-dark text-xs">No assets</span>}
-                                                </div>
-                                            </td>
-                                            <td className="text-center">
-                                                <button type="button" className="btn btn-sm btn-outline-primary p-2" onClick={() => openResourceDetail(resource)}>
-                                                    <IconEye className="w-4 h-4" />
-                                                </button>
-                                            </td>
-                                        </tr>
-                                    );
-                                })}
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
+                    }}
+                />
             )}
 
-            {selectedItem &&
-                createPortal(
-                    <div className="fixed inset-0 z-[9999] bg-black/60 p-4 flex items-center justify-center" onClick={() => setSelectedItem(null)}>
-                    <div className="panel w-full max-w-3xl max-h-[92vh] overflow-auto dark:bg-[#0e1726]" onClick={(e) => e.stopPropagation()}>
-                        <div className="flex items-start justify-between gap-4">
-                            <div>
-                                <h3 className="text-xl font-bold">{selectedItem.title}</h3>
-                                <p className="text-white-dark mt-1">{selectedItem.description || 'No description provided.'}</p>
-                            </div>
-                            <button type="button" className="btn btn-sm btn-outline-danger" onClick={() => setSelectedItem(null)}>
-                                Close
-                            </button>
-                        </div>
 
+            {selectedItem && (
+                <Modal open onClose={() => setSelectedItem(null)} title={selectedItem.title} subtitle={selectedItem.description || 'No description provided.'} size="3xl">
                         {(() => {
                             const m = mediaList(selectedItem);
                             const imgItems = m.filter((x) => x.media_type === 'image');
@@ -496,34 +378,34 @@ const LearningCorner = () => {
                                                 </p>
                                             </div>
                                             <div className="flex flex-col gap-2 shrink-0 w-full sm:w-auto sm:min-w-[220px]">
-                                                <button
+                                                <Button size="sm"
                                                     type="button"
-                                                    className="btn btn-primary btn-sm inline-flex items-center justify-center gap-2"
+                                                    
                                                     disabled={detailDownloadBusy}
                                                     onClick={() => downloadLearningMediaItems(items, selectedItem.title)}
                                                 >
                                                     <IconDownload className="h-4 w-4 shrink-0" />
                                                     Download all {n} {kindWord}
-                                                </button>
+                                                </Button>
                                                 {!detailPickMode ? (
-                                                    <button
+                                                    <Button variant="outline" size="sm"
                                                         type="button"
-                                                        className="btn btn-outline-primary btn-sm"
+                                                        
                                                         onClick={() => setDetailPickMode(true)}
                                                     >
                                                         Choose specific files…
-                                                    </button>
+                                                    </Button>
                                                 ) : (
                                                     <>
-                                                        <button
+                                                        <Button size="sm"
                                                             type="button"
-                                                            className="btn btn-primary btn-sm inline-flex items-center justify-center gap-2"
+                                                            
                                                             disabled={detailDownloadBusy || selectedItems.length === 0}
                                                             onClick={() => downloadLearningMediaItems(selectedItems, selectedItem.title)}
                                                         >
                                                             <IconDownload className="h-4 w-4 shrink-0" />
                                                             Download {selectedItems.length} chosen {chosenWord}
-                                                        </button>
+                                                        </Button>
                                                         <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 text-xs pt-0.5">
                                                             <label className="flex items-center gap-2 cursor-pointer select-none">
                                                                 <input
@@ -655,9 +537,9 @@ const LearningCorner = () => {
                                                                             <>
                                                                                 <div className="relative">
                                                                                     <img src={it.url} alt="" className="w-full max-h-[240px] object-contain pointer-events-none" />
-                                                                                    <button
+                                                                                    <Button variant="outline" size="sm" className="absolute top-2 right-2 !p-2 rounded-md bg-[#0e1726]/90"
                                                                                         type="button"
-                                                                                        className="absolute top-2 right-2 btn btn-sm btn-outline-primary p-2 rounded-md bg-[#0e1726]/90 shadow-md"
+                                                                                        
                                                                                         aria-label="Open expanded preview"
                                                                                         title="Open expanded preview"
                                                                                         onClick={(e) => {
@@ -666,7 +548,7 @@ const LearningCorner = () => {
                                                                                         }}
                                                                                     >
                                                                                         <IconMaximize className="w-4 h-4" />
-                                                                                    </button>
+                                                                                    </Button>
                                                                                 </div>
                                                                                 <div className="flex items-center justify-between gap-2 px-2 py-1.5 text-xs border-t border-white-light/80 dark:border-[#1b2e4b]">
                                                                                     <span className="text-white-dark truncate">{it.filename || 'Image'}</span>
@@ -842,7 +724,7 @@ const LearningCorner = () => {
                                             href={link.url} 
                                             target="_blank" 
                                             rel="noreferrer" 
-                                            className="btn btn-sm btn-outline-warning bg-white dark:bg-[#060818] shadow-sm hover:scale-105 transition-transform"
+                                            className={buttonClasses('outline', 'sm')}
                                         >
                                             {link.title || 'Visit Link'}
                                         </a>
@@ -850,39 +732,27 @@ const LearningCorner = () => {
                                 </div>
                             </div>
                         )}
-                    </div>
-                </div>,
-                    document.body
-                )}
+                </Modal>
+            )}
 
-            {imageGallery &&
-                imageGallery.urls.length > 0 &&
-                createPortal(
-                    <div className="fixed inset-0 z-[10000] bg-black/70 p-4 flex items-center justify-center" onClick={() => setImageGallery(null)}>
-                    <div className="panel w-full max-w-4xl max-h-[92vh] overflow-auto dark:bg-[#0e1726]" onClick={(e) => e.stopPropagation()}>
-                        <div className="flex flex-wrap items-center justify-between gap-3">
-                            <div>
-                                <h3 className="text-lg font-bold">{imageGallery.title}</h3>
-                                {imageGallery.urls.length > 1 && (
-                                    <p className="text-xs text-white-dark mt-1">
-                                        Image {imageGallery.index + 1} of {imageGallery.urls.length}
-                                    </p>
-                                )}
-                            </div>
-                            <div className="flex items-center gap-2">
-                                <button type="button" className="btn btn-sm btn-primary" onClick={handleImageDownload}>
-                                    Download image
-                                </button>
-                                <button type="button" className="btn btn-sm btn-outline-danger" onClick={() => setImageGallery(null)}>
-                                    Close
-                                </button>
-                            </div>
-                        </div>
+            {imageGallery && imageGallery.urls.length > 0 && (
+                <Modal
+                    open
+                    onClose={() => setImageGallery(null)}
+                    title={imageGallery.title}
+                    subtitle={imageGallery.urls.length > 1 ? `Image ${imageGallery.index + 1} of ${imageGallery.urls.length}` : undefined}
+                    size="4xl"
+                    footer={
+                        <Button size="sm" type="button" onClick={handleImageDownload}>
+                            Download image
+                        </Button>
+                    }
+                >
                         <div className="mt-4 relative flex items-center justify-center min-h-[200px]">
                             {imageGallery.urls.length > 1 && (
-                                <button
+                                <Button variant="outline" className="absolute left-1 sm:left-2 top-1/2 z-10 -translate-y-1/2 !p-2.5 rounded-full bg-[#0e1726]/90 border-white-light"
                                     type="button"
-                                    className="absolute left-1 sm:left-2 top-1/2 z-10 -translate-y-1/2 btn btn-outline-primary p-2.5 rounded-full bg-[#0e1726]/90 border-white-light shadow-lg"
+                                    
                                     aria-label="Previous image"
                                     onClick={(e) => {
                                         e.stopPropagation();
@@ -894,7 +764,7 @@ const LearningCorner = () => {
                                     }}
                                 >
                                     <IconArrowLeft className="w-5 h-5" />
-                                </button>
+                                </Button>
                             )}
                             <img
                                 src={imageGallery.urls[imageGallery.index]}
@@ -902,9 +772,9 @@ const LearningCorner = () => {
                                 className="w-full max-h-[72vh] object-contain rounded-lg border border-white-light dark:border-[#1b2e4b]"
                             />
                             {imageGallery.urls.length > 1 && (
-                                <button
+                                <Button variant="outline" className="absolute right-1 sm:right-2 top-1/2 z-10 -translate-y-1/2 !p-2.5 rounded-full bg-[#0e1726]/90 border-white-light"
                                     type="button"
-                                    className="absolute right-1 sm:right-2 top-1/2 z-10 -translate-y-1/2 btn btn-outline-primary p-2.5 rounded-full bg-[#0e1726]/90 border-white-light shadow-lg"
+                                    
                                     aria-label="Next image"
                                     onClick={(e) => {
                                         e.stopPropagation();
@@ -916,12 +786,10 @@ const LearningCorner = () => {
                                     }}
                                 >
                                     <IconArrowForward className="w-5 h-5" />
-                                </button>
+                                </Button>
                             )}
                         </div>
-                    </div>
-                </div>,
-                    document.body
+                </Modal>
             )}
         </div>
     );

@@ -374,7 +374,7 @@ const AdminLearningDashboard = () => {
                             <div key={sess.id} className="border border-gray-100 dark:border-gray-800 rounded-xl p-3">
                                 <div className="flex items-center justify-between mb-1">
                                     <span className="text-xs font-bold text-gray-800 dark:text-white truncate">{sess.title}</span>
-                                    <span className="text-[9px] font-black uppercase bg-indigo-500/10 text-indigo-600 px-2 py-0.5 rounded-full shrink-0">{sess.session_type}</span>
+                                    <span className="text-[9px] font-black uppercase bg-brand-500/10 text-brand-600 px-2 py-0.5 rounded-full shrink-0">{sess.session_type}</span>
                                 </div>
                                 <div className="text-[10px] text-gray-400">
                                     {new Date(sess.start_datetime).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}

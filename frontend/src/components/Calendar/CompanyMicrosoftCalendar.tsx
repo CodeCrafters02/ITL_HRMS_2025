@@ -203,16 +203,32 @@ function writeHolidaySyncMap(m: Record<string, HolidayOutlookSyncEntry>) {
     localStorage.setItem(holidaySyncMapStorageKey(), JSON.stringify(m));
 }
 
+function addDaysToDateString(dateStr: string, days = 1): string {
+    const raw = String(dateStr || '').trim().slice(0, 10);
+    const parts = raw.split('-').map(Number);
+    if (parts.length === 3 && !isNaN(parts[0]) && !isNaN(parts[1]) && !isNaN(parts[2])) {
+        const d = new Date(parts[0], parts[1] - 1, parts[2] + days);
+        const y = d.getFullYear();
+        const m = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        return `${y}-${m}-${day}`;
+    }
+    const d = new Date(dateStr);
+    d.setDate(d.getDate() + days);
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
+}
+
 function fingerprintCompanyHoliday(h: CompanyCalEvent): string {
     return `${h.date}|${h.name}|${(h.description || '').trim()}`;
 }
 
 function buildCompanyHolidayOutlookBody(h: CompanyCalEvent): Record<string, unknown> {
     const tz = calendarTimeZone();
-    const d = new Date(h.date + 'T00:00:00');
-    const endD = new Date(d);
-    endD.setDate(endD.getDate() + 1);
-    const endStr = endD.toISOString().slice(0, 10);
+    const startDate = String(h.date || '').trim().slice(0, 10);
+    const endDate = addDaysToDateString(startDate, 1);
 
     return {
         subject: `[Company] ${h.name}`,
@@ -220,8 +236,8 @@ function buildCompanyHolidayOutlookBody(h: CompanyCalEvent): Record<string, unkn
             contentType: 'Text',
             content: [h.description?.trim(), 'Synced from company calendar (HRMS).'].filter(Boolean).join('\n\n'),
         },
-        start: { dateTime: `${h.date}T00:00:00`, timeZone: tz },
-        end: { dateTime: `${endStr}T00:00:00`, timeZone: tz },
+        start: { dateTime: `${startDate}T00:00:00`, timeZone: tz },
+        end: { dateTime: `${endDate}T00:00:00`, timeZone: tz },
         isAllDay: true,
         categories: ['HRMS Company Holiday'],
     };
@@ -731,10 +747,9 @@ export const CompanyMicrosoftCalendar = ({ variant = 'page' }: CompanyCalendarPr
             let endDt: string;
 
             if (eventAllDay) {
-                startDt = `${eventDate}T00:00:00`;
-                const d = new Date(eventDate + 'T00:00:00');
-                d.setDate(d.getDate() + 1);
-                endDt = `${d.toISOString().slice(0, 10)}T00:00:00`;
+                const sDate = String(eventDate || '').trim().slice(0, 10);
+                startDt = `${sDate}T00:00:00`;
+                endDt = `${addDaysToDateString(sDate, 1)}T00:00:00`;
             } else {
                 startDt = `${eventDate}T${eventStart}:00`;
                 endDt = `${eventDate}T${eventEnd}:00`;

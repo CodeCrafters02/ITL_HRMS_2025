@@ -4,6 +4,9 @@ import { Link } from 'react-router-dom';
 import axios from 'axios';
 import { setPageTitle } from '../../../store/themeConfigSlice';
 
+import PageHeader from '../../../components/Common/PageHeader';
+import Modal from '../../../components/Common/Modal';
+import { buttonClasses } from '../../../components/Common/Button';
 interface Cycle {
     id: number;
     name: string;
@@ -174,7 +177,7 @@ const ExtensionStatus = () => {
                 <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">{error}</p>
                 <button
                     onClick={loadData}
-                    className="px-4 py-2 bg-teal-500 hover:bg-teal-600 text-white rounded-xl text-xs font-bold transition"
+                    className={buttonClasses('primary', 'sm')}
                 >
                     Retry
                 </button>
@@ -185,27 +188,29 @@ const ExtensionStatus = () => {
     return (
         <div className="space-y-6 py-2 animate__animated animate__fadeIn">
             {/* Header */}
-            <div className="bg-white dark:bg-gray-900 p-5 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                <div>
-                    <div className="text-xs font-black uppercase text-teal-600 dark:text-teal-400 mb-1">Review Deadlines</div>
-                    <h2 className="text-xl font-bold text-gray-800 dark:text-white">Appraisal Extension Status</h2>
-                    <p className="text-xs text-gray-400 mt-0.5">Submit and track extension requests if you need more time to fill self-appraisals.</p>
-                </div>
-                <div className="flex gap-2">
-                    <button
+            <PageHeader
+                title="Appraisal Extension Status"
+                badge="Review Deadlines"
+                subtitle="Submit and track extension requests if you need more time to fill self-appraisals."
+                actions={
+                    <>
+                        <div className="flex gap-2">
+                        <button
                         onClick={() => setShowModal(true)}
-                        className="px-4 py-2 bg-teal-500 hover:bg-teal-600 text-white rounded-xl text-xs font-bold transition shadow-md shadow-teal-500/10 whitespace-nowrap"
-                    >
+                        className={buttonClasses('primary', 'sm')}
+                        >
                         Request Extension
-                    </button>
-                    <Link
+                        </button>
+                        <Link
                         to="/employee/performance"
-                        className="px-4 py-2 bg-gray-100 hover:bg-gray-200 dark:bg-gray-850 dark:hover:bg-gray-800 text-gray-600 dark:text-gray-300 rounded-xl text-xs font-bold transition"
-                    >
+                        className={buttonClasses('secondary', 'sm')}
+                        >
                         ← Back to Performance Hub
-                    </Link>
-                </div>
-            </div>
+                        </Link>
+                        </div>
+                    </>
+                }
+            />
 
             {/* List */}
             {extensions.length === 0 ? (
@@ -242,9 +247,9 @@ const ExtensionStatus = () => {
                                         <div className="text-[8px] font-black text-gray-400 uppercase mb-1">Original Deadline</div>
                                         <div className="text-xs font-bold text-gray-700 dark:text-gray-300">{fmtDate(ext.original_deadline)}</div>
                                     </div>
-                                    <div className="bg-teal-500/5 rounded-xl p-3">
-                                        <div className="text-[8px] font-black text-teal-600 dark:text-teal-400 uppercase mb-1">Requested Extended Date</div>
-                                        <div className="text-xs font-bold text-teal-700 dark:text-teal-400">{fmtDate(ext.extended_deadline)}</div>
+                                    <div className="bg-brand/5 rounded-xl p-3">
+                                        <div className="text-[8px] font-black text-brand dark:text-brand-400 uppercase mb-1">Requested Extended Date</div>
+                                        <div className="text-xs font-bold text-brand-dark dark:text-brand-400">{fmtDate(ext.extended_deadline)}</div>
                                     </div>
                                 </div>
                             </div>
@@ -255,19 +260,7 @@ const ExtensionStatus = () => {
 
             {/* Request Modal */}
             {showModal && (
-                <div className="fixed inset-0 z-50 bg-gray-900/60 backdrop-blur-sm flex items-center justify-center p-4">
-                    <div className="bg-white dark:bg-gray-900 rounded-3xl border border-gray-100 dark:border-gray-800 shadow-2xl p-6 max-w-md w-full relative animate__animated animate__zoomIn animate__faster">
-                        {/* Close */}
-                        <button
-                            onClick={() => setShowModal(false)}
-                            className="absolute top-4 right-4 text-gray-400 hover:text-gray-650 text-lg font-bold"
-                        >
-                            ✕
-                        </button>
-
-                        <div className="text-[10px] font-black uppercase tracking-widest text-teal-600 dark:text-teal-400 mb-1">New request</div>
-                        <h3 className="text-lg font-bold text-gray-850 dark:text-white mb-4">Request Deadline Extension</h3>
-
+                <Modal open onClose={() => setShowModal(false)} title="Request Deadline Extension" subtitle="New request" size="md" dismissible={false}>
                         {modalError && (
                             <div className="bg-rose-500/10 border border-rose-500/20 text-rose-700 dark:text-rose-400 p-3 rounded-xl text-xs font-bold mb-4">
                                 ⚠️ {modalError}
@@ -342,14 +335,13 @@ const ExtensionStatus = () => {
                                 <button
                                     type="submit"
                                     disabled={saving || !selectedCycleId || !requestedDate || !reason.trim()}
-                                    className="px-5 py-2 bg-teal-500 hover:bg-teal-600 disabled:bg-gray-300 text-white rounded-xl text-xs font-bold transition shadow-md shadow-teal-500/10"
+                                    className={buttonClasses('primary', 'sm')}
                                 >
                                     {saving ? 'Submitting...' : 'Submit Request'}
                                 </button>
                             </div>
                         </form>
-                    </div>
-                </div>
+                </Modal>
             )}
         </div>
     );

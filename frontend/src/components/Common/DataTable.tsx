@@ -1,6 +1,7 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import IconSearch from '../Icon/IconSearch';
 import IconRefresh from '../Icon/IconRefresh';
+import Pagination from './Pagination';
 
 export interface Column<T = any> {
     key: string;
@@ -133,59 +134,11 @@ export function DataTable<T = any>({
         }
     };
 
-    // Calculate effective counts
-    const isServerPaginated = (totalCount !== undefined && onPageChange !== undefined) || onSearchChange !== undefined;
+    // Strictly backend-driven: rows are shown exactly as the server returned them for this page/search.
     const effectiveTotalCount = totalCount !== undefined ? totalCount : data.length;
     const totalPages = Math.max(1, Math.ceil(effectiveTotalCount / pageSize));
     const effectivePage = Math.min(Math.max(1, page), totalPages);
-
-    // Data resolution: strictly display backend data when server callbacks or totalCount are used
-    const displayData = useMemo(() => {
-        // If server pagination, server search, or totalCount is provided, data is strictly backend-driven
-        if (isServerPaginated) {
-            return data || [];
-        }
-        // Fallback for purely static, client-only tables with no backend handlers
-        let filtered = data || [];
-        if (localSearch.trim()) {
-            const query = localSearch.toLowerCase();
-            filtered = (data || []).filter((row: any) =>
-                Object.values(row).some((val) =>
-                    String(val ?? '').toLowerCase().includes(query)
-                )
-            );
-        }
-        const start = (effectivePage - 1) * pageSize;
-        return filtered.slice(start, start + pageSize);
-    }, [data, isServerPaginated, localSearch, effectivePage, pageSize]);
-
-    // Page range calculation
-    const fromRecord = effectiveTotalCount === 0 ? 0 : (effectivePage - 1) * pageSize + 1;
-    const toRecord = Math.min(effectivePage * pageSize, effectiveTotalCount);
-
-    // Windowed pagination: 1 … (p-1) p (p+1) … N
-    const paginationItems = useMemo(() => {
-        const items: (number | 'ellipsis-left' | 'ellipsis-right')[] = [];
-        if (totalPages <= 7) {
-            for (let i = 1; i <= totalPages; i++) items.push(i);
-            return items;
-        }
-        const start = Math.max(2, effectivePage - 1);
-        const end = Math.min(totalPages - 1, effectivePage + 1);
-        items.push(1);
-        if (start > 2) items.push('ellipsis-left');
-        for (let i = start; i <= end; i++) items.push(i);
-        if (end < totalPages - 1) items.push('ellipsis-right');
-        items.push(totalPages);
-        return items;
-    }, [totalPages, effectivePage]);
-
-    // Backend-driven: if the current page no longer exists (e.g. last row deleted), step back
-    useEffect(() => {
-        if (!loading && totalCount !== undefined && onPageChange && page > totalPages) {
-            onPageChange(totalPages);
-        }
-    }, [loading, totalCount, page, totalPages]);
+    const displayData = data || [];
 
     const handleSort = (colKey: string, sortable?: boolean) => {
         if (!sortable || !onSortChange) return;
@@ -198,10 +151,10 @@ export function DataTable<T = any>({
 
     return (
         <div
-            className={`w-full rounded-2xl border border-slate-200/90 dark:border-slate-800/90 bg-white dark:bg-[#0e1726] shadow-[0_4px_20px_-4px_rgba(15,23,42,0.06),0_1px_3px_rgba(15,23,42,0.04)] dark:shadow-[0_4px_24px_-4px_rgba(0,0,0,0.5)] overflow-hidden transition-all duration-200 ${className}`}
+            className={`relative isolate z-0 w-full rounded-2xl border border-slate-200/90 dark:border-slate-800/90 bg-white dark:bg-[#0e1726] shadow-[0_4px_20px_-4px_rgba(15,23,42,0.06),0_1px_3px_rgba(15,23,42,0.04)] dark:shadow-[0_4px_24px_-4px_rgba(0,0,0,0.5)] overflow-hidden transition-all duration-200 ${className}`}
         >
             {/* Innovyx Signature Brand Accent Bar */}
-            <div className="h-1 w-full bg-gradient-to-r from-[#0062E0] via-[#2563eb] to-[#38bdf8]" />
+            <div className="h-1 w-full bg-gradient-to-r from-brand via-brand-mid to-brand-accent" />
 
             {/* Top Header Row: Title & Primary Actions */}
             {(title || activeActions || onRefresh) && (
@@ -210,7 +163,7 @@ export function DataTable<T = any>({
                     {title ? (
                         <div className="min-w-0">
                             <h3 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white tracking-tight flex items-center gap-2.5">
-                                <span className="h-2 w-2 rounded-full bg-[#0062E0] dark:bg-blue-400 ring-4 ring-blue-500/20" />
+                                <span className="h-2 w-2 rounded-full bg-brand dark:bg-brand-400 ring-4 ring-brand-500/20" />
                                 <span>{title}</span>
                             </h3>
                             {subtitle && (
@@ -231,12 +184,12 @@ export function DataTable<T = any>({
                             <button
                                 type="button"
                                 onClick={() => onRefresh()}
-                                className="h-9.5 w-9.5 sm:h-10 sm:w-10 flex items-center justify-center rounded-xl text-slate-500 dark:text-slate-400 hover:text-[#0062E0] dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950/40 border border-slate-200 dark:border-slate-700/80 bg-white dark:bg-[#121e32] transition-all duration-150 shadow-xs hover:shadow-sm active:scale-95"
+                                className="h-9.5 w-9.5 sm:h-10 sm:w-10 flex items-center justify-center rounded-xl text-slate-500 dark:text-slate-400 hover:text-brand dark:hover:text-brand-400 hover:bg-brand-50 dark:hover:bg-brand-950/40 border border-slate-200 dark:border-slate-700/80 bg-white dark:bg-[#121e32] transition-all duration-150 shadow-xs hover:shadow-sm active:scale-95"
                                 title="Refresh data"
                             >
                                 <IconRefresh
                                     className={`w-4 h-4 transition-transform ${
-                                        loading ? 'animate-spin text-[#0062E0] dark:text-blue-400' : ''
+                                        loading ? 'animate-spin text-brand dark:text-brand-400' : ''
                                     }`}
                                 />
                             </button>
@@ -253,12 +206,12 @@ export function DataTable<T = any>({
                         <div className="relative w-full md:w-80 group flex-shrink-0">
                             <input
                                 type="text"
-                                className="form-input text-xs sm:text-sm pl-10 pr-9 h-10 w-full rounded-xl border border-slate-200 dark:border-slate-700/80 bg-white dark:bg-[#121e32] text-slate-800 dark:text-slate-100 placeholder:text-slate-400 font-medium shadow-xs transition-all duration-200 focus:outline-none focus:border-[#0062E0] focus:ring-4 focus:ring-[#0062E0]/15 hover:border-slate-300 dark:hover:border-slate-600"
+                                className="form-input text-xs sm:text-sm pl-10 pr-9 h-10 w-full rounded-xl border border-slate-200 dark:border-slate-700/80 bg-white dark:bg-[#121e32] text-slate-800 dark:text-slate-100 placeholder:text-slate-400 font-medium shadow-xs transition-all duration-200 focus:outline-none focus:border-brand focus:ring-4 focus:ring-brand/15 hover:border-slate-300 dark:hover:border-slate-600"
                                 placeholder={searchPlaceholder}
                                 value={localSearch}
                                 onChange={(e) => handleSearchInput(e.target.value)}
                             />
-                            <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-[#0062E0] dark:group-focus-within:text-blue-400 transition-colors pointer-events-none">
+                            <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-brand dark:group-focus-within:text-brand-400 transition-colors pointer-events-none">
                                 <IconSearch className="w-4 h-4" />
                             </span>
                             {localSearch && (
@@ -289,15 +242,15 @@ export function DataTable<T = any>({
                 className={`relative w-full overflow-x-auto ${maxHeight ? 'overflow-y-auto' : ''} min-h-[160px] scrollbar-thin scrollbar-thumb-slate-200 dark:scrollbar-thumb-slate-800 scrollbar-track-transparent`}
             >
                 {loading && displayData.length > 0 && (
-                    <div className="absolute top-0 left-0 right-0 h-0.5 z-20 overflow-hidden bg-blue-100 dark:bg-blue-950">
-                        <div className="h-full w-1/3 bg-[#0062E0] animate-[pulse_1s_ease-in-out_infinite]" />
+                    <div className="absolute top-0 left-0 right-0 h-0.5 z-20 overflow-hidden bg-brand-100 dark:bg-brand-950">
+                        <div className="h-full w-1/3 bg-brand animate-[pulse_1s_ease-in-out_infinite]" />
                     </div>
                 )}
                 <table className={`w-full border-collapse ${bordered ? 'border-y border-slate-200 dark:border-slate-800' : ''}`}>
                     {/* Table Header */}
                     <thead>
                         <tr
-                            className={`border-b-2 border-blue-200/90 dark:border-blue-900/60 !bg-[#eaf2fd] dark:!bg-[#0d1d36] ${
+                            className={`border-b-2 border-brand-200/90 dark:border-brand-900/60 !bg-brand-50 dark:!bg-[#0d1d36] ${
                                 stickyHeader ? 'sticky top-0 z-10 backdrop-blur-sm' : ''
                             }`}
                         >
@@ -313,9 +266,9 @@ export function DataTable<T = any>({
                                     <th
                                         key={col.key || idx}
                                         style={col.width ? { width: col.width } : undefined}
-                                        className={`py-3.5 px-4 sm:px-5 font-bold text-[11px] sm:text-xs uppercase tracking-wider text-blue-950 dark:text-blue-200 !bg-[#eaf2fd] dark:!bg-[#0d1d36] select-none transition-colors ${alignClass} ${hideClass(col.hideBelow)} ${col.sticky ? 'sticky left-0 z-20' : ''} ${
+                                        className={`py-3.5 px-4 sm:px-5 font-bold text-[11px] sm:text-xs uppercase tracking-wider text-brand-950 dark:text-brand-200 !bg-brand-50 dark:!bg-[#0d1d36] select-none transition-colors ${alignClass} ${hideClass(col.hideBelow)} ${col.sticky ? 'sticky left-0 z-20' : ''} ${
                                             col.sortable
-                                                ? 'cursor-pointer hover:text-[#0062E0] dark:hover:text-blue-300 hover:!bg-[#dce9fc] dark:hover:!bg-[#122849] group'
+                                                ? 'cursor-pointer hover:text-brand dark:hover:text-brand-300 hover:!bg-brand-100 dark:hover:!bg-[#122849] group'
                                                 : ''
                                         } ${col.headerClassName || ''}`}
                                         aria-sort={col.sortable && sortField === col.key ? (sortDirection === 'asc' ? 'ascending' : 'descending') : undefined}
@@ -336,7 +289,7 @@ export function DataTable<T = any>({
                                                     {sortField === col.key ? (
                                                         sortDirection === 'asc' ? (
                                                             <svg
-                                                                className="w-3.5 h-3.5 text-[#0062E0] dark:text-blue-400"
+                                                                className="w-3.5 h-3.5 text-brand dark:text-brand-400"
                                                                 viewBox="0 0 20 20"
                                                                 fill="currentColor"
                                                             >
@@ -348,7 +301,7 @@ export function DataTable<T = any>({
                                                             </svg>
                                                         ) : (
                                                             <svg
-                                                                className="w-3.5 h-3.5 text-[#0062E0] dark:text-blue-400"
+                                                                className="w-3.5 h-3.5 text-brand dark:text-brand-400"
                                                                 viewBox="0 0 20 20"
                                                                 fill="currentColor"
                                                             >
@@ -361,7 +314,7 @@ export function DataTable<T = any>({
                                                         )
                                                     ) : (
                                                         <svg
-                                                            className="w-3.5 h-3.5 text-blue-300 dark:text-blue-700/80 group-hover:text-blue-500"
+                                                            className="w-3.5 h-3.5 text-brand-300 dark:text-brand-700/80 group-hover:text-brand-500"
                                                             viewBox="0 0 20 20"
                                                             fill="currentColor"
                                                         >
@@ -404,7 +357,7 @@ export function DataTable<T = any>({
                                     <React.Fragment key={rowKeyVal}>
                                         <tr
                                             onClick={() => onRowClick && onRowClick(row)}
-                                            className={`transition-all duration-150 hover:!bg-blue-50/40 dark:hover:!bg-[#132247]/30 ${loading ? 'opacity-50 pointer-events-none' : ''} ${
+                                            className={`transition-all duration-150 hover:!bg-brand-50/40 dark:hover:!bg-[#132247]/30 ${loading ? 'opacity-50 pointer-events-none' : ''} ${
                                                 striped ? 'even:bg-slate-50/25 dark:even:bg-slate-900/15' : ''
                                             } ${onRowClick ? 'cursor-pointer' : ''} ${customRowClass}`}
                                         >
@@ -465,7 +418,7 @@ export function DataTable<T = any>({
                             <tr>
                                 <td colSpan={columns.length} className="py-14 px-4 sm:px-6 text-center">
                                     <div className="flex flex-col items-center justify-center max-w-sm mx-auto text-center">
-                                        <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-50 to-indigo-100/70 dark:from-blue-950/40 dark:to-indigo-950/30 border border-blue-200/60 dark:border-blue-900/40 flex items-center justify-center text-[#0062E0] dark:text-blue-400 mb-3.5 shadow-sm">
+                                        <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-brand-50 to-brand-100/70 dark:from-brand-950/40 dark:to-brand-950/30 border border-brand-200/60 dark:border-brand-900/40 flex items-center justify-center text-brand dark:text-brand-400 mb-3.5 shadow-sm">
                                             {emptyIcon || (
                                                 <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                                     <path
@@ -487,7 +440,7 @@ export function DataTable<T = any>({
                                             <button
                                                 type="button"
                                                 onClick={() => handleSearchInput('')}
-                                                className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl border border-blue-200 dark:border-blue-900/60 bg-blue-50 dark:bg-blue-950/40 text-[#0062E0] dark:text-blue-400 text-xs font-semibold hover:bg-blue-100 dark:hover:bg-blue-900/60 transition-colors shadow-xs"
+                                                className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl border border-brand-200 dark:border-brand-900/60 bg-brand-50 dark:bg-brand-950/40 text-brand dark:text-brand-400 text-xs font-semibold hover:bg-brand-100 dark:hover:bg-brand-900/60 transition-colors shadow-xs"
                                             >
                                                 <svg className="w-3.5 h-3.5" viewBox="0 0 20 20" fill="currentColor">
                                                     <path
@@ -507,136 +460,17 @@ export function DataTable<T = any>({
                 </table>
             </div>
 
-            {/* Pagination & Footer Controls */}
-            {effectiveTotalCount > 0 && (
-                <div className="px-5 py-4 sm:px-6 border-t border-slate-200/80 dark:border-slate-800/80 bg-slate-50/70 dark:bg-[#0b1320]/60 backdrop-blur-sm flex flex-col sm:flex-row items-center justify-between gap-3.5 text-xs">
-                    {/* Left: Entries Info & Page Size */}
-                    <div className="flex items-center gap-3 text-slate-600 dark:text-slate-400 flex-wrap justify-center sm:justify-start">
-                        <span>
-                            Showing <span className="font-semibold text-slate-900 dark:text-white">{fromRecord}</span> to{' '}
-                            <span className="font-semibold text-slate-900 dark:text-white">{toRecord}</span> of{' '}
-                            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-bold bg-blue-50 dark:bg-blue-950/60 text-[#0062E0] dark:text-blue-400 border border-blue-200/60 dark:border-blue-900/50">
-                                {effectiveTotalCount}
-                            </span> {entityLabel}
-                        </span>
-
-                        {onPageSizeChange && (
-                            <div className="flex items-center gap-1.5 ml-1 sm:ml-2 pl-2 sm:border-l border-slate-200 dark:border-slate-700">
-                                <span className="text-slate-500 dark:text-slate-400">Show</span>
-                                <select
-                                    className="form-select text-xs py-1 px-2.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-[#121e32] text-slate-700 dark:text-slate-200 font-semibold shadow-xs focus:border-[#0062E0] focus:ring-2 focus:ring-[#0062E0]/20 transition-all cursor-pointer"
-                                    value={pageSize}
-                                    onChange={(e) => onPageSizeChange(Number(e.target.value))}
-                                >
-                                    {pageSizeOptions.map((opt) => (
-                                        <option key={opt} value={opt}>
-                                            {opt}
-                                        </option>
-                                    ))}
-                                </select>
-                                <span className="text-slate-500 dark:text-slate-400">per page</span>
-                            </div>
-                        )}
-                    </div>
-
-                    {/* Right: Page Navigation Buttons */}
-                    {totalPages > 1 && (
-                        <div className="flex items-center gap-1.5">
-                            {/* Previous Button */}
-                            <button
-                                type="button"
-                                onClick={() => onPageChange && onPageChange(effectivePage - 1)}
-                                disabled={effectivePage <= 1}
-                                className="h-8 px-3 rounded-xl border border-slate-200 dark:border-slate-700/80 bg-white dark:bg-[#121e32] text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-[#0062E0] dark:hover:text-blue-400 hover:border-blue-200 dark:hover:border-blue-900/60 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-white dark:disabled:hover:bg-[#121e32] disabled:hover:border-slate-200 transition-all font-semibold text-xs flex items-center gap-1.5 shadow-xs"
-                                title="Previous page"
-                            >
-                                <svg className="w-3.5 h-3.5" viewBox="0 0 20 20" fill="currentColor">
-                                    <path
-                                        fillRule="evenodd"
-                                        d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z"
-                                        clipRule="evenodd"
-                                    />
-                                </svg>
-                                <span>Prev</span>
-                            </button>
-
-                            {/* Page Numbers */}
-                            <div className="hidden sm:flex items-center gap-1.5">
-                                {paginationItems.map((item) => {
-                                    if (item === 'ellipsis-left') {
-                                        const prevJump = Math.max(1, effectivePage - 3);
-                                        return (
-                                            <button
-                                                key="ellipsis-left"
-                                                type="button"
-                                                onClick={() => onPageChange && onPageChange(prevJump)}
-                                                className="min-w-[32px] h-8 px-2 rounded-xl text-xs font-bold border border-slate-200 dark:border-slate-700/80 bg-white dark:bg-[#121e32] text-slate-500 hover:text-[#0062E0] dark:hover:text-blue-400 hover:bg-blue-50/50 hover:border-blue-200 dark:hover:bg-slate-800 transition-all select-none shadow-xs"
-                                                title={`Jump to page ${prevJump}`}
-                                            >
-                                                …
-                                            </button>
-                                        );
-                                    }
-
-                                    if (item === 'ellipsis-right') {
-                                        const nextJump = Math.min(totalPages, effectivePage + 3);
-                                        return (
-                                            <button
-                                                key="ellipsis-right"
-                                                type="button"
-                                                onClick={() => onPageChange && onPageChange(nextJump)}
-                                                className="min-w-[32px] h-8 px-2 rounded-xl text-xs font-bold border border-slate-200 dark:border-slate-700/80 bg-white dark:bg-[#121e32] text-slate-500 hover:text-[#0062E0] dark:hover:text-blue-400 hover:bg-blue-50/50 hover:border-blue-200 dark:hover:bg-slate-800 transition-all select-none shadow-xs"
-                                                title={`Jump to page ${nextJump}`}
-                                            >
-                                                …
-                                            </button>
-                                        );
-                                    }
-
-                                    const isCurrent = item === effectivePage;
-                                    return (
-                                        <button
-                                            key={`page-${item}`}
-                                            type="button"
-                                            onClick={() => onPageChange && onPageChange(item as number)}
-                                            className={`min-w-[34px] h-8 px-2.5 rounded-xl text-xs font-bold transition-all duration-150 ${
-                                                isCurrent
-                                                    ? 'bg-gradient-to-r from-[#0062E0] to-[#1d4ed8] text-white shadow-md shadow-[#0062E0]/25 ring-2 ring-[#0062E0]/20 scale-105'
-                                                    : 'border border-slate-200 dark:border-slate-700/80 bg-white dark:bg-[#121e32] text-slate-600 dark:text-slate-300 hover:border-blue-300 dark:hover:border-blue-800 hover:text-[#0062E0] dark:hover:text-blue-400 hover:bg-blue-50/50 dark:hover:bg-slate-800 shadow-xs'
-                                            }`}
-                                        >
-                                            {item}
-                                        </button>
-                                    );
-                                })}
-                            </div>
-
-                            {/* Mobile Page indicator */}
-                            <span className="sm:hidden px-2 text-xs font-bold text-[#0062E0] dark:text-blue-400">
-                                {effectivePage} / {totalPages}
-                            </span>
-
-                            {/* Next Button */}
-                            <button
-                                type="button"
-                                onClick={() => onPageChange && onPageChange(effectivePage + 1)}
-                                disabled={effectivePage >= totalPages}
-                                className="h-8 px-3 rounded-xl border border-slate-200 dark:border-slate-700/80 bg-white dark:bg-[#121e32] text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-[#0062E0] dark:hover:text-blue-400 hover:border-blue-200 dark:hover:border-blue-900/60 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-white dark:disabled:hover:bg-[#121e32] disabled:hover:border-slate-200 transition-all font-semibold text-xs flex items-center gap-1.5 shadow-xs"
-                                title="Next page"
-                            >
-                                <span>Next</span>
-                                <svg className="w-3.5 h-3.5" viewBox="0 0 20 20" fill="currentColor">
-                                    <path
-                                        fillRule="evenodd"
-                                        d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 010-1.414z"
-                                        clipRule="evenodd"
-                                    />
-                                </svg>
-                            </button>
-                        </div>
-                    )}
-                </div>
-            )}
+            {/* Pagination & Footer Controls (backend-driven) */}
+            <Pagination
+                page={page}
+                pageSize={pageSize}
+                totalCount={effectiveTotalCount}
+                pageSizeOptions={pageSizeOptions}
+                onPageChange={(p) => onPageChange && onPageChange(p)}
+                onPageSizeChange={onPageSizeChange}
+                entityLabel={entityLabel}
+                loading={loading}
+            />
         </div>
     );
 }

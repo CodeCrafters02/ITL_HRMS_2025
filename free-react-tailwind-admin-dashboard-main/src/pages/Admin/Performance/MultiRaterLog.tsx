@@ -15,6 +15,7 @@ import IconClock from '../../../components/Icon/IconClock';
 import IconChecks from '../../../components/Icon/IconChecks';
 import IconCircleCheck from '../../../components/Icon/IconCircleCheck';
 import IconUser from '../../../components/Icon/IconUser';
+import { buttonClasses } from '../../../components/Common/Button';
 interface MultiRaterMapping {
     id: number;
     employee: number;
@@ -302,7 +303,7 @@ const MultiRaterLog = () => {
                 {/* Donut chart */}
                 <div className="bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 p-5 rounded-3xl shadow-sm space-y-4">
                     <div className="flex items-center gap-2 border-b border-gray-100 dark:border-gray-800 pb-3">
-                        <IconMenuCharts className="w-4 h-4 text-blue-500" />
+                        <IconMenuCharts className="w-4 h-4 text-brand-500" />
                         <h3 className="text-sm font-black text-gray-800 dark:text-white">Mapping Status Distribution</h3>
                     </div>
                     {filteredMappings.length > 0 ? (
@@ -322,7 +323,7 @@ const MultiRaterLog = () => {
                 {/* Bar chart workload */}
                 <div className="bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 p-5 rounded-3xl shadow-sm space-y-4">
                     <div className="flex items-center gap-2 border-b border-gray-100 dark:border-gray-800 pb-3">
-                        <span className="text-base text-blue-500">⚖️</span>
+                        <span className="text-base text-brand-500">⚖️</span>
                         <h3 className="text-sm font-black text-gray-800 dark:text-white">Workload Check: Top Nominated Reviewers</h3>
                     </div>
                     {reviewerChartData.categories.length > 0 ? (
@@ -384,7 +385,7 @@ const MultiRaterLog = () => {
                         <button
                             onClick={handleExportCSV}
                             disabled={filteredMappings.length === 0}
-                            className="flex items-center gap-1.5 px-4 py-1.5 bg-brand hover:bg-brand disabled:bg-gray-300 text-white rounded-xl text-xs font-black transition shadow-sm"
+                            className={buttonClasses('primary', 'sm')}
                         >
                             <IconDownload className="w-3.5 h-3.5" />
                             Export CSV
@@ -415,14 +416,14 @@ const MultiRaterLog = () => {
                                     <td className="py-3.5 px-2">{m.employee_designation || '—'}</td>
                                     <td className="py-3.5 px-2 font-semibold text-gray-800 dark:text-gray-200">
                                         <div className="flex items-center gap-2">
-                                            <div className="w-6 h-6 rounded-full bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center text-[9px] font-black shrink-0">
+                                            <div className="w-6 h-6 rounded-full bg-brand-500/10 text-brand-600 dark:text-brand-400 flex items-center justify-center text-[9px] font-black shrink-0">
                                                 {m.reviewer_initials}
                                             </div>
                                             <span>{m.reviewer_name}</span>
                                         </div>
                                     </td>
                                     <td className="py-3.5 px-2">{m.reviewer_designation || '—'}</td>
-                                    <td className="py-3.5 px-2 text-blue-600 dark:text-blue-400 font-semibold">{m.cycle_name}</td>
+                                    <td className="py-3.5 px-2 text-brand-600 dark:text-brand-400 font-semibold">{m.cycle_name}</td>
                                     <td className="py-3.5 px-2">{new Date(m.created_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}</td>
                                     <td className="py-3.5 px-2 text-right">
                                         <span className={`px-2 py-0.5 rounded-full uppercase text-[8px] font-black ${

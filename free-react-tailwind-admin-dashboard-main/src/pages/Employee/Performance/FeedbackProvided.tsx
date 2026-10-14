@@ -4,6 +4,9 @@ import { Link } from 'react-router-dom';
 import axios from 'axios';
 import { setPageTitle } from '../../../store/themeConfigSlice';
 
+import PageHeader from '../../../components/Common/PageHeader';
+import Modal from '../../../components/Common/Modal';
+import { buttonClasses } from '../../../components/Common/Button';
 interface AppraisalCycle {
     id: number;
     name: string;
@@ -55,7 +58,7 @@ interface AppraisalExtension {
     status: 'pending' | 'approved' | 'rejected';
 }
 
-const AVATAR_COLORS = ['bg-emerald-500','bg-indigo-500','bg-amber-500','bg-teal-500','bg-rose-500','bg-blue-500','bg-purple-500','bg-pink-500'];
+const AVATAR_COLORS = ['bg-emerald-500','bg-brand-500','bg-amber-500','bg-brand','bg-rose-500','bg-brand-500','bg-brand-accent','bg-pink-500'];
 
 const ROLE_CFG = {
     self:    { label: 'Self Appraisal',   icon: '👤', roleType: 'self',    color: 'violet' },
@@ -243,7 +246,7 @@ const FeedbackProvided = () => {
 
         if (days > 0) {
             const text = `${days}d ${rHours}h left`;
-            const cls = days <= 2 ? 'text-amber-500 dark:text-amber-400 font-extrabold' : 'text-teal-600 dark:text-teal-400 font-semibold';
+            const cls = days <= 2 ? 'text-amber-500 dark:text-amber-400 font-extrabold' : 'text-brand dark:text-brand-400 font-semibold';
             return { text, cls };
         } else {
             const text = `${rHours}h ${rMins}m ${rSecs}s left`;
@@ -373,7 +376,7 @@ const FeedbackProvided = () => {
     if (error) return (
         <div className="flex flex-col items-center justify-center min-h-[50vh] text-center gap-4">
             <p className="text-sm text-rose-500">{error}</p>
-            <Link to="/employee/performance" className="px-4 py-2 bg-teal-500 text-white rounded-xl text-xs font-bold">← Back</Link>
+            <Link to="/employee/performance" className={buttonClasses('primary', 'sm')}>← Back</Link>
         </div>
     );
 
@@ -384,14 +387,12 @@ const FeedbackProvided = () => {
     return (
         <div className="space-y-5">
             {/* Header */}
-            <div className="bg-white dark:bg-gray-900 p-5 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm space-y-4">
-                <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
-                    <div>
-                        <div className="text-xs font-black uppercase text-teal-600 dark:text-teal-400 mb-1">Employee Feed</div>
-                        <h2 className="text-xl font-bold text-gray-800 dark:text-white">Feedback Provided</h2>
-                        <p className="text-xs text-gray-455 mt-0.5">Answer appraisal questions for your assigned peers and reportees.</p>
-                    </div>
-                    <div className="flex gap-3 text-center shrink-0">
+            <PageHeader
+                title="Feedback Provided"
+                subtitle="Answer appraisal questions for your assigned peers and reportees."
+                badge="Employee Feed"
+                actions={
+                    <div className="flex items-center gap-3 text-center">
                         <div className="bg-amber-50 dark:bg-amber-950/30 border border-amber-100 dark:border-amber-900/40 rounded-xl px-4 py-2">
                             <span className="block text-xl font-black text-amber-600 dark:text-amber-400">{pendingCount}</span>
                             <span className="block text-[9px] font-bold uppercase text-amber-400">Pending</span>
@@ -400,9 +401,12 @@ const FeedbackProvided = () => {
                             <span className="block text-xl font-black text-emerald-600 dark:text-emerald-400">{doneCount}</span>
                             <span className="block text-[9px] font-bold uppercase text-emerald-400">Done</span>
                         </div>
-                        <Link to="/employee/performance" className="self-center px-4 py-2 bg-gray-100 hover:bg-gray-200 dark:bg-gray-855 dark:hover:bg-gray-800 text-gray-600 dark:text-gray-300 rounded-xl text-xs font-bold transition">← Back</Link>
+                        <Link to="/employee/performance" className={buttonClasses('secondary', 'sm', 'self-center')}>← Back</Link>
                     </div>
-                </div>
+                }
+            />
+
+            <div className="bg-white dark:bg-gray-900 p-5 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm space-y-4">
 
                 {!activeCycle ? (
                     <div className="flex items-center gap-3 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-3">
@@ -413,22 +417,22 @@ const FeedbackProvided = () => {
                         </div>
                     </div>
                 ) : (
-                    <div className="flex flex-col md:flex-row gap-4 justify-between bg-teal-50 dark:bg-teal-950/20 border border-teal-200 dark:border-teal-900/40 rounded-xl px-5 py-4">
+                    <div className="flex flex-col md:flex-row gap-4 justify-between bg-brand-50 dark:bg-brand-950/20 border border-brand-200 dark:border-brand-900/40 rounded-xl px-5 py-4">
                         <div className="space-y-1">
                             <div className="flex items-center gap-2">
-                                <p className="text-xs font-black text-teal-700 dark:text-teal-300">{activeCycle.name} — Cycle Timelines</p>
+                                <p className="text-xs font-black text-brand-dark dark:text-brand-300">{activeCycle.name} — Cycle Timelines</p>
                                 {approvedExt && <span className="text-[9px] font-black uppercase px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-400">✓ Extension Approved</span>}
                                 {pendingExt && <span className="text-[9px] font-black uppercase px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 dark:bg-amber-950/50 dark:text-amber-400">⏳ Extension Pending</span>}
                             </div>
                             <div className="grid grid-cols-1 sm:grid-cols-3 gap-x-6 gap-y-1.5 text-[10px] font-bold text-gray-550 dark:text-gray-400">
                                 <div>
-                                    👤 Self Appraisal: <span className="text-teal-600 dark:text-teal-400 font-extrabold">{new Date(activeCycle.self_appraisal_deadline).toLocaleString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
+                                    👤 Self Appraisal: <span className="text-brand dark:text-brand-400 font-extrabold">{new Date(activeCycle.self_appraisal_deadline).toLocaleString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
                                     <span className={`ml-1 text-[9px] font-extrabold ${formatLiveCountdown(getDeadlineForRelation('self')).cls}`}>
                                         ({formatLiveCountdown(getDeadlineForRelation('self')).text})
                                     </span>
                                 </div>
                                 <div>
-                                    🤝 Peer Review: <span className="text-indigo-600 dark:text-indigo-400 font-extrabold">
+                                    🤝 Peer Review: <span className="text-brand-600 dark:text-brand-400 font-extrabold">
                                         {activeCycle.peer_deadline ? new Date(activeCycle.peer_deadline).toLocaleString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : new Date(activeCycle.self_appraisal_deadline).toLocaleString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
                                     </span>
                                     <span className={`ml-1 text-[9px] font-extrabold ${formatLiveCountdown(getDeadlineForRelation('peer')).cls}`}>
@@ -445,12 +449,12 @@ const FeedbackProvided = () => {
                         </div>
                         <div className="flex items-center gap-3 shrink-0 self-end md:self-center">
                             <div className="w-32 hidden sm:block">
-                                <div className="flex justify-between text-[9px] font-bold text-teal-500 mb-1">
+                                <div className="flex justify-between text-[9px] font-bold text-brand mb-1">
                                     <span>{doneCount}/{targets.length} done</span>
                                     <span>{targets.length ? Math.round((doneCount/targets.length)*100) : 0}%</span>
                                 </div>
-                                <div className="h-1.5 bg-teal-100 dark:bg-teal-900/40 rounded-full overflow-hidden">
-                                    <div className="h-full bg-teal-500 rounded-full transition-all" style={{ width: `${targets.length ? (doneCount/targets.length)*100 : 0}%` }} />
+                                <div className="h-1.5 bg-brand-100 dark:bg-brand-900/40 rounded-full overflow-hidden">
+                                    <div className="h-full bg-brand rounded-full transition-all" style={{ width: `${targets.length ? (doneCount/targets.length)*100 : 0}%` }} />
                                 </div>
                             </div>
                         </div>
@@ -477,18 +481,18 @@ const FeedbackProvided = () => {
                         const done     = !!submitted[`${t.relation}-${t.id}`];
                         const qs       = qsForRelation(t.relation);
                         const noQs     = qs.length === 0;
-                        const avatarBg = t.relation === 'self' ? 'bg-violet-500' : AVATAR_COLORS[idx % AVATAR_COLORS.length];
-                        const stripe   = t.relation === 'self' ? 'bg-violet-500' : t.relation === 'manager' ? 'bg-teal-500' : 'bg-indigo-500';
+                        const avatarBg = t.relation === 'self' ? 'bg-brand-accent' : AVATAR_COLORS[idx % AVATAR_COLORS.length];
+                        const stripe   = t.relation === 'self' ? 'bg-brand-accent' : t.relation === 'manager' ? 'bg-brand' : 'bg-brand-500';
                         const badgeCls = t.relation === 'self'
-                            ? 'bg-violet-100 text-violet-600 dark:bg-violet-950/40 dark:text-violet-400'
+                            ? 'bg-brand-100 text-brand-accent dark:bg-brand-950/40 dark:text-brand-accent'
                             : t.relation === 'manager'
-                            ? 'bg-teal-100 text-teal-600 dark:bg-teal-950/40 dark:text-teal-400'
-                            : 'bg-indigo-100 text-indigo-600 dark:bg-indigo-950/40 dark:text-indigo-400';
+                            ? 'bg-brand-100 text-brand dark:bg-brand-950/40 dark:text-brand-400'
+                            : 'bg-brand-100 text-brand-600 dark:bg-brand-950/40 dark:text-brand-400';
                         const btnCls   = t.relation === 'self'
-                            ? 'bg-violet-500 hover:bg-violet-600'
+                            ? 'bg-brand-accent hover:bg-brand-accent'
                             : t.relation === 'manager'
-                            ? 'bg-teal-500 hover:bg-teal-600'
-                            : 'bg-indigo-500 hover:bg-indigo-600';
+                            ? 'bg-brand hover:bg-brand'
+                            : 'bg-brand-500 hover:bg-brand-600';
 
                         // Calculate target specific deadlines
                         const targetDeadline = getDeadlineForRelation(t.relation);
@@ -634,15 +638,14 @@ const FeedbackProvided = () => {
 
             {/* Structured question modal */}
             {activeTarget && (
-                <div className="fixed inset-0 z-[70000] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate__animated animate__fadeIn">
-                    <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-3xl w-full max-w-lg shadow-2xl flex flex-col max-h-[88vh]">
+                <Modal open onClose={() => setActiveTarget(null)} size="lg" hideClose bodyClassName="!p-0">
                         <div className="flex items-center gap-3 px-6 pt-5 pb-4 border-b border-gray-100 dark:border-gray-800 shrink-0">
-                            <div className={`w-10 h-10 rounded-xl text-white font-black text-xs flex items-center justify-center shrink-0 ${activeTarget.relation === 'self' ? 'bg-violet-500' : activeTarget.relation === 'manager' ? 'bg-teal-500' : 'bg-indigo-500'}`}>
+                            <div className={`w-10 h-10 rounded-xl text-white font-black text-xs flex items-center justify-center shrink-0 ${activeTarget.relation === 'self' ? 'bg-brand-accent' : activeTarget.relation === 'manager' ? 'bg-brand' : 'bg-brand-500'}`}>
                                 {activeTarget.relation === 'self' ? '👤' : activeTarget.initials}
                             </div>
                             <div className="flex-1 min-w-0">
                                 <p className={`text-[9px] font-black uppercase tracking-wider mb-0.5 ${
-                                    activeTarget.relation === 'self' ? 'text-violet-500' : activeTarget.relation === 'manager' ? 'text-teal-500' : 'text-indigo-500'
+                                    activeTarget.relation === 'self' ? 'text-brand-accent' : activeTarget.relation === 'manager' ? 'text-brand' : 'text-brand-500'
                                 }`}>{ROLE_CFG[activeTarget.relation].icon} {ROLE_CFG[activeTarget.relation].label}</p>
                                 <p className="text-sm font-black text-gray-800 dark:text-white truncate">
                                     {activeTarget.relation === 'self' ? 'Self Appraisal' : activeTarget.name}
@@ -661,18 +664,18 @@ const FeedbackProvided = () => {
                             <div className="flex-1 overflow-y-auto px-6 py-4 space-y-5">
                                 {/* Context banner */}
                                 <div className={`rounded-2xl px-4 py-3 flex items-center gap-3 ${
-                                    activeTarget.relation === 'self'    ? 'bg-violet-50 dark:bg-violet-950/20 border border-violet-100 dark:border-violet-900/40' :
-                                    activeTarget.relation === 'manager' ? 'bg-teal-50 dark:bg-teal-950/20 border border-teal-100 dark:border-teal-900/40' :
-                                                                          'bg-indigo-50 dark:bg-indigo-950/20 border border-indigo-100 dark:border-indigo-900/40'
+                                    activeTarget.relation === 'self'    ? 'bg-brand-50 dark:bg-brand-950/20 border border-brand-100 dark:border-brand-900/40' :
+                                    activeTarget.relation === 'manager' ? 'bg-brand-50 dark:bg-brand-950/20 border border-brand-100 dark:border-brand-900/40' :
+                                                                          'bg-brand-50 dark:bg-brand-950/20 border border-brand-100 dark:border-brand-900/40'
                                 }`}>
                                     <div className={`w-9 h-9 rounded-xl text-white font-black text-xs flex items-center justify-center shrink-0 ${
-                                        activeTarget.relation === 'self' ? 'bg-violet-500' : activeTarget.relation === 'manager' ? 'bg-teal-500' : 'bg-indigo-500'
+                                        activeTarget.relation === 'self' ? 'bg-brand-accent' : activeTarget.relation === 'manager' ? 'bg-brand' : 'bg-brand-500'
                                     }`}>
                                         {activeTarget.relation === 'self' ? '👤' : activeTarget.initials}
                                     </div>
                                     <div>
                                         <p className={`text-[10px] font-black uppercase tracking-wider ${
-                                            activeTarget.relation === 'self' ? 'text-violet-500' : activeTarget.relation === 'manager' ? 'text-teal-500' : 'text-indigo-500'
+                                            activeTarget.relation === 'self' ? 'text-brand-accent' : activeTarget.relation === 'manager' ? 'text-brand' : 'text-brand-500'
                                         }`}>{ROLE_CFG[activeTarget.relation].icon} {ROLE_CFG[activeTarget.relation].label}</p>
                                         <p className="text-sm font-black text-gray-800 dark:text-white leading-tight">
                                             {activeTarget.relation === 'self' ? 'Your self appraisal' : `For: ${activeTarget.name}`}
@@ -688,7 +691,7 @@ const FeedbackProvided = () => {
                                     return (
                                         <div key={q.id} className="space-y-3">
                                             <div className="flex items-start gap-2.5">
-                                                <div className="w-5 h-5 rounded-lg bg-teal-500/10 text-teal-600 dark:text-teal-400 flex items-center justify-center text-[9px] font-black shrink-0 mt-0.5">{idx + 1}</div>
+                                                <div className="w-5 h-5 rounded-lg bg-brand/10 text-brand dark:text-brand-400 flex items-center justify-center text-[9px] font-black shrink-0 mt-0.5">{idx + 1}</div>
                                                 <p className="text-xs font-bold text-gray-800 dark:text-white leading-snug">{q.question_text}</p>
                                             </div>
 
@@ -724,14 +727,13 @@ const FeedbackProvided = () => {
                             <div className="px-6 py-4 border-t border-gray-100 dark:border-gray-800 shrink-0 bg-gray-50 dark:bg-gray-900 flex justify-end gap-2">
                                 <button type="button" onClick={() => setActiveTarget(null)} className="px-4 py-2 border border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-455 rounded-xl text-xs font-bold hover:bg-gray-100 dark:hover:bg-gray-800 transition">Cancel</button>
                                 <button type="submit" disabled={saving} className={`px-5 py-2 rounded-xl text-xs font-black text-white transition ${
-                                    activeTarget.relation === 'self' ? 'bg-violet-500 hover:bg-violet-600' : activeTarget.relation === 'manager' ? 'bg-teal-500 hover:bg-teal-600' : 'bg-indigo-500 hover:bg-indigo-600'
+                                    activeTarget.relation === 'self' ? 'bg-brand-accent hover:bg-brand-accent' : activeTarget.relation === 'manager' ? 'bg-brand hover:bg-brand' : 'bg-brand-500 hover:bg-brand-600'
                                 }`}>
                                     {saving ? 'Submitting...' : 'Submit Answers'}
                                 </button>
                             </div>
                         </form>
-                    </div>
-                </div>
+                </Modal>
             )}
 
             {/* Request Extension Modal */}
@@ -742,8 +744,7 @@ const FeedbackProvided = () => {
                 const cycleEnd = new Date(activeCycle.end_date + 'T23:59:59');
                 const maxDateTimeLocal = toDatetimeLocal(cycleEnd);
                 return (
-                    <div className="fixed inset-0 z-[70000] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate__animated animate__fadeIn">
-                        <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-3xl w-full max-w-md shadow-2xl flex flex-col overflow-hidden">
+                    <Modal open onClose={() => setActiveExtTarget(null)} size="md" hideClose bodyClassName="!p-0">
                             <div className="px-6 py-5 border-b border-gray-100 dark:border-gray-800 flex justify-between items-center bg-gray-50/50 dark:bg-gray-955/20">
                                 <div>
                                     <h3 className="text-sm font-black text-gray-800 dark:text-white">Request Deadline Extension</h3>
@@ -780,7 +781,7 @@ const FeedbackProvided = () => {
                                         min={minDateTimeLocal}
                                         max={maxDateTimeLocal}
                                         onChange={e => setRequestedDate(e.target.value)}
-                                        className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 px-3 py-2.5 rounded-xl text-xs font-semibold focus:outline-none focus:border-teal-500 text-gray-850 dark:text-white"
+                                        className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 px-3 py-2.5 rounded-xl text-xs font-semibold focus:outline-none focus:border-brand text-gray-850 dark:text-white"
                                     />
                                     <span className="block text-[8px] text-gray-400 mt-1">Must be strictly after current deadline and before overall cycle end date ({cycleEnd.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}).</span>
                                 </div>
@@ -793,19 +794,18 @@ const FeedbackProvided = () => {
                                         placeholder="Describe why you need more time to complete this evaluation..."
                                         value={requestReason}
                                         onChange={e => setRequestReason(e.target.value)}
-                                        className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 px-3 py-2 rounded-xl text-xs font-semibold focus:outline-none focus:border-teal-500 text-gray-850 dark:text-white resize-none"
+                                        className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 px-3 py-2 rounded-xl text-xs font-semibold focus:outline-none focus:border-brand text-gray-850 dark:text-white resize-none"
                                     />
                                 </div>
 
                                 <div className="pt-2 flex justify-end gap-2 border-t border-gray-100 dark:border-gray-800">
                                     <button type="button" onClick={() => setActiveExtTarget(null)} className="px-4 py-2 border border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-455 rounded-xl text-xs font-bold hover:bg-gray-100 dark:hover:bg-gray-800 transition">Cancel</button>
-                                    <button type="submit" disabled={extSaving} className="px-5 py-2 bg-teal-500 hover:bg-teal-600 disabled:bg-gray-300 text-white rounded-xl text-xs font-bold transition shadow-md shadow-teal-500/10">
+                                    <button type="submit" disabled={extSaving} className={buttonClasses('primary', 'sm')}>
                                         {extSaving ? 'Submitting...' : 'Submit Request'}
                                     </button>
                                 </div>
                             </form>
-                        </div>
-                    </div>
+                    </Modal>
                 );
             })()}
         </div>

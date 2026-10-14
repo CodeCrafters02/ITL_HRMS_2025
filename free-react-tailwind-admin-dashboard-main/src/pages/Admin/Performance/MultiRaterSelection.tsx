@@ -4,6 +4,7 @@ import IconSearch from '../../../components/Icon/IconSearch';
 import IconUsers from '../../../components/Icon/IconUsers';
 
 import PageHeader from '../../../components/Common/PageHeader';
+import { buttonClasses } from '../../../components/Common/Button';
 interface Employee {
     id: number;
     employee_id: string;
@@ -312,7 +313,7 @@ const MultiRaterSelection = () => {
                                                     <div className="flex items-center gap-2 shrink-0">
                                                         <span className={`text-[8px] font-black uppercase px-2 py-0.5 rounded-full ${
                                                             mapping.status === 'completed' ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400'
-                                                            : mapping.status === 'approved' ? 'bg-blue-100 text-blue-700 dark:bg-blue-950/40 dark:text-blue-400'
+                                                            : mapping.status === 'approved' ? 'bg-brand-100 text-brand-700 dark:bg-brand-950/40 dark:text-brand-400'
                                                             : 'bg-brand-100 text-brand-dark dark:bg-brand-950/40 dark:text-brand-400'
                                                         }`}>{mapping.status}</span>
                                                         <button onClick={() => handleRemoveReviewer(mapping.id, peer.id)} disabled={isActioning}
@@ -322,7 +323,7 @@ const MultiRaterSelection = () => {
                                                     </div>
                                                 ) : (
                                                     <button onClick={() => handleAssignPeer(peer.id)} disabled={isActioning}
-                                                        className="shrink-0 px-3 py-1.5 bg-brand hover:bg-brand disabled:bg-gray-200 text-white rounded-xl text-[9px] font-black transition">
+                                                        className={buttonClasses('primary', 'md', 'shrink-0')}>
                                                         {isActioning ? '...' : '+ Assign'}
                                                     </button>
                                                 )}

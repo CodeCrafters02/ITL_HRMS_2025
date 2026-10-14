@@ -9,7 +9,7 @@ import {
     Avatar,
     Badge,
     Column,
-    DataTable,
+    ServerTable,
     FilterSelect,
     FormField,
     FormGrid,
@@ -22,13 +22,11 @@ import {
     ModalFooter,
     notifyError,
     notifySuccess,
-    SearchInput,
-    SectionCard,
     Steps,
-    TableToolbar,
     useServerTable,
 } from '../../components/Master';
 
+import Button from '../../components/Common/Button';
 interface Company {
     id: number;
     name: string;
@@ -241,43 +239,27 @@ const MasterCompany = () => {
             title="Company Management"
             description="Registered companies, their profiles and the administrator responsible for each."
             actions={
-                <button type="button" className="btn btn-primary gap-2" onClick={openAdd}>
+                <Button type="button" onClick={openAdd}>
                     <IconPlus className="h-4 w-4" />
                     Add company
-                </button>
+                </Button>
             }
         >
-            <SectionCard flush>
-                <TableToolbar onReset={table.reset} canReset={table.hasActiveFilters} summary={!table.loading && `${table.total} ${table.total === 1 ? 'company' : 'companies'}`}>
-                    <SearchInput value={table.search} onChange={table.setSearch} placeholder="Search name, email, location or phone" />
-                    <FilterSelect label="Administrator" value={table.filters.has_admin} onChange={(value) => table.setFilter('has_admin', value)} options={ADMIN_OPTIONS} allLabel="Any" />
-                </TableToolbar>
-                <DataTable
-                    columns={columns}
-                    rows={table.rows}
-                    rowKey={(company) => company.id}
-                    loading={table.loading}
-                    error={table.error}
-                    onRetry={reload}
-                    ordering={table.ordering}
-                    onOrderingChange={table.setOrdering}
-                    emptyIcon={<IconServer className="h-6 w-6" />}
-                    emptyTitle={table.hasActiveFilters ? 'No companies match these filters' : 'No companies yet'}
-                    emptyDescription={table.hasActiveFilters ? 'Try a different search term or clear the filters.' : 'Add the first company to start onboarding its administrator and employees.'}
-                    emptyAction={
-                        table.hasActiveFilters ? (
-                            <button type="button" className="btn btn-outline-primary btn-sm" onClick={table.reset}>
-                                Clear filters
-                            </button>
-                        ) : (
-                            <button type="button" className="btn btn-primary btn-sm" onClick={openAdd}>
-                                Add company
-                            </button>
-                        )
-                    }
-                    pagination={{ page: table.page, pageSize: table.pageSize, total: table.total, onPageChange: table.setPage, onPageSizeChange: table.setPageSize, noun: 'companies' }}
-                />
-            </SectionCard>
+            <ServerTable
+                table={table}
+                columns={columns}
+                rowKey={(company) => company.id}
+                noun="companies"
+                searchPlaceholder="Search name, email, location or phone"
+                filters={
+                    <>
+                        <FilterSelect label="Administrator" value={table.filters.has_admin} onChange={(value) => table.setFilter('has_admin', value)} options={ADMIN_OPTIONS} allLabel="Any" />
+                    </>
+                }
+                emptyIcon={<IconServer className="h-6 w-6" />}
+                emptyTitle={table.hasActiveFilters ? 'No companies match these filters' : 'No companies yet'}
+                emptyDescription={table.hasActiveFilters ? 'Try a different search term or clear the filters.' : 'Add the first company to start onboarding its administrator and employees.'}
+            />
 
             <MasterModal
                 open={modalOpen}
@@ -373,24 +355,24 @@ const MasterCompany = () => {
                     <ModalFooter
                         start={
                             isAdminStep && (
-                                <button type="button" className="btn btn-outline-primary" onClick={() => setStep(1)} disabled={saving}>
+                                <Button type="button" variant="outline" onClick={() => setStep(1)} disabled={saving}>
                                     Back
-                                </button>
+                                </Button>
                             )
                         }
                     >
-                        <button type="button" className="btn btn-outline-dark" onClick={() => setModalOpen(false)} disabled={saving}>
+                        <Button type="button" variant="secondary" onClick={() => setModalOpen(false)} disabled={saving}>
                             Cancel
-                        </button>
+                        </Button>
                         {!isAdminStep && (!editing || editing.admin_id) && (
-                            <button type="button" className={editing ? 'btn btn-outline-primary' : 'btn btn-primary'} onClick={goToAdminStep} disabled={saving}>
+                            <Button type="button" onClick={goToAdminStep} disabled={saving} variant={editing ? 'outline' : 'primary'}>
                                 {editing ? 'Edit administrator' : 'Next: administrator'}
-                            </button>
+                            </Button>
                         )}
                         {(editing || isAdminStep) && (
-                            <button type="submit" className="btn btn-primary" disabled={saving}>
+                            <Button type="submit" disabled={saving}>
                                 {saving ? 'Saving...' : editing ? 'Save changes' : 'Add company'}
-                            </button>
+                            </Button>
                         )}
                     </ModalFooter>
                 </form>

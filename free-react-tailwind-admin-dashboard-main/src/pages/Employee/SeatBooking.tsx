@@ -10,6 +10,8 @@ import IconChecks from '../../components/Icon/IconChecks';
 import IconClock from '../../components/Icon/IconClock';
 import PageHeader from '../../components/Common/PageHeader';
 
+import Button from '../../components/Common/Button';
+import { brandHex } from '../../theme/brandColors';
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000';
 
 const SeatBooking = () => {
@@ -246,7 +248,7 @@ const SeatBooking = () => {
             icon: 'warning',
             showCancelButton: true,
             confirmButtonColor: '#d33',
-            cancelButtonColor: '#3085d6',
+            cancelButtonColor: brandHex('brand'),
             confirmButtonText: 'Yes, cancel it!'
         });
 
@@ -548,9 +550,9 @@ const SeatBooking = () => {
                                         </div>
                                     )}
                                     {selectedSeat.booking.is_mine && (
-                                        <button onClick={() => handleCancel()} className="btn btn-danger w-full mt-4 h-11 font-bold">
+                                        <Button variant="danger" className="w-full mt-4 h-11" onClick={() => handleCancel()} >
                                             Cancel Booking
-                                        </button>
+                                        </Button>
                                     )}
                                 </div>
                             ) : (
@@ -619,9 +621,9 @@ const SeatBooking = () => {
                                         </div>
                                     )}
 
-                                    <button onClick={handleBook} className="btn btn-primary w-full mt-4 h-11 font-bold">
+                                    <Button className="w-full mt-4 h-11" onClick={handleBook}>
                                         Confirm Booking
-                                    </button>
+                                    </Button>
                                 </div>
                             )}
 
@@ -638,7 +640,7 @@ const SeatBooking = () => {
                                                         <p className="text-[10px] text-gray-400 font-bold uppercase tracking-tight">{b.booking_type}</p>
                                                     </div>
                                                     <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-full ${
-                                                        b.status === 'pending' ? 'bg-yellow-100 text-yellow-600' : 'bg-blue-100 text-blue-600'
+                                                        b.status === 'pending' ? 'bg-yellow-100 text-yellow-600' : 'bg-brand-100 text-brand-600'
                                                     }`}>
                                                         {b.status}
                                                     </span>
@@ -668,9 +670,9 @@ const SeatBooking = () => {
                                     </div>
                                 </div>
                             )}
-                            <button onClick={() => setSelectedSeat(null)} className="btn btn-outline-secondary w-full mt-2">
+                            <Button variant="secondary" className="w-full mt-2" onClick={() => setSelectedSeat(null)} >
                                 Close
-                            </button>
+                            </Button>
                         </div>
                     ) : (
                         <div className="h-full flex flex-col items-center justify-center text-center opacity-60">

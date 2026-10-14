@@ -33,6 +33,9 @@ const variants: Record<ButtonVariant, string> = {
     ghost: 'bg-transparent text-slate-600 hover:bg-slate-100 focus-visible:ring-slate-300/40 dark:text-slate-300 dark:hover:bg-slate-800',
 };
 
+/** Same look as <Button> for anchors / router Links: <a className={buttonClasses('outline', 'sm')}>. */
+export const buttonClasses = (variant: ButtonVariant = 'primary', size: ButtonSize = 'md', extra = '') => `${base} ${sizes[size]} ${variants[variant]} ${extra}`.trim();
+
 const Spinner = () => <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" aria-hidden />;
 
 export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(

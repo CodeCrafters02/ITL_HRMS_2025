@@ -1,4 +1,7 @@
 import { ReactNode } from 'react';
+import CommonDataTable, { Column as CommonColumn } from '../Common/DataTable';
+import Button from '../Common/Button';
+import type { useServerTable } from './useServerTable';
 import { EmptyState } from './Bits';
 
 export interface Column<T> {
@@ -228,3 +231,82 @@ export const Pagination = ({ page, pageSize, total, onPageChange, onPageSizeChan
         </div>
     );
 };
+
+
+type ServerTableState<T> = ReturnType<typeof useServerTable<T>>;
+
+interface ServerTableProps<T> {
+    /** State returned by useServerTable: search, filters, sorting and paging all go to the backend */
+    table: ServerTableState<T>;
+    columns: Column<T>[];
+    rowKey: (row: T) => string | number;
+    /** Plural noun for the footer, e.g. "users" */
+    noun: string;
+    searchPlaceholder?: string;
+    /** Filter controls (FilterSelect) shown next to the search box */
+    filters?: ReactNode;
+    actions?: ReactNode;
+    emptyIcon?: ReactNode;
+    emptyTitle: string;
+    emptyDescription?: string;
+}
+
+/** The shared DataTable wired to a useServerTable state. */
+export function ServerTable<T>({ table, columns, rowKey, noun, searchPlaceholder, filters, actions, emptyIcon, emptyTitle, emptyDescription }: ServerTableProps<T>) {
+    const sortField = table.ordering.replace(/^-/, '');
+    const cols: CommonColumn<T>[] = columns.map((c) => ({
+        key: c.sortKey || c.key,
+        header: c.header,
+        sortable: !!c.sortKey,
+        align: c.align,
+        className: c.className,
+        render: (_value, row) => c.render(row),
+    }));
+    return (
+        <div className="space-y-3">
+            {table.error && (
+                <div className="flex items-center justify-between gap-3 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-medium text-rose-700">
+                    <span>{table.error}</span>
+                    <Button size="sm" variant="outline-danger" onClick={table.reload}>
+                        Try again
+                    </Button>
+                </div>
+            )}
+            <CommonDataTable<T>
+                columns={cols}
+                data={table.rows}
+                rowKey={rowKey}
+                loading={table.loading}
+                page={table.page}
+                pageSize={table.pageSize}
+                totalCount={table.total}
+                onPageChange={table.setPage}
+                onPageSizeChange={table.setPageSize}
+                searchValue={table.search}
+                onSearchChange={table.setSearch}
+                searchPlaceholder={searchPlaceholder}
+                sortField={sortField || undefined}
+                sortDirection={table.ordering.startsWith('-') ? 'desc' : 'asc'}
+                onSortChange={(field, dir) => table.setOrdering(dir === 'desc' ? `-${field}` : field)}
+                onRefresh={table.reload}
+                entityLabel={noun}
+                emptyMessage={emptyTitle}
+                emptySubtitle={emptyDescription}
+                emptyIcon={emptyIcon}
+                actionButton={actions}
+                filters={
+                    (filters || table.hasActiveFilters) && (
+                        <>
+                            {filters}
+                            {table.hasActiveFilters && (
+                                <Button size="sm" variant="ghost" onClick={table.reset}>
+                                    Clear filters
+                                </Button>
+                            )}
+                        </>
+                    )
+                }
+            />
+        </div>
+    );
+}

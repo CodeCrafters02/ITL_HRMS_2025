@@ -221,7 +221,7 @@ const LoanConfig = () => {
                     <>
                         <button 
                         onClick={() => handleEdit(null)}
-                        className="mt-8 bg-white text-[#1e3a5f] px-8 py-3 rounded-xl font-black uppercase tracking-widest text-xs flex items-center gap-3 hover:bg-indigo-50 transition-all shadow-xl hover:shadow-white/20 active:scale-95"
+                        className="mt-8 bg-white text-[#1e3a5f] px-8 py-3 rounded-xl font-black uppercase tracking-widest text-xs flex items-center gap-3 hover:bg-brand-50 transition-all shadow-xl hover:shadow-white/20 active:scale-95"
                     >
                         <IconPlus className="w-5 h-5" /> Create Loan Product
                     </button>
@@ -246,7 +246,7 @@ const LoanConfig = () => {
                 cols={3}
                 onRefresh={fetchData}
                 renderCard={(cat) => (
-                        <div className="panel group hover:shadow-2xl transition-all duration-300 border-t-4 border-indigo-500 flex flex-col h-full bg-white dark:bg-[#0e1726]">
+                        <div className="panel group hover:shadow-2xl transition-all duration-300 border-t-4 border-brand-500 flex flex-col h-full bg-white dark:bg-[#0e1726]">
                             <div className="flex justify-between items-start mb-4">
                                 <div>
                                     <h3 className="text-xl font-black text-gray-800 dark:text-white-light leading-tight">{cat.name}</h3>
@@ -254,7 +254,7 @@ const LoanConfig = () => {
                                         {cat.is_active ? 'Active' : 'Inactive'}
                                     </span>
                                 </div>
-                                <button onClick={() => handleEdit(cat)} className="p-2 text-gray-400 hover:text-indigo-500 bg-gray-50 dark:bg-gray-800 rounded-lg transition-colors group-hover:scale-110">
+                                <button onClick={() => handleEdit(cat)} className="p-2 text-gray-400 hover:text-brand-500 bg-gray-50 dark:bg-gray-800 rounded-lg transition-colors group-hover:scale-110">
                                     <IconEdit className="w-5 h-5" />
                                 </button>
                             </div>
@@ -263,7 +263,7 @@ const LoanConfig = () => {
                             <div className="space-y-3 pt-4 border-t border-gray-100 dark:border-gray-800">
                                 <div className="flex justify-between items-center">
                                     <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Eligibility</span>
-                                    <span className="text-xs font-black text-indigo-600">{cat.min_tenure_months}M Tenure</span>
+                                    <span className="text-xs font-black text-brand-600">{cat.min_tenure_months}M Tenure</span>
                                 </div>
                                 <div className="flex justify-between items-center">
                                     <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Repayment</span>
@@ -291,7 +291,7 @@ const LoanConfig = () => {
                                                                 {['General Info', 'Interest Slabs', 'Eligibility'].map((t) => (
                                                                     <Tab key={t} as={Fragment}>
                                                                         {({ selected }) => (
-                                                                            <button className={`flex-1 py-4 text-xs font-black uppercase tracking-[0.2em] transition-all outline-none ${selected ? 'text-indigo-600 border-b-4 border-indigo-600 bg-white dark:bg-[#0e1726]' : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-300'}`}>
+                                                                            <button className={`flex-1 py-4 text-xs font-black uppercase tracking-[0.2em] transition-all outline-none ${selected ? 'text-brand-600 border-b-4 border-brand-600 bg-white dark:bg-[#0e1726]' : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-300'}`}>
                                                                                 {t}
                                                                             </button>
                                                                         )}
@@ -303,11 +303,11 @@ const LoanConfig = () => {
                                                                 <Tab.Panel className="space-y-5 animate-fade-in-up">
                                                                     <div>
                                                                         <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1 block">Loan Name</label>
-                                                                        <input type="text" className="form-input text-lg font-bold border-gray-200 focus:border-indigo-500" placeholder="e.g. Home Improvement Loan" value={name} onChange={e => setName(e.target.value)} />
+                                                                        <input type="text" className="form-input text-lg font-bold border-gray-200 focus:border-brand-500" placeholder="e.g. Home Improvement Loan" value={name} onChange={e => setName(e.target.value)} />
                                                                     </div>
                                                                     <div>
                                                                         <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1 block">Description</label>
-                                                                        <textarea className="form-textarea min-h-[100px] border-gray-200 focus:border-indigo-500" placeholder="Briefly describe the purpose and details of this loan..." value={description} onChange={e => setDescription(e.target.value)}></textarea>
+                                                                        <textarea className="form-textarea min-h-[100px] border-gray-200 focus:border-brand-500" placeholder="Briefly describe the purpose and details of this loan..." value={description} onChange={e => setDescription(e.target.value)}></textarea>
                                                                     </div>
                                                                     <div className="grid grid-cols-2 gap-4">
                                                                         <div>
@@ -316,7 +316,7 @@ const LoanConfig = () => {
                                                                         </div>
                                                                         <div>
                                                                             <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1 block">Min Co. Tenure (Months)</label>
-                                                                            <input type="number" className="form-input font-bold text-indigo-600" value={minTenure} onChange={e => setMinTenure(Number(e.target.value))} />
+                                                                            <input type="number" className="form-input font-bold text-brand-600" value={minTenure} onChange={e => setMinTenure(Number(e.target.value))} />
                                                                         </div>
                                                                     </div>
                                                                     <div className="grid grid-cols-1">
@@ -335,10 +335,10 @@ const LoanConfig = () => {
                                                                                     checked={isActive} 
                                                                                     onChange={() => setIsActive(!isActive)} 
                                                                                 />
-                                                                                <div className={`w-11 h-6 rounded-full transition-all duration-300 ${isActive ? 'bg-indigo-600 shadow-lg shadow-indigo-200' : 'bg-gray-300'}`}></div>
+                                                                                <div className={`w-11 h-6 rounded-full transition-all duration-300 ${isActive ? 'bg-brand-600 shadow-lg shadow-brand-200' : 'bg-gray-300'}`}></div>
                                                                                 <div className={`absolute top-1 left-1 bg-white w-4 h-4 rounded-full transition-all duration-300 shadow-sm ${isActive ? 'translate-x-5' : ''}`}></div>
                                                                             </div>
-                                                                            <span className={`text-xs font-black uppercase tracking-widest transition-colors ${isActive ? 'text-indigo-600' : 'text-gray-400'}`}>
+                                                                            <span className={`text-xs font-black uppercase tracking-widest transition-colors ${isActive ? 'text-brand-600' : 'text-gray-400'}`}>
                                                                                 {isActive ? 'Category is Active' : 'Category is Inactive'}
                                                                             </span>
                                                                         </label>
@@ -403,7 +403,7 @@ const LoanConfig = () => {
 
                                                     <div className="flex items-center justify-end px-6 py-4 bg-gray-50/50 dark:bg-gray-900/20 gap-3 border-t border-gray-100 dark:border-gray-800">
                                                         <Button variant="outline-danger" className="!px-6" onClick={() => setModal(false)} >Cancel</Button>
-                                                        <Button className="!px-8 shadow-indigo-500/20" onClick={handleSave} disabled={saving}>
+                                                        <Button className="!px-8 shadow-brand-500/20" onClick={handleSave} disabled={saving}>
                                                             {saving ? <span className="animate-spin border-2 border-white border-l-transparent rounded-full w-3 h-3 mr-2"></span> : <IconSave className="w-4 h-4 mr-2" />}
                                                             {editData ? 'Update Config' : 'Create Category'}
                                                         </Button>

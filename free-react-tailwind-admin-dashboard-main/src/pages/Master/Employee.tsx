@@ -1,15 +1,16 @@
-import { useEffect, useState, Fragment } from 'react';
+import { useEffect, useState } from 'react';
 import { useDispatch } from 'react-redux';
 import { setPageTitle } from '../../store/themeConfigSlice';
-import { Dialog, Transition } from '@headlessui/react';
 import Swal from 'sweetalert2';
-import IconX from '../../components/Icon/IconX';
 import IconPlus from '../../components/Icon/IconPlus';
 import IconEdit from '../../components/Icon/IconEdit';
 import IconTrash from '../../components/Icon/IconTrash';
 import IconEye from '../../components/Icon/IconEye';
 import IconUsers from '../../components/Icon/IconUsers';
 import PageHeader from '../../components/Common/PageHeader';
+import DataTable, { Column } from '../../components/Common/DataTable';
+import Button, { IconButton } from '../../components/Common/Button';
+import Modal from '../../components/Common/Modal';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000';
 const API_URL = `${API_BASE_URL}/app/employee/`;
@@ -40,7 +41,9 @@ const MasterEmployee = () => {
     const [search, setSearch] = useState('');
     const [page, setPage] = useState(1);
     const [pageSize, setPageSize] = useState(10);
-    const [totalPages, setTotalPages] = useState(1);
+    const [companyFilter, setCompanyFilter] = useState('');
+    const [statusFilter, setStatusFilter] = useState('');
+    const [sort, setSort] = useState<{ field: string; dir: 'asc' | 'desc' }>({ field: 'employee_id', dir: 'asc' });
     const [totalCount, setTotalCount] = useState(0);
 
     const initialFormData = {
@@ -70,7 +73,7 @@ const MasterEmployee = () => {
             fetchEmployees();
         }, 500); // 500ms debounce
         return () => clearTimeout(handler);
-    }, [search, page, pageSize]);
+    }, [search, page, pageSize, companyFilter, statusFilter, sort]);
 
     const fetchDropdownData = async () => {
         try {
@@ -105,6 +108,9 @@ const MasterEmployee = () => {
             url.searchParams.append('page', page.toString());
             url.searchParams.append('page_size', pageSize.toString());
             if (search) url.searchParams.append('search', search);
+            if (companyFilter) url.searchParams.append('company', companyFilter);
+            if (statusFilter) url.searchParams.append('is_active', statusFilter);
+            url.searchParams.append('ordering', `${sort.dir === 'desc' ? '-' : ''}${sort.field}`);
 
             const response = await fetch(url.toString(), { headers });
             if (response.ok) {
@@ -112,11 +118,9 @@ const MasterEmployee = () => {
                 if (data.results) {
                     setEmployees(data.results);
                     setTotalCount(data.count);
-                    setTotalPages(Math.ceil(data.count / pageSize));
                 } else {
                     setEmployees(data);
                     setTotalCount(data.length);
-                    setTotalPages(1);
                 }
             }
         } catch (error) {
@@ -243,234 +247,139 @@ const MasterEmployee = () => {
         }
     };
 
+    const columns: Column<any>[] = [
+        { key: 'employee_id', title: 'EMP ID', sortable: true, render: (_v, e) => <span className="font-mono text-xs font-bold text-brand">{e.employee_id || '-'}</span> },
+        { key: 'first_name', title: 'Name', sortable: true, render: (_v, e) => <span className="font-semibold text-slate-900">{`${e.first_name || ''} ${e.last_name || ''}`.trim() || '-'}</span> },
+        { key: 'email', title: 'Email', sortable: true, hideBelow: 'md', render: (_v, e) => <span className="break-all text-slate-600">{e.email}</span> },
+        { key: 'company__name', title: 'Company', sortable: true, hideBelow: 'lg', render: (_v, e) => e.company_name || '-' },
+        { key: 'department__department_name', title: 'Department', sortable: true, hideBelow: 'lg', render: (_v, e) => e.department_name || '-' },
+        {
+            key: 'designation__designation_name',
+            title: 'Designation',
+            sortable: true,
+            render: (_v, e) => <span className="rounded-full bg-brand/10 px-2.5 py-1 text-[11px] font-bold text-brand">{e.designation_name || '-'}</span>,
+        },
+        {
+            key: 'is_active',
+            title: 'Status',
+            sortable: true,
+            align: 'center',
+            render: (_v, e) => (
+                <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-bold ${e.is_active ? 'bg-emerald-500/10 text-emerald-600' : 'bg-rose-500/10 text-rose-600'}`}>
+                    <span className={`h-1.5 w-1.5 rounded-full ${e.is_active ? 'bg-emerald-500' : 'bg-rose-500'}`} />
+                    {e.is_active ? 'Active' : 'Inactive'}
+                </span>
+            ),
+        },
+        {
+            key: 'actions',
+            title: 'Actions',
+            align: 'right',
+            render: (_v, e) => (
+                <div className="flex items-center justify-end gap-1">
+                    <IconButton tone="neutral" label="View profile" onClick={() => handleView(e)}>
+                        <IconEye />
+                    </IconButton>
+                    <IconButton label="Edit employee" onClick={() => handleEdit(e)}>
+                        <IconEdit />
+                    </IconButton>
+                    <IconButton tone="danger" label="Delete employee" onClick={() => handleDelete(e)}>
+                        <IconTrash />
+                    </IconButton>
+                </div>
+            ),
+        },
+    ];
+
+    const addEmployee = () => {
+        resetForm();
+        setIsAddModalOpen(true);
+    };
+
     return (
-        <div>
+        <div className="space-y-6">
             <PageHeader
                 title="Employee Management"
                 subtitle="Manage and view the complete organizational employee registry, department roles, and designations."
                 icon={<IconUsers />}
                 badge="Workforce Master"
-                variant="primary"
                 actions={
-                    <button
-                        type="button"
-                        className="btn btn-primary gap-2 shadow-lg shadow-primary/20 backdrop-blur-sm"
-                        onClick={() => {
-                            resetForm();
-                            setIsAddModalOpen(true);
-                        }}
-                    >
-                        <IconPlus className="w-4 h-4" /> Add Employee
-                    </button>
+                    <Button leftIcon={<IconPlus />} onClick={addEmployee}>
+                        Add Employee
+                    </Button>
                 }
             />
 
-            <div className="flex flex-wrap items-center justify-end gap-4 mb-5">
-                <div className="flex items-center gap-2 w-full sm:w-auto">
-                    <input
-                        type="text"
-                        className="form-input w-full sm:w-64"
-                        placeholder="Search by name, email..."
-                        value={search}
-                        onChange={(e) => { setSearch(e.target.value); setPage(1); }}
-                    />
-                    <button
-                        type="button"
-                        className="btn btn-primary gap-2"
-                        onClick={() => {
-                            resetForm();
-                            setIsAddModalOpen(true);
-                        }}
-                    >
-                        <IconPlus /> Add Employee
-                    </button>
-                </div>
-            </div>
-
-            <div className="panel p-0 border-0 overflow-hidden">
-                <div className="table-responsive">
-                    <table className="table-hover">
-                        <thead>
-                            <tr>
-                                <th>EMP ID</th>
-                                <th>Name</th>
-                                <th>Email</th>
-                                <th>Company</th>
-                                <th>Department</th>
-                                <th>Designation</th>
-                                <th className="text-center">Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {loading ? (
-                                <tr>
-                                    <td colSpan={6} className="text-center py-5">Loading...</td>
-                                </tr>
-                            ) : employees.length > 0 ? (
-                                employees.map((employee) => (
-                                    <tr key={employee.id}>
-                                        <td>{employee.employee_id}</td>
-                                        <td className="font-semibold">{employee.first_name} {employee.last_name}</td>
-                                        <td>{employee.email}</td>
-                                        <td>{employee.company_name || '-'}</td>
-                                        <td>{employee.department_name || '-'}</td>
-                                        <td>
-                                            <span className="badge badge-outline-primary">{employee.designation_name || '-'}</span>
-                                        </td>
-                                        <td className="text-center flex justify-center items-center gap-2 mt-[5px]">
-                                            <button type="button" className="text-info hover:text-blue-500" onClick={() => handleView(employee)}>
-                                                <IconEye className="w-5 h-5" />
-                                            </button>
-                                            <button type="button" className="text-primary hover:text-blue-700" onClick={() => handleEdit(employee)}>
-                                                <IconEdit className="w-5 h-5" />
-                                            </button>
-                                            <button type="button" className="text-danger hover:text-red-700" onClick={() => handleDelete(employee)}>
-                                                <IconTrash className="w-5 h-5" />
-                                            </button>
-                                        </td>
-                                    </tr>
-                                ))
-                            ) : (
-                                <tr>
-                                    <td colSpan={6} className="text-center py-5">No employees found.</td>
-                                </tr>
-                            )}
-                        </tbody>
-                    </table>
-                </div>
-
-                {totalCount > 0 && (
-                    <div className="flex justify-between items-center p-4 border-t border-[#e0e6ed] dark:border-[#1b2e4b]">
-                        <div className="flex items-center gap-4">
-                            <div className="text-sm text-gray-500 font-semibold dark:text-gray-400">
-                                Showing <span className="text-primary">{((page - 1) * pageSize) + 1}</span> to <span className="text-primary">{Math.min(page * pageSize, totalCount)}</span> of <span className="text-primary">{totalCount}</span> entries
-                            </div>
-                            <div className="flex items-center gap-2">
-                                <span className="text-sm font-semibold">Per side:</span>
-                                <select
-                                    className="form-select w-20 text-sm font-semibold py-1"
-                                    value={pageSize}
-                                    onChange={(e) => { setPageSize(Number(e.target.value)); setPage(1); }}
-                                >
-                                    <option value="10">10</option>
-                                    <option value="20">20</option>
-                                    <option value="50">50</option>
-                                    <option value="100">100</option>
-                                </select>
-                            </div>
-                        </div>
-                        <ul className="inline-flex items-center space-x-1 font-semibold">
-                            <li>
-                                <button
-                                    type="button"
-                                    className="flex justify-center font-semibold p-2 rounded-full transition bg-white-light text-dark hover:text-white hover:bg-primary dark:text-white-light dark:bg-[#191e3a] dark:hover:bg-primary disabled:opacity-50 disabled:cursor-not-allowed"
-                                    onClick={() => setPage(page > 1 ? page - 1 : 1)}
-                                    disabled={page === 1}
-                                >
-                                    Prev
-                                </button>
-                            </li>
-                            {(() => {
-                                const pages: (number | string)[] = [];
-                                if (totalPages <= 3) {
-                                    for (let i = 1; i <= totalPages; i++) pages.push(i);
-                                } else {
-                                    if (page <= 2) {
-                                        pages.push(1, 2, 3, 'right-ellipsis', totalPages);
-                                    } else if (page >= totalPages - 1) {
-                                        pages.push(1, 'left-ellipsis', totalPages - 2, totalPages - 1, totalPages);
-                                    } else {
-                                        pages.push(1, 'left-ellipsis', page, 'right-ellipsis', totalPages);
-                                    }
-                                }
-                                return pages.map((p, idx) => {
-                                    if (p === 'left-ellipsis' || p === 'right-ellipsis') {
-                                        const jumpPage = p === 'left-ellipsis' ? Math.max(1, page - 3) : Math.min(totalPages, page + 3);
-                                        return (
-                                            <li key={`${p}-${idx}`}>
-                                                <button
-                                                    type="button"
-                                                    title={p === 'left-ellipsis' ? "Previous 3 pages" : "Next 3 pages"}
-                                                    className="flex justify-center font-semibold px-3 py-2 rounded-full transition bg-white-light text-dark hover:text-white hover:bg-primary dark:text-white-light dark:bg-[#191e3a] dark:hover:bg-primary cursor-pointer"
-                                                    onClick={() => setPage(jumpPage)}
-                                                >
-                                                    ...
-                                                </button>
-                                            </li>
-                                        );
-                                    }
-                                    return (
-                                        <li key={p}>
-                                            <button
-                                                type="button"
-                                                className={`flex justify-center font-semibold px-3.5 py-2 rounded-full transition ${page === p ? 'bg-primary text-white shadow-[0_10px_20px_-10px_rgba(67,97,238,0.44)]' : 'bg-white-light text-dark hover:text-white hover:bg-primary dark:text-white-light dark:bg-[#191e3a] dark:hover:bg-primary'}`}
-                                                onClick={() => setPage(p as number)}
-                                            >
-                                                {p}
-                                            </button>
-                                        </li>
-                                    );
-                                });
-                            })()}
-                            <li>
-                                <button
-                                    type="button"
-                                    className="flex justify-center font-semibold p-2 rounded-full transition bg-white-light text-dark hover:text-white hover:bg-primary dark:text-white-light dark:bg-[#191e3a] dark:hover:bg-primary disabled:opacity-50 disabled:cursor-not-allowed"
-                                    onClick={() => setPage(page < totalPages ? page + 1 : totalPages)}
-                                    disabled={page === totalPages || totalPages === 0}
-                                >
-                                    Next
-                                </button>
-                            </li>
-                        </ul>
-                    </div>
-                )}
-            </div>
+            <DataTable
+                columns={columns}
+                data={employees}
+                rowKey={(e) => e.id}
+                loading={loading}
+                page={page}
+                pageSize={pageSize}
+                totalCount={totalCount}
+                onPageChange={setPage}
+                onPageSizeChange={(n) => {
+                    setPageSize(n);
+                    setPage(1);
+                }}
+                searchValue={search}
+                onSearchChange={(v) => {
+                    setSearch(v);
+                    setPage(1);
+                }}
+                searchPlaceholder="Search by ID, name, email, mobile, department or designation..."
+                sortField={sort.field}
+                sortDirection={sort.dir}
+                onSortChange={(field, dir) => {
+                    setSort({ field, dir });
+                    setPage(1);
+                }}
+                onRefresh={fetchEmployees}
+                entityLabel="employees"
+                emptyMessage="No employees found"
+                filters={
+                    <>
+                        <select
+                            className="form-select h-10 w-48 rounded-xl text-xs"
+                            value={companyFilter}
+                            onChange={(e) => {
+                                setCompanyFilter(e.target.value);
+                                setPage(1);
+                            }}
+                        >
+                            <option value="">All companies</option>
+                            {companies.map((c: any) => (
+                                <option key={c.id} value={c.id}>
+                                    {c.name}
+                                </option>
+                            ))}
+                        </select>
+                        <select
+                            className="form-select h-10 w-36 rounded-xl text-xs"
+                            value={statusFilter}
+                            onChange={(e) => {
+                                setStatusFilter(e.target.value);
+                                setPage(1);
+                            }}
+                        >
+                            <option value="">Any status</option>
+                            <option value="true">Active</option>
+                            <option value="false">Inactive</option>
+                        </select>
+                    </>
+                }
+            />
 
             {/* Comprehensive View Add/Edit Employee Modal */}
-            <Transition appear show={isAddModalOpen} as={Fragment}>
-                <Dialog as="div" open={isAddModalOpen} onClose={() => setIsAddModalOpen(false)} className="relative z-50">
-                    <Transition.Child
-                        as={Fragment}
-                        enter="ease-out duration-300"
-                        enterFrom="opacity-0"
-                        enterTo="opacity-100"
-                        leave="ease-in duration-200"
-                        leaveFrom="opacity-100"
-                        leaveTo="opacity-0"
-                    >
-                        <div className="fixed inset-0 bg-[black]/60" />
-                    </Transition.Child>
-                    <div className="fixed inset-0 overflow-y-auto">
-                        <div className="flex min-h-full items-center justify-center px-4 py-8">
-                            <Transition.Child
-                                as={Fragment}
-                                enter="ease-out duration-300"
-                                enterFrom="opacity-0 scale-95"
-                                enterTo="opacity-100 scale-100"
-                                leave="ease-in duration-200"
-                                leaveFrom="opacity-100 scale-100"
-                                leaveTo="opacity-0 scale-95"
-                            >
-                                <Dialog.Panel className="panel border-0 p-0 rounded-lg overflow-hidden w-full max-w-6xl text-black dark:text-white-dark shadow-xl">
-                                    <button
-                                        type="button"
-                                        onClick={() => setIsAddModalOpen(false)}
-                                        className="absolute top-4 ltr:right-4 rtl:left-4 text-gray-400 hover:text-gray-800 dark:hover:text-gray-600 outline-none"
-                                    >
-                                        <IconX />
-                                    </button>
-                                    <div className="text-lg font-medium bg-[#fbfbfb] dark:bg-[#121c2c] ltr:pl-5 rtl:pr-5 py-3 ltr:pr-[50px] rtl:pl-[50px]">
-                                        {editMode ? 'Edit Employee Details' : 'Add New Employee'}
-                                    </div>
-                                    <div className="p-5 max-h-[75vh] overflow-y-auto">
+            <Modal open={isAddModalOpen} onClose={() => setIsAddModalOpen(false)} title={editMode ? 'Edit Employee Details' : 'Add New Employee'} icon={<IconUsers />} size="5xl" dismissible={false}>
                                         <form onSubmit={handleSaveEmployee} className="space-y-6">
                                             
                                             {/* Section: Basic Details */}
                                             <div>
                                                 <h3 className="text-lg font-semibold text-primary mb-3">Basic Details</h3>
                                                 <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-                                                    <div><label>First Name *</label><input type="text" name="first_name" className="form-input bg-blue-50 dark:bg-gray-800" required value={formData.first_name} onChange={handleInputChange} /></div>
+                                                    <div><label>First Name *</label><input type="text" name="first_name" className="form-input bg-brand-50 dark:bg-gray-800" required value={formData.first_name} onChange={handleInputChange} /></div>
                                                     <div><label>Middle Name</label><input type="text" name="middle_name" className="form-input" value={formData.middle_name} onChange={handleInputChange} /></div>
                                                     <div><label>Last Name</label><input type="text" name="last_name" className="form-input" value={formData.last_name} onChange={handleInputChange} /></div>
                                                     
@@ -486,7 +395,7 @@ const MasterEmployee = () => {
                                                         )}
                                                         <input type="file" name="photo" className="form-input" onChange={handleInputChange} accept="image/*" />
                                                     </div>
-                                                    <div><label>Email *</label><input type="email" name="email" className="form-input bg-blue-50 dark:bg-gray-800" required value={formData.email} onChange={handleInputChange} /></div>
+                                                    <div><label>Email *</label><input type="email" name="email" className="form-input bg-brand-50 dark:bg-gray-800" required value={formData.email} onChange={handleInputChange} /></div>
                                                     <div><label>Mobile Number</label><input type="text" name="mobile" className="form-input" value={formData.mobile} onChange={handleInputChange} /></div>
                                                     <div>
                                                         <label>Gender</label>
@@ -499,7 +408,7 @@ const MasterEmployee = () => {
                                                     
                                                     <div><label>Date of Birth</label><input type="date" name="date_of_birth" className="form-input" value={formData.date_of_birth} onChange={handleInputChange} /></div>
                                                     <div><label>Company *</label>
-                                                        <select name="company" className="form-select bg-blue-50 dark:bg-gray-800" required value={formData.company} onChange={handleInputChange}>
+                                                        <select name="company" className="form-select bg-brand-50 dark:bg-gray-800" required value={formData.company} onChange={handleInputChange}>
                                                             <option value="">Select Company</option>
                                                             {companies.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                                                         </select>
@@ -658,54 +567,13 @@ const MasterEmployee = () => {
                                             </div>
 
                                             <div className="flex justify-end items-center border-t border-[#e0e6ed] dark:border-[#1b2e4b] pt-5 mt-5 space-x-3">
-                                                <button type="button" className="btn btn-outline-danger" onClick={() => setIsAddModalOpen(false)}>Cancel</button>
-                                                <button type="submit" className="btn btn-primary">{editMode ? 'Update Employee' : 'Add Employee'}</button>
+                                                <Button variant="secondary" onClick={() => setIsAddModalOpen(false)}>Cancel</Button>
+                                                <Button type="submit">{editMode ? 'Update Employee' : 'Add Employee'}</Button>
                                             </div>
                                         </form>
-                                    </div>
-                                </Dialog.Panel>
-                            </Transition.Child>
-                        </div>
-                    </div>
-                </Dialog>
-            </Transition>
+            </Modal>
             {/* View Employee Profile Modal */}
-            <Transition appear show={isViewModalOpen} as={Fragment}>
-                <Dialog as="div" open={isViewModalOpen} onClose={() => setIsViewModalOpen(false)} className="relative z-50">
-                    <Transition.Child
-                        as={Fragment}
-                        enter="ease-out duration-300"
-                        enterFrom="opacity-0"
-                        enterTo="opacity-100"
-                        leave="ease-in duration-200"
-                        leaveFrom="opacity-100"
-                        leaveTo="opacity-0"
-                    >
-                        <div className="fixed inset-0 bg-[black]/60" />
-                    </Transition.Child>
-                    <div className="fixed inset-0 overflow-y-auto">
-                        <div className="flex min-h-full items-center justify-center px-4 py-8">
-                            <Transition.Child
-                                as={Fragment}
-                                enter="ease-out duration-300"
-                                enterFrom="opacity-0 scale-95"
-                                enterTo="opacity-100 scale-100"
-                                leave="ease-in duration-200"
-                                leaveFrom="opacity-100 scale-100"
-                                leaveTo="opacity-0 scale-95"
-                            >
-                                <Dialog.Panel className="panel border-0 p-0 rounded-lg w-full max-w-4xl text-black dark:text-white-dark shadow-xl">
-                                    <button
-                                        type="button"
-                                        onClick={() => setIsViewModalOpen(false)}
-                                        className="absolute top-4 ltr:right-4 rtl:left-4 text-gray-400 hover:text-gray-800 dark:hover:text-gray-600 outline-none"
-                                    >
-                                        <IconX />
-                                    </button>
-                                    <div className="text-lg font-medium bg-[#fbfbfb] dark:bg-[#121c2c] ltr:pl-5 rtl:pr-5 py-3 ltr:pr-[50px] rtl:pl-[50px]">
-                                        Employee Profile
-                                    </div>
-                                    <div className="p-5 max-h-[75vh] overflow-y-auto">
+            <Modal open={isViewModalOpen} onClose={() => setIsViewModalOpen(false)} title="Employee Profile" icon={<IconEye />} size="4xl" footer={<Button onClick={() => setIsViewModalOpen(false)}>Close</Button>}>
                                         {viewEmployee && (
                                             <div className="space-y-6">
                                                 <div className="flex flex-col sm:flex-row items-center border-b border-[#e0e6ed] dark:border-[#1b2e4b] pb-6 gap-6">
@@ -773,16 +641,7 @@ const MasterEmployee = () => {
                                                 </div>
                                             </div>
                                         )}
-                                        <div className="flex justify-end pt-5 mt-5 border-t border-[#e0e6ed] dark:border-[#1b2e4b]">
-                                            <button type="button" className="btn btn-primary" onClick={() => setIsViewModalOpen(false)}>Close</button>
-                                        </div>
-                                    </div>
-                                </Dialog.Panel>
-                            </Transition.Child>
-                        </div>
-                    </div>
-                </Dialog>
-            </Transition>
+                                        </Modal>
         </div>
     );
 };

@@ -6,7 +6,6 @@ import 'flatpickr/dist/flatpickr.css';
 import Swal from 'sweetalert2';
 import Tippy from '@tippyjs/react';
 import 'tippy.js/dist/tippy.css';
-import { Dialog, Transition, Tab } from '@headlessui/react';
 import IconPlus from '../../components/Icon/IconPlus';
 import IconX from '../../components/Icon/IconX';
 import IconChecks from '../../components/Icon/IconChecks';
@@ -16,6 +15,11 @@ import IconRefresh from '../../components/Icon/IconRefresh';
 import IconSearch from '../../components/Icon/IconSearch';
 import PageHeader from '../../components/Common/PageHeader';
 
+import Modal from '../../components/Common/Modal';
+import { Tab } from '@headlessui/react';
+import Button from '../../components/Common/Button';
+import DataTable, { Column } from '../../components/Common/DataTable';
+import StatCard, { StatGrid } from '../../components/Common/StatCard';
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000';
 
 /** Calendar date in local timezone (do not use toISOString() — it shifts dates in non-UTC zones). */
@@ -29,7 +33,17 @@ const WFHRequest = () => {
     const [pendingRequests, setPendingRequests] = useState<any[]>([]);
     const [employees, setEmployees] = useState<any[]>([]);
     const [logs, setLogs] = useState<any[]>([]);
-    const [search, setSearch] = useState('');
+    const [reqSearch, setReqSearch] = useState('');
+    const [reqPage, setReqPage] = useState(1);
+    const [reqPageSize, setReqPageSize] = useState(10);
+    const [reqTotal, setReqTotal] = useState(0);
+    const [reqLoading, setReqLoading] = useState(false);
+    const [apSearch, setApSearch] = useState('');
+    const [apPage, setApPage] = useState(1);
+    const [apPageSize, setApPageSize] = useState(10);
+    const [apTotal, setApTotal] = useState(0);
+    const [apLoading, setApLoading] = useState(false);
+    const [counts, setCounts] = useState({ total: 0, pending: 0, approved: 0, rejected: 0 });
     const [showModal, setShowModal] = useState(false);
     const [myLocation, setMyLocation] = useState<string | null>(null);
     
@@ -49,33 +63,84 @@ const WFHRequest = () => {
         Authorization: `Bearer ${localStorage.getItem('access_token')}`,
     };
 
-    useEffect(() => {
-        fetchAllData();
-    }, []);
-
-    const fetchAllData = async () => {
-        setLoading(true);
+    const fetchMine = async () => {
+        setReqLoading(true);
         try {
-            const promises: any[] = [
-                axios.get(`${API_BASE_URL}/app/wfh-requests/?mine=true`, { headers }),
-                axios.get(`${API_BASE_URL}/app/wfh-requests/`, { headers }),
-                axios.get(`${API_BASE_URL}/app/employee/me/`, { headers }).catch(() => ({ data: {} })),
-            ];
-
-            const results = await Promise.all(promises);
-            
-            setRequests(results[0].data.results || results[0].data);
-            if (results[2].data.work_location) setMyLocation(results[2].data.work_location);
-            
-            const approvalRes = results[1].data.results || results[1].data;
-            setPendingRequests(approvalRes.filter((r: any) => r.status === 'pending' && r.employee_username !== myUsername));
-
+            const res = await axios.get(`${API_BASE_URL}/app/wfh-requests/`, {
+                headers,
+                params: { mine: 'true', page: reqPage, page_size: reqPageSize, search: reqSearch.trim() || undefined },
+            });
+            const list = res.data.results || (Array.isArray(res.data) ? res.data : []);
+            setRequests(list);
+            setReqTotal(res.data.count !== undefined ? res.data.count : list.length);
         } catch (error) {
-            console.error('Error fetching WFH data:', error);
+            console.error('Error fetching WFH requests:', error);
         } finally {
+            setReqLoading(false);
             setLoading(false);
         }
     };
+
+    const fetchApprovals = async () => {
+        setApLoading(true);
+        try {
+            const res = await axios.get(`${API_BASE_URL}/app/wfh-requests/`, {
+                headers,
+                params: { status: 'pending', page: apPage, page_size: apPageSize, search: apSearch.trim() || undefined },
+            });
+            const list = res.data.results || (Array.isArray(res.data) ? res.data : []);
+            setPendingRequests(list.filter((r: any) => r.employee_username !== myUsername));
+            setApTotal(res.data.count !== undefined ? res.data.count : list.length);
+        } catch (error) {
+            console.error('Error fetching approvals:', error);
+        } finally {
+            setApLoading(false);
+        }
+    };
+
+    const fetchCounts = async () => {
+        try {
+            const one = (status?: string) => axios.get(`${API_BASE_URL}/app/wfh-requests/`, { headers, params: { mine: 'true', page: 1, page_size: 1, status } });
+            const [all, pending, approved, rejected] = await Promise.all([one(), one('pending'), one('approved'), one('rejected')]);
+            const n = (r: any) => (r.data.count !== undefined ? r.data.count : (r.data.results || r.data || []).length);
+            setCounts({ total: n(all), pending: n(pending), approved: n(approved), rejected: n(rejected) });
+        } catch {
+            /* counts are informational */
+        }
+    };
+
+    const fetchMyLocation = async () => {
+        try {
+            const res = await axios.get(`${API_BASE_URL}/app/employee/me/`, { headers });
+            if (res.data?.work_location) setMyLocation(res.data.work_location);
+        } catch {
+            /* optional */
+        }
+    };
+
+    const fetchAllData = () => {
+        fetchMine();
+        fetchApprovals();
+        fetchCounts();
+        fetchMyLocation();
+    };
+
+    useEffect(() => {
+        fetchCounts();
+        fetchMyLocation();
+    }, []);
+
+    useEffect(() => {
+        const t = setTimeout(fetchMine, 350);
+        return () => clearTimeout(t);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [reqPage, reqPageSize, reqSearch]);
+
+    useEffect(() => {
+        const t = setTimeout(fetchApprovals, 350);
+        return () => clearTimeout(t);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [apPage, apPageSize, apSearch]);
 
     const handleSubmit = async (e: any) => {
         e.preventDefault();
@@ -171,15 +236,65 @@ const WFHRequest = () => {
         }
     };
 
-    const filteredEmployees = employees.filter((emp: any) => 
-        emp.full_name.toLowerCase().includes(search.toLowerCase()) || 
-        emp.employee_id?.toLowerCase().includes(search.toLowerCase())
+    const tabs = ['My Requests', 'Team Approvals'];
+
+    const typeBadge = (t: string) => (
+        <span className={`badge text-[9px] font-black uppercase tracking-widest ${t === 'wfo' ? 'badge-outline-success' : 'badge-outline-primary'}`}>{t === 'wfo' ? 'Office' : 'Home'}</span>
     );
 
-    const tabs = ['My Requests', 'Team Approvals'];
-    const myApprovedCount = requests.filter((r: any) => r.status === 'approved').length;
-    const myPendingCount = requests.filter((r: any) => r.status === 'pending').length;
-    const myRejectedCount = requests.filter((r: any) => r.status === 'rejected').length;
+    const myColumns: Column<any>[] = [
+        { key: 'request_type', title: 'Type', render: (v) => typeBadge(v) },
+        { key: 'reason', title: 'Reason', hideBelow: 'md', render: (v) => <span className="block min-w-[200px] whitespace-normal text-sm font-semibold text-gray-700">{v}</span> },
+        {
+            key: 'from_date', title: 'Duration',
+            render: (_v, req) => (
+                <div className="flex flex-col">
+                    <span className="text-xs font-bold text-brand">{req.from_date || 'N/A'}</span>
+                    {req.to_date && <span className="text-[10px] italic text-gray-400">to {req.to_date}</span>}
+                </div>
+            ),
+        },
+        { key: 'status', title: 'Status', align: 'center', render: (v) => getStatusBadge(v) },
+        { key: 'created_at', title: 'Requested On', hideBelow: 'lg', render: (v) => <span className="text-[11px] font-semibold text-gray-500">{new Date(v).toLocaleDateString()}</span> },
+        {
+            key: 'rejection_reason', title: 'Feedback', hideBelow: 'lg',
+            render: (v) =>
+                v ? (
+                    <div className="flex max-w-[220px] items-start gap-2">
+                        <IconInfoCircle className="mt-0.5 h-3 w-3 shrink-0 text-rose-500" />
+                        <span className="text-[11px] font-medium italic text-rose-600">{v}</span>
+                    </div>
+                ) : (
+                    <span className="text-[10px] text-gray-400">—</span>
+                ),
+        },
+    ];
+
+    const approvalColumns: Column<any>[] = [
+        {
+            key: 'employee_name', title: 'Employee',
+            render: (_v, req) => (
+                <div className="flex flex-col">
+                    <span className="font-black text-brand">{req.employee_name}</span>
+                    <span className="text-[10px] font-semibold uppercase tracking-wide text-gray-400">ID: {req.employee_id}</span>
+                </div>
+            ),
+        },
+        { key: 'employee_current_location', title: 'Current', align: 'center', hideBelow: 'md', render: (v) => <span className={`badge text-[9px] font-black uppercase tracking-widest ${v === 'home' ? 'badge-outline-primary' : 'badge-outline-success'}`}>{v === 'home' ? 'Home' : 'Office'}</span> },
+        { key: 'request_type', title: 'Request', align: 'center', render: (v) => typeBadge(v) },
+        { key: 'reason', title: 'Reason', hideBelow: 'lg', render: (v) => <span className="block min-w-[200px] whitespace-normal text-xs font-medium text-gray-600">{v}</span> },
+        { key: 'from_date', title: 'Duration', align: 'center', hideBelow: 'md', render: (_v, req) => <span className="text-xs font-bold">{req.from_date || 'N/A'} {req.to_date ? `→ ${req.to_date}` : ''}</span> },
+        {
+            key: 'actions', title: 'Actions', align: 'center',
+            render: (_v, req) => (
+                <div className="flex items-center justify-center gap-2">
+                    <Tippy content="Approve"><Button variant="outline-success" size="sm" className="!p-2" onClick={() => handleApprove(req.id)}><IconChecks className="h-4 w-4" /></Button></Tippy>
+                    <Tippy content="Reject"><Button variant="outline-danger" size="sm" className="!p-2" onClick={() => handleReject(req.id)}><IconX className="h-4 w-4" /></Button></Tippy>
+                </div>
+            ),
+        },
+    ];
+
 
     return (
         <div className="pb-10 space-y-7">
@@ -192,44 +307,32 @@ const WFHRequest = () => {
                 actions={
                     <div className="flex items-center gap-3">
                         {myLocation && (
-                            <div className="rounded-xl border border-white/20 bg-white/10 px-4 py-2 backdrop-blur-md">
-                                <p className="text-[10px] uppercase tracking-widest font-bold text-white/80">Current Work Mode</p>
-                                <p className="mt-0.5 flex items-center gap-2 text-xs font-extrabold text-white">
-                                    <span className={`h-2 w-2 rounded-full ${myLocation === 'home' ? 'bg-indigo-300' : 'bg-emerald-300'} animate-pulse`} />
+                            <div className="rounded-xl border border-brand/20 bg-brand/10 px-4 py-2">
+                                <p className="text-[10px] uppercase tracking-widest font-bold text-slate-500">Current Work Mode</p>
+                                <p className="mt-0.5 flex items-center gap-2 text-xs font-extrabold text-slate-900">
+                                    <span className={`h-2 w-2 rounded-full ${myLocation === 'home' ? 'bg-brand-300' : 'bg-emerald-300'} animate-pulse`} />
                                     {myLocation === 'home' ? 'At Home' : 'In Office'}
                                 </p>
                             </div>
                         )}
-                        <button
+                        <Button
                             type="button"
-                            className="btn btn-primary gap-2 shadow-lg shadow-primary/20 backdrop-blur-sm"
+                            
                             onClick={() => setShowModal(true)}
                         >
                             <IconPlus className="w-4 h-4" />
                             New Request
-                        </button>
+                        </Button>
                     </div>
                 }
             />
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
-                <div className="panel border border-indigo-100/70 dark:border-indigo-900/40 shadow-sm">
-                    <p className="text-[11px] uppercase tracking-widest text-gray-500 font-bold">Total Requests</p>
-                    <p className="mt-2 text-2xl font-black text-indigo-600">{requests.length}</p>
-                </div>
-                <div className="panel border border-blue-100/70 dark:border-blue-900/40 shadow-sm">
-                    <p className="text-[11px] uppercase tracking-widest text-gray-500 font-bold">Pending</p>
-                    <p className="mt-2 text-2xl font-black text-blue-600">{myPendingCount}</p>
-                </div>
-                <div className="panel border border-emerald-100/70 dark:border-emerald-900/40 shadow-sm">
-                    <p className="text-[11px] uppercase tracking-widest text-gray-500 font-bold">Approved</p>
-                    <p className="mt-2 text-2xl font-black text-emerald-600">{myApprovedCount}</p>
-                </div>
-                <div className="panel border border-rose-100/70 dark:border-rose-900/40 shadow-sm">
-                    <p className="text-[11px] uppercase tracking-widest text-gray-500 font-bold">Rejected</p>
-                    <p className="mt-2 text-2xl font-black text-rose-600">{myRejectedCount}</p>
-                </div>
-            </div>
+            <StatGrid cols={4} className="!mb-0">
+                <StatCard label="Total Requests" value={counts.total} tone="primary" icon={<IconCalendar />} />
+                <StatCard label="Pending" value={counts.pending} tone="warning" icon={<IconInfoCircle />} />
+                <StatCard label="Approved" value={counts.approved} tone="success" icon={<IconChecks />} />
+                <StatCard label="Rejected" value={counts.rejected} tone="danger" icon={<IconX />} />
+            </StatGrid>
 
             <Tab.Group>
                 <Tab.List className="flex w-full flex-wrap gap-2 rounded-2xl border border-gray-100 bg-white p-2 shadow-sm dark:border-gray-800 dark:bg-black">
@@ -238,13 +341,13 @@ const WFHRequest = () => {
                             {({ selected }) => (
                                 <button
                                     className={`relative rounded-xl px-4 py-2.5 text-xs font-black uppercase tracking-[0.15em] transition-all outline-none ${
-                                        selected ? 'bg-indigo-600 text-white shadow-lg' : 'text-gray-500 hover:text-gray-900 dark:hover:text-white'
+                                        selected ? 'bg-brand-600 text-white shadow-lg' : 'text-gray-500 hover:text-gray-900 dark:hover:text-white'
                                     }`}
                                 >
                                     {t}
-                                    {t === 'Team Approvals' && pendingRequests.length > 0 && (
+                                    {t === 'Team Approvals' && apTotal > 0 && (
                                         <span className="ml-2 inline-flex min-w-[18px] h-[18px] items-center justify-center rounded-full bg-rose-500 px-1 text-[10px] font-black text-white">
-                                            {pendingRequests.length > 99 ? '99+' : pendingRequests.length}
+                                            {apTotal > 99 ? '99+' : apTotal}
                                         </span>
                                     )}
                                 </button>
@@ -257,244 +360,118 @@ const WFHRequest = () => {
                     {tabs.map((t) => (
                         <Tab.Panel key={t} className="animate-fade-in-up">
                             {t === 'My Requests' && (
-                                <div className="panel p-0 overflow-hidden rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm">
-                                    <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 dark:border-gray-800 bg-gray-50/60 dark:bg-gray-900/30">
-                                        <div className="flex items-center gap-2">
-                                            <IconCalendar className="w-4 h-4 text-indigo-500" />
-                                            <p className="text-xs font-black uppercase tracking-widest text-gray-600 dark:text-gray-300">Request Timeline</p>
-                                        </div>
-                                        <button type="button" className="btn btn-sm btn-outline-primary" onClick={fetchAllData}>
-                                            <IconRefresh className="w-3.5 h-3.5 mr-1.5" />
-                                            Refresh
-                                        </button>
-                                    </div>
-                                    <div className="table-responsive">
-                                        <table className="table-hover">
-                                            <thead>
-                                                <tr className="bg-gray-50 dark:bg-gray-900/50">
-                                                    <th className="text-[10px] font-black uppercase tracking-wider">Type</th>
-                                                    <th className="text-[10px] font-black uppercase tracking-wider">Reason</th>
-                                                    <th className="text-[10px] font-black uppercase tracking-wider">Duration</th>
-                                                    <th className="text-[10px] font-black uppercase tracking-wider text-center">Status</th>
-                                                    <th className="text-[10px] font-black uppercase tracking-wider">Requested On</th>
-                                                    <th className="text-[10px] font-black uppercase tracking-wider">Feedback</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                {requests.map((req: any) => (
-                                                    <tr key={req.id}>
-                                                        <td>
-                                                            <span className={`badge uppercase text-[9px] font-black tracking-widest ${req.request_type === 'wfo' ? 'badge-outline-info' : 'badge-outline-secondary'}`}>
-                                                                {req.request_type === 'wfo' ? 'Office' : 'Home'}
-                                                            </span>
-                                                        </td>
-                                                        <td className="whitespace-normal min-w-[260px] text-sm font-semibold text-gray-700 dark:text-gray-200">{req.reason}</td>
-                                                        <td>
-                                                            <div className="flex flex-col">
-                                                                <span className="text-xs font-bold text-indigo-600">{req.from_date || 'N/A'}</span>
-                                                                {req.to_date && <span className="text-[10px] text-gray-400 italic">to {req.to_date}</span>}
-                                                            </div>
-                                                        </td>
-                                                        <td className="text-center">{getStatusBadge(req.status)}</td>
-                                                        <td className="text-[11px] font-semibold text-gray-500">{new Date(req.created_at).toLocaleDateString('en-GB')}</td>
-                                                        <td>
-                                                            {req.rejection_reason ? (
-                                                                <div className="flex items-start gap-2 max-w-[220px]">
-                                                                    <IconInfoCircle className="w-3 h-3 text-rose-500 mt-0.5 shrink-0" />
-                                                                    <span className="text-[11px] text-rose-600 font-medium italic">{req.rejection_reason}</span>
-                                                                </div>
-                                                            ) : (
-                                                                <span className="text-[10px] text-gray-400">—</span>
-                                                            )}
-                                                        </td>
-                                                    </tr>
-                                                ))}
-                                                {requests.length === 0 && !loading && (
-                                                    <tr>
-                                                        <td colSpan={6} className="text-center py-16">
-                                                            <div className="mx-auto max-w-sm">
-                                                                <p className="text-sm font-black uppercase tracking-widest text-gray-400">No requests yet</p>
-                                                                <p className="mt-2 text-xs text-gray-500">Start by creating your first work mode request.</p>
-                                                            </div>
-                                                        </td>
-                                                    </tr>
-                                                )}
-                                            </tbody>
-                                        </table>
-                                    </div>
-                                </div>
+                                <DataTable
+                                    columns={myColumns}
+                                    data={requests}
+                                    loading={reqLoading}
+                                    page={reqPage}
+                                    pageSize={reqPageSize}
+                                    totalCount={reqTotal}
+                                    onPageChange={setReqPage}
+                                    onPageSizeChange={(sz) => { setReqPageSize(sz); setReqPage(1); }}
+                                    searchValue={reqSearch}
+                                    onSearchChange={(v) => { setReqSearch(v); setReqPage(1); }}
+                                    onRefresh={() => { fetchMine(); fetchCounts(); }}
+                                    searchPlaceholder="Search my requests..."
+                                    emptyMessage="No requests found"
+                                    emptySubtitle="Start by creating your first work mode request."
+                                    entityLabel="requests"
+                                />
                             )}
 
                             {t === 'Team Approvals' && (
-                                <div className="panel p-0 overflow-hidden rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm">
-                                    <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 dark:border-gray-800 bg-gray-50/60 dark:bg-gray-900/30">
-                                        <div className="flex items-center gap-2">
-                                            <IconSearch className="w-4 h-4 text-indigo-500" />
-                                            <p className="text-xs font-black uppercase tracking-widest text-gray-600 dark:text-gray-300">Pending Team Approvals</p>
-                                        </div>
-                                        <button type="button" className="btn btn-sm btn-outline-primary" onClick={fetchAllData}>
-                                            <IconRefresh className="w-3.5 h-3.5 mr-1.5" />
-                                            Refresh
-                                        </button>
-                                    </div>
-                                    <div className="table-responsive">
-                                        <table className="table-hover">
-                                            <thead>
-                                                <tr className="bg-gray-50 dark:bg-gray-900/50">
-                                                    <th className="text-[10px] font-black uppercase tracking-wider">Employee</th>
-                                                    <th className="text-[10px] font-black uppercase tracking-wider text-center">Current</th>
-                                                    <th className="text-[10px] font-black uppercase tracking-wider text-center">Request</th>
-                                                    <th className="text-[10px] font-black uppercase tracking-wider">Reason</th>
-                                                    <th className="text-[10px] font-black uppercase tracking-wider text-center">Duration</th>
-                                                    <th className="text-[10px] font-black uppercase tracking-wider text-center">Actions</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                {pendingRequests.map((req: any) => (
-                                                    <tr key={req.id}>
-                                                        <td>
-                                                            <div className="flex flex-col">
-                                                                <span className="font-black text-indigo-600">{req.employee_name}</span>
-                                                                <span className="text-[10px] font-semibold uppercase tracking-wide text-gray-400">ID: {req.employee_id}</span>
-                                                            </div>
-                                                        </td>
-                                                        <td className="text-center">
-                                                            <span className={`badge uppercase text-[9px] font-black tracking-widest ${req.employee_current_location === 'home' ? 'badge-outline-secondary' : 'badge-outline-info'}`}>
-                                                                {req.employee_current_location === 'home' ? 'Home' : 'Office'}
-                                                            </span>
-                                                        </td>
-                                                        <td className="text-center">
-                                                            <span className={`badge uppercase text-[9px] font-black tracking-widest ${req.request_type === 'wfo' ? 'badge-outline-info' : 'badge-outline-secondary'}`}>
-                                                                {req.request_type === 'wfo' ? 'Office' : 'Home'}
-                                                            </span>
-                                                        </td>
-                                                        <td className="whitespace-normal min-w-[260px] text-xs font-medium text-gray-600 dark:text-gray-300">{req.reason}</td>
-                                                        <td className="text-center font-bold text-xs">{req.from_date || 'N/A'} {req.to_date ? `→ ${req.to_date}` : ''}</td>
-                                                        <td>
-                                                            <div className="flex items-center justify-center gap-2">
-                                                                <Tippy content="Approve">
-                                                                    <button onClick={() => handleApprove(req.id)} className="btn btn-sm btn-outline-success p-2 rounded-lg">
-                                                                        <IconChecks className="w-4 h-4" />
-                                                                    </button>
-                                                                </Tippy>
-                                                                <Tippy content="Reject">
-                                                                    <button onClick={() => handleReject(req.id)} className="btn btn-sm btn-outline-danger p-2 rounded-lg">
-                                                                        <IconX className="w-4 h-4" />
-                                                                    </button>
-                                                                </Tippy>
-                                                            </div>
-                                                        </td>
-                                                    </tr>
-                                                ))}
-                                                {pendingRequests.length === 0 && (
-                                                    <tr>
-                                                        <td colSpan={6} className="text-center py-16">
-                                                            <p className="text-sm font-black uppercase tracking-widest text-gray-400">No pending approvals</p>
-                                                        </td>
-                                                    </tr>
-                                                )}
-                                            </tbody>
-                                        </table>
-                                    </div>
-                                </div>
+                                <DataTable
+                                    columns={approvalColumns}
+                                    data={pendingRequests}
+                                    loading={apLoading}
+                                    page={apPage}
+                                    pageSize={apPageSize}
+                                    totalCount={apTotal}
+                                    onPageChange={setApPage}
+                                    onPageSizeChange={(sz) => { setApPageSize(sz); setApPage(1); }}
+                                    searchValue={apSearch}
+                                    onSearchChange={(v) => { setApSearch(v); setApPage(1); }}
+                                    onRefresh={fetchApprovals}
+                                    searchPlaceholder="Search pending approvals..."
+                                    emptyMessage="No pending approvals"
+                                    entityLabel="requests"
+                                />
                             )}
                         </Tab.Panel>
                     ))}
                 </Tab.Panels>
             </Tab.Group>
 
-            <Transition appear show={showModal} as={Fragment}>
-                <Dialog as="div" open={showModal} onClose={() => setShowModal(false)} className="relative z-50">
-                    <Transition.Child as={Fragment} enter="ease-out duration-300" enterFrom="opacity-0" enterTo="opacity-100" leave="ease-in duration-200" leaveFrom="opacity-100" leaveTo="opacity-0">
-                        <div className="fixed inset-0 bg-[black]/60" />
-                    </Transition.Child>
-                    <div className="fixed inset-0 overflow-y-auto">
-                        <div className="flex min-h-full items-center justify-center px-4 py-8">
-                            <Transition.Child as={Fragment} enter="ease-out duration-300" enterFrom="opacity-0 scale-95" enterTo="opacity-100 scale-100" leave="ease-in duration-200" leaveFrom="opacity-100 scale-100" leaveTo="opacity-0 scale-95">
-                                <Dialog.Panel className="w-full max-w-xl overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-2xl dark:border-gray-800 dark:bg-[#0e1726]">
-                                    <div className="flex items-center justify-between border-b border-gray-100 px-6 py-4 dark:border-gray-800">
-                                        <div>
-                                            <h5 className="text-lg font-black text-indigo-600 uppercase tracking-wide">Create Request</h5>
-                                            <p className="text-xs text-gray-500 mt-0.5">Submit your WFH/WFO plan for approval.</p>
-                                        </div>
-                                        <button onClick={() => setShowModal(false)} className="text-gray-400 hover:text-red-500">
-                                            <IconX />
-                                        </button>
-                                    </div>
-                                    <form onSubmit={handleSubmit}>
-                                        <div className="space-y-5 p-6">
-                                            <div>
-                                                <label className="mb-1 block text-[10px] font-bold uppercase tracking-widest text-gray-500">Request Type</label>
-                                                <select className="form-select text-sm font-semibold" value={formData.request_type} onChange={(e) => setFormData({ ...formData, request_type: e.target.value })}>
-                                                    <option value="wfh">Work From Home</option>
-                                                    <option value="wfo">Work From Office</option>
-                                                </select>
-                                            </div>
-                                            <div>
-                                                <label className="mb-1 block text-[10px] font-bold uppercase tracking-widest text-gray-500">Reason</label>
-                                                <textarea className="form-textarea min-h-[110px] text-sm" placeholder="Share details for your manager..." required value={formData.reason} onChange={(e) => setFormData({ ...formData, reason: e.target.value })} />
-                                            </div>
-                                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                                <div>
-                                                    <label className="mb-1 block text-[10px] font-bold uppercase tracking-widest text-gray-500">From Date</label>
-                                                    <Flatpickr
-                                                        value={formData.from_date || undefined}
-                                                        options={{ dateFormat: 'Y-m-d' }}
-                                                        className="form-input"
-                                                        onChange={(date: Date[]) => {
-                                                            const picked = date[0];
-                                                            if (!picked) {
-                                                                setFormData((prev) => ({ ...prev, from_date: '' }));
-                                                                return;
-                                                            }
-                                                            const from = dateToLocalYmd(picked);
-                                                            setFormData((prev) => ({
-                                                                ...prev,
-                                                                from_date: from,
-                                                                to_date: prev.to_date && prev.to_date < from ? from : prev.to_date,
-                                                            }));
-                                                        }}
-                                                    />
-                                                </div>
-                                                <div>
-                                                    <label className="mb-1 block text-[10px] font-bold uppercase tracking-widest text-gray-500">To Date</label>
-                                                    <Flatpickr
-                                                        value={formData.to_date || undefined}
-                                                        options={{ dateFormat: 'Y-m-d' }}
-                                                        className="form-input"
-                                                        onChange={(date: Date[]) => {
-                                                            const picked = date[0];
-                                                            if (!picked) {
-                                                                setFormData((prev) => ({ ...prev, to_date: '' }));
-                                                                return;
-                                                            }
-                                                            let to = dateToLocalYmd(picked);
-                                                            setFormData((prev) => {
-                                                                if (prev.from_date && to < prev.from_date) {
-                                                                    to = prev.from_date;
-                                                                }
-                                                                return { ...prev, to_date: to };
-                                                            });
-                                                        }}
-                                                    />
-                                                </div>
-                                            </div>
-                                        </div>
-                                        <div className="flex items-center justify-end gap-3 border-t border-gray-100 bg-gray-50/60 px-6 py-4 dark:border-gray-800 dark:bg-gray-900/20">
-                                            <button type="button" onClick={() => setShowModal(false)} className="btn btn-outline-danger">
-                                                Cancel
-                                            </button>
-                                            <button type="submit" className="btn btn-primary">
-                                                Submit Request
-                                            </button>
-                                        </div>
-                                    </form>
-                                </Dialog.Panel>
-                            </Transition.Child>
-                        </div>
-                    </div>
-                </Dialog>
-            </Transition>
+            <Modal open={showModal} onClose={() => setShowModal(false)} title="Create Request" size="xl">
+                <form onSubmit={handleSubmit}>
+                                                        <div className="space-y-5 p-6">
+                                                            <div>
+                                                                <label className="mb-1 block text-[10px] font-bold uppercase tracking-widest text-gray-500">Request Type</label>
+                                                                <select className="form-select text-sm font-semibold" value={formData.request_type} onChange={(e) => setFormData({ ...formData, request_type: e.target.value })}>
+                                                                    <option value="wfh">Work From Home</option>
+                                                                    <option value="wfo">Work From Office</option>
+                                                                </select>
+                                                            </div>
+                                                            <div>
+                                                                <label className="mb-1 block text-[10px] font-bold uppercase tracking-widest text-gray-500">Reason</label>
+                                                                <textarea className="form-textarea min-h-[110px] text-sm" placeholder="Share details for your manager..." required value={formData.reason} onChange={(e) => setFormData({ ...formData, reason: e.target.value })} />
+                                                            </div>
+                                                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                                                <div>
+                                                                    <label className="mb-1 block text-[10px] font-bold uppercase tracking-widest text-gray-500">From Date</label>
+                                                                    <Flatpickr
+                                                                        value={formData.from_date || undefined}
+                                                                        options={{ dateFormat: 'Y-m-d' }}
+                                                                        className="form-input"
+                                                                        onChange={(date: Date[]) => {
+                                                                            const picked = date[0];
+                                                                            if (!picked) {
+                                                                                setFormData((prev) => ({ ...prev, from_date: '' }));
+                                                                                return;
+                                                                            }
+                                                                            const from = dateToLocalYmd(picked);
+                                                                            setFormData((prev) => ({
+                                                                                ...prev,
+                                                                                from_date: from,
+                                                                                to_date: prev.to_date && prev.to_date < from ? from : prev.to_date,
+                                                                            }));
+                                                                        }}
+                                                                    />
+                                                                </div>
+                                                                <div>
+                                                                    <label className="mb-1 block text-[10px] font-bold uppercase tracking-widest text-gray-500">To Date</label>
+                                                                    <Flatpickr
+                                                                        value={formData.to_date || undefined}
+                                                                        options={{ dateFormat: 'Y-m-d' }}
+                                                                        className="form-input"
+                                                                        onChange={(date: Date[]) => {
+                                                                            const picked = date[0];
+                                                                            if (!picked) {
+                                                                                setFormData((prev) => ({ ...prev, to_date: '' }));
+                                                                                return;
+                                                                            }
+                                                                            let to = dateToLocalYmd(picked);
+                                                                            setFormData((prev) => {
+                                                                                if (prev.from_date && to < prev.from_date) {
+                                                                                    to = prev.from_date;
+                                                                                }
+                                                                                return { ...prev, to_date: to };
+                                                                            });
+                                                                        }}
+                                                                    />
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                        <div className="flex items-center justify-end gap-3 border-t border-gray-100 bg-gray-50/60 px-6 py-4 dark:border-gray-800 dark:bg-gray-900/20">
+                                                            <Button variant="outline-danger" type="button" onClick={() => setShowModal(false)} >
+                                                                Cancel
+                                                            </Button>
+                                                            <Button type="submit">
+                                                                Submit Request
+                                                            </Button>
+                                                        </div>
+                                                    </form>
+            </Modal>
         </div>
     );
 };

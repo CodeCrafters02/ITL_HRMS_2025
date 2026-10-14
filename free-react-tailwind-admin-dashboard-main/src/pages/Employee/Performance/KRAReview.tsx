@@ -3,6 +3,13 @@ import { useDispatch } from 'react-redux';
 import axios from 'axios';
 import { setPageTitle } from '../../../store/themeConfigSlice';
 
+import PageHeader from '../../../components/Common/PageHeader';
+import { brandHex } from '../../../theme/brandColors';
+import StatCard, { StatGrid } from '../../../components/Common/StatCard';
+import IconListCheck from '../../../components/Icon/IconListCheck';
+import IconClock from '../../../components/Icon/IconClock';
+import IconCircleCheck from '../../../components/Icon/IconCircleCheck';
+import { buttonClasses } from '../../../components/Common/Button';
 const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
 const auth = () => ({ Authorization: `Bearer ${localStorage.getItem('access_token')}` });
 
@@ -25,8 +32,8 @@ interface KRAItem {
 }
 
 const scoreLabel = (s: number) => s >= 4 ? 'Excellent' : s >= 3 ? 'Good' : s >= 2 ? 'Average' : 'Below Average';
-const scoreColor = (s: number) => s >= 4 ? 'text-emerald-600 dark:text-emerald-400' : s >= 3 ? 'text-teal-600 dark:text-teal-400' : s >= 2 ? 'text-amber-600 dark:text-amber-400' : 'text-rose-500 dark:text-rose-400';
-const scoreBg = (s: number) => s >= 4 ? 'bg-emerald-500' : s >= 3 ? 'bg-teal-500' : s >= 2 ? 'bg-amber-500' : 'bg-rose-500';
+const scoreColor = (s: number) => s >= 4 ? 'text-emerald-600 dark:text-emerald-400' : s >= 3 ? 'text-brand dark:text-brand-400' : s >= 2 ? 'text-amber-600 dark:text-amber-400' : 'text-rose-500 dark:text-rose-400';
+const scoreBg = (s: number) => s >= 4 ? 'bg-emerald-500' : s >= 3 ? 'bg-brand' : s >= 2 ? 'bg-amber-500' : 'bg-rose-500';
 
 const KRAReview = () => {
     const dispatch = useDispatch();
@@ -100,7 +107,7 @@ const KRAReview = () => {
     if (loading) return (
         <div className="flex items-center justify-center min-h-[60vh]">
             <div className="flex flex-col items-center gap-3">
-                <div className="w-10 h-10 rounded-full border-4 border-indigo-500 border-t-transparent animate-spin" />
+                <div className="w-10 h-10 rounded-full border-4 border-brand-500 border-t-transparent animate-spin" />
                 <span className="text-xs font-bold text-gray-400">Loading KRAs assigned for your review...</span>
             </div>
         </div>
@@ -115,56 +122,22 @@ const KRAReview = () => {
             )}
 
             {/* Header */}
-            <div className="bg-white dark:bg-gray-900 rounded-3xl border border-gray-100 dark:border-gray-800 shadow-sm p-6">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                    <div>
-                        <h1 className="text-xl font-black text-gray-800 dark:text-white">KRA Review Queue</h1>
-                        <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
-                            KRAs assigned to you for performance evaluation. Score each KRA to contribute to the employee's performance rating.
-                        </p>
-                    </div>
-                    <div className="flex gap-3 shrink-0">
-                        <div className="text-center bg-gray-50 dark:bg-gray-850/40 border border-gray-200 dark:border-gray-800 rounded-2xl px-5 py-3">
-                            <span className="block text-2xl font-black text-gray-800 dark:text-white">{kras.length}</span>
-                            <span className="block text-[10px] font-bold uppercase tracking-wider text-gray-400 mt-0.5">Total KRAs</span>
-                        </div>
-                        <div className="text-center bg-amber-50 dark:bg-amber-950/30 border border-amber-100 dark:border-amber-900/40 rounded-2xl px-5 py-3">
-                            <span className="block text-2xl font-black text-amber-600 dark:text-amber-400">{pendingTotal}</span>
-                            <span className="block text-[10px] font-bold uppercase tracking-wider text-amber-500 mt-0.5">Pending</span>
-                        </div>
-                        <div className="text-center bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-100 dark:border-emerald-900/40 rounded-2xl px-5 py-3">
-                            <span className="block text-2xl font-black text-emerald-600 dark:text-emerald-400">{reviewedTotal}</span>
-                            <span className="block text-[10px] font-bold uppercase tracking-wider text-emerald-500 mt-0.5">Reviewed</span>
-                        </div>
-                    </div>
-                </div>
+            <PageHeader title="KRA Review Queue" subtitle="KRAs assigned to you for performance evaluation. Score each KRA to contribute to the employee's performance rating." icon={<IconListCheck />} />
 
-                {/* Progress bar */}
-                {kras.length > 0 && (
-                    <div className="mt-4 pt-4 border-t border-gray-100 dark:border-gray-800">
-                        <div className="flex items-center justify-between mb-1.5">
-                            <span className="text-[10px] font-black uppercase tracking-wider text-gray-400">Review Progress</span>
-                            <span className="text-[10px] font-black text-emerald-600">{Math.round((reviewedTotal / kras.length) * 100)}% complete</span>
-                        </div>
-                        <div className="h-2 bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden">
-                            <div className="h-full bg-emerald-500 rounded-full transition-all duration-500" style={{ width: `${(reviewedTotal / kras.length) * 100}%` }} />
-                        </div>
-                    </div>
-                )}
-
-                {/* Filter tabs */}
-                <div className="flex gap-2 mt-4">
-                    {(['all', 'pending', 'reviewed'] as const).map(f => (
-                        <button
-                            key={f}
-                            onClick={() => setFilter(f)}
-                            className={`px-4 py-1.5 rounded-xl text-[11px] font-black uppercase tracking-wider transition ${filter === f ? 'bg-indigo-500 text-white shadow-sm' : 'bg-gray-100 dark:bg-gray-800 text-gray-500 hover:bg-gray-200 dark:hover:bg-gray-700'}`}
-                        >
-                            {f === 'all' ? `All (${kras.length})` : f === 'pending' ? `Pending (${pendingTotal})` : `Reviewed (${reviewedTotal})`}
-                        </button>
-                    ))}
-                </div>
-            </div>
+            <StatGrid cols={3} className="!mb-0">
+                <StatCard label="Total KRAs" value={kras.length} icon={<IconListCheck />} tone="primary" active={filter === 'all'} onClick={() => setFilter('all')} />
+                <StatCard label="Pending" value={pendingTotal} icon={<IconClock />} tone="warning" active={filter === 'pending'} onClick={() => setFilter('pending')} />
+                <StatCard
+                    label="Reviewed"
+                    value={reviewedTotal}
+                    icon={<IconCircleCheck />}
+                    tone="success"
+                    hint={kras.length ? `${Math.round((reviewedTotal / kras.length) * 100)}% complete` : undefined}
+                    progress={kras.length ? (reviewedTotal / kras.length) * 100 : 0}
+                    active={filter === 'reviewed'}
+                    onClick={() => setFilter('reviewed')}
+                />
+            </StatGrid>
 
             {kras.length === 0 ? (
                 <div className="bg-white dark:bg-gray-900 rounded-3xl border border-dashed border-gray-200 dark:border-gray-800 p-20 text-center shadow-sm">
@@ -190,7 +163,7 @@ const KRAReview = () => {
                                     onClick={() => setExpandedEmployee(isOpen && expandedEmployee === empIdNum ? null : empIdNum)}
                                     className="w-full flex items-center gap-4 p-5 hover:bg-gray-50/50 dark:hover:bg-gray-850/20 transition text-left"
                                 >
-                                    <div className="w-11 h-11 rounded-2xl bg-indigo-500 text-white font-black text-xs flex items-center justify-center shrink-0">
+                                    <div className="w-11 h-11 rounded-2xl bg-brand-500 text-white font-black text-xs flex items-center justify-center shrink-0">
                                         {group.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
                                     </div>
                                     <div className="flex-1 min-w-0">
@@ -220,7 +193,7 @@ const KRAReview = () => {
                                             const ev = kra.evaluation;
                                             const f = forms[kra.id];
                                             const isEditing = f !== undefined;
-                                            const colors = ['#14b8a6','#6366f1','#8b5cf6','#f59e0b','#f43f5e','#06b6d4'];
+                                            const colors = ['#14b8a6',brandHex('brand'),brandHex('accent'),'#f59e0b','#f43f5e',brandHex('mid')];
                                             const color = colors[idx % colors.length];
                                             const circumference = 2 * Math.PI * 14;
                                             const dash = (kra.weightage / 100) * circumference;
@@ -261,21 +234,21 @@ const KRAReview = () => {
 
                                                             {/* Eval area */}
                                                             {ev && !isEditing ? (
-                                                                <div className="flex items-center gap-3 bg-indigo-50 dark:bg-indigo-950/20 rounded-xl px-4 py-3">
+                                                                <div className="flex items-center gap-3 bg-brand-50 dark:bg-brand-950/20 rounded-xl px-4 py-3">
                                                                     <div>
                                                                         <span className={`block text-2xl font-black ${scoreColor(ev.score)}`}>{ev.score.toFixed(1)}</span>
                                                                         <span className={`block text-[9px] font-black uppercase ${scoreColor(ev.score)}`}>{scoreLabel(ev.score)}</span>
                                                                     </div>
                                                                     <div className="flex-1">
-                                                                        <div className="h-1.5 bg-indigo-100 dark:bg-indigo-900/40 rounded-full overflow-hidden">
+                                                                        <div className="h-1.5 bg-brand-100 dark:bg-brand-900/40 rounded-full overflow-hidden">
                                                                             <div className={`h-full rounded-full ${scoreBg(ev.score)}`} style={{ width: `${(ev.score / 5) * 100}%` }} />
                                                                         </div>
-                                                                        {ev.remarks && <p className="text-[10px] text-indigo-600 dark:text-indigo-300 mt-1.5 font-semibold italic">"{ev.remarks}"</p>}
+                                                                        {ev.remarks && <p className="text-[10px] text-brand-600 dark:text-brand-300 mt-1.5 font-semibold italic">"{ev.remarks}"</p>}
                                                                         <span className="text-[9px] text-gray-400 mt-1 block">Evaluated {ev.evaluated_at}</span>
                                                                     </div>
                                                                     <button
                                                                         onClick={() => setForms(p => ({ ...p, [kra.id]: { score: String(ev.score), remarks: ev.remarks } }))}
-                                                                        className="px-3 py-1.5 rounded-lg text-[10px] font-black border border-indigo-200 dark:border-indigo-800 text-indigo-600 dark:text-indigo-400 hover:bg-white dark:hover:bg-indigo-950/40 transition"
+                                                                        className="px-3 py-1.5 rounded-lg text-[10px] font-black border border-brand-200 dark:border-brand-800 text-brand-600 dark:text-brand-400 hover:bg-white dark:hover:bg-brand-950/40 transition"
                                                                     >Edit</button>
                                                                 </div>
                                                             ) : (
@@ -289,7 +262,7 @@ const KRAReview = () => {
                                                                                 onChange={e => setForms(p => ({ ...p, [kra.id]: { ...(p[kra.id] ?? { remarks: '' }), score: e.target.value } }))}
                                                                                 onFocus={() => !f && setForms(p => ({ ...p, [kra.id]: { score: ev ? String(ev.score) : '', remarks: ev?.remarks ?? '' } }))}
                                                                                 placeholder="0–5"
-                                                                                className="w-full text-sm font-black bg-white dark:bg-gray-850/50 border border-gray-200 dark:border-gray-800 rounded-xl px-3 py-2 focus:outline-none focus:border-indigo-400 transition"
+                                                                                className="w-full text-sm font-black bg-white dark:bg-gray-850/50 border border-gray-200 dark:border-gray-800 rounded-xl px-3 py-2 focus:outline-none focus:border-brand-400 transition"
                                                                             />
                                                                         </div>
                                                                         <div className="col-span-3">
@@ -300,7 +273,7 @@ const KRAReview = () => {
                                                                                 onChange={e => setForms(p => ({ ...p, [kra.id]: { ...(p[kra.id] ?? { score: '' }), remarks: e.target.value } }))}
                                                                                 onFocus={() => !f && setForms(p => ({ ...p, [kra.id]: { score: ev ? String(ev.score) : '', remarks: ev?.remarks ?? '' } }))}
                                                                                 placeholder="Performance remarks..."
-                                                                                className="w-full text-xs font-semibold bg-white dark:bg-gray-850/50 border border-gray-200 dark:border-gray-800 rounded-xl px-3 py-2 focus:outline-none focus:border-indigo-400 transition"
+                                                                                className="w-full text-xs font-semibold bg-white dark:bg-gray-850/50 border border-gray-200 dark:border-gray-800 rounded-xl px-3 py-2 focus:outline-none focus:border-brand-400 transition"
                                                                             />
                                                                         </div>
                                                                     </div>
@@ -309,7 +282,7 @@ const KRAReview = () => {
                                                                         {[1,2,3,4,5].map(s => (
                                                                             <button key={s}
                                                                                 onClick={() => setForms(p => ({ ...p, [kra.id]: { ...(p[kra.id] ?? { remarks: '' }), score: String(s) } }))}
-                                                                                className={`w-7 h-7 rounded-lg text-xs font-black transition ${f?.score === String(s) ? 'bg-indigo-500 text-white' : 'bg-gray-100 dark:bg-gray-800 text-gray-500 hover:bg-indigo-100 dark:hover:bg-indigo-950/30 hover:text-indigo-600'}`}
+                                                                                className={`w-7 h-7 rounded-lg text-xs font-black transition ${f?.score === String(s) ? 'bg-brand-500 text-white' : 'bg-gray-100 dark:bg-gray-800 text-gray-500 hover:bg-brand-100 dark:hover:bg-brand-950/30 hover:text-brand-600'}`}
                                                                             >{s}</button>
                                                                         ))}
                                                                         <div className="ml-auto flex gap-2">
@@ -317,7 +290,7 @@ const KRAReview = () => {
                                                                             <button
                                                                                 onClick={() => handleSubmit(kra)}
                                                                                 disabled={submitting === kra.id}
-                                                                                className="px-4 py-1.5 rounded-xl text-[10px] font-black bg-indigo-500 hover:bg-indigo-600 text-white shadow-sm disabled:opacity-60 transition flex items-center gap-1.5"
+                                                                                className={buttonClasses('primary', 'sm')}
                                                                             >
                                                                                 {submitting === kra.id && <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" />}
                                                                                 {ev ? 'Update' : 'Submit'}

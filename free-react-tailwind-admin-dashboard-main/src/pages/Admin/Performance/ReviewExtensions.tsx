@@ -8,6 +8,7 @@ import IconClock from '../../../components/Icon/IconClock';
 import IconCircleCheck from '../../../components/Icon/IconCircleCheck';
 import IconXCircle from '../../../components/Icon/IconXCircle';
 import IconListCheck from '../../../components/Icon/IconListCheck';
+import { buttonClasses } from '../../../components/Common/Button';
 interface Cycle { id: number; name: string; status: string; }
 interface Employee { id: number; full_name: string; initials: string; designation_name: string | null; department_name: string | null; }
 
@@ -36,7 +37,7 @@ const STATUS_STYLE = {
     rejected: { badge: 'bg-rose-100 text-rose-700 dark:bg-rose-950/40 dark:text-rose-400',       dot: 'bg-rose-400',    label: 'Rejected' },
 };
 
-const AVATAR_COLORS = ['bg-brand','bg-violet-500','bg-rose-500','bg-amber-500','bg-indigo-500','bg-pink-500','bg-cyan-500'];
+const AVATAR_COLORS = ['bg-brand','bg-brand-accent','bg-rose-500','bg-amber-500','bg-brand-500','bg-pink-500','bg-brand-mid'];
 const avatarColor = (id: number) => AVATAR_COLORS[id % AVATAR_COLORS.length];
 
 const fmt = (d: string) => d ? new Date(d).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '—';
@@ -230,7 +231,7 @@ const ReviewExtensions = () => {
 
                         <div className="sm:col-span-full flex justify-end">
                             <button type="submit" disabled={saving || !formCycle || !formEmployee}
-                                className="px-5 py-2 bg-brand hover:bg-brand disabled:bg-gray-300 text-white rounded-xl text-xs font-bold">
+                                className={buttonClasses('primary', 'sm')}>
                                 {saving ? 'Granting...' : 'Grant & Approve Extension'}
                             </button>
                         </div>

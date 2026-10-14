@@ -115,6 +115,7 @@ const AdminDepartment = lazy(() => import('../pages/Admin/Department'));
 const AdminLevel = lazy(() => import('../pages/Admin/Level'));
 const AdminDesignation = lazy(() => import('../pages/Admin/Designation'));
 const AdminEmployeeRegister = lazy(() => import('../pages/Admin/EmployeeRegister'));
+const MicrosoftEntraDirectory = lazy(() => import('../pages/Admin/MicrosoftEntraDirectory'));
 const AdminAssignShifts = lazy(() => import('../pages/Admin/AssignShifts'));
 const AdminRecruitment = lazy(() => import('../pages/Admin/Recruitment'));
 const AdminRelievedEmployees = lazy(() => import('../pages/Admin/RelievedEmployees'));
@@ -641,6 +642,10 @@ const routes = [
     {
         path: '/admin/employee-register',
         element: <AdminEmployeeRegister />,
+    },
+    {
+        path: '/admin/entra-directory',
+        element: <MicrosoftEntraDirectory />,
     },
     {
         path: '/admin/assign-shifts',

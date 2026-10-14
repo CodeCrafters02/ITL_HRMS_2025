@@ -4,6 +4,9 @@ export interface CompanyPolicy {
     id: number;
     name: string;
     document: string | null;
+    version: string;
+    published_at: string | null;
+    file_name: string;
 }
 
 export interface PaginatedCompanyPolicies {
@@ -51,4 +54,13 @@ export const fetchCompanyPolicies = async (params?: {
         count,
         total_pages: Math.max(1, Math.ceil(count / pageSize)),
     };
+};
+
+export const fetchPolicyFile = async (id: number): Promise<Blob> => {
+    const res = await authFetch(`${EMPLOYEE_API}/employee-companypolicies/${id}/file/`);
+    if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error((data as { detail?: string }).detail || 'Failed to load document');
+    }
+    return res.blob();
 };

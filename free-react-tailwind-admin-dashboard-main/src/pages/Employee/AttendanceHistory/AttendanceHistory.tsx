@@ -5,6 +5,8 @@ import IconCalendar from '../../../components/Icon/IconCalendar';
 import PageHeader from '../../../components/Common/PageHeader';
 import { AttendanceHistoryResponse, AttendanceStatus, fetchAttendanceHistory, fetchCompanyHolidays } from './api';
 
+import Button from '../../../components/Common/Button';
+import Modal from '../../../components/Common/Modal';
 const statusClassMap: Record<AttendanceStatus, string> = {
     present: 'bg-success-light text-success',
     absent: 'bg-danger-light text-danger',
@@ -171,9 +173,9 @@ const AttendanceHistory = () => {
                 badge="Time & Attendance"
                 variant="indigo"
                 actions={
-                    <button type="button" className="btn btn-outline-light gap-2 backdrop-blur-md bg-white/10 hover:bg-white/20 border-white/20 text-white font-semibold" onClick={loadAttendance}>
+                    <Button variant="outline" type="button"  onClick={loadAttendance}>
                         {loading ? 'Refreshing...' : 'Refresh'}
-                    </button>
+                    </Button>
                 }
             />
 
@@ -222,7 +224,7 @@ const AttendanceHistory = () => {
                 {loading && (!attendanceData || attendanceData.monthly_data.length === 0) ? (
                     <div className="text-center py-20">
                         <div className="flex flex-col items-center gap-3">
-                            <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-indigo-600"></div>
+                            <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-brand-600"></div>
                             <span className="text-sm font-semibold text-white-dark tracking-wide">Syncing attendance data...</span>
                         </div>
                     </div>
@@ -302,24 +304,7 @@ const AttendanceHistory = () => {
             </div>
 
             {isDetailsModalOpen && selectedDateKey && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-                    <button
-                        type="button"
-                        className="absolute inset-0 bg-black/50"
-                        onClick={() => setIsDetailsModalOpen(false)}
-                        aria-label="Close attendance details popup"
-                    />
-                    <div className="relative w-full max-w-3xl rounded-lg bg-white dark:bg-[#0e1726] border border-[#ebedf2] dark:border-[#1b2e4b] shadow-2xl">
-                        <div className="flex items-start justify-between gap-4 p-5 border-b border-[#ebedf2] dark:border-[#1b2e4b]">
-                            <div>
-                                <h3 className="text-lg font-semibold">Attendance Details</h3>
-                                <p className="text-sm text-white-dark mt-1">{selectedDateLabel}</p>
-                            </div>
-                            <button type="button" className="btn btn-outline-danger btn-sm" onClick={() => setIsDetailsModalOpen(false)}>
-                                Close
-                            </button>
-                        </div>
-
+                <Modal open onClose={() => setIsDetailsModalOpen(false)} title="Attendance Details" subtitle={selectedDateLabel} size="3xl" bodyClassName="!p-0">
                         <div className="p-5">
                             <div className="flex flex-wrap items-center gap-2">
                                 {selectedStatus !== 'no_data' && (
@@ -345,8 +330,7 @@ const AttendanceHistory = () => {
                                 </div>
                             )}
                         </div>
-                    </div>
-                </div>
+                </Modal>
             )}
         </div>
     );

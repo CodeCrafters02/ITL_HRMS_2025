@@ -79,6 +79,7 @@ urlpatterns = [
     path('employee-profile/<str:employee_id>/', EmployeeProfileByIdAPIView.as_view(), name='employee_profile_by_id'),
     path('employee-breaks/', BreakLogAPIView.as_view(), name='employee-breaks'),
     path('employee-companypolicies/', EmployeeCompanyPoliciesAPIView.as_view(), name='employee-company-policies'),
+    path('employee-companypolicies/<int:pk>/file/', EmployeeCompanyPolicyFileAPIView.as_view(), name='employee-company-policy-file'),
     path('employee-hierarchy/', EmployeeHierarchyAPIView.as_view(), name='employee-hierarchy'),
     path('attendance-chart/', AttendanceChartDataAPIView.as_view(), name='attendance-chart'),
     path('performance-profile/<int:emp_id>/', EmployeePerformanceProfileAPIView.as_view(), name='employee-performance-profile'),

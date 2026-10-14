@@ -1630,12 +1630,37 @@ class LeaveListAPIView(generics.ListAPIView):
 
 
 class EmpLeaveListAPIView(generics.ListAPIView):
+    """Leave requests addressed to the signed-in manager.
+
+    Without `page`/`page_size` it returns the plain list (the sidebar badge counts use that).
+    With them it paginates and supports `search` and `status`, and adds per-status `counts`.
+    """
     serializer_class = EmpLeaveSerializer
     permission_classes = [IsAuthenticated]
+    filter_backends = [filters.SearchFilter]
+    search_fields = ['employee__first_name', 'employee__last_name', 'leave_type__leave_name', 'reason']
+
+    @property
+    def paginator(self):
+        if not hasattr(self, '_paginator'):
+            q = self.request.query_params
+            self._paginator = EmployeePagination() if ('page' in q or 'page_size' in q) else None
+        return self._paginator
 
     def get_queryset(self):
         manager = self.request.user.employee_profile
-        return EmpLeave.objects.filter(reporting_manager=manager)
+        qs = EmpLeave.objects.filter(reporting_manager=manager).order_by('-created_at', '-id')
+        status_param = self.request.query_params.get('status')
+        if status_param and status_param.lower() != 'all':
+            qs = qs.filter(status__iexact=status_param)
+        return qs
+
+    def list(self, request, *args, **kwargs):
+        resp = super().list(request, *args, **kwargs)
+        if isinstance(resp.data, dict) and 'results' in resp.data:
+            base = EmpLeave.objects.filter(reporting_manager=request.user.employee_profile)
+            resp.data['counts'] = {st: base.filter(status=st).count() for st in ('Pending', 'Approved', 'Rejected', 'Cancelled')}
+        return resp
 
 
 class ApproveEmpLeaveAPIView(APIView):
@@ -1897,16 +1922,45 @@ class BreakLogAPIView(APIView):
         else:
             return Response({"detail": "Invalid action. Use 'start' or 'end'."}, status=400)
 
+class EmployeePolicySerializer(serializers.ModelSerializer):
+    """Employees only see the latest published version (no version history)."""
+    file_name = serializers.SerializerMethodField()
+
+    class Meta:
+        model = CompanyPolicies
+        fields = ['id', 'name', 'document', 'version', 'published_at', 'file_name']
+
+    def get_file_name(self, obj):
+        import os
+        return os.path.basename(obj.document.name) if obj.document else ''
+
+
 class EmployeeCompanyPoliciesAPIView(generics.ListAPIView):
-    serializer_class = PolicyConfigurationSerializer
+    serializer_class = EmployeePolicySerializer
     permission_classes = [IsAuthenticated]
     pagination_class = EmployeePagination
     filter_backends = [filters.SearchFilter]
-    search_fields = ["name"]
+    search_fields = ["name", "version"]
 
     def get_queryset(self):
         user = self.request.user
-        return CompanyPolicies.objects.filter(company=user.company,is_active=True).order_by("-id")
+        return CompanyPolicies.objects.filter(company=user.company, is_active=True).order_by("-published_at", "-id")
+
+
+class EmployeeCompanyPolicyFileAPIView(APIView):
+    """Streams the latest document of an active policy so it can be viewed in the browser."""
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, pk):
+        import mimetypes
+        import os
+        from django.http import FileResponse
+        policy = get_object_or_404(CompanyPolicies, pk=pk, company=request.user.company, is_active=True)
+        doc = policy.document
+        if not doc or not doc.storage.exists(doc.name):
+            return Response({"detail": "Document not found."}, status=404)
+        content_type = mimetypes.guess_type(doc.name)[0] or 'application/octet-stream'
+        return FileResponse(doc.open('rb'), content_type=content_type, filename=os.path.basename(doc.name))
 
     def get_serializer_context(self):
         context = super().get_serializer_context()

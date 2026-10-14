@@ -43,7 +43,7 @@ const OutlookInboxWidget: FC<OutlookInboxWidgetProps> = ({
                         <span
                             className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold ${
                                 data.unread_count > 0
-                                    ? 'bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300'
+                                    ? 'bg-brand-100 dark:bg-brand-900/40 text-brand-700 dark:text-brand-300'
                                     : 'bg-slate-100 dark:bg-slate-800 text-slate-500'
                             }`}
                         >
@@ -90,10 +90,10 @@ const OutlookInboxWidget: FC<OutlookInboxWidgetProps> = ({
 
             {/* Logged-in User Profile Bar */}
             {showLoggedInUser && (
-                <div className="px-5 py-3.5 bg-gradient-to-r from-blue-50/70 via-indigo-50/40 to-slate-50/50 dark:from-slate-900/60 dark:via-slate-800/40 dark:to-slate-900/40 border-b border-slate-200/80 dark:border-slate-800 flex items-center justify-between gap-3">
+                <div className="px-5 py-3.5 bg-gradient-to-r from-brand-50/70 via-brand-50/40 to-slate-50/50 dark:from-slate-900/60 dark:via-slate-800/40 dark:to-slate-900/40 border-b border-slate-200/80 dark:border-slate-800 flex items-center justify-between gap-3">
                     <div className="flex items-center gap-3 min-w-0">
                         <div className="relative shrink-0">
-                            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-600 text-white flex items-center justify-center font-bold text-sm shadow-sm ring-2 ring-white dark:ring-slate-800">
+                            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-brand-600 to-brand-600 text-white flex items-center justify-center font-bold text-sm shadow-sm ring-2 ring-white dark:ring-slate-800">
                                 {initials}
                             </div>
                             <span
@@ -106,7 +106,7 @@ const OutlookInboxWidget: FC<OutlookInboxWidgetProps> = ({
                                 <h4 className="text-sm font-bold text-slate-900 dark:text-white truncate">
                                     {displayName}
                                 </h4>
-                                <span className="text-[10px] uppercase font-bold px-1.5 py-0.5 rounded bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300">
+                                <span className="text-[10px] uppercase font-bold px-1.5 py-0.5 rounded bg-brand-100 dark:bg-brand-900/40 text-brand-700 dark:text-brand-300">
                                     {userRole}
                                 </span>
                             </div>

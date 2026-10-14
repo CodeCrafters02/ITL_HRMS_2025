@@ -1,12 +1,17 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useDispatch } from 'react-redux';
 import Swal from 'sweetalert2';
 import { setPageTitle } from '../../../store/themeConfigSlice';
 import IconChecks from '../../../components/Icon/IconChecks';
-import IconSearch from '../../../components/Icon/IconSearch';
 import IconX from '../../../components/Icon/IconX';
-import { approveManagerLeave, fetchManagerLeaveRequests, LeaveStatus, ManagerLeaveRequest, rejectManagerLeave } from './api';
+import { approveManagerLeave, fetchManagerLeavePage, LeaveStatus, ManagerLeaveRequest, rejectManagerLeave } from './api';
+import DataTable, { Column } from '../../../components/Common/DataTable';
+import StatCard, { StatGrid } from '../../../components/Common/StatCard';
+import IconClock from '../../../components/Icon/IconClock';
+import IconCalendar from '../../../components/Icon/IconCalendar';
 
+import Button from '../../../components/Common/Button';
+import PageHeader from '../../../components/Common/PageHeader';
 function formatLeaveDuration(v?: string | null): string {
     if (v == null || v === '') return '—';
     const s = String(v).trim().toLowerCase();
@@ -38,6 +43,10 @@ const LeaveApprovals = () => {
     const [loading, setLoading] = useState(true);
     const [search, setSearch] = useState('');
     const [statusFilter, setStatusFilter] = useState<'all' | LeaveStatus>('all');
+    const [page, setPage] = useState(1);
+    const [pageSize, setPageSize] = useState(10);
+    const [totalCount, setTotalCount] = useState(0);
+    const [counts, setCounts] = useState<Partial<Record<LeaveStatus, number>>>({});
 
     useEffect(() => {
         dispatch(setPageTitle('Leave Request'));
@@ -46,8 +55,10 @@ const LeaveApprovals = () => {
     const loadLeaves = async () => {
         setLoading(true);
         try {
-            const data = await fetchManagerLeaveRequests();
-            setItems(data);
+            const data = await fetchManagerLeavePage({ page, pageSize, search, status: statusFilter });
+            setItems(data.results);
+            setTotalCount(data.count);
+            setCounts(data.counts);
         } catch (err) {
             const message = err instanceof Error ? err.message : 'Failed to load leave requests';
             Swal.fire('Error', message, 'error');
@@ -57,8 +68,10 @@ const LeaveApprovals = () => {
     };
 
     useEffect(() => {
-        loadLeaves();
-    }, []);
+        const t = setTimeout(loadLeaves, 350);
+        return () => clearTimeout(t);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [search, statusFilter, page, pageSize]);
 
     const handleAction = async (leaveId: number, action: 'approve' | 'reject') => {
         try {
@@ -98,136 +111,75 @@ const LeaveApprovals = () => {
         }
     };
 
-    const filtered = useMemo(() => {
-        return items.filter((item) => {
-            const matchesStatus = statusFilter === 'all' || item.status === statusFilter;
-            const q = search.trim().toLowerCase();
-            const matchesSearch = !q
-                || item.employee_name.toLowerCase().includes(q)
-                || item.leave_type_name.toLowerCase().includes(q)
-                || (item.reason || '').toLowerCase().includes(q);
-            return matchesStatus && matchesSearch;
-        });
-    }, [items, search, statusFilter]);
+    const statusBadge = (st: string) =>
+        st === 'Pending' ? 'bg-warning-light text-warning' : st === 'Approved' ? 'bg-success-light text-success' : st === 'Rejected' ? 'bg-danger-light text-danger' : 'bg-dark-light text-white-dark';
 
-    const pendingCount = items.filter((item) => item.status === 'Pending').length;
-    const approvedCount = items.filter((item) => item.status === 'Approved').length;
-    const rejectedCount = items.filter((item) => item.status === 'Rejected').length;
+    const columns: Column<ManagerLeaveRequest>[] = [
+        { key: 'employee_name', title: 'Employee', render: (v) => <span className="font-semibold">{v}</span> },
+        { key: 'leave_type_name', title: 'Leave Type', hideBelow: 'md', render: (v) => v || '-' },
+        { key: 'from_date', title: 'Period', render: (_v, r) => `${formatLeaveDateDdMmYyyy(r.from_date)} - ${formatLeaveDateDdMmYyyy(r.to_date)}` },
+        { key: 'leave_duration', title: 'Duration', hideBelow: 'lg', render: (v) => <span className="whitespace-nowrap">{formatLeaveDuration(v)}</span> },
+        {
+            key: 'reason', title: 'Reason', hideBelow: 'lg',
+            render: (_v, r) => (
+                <div className="max-w-[260px]">
+                    <p className="line-clamp-2">{r.reason || '-'}</p>
+                    {r.rejection_reason && <p className="mt-1 text-xs text-danger">Rejected: {r.rejection_reason}</p>}
+                </div>
+            ),
+        },
+        { key: 'status', title: 'Status', render: (v) => <span className={`badge ${statusBadge(v)}`}>{v}</span> },
+        {
+            key: 'actions', title: 'Action', align: 'center',
+            render: (_v, r) =>
+                r.status === 'Pending' ? (
+                    <div className="flex items-center justify-center gap-2">
+                        <Button variant="success" size="sm" leftIcon={<IconChecks />} onClick={() => handleAction(r.id, 'approve')}>Approve</Button>
+                        <Button variant="danger" size="sm" leftIcon={<IconX />} onClick={() => handleAction(r.id, 'reject')}>Reject</Button>
+                    </div>
+                ) : (
+                    <span className="text-xs text-white-dark">Processed</span>
+                ),
+        },
+    ];
 
     return (
         <div className="space-y-6 animate__animated animate__fadeIn">
-            <div className="panel bg-gradient-to-r from-[#220fb6] via-[#4f6be5] to-[#0f52af] text-white border-0">
-                <h1 className="text-2xl md:text-3xl font-bold">Leave Request Approval</h1>
-                <p className="mt-1 text-white/75 text-sm md:text-base">Review and process leave requests from your reportees.</p>
-            </div>
+            <PageHeader
+                title="Leave Request Approval"
+                subtitle="Review and process leave requests from your reportees."
+            />
 
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <div className="panel">
-                    <p className="text-xs uppercase text-white-dark">Pending</p>
-                    <p className="text-2xl font-bold mt-2 text-warning">{pendingCount}</p>
-                </div>
-                <div className="panel">
-                    <p className="text-xs uppercase text-white-dark">Approved</p>
-                    <p className="text-2xl font-bold mt-2 text-success">{approvedCount}</p>
-                </div>
-                <div className="panel">
-                    <p className="text-xs uppercase text-white-dark">Rejected</p>
-                    <p className="text-2xl font-bold mt-2 text-danger">{rejectedCount}</p>
-                </div>
-            </div>
+            <StatGrid cols={3} className="!mb-0">
+                <StatCard label="Pending" value={counts.Pending ?? 0} tone="warning" icon={<IconClock />} onClick={() => { setStatusFilter('Pending'); setPage(1); }} active={statusFilter === 'Pending'} />
+                <StatCard label="Approved" value={counts.Approved ?? 0} tone="success" icon={<IconChecks />} onClick={() => { setStatusFilter('Approved'); setPage(1); }} active={statusFilter === 'Approved'} />
+                <StatCard label="Rejected" value={counts.Rejected ?? 0} tone="danger" icon={<IconCalendar />} onClick={() => { setStatusFilter('Rejected'); setPage(1); }} active={statusFilter === 'Rejected'} />
+            </StatGrid>
 
-            <div className="panel">
-                <div className="flex flex-col md:flex-row gap-3">
-                    <div className="relative flex-1">
-                        <input className="form-input pl-10" placeholder="Search employee / leave type / reason..." value={search} onChange={(e) => setSearch(e.target.value)} />
-                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-white-dark">
-                            <IconSearch className="w-4 h-4" />
-                        </span>
-                    </div>
-                    <select className="form-select md:w-[180px]" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value as 'all' | LeaveStatus)}>
+            <DataTable
+                columns={columns}
+                data={items}
+                loading={loading}
+                page={page}
+                pageSize={pageSize}
+                totalCount={totalCount}
+                onPageChange={setPage}
+                onPageSizeChange={(sz) => { setPageSize(sz); setPage(1); }}
+                searchValue={search}
+                onSearchChange={(v) => { setSearch(v); setPage(1); }}
+                onRefresh={loadLeaves}
+                searchPlaceholder="Search employee / leave type / reason..."
+                emptyMessage="No leave requests found"
+                filters={
+                    <select className="form-select h-10 w-44 rounded-xl" value={statusFilter} onChange={(e) => { setStatusFilter(e.target.value as 'all' | LeaveStatus); setPage(1); }}>
                         <option value="all">All Status</option>
                         <option value="Pending">Pending</option>
                         <option value="Approved">Approved</option>
                         <option value="Rejected">Rejected</option>
                         <option value="Cancelled">Cancelled</option>
                     </select>
-                </div>
-            </div>
-
-            <div className="panel p-0 overflow-hidden">
-                <div className="table-responsive">
-                    <table className="table-hover">
-                        <thead>
-                            <tr>
-                                <th>Employee</th>
-                                <th>Leave Type</th>
-                                <th>Period</th>
-                                <th>Duration</th>
-                                <th>Reason</th>
-                                <th>Status</th>
-                                <th className="text-center">Action</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {loading ? (
-                                <tr>
-                                    <td colSpan={7} className="text-center py-12 text-white-dark">Loading leave requests...</td>
-                                </tr>
-                            ) : filtered.length === 0 ? (
-                                <tr>
-                                    <td colSpan={7} className="text-center py-12 text-white-dark">No leave requests found.</td>
-                                </tr>
-                            ) : (
-                                filtered.map((item) => (
-                                    <tr key={item.id}>
-                                        <td className="font-semibold">{item.employee_name}</td>
-                                        <td>{item.leave_type_name || '-'}</td>
-                                        <td>
-                                            {formatLeaveDateDdMmYyyy(item.from_date)} - {formatLeaveDateDdMmYyyy(item.to_date)}
-                                        </td>
-                                        <td className="whitespace-nowrap">{formatLeaveDuration(item.leave_duration)}</td>
-                                        <td className="max-w-[260px]">
-                                            <p className="line-clamp-2">{item.reason || '-'}</p>
-                                            {item.rejection_reason && <p className="text-xs text-danger mt-1">Rejected: {item.rejection_reason}</p>}
-                                        </td>
-                                        <td>
-                                            <span
-                                                className={`badge ${
-                                                    item.status === 'Pending'
-                                                        ? 'bg-warning-light text-warning'
-                                                        : item.status === 'Approved'
-                                                          ? 'bg-success-light text-success'
-                                                          : item.status === 'Rejected'
-                                                            ? 'bg-danger-light text-danger'
-                                                            : 'bg-dark-light text-white-dark'
-                                                }`}
-                                            >
-                                                {item.status}
-                                            </span>
-                                        </td>
-                                        <td className="text-center">
-                                            {item.status === 'Pending' ? (
-                                                <div className="flex items-center justify-center gap-2">
-                                                    <button type="button" className="btn btn-sm btn-success" onClick={() => handleAction(item.id, 'approve')}>
-                                                        <IconChecks className="w-4 h-4 mr-1" />
-                                                        Approve
-                                                    </button>
-                                                    <button type="button" className="btn btn-sm btn-danger" onClick={() => handleAction(item.id, 'reject')}>
-                                                        <IconX className="w-4 h-4 mr-1" />
-                                                        Reject
-                                                    </button>
-                                                </div>
-                                            ) : (
-                                                <span className="text-xs text-white-dark">Processed</span>
-                                            )}
-                                        </td>
-                                    </tr>
-                                ))
-                            )}
-                        </tbody>
-                    </table>
-                </div>
-            </div>
+                }
+            />
         </div>
     );
 };

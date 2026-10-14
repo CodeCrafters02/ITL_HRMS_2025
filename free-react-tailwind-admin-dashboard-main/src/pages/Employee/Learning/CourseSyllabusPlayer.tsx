@@ -9,6 +9,8 @@ import IconOpenBook from '../../../components/Icon/IconOpenBook';
 import IconMenuCalendar from '../../../components/Icon/Menu/IconMenuCalendar';
 import IconX from '../../../components/Icon/IconX';
 
+import Button from '../../../components/Common/Button';
+import { buttonClasses } from '../../../components/Common/Button';
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000';
 const ENROLLMENT_DETAIL_API = (id: string) => `${API_BASE_URL}/employee/enrollments/${id}/`;
 const CONTENTS_API = `${API_BASE_URL}/employee/course-contents/`;
@@ -527,7 +529,7 @@ const CourseSyllabusPlayer = () => {
                                 target="_blank"
                                 rel="noreferrer"
                                 download
-                                className="btn btn-success btn-sm w-full rounded-lg text-xs py-2 mt-4 font-bold flex items-center justify-center gap-1.5 shadow-md hover:scale-102 transition-all duration-300"
+                                className={buttonClasses('success', 'sm', 'w-full mt-4 flex items-center justify-center gap-1.5')}
                             >
                                 🎓 Download Certificate
                             </a>
@@ -672,7 +674,7 @@ const CourseSyllabusPlayer = () => {
                             target="_blank"
                             rel="noreferrer"
                             download
-                            className="btn btn-success rounded-lg text-xs py-2 px-5 font-bold shadow-md hover:scale-105 transition-all duration-300 flex items-center gap-1.5"
+                            className={buttonClasses('success', 'md', 'flex items-center gap-1.5')}
                         >
                             📥 Download PDF Certificate
                         </a>
@@ -682,7 +684,7 @@ const CourseSyllabusPlayer = () => {
                     <div className="m-auto text-center text-gray-400 font-semibold animate-pulse">Loading active media...</div>
                 ) : activeItem === null ? (
                     computedProgress === 100 ? (
-                        <div className="m-auto text-center max-w-md p-6 bg-[#8b5cf6]/5 border border-dashed border-[#8b5cf6]/35 rounded-xl shadow-sm">
+                        <div className="m-auto text-center max-w-md p-6 bg-brand-accent/5 border border-dashed border-brand-accent/35 rounded-xl shadow-sm">
                             <span className="text-5xl block mb-3">🏆</span>
                             <h3 className="text-xl font-extrabold text-gray-800 dark:text-white">Congratulations!</h3>
                             <p className="text-xs text-gray-500 mt-2 mb-6 leading-relaxed">
@@ -695,7 +697,7 @@ const CourseSyllabusPlayer = () => {
                                     target="_blank"
                                     rel="noreferrer"
                                     download
-                                    className="btn btn-primary rounded-lg text-xs py-2 px-6 inline-flex items-center gap-2 mb-6"
+                                    className={buttonClasses('primary', 'md', 'inline-flex items-center gap-2 mb-6')}
                                 >
                                     🎓 Download Certificate
                                 </a>
@@ -738,13 +740,11 @@ const CourseSyllabusPlayer = () => {
                                         />
                                     </div>
 
-                                    <button
+                                    <Button className="text-xs !py-2 w-full"
                                         type="submit"
-                                        disabled={saving}
-                                        className="btn btn-primary rounded-lg text-xs py-2 w-full shadow-md"
-                                    >
+                                        disabled={saving}>
                                         {saving ? 'Submitting...' : 'Submit Feedback Review'}
-                                    </button>
+                                    </Button>
                                 </form>
                             )}
                         </div>
@@ -769,7 +769,7 @@ const CourseSyllabusPlayer = () => {
                                             target="_blank"
                                             rel="noreferrer"
                                             download
-                                            className="btn btn-outline-primary btn-sm rounded-lg text-xs py-1.5 px-3 font-bold gap-1.5 flex items-center"
+                                            className={buttonClasses('outline', 'sm', 'gap-1.5 flex items-center')}
                                         >
                                             📥 Download / Open Resource
                                         </a>
@@ -826,14 +826,14 @@ const CourseSyllabusPlayer = () => {
                                                                     href={fileUrl}
                                                                     target="_blank"
                                                                     rel="noreferrer"
-                                                                    className="btn btn-primary rounded-lg text-xs py-2 px-5 font-bold shadow-md"
+                                                                    className={buttonClasses('primary', 'md')}
                                                                 >
                                                                     🗂️ Open Document
                                                                 </a>
                                                                 <a
                                                                     href={fileUrl}
                                                                     download
-                                                                    className="btn btn-outline-primary rounded-lg text-xs py-2 px-5 font-bold"
+                                                                    className={buttonClasses('outline', 'md')}
                                                                 >
                                                                     📥 Download File
                                                                 </a>
@@ -850,7 +850,7 @@ const CourseSyllabusPlayer = () => {
                                                                 href={`${fileUrl}?t=${new Date().getTime()}`}
                                                                 target="_blank"
                                                                 rel="noreferrer"
-                                                                className="btn btn-sm btn-primary rounded-md text-[10px] font-bold py-1 px-3"
+                                                                className={buttonClasses('primary', 'sm')}
                                                             >
                                                                 🌐 Open in New Tab
                                                             </a>
@@ -882,7 +882,7 @@ const CourseSyllabusPlayer = () => {
                                                 href={activeLecture.external_url}
                                                 target="_blank"
                                                 rel="noreferrer"
-                                                className="btn btn-primary rounded-lg text-xs"
+                                                className={buttonClasses('primary', 'md')}
                                             >
                                                 Open External Portal
                                             </a>
@@ -891,14 +891,14 @@ const CourseSyllabusPlayer = () => {
                                 </div>
 
                                 <div className="mt-6 flex justify-end">
-                                    <button
+                                    <Button variant="success" className="text-xs !py-2 !px-6"
                                         type="button"
-                                        className="btn btn-success rounded-lg font-bold text-xs py-2 px-6"
+                                        
                                         disabled={completedLessons.includes(activeLecture.id) || saving}
                                         onClick={() => handleMarkComplete(activeLecture.id)}
                                     >
                                         {completedLessons.includes(activeLecture.id) ? '✓ Completed' : 'Mark Lesson Complete'}
-                                    </button>
+                                    </Button>
                                 </div>
                             </div>
                         )}
@@ -935,13 +935,13 @@ const CourseSyllabusPlayer = () => {
                                                             ✓ You have successfully passed this assessment.
                                                         </div>
                                                     ) : !hasReachedMax ? (
-                                                        <button
+                                                        <Button variant="outline" size="sm" className="mt-5 mx-auto"
                                                             type="button"
-                                                            className="btn btn-outline-primary btn-sm rounded-lg mt-5 mx-auto"
+                                                            
                                                             onClick={() => { setQuizSubmitted(false); setQuizAnswers({}); setQuizResult(null); }}
                                                         >
                                                             Retake Assessment
-                                                        </button>
+                                                        </Button>
                                                     ) : (
                                                         <div className="mt-4 text-xs text-danger font-bold">
                                                             🚫 Maximum allowed attempts ({maxAttempts}) reached for this quiz.
@@ -1095,14 +1095,13 @@ const CourseSyllabusPlayer = () => {
                                             ))}
 
                                             <div className="flex justify-end pt-4 border-t border-[#ebedf2] dark:border-[#1b2e4b]">
-                                                <button
+                                                <Button className="text-xs !py-2 !px-6"
                                                     type="button"
-                                                    className="btn btn-primary rounded-lg font-bold text-xs py-2 px-6"
+                                                    
                                                     onClick={handleSubmitQuiz}
-                                                    disabled={saving}
-                                                >
+                                                    disabled={saving}>
                                                     Submit Evaluation Sheets
-                                                </button>
+                                                </Button>
                                             </div>
                                         </div>
                                     );
@@ -1132,9 +1131,9 @@ const CourseSyllabusPlayer = () => {
 
                                     {/* Submission status and review */}
                                     {sub && (() => {
-                                        let containerBg = 'bg-blue-500/5 dark:bg-blue-500/10 border-blue-500/20';
-                                        let textColor = 'text-blue-600 dark:text-blue-400';
-                                        let badgeColor = 'bg-blue-500 text-white';
+                                        let containerBg = 'bg-brand-500/5 dark:bg-brand-500/10 border-brand-500/20';
+                                        let textColor = 'text-brand-600 dark:text-brand-400';
+                                        let badgeColor = 'bg-brand-500 text-white';
 
                                         if (sub.status === 'graded') {
                                             containerBg = 'bg-success/5 dark:bg-success/10 border-success/20';

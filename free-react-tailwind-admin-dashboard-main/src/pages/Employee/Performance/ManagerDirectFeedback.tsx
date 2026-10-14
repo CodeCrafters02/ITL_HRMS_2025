@@ -4,6 +4,8 @@ import { Link } from 'react-router-dom';
 import axios from 'axios';
 import { setPageTitle } from '../../../store/themeConfigSlice';
 
+import PageHeader from '../../../components/Common/PageHeader';
+import { buttonClasses } from '../../../components/Common/Button';
 /* ─── Types ─────────────────────────────────────────────── */
 interface Reportee {
     id: number;
@@ -27,23 +29,23 @@ interface FeedbackEntry {
 }
 
 /* ─── Constants ──────────────────────────────────────────── */
-const AVATAR_COLORS = ['bg-emerald-500','bg-indigo-500','bg-amber-500','bg-teal-500','bg-rose-500','bg-blue-500','bg-purple-500','bg-pink-500'];
+const AVATAR_COLORS = ['bg-emerald-500','bg-brand-500','bg-amber-500','bg-brand','bg-rose-500','bg-brand-500','bg-brand-accent','bg-pink-500'];
 const avatarBg = (name: string) => AVATAR_COLORS[(name.charCodeAt(0)+(name.charCodeAt(1)||0)) % AVATAR_COLORS.length];
 
 const CAT_OPTS = [
     { value: 'appreciation',     label: '🌟  Appreciation',     cls: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300' },
-    { value: 'manager_coaching',  label: '💬  Manager Coaching', cls: 'bg-blue-100 text-blue-700 dark:bg-blue-950/40 dark:text-blue-300' },
+    { value: 'manager_coaching',  label: '💬  Manager Coaching', cls: 'bg-brand-100 text-brand-700 dark:bg-brand-950/40 dark:text-brand-300' },
     { value: 'constructive',      label: '🔧  Constructive',     cls: 'bg-amber-100 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300' },
-    { value: 'goal_progress',     label: '🎯  Goal Progress',    cls: 'bg-teal-100 text-teal-700 dark:bg-teal-950/40 dark:text-teal-300' },
-    { value: 'peer_recognition',  label: '🤝  Peer Recognition', cls: 'bg-violet-100 text-violet-700 dark:bg-violet-950/40 dark:text-violet-300' },
+    { value: 'goal_progress',     label: '🎯  Goal Progress',    cls: 'bg-brand-100 text-brand-dark dark:bg-brand-950/40 dark:text-brand-300' },
+    { value: 'peer_recognition',  label: '🤝  Peer Recognition', cls: 'bg-brand-100 text-brand-700 dark:bg-brand-950/40 dark:text-brand-300' },
 ];
 
 const CAT_MAP: Record<string, { icon: string; cls: string }> = {
     appreciation:      { icon: '🌟', cls: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300' },
-    manager_coaching:  { icon: '💬', cls: 'bg-blue-100 text-blue-700 dark:bg-blue-950/40 dark:text-blue-300' },
+    manager_coaching:  { icon: '💬', cls: 'bg-brand-100 text-brand-700 dark:bg-brand-950/40 dark:text-brand-300' },
     constructive:      { icon: '🔧', cls: 'bg-amber-100 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300' },
-    goal_progress:     { icon: '🎯', cls: 'bg-teal-100 text-teal-700 dark:bg-teal-950/40 dark:text-teal-300' },
-    peer_recognition:  { icon: '🤝', cls: 'bg-violet-100 text-violet-700 dark:bg-violet-950/40 dark:text-violet-300' },
+    goal_progress:     { icon: '🎯', cls: 'bg-brand-100 text-brand-dark dark:bg-brand-950/40 dark:text-brand-300' },
+    peer_recognition:  { icon: '🤝', cls: 'bg-brand-100 text-brand-700 dark:bg-brand-950/40 dark:text-brand-300' },
 };
 
 const STARS = [1, 2, 3, 4, 5];
@@ -182,7 +184,7 @@ const ManagerDirectFeedback = () => {
     if (loading) return (
         <div className="flex items-center justify-center min-h-[60vh]">
             <div className="flex flex-col items-center gap-3">
-                <div className="w-10 h-10 rounded-full border-4 border-teal-500 border-t-transparent animate-spin" />
+                <div className="w-10 h-10 rounded-full border-4 border-brand border-t-transparent animate-spin" />
                 <span className="text-xs font-bold text-gray-400">Loading your reportees…</span>
             </div>
         </div>
@@ -194,7 +196,7 @@ const ManagerDirectFeedback = () => {
             <div className="text-5xl">👔</div>
             <h2 className="text-xl font-bold text-gray-800 dark:text-white">No Reportees Found</h2>
             <p className="text-sm text-gray-500 dark:text-gray-400 max-w-md">You currently have no employees reporting to you. Only managers with direct reports can provide direct feedback ratings.</p>
-            <Link to="/employee/performance" className="px-4 py-2 bg-teal-500 hover:bg-teal-600 text-white rounded-xl text-xs font-bold transition shadow-md">
+            <Link to="/employee/performance" className={buttonClasses('primary', 'sm')}>
                 ← Back to Dashboard
             </Link>
         </div>
@@ -210,21 +212,21 @@ const ManagerDirectFeedback = () => {
             )}
 
             {/* Header Banner */}
-            <div className="bg-white dark:bg-gray-900 p-5 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                <div>
-                    <div className="text-xs font-black uppercase text-teal-600 dark:text-teal-400 mb-1">Direct Feedback Channel</div>
-                    <h2 className="text-xl font-bold text-gray-800 dark:text-white">Manager Direct Feedback</h2>
-                    <p className="text-xs text-gray-450 mt-0.5 leading-relaxed max-w-lg">
-                        Provide continuous, real-time feedback with ratings to your direct reports anytime — recognize achievements, coach for improvement, or track goal progress.
-                    </p>
-                </div>
-                <Link
-                    to="/employee/performance"
-                    className="px-4 py-2 bg-gray-100 hover:bg-gray-200 dark:bg-gray-850 dark:hover:bg-gray-800 text-gray-600 dark:text-gray-300 rounded-xl text-xs font-bold transition whitespace-nowrap self-start"
-                >
-                    ← Back to Dashboard
-                </Link>
-            </div>
+            <PageHeader
+                title="Manager Direct Feedback"
+                badge="Direct Feedback Channel"
+                subtitle="Provide continuous, real-time feedback with ratings to your direct reports anytime — recognize achievements, coach for improvement, or track goal progress."
+                actions={
+                    <>
+                        <Link
+                        to="/employee/performance"
+                        className={buttonClasses('secondary', 'sm', 'self-start')}
+                        >
+                        ← Back to Dashboard
+                        </Link>
+                    </>
+                }
+            />
 
             {/* Main 3-column layout */}
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
@@ -237,7 +239,7 @@ const ManagerDirectFeedback = () => {
                             placeholder="Search reportee..."
                             value={search}
                             onChange={e => setSearch(e.target.value)}
-                            className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 pl-9 pr-3 py-2 rounded-xl text-xs font-semibold text-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-teal-500/30 transition"
+                            className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 pl-9 pr-3 py-2 rounded-xl text-xs font-semibold text-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-brand/30 transition"
                         />
                         <span className="absolute left-3 top-2.5 text-gray-400 text-xs">🔍</span>
                     </div>
@@ -255,7 +257,7 @@ const ManagerDirectFeedback = () => {
                                     onClick={() => setSelectedEmp(emp)}
                                     className={`p-3 rounded-xl border flex items-center gap-3 cursor-pointer transition select-none ${
                                         active
-                                        ? 'bg-teal-500/10 border-teal-500/40 ring-1 ring-teal-500/20'
+                                        ? 'bg-brand/10 border-brand/40 ring-1 ring-brand/20'
                                         : 'bg-white dark:bg-gray-900 border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-850'
                                     }`}
                                 >
@@ -263,7 +265,7 @@ const ManagerDirectFeedback = () => {
                                         {emp.initials}
                                     </div>
                                     <div className="min-w-0">
-                                        <span className={`block text-xs font-bold leading-tight truncate ${active ? 'text-teal-700 dark:text-teal-300' : 'text-gray-800 dark:text-white'}`}>
+                                        <span className={`block text-xs font-bold leading-tight truncate ${active ? 'text-brand-dark dark:text-brand-300' : 'text-gray-800 dark:text-white'}`}>
                                             {emp.name}
                                         </span>
                                         <span className="block text-[9px] text-gray-400 mt-0.5 truncate">
@@ -333,7 +335,7 @@ const ManagerDirectFeedback = () => {
                                         value={feedbackText}
                                         onChange={e => setFeedbackText(e.target.value)}
                                         placeholder={`Write your feedback for ${selectedEmp.name}...\n\nBe specific about what was done well or what can be improved.`}
-                                        className="flex-1 min-h-[100px] bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 px-4 py-3 rounded-2xl text-xs font-medium text-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-teal-500/30 resize-none transition leading-relaxed"
+                                        className="flex-1 min-h-[100px] bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 px-4 py-3 rounded-2xl text-xs font-medium text-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-brand/30 resize-none transition leading-relaxed"
                                     />
                                 </div>
 
@@ -352,7 +354,7 @@ const ManagerDirectFeedback = () => {
                                                 onClick={() => setVisibility(v.value)}
                                                 className={`flex-1 px-3 py-2.5 rounded-xl text-center transition border ${
                                                     visibility === v.value
-                                                    ? 'bg-teal-500/10 border-teal-500/30 text-teal-700 dark:text-teal-300'
+                                                    ? 'bg-brand/10 border-brand/30 text-brand-dark dark:text-brand-300'
                                                     : 'bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 hover:border-gray-300'
                                                 }`}
                                             >
@@ -367,7 +369,7 @@ const ManagerDirectFeedback = () => {
                                 <button
                                     type="submit"
                                     disabled={submitting || !feedbackText.trim() || rating === 0}
-                                    className="w-full py-3 bg-gradient-to-r from-teal-500 to-emerald-500 hover:from-teal-600 hover:to-emerald-600 disabled:from-gray-300 disabled:to-gray-400 text-white rounded-2xl text-xs font-black uppercase tracking-wider shadow-lg shadow-teal-500/20 transition flex items-center justify-center gap-2"
+                                    className="w-full py-3 bg-gradient-to-r from-brand to-emerald-500 hover:from-brand hover:to-emerald-600 disabled:from-gray-300 disabled:to-gray-400 text-white rounded-2xl text-xs font-black uppercase tracking-wider shadow-lg shadow-brand/20 transition flex items-center justify-center gap-2"
                                 >
                                     {submitting && <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />}
                                     {submitting ? 'Submitting…' : 'Submit Feedback & Rating'}
@@ -399,7 +401,7 @@ const ManagerDirectFeedback = () => {
                     <div className="flex-1 overflow-y-auto space-y-3 pr-1">
                         {histLoading ? (
                             <div className="flex items-center justify-center h-full">
-                                <div className="w-6 h-6 border-2 border-teal-500 border-t-transparent rounded-full animate-spin" />
+                                <div className="w-6 h-6 border-2 border-brand border-t-transparent rounded-full animate-spin" />
                             </div>
                         ) : !selectedEmp ? (
                             <div className="flex flex-col items-center justify-center h-full text-center">

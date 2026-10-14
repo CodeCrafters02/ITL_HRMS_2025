@@ -21,6 +21,9 @@ import IconXCircle from '../../components/Icon/IconXCircle';
 import { fetchMyLeaveRequests, type LeaveRequest } from './LeaveApplication/api';
 
 import { openTeamsChat } from '../../utils/teams';
+import Button from '../../components/Common/Button';
+import { brandHex } from '../../theme/brandColors';
+import StatCard, { StatGrid } from '../../components/Common/StatCard';
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000';
 
 const pickLatestLeaveRequest = (results: LeaveRequest[]): LeaveRequest | null => {
@@ -832,7 +835,7 @@ const EmployeeDashboard = () => {
                 )}
                 <div className="pointer-events-auto fixed inset-x-4 bottom-5 z-[60000] rounded-2xl border border-primary/35 bg-white/95 p-4 shadow-2xl backdrop-blur dark:border-primary/45 dark:bg-[#1b2e4b]/95 sm:hidden">
                     <div className="flex items-start gap-3">
-                        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-primary/15 to-cyan-500/25 text-lg" aria-hidden>
+                        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-primary/15 to-brand-mid/25 text-lg" aria-hidden>
                             🕐
                         </span>
                         <div className="min-w-0 flex-1">
@@ -870,21 +873,21 @@ const EmployeeDashboard = () => {
                     </div>
                 </div>
             )}
-            <div className="panel relative overflow-hidden border-0 bg-gradient-to-r from-[#220fb6] via-[#4f6be5] to-[#0f52af] text-white p-1 md:p-2">
+            <div className="panel relative overflow-hidden border-0 bg-gradient-to-r from-brand-800 via-brand to-brand-mid text-white p-1 md:p-2">
                 <div className="absolute inset-0 bg-[radial-gradient(circle_at_18%_22%,rgba(255,255,255,0.18),transparent_34%),radial-gradient(circle_at_84%_20%,rgba(128,224,255,0.22),transparent_36%)] pointer-events-none"></div>
-                <div className="absolute -top-12 -right-12 w-56 h-56 rounded-full bg-cyan-200/25 blur-3xl"></div>
-                <div className="absolute -bottom-14 -left-12 w-52 h-52 rounded-full bg-indigo-200/25 blur-3xl"></div>
+                <div className="absolute -top-12 -right-12 w-56 h-56 rounded-full bg-brand-200/25 blur-3xl"></div>
+                <div className="absolute -bottom-14 -left-12 w-52 h-52 rounded-full bg-brand-200/25 blur-3xl"></div>
 
                 <div className="absolute z-[1] -left-10 bottom-9 h-20 w-20 rounded-full border border-white/20 bg-white/10 backdrop-blur-md shadow-[inset_0_0_24px_rgba(255,255,255,0.18)] animate-particle-drift"></div>
-                <div className="absolute z-[1] -right-8 top-1/3 h-20 w-20 rounded-full border border-cyan-100/25 bg-cyan-100/10 backdrop-blur-md shadow-[inset_0_0_20px_rgba(190,235,255,0.18)] animate-particle-drift [animation-delay:1.2s]"></div>
+                <div className="absolute z-[1] -right-8 top-1/3 h-20 w-20 rounded-full border border-brand-100/25 bg-brand-100/10 backdrop-blur-md shadow-[inset_0_0_20px_rgba(190,235,255,0.18)] animate-particle-drift [animation-delay:1.2s]"></div>
 
                 <div className="absolute z-[1] left-7 top-8 h-4 w-4 rounded-full border border-white/65 bg-white/35 backdrop-blur-md shadow-[0_0_16px_rgba(255,255,255,0.45)] animate-particle-float"></div>
                 <div className="absolute z-[1] left-16 bottom-6 h-3.5 w-3.5 rounded-full border border-white/60 bg-white/30 backdrop-blur-md shadow-[0_0_14px_rgba(255,255,255,0.38)] animate-particle-drift [animation-delay:650ms]"></div>
-                <div className="absolute z-[1] right-36 top-6 h-5 w-5 rounded-full border border-cyan-100/70 bg-cyan-100/35 backdrop-blur-md shadow-[0_0_18px_rgba(180,236,255,0.5)] animate-particle-float [animation-delay:340ms]"></div>
-                <div className="absolute z-[1] right-8 bottom-8 h-4 w-4 rounded-full border border-blue-100/70 bg-blue-100/30 backdrop-blur-md shadow-[0_0_16px_rgba(190,220,255,0.45)] animate-particle-drift [animation-delay:1.6s]"></div>
+                <div className="absolute z-[1] right-36 top-6 h-5 w-5 rounded-full border border-brand-100/70 bg-brand-100/35 backdrop-blur-md shadow-[0_0_18px_rgba(180,236,255,0.5)] animate-particle-float [animation-delay:340ms]"></div>
+                <div className="absolute z-[1] right-8 bottom-8 h-4 w-4 rounded-full border border-brand-100/70 bg-brand-100/30 backdrop-blur-md shadow-[0_0_16px_rgba(190,220,255,0.45)] animate-particle-drift [animation-delay:1.6s]"></div>
                 <div className="absolute z-[1] left-[44%] top-[36%] h-4 w-4 rounded-full border border-white/60 bg-white/28 backdrop-blur-md shadow-[0_0_14px_rgba(255,255,255,0.36)] animate-particle-float [animation-delay:240ms]"></div>
-                <div className="absolute z-[1] left-[52%] bottom-9 h-3.5 w-3.5 rounded-full border border-cyan-100/60 bg-cyan-100/28 backdrop-blur-md shadow-[0_0_12px_rgba(175,230,255,0.34)] animate-particle-drift [animation-delay:920ms]"></div>
-                <div className="absolute z-[1] left-[60%] top-[48%] h-3 w-3 rounded-full border border-blue-100/60 bg-blue-100/28 backdrop-blur-md shadow-[0_0_12px_rgba(180,215,255,0.32)] animate-particle-float [animation-delay:1.25s]"></div>
+                <div className="absolute z-[1] left-[52%] bottom-9 h-3.5 w-3.5 rounded-full border border-brand-100/60 bg-brand-100/28 backdrop-blur-md shadow-[0_0_12px_rgba(175,230,255,0.34)] animate-particle-drift [animation-delay:920ms]"></div>
+                <div className="absolute z-[1] left-[60%] top-[48%] h-3 w-3 rounded-full border border-brand-100/60 bg-brand-100/28 backdrop-blur-md shadow-[0_0_12px_rgba(180,215,255,0.32)] animate-particle-float [animation-delay:1.25s]"></div>
 
                 <div className="relative z-10 space-y-3">
                     <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-3">
@@ -902,7 +905,7 @@ const EmployeeDashboard = () => {
                         </div>
 
                         <div ref={checkinIntroAnchorRef} className="flex flex-wrap items-center gap-2">
-                            <span className="text-[11px] px-2.5 py-1 rounded-full bg-[#58b8df]/20 text-cyan-100 border border-cyan-200/40 font-semibold">Realtime</span>
+                            <span className="text-[11px] px-2.5 py-1 rounded-full bg-[#58b8df]/20 text-brand-100 border border-brand-200/40 font-semibold">Realtime</span>
 
                             {isGeofenceRequired && (
                                 <span className={`text-[11px] px-2.5 py-1 rounded-full border font-bold flex items-center gap-1 ${isInOffice ? 'bg-success/20 text-success-light border-success/30' : 'bg-danger/20 text-danger-light border-danger/30'}`}>
@@ -924,49 +927,48 @@ const EmployeeDashboard = () => {
                                 </button>
                             )}
                             {checkin_time && !checkout_time && (
-                                <button 
+                                <Button variant="danger" className="disabled:opacity-50 disabled:cursor-not-allowed" 
                                     type="button" 
-                                    className="btn btn-danger shadow-md rounded-xl disabled:opacity-50 disabled:cursor-not-allowed" 
+                                     
                                     onClick={handleCheckOut}
                                     disabled={!canPerformAction}
-                                    title={!canPerformAction ? 'You must be at the office to check out' : ''}
-                                >
+                                    title={!canPerformAction ? 'You must be at the office to check out' : ''}>
                                     Check Out
-                                </button>
+                                </Button>
                             )}
                         </div>
                     </div>
 
                     <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-2.5">
                         <div className="rounded-xl border border-white/30 bg-white/10 px-3 py-2.5">
-                            <p className="text-[10px] uppercase tracking-wide text-blue-100">Status</p>
+                            <p className="text-[10px] uppercase tracking-wide text-brand-100">Status</p>
                             <p className="text-base font-bold mt-1 text-white">{attendanceStatusLabel}</p>
                         </div>
                         <div className="rounded-xl border border-white/30 bg-white/10 px-3 py-2.5">
-                            <p className="text-[10px] uppercase tracking-wide text-blue-100">Weekly Target</p>
+                            <p className="text-[10px] uppercase tracking-wide text-brand-100">Weekly Target</p>
                             <p className="text-xl font-black mt-1 text-white">
                                 <CountUp end={weeklyProgress} duration={1.3} />%
                             </p>
                         </div>
                         <div className="rounded-xl border border-white/30 bg-white/10 px-3 py-2.5">
-                            <p className="text-[10px] uppercase tracking-wide text-blue-100">Focus Index</p>
+                            <p className="text-[10px] uppercase tracking-wide text-brand-100">Focus Index</p>
                             <p className="text-xl font-black mt-1 text-white">
                                 <CountUp end={focusScore} duration={1.3} />%
                             </p>
                         </div>
                         <div className="rounded-xl border border-white/20 bg-white/10 px-3 py-2.5">
-                            <p className="text-[10px] uppercase tracking-wide text-blue-100">Punch Time</p>
+                            <p className="text-[10px] uppercase tracking-wide text-brand-100">Punch Time</p>
                             <p className="text-sm font-bold text-white mt-1">{checkin_time || '--:--'} / {checkout_time || '--:--'}</p>
                         </div>
                         <div className="rounded-xl border border-white/20 bg-white/10 px-3 py-2.5">
-                            <p className="text-[10px] uppercase tracking-wide text-cyan-100">Live Clock</p>
-                            <p className="text-sm font-black text-cyan-100 mt-1 animate-pulse">{liveRawSeconds}</p>
+                            <p className="text-[10px] uppercase tracking-wide text-brand-100">Live Clock</p>
+                            <p className="text-sm font-black text-brand-100 mt-1 animate-pulse">{liveRawSeconds}</p>
                         </div>
                     </div>
 
                     {checkin_time && !checkout_time && (
                         <div className="flex flex-wrap items-center gap-2 border-t border-dashed border-white/20 pt-3">
-                            <p className="text-xs font-semibold uppercase tracking-wider text-blue-100 mr-1">Status & Breaks</p>
+                            <p className="text-xs font-semibold uppercase tracking-wider text-brand-100 mr-1">Status & Breaks</p>
                             
                             {/* Live Status Dropdown inside Breaks Section */}
                             <div className="dropdown relative">
@@ -976,7 +978,7 @@ const EmployeeDashboard = () => {
                                     usePortal={true}
                                     strategy="fixed"
                                     button={
-                                        <span className="px-3 py-1.5 text-xs font-semibold rounded-lg border border-cyan-200/45 bg-cyan-200/10 text-cyan-100 hover:bg-cyan-200/20 transition-colors capitalize flex items-center gap-1">
+                                        <span className="px-3 py-1.5 text-xs font-semibold rounded-lg border border-brand-200/45 bg-brand-200/10 text-brand-100 hover:bg-brand-200/20 transition-colors capitalize flex items-center gap-1">
                                             <span className={`w-2 h-2 rounded-full ${
                                                 data.status === 'online' ? 'bg-success' :
                                                 data.status === 'away' ? 'bg-warning' :
@@ -1008,7 +1010,7 @@ const EmployeeDashboard = () => {
                                             <button
                                                 key={bc.id}
                                                 type="button"
-                                                className="px-3 py-1.5 text-xs font-semibold rounded-lg border border-cyan-200/45 bg-cyan-200/10 text-cyan-100 hover:bg-cyan-200/20 transition-colors capitalize disabled:opacity-50 disabled:cursor-not-allowed"
+                                                className="px-3 py-1.5 text-xs font-semibold rounded-lg border border-brand-200/45 bg-brand-200/10 text-brand-100 hover:bg-brand-200/20 transition-colors capitalize disabled:opacity-50 disabled:cursor-not-allowed"
                                                 onClick={() => handleStartBreak(bc.id)}
                                                 disabled={!canPerformAction}
                                             >
@@ -1028,7 +1030,7 @@ const EmployeeDashboard = () => {
                                                     placement="bottom-start"
                                                     usePortal={true}
                                                     strategy="fixed"
-                                                    btnClassName="px-3 py-1.5 text-xs font-semibold rounded-lg border border-cyan-200/45 bg-cyan-200/10 text-cyan-100 hover:bg-cyan-200/20 transition-colors capitalize flex items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed"
+                                                    btnClassName="px-3 py-1.5 text-xs font-semibold rounded-lg border border-brand-200/45 bg-brand-200/10 text-brand-100 hover:bg-brand-200/20 transition-colors capitalize flex items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed"
                                                     disabled={!canPerformAction}
                                                     button={
                                                         <span className="flex items-center gap-1">
@@ -1059,14 +1061,9 @@ const EmployeeDashboard = () => {
                                 })
                             ) : (
                                 <div className="flex flex-wrap items-center gap-2">
-                                    <button 
-                                        type="button" 
-                                        className="btn btn-warning rounded-xl animate-pulse disabled:opacity-50 disabled:cursor-not-allowed" 
-                                        onClick={handleEndBreak}
-                                        disabled={!canPerformAction}
-                                    >
+                                    <Button type="button" onClick={handleEndBreak} disabled={!canPerformAction}>
                                         End Active Break ({active_break.type?.replace(/_/g, ' ') || 'Break'})
-                                    </button>
+                                    </Button>
                                     <span className="text-xs font-bold text-amber-100 px-2.5 py-1 rounded-md bg-amber-500/20 border border-amber-300/40">
                                         {breakRemainingSeconds === null
                                             ? 'Running...'
@@ -1081,62 +1078,32 @@ const EmployeeDashboard = () => {
                 </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-6 gap-4">
-                <Link
+            <StatGrid cols={6} className="!mb-0">
+                <StatCard
+                    label="Leave application"
+                    value={latestLeave ? latestLeave.leave_type_name : 'No requests yet'}
+                    hint={latestLeave ? `${latestLeave.status} · ${formatLeaveDateRange(latestLeave.from_date, latestLeave.to_date)}` : 'Open leave application to submit'}
+                    icon={<IconCalendar />}
+                    tone="info"
                     to="/employee/leave-application"
-                    className="panel p-4 hover:-translate-y-1 transition-all duration-300 border border-[#ebedf2] dark:border-[#1b2e4b] hover:border-primary dark:hover:border-primary block no-underline text-inherit min-w-0 group"
-                >
-                    <div className="flex items-start justify-between gap-2">
-                        <p className="text-[11px] uppercase tracking-wider text-white-dark font-semibold">Leave application</p>
-                     
-                    </div>
-                    {latestLeave ? (
+                />
+                <StatCard label="Effective time" value={liveTime} hint="Net hours after breaks" icon={<IconClock />} tone="primary" />
+                <StatCard label="Weekly hours" value={data.total_work_duration_week} hint="Current week accumulation" icon={<IconTrendingUp />} tone="success" />
+                <StatCard label="Overtime" value={data.overtime ? `${data.overtime.hours}h ${data.overtime.minutes}m` : '0h 0m'} hint="Extra contribution" icon={<IconClock />} tone="warning" />
+                <StatCard label="Latest payroll" value={data.latest_payroll ? `$ ${data.latest_payroll.amount.toLocaleString()}` : 'Pending'} hint="Most recent payout" icon={<IconTrendingUp />} tone="purple" />
+                <StatCard
+                    label="Focus score"
+                    value={
                         <>
-                            <p className="text-lg font-black mt-2 truncate" title={latestLeave.leave_type_name}>
-                                {latestLeave.leave_type_name}
-                            </p>
-                            <p className="mt-2">
-                                <span className={leaveStatusBadgeClass(latestLeave.status)}>{latestLeave.status}</span>
-                            </p>
-                            <p className="text-xs text-white-dark mt-1.5 truncate" title={`${latestLeave.from_date} → ${latestLeave.to_date}`}>
-                                {formatLeaveDateRange(latestLeave.from_date, latestLeave.to_date)}
-                            </p>
-                            </>
-                    ) : (
-                        <>
-                            <p className="text-lg font-black mt-2 text-white-dark">No requests yet</p>
-                            <p className="text-xs text-white-dark mt-1">Open leave application to submit</p>
+                            <CountUp end={focusScore} duration={1.2} />%
                         </>
-                    )}
-                </Link>
-                <div className="panel p-4 hover:-translate-y-1 transition-all duration-300 border border-[#ebedf2] dark:border-[#1b2e4b]">
-                    <p className="text-[11px] uppercase tracking-wider text-white-dark font-semibold">Effective Time</p>
-                    <p className="text-2xl font-black mt-2">{liveTime}</p>
-                    <p className="text-xs text-white-dark mt-1">Net hours after breaks</p>
-                </div>
-                <div className="panel p-4 hover:-translate-y-1 transition-all duration-300 border border-[#ebedf2] dark:border-[#1b2e4b]">
-                    <p className="text-[11px] uppercase tracking-wider text-white-dark font-semibold">Weekly Hours</p>
-                    <p className="text-2xl font-black mt-2 text-success">{data.total_work_duration_week}</p>
-                    <p className="text-xs text-white-dark mt-1">Current week accumulation</p>
-                </div>
-                <div className="panel p-4 hover:-translate-y-1 transition-all duration-300 border border-[#ebedf2] dark:border-[#1b2e4b]">
-                    <p className="text-[11px] uppercase tracking-wider text-white-dark font-semibold">Overtime</p>
-                    <p className="text-2xl font-black mt-2 text-warning">{data.overtime ? `${data.overtime.hours}h ${data.overtime.minutes}m` : '0h 0m'}</p>
-                    <p className="text-xs text-white-dark mt-1">Extra contribution</p>
-                </div>
-                <div className="panel p-4 hover:-translate-y-1 transition-all duration-300 border border-[#ebedf2] dark:border-[#1b2e4b]">
-                    <p className="text-[11px] uppercase tracking-wider text-white-dark font-semibold">Latest Payroll</p>
-                    <p className="text-2xl font-black mt-2 text-secondary">{data.latest_payroll ? `$ ${data.latest_payroll.amount.toLocaleString()}` : 'Pending'}</p>
-                    <p className="text-xs text-white-dark mt-1">Most recent payout</p>
-                </div>
-                <div className="panel p-4 hover:-translate-y-1 transition-all duration-300 border border-[#ebedf2] dark:border-[#1b2e4b]">
-                    <p className="text-[11px] uppercase tracking-wider text-white-dark font-semibold">Focus Score</p>
-                    <p className="text-2xl font-black mt-2 text-primary">
-                        <CountUp end={focusScore} duration={1.2} />%
-                    </p>
-                    <p className="text-xs text-white-dark mt-1">Work-to-break ratio</p>
-                </div>
-            </div>
+                    }
+                    hint="Work-to-break ratio"
+                    icon={<IconListCheck />}
+                    tone="primary"
+                    progress={focusScore}
+                />
+            </StatGrid>
 
             <div className="grid grid-cols-1 xl:grid-cols-5 gap-6">
                 <div className="xl:col-span-3 panel p-5">
@@ -1195,7 +1162,7 @@ const EmployeeDashboard = () => {
                             series={[{ name: 'Work Hours', data: chartData?.series || [] }]}
                             options={{
                                 chart: { height: 350, type: 'area', fontFamily: 'Nunito, sans-serif', toolbar: { show: false }, zoom: { enabled: false } },
-                                colors: ['#4361ee'],
+                                colors: [brandHex('brand')],
                                 dataLabels: { enabled: false },
                                 stroke: { curve: 'smooth', width: 3.4 },
                                 fill: {
@@ -1338,7 +1305,7 @@ const EmployeeDashboard = () => {
                             </div>
                             <div className="rounded-lg bg-slate-50 dark:bg-black/20 border border-slate-200 dark:border-slate-800 p-2.5">
                                 <p className="text-[11px] text-slate-500">Break mins</p>
-                                <p className="text-lg font-bold text-cyan-600 dark:text-cyan-300">
+                                <p className="text-lg font-bold text-brand-mid dark:text-brand-300">
                                     <CountUp end={breakMinutes} duration={1.2} />
                                 </p>
                             </div>
@@ -1384,15 +1351,15 @@ const EmployeeDashboard = () => {
                 <div className="panel xl:col-span-1 p-5 shadow-lg border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-[#0f1726]">
                     <div className="flex items-center justify-between mb-5">
                         <h5 className="font-bold text-lg dark:text-white">Upcoming Events</h5>
-                        <div className="p-2 rounded-lg bg-cyan-100 dark:bg-cyan-500/15">
-                            <IconCalendar className="w-5 h-5 text-cyan-700 dark:text-cyan-300" />
+                        <div className="p-2 rounded-lg bg-brand-100 dark:bg-brand-mid/15">
+                            <IconCalendar className="w-5 h-5 text-brand-700 dark:text-brand-300" />
                         </div>
                     </div>
                     <div className="space-y-3.5">
                         {events.length > 0 ? (
                             events.map((event) => (
                                 <div key={event.id} className="flex items-start gap-3 p-3 rounded-xl border border-slate-100 dark:border-slate-800 bg-slate-50/70 dark:bg-black/15 hover:-translate-y-0.5 transition-transform">
-                                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${event.is_holiday ? 'bg-gradient-to-br from-amber-400 to-orange-500' : 'bg-gradient-to-br from-emerald-500 to-cyan-500'}`}>
+                                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${event.is_holiday ? 'bg-gradient-to-br from-amber-400 to-orange-500' : 'bg-gradient-to-br from-emerald-500 to-brand-mid'}`}>
                                         {event.is_holiday ? <IconSun className="w-5 h-5 text-white" /> : <IconCalendar className="w-5 h-5 text-white" />}
                                     </div>
                                     <div className="flex-1 min-w-0">
@@ -1416,7 +1383,7 @@ const EmployeeDashboard = () => {
                 <div className="panel xl:col-span-1 p-5 shadow-lg border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-[#0f1726]">
                     <div className="flex items-center justify-between mb-4">
                         <h5 className="font-bold text-lg dark:text-white">Quick Navigation</h5>
-                        <span className="text-[11px] font-semibold px-2 py-1 rounded-full bg-violet-100 text-violet-700 dark:bg-violet-500/15 dark:text-violet-300">Shortcuts</span>
+                        <span className="text-[11px] font-semibold px-2 py-1 rounded-full bg-brand-100 text-brand-700 dark:bg-brand-accent/15 dark:text-brand-300">Shortcuts</span>
                     </div>
                     <div className="space-y-3">
                         <button type="button" onClick={() => openTeamsChat()} className="group flex w-full items-center text-left gap-3 p-3.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-gradient-to-r from-white to-slate-50 dark:from-[#172036] dark:to-[#101827] hover:shadow-md transition-all" >
@@ -1429,7 +1396,7 @@ const EmployeeDashboard = () => {
                             </div>
                         </button>
                         <Link to="/employee/calendar" className="group flex items-center gap-3 p-3.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-gradient-to-r from-white to-slate-50 dark:from-[#172036] dark:to-[#101827] hover:shadow-md transition-all">
-                            <div className="w-10 h-10 rounded-lg bg-cyan-100 text-cyan-700 dark:bg-cyan-500/15 dark:text-cyan-300 flex items-center justify-center group-hover:scale-105 transition-transform">
+                            <div className="w-10 h-10 rounded-lg bg-brand-100 text-brand-700 dark:bg-brand-mid/15 dark:text-brand-300 flex items-center justify-center group-hover:scale-105 transition-transform">
                                 <IconCalendar className="w-5 h-5" />
                             </div>
                             <div>
