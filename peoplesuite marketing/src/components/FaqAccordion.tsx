@@ -36,9 +36,9 @@ const faqData: FaqItem[] = [
   },
   {
     category: "talentflow",
-    question: "How does candidate onboarding transition from TalentFlow into PeopleSuite?",
+    question: "How does pre-onboarding candidate document verification work in TalentFlow?",
     answer:
-      "Once an offer is accepted, TalentFlow initiates a DPDP-compliant 11-point document collection workflow (Aadhaar, PAN, payslips, academic degrees). Verified candidate records instantly convert into PeopleSuite Core HR employee profiles—initiating shift assignments, biometric/geofence access, 2D hot desk allocation, and statutory payroll enrollment with zero manual data re-entry.",
+      "Once an offer is accepted, TalentFlow initiates a DPDP-compliant 11-point document collection workflow (Aadhaar, PAN, payslips, academic degrees). Recruiters and hiring managers can verify all candidate proofs with structured checklists and immutable audit trails before day-one joining.",
   },
 
   // Payroll & Core HR FAQs
@@ -96,7 +96,7 @@ const faqData: FaqItem[] = [
   },
   {
     category: "security",
-    question: "Who develops and supports the unified PeopleSuite + TalentFlow platform?",
+    question: "Who develops and supports the unified HRMS + ATS platform?",
     answer:
       "PeopleSuite and TalentFlow are engineered and developed by Innovyx Tech Labs LLP. We deliver enterprise architecture, cloud deployment, custom statutory rule configurations, continuous compliance updates, and dedicated technical support.",
   },

@@ -32,7 +32,7 @@ const platformModules: Record<DemoPlatform, string[]> = {
     "Loans & Advances",
   ],
   both: [
-    "End-to-End Pipeline (Sourcing to Payroll)",
+    "Both Solutions (HRMS + ATS)",
     "TalentFlow Sourcing & ATS",
     "PeopleSuite Core HR",
     "Geofenced Attendance",
@@ -122,7 +122,7 @@ export default function BookDemoModal({
   const getPlatformLabel = () => {
     if (platform === "talentflow") return "TalentFlow";
     if (platform === "peoplesuite") return "PeopleSuite";
-    return "TalentFlow + PeopleSuite";
+    return "HRMS + ATS";
   };
 
   return (
