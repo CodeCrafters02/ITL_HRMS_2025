@@ -1105,7 +1105,7 @@ export const CompanyMicrosoftCalendar = ({ variant = 'page' }: CompanyCalendarPr
             )}
 
             {/* Admin Controls */}
-            {isAdmin && (
+            {isAdmin && !embedded && (
                 <div className="mb-4 rounded-xl border border-primary/25 bg-primary/[0.06] dark:bg-primary/10 px-4 py-3 sm:px-5">
                     <h3 className="text-sm font-bold text-gray-800 dark:text-white mb-1">Company Calendar Management (Admin)</h3>
                     <p className="text-xs text-gray-600 dark:text-gray-400 mb-3">
@@ -1180,8 +1180,9 @@ export const CompanyMicrosoftCalendar = ({ variant = 'page' }: CompanyCalendarPr
                     headerToolbar={{
                         left: 'prev,next today',
                         center: 'title',
-                        right: 'dayGridMonth,timeGridWeek,timeGridDay',
+                        right: embedded ? 'dayGridMonth,timeGridDay' : 'dayGridMonth,timeGridWeek,timeGridDay',
                     }}
+                    height={embedded ? 480 : undefined}
                     editable={false}
                     selectable={true}
                     selectMirror={true}
@@ -1200,7 +1201,7 @@ export const CompanyMicrosoftCalendar = ({ variant = 'page' }: CompanyCalendarPr
 
     return (
         <div className={embedded ? '' : 'p-6'}>
-            <div className="panel">{panelInner}</div>
+            <div className={embedded ? 'p-0 shadow-none border-0 bg-transparent' : 'panel'}>{panelInner}</div>
 
             {/* Modal: Add Microsoft Outlook Event */}
             {addOpen && (
