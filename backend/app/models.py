@@ -27,6 +27,11 @@ class Company(models.Model):
     account_no = models.CharField(max_length=50, blank=True, null=True)
     ifsc_code = models.CharField(max_length=20, blank=True, null=True)
     branch_name = models.CharField(max_length=255, blank=True, null=True)
+    # Brand theme chosen by the company admin (blank = Innovyx default)
+    theme_preset = models.CharField(max_length=30, blank=True, default='')
+    theme_primary = models.CharField(max_length=7, blank=True, default='')
+    theme_mid = models.CharField(max_length=7, blank=True, default='')
+    theme_accent = models.CharField(max_length=7, blank=True, default='')
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -994,13 +999,41 @@ class CompanyPolicies(models.Model):
     name = models.CharField(max_length=200)
     document = models.FileField(upload_to='policies/')  
     is_active = models.BooleanField(default=True)
+    version = models.CharField(max_length=20, default='1.0')
+    published_at = models.DateField(default=timezone.localdate)
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):
         return f"{self.company.name} - {self.name}"
-    
+
+    MAX_MINOR_VERSION = 3
+
+    def next_version(self):
+        # 1.0 -> 1.1 -> 1.2 -> 1.3 -> 2.0
+        try:
+            major, minor = (int(x) for x in (self.version or '1.0').split('.')[:2])
+        except ValueError:
+            major, minor = 1, 0
+        return f"{major + 1}.0" if minor >= self.MAX_MINOR_VERSION else f"{major}.{minor + 1}"
+
+
+class CompanyPolicyVersion(models.Model):
+    policy = models.ForeignKey(CompanyPolicies, on_delete=models.CASCADE, related_name='versions')
+    version = models.CharField(max_length=20)
+    document = models.FileField(upload_to='policies/')
+    published_at = models.DateField(default=timezone.localdate)
+    change_note = models.CharField(max_length=500, blank=True, default='')
+    uploaded_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-id']
+
+    def __str__(self):
+        return f"{self.policy.name} v{self.version}"
+
     
     
 class LetterTemplate(models.Model):

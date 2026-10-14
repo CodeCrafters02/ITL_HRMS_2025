@@ -16,10 +16,28 @@ module.exports = {
         },
         extend: {
             colors: {
+                // Legacy `primary` and the new `brand` scale are driven by CSS variables so an admin can re-theme the company.
                 primary: {
-                    DEFAULT: '#4361ee',
-                    light: '#eaf1ff',
-                    'dark-light': 'rgba(67,97,238,.15)',
+                    DEFAULT: 'rgb(var(--primary) / <alpha-value>)',
+                    light: 'rgb(var(--primary-light) / <alpha-value>)',
+                    'dark-light': 'rgb(var(--primary) / 0.15)',
+                },
+                brand: {
+                    DEFAULT: 'rgb(var(--brand) / <alpha-value>)',
+                    mid: 'rgb(var(--brand-mid) / <alpha-value>)',
+                    accent: 'rgb(var(--brand-accent) / <alpha-value>)',
+                    dark: 'rgb(var(--brand-700) / <alpha-value>)',
+                    50: 'rgb(var(--brand-50) / <alpha-value>)',
+                    100: 'rgb(var(--brand-100) / <alpha-value>)',
+                    200: 'rgb(var(--brand-200) / <alpha-value>)',
+                    300: 'rgb(var(--brand-300) / <alpha-value>)',
+                    400: 'rgb(var(--brand-400) / <alpha-value>)',
+                    500: 'rgb(var(--brand-500) / <alpha-value>)',
+                    600: 'rgb(var(--brand-600) / <alpha-value>)',
+                    700: 'rgb(var(--brand-700) / <alpha-value>)',
+                    800: 'rgb(var(--brand-800) / <alpha-value>)',
+                    900: 'rgb(var(--brand-900) / <alpha-value>)',
+                    950: 'rgb(var(--brand-950) / <alpha-value>)',
                 },
                 secondary: {
                     DEFAULT: '#805dca',
@@ -69,6 +87,7 @@ module.exports = {
                 4.5: '18px',
             },
             boxShadow: {
+                xs: '0 1px 2px 0 rgba(0, 0, 0, 0.05)',
                 '3xl': '0 2px 2px rgb(224 230 237 / 46%), 1px 6px 7px rgb(224 230 237 / 46%)',
             },
             keyframes: {

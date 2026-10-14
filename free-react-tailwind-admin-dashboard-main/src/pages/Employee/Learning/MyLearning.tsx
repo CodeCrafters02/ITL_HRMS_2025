@@ -8,6 +8,7 @@ import IconMenuCalendar from '../../../components/Icon/Menu/IconMenuCalendar';
 import IconMenuDocumentation from '../../../components/Icon/Menu/IconMenuDocumentation';
 import IconMenuInvoice from '../../../components/Icon/Menu/IconMenuInvoice';
 import IconOpenBook from '../../../components/Icon/IconOpenBook';
+import PageHeader from '../../../components/Common/PageHeader';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000';
 const ENROLLMENTS_API = `${API_BASE_URL}/employee/enrollments/`;
@@ -366,18 +367,13 @@ const MyLearning = () => {
     return (
         <div>
             {/* Header Banner */}
-            <div className="bg-gradient-to-r from-[#0e1726] via-[#4338ca] to-[#8b5cf6] p-6 sm:p-8 rounded-2xl shadow-lg mb-6 relative overflow-hidden">
-                <div className="relative z-10">
-                    <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight flex items-center gap-2">
-                        <span>🎓</span> My Learning Space
-                    </h1>
-                    <p className="text-white/80 mt-1.5 text-sm font-medium max-w-xl">
-                        Resume your curriculum, stay ahead of compliance deadlines, and collect the credentials you've earned along the way.
-                    </p>
-                </div>
-                <div className="absolute top-0 right-0 -mt-16 -mr-16 w-64 h-64 bg-white opacity-5 rounded-full blur-3xl"></div>
-                <div className="absolute bottom-0 right-10 -mb-10 w-32 h-32 bg-white opacity-5 rounded-full blur-2xl"></div>
-            </div>
+            <PageHeader
+                title="My Learning Space"
+                subtitle="Resume assigned coursework, track compliance deadlines, review completions, and download accredited certificates."
+                icon={<IconOpenBook />}
+                badge="Personal Curriculum"
+                variant="purple"
+            />
 
             {/* Quick stats banner */}
             {!location.pathname.includes('certifications') && (

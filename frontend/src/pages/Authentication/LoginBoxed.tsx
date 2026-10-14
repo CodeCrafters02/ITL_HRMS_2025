@@ -53,9 +53,9 @@ const LoginBoxed = () => {
                 if (data.role === 'master') {
                     navigate('/master/dashboard');
                 } else if (data.role === 'admin') {
-                    navigate('/admin/dashboard');
+                    navigate('/admin/hub');
                 } else if (data.role === 'employee') {
-                    navigate('/employee/dashboard');
+                    navigate('/employee/hub');
                 } else {
                     navigate('/master/dashboard');
                 }
@@ -97,9 +97,9 @@ const LoginBoxed = () => {
                 if (data.role === 'master') {
                     navigate('/master/dashboard');
                 } else if (data.role === 'admin') {
-                    navigate('/admin/dashboard');
+                    navigate('/admin/hub');
                 } else if (data.role === 'employee') {
-                    navigate('/employee/dashboard');
+                    navigate('/employee/hub');
                 } else {
                     navigate('/master/dashboard');
                 }

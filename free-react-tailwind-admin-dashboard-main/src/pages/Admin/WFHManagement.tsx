@@ -6,15 +6,18 @@ import 'flatpickr/dist/flatpickr.css';
 import Swal from 'sweetalert2';
 import Tippy from '@tippyjs/react';
 import 'tippy.js/dist/tippy.css';
-import { Dialog, Transition, Tab } from '@headlessui/react';
 import IconPlus from '../../components/Icon/IconPlus';
 import IconX from '../../components/Icon/IconX';
 import IconChecks from '../../components/Icon/IconChecks';
 import IconInfoCircle from '../../components/Icon/IconInfoCircle';
 import IconCalendar from '../../components/Icon/IconCalendar';
 import IconRefresh from '../../components/Icon/IconRefresh';
-import IconSearch from '../../components/Icon/IconSearch';
+import DataTable, { Column } from '../../components/Common/DataTable';
+import PageHeader from '../../components/Common/PageHeader';
 
+import Modal from '../../components/Common/Modal';
+import { Tab } from '@headlessui/react';
+import Button from '../../components/Common/Button';
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000';
 
 /** Calendar date in local timezone (do not use toISOString() — it shifts dates in non-UTC zones). */
@@ -23,12 +26,34 @@ const dateToLocalYmd = (d: Date) =>
 
 const WFHRequest = () => { 
     const { t } = useTranslation();
-    const [loading, setLoading] = useState(true);
-    const [requests, setRequests] = useState<any[]>([]);
+    // Team Approvals State
     const [pendingRequests, setPendingRequests] = useState<any[]>([]);
+    const [approvalLoading, setApprovalLoading] = useState(false);
+    const [approvalPage, setApprovalPage] = useState(1);
+    const [approvalPageSize, setApprovalPageSize] = useState(10);
+    const [approvalTotalCount, setApprovalTotalCount] = useState(0);
+    const [approvalSearch, setApprovalSearch] = useState('');
+
+    // Live Status State
     const [employees, setEmployees] = useState<any[]>([]);
+    const [liveLoading, setLiveLoading] = useState(false);
+    const [livePage, setLivePage] = useState(1);
+    const [livePageSize, setLivePageSize] = useState(10);
+    const [liveTotalCount, setLiveTotalCount] = useState(0);
+    const [liveSearch, setLiveSearch] = useState('');
+
+    // Audit Logs State
     const [logs, setLogs] = useState<any[]>([]);
-    const [search, setSearch] = useState('');
+    const [logsLoading, setLogsLoading] = useState(false);
+    const [logsPage, setLogsPage] = useState(1);
+    const [logsPageSize, setLogsPageSize] = useState(10);
+    const [logsTotalCount, setLogsTotalCount] = useState(0);
+    const [logsSearch, setLogsSearch] = useState('');
+
+    // Header Summary Counts
+    const [homeCount, setHomeCount] = useState(0);
+    const [officeCount, setOfficeCount] = useState(0);
+
     const [showModal, setShowModal] = useState(false);
     
     const [formData, setFormData] = useState({
@@ -46,32 +71,115 @@ const WFHRequest = () => {
         Authorization: `Bearer ${localStorage.getItem('access_token')}`,
     };
 
-    useEffect(() => {
-        fetchAllData();
-    }, []);
-
-    const fetchAllData = async () => {
-        setLoading(true);
+    const fetchSummaryCounts = async () => {
         try {
-            const promises: any[] = [
-                axios.get(`${API_BASE_URL}/app/wfh-requests/`, { headers }),
-                axios.get(`${API_BASE_URL}/app/employee/?page_size=1000`, { headers }),
-                axios.get(`${API_BASE_URL}/app/work-location-logs/`, { headers })
-            ];
-
-            const results = await Promise.all(promises);
-            
-            const approvalRes = results[0].data.results || results[0].data;
-            setPendingRequests(approvalRes.filter((r: any) => r.status === 'pending'));
-
-            setEmployees(results[1].data.results || results[1].data);
-            setLogs(results[2].data.results || results[2].data);
-        } catch (error) {
-            console.error('Error fetching WFH data:', error);
-        } finally {
-            setLoading(false);
+            const res = await axios.get(`${API_BASE_URL}/app/employee/?page_size=1000`, { headers });
+            const list = res.data.results || (Array.isArray(res.data) ? res.data : []);
+            setHomeCount(list.filter((e: any) => e.work_location === 'home').length);
+            setOfficeCount(list.filter((e: any) => e.work_location === 'office').length);
+        } catch (e) {
+            console.error(e);
         }
     };
+
+    const fetchPendingApprovals = async () => {
+        setApprovalLoading(true);
+        try {
+            const res = await axios.get(`${API_BASE_URL}/app/wfh-requests/`, {
+                headers,
+                params: {
+                    status: 'pending',
+                    page: approvalPage,
+                    page_size: approvalPageSize,
+                    search: approvalSearch.trim() || undefined,
+                }
+            });
+            const data = res.data;
+            const list = data.results || (Array.isArray(data) ? data : []);
+            setPendingRequests(list);
+            setApprovalTotalCount(data.count !== undefined ? data.count : list.length);
+        } catch (error) {
+            console.error('Error fetching approvals:', error);
+        } finally {
+            setApprovalLoading(false);
+        }
+    };
+
+    const fetchLiveStatus = async () => {
+        setLiveLoading(true);
+        try {
+            const res = await axios.get(`${API_BASE_URL}/app/employee/`, {
+                headers,
+                params: {
+                    page: livePage,
+                    page_size: livePageSize,
+                    search: liveSearch.trim() || undefined,
+                }
+            });
+            const data = res.data;
+            const list = data.results || (Array.isArray(data) ? data : []);
+            setEmployees(list);
+            setLiveTotalCount(data.count !== undefined ? data.count : list.length);
+        } catch (error) {
+            console.error('Error fetching live status:', error);
+        } finally {
+            setLiveLoading(false);
+        }
+    };
+
+    const fetchLogs = async () => {
+        setLogsLoading(true);
+        try {
+            const res = await axios.get(`${API_BASE_URL}/app/work-location-logs/`, {
+                headers,
+                params: {
+                    page: logsPage,
+                    page_size: logsPageSize,
+                    search: logsSearch.trim() || undefined,
+                }
+            });
+            const data = res.data;
+            const list = data.results || (Array.isArray(data) ? data : []);
+            setLogs(list);
+            setLogsTotalCount(data.count !== undefined ? data.count : list.length);
+        } catch (error) {
+            console.error('Error fetching logs:', error);
+        } finally {
+            setLogsLoading(false);
+        }
+    };
+
+    const fetchAllData = () => {
+        fetchSummaryCounts();
+        fetchPendingApprovals();
+        fetchLiveStatus();
+        fetchLogs();
+    };
+
+    useEffect(() => {
+        fetchSummaryCounts();
+    }, []);
+
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            fetchPendingApprovals();
+        }, 300);
+        return () => clearTimeout(timer);
+    }, [approvalPage, approvalPageSize, approvalSearch]);
+
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            fetchLiveStatus();
+        }, 300);
+        return () => clearTimeout(timer);
+    }, [livePage, livePageSize, liveSearch]);
+
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            fetchLogs();
+        }, 300);
+        return () => clearTimeout(timer);
+    }, [logsPage, logsPageSize, logsSearch]);
 
     const handleSubmit = async (e: any) => {
         e.preventDefault();
@@ -167,39 +275,190 @@ const WFHRequest = () => {
         }
     };
 
-    const filteredEmployees = employees.filter((emp: any) => 
-        emp.full_name.toLowerCase().includes(search.toLowerCase()) || 
-        emp.employee_id?.toLowerCase().includes(search.toLowerCase())
-    );
+    const approvalColumns: Column<any>[] = [
+        {
+            key: 'index',
+            title: '#',
+            width: '60px',
+            align: 'center',
+            render: (_val, _req, idx) => (
+                <span className="font-semibold text-gray-500">{(approvalPage - 1) * approvalPageSize + (idx ?? 0) + 1}</span>
+            ),
+        },
+        {
+            key: 'employee',
+            title: 'Employee',
+            sortable: true,
+            render: (_val, req) => (
+                <div className="flex flex-col">
+                    <span className="font-bold text-primary">{req.employee_name}</span>
+                    <span className="text-[10px] font-mono text-gray-400">ID: {req.employee_id}</span>
+                </div>
+            ),
+        },
+        {
+            key: 'current_location',
+            title: 'Current Status',
+            align: 'center',
+            render: (_val, req) => (
+                <span className={`badge uppercase text-[9px] font-bold ${req.employee_current_location === 'home' ? 'badge-outline-secondary' : 'badge-outline-info'}`}>
+                    {req.employee_current_location === 'home' ? 'Home' : 'Office'}
+                </span>
+            ),
+        },
+        {
+            key: 'request_type',
+            title: 'Req Type',
+            align: 'center',
+            render: (_val, req) => (
+                <span className={`badge uppercase text-[9px] font-bold ${req.request_type === 'wfo' ? 'badge-outline-info' : 'badge-outline-secondary'}`}>
+                    {req.request_type === 'wfo' ? 'Office' : 'Home'}
+                </span>
+            ),
+        },
+        {
+            key: 'reason',
+            title: 'Reason',
+            render: (val) => <span className="text-xs italic text-gray-600 dark:text-gray-300 max-w-[250px] truncate block" title={val}>{val}</span>,
+        },
+        {
+            key: 'duration',
+            title: 'Duration',
+            align: 'center',
+            render: (_val, req) => (
+                <span className="font-semibold text-xs text-gray-600 dark:text-gray-300">
+                    {req.from_date || 'N/A'} {req.to_date ? `→ ${req.to_date}` : ''}
+                </span>
+            ),
+        },
+        {
+            key: 'actions',
+            title: 'Actions',
+            align: 'center',
+            width: '120px',
+            render: (_val, req) => (
+                <div className="flex items-center justify-center gap-2">
+                    <Button variant="outline-success" size="sm" className="!p-2" type="button" onClick={() => handleApprove(req.id)}  title="Approve">
+                        <IconChecks className="w-4 h-4" />
+                    </Button>
+                    <Button variant="outline-danger" size="sm" className="!p-2" type="button" onClick={() => handleReject(req.id)}  title="Reject">
+                        <IconX className="w-4 h-4" />
+                    </Button>
+                </div>
+            ),
+        },
+    ];
+
+    const liveStatusColumns: Column<any>[] = [
+        {
+            key: 'index',
+            title: '#',
+            width: '60px',
+            align: 'center',
+            render: (_val, _emp, idx) => (
+                <span className="font-semibold text-gray-500">{(livePage - 1) * livePageSize + (idx ?? 0) + 1}</span>
+            ),
+        },
+        {
+            key: 'employee_id',
+            title: 'ID',
+            sortable: true,
+            render: (val) => <span className="text-xs font-mono font-bold text-gray-400">{val}</span>,
+        },
+        {
+            key: 'full_name',
+            title: 'Name',
+            sortable: true,
+            render: (val) => <span className="font-bold text-gray-800 dark:text-white-light">{val}</span>,
+        },
+        {
+            key: 'work_location',
+            title: 'Status',
+            sortable: true,
+            render: (val) => (
+                <span className={`badge ${val === 'home' ? 'badge-outline-info' : 'badge-outline-success'} uppercase text-[9px] font-bold`}>
+                    {val === 'home' ? 'Working Home' : 'In Office'}
+                </span>
+            ),
+        },
+        {
+            key: 'action',
+            title: 'Action',
+            align: 'center',
+            render: (_val, emp) => (
+                <button
+                    type="button"
+                    onClick={() => handleToggleLocation(emp)}
+                    className={`btn btn-sm font-bold uppercase text-[10px] px-4 py-1.5 rounded-xl shadow-sm ${emp.work_location === 'home' ? 'btn-warning' : 'btn-info'}`}
+                >
+                    Switch to {emp.work_location === 'home' ? 'Office' : 'Home'}
+                </button>
+            ),
+        },
+    ];
+
+    const auditLogColumns: Column<any>[] = [
+        {
+            key: 'index',
+            title: '#',
+            width: '60px',
+            align: 'center',
+            render: (_val, _log, idx) => (
+                <span className="font-semibold text-gray-500">{(logsPage - 1) * logsPageSize + (idx ?? 0) + 1}</span>
+            ),
+        },
+        {
+            key: 'employee_name',
+            title: 'Employee',
+            sortable: true,
+            render: (val) => <span className="font-bold text-primary">{val}</span>,
+        },
+        {
+            key: 'transition',
+            title: 'Transition',
+            render: (_val, log) => (
+                <span className="font-semibold text-xs capitalize text-gray-600 dark:text-gray-300">
+                    {log.from_location} &rarr; {log.to_location}
+                </span>
+            ),
+        },
+        {
+            key: 'changed_by_name',
+            title: 'Auth By',
+            render: (val) => <span className="text-xs font-semibold text-gray-500">{val || 'System'}</span>,
+        },
+        {
+            key: 'date',
+            title: 'Timestamp',
+            sortable: true,
+            render: (val) => <span className="text-xs text-gray-400">{val ? new Date(val).toLocaleString() : '-'}</span>,
+        },
+    ];
 
     const tabs = ['Team Approvals', 'Live Status', 'Audit Logs'];
 
     return (
         <div className="pb-10">
             {/* Unified Header */}
-            <div className="bg-gradient-to-r from-[#4338ca] via-[#3b82f6] to-[#0ea5e9] p-10 rounded-3xl shadow-2xl mb-10 relative overflow-hidden">
-                <div className="relative z-10 flex flex-col md:flex-row justify-between items-center gap-8">
-                    <div className="text-center md:text-left">
-                        <h1 className="text-4xl md:text-5xl font-black text-white tracking-tight uppercase italic drop-shadow-lg">WFH Hub</h1>
-                        <p className="text-white/90 mt-4 text-lg font-bold max-w-2xl italic leading-relaxed">
-                            {isAdmin ? 'Global oversight & policy management center.' : 'Track your presence and see who\'s in the office today.'}
-                        </p>
-                    </div>
-                    <div className="flex flex-col sm:flex-row items-center gap-4">
-                        <div className="flex gap-4 mr-4">
-                            <div className="text-center bg-white/10 p-3 px-5 rounded-2xl backdrop-blur-md border border-white/20">
-                                <p className="text-2xl font-black text-white leading-none">{employees.filter(e => e.work_location === 'home').length}</p>
-                                <p className="text-[9px] font-black uppercase tracking-widest text-indigo-200 mt-1">At Home</p>
-                            </div>
-                            <div className="text-center bg-white/10 p-3 px-5 rounded-2xl backdrop-blur-md border border-white/20">
-                                <p className="text-2xl font-black text-white leading-none">{employees.filter(e => e.work_location === 'office').length}</p>
-                                <p className="text-[9px] font-black uppercase tracking-widest text-emerald-200 mt-1">In Office</p>
-                            </div>
+            <PageHeader
+                title="WFH Management Hub"
+                subtitle={isAdmin ? 'Global organizational presence tracking, flexible work policies, and approval workflows.' : 'Track your presence and see who\'s working remotely or in the office today.'}
+                icon={<IconCalendar />}
+                badge="Workforce Flexibility"
+                variant="indigo"
+                stats={
+                    <div className="flex items-center gap-3">
+                        <div className="text-center bg-white/10 p-2.5 px-4 rounded-xl backdrop-blur-md border border-white/20">
+                            <p className="text-xl font-black text-white leading-none">{homeCount}</p>
+                            <p className="text-[9px] font-black uppercase tracking-wider text-indigo-200 mt-1">At Home</p>
+                        </div>
+                        <div className="text-center bg-white/10 p-2.5 px-4 rounded-xl backdrop-blur-md border border-white/20">
+                            <p className="text-xl font-black text-white leading-none">{officeCount}</p>
+                            <p className="text-[9px] font-black uppercase tracking-wider text-emerald-200 mt-1">In Office</p>
                         </div>
                     </div>
-                </div>
-                <div className="absolute top-0 right-0 -mt-20 -mr-20 w-[500px] h-[500px] bg-white/5 rounded-full blur-3xl"></div>
-            </div>
+                }
+            />
 
             <Tab.Group>
                 <Tab.List className="flex flex-wrap gap-8 mb-8 border-b border-gray-100 dark:border-gray-800 pb-1">
@@ -222,127 +481,81 @@ const WFHRequest = () => {
                             
                             {/* TEAM APPROVALS */}
                             {t === 'Team Approvals' && (
-                                <div className="panel p-0 border-0 overflow-hidden shadow-sm rounded-2xl">
-                                    <div className="table-responsive">
-                                        <table className="table-hover">
-                                            <thead>
-                                                <tr className="bg-gray-50 dark:bg-gray-900/50">
-                                                    <th className="text-[10px] font-black uppercase">Employee</th>
-                                                    <th className="text-[10px] font-black uppercase text-center">Current Status</th>
-                                                    <th className="text-[10px] font-black uppercase text-center">Req Type</th>
-                                                    <th className="text-[10px] font-black uppercase">Reason</th>
-                                                    <th className="text-[10px] font-black uppercase text-center">Duration</th>
-                                                    <th className="text-[10px] font-black uppercase text-center">Actions</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                {pendingRequests.map((req: any) => (
-                                                    <tr key={req.id}>
-                                                        <td>
-                                                            <div className="flex flex-col">
-                                                                <span className="font-black text-indigo-600">{req.employee_name}</span>
-                                                                <span className="text-[9px] font-bold uppercase text-gray-400 italic">ID: {req.employee_id}</span>
-                                                            </div>
-                                                        </td>
-                                                        <td className="text-center">
-                                                            <span className={`badge uppercase text-[9px] font-black tracking-widest ${req.employee_current_location === 'home' ? 'badge-outline-secondary' : 'badge-outline-info'}`}>
-                                                                {req.employee_current_location === 'home' ? 'Home' : 'Office'}
-                                                            </span>
-                                                        </td>
-                                                        <td className="text-center">
-                                                            <span className={`badge uppercase text-[9px] font-black tracking-widest ${req.request_type === 'wfo' ? 'badge-outline-info' : 'badge-outline-secondary'}`}>
-                                                                {req.request_type === 'wfo' ? 'Office' : 'Home'}
-                                                            </span>
-                                                        </td>
-                                                        <td className="whitespace-normal min-w-[250px] text-xs font-medium italic text-gray-600">{req.reason}</td>
-                                                        <td className="text-center font-bold text-xs">{req.from_date || 'N/A'} {req.to_date ? `→ ${req.to_date}` : ''}</td>
-                                                        <td>
-                                                            <div className="flex items-center justify-center gap-3">
-                                                                <Tippy content="Approve"><button onClick={() => handleApprove(req.id)} className="btn btn-sm btn-outline-success p-2 rounded-lg"><IconChecks className="w-4 h-4" /></button></Tippy>
-                                                                <Tippy content="Reject"><button onClick={() => handleReject(req.id)} className="btn btn-sm btn-outline-danger p-2 rounded-lg"><IconX className="w-4 h-4" /></button></Tippy>
-                                                            </div>
-                                                        </td>
-                                                    </tr>
-                                                ))}
-                                                {pendingRequests.length === 0 && (
-                                                    <tr><td colSpan={4} className="text-center py-20 opacity-30 italic font-black uppercase tracking-widest">No pending approvals</td></tr>
-                                                )}
-                                            </tbody>
-                                        </table>
-                                    </div>
-                                </div>
+                                <DataTable
+                                    title="Team WFH Approvals"
+                                    columns={approvalColumns}
+                                    data={pendingRequests}
+                                    loading={approvalLoading}
+                                    page={approvalPage}
+                                    pageSize={approvalPageSize}
+                                    totalCount={approvalTotalCount}
+                                    onPageChange={(p) => setApprovalPage(p)}
+                                    onPageSizeChange={(sz) => {
+                                        setApprovalPageSize(sz);
+                                        setApprovalPage(1);
+                                    }}
+                                    searchValue={approvalSearch}
+                                    onSearchChange={(val) => {
+                                        setApprovalSearch(val);
+                                        setApprovalPage(1);
+                                    }}
+                                    onRefresh={fetchPendingApprovals}
+                                    searchPlaceholder="Search approvals by name, ID, reason..."
+                                    emptyMessage="No pending approvals"
+                                    emptySubtitle="All employee work-from-home requests have been processed."
+                                />
                             )}
 
                             {/* LIVE STATUS */}
                             {t === 'Live Status' && (
-                                <div>
-                                    <div className="flex justify-end mb-6">
-                                        <div className="relative w-full max-w-md">
-                                            <input type="text" placeholder="Search..." className="form-input py-2.5 pl-11 rounded-2xl shadow-sm" value={search} onChange={(e) => setSearch(e.target.value)} />
-                                            <IconSearch className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />
-                                        </div>
-                                    </div>
-                                    <div className="panel p-0 border-0 overflow-hidden shadow-sm rounded-2xl">
-                                        <div className="table-responsive">
-                                            <table className="table-hover">
-                                                <thead>
-                                                    <tr className="bg-gray-50 dark:bg-gray-900/50">
-                                                        <th className="text-[10px] font-black uppercase">ID</th>
-                                                        <th className="text-[10px] font-black uppercase">Name</th>
-                                                        <th className="text-[10px] font-black uppercase">Status</th>
-                                                        <th className="text-[10px] font-black uppercase text-center">Action</th>
-                                                    </tr>
-                                                </thead>
-                                                <tbody>
-                                                    {filteredEmployees.map((emp: any) => (
-                                                        <tr key={emp.id}>
-                                                            <td className="text-xs font-black text-gray-400">{emp.employee_id}</td>
-                                                            <td className="font-bold">{emp.full_name}</td>
-                                                            <td>
-                                                                <span className={`badge ${emp.work_location === 'home' ? 'badge-outline-info' : 'badge-outline-warning'} uppercase text-[9px] font-black`}>
-                                                                    {emp.work_location === 'home' ? 'Working Home' : 'In Office'}
-                                                                </span>
-                                                            </td>
-                                                            <td className="text-center">
-                                                                <button onClick={() => handleToggleLocation(emp)} className={`btn btn-sm font-black uppercase text-[10px] px-5 py-2 rounded-xl shadow-lg ${emp.work_location === 'home' ? 'btn-warning' : 'btn-info'}`}>
-                                                                    Switch to {emp.work_location === 'home' ? 'Office' : 'Home'}
-                                                                </button>
-                                                            </td>
-                                                        </tr>
-                                                    ))}
-                                                </tbody>
-                                            </table>
-                                        </div>
-                                    </div>
-                                </div>
+                                <DataTable
+                                    title="Employee Live Work Location"
+                                    columns={liveStatusColumns}
+                                    data={employees}
+                                    loading={liveLoading}
+                                    page={livePage}
+                                    pageSize={livePageSize}
+                                    totalCount={liveTotalCount}
+                                    onPageChange={(p) => setLivePage(p)}
+                                    onPageSizeChange={(sz) => {
+                                        setLivePageSize(sz);
+                                        setLivePage(1);
+                                    }}
+                                    searchValue={liveSearch}
+                                    onSearchChange={(val) => {
+                                        setLiveSearch(val);
+                                        setLivePage(1);
+                                    }}
+                                    onRefresh={fetchLiveStatus}
+                                    searchPlaceholder="Search employee by name, ID..."
+                                    emptyMessage="No employees found."
+                                />
                             )}
 
                             {/* AUDIT LOGS */}
                             {t === 'Audit Logs' && (
-                                <div className="panel p-0 border-0 overflow-hidden shadow-sm rounded-2xl">
-                                    <div className="table-responsive">
-                                        <table className="table-hover">
-                                            <thead>
-                                                <tr className="bg-gray-50 dark:bg-gray-900/50">
-                                                    <th className="text-[10px] font-black uppercase">Employee</th>
-                                                    <th className="text-[10px] font-black uppercase">Transition</th>
-                                                    <th className="text-[10px] font-black uppercase">Auth By</th>
-                                                    <th className="text-[10px] font-black uppercase">Timestamp</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                {logs.map((log: any) => (
-                                                    <tr key={log.id}>
-                                                        <td className="font-black text-indigo-600">{log.employee_name}</td>
-                                                        <td>{log.from_location} &rarr; {log.to_location}</td>
-                                                        <td className="text-xs font-bold">{log.changed_by_name}</td>
-                                                        <td className="text-[10px] font-bold text-gray-400 italic">{new Date(log.date).toLocaleString('en-GB')}</td>
-                                                    </tr>
-                                                ))}
-                                            </tbody>
-                                        </table>
-                                    </div>
-                                </div>
+                                <DataTable
+                                    title="Work Location Audit Logs"
+                                    columns={auditLogColumns}
+                                    data={logs}
+                                    loading={logsLoading}
+                                    page={logsPage}
+                                    pageSize={logsPageSize}
+                                    totalCount={logsTotalCount}
+                                    onPageChange={(p) => setLogsPage(p)}
+                                    onPageSizeChange={(sz) => {
+                                        setLogsPageSize(sz);
+                                        setLogsPage(1);
+                                    }}
+                                    searchValue={logsSearch}
+                                    onSearchChange={(val) => {
+                                        setLogsSearch(val);
+                                        setLogsPage(1);
+                                    }}
+                                    onRefresh={fetchLogs}
+                                    searchPlaceholder="Search audit logs..."
+                                    emptyMessage="No audit logs recorded."
+                                />
                             )}
 
                         </Tab.Panel>
@@ -352,80 +565,65 @@ const WFHRequest = () => {
             </Tab.Group>
 
             {/* Request Modal */}
-            <Transition appear show={showModal} as={Fragment}>
-                <Dialog as="div" open={showModal} onClose={() => setShowModal(false)} className="relative z-50">
-                    <Transition.Child as={Fragment} enter="ease-out duration-300" enterFrom="opacity-0" enterTo="opacity-100" leave="ease-in duration-200" leaveFrom="opacity-100" leaveTo="opacity-0"><div className="fixed inset-0 bg-[black]/60" /></Transition.Child>
-                    <div className="fixed inset-0 overflow-y-auto">
-                        <div className="flex min-h-full items-center justify-center px-4 py-8">
-                            <Transition.Child as={Fragment} enter="ease-out duration-300" enterFrom="opacity-0 scale-95" enterTo="opacity-100 scale-100" leave="ease-in duration-200" leaveFrom="opacity-100 scale-100" leaveTo="opacity-0 scale-95">
-                                <Dialog.Panel className="panel border-0 p-0 rounded-2xl overflow-hidden w-full max-w-lg bg-white dark:bg-[#0e1726] shadow-2xl">
-                                    <div className="flex bg-[#fbfbfb] dark:bg-[#121c2c] items-center justify-between px-6 py-4 border-b border-gray-100 dark:border-gray-800">
-                                        <h5 className="text-xl font-black text-indigo-600 uppercase tracking-tight italic">New Request</h5>
-                                        <button onClick={() => setShowModal(false)} className="text-gray-400 hover:text-red-500"><IconX /></button>
-                                    </div>
-                                    <form onSubmit={handleSubmit}>
-                                        <div className="p-6 space-y-6">
-                                            <div>
-                                                <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1 block">Reason</label>
-                                                <textarea className="form-textarea min-h-[120px] text-sm" placeholder="Details..." required value={formData.reason} onChange={(e) => setFormData({ ...formData, reason: e.target.value })}></textarea>
-                                            </div>
-                                            <div className="grid grid-cols-2 gap-5">
-                                                <div>
-                                                    <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1 block">From</label>
-                                                    <Flatpickr
-                                                        value={formData.from_date || undefined}
-                                                        options={{ dateFormat: 'Y-m-d' }}
-                                                        className="form-input"
-                                                        onChange={(date: Date[]) => {
-                                                            const picked = date[0];
-                                                            if (!picked) {
-                                                                setFormData((prev) => ({ ...prev, from_date: '' }));
-                                                                return;
-                                                            }
-                                                            const from = dateToLocalYmd(picked);
-                                                            setFormData((prev) => ({
-                                                                ...prev,
-                                                                from_date: from,
-                                                                to_date: prev.to_date && prev.to_date < from ? from : prev.to_date,
-                                                            }));
-                                                        }}
-                                                    />
-                                                </div>
-                                                <div>
-                                                    <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1 block">To</label>
-                                                    <Flatpickr
-                                                        value={formData.to_date || undefined}
-                                                        options={{ dateFormat: 'Y-m-d' }}
-                                                        className="form-input"
-                                                        onChange={(date: Date[]) => {
-                                                            const picked = date[0];
-                                                            if (!picked) {
-                                                                setFormData((prev) => ({ ...prev, to_date: '' }));
-                                                                return;
-                                                            }
-                                                            let to = dateToLocalYmd(picked);
-                                                            setFormData((prev) => {
-                                                                if (prev.from_date && to < prev.from_date) {
-                                                                    to = prev.from_date;
-                                                                }
-                                                                return { ...prev, to_date: to };
-                                                            });
-                                                        }}
-                                                    />
-                                                </div>
-                                            </div>
-                                        </div>
-                                        <div className="flex items-center justify-end px-6 py-4 bg-gray-50/50 dark:bg-gray-900/20 gap-3">
-                                            <button type="button" onClick={() => setShowModal(false)} className="btn btn-outline-danger">Cancel</button>
-                                            <button type="submit" className="btn btn-primary">Submit</button>
-                                        </div>
-                                    </form>
-                                </Dialog.Panel>
-                            </Transition.Child>
-                        </div>
-                    </div>
-                </Dialog>
-            </Transition>
+            <Modal open={showModal} onClose={() => setShowModal(false)} title="New Request" size="lg">
+                <form onSubmit={handleSubmit}>
+                                                        <div className="p-6 space-y-6">
+                                                            <div>
+                                                                <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1 block">Reason</label>
+                                                                <textarea className="form-textarea min-h-[120px] text-sm" placeholder="Details..." required value={formData.reason} onChange={(e) => setFormData({ ...formData, reason: e.target.value })}></textarea>
+                                                            </div>
+                                                            <div className="grid grid-cols-2 gap-5">
+                                                                <div>
+                                                                    <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1 block">From</label>
+                                                                    <Flatpickr
+                                                                        value={formData.from_date || undefined}
+                                                                        options={{ dateFormat: 'Y-m-d' }}
+                                                                        className="form-input"
+                                                                        onChange={(date: Date[]) => {
+                                                                            const picked = date[0];
+                                                                            if (!picked) {
+                                                                                setFormData((prev) => ({ ...prev, from_date: '' }));
+                                                                                return;
+                                                                            }
+                                                                            const from = dateToLocalYmd(picked);
+                                                                            setFormData((prev) => ({
+                                                                                ...prev,
+                                                                                from_date: from,
+                                                                                to_date: prev.to_date && prev.to_date < from ? from : prev.to_date,
+                                                                            }));
+                                                                        }}
+                                                                    />
+                                                                </div>
+                                                                <div>
+                                                                    <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1 block">To</label>
+                                                                    <Flatpickr
+                                                                        value={formData.to_date || undefined}
+                                                                        options={{ dateFormat: 'Y-m-d' }}
+                                                                        className="form-input"
+                                                                        onChange={(date: Date[]) => {
+                                                                            const picked = date[0];
+                                                                            if (!picked) {
+                                                                                setFormData((prev) => ({ ...prev, to_date: '' }));
+                                                                                return;
+                                                                            }
+                                                                            let to = dateToLocalYmd(picked);
+                                                                            setFormData((prev) => {
+                                                                                if (prev.from_date && to < prev.from_date) {
+                                                                                    to = prev.from_date;
+                                                                                }
+                                                                                return { ...prev, to_date: to };
+                                                                            });
+                                                                        }}
+                                                                    />
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                        <div className="flex items-center justify-end px-6 py-4 bg-gray-50/50 dark:bg-gray-900/20 gap-3">
+                                                            <Button variant="outline-danger" type="button" onClick={() => setShowModal(false)} >Cancel</Button>
+                                                            <Button type="submit">Submit</Button>
+                                                        </div>
+                                                    </form>
+            </Modal>
         </div>
     );
 };

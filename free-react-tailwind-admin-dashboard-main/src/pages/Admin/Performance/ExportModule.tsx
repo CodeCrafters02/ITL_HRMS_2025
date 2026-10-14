@@ -9,6 +9,12 @@ import IconSearch from '../../../components/Icon/IconSearch';
 import IconDownload from '../../../components/Icon/IconDownload';
 import IconMenuCharts from '../../../components/Icon/Menu/IconMenuCharts';
 
+import PageHeader from '../../../components/Common/PageHeader';
+import StatCard, { StatGrid } from '../../../components/Common/StatCard';
+import IconListCheck from '../../../components/Icon/IconListCheck';
+import IconCircleCheck from '../../../components/Icon/IconCircleCheck';
+import IconTrendingUp from '../../../components/Icon/IconTrendingUp';
+import IconClock from '../../../components/Icon/IconClock';
 interface Evaluation {
     id: number;
     employee: number;
@@ -325,20 +331,20 @@ const ExportModule = () => {
     return (
         <div className="space-y-6 py-2 animate__animated animate__fadeIn">
             {/* Header */}
-            <div className="bg-white dark:bg-gray-900 p-5 rounded-2xl border border-gray-150 dark:border-gray-800 shadow-sm flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                <div>
-                    <h2 className="text-xl font-bold text-gray-800 dark:text-white">Appraisal Reports & Analytics</h2>
-                    <p className="text-xs text-gray-450 mt-0.5">Visualize talent distribution, track review completion rates, and apply salary hikes.</p>
-                </div>
-                <div className="flex gap-2">
-                    <button onClick={loadData} className="px-4 py-2 border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-850 text-gray-600 dark:text-gray-300 rounded-xl text-xs font-semibold transition">
+            <PageHeader
+                title="Appraisal Reports & Analytics"
+                subtitle="Visualize talent distribution, track review completion rates, and apply salary hikes."
+                actions={
+                    <>
+                        <button onClick={loadData} className="px-4 py-2 border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-850 text-gray-600 dark:text-gray-300 rounded-xl text-xs font-semibold transition">
                         🔄 Refresh
                     </button>
-                    <Link to="/admin/performance" className="px-4 py-2 bg-gray-100 hover:bg-gray-200 dark:bg-gray-850 dark:hover:bg-gray-800 text-gray-600 dark:text-gray-300 rounded-xl text-xs font-semibold transition">
-                        ← Control Center
-                    </Link>
-                </div>
-            </div>
+                        <Link to="/admin/performance" className="btn btn-outline-primary gap-2">
+                            ← Control Center
+                        </Link>
+                    </>
+                }
+            />
 
             {error && (
                 <div className="bg-rose-500/10 border border-rose-500/20 text-rose-700 dark:text-rose-400 p-4 rounded-xl text-xs font-bold">
@@ -347,26 +353,18 @@ const ExportModule = () => {
             )}
 
             {/* Metrics cards */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                {[
-                    { title: 'Total Evaluations',   value: stats.total,        color: 'text-teal-600 dark:text-teal-400',    desc: 'Active in cycle' },
-                    { title: 'Completed Reviews',   value: stats.completed,    color: 'text-emerald-600 dark:text-emerald-400', desc: 'Manager / HR approved' },
-                    { title: 'Avg. Perf Score',     value: stats.avgScore,     color: 'text-indigo-650 dark:text-indigo-400', desc: 'Equal-weight role avg' },
-                    { title: 'Grace Extensions',    value: stats.approvedExts, color: 'text-amber-600 dark:text-amber-400',  desc: 'Approved requests' },
-                ].map((s, idx) => (
-                    <div key={idx} className="bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800/80 p-5 rounded-2xl shadow-sm space-y-1">
-                        <span className="block text-[9px] font-bold text-gray-400 uppercase tracking-wider">{s.title}</span>
-                        <div className={`text-2xl font-black ${s.color}`}>{s.value}</div>
-                        <span className="block text-[9px] text-gray-400 italic">{s.desc}</span>
-                    </div>
-                ))}
-            </div>
+            <StatGrid cols={4}>
+                <StatCard label="Total Evaluations" value={stats.total} tone="primary" icon={<IconListCheck />} hint="Active in cycle" />
+                <StatCard label="Completed Reviews" value={stats.completed} tone="success" icon={<IconCircleCheck />} hint="Manager / HR approved" />
+                <StatCard label="Avg. Perf Score" value={stats.avgScore} tone="info" icon={<IconTrendingUp />} hint="Equal-weight role avg" />
+                <StatCard label="Grace Extensions" value={stats.approvedExts} tone="warning" icon={<IconClock />} hint="Approved requests" />
+            </StatGrid>
 
             {/* Charts */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
                 <div className="bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 p-5 rounded-3xl shadow-sm space-y-4">
                     <div className="flex items-center gap-2 border-b border-gray-100 dark:border-gray-800 pb-3">
-                        <IconMenuCharts className="w-4 h-4 text-teal-500" />
+                        <IconMenuCharts className="w-4 h-4 text-brand" />
                         <h3 className="text-sm font-black text-gray-800 dark:text-white">Evaluation Completion Status</h3>
                     </div>
                     {filteredEvaluations.length > 0 ? (
@@ -380,7 +378,7 @@ const ExportModule = () => {
 
                 <div className="bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 p-5 rounded-3xl shadow-sm space-y-4">
                     <div className="flex items-center gap-2 border-b border-gray-100 dark:border-gray-800 pb-3">
-                        <span className="text-base text-teal-500">🏢</span>
+                        <span className="text-base text-brand">🏢</span>
                         <h3 className="text-sm font-black text-gray-800 dark:text-white">Avg Perf Score by Department</h3>
                     </div>
                     {deptChartData.categories.length > 0 ? (
@@ -435,7 +433,7 @@ const ExportModule = () => {
                         )}
 
                         <button onClick={handleExportCSV} disabled={filteredEvaluations.length === 0}
-                            className="flex items-center gap-1.5 px-4 py-1.5 bg-teal-500 hover:bg-teal-600 disabled:bg-gray-300 text-white rounded-xl text-xs font-black transition shadow-sm">
+                            className="flex items-center gap-1.5 px-4 py-1.5 bg-brand hover:bg-brand disabled:bg-gray-300 text-white rounded-xl text-xs font-black transition shadow-sm">
                             <IconDownload className="w-3.5 h-3.5" />
                             Export CSV
                         </button>
@@ -478,14 +476,14 @@ const ExportModule = () => {
                                         <td className="py-3.5 px-2 font-bold text-gray-850 dark:text-white">{emp?.full_name || e.employee_name}</td>
                                         <td className="py-3.5 px-2">{emp?.department_name || '—'}</td>
                                         <td className="py-3.5 px-2">{emp?.designation_name || '—'}</td>
-                                        <td className="py-3.5 px-2 text-teal-600 dark:text-teal-400 font-semibold">{e.cycle_name}</td>
+                                        <td className="py-3.5 px-2 text-brand dark:text-brand-400 font-semibold">{e.cycle_name}</td>
                                         <td className="py-3.5 px-2 text-center font-extrabold">{e.self_overall_rating || '—'}</td>
                                         <td className="py-3.5 px-2 text-center font-extrabold">{e.manager_overall_rating || '—'}</td>
                                         <td className="py-3.5 px-2 text-center font-extrabold">{e.peer_overall_rating ?? '—'}</td>
                                         <td className="py-3.5 px-2 text-center font-extrabold">{e.hr_overall_rating || '—'}</td>
                                         <td className="py-3.5 px-2 text-center">
                                             {e.perf_score !== null ? (
-                                                <span className="font-black px-2 py-0.5 rounded-full bg-teal-100 text-teal-700 dark:bg-teal-950/40 dark:text-teal-450">
+                                                <span className="font-black px-2 py-0.5 rounded-full bg-brand-100 text-brand-dark dark:bg-brand-950/40 dark:text-brand-450">
                                                     {e.perf_score}
                                                 </span>
                                             ) : '—'}
@@ -495,7 +493,7 @@ const ExportModule = () => {
                                                 <span className={`font-black px-2 py-0.5 rounded-full text-[10px] ${
                                                     hike >= 15 ? 'bg-violet-100 text-violet-700 dark:bg-violet-950/40 dark:text-violet-400' :
                                                     hike >= 10 ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400' :
-                                                    hike >= 7  ? 'bg-teal-100 text-teal-700 dark:bg-teal-950/40 dark:text-teal-400' :
+                                                    hike >= 7  ? 'bg-brand-100 text-brand-dark dark:bg-brand-950/40 dark:text-brand-400' :
                                                     hike >= 4  ? 'bg-amber-100 text-amber-700 dark:bg-amber-950/40 dark:text-amber-400' :
                                                                  'bg-rose-100 text-rose-700 dark:bg-rose-950/40 dark:text-rose-400'
                                                 }`}>{hike}%</span>

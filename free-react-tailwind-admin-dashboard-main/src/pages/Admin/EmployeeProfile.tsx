@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { useDispatch } from 'react-redux';
 import { setPageTitle } from '../../store/themeConfigSlice';
 
+import Button from '../../components/Common/Button';
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000';
 const API_URL = `${API_BASE_URL}/app/employee/`;
 
@@ -209,13 +210,13 @@ const AdminEmployeeProfile = () => {
                         </div>
                     </div>
                     <div className="flex items-center gap-2">
-                        <button type="button" className="btn btn-outline-primary" onClick={() => navigate(-1)}>
+                        <Button variant="outline" type="button"  onClick={() => navigate(-1)}>
                             Back
-                        </button>
+                        </Button>
                         {employee && (
-                            <button type="button" className="btn btn-primary" onClick={() => navigate(`/admin/employee-register/${employee.id}/edit`)}>
+                            <Button type="button"  onClick={() => navigate(`/admin/employee-register/${employee.id}/edit`)}>
                                 Edit
-                            </button>
+                            </Button>
                         )}
                     </div>
                 </div>

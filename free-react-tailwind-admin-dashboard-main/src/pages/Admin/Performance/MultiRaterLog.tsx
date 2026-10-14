@@ -8,6 +8,13 @@ import IconSearch from '../../../components/Icon/IconSearch';
 import IconDownload from '../../../components/Icon/IconDownload';
 import IconMenuCharts from '../../../components/Icon/Menu/IconMenuCharts';
 
+import PageHeader from '../../../components/Common/PageHeader';
+import StatCard, { StatGrid } from '../../../components/Common/StatCard';
+import IconUsersGroup from '../../../components/Icon/IconUsersGroup';
+import IconClock from '../../../components/Icon/IconClock';
+import IconChecks from '../../../components/Icon/IconChecks';
+import IconCircleCheck from '../../../components/Icon/IconCircleCheck';
+import IconUser from '../../../components/Icon/IconUser';
 interface MultiRaterMapping {
     id: number;
     employee: number;
@@ -257,26 +264,23 @@ const MultiRaterLog = () => {
     return (
         <div className="space-y-6 py-2 animate__animated animate__fadeIn">
             {/* Header section */}
-            <div className="bg-white dark:bg-gray-900 p-5 rounded-2xl border border-gray-150 dark:border-gray-800 shadow-sm flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                <div>
-                    <h2 className="text-xl font-bold text-gray-800 dark:text-white">Multi-Rater Review Master Log</h2>
-                    <p className="text-xs text-gray-450 mt-0.5">Track peer assignments, review nominated relationships, audit workload distribution, and generate mappings spreadsheets.</p>
-                </div>
-                <div className="flex gap-2">
-                    <button
+            <PageHeader
+                title="Multi-Rater Review Master Log"
+                subtitle="Track peer assignments, review nominated relationships, audit workload distribution, and generate mappings spreadsheets."
+                actions={
+                    <>
+                        <button
                         onClick={loadData}
                         className="px-4 py-2 border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-850 text-gray-600 dark:text-gray-300 rounded-xl text-xs font-semibold transition"
                     >
                         🔄 Refresh Log
                     </button>
-                    <Link
-                        to="/admin/performance"
-                        className="px-4 py-2 bg-gray-100 hover:bg-gray-200 dark:bg-gray-855 dark:hover:bg-gray-800 text-gray-600 dark:text-gray-300 rounded-xl text-xs font-semibold transition"
-                    >
-                        ← Control Center
-                    </Link>
-                </div>
-            </div>
+                        <Link to="/admin/performance" className="btn btn-outline-primary gap-2">
+                            ← Control Center
+                        </Link>
+                    </>
+                }
+            />
 
             {error && (
                 <div className="bg-rose-500/10 border border-rose-500/20 text-rose-700 dark:text-rose-400 p-4 rounded-xl text-xs font-bold animate__animated animate__fadeIn">
@@ -285,21 +289,13 @@ const MultiRaterLog = () => {
             )}
 
             {/* Stats metrics */}
-            <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
-                {[
-                    { title: 'Total Peer Mappings', value: stats.total, color: 'text-blue-600 dark:text-blue-400', desc: 'Nominations registered' },
-                    { title: 'Nominated Mappings', value: stats.nominated, color: 'text-amber-500 dark:text-amber-400', desc: 'Awaiting validation' },
-                    { title: 'Approved Assignments', value: stats.approved, color: 'text-teal-600 dark:text-teal-400', desc: 'Valid feedback paths' },
-                    { title: 'Completed Peer Reviews', value: stats.completed, color: 'text-emerald-600 dark:text-emerald-400', desc: 'Feedback submitted' },
-                    { title: 'Unique Reviewers', value: stats.uniqueReviewers, color: 'text-indigo-650 dark:text-indigo-400', desc: 'Active participants' }
-                ].map((s, idx) => (
-                    <div key={idx} className="bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800/80 p-5 rounded-2xl shadow-sm space-y-1">
-                        <span className="block text-[9px] font-bold text-gray-400 uppercase tracking-wider">{s.title}</span>
-                        <div className={`text-2xl font-black ${s.color}`}>{s.value}</div>
-                        <span className="block text-[9px] text-gray-400 italic">{s.desc}</span>
-                    </div>
-                ))}
-            </div>
+            <StatGrid cols={5}>
+                <StatCard label="Total Peer Mappings" value={stats.total} tone="primary" icon={<IconUsersGroup />} hint="Nominations registered" />
+                <StatCard label="Nominated Mappings" value={stats.nominated} tone="warning" icon={<IconClock />} hint="Awaiting validation" />
+                <StatCard label="Approved Assignments" value={stats.approved} tone="info" icon={<IconChecks />} hint="Valid feedback paths" />
+                <StatCard label="Completed Peer Reviews" value={stats.completed} tone="success" icon={<IconCircleCheck />} hint="Feedback submitted" />
+                <StatCard label="Unique Reviewers" value={stats.uniqueReviewers} tone="purple" icon={<IconUser />} hint="Active participants" />
+            </StatGrid>
 
             {/* Charts Row */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
@@ -388,7 +384,7 @@ const MultiRaterLog = () => {
                         <button
                             onClick={handleExportCSV}
                             disabled={filteredMappings.length === 0}
-                            className="flex items-center gap-1.5 px-4 py-1.5 bg-teal-500 hover:bg-teal-600 disabled:bg-gray-300 text-white rounded-xl text-xs font-black transition shadow-sm"
+                            className="flex items-center gap-1.5 px-4 py-1.5 bg-brand hover:bg-brand disabled:bg-gray-300 text-white rounded-xl text-xs font-black transition shadow-sm"
                         >
                             <IconDownload className="w-3.5 h-3.5" />
                             Export CSV
@@ -433,7 +429,7 @@ const MultiRaterLog = () => {
                                             m.status === 'nominated'
                                                 ? 'bg-amber-100 text-amber-700 dark:bg-amber-950/40 dark:text-amber-400'
                                                 : m.status === 'approved'
-                                                ? 'bg-teal-100 text-teal-700 dark:bg-teal-950/40 dark:text-teal-400'
+                                                ? 'bg-brand-100 text-brand-dark dark:bg-brand-950/40 dark:text-brand-400'
                                                 : m.status === 'rejected'
                                                 ? 'bg-rose-100 text-rose-700 dark:bg-rose-950/40 dark:text-rose-455'
                                                 : 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-450'

@@ -3,6 +3,12 @@ import { createPortal } from 'react-dom';
 import axios from 'axios';
 import IconSearch from '../../../components/Icon/IconSearch';
 
+import PageHeader from '../../../components/Common/PageHeader';
+import StatCard, { StatGrid } from '../../../components/Common/StatCard';
+import IconListCheck from '../../../components/Icon/IconListCheck';
+import IconPlayCircle from '../../../components/Icon/IconPlayCircle';
+import IconNotesEdit from '../../../components/Icon/IconNotesEdit';
+import IconCircleCheck from '../../../components/Icon/IconCircleCheck';
 interface Cycle {
     id: number;
     name: string;
@@ -41,7 +47,7 @@ const BAND_PRESETS = [
     { label: '3-Band', bands: [{ minRating: '4.00', maxRating: '5.00', hikePercent: '15.00' }, { minRating: '2.50', maxRating: '3.99', hikePercent: '7.00' }, { minRating: '1.00', maxRating: '2.49', hikePercent: '0.00' }] },
     { label: '5-Band', bands: [{ minRating: '4.50', maxRating: '5.00', hikePercent: '18.00' }, { minRating: '4.00', maxRating: '4.49', hikePercent: '12.00' }, { minRating: '3.00', maxRating: '3.99', hikePercent: '7.00' }, { minRating: '2.00', maxRating: '2.99', hikePercent: '3.00' }, { minRating: '1.00', maxRating: '1.99', hikePercent: '0.00' }] },
 ];
-const bandColor = (h: number) => h >= 15 ? 'text-violet-600 dark:text-violet-400 bg-violet-500/10' : h >= 10 ? 'text-emerald-600 dark:text-emerald-400 bg-emerald-500/10' : h >= 7 ? 'text-teal-600 dark:text-teal-400 bg-teal-500/10' : h >= 4 ? 'text-amber-600 dark:text-amber-400 bg-amber-500/10' : 'text-rose-600 dark:text-rose-400 bg-rose-500/10';
+const bandColor = (h: number) => h >= 15 ? 'text-violet-600 dark:text-violet-400 bg-violet-500/10' : h >= 10 ? 'text-emerald-600 dark:text-emerald-400 bg-emerald-500/10' : h >= 7 ? 'text-brand dark:text-brand-400 bg-brand/10' : h >= 4 ? 'text-amber-600 dark:text-amber-400 bg-amber-500/10' : 'text-rose-600 dark:text-rose-400 bg-rose-500/10';
 
 const EMPTY_FORM: FormState = {
     name: '', start_date: '', end_date: '',
@@ -52,7 +58,7 @@ const EMPTY_DRAFTS: DraftQuestions = { self: [], manager: [], peer: [], hr: [] }
 
 const ROLE_META: Record<RoleKey, { label: string; icon: string; color: string }> = {
     self:    { label: 'Self',     icon: '👤', color: 'text-violet-600 dark:text-violet-400' },
-    manager: { label: 'Manager',  icon: '👔', color: 'text-teal-600 dark:text-teal-400' },
+    manager: { label: 'Manager',  icon: '👔', color: 'text-brand dark:text-brand-400' },
     peer:    { label: 'Peer',     icon: '🤝', color: 'text-amber-600 dark:text-amber-400' },
     hr:      { label: 'Admin/HR', icon: '🛡️', color: 'text-rose-600 dark:text-rose-400' },
 };
@@ -254,30 +260,25 @@ const AppraisalCycles = () => {
     return (
         <div className="space-y-5 py-2 animate__animated animate__fadeIn">
             {/* Header */}
-            <div className="bg-white dark:bg-gray-900 p-5 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                <div>
-                    <h2 className="text-xl font-bold text-gray-800 dark:text-white">Appraisal Cycles</h2>
-                    <p className="text-xs text-gray-400 mt-0.5">Manage performance review periods, deadlines and question banks.</p>
-                </div>
-                <button onClick={openCreate} className="px-4 py-2 bg-teal-500 hover:bg-teal-600 text-white rounded-xl text-xs font-bold shadow-md shadow-teal-500/10 whitespace-nowrap">
+            <PageHeader
+                title="Appraisal Cycles"
+                subtitle="Manage performance review periods, deadlines and question banks."
+                actions={
+                    <>
+                        <button onClick={openCreate} className="px-4 py-2 bg-brand hover:bg-brand text-white rounded-xl text-xs font-bold shadow-md shadow-brand/10 whitespace-nowrap">
                     + New Cycle
                 </button>
-            </div>
+                    </>
+                }
+            />
 
             {/* Stats */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                {[
-                    { label: 'Total', value: stats.total, color: 'text-gray-700 dark:text-white', bg: 'bg-white dark:bg-gray-900' },
-                    { label: 'Active', value: stats.active, color: 'text-emerald-600 dark:text-emerald-400', bg: 'bg-emerald-50 dark:bg-emerald-950/30' },
-                    { label: 'Draft', value: stats.draft, color: 'text-slate-600 dark:text-slate-300', bg: 'bg-slate-50 dark:bg-slate-800/40' },
-                    { label: 'Completed', value: stats.completed, color: 'text-blue-600 dark:text-blue-400', bg: 'bg-blue-50 dark:bg-blue-950/30' },
-                ].map(s => (
-                    <div key={s.label} className={`${s.bg} border border-gray-100 dark:border-gray-800 rounded-2xl p-4 text-center`}>
-                        <div className={`text-2xl font-black ${s.color}`}>{s.value}</div>
-                        <div className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mt-0.5">{s.label}</div>
-                    </div>
-                ))}
-            </div>
+            <StatGrid cols={4}>
+                <StatCard label="Total" value={stats.total} tone="primary" icon={<IconListCheck />} />
+                <StatCard label="Active" value={stats.active} tone="success" icon={<IconPlayCircle />} />
+                <StatCard label="Draft" value={stats.draft} tone="slate" icon={<IconNotesEdit />} />
+                <StatCard label="Completed" value={stats.completed} tone="info" icon={<IconCircleCheck />} />
+            </StatGrid>
 
             {errorMsg && <div className="bg-rose-500/10 border border-rose-500/20 text-rose-700 dark:text-rose-400 p-3 rounded-xl text-xs font-bold">⚠️ {errorMsg}</div>}
             {successMsg && <div className="bg-emerald-500/10 border border-emerald-500/20 text-emerald-700 dark:text-emerald-400 p-3 rounded-xl text-xs font-bold">✓ {successMsg}</div>}
@@ -295,7 +296,7 @@ const AppraisalCycles = () => {
                     <div className="flex-1 overflow-y-auto space-y-2 pr-1">
                         {loading ? <div className="text-center py-10 text-xs text-gray-400">Loading...</div> : filtered.map(c => (
                             <div key={c.id} onClick={() => setSelectedId(c.id)}
-                                className={`p-3 rounded-xl border cursor-pointer transition select-none ${selectedId === c.id ? 'bg-teal-500/10 border-teal-500' : 'border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/40'}`}>
+                                className={`p-3 rounded-xl border cursor-pointer transition select-none ${selectedId === c.id ? 'bg-brand/10 border-brand' : 'border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/40'}`}>
                                 <div className="flex justify-between items-start gap-2">
                                     <span className="text-xs font-bold text-gray-800 dark:text-white leading-tight">{c.name}</span>
                                     <span className={`text-[8px] font-black uppercase px-2 py-0.5 rounded-full shrink-0 ${STATUS_STYLE[c.status]}`}>{c.status}</span>
@@ -307,12 +308,12 @@ const AppraisalCycles = () => {
                                 <div className="flex items-center gap-2 mt-2 pt-2 border-t border-gray-100 dark:border-gray-800">
                                     <button
                                         onClick={e => { e.stopPropagation(); openEdit(c); }}
-                                        className="text-[9px] font-bold text-teal-600 dark:text-teal-400 hover:underline"
+                                        className="text-[9px] font-bold text-brand dark:text-brand-400 hover:underline"
                                     >Edit</button>
                                     <span className="text-gray-300 dark:text-gray-700">|</span>
                                     <button
                                         onClick={e => { e.stopPropagation(); handleTransition(c); }}
-                                        className="text-[9px] font-bold text-gray-400 hover:text-teal-500 hover:underline"
+                                        className="text-[9px] font-bold text-gray-400 hover:text-brand hover:underline"
                                     >→ {STATUS_FLOW[c.status]}</button>
                                     <span className="text-gray-300 dark:text-gray-700">|</span>
                                     <button
@@ -330,12 +331,12 @@ const AppraisalCycles = () => {
                 <div className="lg:col-span-2 bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-3xl p-6 h-[600px] flex flex-col">
                     {!selected ? (
                         <div className="flex-1 flex flex-col items-center justify-center text-center">
-                            <div className="w-14 h-14 rounded-2xl bg-teal-500/10 flex items-center justify-center mb-4">
+                            <div className="w-14 h-14 rounded-2xl bg-brand/10 flex items-center justify-center mb-4">
                                 <span className="text-2xl">📋</span>
                             </div>
                             <h4 className="text-sm font-bold text-gray-500 dark:text-gray-400">Select a cycle</h4>
                             <p className="text-[10px] text-gray-400 mt-1 max-w-xs leading-relaxed">Click a cycle from the list or create a new one to view its details and question bank.</p>
-                            <button onClick={openCreate} className="mt-4 px-4 py-2 bg-teal-500 hover:bg-teal-600 text-white rounded-xl text-xs font-bold">
+                            <button onClick={openCreate} className="mt-4 px-4 py-2 bg-brand hover:bg-brand text-white rounded-xl text-xs font-bold">
                                 + Create First Cycle
                             </button>
                         </div>
@@ -351,7 +352,7 @@ const AppraisalCycles = () => {
                                     <div className="flex gap-2">
                                         <button onClick={() => openEdit(selected)} className="px-3 py-1.5 bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 rounded-lg text-[10px] font-bold">Edit</button>
                                         <button onClick={() => handleTransition(selected)}
-                                            className="px-3 py-1.5 bg-teal-500/10 text-teal-600 dark:text-teal-400 rounded-lg text-[10px] font-bold">
+                                            className="px-3 py-1.5 bg-brand/10 text-brand dark:text-brand-400 rounded-lg text-[10px] font-bold">
                                             → {STATUS_FLOW[selected.status].charAt(0).toUpperCase() + STATUS_FLOW[selected.status].slice(1)}
                                         </button>
                                         <button onClick={() => handleDelete(selected.id)} className="px-3 py-1.5 bg-rose-500/10 text-rose-600 dark:text-rose-400 rounded-lg text-[10px] font-bold">Delete</button>
@@ -372,7 +373,7 @@ const AppraisalCycles = () => {
                                         <span className="text-base">{t.icon}</span>
                                         <div className="text-[9px] font-bold text-gray-400 uppercase mt-1">{t.label}</div>
                                         <div className="text-xs font-bold text-gray-800 dark:text-white mt-0.5">{t.value}</div>
-                                        {t.extra && <div className={`text-[9px] font-black mt-0.5 ${daysLeft(selected.end_date) < 7 && selected.status !== 'completed' ? 'text-rose-500' : 'text-teal-500'}`}>{t.extra}</div>}
+                                        {t.extra && <div className={`text-[9px] font-black mt-0.5 ${daysLeft(selected.end_date) < 7 && selected.status !== 'completed' ? 'text-rose-500' : 'text-brand'}`}>{t.extra}</div>}
                                     </div>
                                 ))}
                             </div>
@@ -386,7 +387,7 @@ const AppraisalCycles = () => {
                                 <div className="grid grid-cols-4 gap-2">
                                     {[
                                         { label: 'Self', count: selected.self_count, color: 'text-violet-600 dark:text-violet-400 bg-violet-500/10' },
-                                        { label: 'Manager', count: selected.manager_count, color: 'text-teal-600 dark:text-teal-400 bg-teal-500/10' },
+                                        { label: 'Manager', count: selected.manager_count, color: 'text-brand dark:text-brand-400 bg-brand/10' },
                                         { label: 'Peer', count: selected.peer_count, color: 'text-amber-600 dark:text-amber-400 bg-amber-500/10' },
                                         { label: 'Admin/HR', count: selected.hr_count, color: 'text-rose-600 dark:text-rose-400 bg-rose-500/10' },
                                     ].map(r => (
@@ -425,8 +426,8 @@ const AppraisalCycles = () => {
                                 <div className="flex items-center gap-1">
                                     {[1, 2, 3].map(s => (
                                         <div key={s} className="flex items-center gap-1">
-                                            <div className={`w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-black transition ${step >= s ? 'bg-teal-500 text-white' : 'bg-gray-100 dark:bg-gray-800 text-gray-400'}`}>{s}</div>
-                                            {s < 3 && <div className={`w-5 h-0.5 rounded ${step > s ? 'bg-teal-500' : 'bg-gray-200 dark:bg-gray-700'}`} />}
+                                            <div className={`w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-black transition ${step >= s ? 'bg-brand text-white' : 'bg-gray-100 dark:bg-gray-800 text-gray-400'}`}>{s}</div>
+                                            {s < 3 && <div className={`w-5 h-0.5 rounded ${step > s ? 'bg-brand' : 'bg-gray-200 dark:bg-gray-700'}`} />}
                                         </div>
                                     ))}
                                     <span className="text-[10px] font-bold text-gray-400 ml-1">{step === 1 ? 'Details' : step === 2 ? 'Questions' : 'Hike Bands'}</span>
@@ -481,7 +482,7 @@ const AppraisalCycles = () => {
                                         <div className="flex gap-2">
                                             {(['draft', 'active', 'completed'] as const).map(s => (
                                                 <button key={s} type="button" onClick={() => setForm(f => ({ ...f, status: s }))}
-                                                    className={`flex-1 py-2 rounded-xl text-[10px] font-bold capitalize transition ${form.status === s ? 'bg-teal-500 text-white' : 'bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400'}`}>
+                                                    className={`flex-1 py-2 rounded-xl text-[10px] font-bold capitalize transition ${form.status === s ? 'bg-brand text-white' : 'bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400'}`}>
                                                     {s}
                                                 </button>
                                             ))}
@@ -500,7 +501,7 @@ const AppraisalCycles = () => {
                                             const newCount   = draftQs[role].length;
                                             return (
                                                 <button key={role} type="button" onClick={() => setQRole(role)}
-                                                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[10px] font-bold transition ${qRole === role ? 'bg-teal-500 text-white' : 'bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400'}`}>
+                                                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[10px] font-bold transition ${qRole === role ? 'bg-brand text-white' : 'bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400'}`}>
                                                     <span>{ROLE_META[role].icon}</span>
                                                     <span>{ROLE_META[role].label}</span>
                                                     <span className={`text-[8px] font-black px-1.5 py-0.5 rounded-full ${qRole === role ? 'bg-white/20 text-white' : 'bg-gray-200 dark:bg-gray-700 text-gray-500'}`}>
@@ -523,13 +524,13 @@ const AppraisalCycles = () => {
                                                     <div className="flex items-center gap-2">
                                                         {(['scale', 'yes_no'] as const).map(t => (
                                                             <button key={t} type="button" onClick={() => updateExistingQ(q.id, { type: t })}
-                                                                className={`px-2 py-0.5 rounded-lg text-[9px] font-bold transition ${q.type === t ? 'bg-teal-500 text-white' : 'bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 text-gray-400'}`}>
+                                                                className={`px-2 py-0.5 rounded-lg text-[9px] font-bold transition ${q.type === t ? 'bg-brand text-white' : 'bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 text-gray-400'}`}>
                                                                 {t === 'scale' ? '⭐ Rating' : '✅ Yes/No'}
                                                             </button>
                                                         ))}
                                                         {q.type === 'scale' && [3, 5, 7, 10].map(n => (
                                                             <button key={n} type="button" onClick={() => updateExistingQ(q.id, { maxScore: n })}
-                                                                className={`w-6 h-6 rounded-lg text-[9px] font-black transition ${q.maxScore === n ? 'bg-teal-500 text-white' : 'bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 text-gray-400'}`}>{n}</button>
+                                                                className={`w-6 h-6 rounded-lg text-[9px] font-black transition ${q.maxScore === n ? 'bg-brand text-white' : 'bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 text-gray-400'}`}>{n}</button>
                                                         ))}
                                                     </div>
                                                 </div>
@@ -568,7 +569,7 @@ const AppraisalCycles = () => {
                                             <span className="text-[9px] font-bold text-gray-400 uppercase">Type:</span>
                                             {(['scale', 'yes_no'] as const).map(t => (
                                                 <button key={t} type="button" onClick={() => setQType(t)}
-                                                    className={`px-2.5 py-1 rounded-lg text-[10px] font-bold transition ${qType === t ? 'bg-teal-500 text-white' : 'bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 text-gray-500'}`}>
+                                                    className={`px-2.5 py-1 rounded-lg text-[10px] font-bold transition ${qType === t ? 'bg-brand text-white' : 'bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 text-gray-500'}`}>
                                                     {t === 'scale' ? '⭐ Rating' : '✅ Yes / No'}
                                                 </button>
                                             ))}
@@ -577,14 +578,14 @@ const AppraisalCycles = () => {
                                                     <span className="text-[9px] font-bold text-gray-400 uppercase ml-2">Max:</span>
                                                     {[3, 5, 7, 10].map(n => (
                                                         <button key={n} type="button" onClick={() => setQMax(n)}
-                                                            className={`w-7 h-7 rounded-lg text-[10px] font-black transition ${qMax === n ? 'bg-teal-500 text-white' : 'bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 text-gray-500'}`}>
+                                                            className={`w-7 h-7 rounded-lg text-[10px] font-black transition ${qMax === n ? 'bg-brand text-white' : 'bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 text-gray-500'}`}>
                                                             {n}
                                                         </button>
                                                     ))}
                                                 </>
                                             )}
                                             <button type="button" onClick={addDraftQ} disabled={!qText.trim()}
-                                                className="ml-auto px-3 py-1.5 bg-teal-500 hover:bg-teal-600 disabled:bg-gray-200 disabled:text-gray-400 text-white rounded-xl text-[10px] font-black transition">
+                                                className="ml-auto px-3 py-1.5 bg-brand hover:bg-brand disabled:bg-gray-200 disabled:text-gray-400 text-white rounded-xl text-[10px] font-black transition">
                                                 + Add
                                             </button>
                                         </div>
@@ -601,7 +602,7 @@ const AppraisalCycles = () => {
                                         {BAND_PRESETS.map(p => (
                                             <button key={p.label} type="button"
                                                 onClick={() => { setDraftBands([]); setExistingBands([]); setDraftBands(p.bands); }}
-                                                className="px-3 py-1.5 rounded-xl text-[10px] font-bold bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-teal-500 hover:text-white transition">
+                                                className="px-3 py-1.5 rounded-xl text-[10px] font-bold bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-brand hover:text-white transition">
                                                 {p.label}
                                             </button>
                                         ))}
@@ -677,7 +678,7 @@ const AppraisalCycles = () => {
                                             <button type="button"
                                                 disabled={!bandForm.minRating || !bandForm.maxRating || !bandForm.hikePercent}
                                                 onClick={() => { setDraftBands(prev => [...prev, bandForm]); setBandForm(EMPTY_BAND); }}
-                                                className="ml-auto px-3 py-1.5 bg-teal-500 hover:bg-teal-600 disabled:bg-gray-200 disabled:text-gray-400 text-white rounded-xl text-[10px] font-black transition">
+                                                className="ml-auto px-3 py-1.5 bg-brand hover:bg-brand disabled:bg-gray-200 disabled:text-gray-400 text-white rounded-xl text-[10px] font-black transition">
                                                 + Add Band
                                             </button>
                                         </div>
@@ -695,7 +696,7 @@ const AppraisalCycles = () => {
                                             <button type="button" onClick={() => setShowForm(false)}
                                                 className="px-4 py-2 bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 rounded-xl text-xs font-bold">Cancel</button>
                                             <button type="submit" disabled={saving}
-                                                className="px-5 py-2 bg-teal-500 hover:bg-teal-600 disabled:bg-gray-300 text-white rounded-xl text-xs font-bold flex items-center gap-2">
+                                                className="px-5 py-2 bg-brand hover:bg-brand disabled:bg-gray-300 text-white rounded-xl text-xs font-bold flex items-center gap-2">
                                                 {saving && <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" />}
                                                 {saving ? (editId ? 'Saving...' : 'Creating...') : editId ? 'Save All Changes' : `Create Cycle`}
                                             </button>
@@ -706,7 +707,7 @@ const AppraisalCycles = () => {
                                         <button type="button" onClick={() => setStep(1)}
                                             className="px-4 py-2 bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 rounded-xl text-xs font-bold">← Back</button>
                                         <button type="button" onClick={() => setStep(3)}
-                                            className="px-5 py-2 bg-teal-500 hover:bg-teal-600 text-white rounded-xl text-xs font-bold">
+                                            className="px-5 py-2 bg-brand hover:bg-brand text-white rounded-xl text-xs font-bold">
                                             Next: Hike Bands →
                                         </button>
                                     </>
@@ -716,7 +717,7 @@ const AppraisalCycles = () => {
                                             className="px-4 py-2 bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 rounded-xl text-xs font-bold">Cancel</button>
                                         <button type="button" disabled={!form.name || !form.start_date || !form.end_date}
                                             onClick={() => { if (!form.name || !form.start_date || !form.end_date) { setErrorMsg('Name, start date and end date are required.'); return; } setErrorMsg(''); setStep(2); }}
-                                            className="px-5 py-2 bg-teal-500 hover:bg-teal-600 disabled:bg-gray-300 disabled:text-gray-100 text-white rounded-xl text-xs font-bold">
+                                            className="px-5 py-2 bg-brand hover:bg-brand disabled:bg-gray-300 disabled:text-gray-100 text-white rounded-xl text-xs font-bold">
                                             Next: {editId ? 'Edit Questions →' : 'Add Questions →'}
                                         </button>
                                     </>

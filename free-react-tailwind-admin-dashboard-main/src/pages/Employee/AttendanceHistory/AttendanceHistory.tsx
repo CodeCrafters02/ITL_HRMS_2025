@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useDispatch } from 'react-redux';
 import { setPageTitle } from '../../../store/themeConfigSlice';
 import IconCalendar from '../../../components/Icon/IconCalendar';
+import PageHeader from '../../../components/Common/PageHeader';
 import { AttendanceHistoryResponse, AttendanceStatus, fetchAttendanceHistory, fetchCompanyHolidays } from './api';
 
 const statusClassMap: Record<AttendanceStatus, string> = {
@@ -163,22 +164,18 @@ const AttendanceHistory = () => {
 
     return (
         <div className="space-y-6 animate__animated animate__fadeIn">
-            <div className="panel bg-gradient-to-r from-[#220fb6] via-[#4f6be5] to-[#0f52af] text-white border-0">
-                <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-                    <div className="flex items-start gap-4">
-                        <div className="w-11 h-11 rounded-lg bg-white/15 flex items-center justify-center shrink-0">
-                            <IconCalendar className="w-6 h-6" />
-                        </div>
-                        <div>
-                            <h1 className="text-xl sm:text-2xl md:text-3xl font-bold">Attendance History</h1>
-                            <p className="mt-1 text-white/75 text-sm">View day-wise attendance, time logs, and status records.</p>
-                        </div>
-                    </div>
-                    <button type="button" className="btn btn-outline-light w-full md:w-auto" onClick={loadAttendance}>
+            <PageHeader
+                title="Attendance History"
+                subtitle="View day-wise check-in and check-out logs, worked hours, punctuality records, and monthly attendance calendar."
+                icon={<IconCalendar />}
+                badge="Time & Attendance"
+                variant="indigo"
+                actions={
+                    <button type="button" className="btn btn-outline-light gap-2 backdrop-blur-md bg-white/10 hover:bg-white/20 border-white/20 text-white font-semibold" onClick={loadAttendance}>
                         {loading ? 'Refreshing...' : 'Refresh'}
                     </button>
-                </div>
-            </div>
+                }
+            />
 
             {error && (
                 <div className="panel border border-danger/30 bg-danger-light text-danger">

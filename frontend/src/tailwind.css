@@ -84,37 +84,59 @@
     }
 
     /* Sidebar */
+    /* Sidebar Base */
+    .sidebar {
+        @apply border-r border-slate-200/80 dark:border-slate-800/80 shadow-[4px_0_24px_0_rgba(15,23,42,0.06)] dark:shadow-[4px_0_24px_0_rgba(0,0,0,0.4)];
+    }
     .sidebar:hover .nav-item > a {
         @apply w-auto;
     }
 
     .sidebar .nav-item > button,
     .sidebar .nav-item > a {
-        @apply mb-1 flex w-full items-center justify-between overflow-hidden whitespace-nowrap rounded-md p-2.5 text-[#506690] hover:bg-[#000]/[0.08] hover:text-black dark:hover:bg-[#181f32] dark:hover:text-white-dark;
+        @apply mb-1 flex w-full items-center justify-between overflow-hidden whitespace-nowrap rounded-xl px-3 py-2.5 text-[13px] font-medium text-slate-600 dark:text-slate-300 transition-all duration-200 hover:bg-slate-100/80 dark:hover:bg-slate-800/60 hover:text-primary dark:hover:text-white;
     }
+
+    /* Active Tab: Modern Accent Pill with Left Glow Bar */
     .sidebar .nav-item > button.active,
     .sidebar .nav-item > a.active {
-        @apply bg-[#000]/[0.08] text-black dark:bg-[#181f32] dark:text-white-dark;
+        @apply relative bg-gradient-to-r from-primary/[0.14] via-primary/[0.08] to-transparent text-primary font-bold shadow-sm border-l-[3.5px] border-primary rounded-r-xl rounded-l-none dark:from-primary/[0.24] dark:via-primary/[0.12] dark:to-transparent dark:text-white;
     }
 
     .sidebar .nav-item > button.active > div > span,
     .sidebar .nav-item > a.active > div > span {
-        @apply dark:!text-white-dark;
+        @apply !text-primary dark:!text-white font-bold tracking-tight;
+    }
+
+    .sidebar .nav-item a.active div:first-child svg,
+    .sidebar .nav-item button.active div:first-child svg {
+        @apply !text-primary dark:!text-primary-light scale-110 drop-shadow-sm;
+    }
+
+    /* Parent Dropdown Button when open */
+    .sidebar .nav-item > button.active > div:last-child svg {
+        @apply !text-primary dark:!text-white transition-transform duration-200;
+    }
+
+    /* Sub-menu tree structure */
+    .sidebar ul.sub-menu {
+        @apply relative ltr:ml-3.5 rtl:mr-3.5 ltr:pl-3 rtl:pr-3 ltr:border-l rtl:border-r border-slate-200/90 dark:border-slate-800 space-y-1 my-1.5;
     }
 
     .sidebar ul.sub-menu li button,
     .sidebar ul.sub-menu li a {
-        @apply flex w-full items-center px-9 py-2.5 before:h-0.5 before:w-2 before:rounded before:bg-gray-300 hover:bg-gray-100
-hover:text-primary hover:before:!bg-primary ltr:before:mr-2 rtl:before:ml-2 dark:before:bg-gray-500 dark:hover:bg-gray-900 dark:hover:text-primary;
+        @apply flex w-full items-center px-3 py-1.5 text-xs rounded-lg text-slate-500 font-medium transition-all duration-150 relative before:w-1.5 before:h-1.5 before:rounded-full before:bg-slate-300 hover:bg-slate-100/90 hover:text-primary hover:before:!bg-primary hover:before:scale-125 ltr:before:mr-2.5 rtl:before:ml-2.5 dark:text-slate-400 dark:before:bg-slate-600 dark:hover:bg-slate-800/70 dark:hover:text-primary;
     }
+
+    /* Active Sub-menu Item: Glowing Dot & Highlight Pill */
     .sidebar ul.sub-menu li button.active,
     .sidebar ul.sub-menu li a.active {
-        @apply text-primary before:bg-primary;
+        @apply bg-primary/10 !text-primary font-bold before:!bg-primary before:!scale-150 before:ring-2 before:ring-primary/30 shadow-sm dark:bg-primary/25 dark:!text-primary-light dark:before:ring-primary/50;
     }
 
     .sidebar .nav-item a div:first-child svg,
     .sidebar .nav-item button div:first-child svg {
-        @apply h-5 w-5 text-black/50 dark:text-white/50;
+        @apply h-5 w-5 text-slate-400 transition-colors duration-200 group-hover:text-primary;
     }
 
     .main-container .main-content {

@@ -3,6 +3,7 @@ import axios from 'axios';
 import IconSearch from '../../../components/Icon/IconSearch';
 import IconTrendingUp from '../../../components/Icon/IconTrendingUp';
 
+import PageHeader from '../../../components/Common/PageHeader';
 interface Employee {
     id: number;
     employee_id: string;
@@ -212,12 +213,10 @@ const BulkMap = () => {
     return (
         <div className="space-y-6 py-2 animate__animated animate__fadeIn">
             {/* Header */}
-            <div className="bg-white dark:bg-gray-900 p-6 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm">
-                <h2 className="text-xl font-bold text-gray-800 dark:text-white">Bulk Map KRAs</h2>
-                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 leading-relaxed">
-                    Pick a KRA, then map it to many eligible department employees at once with a shared reviewer & weightage.
-                </p>
-            </div>
+            <PageHeader
+                title="Bulk Map KRAs"
+                subtitle="Pick a KRA, then map it to many eligible department employees at once with a shared reviewer & weightage."
+            />
 
             {errorMsg && (
                 <div className="bg-rose-500/10 border border-rose-500/20 text-rose-700 dark:text-rose-400 p-4 rounded-xl text-xs font-bold animate__animated animate__shakeX">
@@ -261,13 +260,13 @@ const BulkMap = () => {
                                         onClick={() => pickKra(k.id)}
                                         className={`p-3 rounded-xl border cursor-pointer transition duration-200 select-none ${
                                             sel
-                                                ? 'bg-teal-500/10 border-teal-500'
+                                                ? 'bg-brand/10 border-brand'
                                                 : 'bg-white dark:bg-gray-900 border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/40'
                                         }`}
                                     >
                                         <div className="flex justify-between items-start gap-2">
                                             <span className="text-xs font-bold text-gray-800 dark:text-white leading-tight">{k.title}</span>
-                                            <span className="text-[8px] font-black text-teal-600 bg-teal-500/10 px-2 py-0.5 rounded-full shrink-0">
+                                            <span className="text-[8px] font-black text-brand bg-brand/10 px-2 py-0.5 rounded-full shrink-0">
                                                 {kpiCount} KPI
                                             </span>
                                         </div>
@@ -317,7 +316,7 @@ const BulkMap = () => {
                                                 <span className="text-[8px] font-bold text-gray-400 bg-gray-50 dark:bg-gray-800 px-2 py-0.5 rounded-full">All departments</span>
                                             ) : (
                                                 kraDepts(selectedKra).map(id => (
-                                                    <span key={id} className="text-[8px] font-bold text-teal-600 bg-teal-500/10 px-2 py-0.5 rounded-full">{deptName(id)}</span>
+                                                    <span key={id} className="text-[8px] font-bold text-brand bg-brand/10 px-2 py-0.5 rounded-full">{deptName(id)}</span>
                                                 ))
                                             )}
                                             {selectedKraKpis.map(kpi => (
@@ -354,7 +353,7 @@ const BulkMap = () => {
                                                     <div
                                                         key={e.id}
                                                         onMouseDown={() => { setReviewerId(String(e.id)); setReviewerSearch(`${e.full_name} (${e.designation_name || 'No Desig'})`); setShowReviewerList(false); }}
-                                                        className="px-3 py-2 text-[11px] font-semibold text-gray-700 dark:text-gray-300 hover:bg-teal-500/10 cursor-pointer"
+                                                        className="px-3 py-2 text-[11px] font-semibold text-gray-700 dark:text-gray-300 hover:bg-brand/10 cursor-pointer"
                                                     >
                                                         {e.full_name} <span className="text-gray-400">({e.designation_name || 'No Desig'})</span>
                                                     </div>
@@ -424,11 +423,11 @@ const BulkMap = () => {
                                         >
                                             <input
                                                 type="checkbox"
-                                                className="accent-teal-600"
+                                                className="accent-brand"
                                                 checked={checked}
                                                 onChange={() => toggleEmp(e.id)}
                                             />
-                                            <div className="w-8 h-8 rounded-full bg-teal-600 text-white flex items-center justify-center text-xs font-bold shrink-0">
+                                            <div className="w-8 h-8 rounded-full bg-brand text-white flex items-center justify-center text-xs font-bold shrink-0">
                                                 {e.initials}
                                             </div>
                                             <div className="flex-1 min-w-0">
@@ -438,7 +437,7 @@ const BulkMap = () => {
                                                 </span>
                                             </div>
                                             {timesAssigned > 0 && (
-                                                <span className="text-[8px] font-black text-teal-600 bg-teal-500/10 px-2 py-0.5 rounded-full shrink-0">×{timesAssigned}</span>
+                                                <span className="text-[8px] font-black text-brand bg-brand/10 px-2 py-0.5 rounded-full shrink-0">×{timesAssigned}</span>
                                             )}
                                         </label>
                                     );
@@ -453,7 +452,7 @@ const BulkMap = () => {
                                 <button
                                     onClick={handleBulkAssign}
                                     disabled={assigning || selectedEmpIds.length === 0 || !reviewerId}
-                                    className="px-5 py-2 bg-teal-500 hover:bg-teal-600 disabled:bg-gray-300 text-white rounded-xl text-xs font-bold shadow-md shadow-teal-500/10 transition duration-300"
+                                    className="px-5 py-2 bg-brand hover:bg-brand disabled:bg-gray-300 text-white rounded-xl text-xs font-bold shadow-md shadow-brand/10 transition duration-300"
                                 >
                                     {assigning ? 'Mapping...' : `Map to ${selectedEmpIds.length || ''} Employee(s)`}
                                 </button>

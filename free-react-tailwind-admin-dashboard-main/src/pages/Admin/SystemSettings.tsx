@@ -6,6 +6,8 @@ import IconSettings from '../../components/Icon/IconSettings';
 import IconSave from '../../components/Icon/IconSave';
 import IconRefresh from '../../components/Icon/IconRefresh';
 
+import PageHeader from '../../components/Common/PageHeader';
+import Button from '../../components/Common/Button';
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000';
 const API_URL = `${API_BASE_URL}/app/system-settings/`;
 const DEMO_STATUS_URL = `${API_BASE_URL}/app/demo-status/`;
@@ -140,15 +142,11 @@ const AdminSystemSettings = () => {
 
     return (
         <div className="p-4">
-            <div className="mb-6">
-                <h1 className="text-2xl font-bold text-gray-800 dark:text-white flex items-center gap-3">
-                    <IconSettings className="w-8 h-8 text-primary" />
-                    System Settings
-                </h1>
-                <p className="text-gray-600 dark:text-gray-400 mt-2">
-                    Configure global system settings including demo mode for mobile app reviewers.
-                </p>
-            </div>
+            <PageHeader
+                title="System Settings"
+                subtitle="Configure global system settings including demo mode for mobile app reviewers."
+                icon={<IconSettings />}
+            />
 
             {/* Demo Mode Section */}
             <div className="panel mb-6">
@@ -217,26 +215,24 @@ const AdminSystemSettings = () => {
 
                 {/* Action Buttons */}
                 <div className="flex flex-wrap gap-3 mt-6 pt-6 border-t border-gray-200 dark:border-gray-700">
-                    <button
+                    <Button
                         type="button"
-                        className="btn btn-primary flex items-center gap-2"
+                        
                         onClick={saveSettings}
-                        disabled={saving}
-                    >
+                        disabled={saving}>
                         {saving ? (
                             <span className="animate-spin border-2 border-white border-l-transparent rounded-full w-4 h-4" />
                         ) : (
                             <IconSave className="w-4 h-4" />
                         )}
                         Save Settings
-                    </button>
+                    </Button>
 
-                    <button
+                    <Button variant="outline"
                         type="button"
-                        className="btn btn-outline-primary flex items-center gap-2"
+                        
                         onClick={testDemoMode}
-                        disabled={testing}
-                    >
+                        disabled={testing}>
                         {testing ? (
                             <span className="animate-spin border-2 border-primary border-l-transparent rounded-full w-4 h-4" />
                         ) : (
@@ -245,17 +241,16 @@ const AdminSystemSettings = () => {
                             </svg>
                         )}
                         Test Demo Mode
-                    </button>
+                    </Button>
 
-                    <button
+                    <Button variant="secondary"
                         type="button"
-                        className="btn btn-outline-secondary flex items-center gap-2"
+                        
                         onClick={fetchSettings}
-                        disabled={loading}
-                    >
+                        disabled={loading}>
                         <IconRefresh className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
                         Refresh
-                    </button>
+                    </Button>
                 </div>
             </div>
 

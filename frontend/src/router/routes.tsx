@@ -141,6 +141,7 @@ const AdminConfRoomApproval = lazy(() => import('../pages/Admin/ConferenceRoomAp
 const AdminConfRoomOverview = lazy(() => import('../pages/Admin/ConferenceRoomOverview'));
 
 // Employee Pages
+const EmployeeHub = lazy(() => import('../pages/Employee/EmployeeHub'));
 const EmployeeDashboard = lazy(() => import('../pages/Employee/Dashboard'));
 const EmployeeChat = lazy(() => import('../pages/Employee/Chat'));
 const EmployeeCalendar = lazy(() => import('../pages/Employee/Calendar'));
@@ -618,8 +619,12 @@ const routes = [
     },
     // Admin Dashboard Routes
     {
-        path: '/admin/dashboard',
+        path: '/admin/hub',
         element: <AdminHub />,
+    },
+    {
+        path: '/admin/dashboard',
+        element: <AdminDashboard />,
     },
     {
         path: '/admin/branch-mgt/department',
@@ -748,6 +753,10 @@ const routes = [
     {
         path: '/admin/conference-room/overview',
         element: <AdminConfRoomOverview />,
+    },
+    {
+        path: '/employee/hub',
+        element: <EmployeeHub />,
     },
     {
         path: '/employee/dashboard',

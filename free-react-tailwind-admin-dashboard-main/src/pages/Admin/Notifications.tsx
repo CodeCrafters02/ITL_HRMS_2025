@@ -1,17 +1,19 @@
 import { Fragment, useEffect, useMemo, useState } from 'react';
 import { useDispatch } from 'react-redux';
-import { Dialog, Transition } from '@headlessui/react';
 import Swal from 'sweetalert2';
 import { setPageTitle } from '../../store/themeConfigSlice';
 import IconPlus from '../../components/Icon/IconPlus';
-import IconSearch from '../../components/Icon/IconSearch';
 import IconPencil from '../../components/Icon/IconPencil';
 import IconTrashLines from '../../components/Icon/IconTrashLines';
 import IconX from '../../components/Icon/IconX';
 import IconBell from '../../components/Icon/IconBell';
+import DataTable, { Column } from '../../components/Common/DataTable';
+import PageHeader from '../../components/Common/PageHeader';
 import Flatpickr from 'react-flatpickr';
 import 'flatpickr/dist/flatpickr.css';
 
+import Modal from '../../components/Common/Modal';
+import Button, { IconButton } from '../../components/Common/Button';
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000';
 const API_URL = `${API_BASE_URL}/app/notifications/`;
 
@@ -215,246 +217,179 @@ const AdminNotifications = () => {
         }
     };
 
+    const columns: Column<NotificationItem>[] = [
+        {
+            key: 'id',
+            title: '#',
+            width: '60px',
+            align: 'center',
+            render: (_val, _item, idx) => <span className="font-semibold text-gray-500">{(idx ?? 0) + 1}</span>,
+        },
+        {
+            key: 'title',
+            title: 'Title',
+            sortable: true,
+            render: (_val, item) => <span className="font-semibold text-gray-800 dark:text-white-light">{item.title}</span>,
+        },
+        {
+            key: 'description',
+            title: 'Message',
+            render: (_val, item) => (
+                <span className="text-gray-500 dark:text-gray-400 max-w-[400px] truncate block" title={item.description || ''}>
+                    {item.description || '-'}
+                </span>
+            ),
+        },
+        {
+            key: 'date',
+            title: 'Date',
+            sortable: true,
+            render: (_val, item) => <span className="text-gray-500 dark:text-gray-400">{item.date || '-'}</span>,
+        },
+        {
+            key: 'actions',
+            title: 'Actions',
+            align: 'center',
+            width: '120px',
+            render: (_val, item) => (
+                <div className="flex items-center justify-center gap-2">
+                    <IconButton tone="primary"
+                        type="button"
+                        
+                        onClick={() => openEditModal(item)}
+                        title="Edit Notification"
+                    >
+                        <IconPencil className="w-4 h-4" />
+                    </IconButton>
+                    <IconButton tone="danger"
+                        type="button"
+                        
+                        onClick={() => handleDelete(item)}
+                        title="Delete Notification"
+                    >
+                        <IconTrashLines className="w-4 h-4" />
+                    </IconButton>
+                </div>
+            ),
+        },
+    ];
+
     return (
-        <div>
-            <div className="bg-gradient-to-r from-[#0e1726] to-[#3b82f6] p-6 rounded-xl shadow-lg mb-6 relative overflow-hidden">
-                <div className="relative z-10">
-                    <h1 className="text-3xl font-extrabold text-white tracking-tight">Company Notifications</h1>
-                    <p className="text-white/80 mt-1 text-sm font-medium">Create and manage announcements for your company employees.</p>
-                </div>
-                <div className="absolute top-0 right-0 -mt-10 -mr-10 w-48 h-48 bg-white opacity-5 rounded-full blur-2xl"></div>
-            </div>
+        <div className="space-y-6">
+            <PageHeader
+                title="Company Notifications"
+                subtitle="Broadcast company announcements, event notices, and general policy updates to all active personnel."
+                icon={<IconBell />}
+                badge="Communications"
+                variant="primary"
+                actions={
+                    <Button type="button"  onClick={openCreateModal}>
+                        <IconPlus className="w-4 h-4" /> Add Notification
+                    </Button>
+                }
+            />
 
-            <div className="flex flex-wrap items-center justify-between gap-4 mb-5">
-                <div className="relative">
-                    <input
-                        type="text"
-                        className="form-input pr-10 w-72"
-                        placeholder="Search notifications..."
-                        value={search}
-                        onChange={(e) => {
-                            setSearch(e.target.value);
-                            setCurrentPage(1);
-                        }}
-                    />
-                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400">
-                        <IconSearch className="w-4 h-4" />
-                    </span>
-                </div>
-                <button type="button" className="btn btn-primary gap-2" onClick={openCreateModal}>
-                    <IconPlus /> Add Notification
-                </button>
-            </div>
+            <DataTable
+                columns={columns}
+                data={items}
+                loading={loading}
+                page={currentPage}
+                pageSize={itemsPerPage}
+                totalCount={totalCount}
+                onPageChange={(p) => setCurrentPage(p)}
+                onPageSizeChange={(sz) => { setItemsPerPage(sz); setCurrentPage(1); }}
+                searchValue={search}
+                onSearchChange={(val) => { setSearch(val); setCurrentPage(1); }}
+                searchPlaceholder="Search notifications by title or message..."
+                onRefresh={fetchNotifications}
+                actionButton={
+                    <Button type="button"  onClick={openCreateModal}>
+                        <IconPlus className="w-4 h-4" /> Add Notification
+                    </Button>
+                }
+            />
 
-            <div className="panel p-0 border-0 overflow-hidden">
-                <div className="table-responsive">
-                    <table className="table-hover">
-                        <thead>
-                            <tr>
-                                <th className="w-12">#</th>
-                                <th>Title</th>
-                                <th>Message</th>
-                                <th>Date</th>
-                                <th className="text-center w-24">Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {loading ? (
-                                <tr>
-                                    <td colSpan={5} className="text-center py-10">
-                                        <span className="animate-pulse text-gray-400 font-medium">Loading notifications...</span>
-                                    </td>
-                                </tr>
-                            ) : items.length === 0 ? (
-                                <tr>
-                                    <td colSpan={5} className="text-center py-10 text-gray-500 font-medium">No notifications found.</td>
-                                </tr>
-                            ) : (
-                                items.map((item, index) => (
-                                    <tr key={item.id}>
-                                        <td>{(currentPage - 1) * itemsPerPage + index + 1}</td>
-                                        <td className="font-semibold">{item.title}</td>
-                                        <td className="text-gray-500 max-w-[400px] truncate">{item.description || '-'}</td>
-                                        <td className="text-gray-500">{item.date || '-'}</td>
-                                        <td className="text-center">
-                                            <div className="flex items-center justify-center gap-3 font-semibold">
-                                                <button type="button" className="text-primary hover:text-blue-700" onClick={() => openEditModal(item)}>
-                                                    <IconPencil className="w-5 h-5" />
-                                                </button>
-                                                <button type="button" className="text-danger hover:text-red-700" onClick={() => handleDelete(item)}>
-                                                    <IconTrashLines className="w-5 h-5" />
-                                                </button>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                ))
-                            )}
-                        </tbody>
-                    </table>
-                </div>
-
-                {totalCount > 0 && (
-                    <div className="flex justify-between items-center p-4 border-t border-[#e0e6ed] dark:border-[#1b2e4b]">
-                        <div className="flex items-center gap-4">
-                            <div className="text-sm text-gray-500 font-semibold dark:text-gray-400">
-                                Showing <span className="text-primary">{(currentPage - 1) * itemsPerPage + 1}</span> to{' '}
-                                <span className="text-primary">{Math.min(currentPage * itemsPerPage, totalCount)}</span> of{' '}
-                                <span className="text-primary">{totalCount}</span> entries
-                            </div>
-                            <div className="flex items-center gap-2">
-                                <span className="text-sm font-semibold">Per page:</span>
-                                <select
-                                    className="form-select w-20 text-sm font-semibold py-1"
-                                    value={itemsPerPage}
-                                    onChange={(e) => {
-                                        setItemsPerPage(Number(e.target.value));
-                                        setCurrentPage(1);
+            <Modal open={modalOpen} onClose={() => setModalOpen(false)} title={editingItem ? 'Edit Notification' : 'Create Notification'} icon={<IconBell />} size="lg">
+                <form onSubmit={handleSave} className="space-y-4">
+                    <div>
+                        <label className="font-semibold mb-1 block">Title</label>
+                        <input
+                            className="form-input"
+                            required
+                            placeholder="Enter notification title"
+                            value={formData.title}
+                            onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                        />
+                    </div>
+                    <div>
+                        <label className="font-semibold mb-1 block">Date</label>
+                        <Flatpickr
+                            value={formData.date}
+                            options={{ dateFormat: 'Y-m-d' }}
+                            className="form-input"
+                            onChange={(date) => {
+                                if (date.length > 0) {
+                                    const d = date[0];
+                                    const formatted = d.toISOString().split('T')[0];
+                                    setFormData({ ...formData, date: formatted });
+                                }
+                            }}
+                        />
+                    </div>
+                    <div>
+                        <label className="font-semibold mb-1 block">Message</label>
+                        <textarea
+                            className="form-textarea min-h-[150px]"
+                            required
+                            placeholder="Describe the announcement..."
+                            value={formData.description}
+                            onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                        />
+                    </div>
+                    <div>
+                        <label className="font-semibold mb-1 block">Image (Optional)</label>
+                        <input
+                            type="file"
+                            accept="image/*"
+                            className="form-input"
+                            onChange={handleImageChange}
+                        />
+                        {imagePreview && (
+                            <div className="mt-2 relative inline-block">
+                                <img
+                                    src={imagePreview}
+                                    alt="Preview"
+                                    className="max-h-32 rounded-lg border border-gray-200"
+                                />
+                                <button
+                                    type="button"
+                                    className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs hover:bg-red-600"
+                                    onClick={() => {
+                                        setImageFile(null);
+                                        setImagePreview(null);
                                     }}
                                 >
-                                    <option value={10}>10</option>
-                                    <option value={20}>20</option>
-                                    <option value={50}>50</option>
-                                </select>
+                                    ×
+                                </button>
                             </div>
-                        </div>
-                        <ul className="inline-flex items-center space-x-1 font-semibold">
-                            <li>
-                                <button
-                                    type="button"
-                                    className="flex justify-center font-semibold p-2 rounded-full transition bg-white-light text-dark hover:text-white hover:bg-primary dark:text-white-light dark:bg-[#191e3a] dark:hover:bg-primary disabled:opacity-50 disabled:cursor-not-allowed"
-                                    disabled={currentPage === 1}
-                                    onClick={() => setCurrentPage(currentPage - 1)}
-                                >
-                                    Prev
-                                </button>
-                            </li>
-                            <li>
-                                <button
-                                    type="button"
-                                    className="flex justify-center font-semibold px-3.5 py-2 rounded-full transition bg-primary text-white shadow-[0_10px_20px_-10px_rgba(67,97,238,0.44)]"
-                                >
-                                    {currentPage}
-                                </button>
-                            </li>
-                            <li>
-                                <button
-                                    type="button"
-                                    className="flex justify-center font-semibold p-2 rounded-full transition bg-white-light text-dark hover:text-white hover:bg-primary dark:text-white-light dark:bg-[#191e3a] dark:hover:bg-primary disabled:opacity-50 disabled:cursor-not-allowed"
-                                    disabled={currentPage === totalPages}
-                                    onClick={() => setCurrentPage(currentPage + 1)}
-                                >
-                                    Next
-                                </button>
-                            </li>
-                        </ul>
+                        )}
                     </div>
-                )}
-            </div>
+                    <div className="flex justify-end gap-3 pt-4 border-t border-[#e0e6ed] dark:border-[#1b2e4b] -mx-5 px-5 mt-5">
+                        <Button variant="outline-danger" type="button"  onClick={() => setModalOpen(false)}>
+                            Cancel
+                        </Button>
+                        <Button className="min-w-[120px]" type="submit"  disabled={saving}>
+                            {saving ? (
+                                <span className="flex items-center gap-2">
+                                    <span className="animate-spin border-2 border-white border-l-transparent rounded-full w-4 h-4"></span>
+                                    Saving...
+                                </span>
+                            ) : editingItem ? 'Update' : 'Publish'}
+                        </Button>
+                    </div>
+                </form>
 
-            <Transition appear show={modalOpen} as={Fragment}>
-                <Dialog as="div" open={modalOpen} onClose={() => setModalOpen(false)} className="relative z-50">
-                    <Transition.Child as={Fragment} enter="ease-out duration-300" enterFrom="opacity-0" enterTo="opacity-100" leave="ease-in duration-200" leaveFrom="opacity-100" leaveTo="opacity-0">
-                        <div className="fixed inset-0 bg-[black]/60" />
-                    </Transition.Child>
-                    <div className="fixed inset-0 overflow-y-auto">
-                        <div className="flex min-h-full items-center justify-center px-4 py-8">
-                            <Transition.Child as={Fragment} enter="ease-out duration-300" enterFrom="opacity-0 scale-95" enterTo="opacity-100 scale-100" leave="ease-in duration-200" leaveFrom="opacity-100 scale-100" leaveTo="opacity-0 scale-95">
-                                <Dialog.Panel className="panel border-0 p-0 rounded-lg overflow-hidden w-full max-w-lg text-black dark:text-white-dark shadow-xl">
-                                    <button type="button" onClick={() => setModalOpen(false)} className="absolute top-4 ltr:right-4 rtl:left-4 text-gray-400 hover:text-gray-800 dark:hover:text-gray-600 outline-none">
-                                        <IconX />
-                                    </button>
-                                    <div className="text-xl font-bold bg-[#fbfbfb] dark:bg-[#121c2c] py-4 px-5 flex items-center gap-3">
-                                        <div className="p-2 bg-primary-light rounded-lg">
-                                            <IconBell className="text-primary w-6 h-6" />
-                                        </div>
-                                        {editingItem ? 'Edit Notification' : 'Create Notification'}
-                                    </div>
-                                    <div className="p-5">
-                                        <form onSubmit={handleSave} className="space-y-4">
-                                            <div>
-                                                <label className="font-semibold mb-1 block">Title</label>
-                                                <input
-                                                    className="form-input"
-                                                    required
-                                                    placeholder="Enter notification title"
-                                                    value={formData.title}
-                                                    onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                                                />
-                                            </div>
-                                            <div>
-                                                <label className="font-semibold mb-1 block">Date</label>
-                                                <Flatpickr
-                                                    value={formData.date}
-                                                    options={{ dateFormat: 'Y-m-d' }}
-                                                    className="form-input"
-                                                    onChange={(date) => {
-                                                        if (date.length > 0) {
-                                                            const d = date[0];
-                                                            const formatted = d.toISOString().split('T')[0];
-                                                            setFormData({ ...formData, date: formatted });
-                                                        }
-                                                    }}
-                                                />
-                                            </div>
-                                            <div>
-                                                <label className="font-semibold mb-1 block">Message</label>
-                                                <textarea
-                                                    className="form-textarea min-h-[150px]"
-                                                    required
-                                                    placeholder="Describe the announcement..."
-                                                    value={formData.description}
-                                                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                                                />
-                                            </div>
-                                            <div>
-                                                <label className="font-semibold mb-1 block">Image (Optional)</label>
-                                                <input
-                                                    type="file"
-                                                    accept="image/*"
-                                                    className="form-input"
-                                                    onChange={handleImageChange}
-                                                />
-                                                {imagePreview && (
-                                                    <div className="mt-2 relative inline-block">
-                                                        <img
-                                                            src={imagePreview}
-                                                            alt="Preview"
-                                                            className="max-h-32 rounded-lg border border-gray-200"
-                                                        />
-                                                        <button
-                                                            type="button"
-                                                            className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs hover:bg-red-600"
-                                                            onClick={() => {
-                                                                setImageFile(null);
-                                                                setImagePreview(null);
-                                                            }}
-                                                        >
-                                                            ×
-                                                        </button>
-                                                    </div>
-                                                )}
-                                            </div>
-                                            <div className="flex justify-end gap-3 pt-4 border-t border-[#e0e6ed] dark:border-[#1b2e4b] -mx-5 px-5 mt-5">
-                                                <button type="button" className="btn btn-outline-danger" onClick={() => setModalOpen(false)}>
-                                                    Cancel
-                                                </button>
-                                                <button type="submit" className="btn btn-primary min-w-[120px]" disabled={saving}>
-                                                    {saving ? (
-                                                        <span className="flex items-center gap-2">
-                                                            <span className="animate-spin border-2 border-white border-l-transparent rounded-full w-4 h-4"></span>
-                                                            Saving...
-                                                        </span>
-                                                    ) : editingItem ? 'Update' : 'Publish'}
-                                                </button>
-                                            </div>
-                                        </form>
-                                    </div>
-                                </Dialog.Panel>
-                            </Transition.Child>
-                        </div>
-                    </div>
-                </Dialog>
-            </Transition>
+            </Modal>
         </div>
     );
 };

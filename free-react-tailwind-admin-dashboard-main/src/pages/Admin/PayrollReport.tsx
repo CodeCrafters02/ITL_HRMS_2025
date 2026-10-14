@@ -4,6 +4,8 @@ import { setPageTitle } from '../../store/themeConfigSlice';
 import Swal from 'sweetalert2';
 import IconSave from '../../components/Icon/IconSave';
 
+import PageHeader from '../../components/Common/PageHeader';
+import IconChartSquare from '../../components/Icon/IconChartSquare';
 const API = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000';
 
 type Employee = { id: number; employee_id: string; first_name: string; last_name: string; department_name: string | null; designation_name: string | null; basic_salary: number | string | null; gross_salary: number | string | null; active_loan_emi: number; active_loans_breakdown: any[]; };
@@ -352,13 +354,12 @@ const PayrollReport = () => {
 
     return (
         <div>
-            <div className="bg-gradient-to-r from-[#1e3a5f] via-[#2563eb] to-[#7c3aed] p-6 rounded-xl shadow-lg mb-6 relative overflow-hidden">
-                <div className="relative z-10">
-                    <h1 className="text-3xl font-extrabold text-white tracking-tight">Payroll Report</h1>
-                    <p className="text-white/80 mt-1 text-sm font-medium">Select an employee to view and configure their salary breakdown.</p>
-                </div>
-                <div className="absolute top-0 right-0 -mt-10 -mr-10 w-48 h-48 bg-white opacity-5 rounded-full blur-2xl"></div>
-            </div>
+            <PageHeader
+                icon={<IconChartSquare />}
+                title="Payroll Report"
+                subtitle="Select an employee to view and configure their salary breakdown."
+                variant="amber"
+            />
 
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
                 {/* Employee List */}
@@ -697,7 +698,7 @@ const PayrollReport = () => {
                             </div>
 
                             {/* Net Salary + Save */}
-                            <div className="panel bg-gradient-to-r from-[#1e3a5f] to-[#2563eb] text-white">
+                            <div className="panel bg-gradient-to-r from-[#1e3a5f] to-brand-mid text-white">
                                 <div className="flex items-center justify-between flex-wrap gap-4">
                                     <div>
                                         <p className="text-white/70 text-sm font-medium">Net Salary (Take Home)</p>

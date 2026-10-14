@@ -8,6 +8,7 @@ import IconSearch from '../../../components/Icon/IconSearch';
 import IconUsers from '../../../components/Icon/IconUsers';
 import IconMenuCharts from '../../../components/Icon/Menu/IconMenuCharts';
 
+import HeroBanner from '../../../components/Common/HeroBanner';
 interface Employee {
     id: number;
     name: string;
@@ -87,7 +88,7 @@ const boxCells: BoxCell[] = [
     // Middle Row: Medium Potential
     { potential: 'medium', performance: 'low', label: 'Dilemma', badgeColor: 'bg-amber-100 text-amber-800 dark:bg-amber-900/50 dark:text-amber-300', cellBg: 'bg-amber-500/5 hover:bg-amber-500/10 dark:bg-amber-500/10 dark:hover:bg-amber-500/20 border-amber-200/50 dark:border-amber-800/40', desc: 'Needs active coaching or redirection.', themeColor: 'amber' },
     { potential: 'medium', performance: 'medium', label: 'Key Contributor', badgeColor: 'bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-300', cellBg: 'bg-blue-500/5 hover:bg-blue-500/10 dark:bg-blue-500/10 dark:hover:bg-blue-500/20 border-blue-200/50 dark:border-blue-800/40', desc: 'Reliable team player providing solid results.', themeColor: 'blue' },
-    { potential: 'medium', performance: 'high', label: 'High Performer', badgeColor: 'bg-teal-100 text-teal-800 dark:bg-teal-900/50 dark:text-teal-300', cellBg: 'bg-teal-500/5 hover:bg-teal-500/10 dark:bg-teal-500/10 dark:hover:bg-teal-500/20 border-teal-200/50 dark:border-teal-800/40', desc: 'Delivering great results, moderate development room.', themeColor: 'teal' },
+    { potential: 'medium', performance: 'high', label: 'High Performer', badgeColor: 'bg-brand-100 text-brand-800 dark:bg-brand-900/50 dark:text-brand-300', cellBg: 'bg-brand/5 hover:bg-brand/10 dark:bg-brand/10 dark:hover:bg-brand/20 border-brand-200/50 dark:border-brand-800/40', desc: 'Delivering great results, moderate development room.', themeColor: 'teal' },
     
     // Bottom Row: Low Potential
     { potential: 'low', performance: 'low', label: 'Underperformer', badgeColor: 'bg-rose-100 text-rose-800 dark:bg-rose-900/50 dark:text-rose-300', cellBg: 'bg-rose-500/5 hover:bg-rose-500/10 dark:bg-rose-500/10 dark:hover:bg-rose-500/20 border-rose-200/50 dark:border-rose-800/40', desc: 'Action required: performance plan needed.', themeColor: 'rose' },
@@ -155,40 +156,28 @@ const AdminPerformanceDashboard = () => {
     return (
         <div className="min-h-[75vh] flex flex-col gap-6 py-2 animate__animated animate__fadeIn">
             
-            {/* Dynamic Welcome & Stat Banner */}
-            <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-teal-500 to-emerald-600 text-white p-8 shadow-lg shadow-teal-500/10">
-                <div className="absolute -top-10 -right-10 w-40 h-40 rounded-full bg-white/5 blur-2xl" />
-                <div className="absolute -bottom-10 -left-10 w-60 h-60 rounded-full bg-white/5 blur-3xl" />
-                
-                <div className="relative z-10 flex flex-col lg:flex-row justify-between lg:items-center gap-6">
-                    <div>
-                        <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-white/10 rounded-full text-xs font-bold uppercase tracking-wider mb-3">
-                            <IconTrendingUp className="w-4 h-4" />
-                            Admin Performance Control Center
+            {/* Welcome & KPI banner (company brand theme) */}
+            <HeroBanner
+                eyebrow="Admin Performance Control Center"
+                title="Performance Management Systems"
+                subtitle="Evaluate organizational talent distribution, setup cyclical appraisals, map continuous reviews, and analyze high-potential contributors."
+                aside={
+                    <>
+                        <div className="rounded-2xl border border-white/20 bg-white/10 px-5 py-3 text-center backdrop-blur-md">
+                            <span className="block text-xl font-extrabold">{employees.length}</span>
+                            <span className="text-[10px] font-semibold uppercase tracking-wider text-white/70">Total Evaluated</span>
                         </div>
-                        <h1 className="text-3xl font-extrabold mb-1">Performance Management Systems</h1>
-                        <p className="text-white/80 text-sm max-w-xl leading-relaxed">
-                            Evaluate organizational talent distribution, setup cyclical appraisals, map continuous reviews, and analyze high-potential contributors.
-                        </p>
-                    </div>
-                    
-                    {/* Live Metric Badges */}
-                    <div className="flex flex-wrap gap-4 shrink-0 bg-white/10 p-4 rounded-2xl backdrop-blur-md border border-white/10">
-                        <div className="text-center px-4 border-r border-white/10">
-                            <span className="block text-xl font-extrabold text-white">{employees.length}</span>
-                            <span className="text-[10px] text-white/70 font-semibold uppercase tracking-wider">Total Evaluated</span>
+                        <div className="rounded-2xl border border-white/20 bg-white/10 px-5 py-3 text-center backdrop-blur-md">
+                            <span className="block text-xl font-extrabold text-emerald-200">{starsCount}</span>
+                            <span className="text-[10px] font-semibold uppercase tracking-wider text-white/70">Star Performers</span>
                         </div>
-                        <div className="text-center px-4 border-r border-white/10">
-                            <span className="block text-xl font-extrabold text-emerald-300">{starsCount}</span>
-                            <span className="text-[10px] text-white/70 font-semibold uppercase tracking-wider">Star Performers</span>
+                        <div className="rounded-2xl border border-white/20 bg-white/10 px-5 py-3 text-center backdrop-blur-md">
+                            <span className="block text-xl font-extrabold text-rose-200">{underperformersCount}</span>
+                            <span className="text-[10px] font-semibold uppercase tracking-wider text-white/70">Underperformers</span>
                         </div>
-                        <div className="text-center px-4">
-                            <span className="block text-xl font-extrabold text-rose-300">{underperformersCount}</span>
-                            <span className="text-[10px] text-white/70 font-semibold uppercase tracking-wider">Underperformers</span>
-                        </div>
-                    </div>
-                </div>
-            </div>
+                    </>
+                }
+            />
 
             {/* Premium Tab Bar switcher */}
             <div className="flex justify-between items-center bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 p-2.5 rounded-2xl shadow-sm">
@@ -197,7 +186,7 @@ const AdminPerformanceDashboard = () => {
                         onClick={() => setActiveTab('matrix')}
                         className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-bold transition duration-300 ${
                             activeTab === 'matrix' 
-                            ? 'bg-teal-500 text-white shadow-md shadow-teal-500/10' 
+                            ? 'bg-brand text-white shadow-md shadow-brand/10' 
                             : 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'
                         }`}
                     >
@@ -214,7 +203,7 @@ const AdminPerformanceDashboard = () => {
                 </div>
 
                 {activeTab === 'matrix' && (
-                    <div className="text-xs font-bold text-teal-600 dark:text-teal-400 bg-teal-500/10 px-3.5 py-1.5 rounded-xl animate__animated animate__fadeIn">
+                    <div className="text-xs font-bold text-brand dark:text-brand-400 bg-brand/10 px-3.5 py-1.5 rounded-xl animate__animated animate__fadeIn">
                         Talent Distribution Analysis
                     </div>
                 )}
@@ -236,7 +225,7 @@ const AdminPerformanceDashboard = () => {
                                         placeholder="Search employee or designation..."
                                         value={searchQuery}
                                         onChange={e => handleSearch(e.target.value)}
-                                        className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 pl-9 pr-4 py-2 rounded-xl text-xs font-medium text-gray-800 dark:text-white placeholder-gray-400 focus:outline-none focus:border-teal-500 transition"
+                                        className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 pl-9 pr-4 py-2 rounded-xl text-xs font-medium text-gray-800 dark:text-white placeholder-gray-400 focus:outline-none focus:border-brand transition"
                                     />
                                     <IconSearch className="w-4 h-4 text-gray-400 absolute left-3 top-2.5" />
                                 </div>
@@ -244,7 +233,7 @@ const AdminPerformanceDashboard = () => {
                                 <div className="flex items-center gap-2">
                                     <span className="text-[10px] font-bold text-gray-400 uppercase">Dept:</span>
                                     <select value={deptFilter} onChange={e => handleDept(e.target.value)}
-                                        className="bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 px-3 py-2 rounded-xl text-xs font-semibold text-gray-700 dark:text-white focus:outline-none focus:border-teal-500">
+                                        className="bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 px-3 py-2 rounded-xl text-xs font-semibold text-gray-700 dark:text-white focus:outline-none focus:border-brand">
                                         <option value="">All</option>
                                         {departments.map((d, i) => <option key={i} value={d}>{d}</option>)}
                                     </select>
@@ -253,17 +242,17 @@ const AdminPerformanceDashboard = () => {
                                 <div className="flex items-center gap-2">
                                     <span className="text-[10px] font-bold text-gray-400 uppercase">Designation:</span>
                                     <select value={desigFilter} onChange={e => handleDesig(e.target.value)}
-                                        className="bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 px-3 py-2 rounded-xl text-xs font-semibold text-gray-700 dark:text-white focus:outline-none focus:border-teal-500">
+                                        className="bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 px-3 py-2 rounded-xl text-xs font-semibold text-gray-700 dark:text-white focus:outline-none focus:border-brand">
                                         <option value="">All</option>
                                         {designations.map((d, i) => <option key={i} value={d}>{d}</option>)}
                                     </select>
                                 </div>
 
-                                {loading && <span className="text-[10px] text-teal-500 font-bold animate-pulse">Updating...</span>}
+                                {loading && <span className="text-[10px] text-brand font-bold animate-pulse">Updating...</span>}
                             </div>
 
                             <button onClick={handleReset}
-                                className="text-xs font-semibold text-teal-600 dark:text-teal-400 hover:underline">
+                                className="text-xs font-semibold text-brand dark:text-brand-400 hover:underline">
                                 Reset Filters
                             </button>
                         </div>
@@ -292,7 +281,7 @@ const AdminPerformanceDashboard = () => {
                                                 onClick={() => setSelectedCell(cell)}
                                                 className={`border rounded-2xl p-4 flex flex-col justify-between min-h-[160px] cursor-pointer transition-all duration-300 select-none ${cell.cellBg} ${
                                                     isSelected 
-                                                    ? 'ring-2 ring-teal-500 scale-[1.01] shadow-lg shadow-teal-500/10 border-transparent' 
+                                                    ? 'ring-2 ring-brand scale-[1.01] shadow-lg shadow-brand/10 border-transparent' 
                                                     : 'hover:scale-[1.01] hover:shadow-md'
                                                 }`}
                                             >
@@ -375,7 +364,7 @@ const AdminPerformanceDashboard = () => {
                                         <div 
                                             key={emp.id} 
                                             onClick={() => navigate(`/admin/performance/search-profile?id=${emp.id}`)}
-                                            className="bg-gray-50 dark:bg-gray-800/40 border border-gray-100 dark:border-gray-800/50 p-3 rounded-xl flex items-center justify-between hover:scale-[1.01] hover:bg-teal-500/5 dark:hover:bg-teal-500/10 hover:border-teal-500/25 dark:hover:border-teal-500/35 cursor-pointer transition-all duration-300"
+                                            className="bg-gray-50 dark:bg-gray-800/40 border border-gray-100 dark:border-gray-800/50 p-3 rounded-xl flex items-center justify-between hover:scale-[1.01] hover:bg-brand/5 dark:hover:bg-brand/10 hover:border-brand/25 dark:hover:border-brand/35 cursor-pointer transition-all duration-300"
                                             title="Click to view detailed employee performance profile"
                                         >
                                             <div className="flex items-center gap-3">
@@ -385,7 +374,7 @@ const AdminPerformanceDashboard = () => {
                                                 </div>
                                                 
                                                 <div>
-                                                    <span className="block text-xs font-bold text-gray-800 dark:text-white leading-tight hover:text-teal-500 transition-colors duration-200">
+                                                    <span className="block text-xs font-bold text-gray-800 dark:text-white leading-tight hover:text-brand transition-colors duration-200">
                                                         {emp.name}
                                                     </span>
                                                     <span className="block text-[9px] text-gray-400 dark:text-gray-500 mt-0.5">
@@ -429,7 +418,7 @@ const AdminPerformanceDashboard = () => {
             {/* Development indicator */}
             <div className="flex items-center gap-2.5 px-5 py-3 bg-emerald-500/10 rounded-2xl border border-emerald-500/20 max-w-max mx-auto mt-2">
                 <div className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
-                <span className="text-xs font-bold text-teal-700 dark:text-teal-400">All Performance sub-modules are under active development — Launching soon!</span>
+                <span className="text-xs font-bold text-brand-dark dark:text-brand-400">All Performance sub-modules are under active development — Launching soon!</span>
             </div>
         </div>
     );

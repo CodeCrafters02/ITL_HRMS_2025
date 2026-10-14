@@ -5,6 +5,7 @@ import { fetchPayslips, Payslip, downloadPayslip } from '../Payroll/payslipApi';
 import IconFile from '../../components/Icon/IconFile';
 import IconDownload from '../../components/Icon/IconDownload';
 import IconEye from '../../components/Icon/IconEye';
+import PageHeader from '../../components/Common/PageHeader';
 
 const MyPayslips = () => {
     const dispatch = useDispatch();
@@ -39,13 +40,13 @@ const MyPayslips = () => {
 
     return (
         <div className="space-y-6">
-            <div className="bg-gradient-to-r from-[#4338ca] to-[#6366f1] p-6 rounded-xl shadow-lg relative overflow-hidden">
-                <div className="relative z-10">
-                    <h1 className="text-3xl font-extrabold text-white tracking-tight">My Payslips</h1>
-                    <p className="text-white/80 mt-1 text-sm font-medium">View and download your monthly salary statements.</p>
-                </div>
-                <div className="absolute top-0 right-0 -mt-10 -mr-10 w-48 h-48 bg-white opacity-10 rounded-full blur-2xl"></div>
-            </div>
+            <PageHeader
+                title="My Payslips"
+                subtitle="View and download your monthly salary statements, tax breakdowns, and compensation documents."
+                icon={<IconFile />}
+                badge="Payroll & Compensation"
+                variant="amber"
+            />
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                 {loading ? (

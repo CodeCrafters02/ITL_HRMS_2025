@@ -5,7 +5,11 @@ import { setPageTitle } from '../../../store/themeConfigSlice';
 import { authFetch } from '../../../utils/authFetch';
 import IconSearch from '../../../components/Icon/IconSearch';
 import IconX from '../../../components/Icon/IconX';
+import IconOpenBook from '../../../components/Icon/IconOpenBook';
+import PageHeader from '../../../components/Common/PageHeader';
 
+import Button from '../../../components/Common/Button';
+import CardGrid from '../../../components/Common/CardGrid';
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000';
 const ENROLLMENTS_API = `${API_BASE_URL}/employee/enrollments/`;
 const CONTENTS_API = `${API_BASE_URL}/employee/course-contents/`;
@@ -207,152 +211,52 @@ const Compliance = () => {
     return (
         <div>
             {/* Header Banner */}
-            <div className="bg-gradient-to-r from-[#0e1726] to-[#8b5cf6] p-6 rounded-xl shadow-lg mb-6 relative overflow-hidden">
-                <div className="relative z-10">
-                    <h1 className="text-3xl font-extrabold text-white tracking-tight">Employee Course Activity</h1>
-                    <p className="text-white/80 mt-1 text-sm font-medium">
-                        See every employee with course activity — enrolled, completed, and pending courses, and exactly which syllabus items they've finished.
-                    </p>
-                </div>
-                <div className="absolute top-0 right-0 -mt-10 -mr-10 w-48 h-48 bg-white opacity-5 rounded-full blur-2xl"></div>
-            </div>
+            <PageHeader
+                title="Employee Course Activity"
+                subtitle="Track learner progress across teams, monitor course enrollments, completion rates, and syllabus milestones in real-time."
+                icon={<IconOpenBook />}
+                badge="Learning Analytics & Compliance"
+                variant="purple"
+            />
 
-            <div className="flex flex-wrap items-center justify-between gap-4 mb-5">
-                <div className="relative">
-                    <input
-                        type="text"
-                        className="form-input pr-10 w-80"
-                        placeholder="Search employee, ID, or department..."
-                        value={activitySearch}
-                        onChange={(e) => { setActivitySearch(e.target.value); setPage(1); }}
-                    />
-                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400">
-                        <IconSearch className="w-4 h-4" />
-                    </span>
-                </div>
-                <span className="text-xs text-gray-400 font-semibold">{employeeActivitySummaries.length} employee(s) showing on page</span>
-            </div>
-
-            {enrollmentsLoading ? (
-                <div className="panel text-center py-10">
-                    <span className="animate-pulse text-gray-400">Loading employee course activity...</span>
-                </div>
-            ) : employeeActivitySummaries.length === 0 ? (
-                <div className="panel text-center py-10 text-gray-500 font-medium">No employees have enrolled in any course yet.</div>
-            ) : (
-                <div className="space-y-6">
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-                        {employeeActivitySummaries.map((s) => (
-                            <button
-                                key={s.employee}
-                                type="button"
-                                onClick={() => openActivityModal(s.employee)}
-                                className="panel text-left border border-[#e0e6ed] dark:border-[#1b2e4b] hover:shadow-lg hover:border-primary/40 transition-all duration-300 rounded-xl p-5"
-                            >
-                                <div className="flex items-start justify-between mb-3">
-                                    <div>
-                                        <div className="font-bold text-gray-800 dark:text-white-light">{s.employee_name}</div>
-                                        <div className="text-xs text-gray-400">{s.employee_code || '—'} • {s.department_name || 'No Dept'}</div>
-                                    </div>
-                                    <span className="badge badge-outline-primary rounded-full px-2.5 py-0.5 text-[11px] font-bold">{s.total} course{s.total === 1 ? '' : 's'}</span>
+            <CardGrid
+                items={employeeActivitySummaries}
+                loading={enrollmentsLoading}
+                page={page}
+                pageSize={limit}
+                totalCount={totalCount}
+                pageSizeOptions={[6, 9, 12, 24]}
+                onPageChange={setPage}
+                onPageSizeChange={(sz) => { setLimit(sz); setPage(1); }}
+                searchValue={activitySearch}
+                onSearchChange={(v) => { setActivitySearch(v); setPage(1); }}
+                searchPlaceholder="Search employee, ID, or department..."
+                emptyMessage="No employees have enrolled in any course yet"
+                entityLabel="enrollments"
+                cols={3}
+                onRefresh={fetchEnrollments}
+                renderCard={(s) => (
+                        <button
+                            type="button"
+                            onClick={() => openActivityModal(s.employee)}
+                            className="panel text-left border border-[#e0e6ed] dark:border-[#1b2e4b] hover:shadow-lg hover:border-primary/40 transition-all duration-300 rounded-xl p-5"
+                        >
+                            <div className="flex items-start justify-between mb-3">
+                                <div>
+                                    <div className="font-bold text-gray-800 dark:text-white-light">{s.employee_name}</div>
+                                    <div className="text-xs text-gray-400">{s.employee_code || '—'} • {s.department_name || 'No Dept'}</div>
                                 </div>
-                                <div className="flex items-center gap-2 text-[10px] font-bold uppercase">
-                                    <span className="badge bg-success text-white rounded-full px-2 py-0.5">{s.completed} Completed</span>
-                                    <span className="badge bg-primary text-white rounded-full px-2 py-0.5">{s.inProgress} In Progress</span>
-                                    <span className="badge bg-amber-500 text-white rounded-full px-2 py-0.5">{s.pending} Pending</span>
-                                </div>
-                            </button>
-                        ))}
-                    </div>
-
-                    {totalCount > 0 && (
-                        <div className="flex flex-col sm:flex-row justify-between items-center gap-4 p-4 panel border border-[#e0e6ed] dark:border-[#1b2e4b] rounded-xl mt-6">
-                            <div className="flex items-center gap-4">
-                                <div className="text-sm text-gray-500 font-semibold dark:text-gray-400">
-                                    Showing <span className="text-primary">{((page - 1) * limit) + 1}</span> to <span className="text-primary">{Math.min(page * limit, totalCount)}</span> of <span className="text-primary">{totalCount}</span> enrollment records
-                                </div>
-                                <div className="flex items-center gap-2">
-                                    <span className="text-sm font-semibold">Per page:</span>
-                                    <select
-                                        className="form-select w-20 text-sm font-semibold py-1"
-                                        value={limit}
-                                        onChange={(e) => { setLimit(Number(e.target.value)); setPage(1); }}
-                                    >
-                                        <option value="5">5</option>
-                                        <option value="10">10</option>
-                                        <option value="20">20</option>
-                                        <option value="50">50</option>
-                                    </select>
-                                </div>
+                                <span className="badge badge-outline-primary rounded-full px-2.5 py-0.5 text-[11px] font-bold">{s.total} course{s.total === 1 ? '' : 's'}</span>
                             </div>
-                            <ul className="inline-flex items-center space-x-1 font-semibold">
-                                <li>
-                                    <button
-                                        type="button"
-                                        className="flex justify-center font-semibold px-3 py-1.5 rounded-lg transition bg-white-light text-dark hover:text-white hover:bg-primary dark:text-white-light dark:bg-[#191e3a] dark:hover:bg-primary disabled:opacity-50 disabled:cursor-not-allowed text-xs"
-                                        onClick={() => setPage(page > 1 ? page - 1 : 1)}
-                                        disabled={page === 1}
-                                    >
-                                        Prev
-                                    </button>
-                                </li>
-                                {(() => {
-                                    const pages: (number | string)[] = [];
-                                    if (totalPages <= 3) {
-                                        for (let i = 1; i <= totalPages; i++) pages.push(i);
-                                    } else {
-                                        if (page <= 2) {
-                                            pages.push(1, 2, 3, 'right-ellipsis', totalPages);
-                                        } else if (page >= totalPages - 1) {
-                                            pages.push(1, 'left-ellipsis', totalPages - 2, totalPages - 1, totalPages);
-                                        } else {
-                                            pages.push(1, 'left-ellipsis', page, 'right-ellipsis', totalPages);
-                                        }
-                                    }
-                                    return pages.map((p, idx) => {
-                                        if (p === 'left-ellipsis' || p === 'right-ellipsis') {
-                                            const jumpPage = p === 'left-ellipsis' ? Math.max(1, page - 3) : Math.min(totalPages, page + 3);
-                                            return (
-                                                <li key={`${p}-${idx}`}>
-                                                    <button
-                                                        type="button"
-                                                        title={p === 'left-ellipsis' ? "Previous 3 pages" : "Next 3 pages"}
-                                                        className="flex justify-center font-semibold px-3 py-1.5 rounded-lg transition bg-white-light text-dark hover:text-white hover:bg-primary dark:text-white-light dark:bg-[#191e3a] dark:hover:bg-primary cursor-pointer text-xs"
-                                                        onClick={() => setPage(jumpPage)}
-                                                    >
-                                                        ...
-                                                    </button>
-                                                </li>
-                                            );
-                                        }
-                                        return (
-                                            <li key={p}>
-                                                <button
-                                                    type="button"
-                                                    className={`flex justify-center font-semibold px-3 py-1.5 rounded-lg transition text-xs ${page === p ? 'bg-primary text-white shadow-md' : 'bg-white-light text-dark hover:text-white hover:bg-primary dark:text-white-light dark:bg-[#191e3a] dark:hover:bg-primary'}`}
-                                                    onClick={() => setPage(p as number)}
-                                                >
-                                                    {p}
-                                                </button>
-                                            </li>
-                                        );
-                                    });
-                                })()}
-                                <li>
-                                    <button
-                                        type="button"
-                                        className="flex justify-center font-semibold px-3 py-1.5 rounded-lg transition bg-white-light text-dark hover:text-white hover:bg-primary dark:text-white-light dark:bg-[#191e3a] dark:hover:bg-primary disabled:opacity-50 disabled:cursor-not-allowed text-xs"
-                                        onClick={() => setPage(page < totalPages ? page + 1 : totalPages)}
-                                        disabled={page === totalPages || totalPages === 0}
-                                    >
-                                        Next
-                                    </button>
-                                </li>
-                            </ul>
-                        </div>
+                            <div className="flex items-center gap-2 text-[10px] font-bold uppercase">
+                                <span className="badge bg-success text-white rounded-full px-2 py-0.5">{s.completed} Completed</span>
+                                <span className="badge bg-primary text-white rounded-full px-2 py-0.5">{s.inProgress} In Progress</span>
+                                <span className="badge bg-amber-500 text-white rounded-full px-2 py-0.5">{s.pending} Pending</span>
+                            </div>
+                        </button>
+
                     )}
-                </div>
-            )}
+            />
 
             {/* Employee Course Activity Modal */}
             <Transition appear show={activityModalOpen} as={Fragment}>
@@ -463,7 +367,7 @@ const Compliance = () => {
                                         </div>
 
                                         <div className="flex justify-end pt-6 border-t border-[#ebedf2] dark:border-[#1b2e4b] mt-6">
-                                            <button type="button" className="btn btn-outline-danger rounded-lg" onClick={() => setActivityModalOpen(false)}>Close</button>
+                                            <Button variant="outline-danger" type="button"  onClick={() => setActivityModalOpen(false)}>Close</Button>
                                         </div>
                                     </div>
                                 </Dialog.Panel>

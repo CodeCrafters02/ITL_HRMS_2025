@@ -191,6 +191,8 @@ const AdminGeofencing = lazy(() => import('../pages/Admin/Geofencing'));
 const AdminAssignTask = lazy(() => import('../pages/Admin/AssignTask'));
 const AdminPayslipRollout = lazy(() => import('../pages/Admin/PayslipRollout'));
 const AdminSystemSettings = lazy(() => import('../pages/Admin/SystemSettings'));
+const TeamsChatRedirect = lazy(() => import('../pages/Common/TeamsChatRedirect'));
+const AdminBranding = lazy(() => import('../pages/Admin/Branding'));
 
 // Employee Pages
 const EmployeeHub = lazy(() => import('../pages/Employee/EmployeeHub'));
@@ -291,7 +293,7 @@ const routes = [
     // Apps page
     {
         path: '/apps/chat',
-        element: <Chat />,
+        element: <TeamsChatRedirect fallback="/" />,
     },
     {
         path: '/apps/scrumboard',
@@ -993,7 +995,7 @@ const routes = [
     },
     {
         path: '/admin/chat',
-        element: <AdminChat />,
+        element: <TeamsChatRedirect fallback="/admin/dashboard" />,
     },
     {
         path: '/admin/seat-approvals',
@@ -1034,6 +1036,10 @@ const routes = [
     {
         path: '/admin/system-settings',
         element: <AdminSystemSettings />,
+    },
+    {
+        path: '/admin/branding',
+        element: <AdminBranding />,
     },
     {
         path: '/employee/hub',
@@ -1109,7 +1115,7 @@ const routes = [
     },
     {
         path: '/employee/chat',
-        element: <EmployeeChat />,
+        element: <TeamsChatRedirect fallback="/employee/hub" />,
     },
     {
         path: '/employee/calendar',

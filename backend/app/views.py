@@ -16,6 +16,9 @@ from django.contrib.auth import authenticate
 from rest_framework_simplejwt.tokens import RefreshToken
 from datetime import date
 import io
+import os
+import mimetypes
+from django.http import FileResponse
 from django.utils import timezone
 from .utils import generate_letter_pdf, fill_placeholders, validate_geofence, compute_attendance_metrics, generate_payslip_pdf, compute_loan_emi, compute_asset_deductions, compute_loan_disbursement, compute_salary_structure_allowances
 from decimal import Decimal, ROUND_HALF_UP
@@ -358,12 +361,87 @@ class CompanyUpdateAPIView(APIView):
         except Company.DoesNotExist:
             return Response({"detail": "Company not found."}, status=status.HTTP_404_NOT_FOUND)
 
-        
+        if company.pk != getattr(request.user, 'company_id', None):
+            return Response({"detail": "You can only update your own company."}, status=status.HTTP_403_FORBIDDEN)
+
         serializer = CompanySerializer(company, data=request.data, partial=True)
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+_HEX_RE = re.compile(r'^#[0-9a-fA-F]{6}$')
+_LOGO_TYPES = {'image/png', 'image/jpeg', 'image/webp', 'image/gif'}
+_LOGO_MAX_BYTES = 2 * 1024 * 1024
+_THEME_PRESETS = {'', 'emerald', 'indigo', 'sunset', 'rose', 'teal', 'violet', 'crimson', 'navy', 'slate'}
+
+
+class CompanyBrandingAPIView(APIView):
+    """GET: any authenticated user of the company. PATCH: company admin only."""
+    parser_classes = [MultiPartParser, FormParser, JSONParser]
+
+    def get_permissions(self):
+        if self.request.method == 'GET':
+            return [IsAuthenticated()]
+        return [IsAuthenticated(), IsAdminUser()]
+
+    def _company(self, request):
+        return getattr(request.user, 'company', None)
+
+    def get(self, request):
+        company = self._company(request)
+        if not company:
+            return Response({"detail": "No company found for user."}, status=status.HTTP_404_NOT_FOUND)
+        return Response(CompanyBrandingSerializer(company, context={"request": request}).data)
+
+    def patch(self, request):
+        company = self._company(request)
+        if not company:
+            return Response({"detail": "No company found for user."}, status=status.HTTP_404_NOT_FOUND)
+
+        data = request.data
+        errors = {}
+
+        if 'name' in data:
+            name = (data.get('name') or '').strip()
+            if len(name) < 2 or len(name) > 100:
+                errors['name'] = 'Company name must be between 2 and 100 characters.'
+            else:
+                company.name = name
+
+        for field in ('theme_primary', 'theme_mid', 'theme_accent'):
+            if field in data:
+                val = (data.get(field) or '').strip()
+                if val and not _HEX_RE.match(val):
+                    errors[field] = 'Use a 6-digit hex colour such as #0062E0.'
+                else:
+                    setattr(company, field, val.lower())
+        if 'theme_preset' in data:
+            preset = (data.get('theme_preset') or '').strip()
+            if preset not in _THEME_PRESETS:
+                errors['theme_preset'] = 'Unknown theme preset.'
+            else:
+                company.theme_preset = preset
+
+        logo = request.FILES.get('logo')
+        if logo:
+            if logo.content_type not in _LOGO_TYPES:
+                errors['logo'] = 'Logo must be a PNG, JPG, WebP or GIF image.'
+            elif logo.size > _LOGO_MAX_BYTES:
+                errors['logo'] = 'Logo must be 2 MB or smaller.'
+
+        if errors:
+            return Response(errors, status=status.HTTP_400_BAD_REQUEST)
+
+        remove_logo = str(data.get('remove_logo', '')).lower() in ('1', 'true', 'yes')
+        if logo or remove_logo:
+            if company.logo:
+                company.logo.delete(save=False)
+            company.logo = logo if logo else None
+
+        company.save()
+        return Response(CompanyBrandingSerializer(company, context={"request": request}).data)
 
 
 class AdminDashboardAPIView(APIView):
@@ -673,8 +751,17 @@ class DesignationViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         user = self.request.user
         if user.role == 'master':
-            return Designation.objects.select_related('department', 'level').order_by('id')
-        return Designation.objects.filter(company=user.company).select_related('department', 'level').order_by('id')
+            qs = Designation.objects.select_related('department', 'level').order_by('id')
+        else:
+            qs = Designation.objects.filter(company=user.company).select_related('department', 'level').order_by('id')
+
+        dept = self.request.query_params.get('department')
+        if dept:
+            qs = qs.filter(department_id=dept)
+        lvl = self.request.query_params.get('level')
+        if lvl:
+            qs = qs.filter(level_id=lvl)
+        return qs
 
     def perform_create(self, serializer):
         company = self.request.user.company
@@ -685,6 +772,9 @@ class DesignationViewSet(viewsets.ModelViewSet):
 class DesignationSalaryViewSet(viewsets.ModelViewSet):
     serializer_class = DesignationSalarySerializer
     permission_classes = [IsAuthenticated, IsAdminUser | IsMaster]
+    pagination_class = CustomPagination
+    filter_backends = [filters.SearchFilter]
+    search_fields = ['designation__designation_name', 'designation__department__department_name']
     
     def get_queryset(self):
         user = self.request.user
@@ -829,7 +919,17 @@ class EmployeeViewSet(viewsets.ModelViewSet):
                     qs = qs.exclude(user__role__in=['admin', 'master'])
             else:
                 qs = qs.none()
-            
+
+        dept_id = self.request.query_params.get('department')
+        if dept_id:
+            qs = qs.filter(department_id=dept_id)
+        desig_id = self.request.query_params.get('designation')
+        if desig_id:
+            qs = qs.filter(designation_id=desig_id)
+        is_active = self.request.query_params.get('is_active')
+        if is_active is not None and is_active != '':
+            qs = qs.filter(is_active=(is_active.lower() in ['true', '1', 'active']))
+
         return qs.select_related(
             'department', 'designation', 'level', 'reporting_manager', 
             'reporting_level', 'shift_assigned'
@@ -1287,6 +1387,9 @@ class LeaveViewSet(viewsets.ModelViewSet):
     queryset = Leave.objects.all()
     serializer_class = LeaveSerializer
     permission_classes = [IsAuthenticated, IsAdminUser]
+    pagination_class = CustomPagination
+    filter_backends = [filters.SearchFilter]
+    search_fields = ['leave_name']
 
     def get_queryset(self):
         return Leave.objects.filter(company=self.request.user.company)
@@ -1308,7 +1411,14 @@ class LearningCornerViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         user = self.request.user
-        return LearningCorner.objects.filter(company=user.company).prefetch_related('media_items').order_by('id')
+        qs = LearningCorner.objects.filter(company=user.company).prefetch_related('media_items')
+        media_type = self.request.query_params.get('media_type')
+        if media_type in ('image', 'video', 'document'):
+            legacy = {'image': 'image', 'video': 'video', 'document': 'document'}[media_type]
+            qs = qs.filter(Q(media_items__media_type=media_type) | (Q(**{legacy + '__isnull': False}) & ~Q(**{legacy: ''}))).distinct()
+        sort = self.request.query_params.get('sort')
+        ordering = {'newest': '-id', 'oldest': 'id', 'az': 'title'}.get(sort, 'id')
+        return qs.order_by(ordering)
 
     def perform_create(self, serializer):
         serializer.save(company=self.request.user.company)
@@ -1359,6 +1469,9 @@ class DepartmentWiseWorkingDaysViewSet(viewsets.ModelViewSet):
     queryset = DepartmentWiseWorkingDays.objects.all()
     serializer_class = DepartmentWiseWorkingDaysSerializer
     permission_classes = [IsAuthenticated,IsAdminUser]
+    pagination_class = CustomPagination
+    filter_backends = [filters.SearchFilter]
+    search_fields = ['department__department_name', 'shifts__shift_type']
 
     def get_queryset(self):
         user = self.request.user
@@ -4238,13 +4351,44 @@ class CompanyPoliciesViewSet(viewsets.ModelViewSet):
     queryset = CompanyPolicies.objects.all()
     serializer_class = PolicyConfigurationSerializer
     permission_classes = [IsAuthenticated, IsAdminUser]
+    pagination_class = CustomPagination
+    filter_backends = [filters.SearchFilter]
+    search_fields = ['name', 'description', 'version']
 
     def get_queryset(self):
-        return CompanyPolicies.objects.filter(company=self.request.user.company)
+        qs = CompanyPolicies.objects.filter(company=self.request.user.company).prefetch_related('versions__uploaded_by').order_by('-id')
+        is_active = self.request.query_params.get('is_active')
+        if is_active is not None and is_active != '':
+            qs = qs.filter(is_active=(is_active.lower() in ['true', '1', 'active']))
+        return qs
+
+    def list(self, request, *args, **kwargs):
+        # Backfill v1.0 history rows for policies uploaded before versioning existed
+        legacy = CompanyPolicies.objects.filter(company=request.user.company, versions__isnull=True).exclude(document='')
+        CompanyPolicyVersion.objects.bulk_create([
+            CompanyPolicyVersion(policy=p, version=p.version, document=p.document.name, published_at=p.published_at)
+            for p in legacy
+        ])
+        return super().list(request, *args, **kwargs)
 
     def perform_create(self, serializer):
         serializer.save(company=self.request.user.company)
- 
+
+    @transaction.atomic
+    def perform_update(self, serializer):
+        serializer.save()
+
+    @action(detail=True, methods=['get'], url_path='file')
+    def file(self, request, pk=None):
+        """Stream the current document, or a past one via ?version=<version id>, for in-app preview."""
+        policy = self.get_object()
+        version_id = request.query_params.get('version')
+        doc = get_object_or_404(policy.versions, pk=version_id).document if version_id else policy.document
+        if not doc or not doc.storage.exists(doc.name):
+            return Response({"detail": "Document not found."}, status=status.HTTP_404_NOT_FOUND)
+        content_type = mimetypes.guess_type(doc.name)[0] or 'application/octet-stream'
+        return FileResponse(doc.open('rb'), content_type=content_type, filename=os.path.basename(doc.name))
+
 class ApprovedLeaveLogView(generics.ListAPIView):
     """
     Admin approved leave logs with backend pagination + search.
@@ -5867,6 +6011,15 @@ class SeatBookingViewSet(viewsets.ModelViewSet):
     queryset = SeatBooking.objects.all()
     serializer_class = SeatBookingSerializer
     permission_classes = [permissions.IsAuthenticated]
+    pagination_class = CustomPagination
+    filter_backends = [filters.SearchFilter]
+    search_fields = ['employee__first_name', 'employee__last_name', 'employee__employee_id', 'seat__seat_number', 'booking_type']
+    
+    @property
+    def paginator(self):
+        if self.request.query_params.get('all') == 'true' or (self.request.query_params.get('floor') and not self.request.query_params.get('page')):
+            return None
+        return super().paginator
     
     def get_queryset(self):
         # For history view, we want to see even cancelled/rejected (inactive) bookings
@@ -6014,6 +6167,9 @@ class ConferenceRoomViewSet(viewsets.ModelViewSet):
 class ConferenceRoomBookingViewSet(viewsets.ModelViewSet):
     serializer_class = ConferenceRoomBookingSerializer
     permission_classes = [IsAuthenticated]
+    pagination_class = CustomPagination
+    filter_backends = [filters.SearchFilter]
+    search_fields = ['employee__first_name', 'employee__last_name', 'employee__employee_id', 'room__name', 'purpose']
 
     def get_queryset(self):
         user = self.request.user
@@ -6613,6 +6769,8 @@ class LoanCategoryViewSet(viewsets.ModelViewSet):
     serializer_class = LoanCategorySerializer
     permission_classes = [IsAuthenticated]
     pagination_class = CustomPagination
+    filter_backends = [filters.SearchFilter]
+    search_fields = ['name', 'description']
 
     def get_queryset(self):
         user = self.request.user
@@ -6632,7 +6790,7 @@ class LoanApplicationViewSet(viewsets.ModelViewSet):
     parser_classes = [MultiPartParser, FormParser, JSONParser]
     pagination_class = CustomPagination
     filter_backends = [filters.SearchFilter]
-    search_fields = ['category__name', 'status', 'employee__first_name', 'employee__last_name']
+    search_fields = ['category__name', 'status', 'employee__first_name', 'employee__last_name', 'employee__employee__employee_id', 'employee__username']
 
     def destroy(self, request, *args, **kwargs):
         user = request.user
@@ -6649,6 +6807,8 @@ class LoanApplicationViewSet(viewsets.ModelViewSet):
         qs = LoanApplication.objects.filter(employee__company=user.company).order_by('-created_at')
 
         mine_only = self.request.query_params.get('mine') == 'true'
+        history_only = self.request.query_params.get('history') == 'true'
+        pending_only = self.request.query_params.get('pending') == 'true'
         status_filter = self.request.query_params.get('status')
 
         if mine_only:
@@ -6658,14 +6818,18 @@ class LoanApplicationViewSet(viewsets.ModelViewSet):
             return qs
 
         if user.role in ['admin', 'master']:
-            # Admins see:
-            # 1. All non-PENDING applications (APPROVED, REJECTED, MANAGER_APPROVED)
-            # 2. PENDING applications ONLY IF the applicant's reporting manager is NOT an employee
-            # (meaning they report to an admin or have no manager assigned)
-            qs = qs.exclude(
-                status='PENDING', 
-                employee__employee__reporting_manager__user__role='employee'
-            )
+            if history_only:
+                qs = qs.exclude(status__in=['PENDING', 'MANAGER_APPROVED'])
+            elif pending_only:
+                qs = qs.filter(status__in=['PENDING', 'MANAGER_APPROVED']).exclude(
+                    status='PENDING',
+                    employee__employee__reporting_manager__user__role='employee'
+                )
+            else:
+                qs = qs.exclude(
+                    status='PENDING', 
+                    employee__employee__reporting_manager__user__role='employee'
+                )
             if status_filter:
                 qs = qs.filter(status=status_filter.upper())
             return qs
@@ -6875,23 +7039,41 @@ class WFHRequestViewSet(viewsets.ModelViewSet):
     serializer_class = WFHRequestSerializer
     permission_classes = [IsAuthenticated]
     pagination_class = CustomPagination
+    filter_backends = [filters.SearchFilter]
+    search_fields = ['employee__user__first_name', 'employee__user__last_name', 'employee__employee_id', 'reason', 'status', 'request_type']
 
     def get_queryset(self):
         user = self.request.user
         mine = self.request.query_params.get('mine') == 'true'
+        status_filter = self.request.query_params.get('status')
         
         emp_profile = user.employee_profile
-        if not emp_profile:
-            # If a user doesn't have an employee profile, they can't request or approve WFH
-            # (Admins/Masters usually have a linked profile if they manage people)
-            return WFHRequest.objects.none()
 
         if mine:
-            # ONLY show requests where user is the requester
-            return WFHRequest.objects.filter(employee=emp_profile).order_by('-created_at')
-            
+            if not emp_profile:
+                return WFHRequest.objects.none()
+            qs = WFHRequest.objects.filter(employee=emp_profile).order_by('-created_at')
+            if status_filter:
+                qs = qs.filter(status=status_filter.lower())
+            return qs
+
+        if user.role in ['admin', 'master']:
+            if user.role == 'master':
+                qs = WFHRequest.objects.all().order_by('-created_at')
+            else:
+                qs = WFHRequest.objects.filter(employee__company=user.company).order_by('-created_at')
+            if status_filter:
+                qs = qs.filter(status=status_filter.lower())
+            return qs
+
+        if not emp_profile:
+            return WFHRequest.objects.none()
+
         # APPROVALS: Only show requests where current user is the reporting manager
-        return WFHRequest.objects.filter(reporting_manager=emp_profile).order_by('-created_at')
+        qs = WFHRequest.objects.filter(reporting_manager=emp_profile).order_by('-created_at')
+        if status_filter:
+            qs = qs.filter(status=status_filter.lower())
+        return qs
 
     def perform_create(self, serializer):
         emp_profile = self.request.user.employee_profile
@@ -6933,7 +7115,7 @@ class WFHRequestViewSet(viewsets.ModelViewSet):
                 employee=employee,
                 from_location=old_loc,
                 to_location=new_loc,
-                changed_by=request.user.employee_profile,
+                changed_by=getattr(request.user, 'employee_profile', None),
                 reason=f"{req_type_str} Request Approved: {wfh_request.reason}"
             )
 
@@ -6957,9 +7139,16 @@ class WFHRequestViewSet(viewsets.ModelViewSet):
 class WorkLocationLogViewSet(viewsets.ReadOnlyModelViewSet):
     serializer_class = WorkLocationLogSerializer
     permission_classes = [IsAuthenticated]
+    pagination_class = CustomPagination
+    filter_backends = [filters.SearchFilter]
+    search_fields = ['employee__user__first_name', 'employee__user__last_name', 'employee__employee_id', 'from_location', 'to_location', 'reason', 'changed_by__user__first_name', 'changed_by__user__last_name']
 
     def get_queryset(self):
-        return WorkLocationLog.objects.all().order_by('-date')
+        user = self.request.user
+        qs = WorkLocationLog.objects.all().select_related('employee__user', 'changed_by__user').order_by('-date')
+        if user.role != 'master' and user.company:
+            qs = qs.filter(employee__company=user.company)
+        return qs
 
 
 # --------------------------- DEMO MODE ENDPOINTS ---------------------------------

@@ -3,9 +3,11 @@ import { useDispatch } from 'react-redux';
 import { Dialog, Transition } from '@headlessui/react';
 import Swal from 'sweetalert2';
 import { setPageTitle } from '../../store/themeConfigSlice';
-import IconSearch from '../../components/Icon/IconSearch';
 import IconPencil from '../../components/Icon/IconPencil';
 import IconX from '../../components/Icon/IconX';
+import IconUsersGroup from '../../components/Icon/IconUsersGroup';
+import DataTable, { Column } from '../../components/Common/DataTable';
+import PageHeader from '../../components/Common/PageHeader';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000';
 const API_URL = `${API_BASE_URL}/employee/employeereference/`;
@@ -143,35 +145,133 @@ const AdminEmployeeReferences = () => {
         }
     };
 
-    return (
-        <div>
-            <div className="bg-gradient-to-r from-[#0e1726] to-[#6366f1] p-6 rounded-xl shadow-lg mb-6 relative overflow-hidden">
-                <div className="relative z-10">
-                    <h1 className="text-3xl font-extrabold text-white tracking-tight">Employee References</h1>
-                    <p className="text-white/80 mt-1 text-sm font-medium">Review employee referrals from people referred by employees in your company.</p>
+    const columns: Column<EmployeeReference>[] = [
+        {
+            key: 'id',
+            title: '#',
+            width: '60px',
+            align: 'center',
+            render: (_val, _row, idx) => <span className="font-semibold text-gray-500">{(idx ?? 0) + 1}</span>,
+        },
+        {
+            key: 'employee',
+            title: 'Employee',
+            sortable: true,
+            render: (_val, ref) => (
+                <div>
+                    <div className="font-semibold text-gray-800 dark:text-white-light">{ref.employee_name || '-'}</div>
+                    <div className="text-xs text-gray-500">{ref.employee_id || '-'}</div>
                 </div>
-                <div className="absolute top-0 right-0 -mt-10 -mr-10 w-48 h-48 bg-white opacity-5 rounded-full blur-2xl"></div>
-            </div>
+            ),
+        },
+        {
+            key: 'name',
+            title: 'Reference Name',
+            sortable: true,
+            render: (_val, ref) => <span className="font-semibold text-gray-800 dark:text-white-light">{ref.name}</span>,
+        },
+        {
+            key: 'designation',
+            title: 'Designation',
+            sortable: true,
+            render: (_val, ref) => <span className="text-gray-600 dark:text-gray-300">{ref.designation}</span>,
+        },
+        {
+            key: 'email',
+            title: 'Email',
+            render: (_val, ref) => <span className="text-gray-600 dark:text-gray-300">{ref.email}</span>,
+        },
+        {
+            key: 'contact_number',
+            title: 'Contact',
+            render: (_val, ref) => <span className="text-gray-600 dark:text-gray-300">{ref.contact_number}</span>,
+        },
+        {
+            key: 'resume',
+            title: 'Resume',
+            render: (_val, ref) => (
+                resolveUrl(ref.resume) ? (
+                    <a className="text-[#0062E0] hover:underline font-semibold" href={resolveUrl(ref.resume)!} target="_blank" rel="noreferrer">
+                        View Resume
+                    </a>
+                ) : (
+                    <span className="text-gray-400">-</span>
+                )
+            ),
+        },
+        {
+            key: 'status',
+            title: 'Status',
+            sortable: true,
+            render: (_val, ref) => (
+                <span
+                    className={`badge ${
+                        ref.status === 'Approved'
+                            ? 'badge-outline-success text-success bg-success/10'
+                            : ref.status === 'Rejected'
+                              ? 'badge-outline-danger text-danger bg-danger/10'
+                              : 'badge-outline-warning text-warning bg-warning/10'
+                    }`}
+                >
+                    {ref.status}
+                </span>
+            ),
+        },
+        {
+            key: 'admin_comment',
+            title: 'Admin Comment',
+            render: (_val, ref) => <span className="text-gray-500 max-w-[200px] truncate block" title={ref.admin_comment || ''}>{ref.admin_comment || '-'}</span>,
+        },
+        {
+            key: 'submitted_at',
+            title: 'Submitted',
+            sortable: true,
+            render: (_val, ref) => <span className="text-gray-500">{new Date(ref.submitted_at).toLocaleDateString()}</span>,
+        },
+        {
+            key: 'actions',
+            title: 'Actions',
+            align: 'center',
+            width: '100px',
+            render: (_val, ref) => (
+                <button
+                    type="button"
+                    className="p-1.5 rounded-lg text-primary hover:bg-primary/10 transition-colors"
+                    onClick={() => openEditModal(ref.id)}
+                    title="Review Referral"
+                >
+                    <IconPencil className="w-4 h-4" />
+                </button>
+            ),
+        },
+    ];
 
-            <div className="flex flex-wrap items-center justify-between gap-4 mb-5">
-                <div className="relative">
-                    <input
-                        type="text"
-                        className="form-input pr-10 w-72"
-                        placeholder="Search references..."
-                        value={search}
-                        onChange={(e) => {
-                            setSearch(e.target.value);
-                            setPage(1);
-                        }}
-                    />
-                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400">
-                        <IconSearch className="w-4 h-4" />
-                    </span>
-                </div>
-                <div className="flex items-center gap-3">
+    return (
+        <div className="space-y-6">
+            <PageHeader
+                title="Employee References"
+                subtitle="Review and process candidate referrals submitted by internal company team members."
+                icon={<IconUsersGroup />}
+                badge="Employee Referrals"
+                variant="indigo"
+            />
+
+            <DataTable
+                columns={columns}
+                data={rows}
+                loading={loading}
+                page={page}
+                pageSize={pageSize}
+                totalCount={totalCount}
+                onPageChange={(p) => setPage(p)}
+                onPageSizeChange={(sz) => { setPageSize(sz); setPage(1); }}
+                searchValue={search}
+                onSearchChange={(val) => { setSearch(val); setPage(1); }}
+                searchPlaceholder="Search references by candidate, employee, email..."
+                onRefresh={fetchReferences}
+                filters={
                     <select
-                        className="form-select w-40"
+                        className="form-select text-xs py-1.5 px-3 rounded-lg border-[#cbd5e1] dark:border-[#1e293b] dark:bg-[#121e32] focus:border-[#0062E0] focus:ring-1 focus:ring-[#0062E0] font-semibold"
                         value={statusFilter}
                         onChange={(e) => {
                             setStatusFilter(e.target.value as any);
@@ -183,144 +283,8 @@ const AdminEmployeeReferences = () => {
                         <option value="Approved">Approved</option>
                         <option value="Rejected">Rejected</option>
                     </select>
-                </div>
-            </div>
-
-            <div className="panel p-0 border-0 overflow-hidden">
-                <div className="table-responsive">
-                    <table className="table-hover">
-                        <thead>
-                            <tr>
-                                <th>#</th>
-                                <th>Employee</th>
-                                <th>Reference Name</th>
-                                <th>Designation</th>
-                                <th>Email</th>
-                                <th>Contact</th>
-                                <th>Resume</th>
-                                <th>Status</th>
-                                <th>Admin Comment</th>
-                                <th>Submitted</th>
-                                <th className="text-center">Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {loading ? (
-                                <tr>
-                                    <td colSpan={11} className="text-center py-5">
-                                        <span className="animate-pulse text-gray-400">Loading references...</span>
-                                    </td>
-                                </tr>
-                            ) : rows.length > 0 ? (
-                                rows.map((ref, idx) => (
-                                    <tr key={ref.id}>
-                                        <td>{(page - 1) * pageSize + idx + 1}</td>
-                                        <td>
-                                            <div className="font-semibold">{ref.employee_name || '-'}</div>
-                                            <div className="text-xs text-gray-500">{ref.employee_id || '-'}</div>
-                                        </td>
-                                        <td className="font-semibold">{ref.name}</td>
-                                        <td className="text-gray-500">{ref.designation}</td>
-                                        <td className="text-gray-500">{ref.email}</td>
-                                        <td className="text-gray-500">{ref.contact_number}</td>
-                                        <td>
-                                            {resolveUrl(ref.resume) ? (
-                                                <a className="text-primary underline" href={resolveUrl(ref.resume)!} target="_blank" rel="noreferrer">
-                                                    View Resume
-                                                </a>
-                                            ) : (
-                                                <span className="text-gray-400">-</span>
-                                            )}
-                                        </td>
-                                        <td>
-                                            <span
-                                                className={`badge ${
-                                                    ref.status === 'Approved'
-                                                        ? 'badge-outline-success'
-                                                        : ref.status === 'Rejected'
-                                                          ? 'badge-outline-danger'
-                                                          : 'badge-outline-warning'
-                                                }`}
-                                            >
-                                                {ref.status}
-                                            </span>
-                                        </td>
-                                        <td className="text-gray-500 max-w-[220px] truncate">{ref.admin_comment || '-'}</td>
-                                        <td className="text-gray-500">{new Date(ref.submitted_at).toLocaleDateString()}</td>
-                                        <td className="text-center">
-                                            <button type="button" className="text-primary hover:text-blue-700" onClick={() => openEditModal(ref.id)} title="Review">
-                                                <IconPencil className="w-5 h-5" />
-                                            </button>
-                                        </td>
-                                    </tr>
-                                ))
-                            ) : (
-                                <tr>
-                                    <td colSpan={11} className="text-center py-5 text-gray-400">No references found.</td>
-                                </tr>
-                            )}
-                        </tbody>
-                    </table>
-                </div>
-
-                {totalCount > 0 && (
-                    <div className="flex justify-between items-center p-4 border-t border-[#e0e6ed] dark:border-[#1b2e4b]">
-                        <div className="flex items-center gap-4">
-                            <div className="text-sm text-gray-500 font-semibold dark:text-gray-400">
-                                Showing <span className="text-primary">{(page - 1) * pageSize + 1}</span> to <span className="text-primary">{Math.min(page * pageSize, totalCount)}</span> of <span className="text-primary">{totalCount}</span> entries
-                            </div>
-                            <div className="flex items-center gap-2">
-                                <span className="text-sm font-semibold">Per page:</span>
-                                <select
-                                    className="form-select w-20 text-sm font-semibold py-1"
-                                    value={pageSize}
-                                    onChange={(e) => {
-                                        setPageSize(Number(e.target.value));
-                                        setPage(1);
-                                    }}
-                                >
-                                    <option value="10">10</option>
-                                    <option value="20">20</option>
-                                    <option value="50">50</option>
-                                </select>
-                            </div>
-                        </div>
-                        <ul className="inline-flex items-center space-x-1 font-semibold">
-                            <li>
-                                <button
-                                    type="button"
-                                    className="flex justify-center font-semibold p-2 rounded-full transition bg-white-light text-dark hover:text-white hover:bg-primary dark:text-white-light dark:bg-[#191e3a] dark:hover:bg-primary disabled:opacity-50 disabled:cursor-not-allowed"
-                                    onClick={() => setPage(page > 1 ? page - 1 : 1)}
-                                    disabled={page === 1}
-                                >
-                                    Prev
-                                </button>
-                            </li>
-                            {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
-                                <li key={p}>
-                                    <button
-                                        type="button"
-                                        className={`flex justify-center font-semibold px-3.5 py-2 rounded-full transition ${page === p ? 'bg-primary text-white shadow-[0_10px_20px_-10px_rgba(67,97,238,0.44)]' : 'bg-white-light text-dark hover:text-white hover:bg-primary dark:text-white-light dark:bg-[#191e3a] dark:hover:bg-primary'}`}
-                                        onClick={() => setPage(p)}
-                                    >
-                                        {p}
-                                    </button>
-                                </li>
-                            ))}
-                            <li>
-                                <button
-                                    type="button"
-                                    className="flex justify-center font-semibold p-2 rounded-full transition bg-white-light text-dark hover:text-white hover:bg-primary dark:text-white-light dark:bg-[#191e3a] dark:hover:bg-primary disabled:opacity-50 disabled:cursor-not-allowed"
-                                    onClick={() => setPage(page < totalPages ? page + 1 : totalPages)}
-                                    disabled={page === totalPages || totalPages === 0}
-                                >
-                                    Next
-                                </button>
-                            </li>
-                        </ul>
-                    </div>
-                )}
-            </div>
+                }
+            />
 
             <Transition appear show={editModalOpen} as={Fragment}>
                 <Dialog as="div" open={editModalOpen} onClose={() => setEditModalOpen(false)} className="relative z-50">

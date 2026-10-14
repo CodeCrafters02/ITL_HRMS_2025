@@ -11,7 +11,11 @@ import IconX from '../../components/Icon/IconX';
 import IconClock from '../../components/Icon/IconClock';
 import IconTrash from '../../components/Icon/IconTrash';
 import Swal from 'sweetalert2';
+import DataTable, { Column } from '../../components/Common/DataTable';
+import PageHeader from '../../components/Common/PageHeader';
 
+import StatCard, { StatGrid } from '../../components/Common/StatCard';
+import Button, { IconButton } from '../../components/Common/Button';
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000';
 
 const AdminSeatBookingsOverview = () => {
@@ -38,6 +42,9 @@ const AdminSeatBookingsOverview = () => {
     const [historyBookings, setHistoryBookings] = useState<any[]>([]);
     const [loadingHistory, setLoadingHistory] = useState(false);
     const [historySearch, setHistorySearch] = useState('');
+    const [historyPage, setHistoryPage] = useState(1);
+    const [historyPageSize, setHistoryPageSize] = useState(10);
+    const [historyTotalCount, setHistoryTotalCount] = useState(0);
 
     const stageRef = useRef<any>(null);
 
@@ -132,7 +139,7 @@ const AdminSeatBookingsOverview = () => {
             });
             if (res.ok) {
                 const data = await res.json();
-                setBookings(data || []);
+                setBookings(Array.isArray(data) ? data : (data.results || []));
             }
         } catch (error) {
             console.error('Error fetching bookings:', error);
@@ -182,12 +189,20 @@ const AdminSeatBookingsOverview = () => {
         setLoadingHistory(true);
         try {
             const token = localStorage.getItem('access_token');
-            const res = await fetch(`${API_BASE_URL}/app/seat-bookings/?history=true`, {
+            const url = new URL(`${API_BASE_URL}/app/seat-bookings/`);
+            url.searchParams.set('history', 'true');
+            url.searchParams.set('page', String(historyPage));
+            url.searchParams.set('page_size', String(historyPageSize));
+            if (historySearch.trim()) url.searchParams.set('search', historySearch.trim());
+
+            const res = await fetch(url.toString(), {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
             if (res.ok) {
                 const data = await res.json();
-                setHistoryBookings(data || []);
+                const list = data.results || (Array.isArray(data) ? data : []);
+                setHistoryBookings(list);
+                setHistoryTotalCount(data.count !== undefined ? data.count : list.length);
             }
         } catch (error) {
             console.error('Error fetching history:', error);
@@ -195,6 +210,15 @@ const AdminSeatBookingsOverview = () => {
             setLoadingHistory(false);
         }
     };
+
+    useEffect(() => {
+        if (showHistoryModal) {
+            const timer = setTimeout(() => {
+                fetchHistory();
+            }, 300);
+            return () => clearTimeout(timer);
+        }
+    }, [showHistoryModal, historyPage, historyPageSize, historySearch]);
 
     const handleCancelBooking = async (bookingId: number) => {
         try {
@@ -267,32 +291,27 @@ const AdminSeatBookingsOverview = () => {
     const weeklyCount = bookings.filter(b => b.booking_type === 'weekly').length;
     const dailyCount = bookings.filter(b => b.booking_type === 'daily').length;
 
-    const filteredHistory = historyBookings.filter(b =>
-        b.employee_details.name.toLowerCase().includes(historySearch.toLowerCase()) ||
-        b.seat_details.seat_number.toLowerCase().includes(historySearch.toLowerCase())
-    );
 
     return (
         <div className="flex flex-col h-[calc(var(--app-vh)_-_90px)] space-y-4">
-            {/* Header Banner - Restored with better spacing */}
-            <div className="bg-gradient-to-r from-emerald-500 to-teal-600 rounded-xl p-4 text-white shadow-lg overflow-hidden relative">
-                <div className="relative z-10 flex items-center justify-between">
-                    <div>
-                        <h2 className="text-3xl font-extrabold mb-0.5 tracking-tight">Seat Management Insights</h2>
-                        <p className="text-white/80 text-sm font-medium">Real-time office occupancy tracking and booking history.</p>
-                    </div>
-                     <button 
+            {/* Executive Page Header */}
+            <PageHeader
+                title="Seat Management Insights"
+                subtitle="Real-time office occupancy tracking, interactive floor plans, and employee workspace allocation."
+                icon={<IconInfoCircle />}
+                badge="Facilities & Seating"
+                variant="emerald"
+                className="mb-0"
+                actions={
+                    <button 
                         onClick={() => setShowHistoryModal(true)}
-                        className="bg-white/20 hover:bg-white/30 backdrop-blur-md text-white px-5 py-2 rounded-xl font-bold transition-all border border-white/20 flex items-center gap-2"
+                        className="btn btn-outline-light gap-2 backdrop-blur-md bg-white/10 hover:bg-white/20 border-white/20 text-white font-semibold"
                     >
                         <IconClock className="w-4 h-4" />
                         View History
                     </button>
-                </div>
-                <div className="absolute right-[-20px] top-[-20px] opacity-10">
-                    <IconInfoCircle className="w-48 h-48" />
-                </div>
-            </div>
+                }
+            />
 
             <div className="flex flex-col md:flex-row justify-between items-center bg-white dark:bg-[#0e1726] p-4 rounded-xl shadow-sm gap-4 border border-gray-100 dark:border-gray-800">
                 <div className="flex items-center gap-4">
@@ -341,63 +360,27 @@ const AdminSeatBookingsOverview = () => {
                         value={selectedDate}
                         onChange={(e) => setSelectedDate(e.target.value)}
                     />
-                    <button
+                    <Button
                         onClick={() => {
                             setShowHistoryModal(true);
                             fetchHistory();
                         }}
-                        className="btn btn-primary flex items-center gap-2"
+                        
                         title="View All History"
                     >
                         <IconClock className="w-4 h-4" />
                         History
-                    </button>
+                    </Button>
                 </div>
             </div>
 
             {/* Restored Analytics Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                <div className="panel bg-gradient-to-br from-blue-500 to-indigo-600 text-white p-4 rounded-xl shadow-md border-none">
-                    <div className="flex justify-between items-center mb-1">
-                        <h5 className="font-bold text-xs uppercase opacity-80 tracking-wider">Total Capacity</h5>
-                        <IconUsers className="w-4 h-4 opacity-50" />
-                    </div>
-                    <div className="flex items-baseline gap-1">
-                        <div className="text-2xl font-black">{totalSeats}</div>
-                        <span className="text-[10px] font-bold opacity-60">SEATS</span>
-                    </div>
-                </div>
-                <div className="panel bg-gradient-to-br from-emerald-500 to-teal-600 text-white p-4 rounded-xl shadow-md border-none">
-                    <div className="flex justify-between items-center mb-1">
-                        <h5 className="font-bold text-xs uppercase opacity-80 tracking-wider">Available Now</h5>
-                        <IconChecks className="w-4 h-4 opacity-50" />
-                    </div>
-                    <div className="flex items-baseline gap-1">
-                        <div className="text-2xl font-black">{availableCount}</div>
-                        <span className="text-[10px] font-bold opacity-60">FREE</span>
-                    </div>
-                </div>
-                <div className="panel bg-gradient-to-br from-orange-400 to-orange-600 text-white p-4 rounded-xl shadow-md border-none">
-                    <div className="flex justify-between items-center mb-1">
-                        <h5 className="font-bold text-xs uppercase opacity-80 tracking-wider">Booked</h5>
-                        <IconInfoCircle className="w-4 h-4 opacity-50" />
-                    </div>
-                    <div className="flex items-baseline gap-1">
-                        <div className="text-2xl font-black">{bookedCount}</div>
-                        <span className="text-[10px] font-bold opacity-60">{dailyCount}D | {weeklyCount}W</span>
-                    </div>
-                </div>
-                <div className="panel bg-gradient-to-br from-pink-500 to-rose-600 text-white p-4 rounded-xl shadow-md border-none">
-                    <div className="flex justify-between items-center mb-1">
-                        <h5 className="font-bold text-xs uppercase opacity-80 tracking-wider">Permanent</h5>
-                        <IconInfoCircle className="w-4 h-4 opacity-50" />
-                    </div>
-                    <div className="flex items-baseline gap-1">
-                        <div className="text-2xl font-black">{permanentCount}</div>
-                        <span className="text-[10px] font-bold opacity-60">ALLOCATED</span>
-                    </div>
-                </div>
-            </div>
+            <StatGrid cols={4}>
+                <StatCard label="Total Capacity" value={totalSeats} tone="primary" icon={<IconUsers />} hint="seats" />
+                <StatCard label="Available Now" value={availableCount} tone="success" icon={<IconChecks />} hint="free" />
+                <StatCard label="Booked" value={bookedCount} tone="warning" icon={<IconInfoCircle />} hint={`${dailyCount}D | ${weeklyCount}W`} />
+                <StatCard label="Permanent" value={permanentCount} tone="purple" icon={<IconInfoCircle />} hint="allocated" />
+            </StatGrid>
 
 
             <div className="flex-1 flex gap-6 overflow-hidden">
@@ -562,13 +545,13 @@ const AdminSeatBookingsOverview = () => {
                                         </div>
                                     )}
 
-                                    <button 
+                                    <Button variant="outline-danger" className="w-full mt-2" 
                                         onClick={() => handleCancelBooking(selectedSeat.booking.id)}
-                                        className="btn btn-outline-danger w-full gap-2 mt-2"
+                                        
                                     >
                                         <IconTrash className="w-4 h-4" />
                                         Cancel This Booking
-                                    </button>
+                                    </Button>
                                 </div>
                             ) : (
                                 <div className="space-y-4">
@@ -603,16 +586,16 @@ const AdminSeatBookingsOverview = () => {
                                                 </div>
                                                 
                                                 {/* Quick Cancel for Admin */}
-                                                <button 
+                                                <IconButton tone="danger" 
                                                     onClick={(e) => {
                                                         e.stopPropagation();
                                                         handleCancelBooking(b.id);
                                                     }}
-                                                    className="absolute top-2 right-2 p-1.5 bg-danger/10 text-danger rounded-lg opacity-0 group-hover:opacity-100 transition-opacity z-20 hover:bg-danger hover:text-white"
+                                                    
                                                     title="Cancel Booking"
                                                 >
                                                     <IconTrash className="w-3.5 h-3.5" />
-                                                </button>
+                                                </IconButton>
 
                                                 <div className="absolute right-[-10px] bottom-[-10px] opacity-5 group-hover:opacity-10 transition-opacity">
                                                     <IconClock className="w-12 h-12" />
@@ -623,9 +606,9 @@ const AdminSeatBookingsOverview = () => {
                                 </div>
                             )}
 
-                            <button onClick={() => setSelectedSeat(null)} className="btn btn-outline-secondary w-full mt-6">
+                            <Button variant="secondary" className="w-full mt-6" onClick={() => setSelectedSeat(null)} >
                                 Close Details
-                            </button>
+                            </Button>
                         </div>
                     ) : (
                         <div className="flex flex-col items-center justify-center h-full opacity-50 text-center">
@@ -659,96 +642,113 @@ const AdminSeatBookingsOverview = () => {
                             </button>
                         </div>
 
-                        <div className="flex flex-col md:flex-row gap-4 mb-6">
-                            <div className="relative flex-1">
-                                <input
-                                    type="text"
-                                    className="form-input pl-10"
-                                    placeholder="Search by employee or seat..."
-                                    value={historySearch}
-                                    onChange={(e) => setHistorySearch(e.target.value)}
-                                />
-                                <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
-                                    <IconSearch className="w-4 h-4" />
-                                </div>
-                            </div>
-                            <button onClick={fetchHistory} className="btn btn-primary flex items-center gap-2">
-                                <IconRefresh className={loadingHistory ? 'animate-spin' : ''} />
-                                Refresh Data
-                            </button>
-                        </div>
-
-                        <div className="table-responsive h-[500px] overflow-y-auto rounded-lg border border-gray-200 dark:border-gray-800">
-                            {loadingHistory ? (
-                                <div className="flex items-center justify-center h-40">
-                                    <span className="animate-spin border-4 border-primary border-l-transparent rounded-full w-10 h-10"></span>
-                                </div>
-                            ) : (
-                                <table className="table-hover">
-                                    <thead>
-                                        <tr>
-                                            <th>Employee</th>
-                                            <th>Seat Info</th>
-                                            <th>Date & Time</th>
-                                            <th>Type</th>
-                                            <th>Status</th>
-                                            <th className="text-center">Action</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {filteredHistory.length > 0 ? (
-                                            filteredHistory.map((b: any) => (
-                                                <tr key={b.id}>
-                                                    <td>
-                                                        <div className="font-bold">{b.employee_details.name}</div>
-                                                        <div className="text-[10px] text-gray-400 font-bold uppercase">ID: {b.employee_details.employee_id}</div>
-                                                    </td>
-                                                    <td>
-                                                        <div className="font-bold text-primary">Seat {b.seat_details.seat_number}</div>
-                                                        <div className="text-[10px] text-gray-400 font-bold uppercase">Floor {b.seat_details.floor} - {b.seat_details.section}</div>
-                                                    </td>
-                                                    <td>
-                                                        <div className="text-sm font-bold">{b.start_date} {b.end_date && ` to ${b.end_date}`}</div>
-                                                        <div className="text-[10px] text-gray-500 font-bold italic">
-                                                            {b.start_time?.substring(0, 5) || '00:00'} - {b.end_time?.substring(0, 5) || '23:59'}
-                                                        </div>
-                                                    </td>
-                                                    <td>
-                                                        <span className={`badge capitalize ${b.booking_type === 'permanent' ? 'badge-outline-secondary' : 'badge-outline-info'}`}>
-                                                            {b.booking_type}
-                                                        </span>
-                                                    </td>
-                                                    <td>
-                                                        <span className={`badge capitalize ${b.status === 'approved' ? 'badge-outline-success' :
-                                                                b.status === 'rejected' ? 'badge-outline-danger' :
-                                                                    b.status === 'cancelled' ? 'badge-outline-dark' :
-                                                                        'badge-outline-warning'
-                                                            }`}>
-                                                            {b.status === 'pending' ? 'Pending Approval' : b.status}
-                                                        </span>
-                                                    </td>
-                                                    <td className="text-center">
-                                                        {(b.status === 'approved' || b.status === 'pending') && (
-                                                            <button 
-                                                                onClick={() => handleCancelBooking(b.id)}
-                                                                className="p-2 bg-danger/10 text-danger rounded-lg hover:bg-danger hover:text-white transition-all shadow-sm"
-                                                                title="Cancel Booking"
-                                                            >
-                                                                <IconTrash className="w-4 h-4" />
-                                                            </button>
-                                                        )}
-                                                    </td>
-                                                </tr>
-                                            ))
-                                        ) : (
-                                            <tr>
-                                                <td colSpan={6} className="text-center py-10 opacity-50 font-bold">No booking history found matching your filters.</td>
-                                            </tr>
-                                        )}
-                                    </tbody>
-                                </table>
-                            )}
-                        </div>
+                        <DataTable
+                            columns={[
+                                {
+                                    key: 'index',
+                                    title: '#',
+                                    width: '60px',
+                                    align: 'center',
+                                    render: (_val: any, _b: any, idx: number) => (
+                                        <span className="font-semibold text-gray-500">{(historyPage - 1) * historyPageSize + (idx ?? 0) + 1}</span>
+                                    ),
+                                },
+                                {
+                                    key: 'employee',
+                                    title: 'Employee',
+                                    sortable: true,
+                                    render: (_val: any, b: any) => (
+                                        <div>
+                                            <div className="font-bold text-gray-800 dark:text-white-light">{b.employee_details?.name}</div>
+                                            <div className="text-[10px] text-gray-400 font-bold uppercase">ID: {b.employee_details?.employee_id}</div>
+                                        </div>
+                                    ),
+                                },
+                                {
+                                    key: 'seat_number',
+                                    title: 'Seat Info',
+                                    sortable: true,
+                                    render: (_val: any, b: any) => (
+                                        <div>
+                                            <div className="font-bold text-primary">Seat {b.seat_details?.seat_number}</div>
+                                            <div className="text-[10px] text-gray-400 font-bold uppercase">Floor {b.seat_details?.floor} - {b.seat_details?.section}</div>
+                                        </div>
+                                    ),
+                                },
+                                {
+                                    key: 'start_date',
+                                    title: 'Date & Time',
+                                    sortable: true,
+                                    render: (_val: any, b: any) => (
+                                        <div>
+                                            <div className="text-sm font-bold">{b.start_date} {b.end_date && ` to ${b.end_date}`}</div>
+                                            <div className="text-[10px] text-gray-500 font-bold italic">
+                                                {b.start_time?.substring(0, 5) || '00:00'} - {b.end_time?.substring(0, 5) || '23:59'}
+                                            </div>
+                                        </div>
+                                    ),
+                                },
+                                {
+                                    key: 'booking_type',
+                                    title: 'Type',
+                                    sortable: true,
+                                    render: (_val: any, b: any) => (
+                                        <span className={`badge capitalize ${b.booking_type === 'permanent' ? 'badge-outline-secondary' : 'badge-outline-info'}`}>
+                                            {b.booking_type}
+                                        </span>
+                                    ),
+                                },
+                                {
+                                    key: 'status',
+                                    title: 'Status',
+                                    sortable: true,
+                                    render: (_val: any, b: any) => (
+                                        <span className={`badge capitalize ${
+                                            b.status === 'approved' ? 'badge-outline-success text-success bg-success/10' :
+                                            b.status === 'rejected' ? 'badge-outline-danger text-danger bg-danger/10' :
+                                            b.status === 'cancelled' ? 'badge-outline-dark text-dark dark:text-gray-400' :
+                                            'badge-outline-warning text-warning bg-warning/10'
+                                        }`}>
+                                            {b.status === 'pending' ? 'Pending Approval' : b.status}
+                                        </span>
+                                    ),
+                                },
+                                {
+                                    key: 'actions',
+                                    title: 'Action',
+                                    align: 'center',
+                                    width: '80px',
+                                    render: (_val: any, b: any) => (
+                                        (b.status === 'approved' || b.status === 'pending') ? (
+                                             <IconButton tone="danger" 
+                                                onClick={() => handleCancelBooking(b.id)}
+                                                
+                                                title="Cancel Booking"
+                                            >
+                                                <IconTrash className="w-4 h-4" />
+                                            </IconButton>
+                                        ) : null
+                                    ),
+                                },
+                            ]}
+                            data={historyBookings}
+                            loading={loadingHistory}
+                            page={historyPage}
+                            pageSize={historyPageSize}
+                            totalCount={historyTotalCount}
+                            onPageChange={(p) => setHistoryPage(p)}
+                            onPageSizeChange={(sz) => {
+                                setHistoryPageSize(sz);
+                                setHistoryPage(1);
+                            }}
+                            onRefresh={fetchHistory}
+                            searchValue={historySearch}
+                            onSearchChange={(val) => {
+                                setHistorySearch(val);
+                                setHistoryPage(1);
+                            }}
+                            searchPlaceholder="Search by employee or seat..."
+                        />
 
                         <div className="mt-6 flex justify-end">
                             <button onClick={() => setShowHistoryModal(false)} className="btn btn-secondary">Close History</button>

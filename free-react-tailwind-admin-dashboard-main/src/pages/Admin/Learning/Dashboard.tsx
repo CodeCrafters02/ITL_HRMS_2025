@@ -5,6 +5,17 @@ import ReactApexChart from 'react-apexcharts';
 import axios from 'axios';
 import { setPageTitle } from '../../../store/themeConfigSlice';
 
+import HeroBanner, { HeroPill } from '../../../components/Common/HeroBanner';
+import StatCard, { StatGrid } from '../../../components/Common/StatCard';
+import { useBranding } from '../../../theme/brandingStore';
+import IconBook from '../../../components/Icon/IconBook';
+import IconUsersGroup from '../../../components/Icon/IconUsersGroup';
+import IconAward from '../../../components/Icon/IconAward';
+import IconStar from '../../../components/Icon/IconStar';
+import IconTrendingUp from '../../../components/Icon/IconTrendingUp';
+import IconListCheck from '../../../components/Icon/IconListCheck';
+import IconSend from '../../../components/Icon/IconSend';
+import IconCircleCheck from '../../../components/Icon/IconCircleCheck';
 const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
 const getHeaders = () => ({ Authorization: `Bearer ${localStorage.getItem('access_token')}` });
 
@@ -76,9 +87,14 @@ const AdminLearningDashboard = () => {
     const s = data?.summary;
 
     // ── Enrollment & Completion Trend (area) ──
+    const { theme } = useBranding();
+    const brand = theme.primary;
+    const mid = theme.mid;
+    const accent = theme.accent;
+
     const trendOptions: ApexCharts.ApexOptions = useMemo(() => ({
         chart: { type: 'area', fontFamily: 'Inter, sans-serif', toolbar: { show: false } },
-        colors: ['#8b5cf6', '#14b8a6'],
+        colors: [brand, accent],
         fill: { type: 'gradient', gradient: { shadeIntensity: 1, opacityFrom: 0.45, opacityTo: 0.05, stops: [0, 90, 100] } },
         stroke: { curve: 'smooth', width: 3 },
         dataLabels: { enabled: false },
@@ -97,7 +113,7 @@ const AdminLearningDashboard = () => {
     // ── Compliance completion gauge (radialBar) ──
     const complianceOptions: ApexCharts.ApexOptions = useMemo(() => ({
         chart: { type: 'radialBar', fontFamily: 'Inter, sans-serif' },
-        colors: ['#8b5cf6'],
+        colors: [brand],
         plotOptions: {
             radialBar: {
                 hollow: { size: '60%' },
@@ -124,7 +140,7 @@ const AdminLearningDashboard = () => {
     // ── Courses by difficulty (bar) ──
     const difficultyOptions: ApexCharts.ApexOptions = useMemo(() => ({
         chart: { type: 'bar', fontFamily: 'Inter, sans-serif', toolbar: { show: false } },
-        colors: ['#6366f1', '#8b5cf6', '#ec4899'],
+        colors: [accent, mid, brand],
         plotOptions: { bar: { borderRadius: 6, columnWidth: '45%', distributed: true } },
         legend: { show: false },
         dataLabels: { enabled: false },
@@ -136,7 +152,7 @@ const AdminLearningDashboard = () => {
     const statusOptions: ApexCharts.ApexOptions = useMemo(() => ({
         chart: { type: 'pie', fontFamily: 'Inter, sans-serif', toolbar: { show: false } },
         labels: (data?.enrollment_status_breakdown || []).map(e => e.status || ''),
-        colors: ['#10b981', '#f59e0b', '#8b5cf6', '#ef4444', '#94a3b8'],
+        colors: ['#10b981', '#f59e0b', brand, '#ef4444', '#94a3b8'],
         legend: { position: 'bottom', fontSize: '10px' },
         dataLabels: { enabled: true, style: { fontSize: '9px' } },
         stroke: { width: 2 },
@@ -145,7 +161,7 @@ const AdminLearningDashboard = () => {
     // ── Department-wise completion (horizontal bar) ──
     const deptOptions: ApexCharts.ApexOptions = useMemo(() => ({
         chart: { type: 'bar', fontFamily: 'Inter, sans-serif', toolbar: { show: false } },
-        colors: ['#14b8a6'],
+        colors: [brand],
         plotOptions: { bar: { horizontal: true, borderRadius: 6, barHeight: '50%' } },
         dataLabels: { enabled: true, formatter: (v: number) => `${v}%`, style: { fontSize: '10px' } },
         xaxis: { categories: (data?.department_completion || []).map(d => d.department), max: 100, labels: { style: { fontSize: '10px' } } },
@@ -171,7 +187,7 @@ const AdminLearningDashboard = () => {
     // ── Certificate issuance trend (bar) ──
     const certOptions: ApexCharts.ApexOptions = useMemo(() => ({
         chart: { type: 'bar', fontFamily: 'Inter, sans-serif', toolbar: { show: false } },
-        colors: ['#ec4899'],
+        colors: [mid],
         plotOptions: { bar: { borderRadius: 6, columnWidth: '40%' } },
         dataLabels: { enabled: false },
         xaxis: { categories: (data?.certificate_trend || []).map(c => c.month), labels: { style: { fontSize: '10px' } } },
@@ -183,7 +199,7 @@ const AdminLearningDashboard = () => {
     // ── Training request funnel (horizontal bar, descending) ──
     const funnelOptions: ApexCharts.ApexOptions = useMemo(() => ({
         chart: { type: 'bar', fontFamily: 'Inter, sans-serif', toolbar: { show: false } },
-        colors: ['#8b5cf6', '#6366f1', '#14b8a6', '#ef4444'],
+        colors: [brand, mid, accent, '#ef4444'],
         plotOptions: { bar: { horizontal: true, borderRadius: 6, barHeight: '55%', distributed: true } },
         legend: { show: false },
         dataLabels: { enabled: true, style: { fontSize: '10px' } },
@@ -197,7 +213,7 @@ const AdminLearningDashboard = () => {
         return (
             <div className="min-h-[60vh] flex items-center justify-center">
                 <div className="flex flex-col items-center gap-3">
-                    <div className="w-10 h-10 border-4 border-violet-500 border-t-transparent rounded-full animate-spin" />
+                    <div className="w-10 h-10 border-4 border-brand border-t-transparent rounded-full animate-spin" />
                     <span className="text-xs text-gray-400 font-semibold">Loading learning management data...</span>
                 </div>
             </div>
@@ -206,56 +222,42 @@ const AdminLearningDashboard = () => {
 
     return (
         <div className="space-y-6 py-2 animate__animated animate__fadeIn">
-            {/* ── Hero Banner ── */}
-            <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-violet-600 via-purple-600 to-indigo-600 text-white p-7 shadow-xl">
-                <div className="absolute -top-12 -right-12 w-48 h-48 rounded-full bg-white/5 blur-3xl" />
-                <div className="absolute -bottom-12 -left-12 w-64 h-64 rounded-full bg-white/5 blur-3xl" />
-                <div className="relative z-10 flex flex-col md:flex-row md:items-center md:justify-between gap-5">
-                    <div>
-                        <p className="text-white/70 text-xs font-bold uppercase tracking-widest mb-0.5">Learning Management</p>
-                        <h1 className="text-2xl font-extrabold leading-tight">Organization Learning Overview</h1>
-                        <p className="text-white/80 text-xs mt-1">Courses, enrollments, compliance, and certification activity across the company.</p>
-                    </div>
-                    <div className="flex gap-4 shrink-0">
-                        <div className="text-center bg-white/10 backdrop-blur rounded-2xl px-5 py-3">
+            {/* ── Hero Banner (company brand theme) ── */}
+            <HeroBanner
+                eyebrow="Learning Management"
+                title="Organization Learning Overview"
+                subtitle="Courses, enrollments, compliance, and certification activity across the company."
+                aside={
+                    <>
+                        <div className="rounded-2xl border border-white/20 bg-white/10 px-5 py-3 text-center backdrop-blur-md">
                             <div className="text-2xl font-extrabold">{s?.completion_rate ?? 0}%</div>
-                            <div className="text-[10px] font-bold text-white/70 uppercase">Completion Rate</div>
+                            <div className="text-[10px] font-bold uppercase text-white/70">Completion Rate</div>
                         </div>
-                        <div className="text-center bg-white/10 backdrop-blur rounded-2xl px-5 py-3">
+                        <div className="rounded-2xl border border-white/20 bg-white/10 px-5 py-3 text-center backdrop-blur-md">
                             <div className="text-2xl font-extrabold">{s?.active_learners ?? 0}</div>
-                            <div className="text-[10px] font-bold text-white/70 uppercase">Active Learners</div>
+                            <div className="text-[10px] font-bold uppercase text-white/70">Active Learners</div>
                         </div>
-                    </div>
-                </div>
-                <div className="relative z-10 flex flex-wrap gap-2 mt-5 pt-4 border-t border-white/20">
-                    {NAV_LINKS.map(l => (
-                        <NavLink key={l.to} to={l.to}
-                            className="text-[10px] font-bold uppercase tracking-wider bg-white/15 hover:bg-white/25 transition px-3 py-1.5 rounded-full">
-                            {l.label}
-                        </NavLink>
-                    ))}
-                </div>
-            </div>
+                    </>
+                }
+            >
+                {NAV_LINKS.map((l) => (
+                    <HeroPill key={l.to} as={NavLink} to={l.to} className="!rounded-full !px-3 !py-1.5 !text-[10px] font-bold uppercase tracking-wider">
+                        {l.label}
+                    </HeroPill>
+                ))}
+            </HeroBanner>
 
             {/* ── Stat Cards ── */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                {[
-                    { label: 'Total Courses', value: s?.total_courses ?? 0, sub: `${s?.published_courses ?? 0} published`, color: 'violet' },
-                    { label: 'Total Enrollments', value: s?.total_enrollments ?? 0, sub: `${s?.completed_enrollments ?? 0} completed`, color: 'indigo' },
-                    { label: 'Certificates Issued', value: s?.total_certificates ?? 0, sub: `${s?.valid_certificates ?? 0} currently valid`, color: 'emerald' },
-                    { label: 'Avg Course Rating', value: s?.avg_course_rating ?? 0, sub: `out of 5.00`, color: 'amber' },
-                    { label: 'Avg Progress', value: `${s?.avg_progress ?? 0}%`, sub: 'across active enrollments', color: 'teal' },
-                    { label: 'Compliance Rate', value: `${s?.compliance_completion_rate ?? 0}%`, sub: 'mandatory training', color: 'rose' },
-                    { label: 'Pending Requests', value: s?.pending_training_requests ?? 0, sub: 'awaiting approval', color: 'pink' },
-                    { label: 'Published Courses', value: s?.published_courses ?? 0, sub: `of ${s?.total_courses ?? 0} total`, color: 'cyan' },
-                ].map((c, i) => (
-                    <div key={i} className="bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-2xl p-5 shadow-sm">
-                        <div className={`text-3xl font-extrabold text-${c.color}-600 dark:text-${c.color}-400 mb-1`}>{c.value}</div>
-                        <div className="text-xs font-bold text-gray-800 dark:text-white">{c.label}</div>
-                        <div className="text-[10px] text-gray-400 mt-0.5">{c.sub}</div>
-                    </div>
-                ))}
-            </div>
+            <StatGrid cols={4} className="!mb-0">
+                <StatCard label="Total Courses" value={s?.total_courses ?? 0} hint={`${s?.published_courses ?? 0} published`} tone="primary" icon={<IconBook />} />
+                <StatCard label="Total Enrollments" value={s?.total_enrollments ?? 0} hint={`${s?.completed_enrollments ?? 0} completed`} tone="info" icon={<IconUsersGroup />} />
+                <StatCard label="Certificates Issued" value={s?.total_certificates ?? 0} hint={`${s?.valid_certificates ?? 0} currently valid`} tone="success" icon={<IconAward />} />
+                <StatCard label="Avg Course Rating" value={s?.avg_course_rating ?? 0} hint="out of 5.00" tone="warning" icon={<IconStar />} />
+                <StatCard label="Avg Progress" value={`${s?.avg_progress ?? 0}%`} hint="across active enrollments" tone="purple" icon={<IconTrendingUp />} progress={Number(s?.avg_progress ?? 0)} />
+                <StatCard label="Compliance Rate" value={`${s?.compliance_completion_rate ?? 0}%`} hint="mandatory training" tone="danger" icon={<IconListCheck />} progress={Number(s?.compliance_completion_rate ?? 0)} />
+                <StatCard label="Pending Requests" value={s?.pending_training_requests ?? 0} hint="awaiting approval" tone="slate" icon={<IconSend />} />
+                <StatCard label="Published Courses" value={s?.published_courses ?? 0} hint={`of ${s?.total_courses ?? 0} total`} tone="primary" icon={<IconCircleCheck />} />
+            </StatGrid>
 
             {/* ── Trend + Compliance Gauge ── */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -347,14 +349,14 @@ const AdminLearningDashboard = () => {
                             <div key={c.id} className="border border-gray-100 dark:border-gray-800 rounded-xl p-3">
                                 <div className="flex items-center justify-between mb-1.5">
                                     <span className="text-xs font-bold text-gray-800 dark:text-white truncate">{c.title}</span>
-                                    <span className="text-[9px] font-black bg-violet-500/10 text-violet-600 px-2 py-0.5 rounded-full shrink-0">{c.category}</span>
+                                    <span className="text-[9px] font-black bg-brand/10 text-brand px-2 py-0.5 rounded-full shrink-0">{c.category}</span>
                                 </div>
                                 <div className="flex items-center gap-3 text-[10px] text-gray-400">
                                     <span>{c.enrollments} enrolled</span>
                                     <span>★ {c.avg_rating.toFixed(1)}</span>
                                 </div>
                                 <div className="w-full h-1.5 bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden mt-2">
-                                    <div className="h-full bg-gradient-to-r from-violet-500 to-purple-500 rounded-full" style={{ width: `${c.completion_rate}%` }} />
+                                    <div className="h-full bg-gradient-to-r from-brand to-brand-accent rounded-full" style={{ width: `${c.completion_rate}%` }} />
                                 </div>
                                 <div className="text-[9px] text-gray-400 mt-1">{c.completion_rate}% completion rate</div>
                             </div>

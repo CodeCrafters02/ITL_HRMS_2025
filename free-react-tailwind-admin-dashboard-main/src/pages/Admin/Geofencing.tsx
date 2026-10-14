@@ -3,6 +3,7 @@ import { useDispatch } from 'react-redux';
 import { setPageTitle } from '../../store/themeConfigSlice';
 import Swal from 'sweetalert2';
 
+import Button from '../../components/Common/Button';
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000';
 
 const Geofencing = () => {
@@ -288,16 +289,16 @@ const Geofencing = () => {
                                     </div>
                                     
                                     <div className="mt-6">
-                                        <button 
+                                        <Button className="w-full" 
                                             type="button" 
-                                            className="btn btn-primary w-full gap-2"
+                                            
                                             onClick={() => handleSave(loc.id)}
                                         >
                                             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                                             </svg>
                                             Save Configuration
-                                        </button>
+                                        </Button>
                                     </div>
                                 </div>
                             );

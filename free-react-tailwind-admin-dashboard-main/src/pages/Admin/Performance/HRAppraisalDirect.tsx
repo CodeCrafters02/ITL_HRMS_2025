@@ -4,6 +4,7 @@ import axios from 'axios';
 import { setPageTitle } from '../../../store/themeConfigSlice';
 import IconSearch from '../../../components/Icon/IconSearch';
 
+import PageHeader from '../../../components/Common/PageHeader';
 interface Employee {
     id: number;
     employee_id: string;
@@ -161,12 +162,10 @@ const HRAppraisalDirect = () => {
     return (
         <div className="space-y-6 py-2 animate__animated animate__fadeIn">
             {/* Header */}
-            <div className="bg-white dark:bg-gray-900 p-6 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm">
-                <h2 className="text-xl font-bold text-gray-800 dark:text-white">HR Appraisal System</h2>
-                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 leading-relaxed">
-                    Evaluate employee performance and submit final ratings directly.
-                </p>
-            </div>
+            <PageHeader
+                title="HR Appraisal System"
+                subtitle="Evaluate employee performance and submit final ratings directly."
+            />
 
             {successMsg && (
                 <div className="bg-emerald-500/10 text-emerald-600 border border-emerald-500/20 px-4 py-3 rounded-xl text-xs font-bold animate__animated animate__fadeIn">
@@ -209,16 +208,16 @@ const HRAppraisalDirect = () => {
                                         key={emp.id}
                                         onClick={() => handleSelectEmployee(emp)}
                                         className={`p-3 rounded-2xl cursor-pointer transition flex items-center justify-between gap-3 my-1.5 ${isSelected
-                                            ? 'bg-teal-500/10 border-l-4 border-teal-500'
+                                            ? 'bg-brand/10 border-l-4 border-brand'
                                             : 'hover:bg-gray-50 dark:hover:bg-gray-850'
                                             }`}
                                     >
                                         <div className="flex items-center gap-3 min-w-0">
-                                            <div className="w-8 h-8 rounded-xl bg-teal-500 text-white font-black text-[10px] flex items-center justify-center shadow-sm shrink-0">
+                                            <div className="w-8 h-8 rounded-xl bg-brand text-white font-black text-[10px] flex items-center justify-center shadow-sm shrink-0">
                                                 {emp.initials}
                                             </div>
                                             <div className="min-w-0">
-                                                <span className={`block font-bold text-xs truncate ${isSelected ? 'text-teal-650 dark:text-teal-400' : 'text-gray-850 dark:text-white'}`}>{emp.full_name}</span>
+                                                <span className={`block font-bold text-xs truncate ${isSelected ? 'text-brand-650 dark:text-brand-400' : 'text-gray-850 dark:text-white'}`}>{emp.full_name}</span>
                                                 <span className="block text-[9px] text-gray-400 truncate">{emp.designation_name || 'Designation Not Set'} • ID: {emp.employee_id}</span>
                                             </div>
                                         </div>
@@ -255,7 +254,7 @@ const HRAppraisalDirect = () => {
                             {/* Employee summary header */}
                             <div className="pb-4 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between shrink-0">
                                 <div className="flex items-center gap-3">
-                                    <div className="w-10 h-10 rounded-2xl bg-teal-500 text-white font-black text-xs flex items-center justify-center shadow-md">
+                                    <div className="w-10 h-10 rounded-2xl bg-brand text-white font-black text-xs flex items-center justify-center shadow-md">
                                         {selectedEmployee.initials}
                                     </div>
                                     <div>
@@ -286,7 +285,7 @@ const HRAppraisalDirect = () => {
                                                 <div key={q.id} className="bg-gray-50 dark:bg-gray-850/50 p-4 rounded-2xl border border-gray-100 dark:border-gray-800/10 space-y-3.5">
                                                     <div className="flex justify-between items-start gap-4">
                                                         <div className="flex gap-2">
-                                                            <span className="text-xs font-black text-teal-500">{idx + 1}.</span>
+                                                            <span className="text-xs font-black text-brand">{idx + 1}.</span>
                                                             <p className="text-xs font-bold text-gray-800 dark:text-gray-250 leading-relaxed">
                                                                 {q.question_text}
                                                             </p>
@@ -326,7 +325,7 @@ const HRAppraisalDirect = () => {
                                                                         className={`px-3 py-1 text-[10px] font-black uppercase rounded-lg border transition ${isCompleted ? 'cursor-not-allowed opacity-80' : 'cursor-pointer'} ${
                                                                             currentRating === btn.val
                                                                                 ? btn.val === 5
-                                                                                    ? 'bg-teal-500 border-teal-500 text-white shadow-sm'
+                                                                                    ? 'bg-brand border-brand text-white shadow-sm'
                                                                                     : 'bg-rose-500 border-rose-500 text-white shadow-sm'
                                                                                 : 'bg-white hover:bg-gray-100 border-gray-200 text-gray-500 dark:bg-gray-800 dark:border-gray-700'
                                                                         }`}
@@ -382,7 +381,7 @@ const HRAppraisalDirect = () => {
                                             type="button"
                                             onClick={handleSubmitHRAppraisal}
                                             disabled={saving}
-                                            className="btn bg-teal-500 hover:bg-teal-600 disabled:opacity-50 text-white text-xs font-bold px-5 py-2.5 rounded-xl shadow-md shadow-teal-500/10 transition"
+                                            className="btn bg-brand hover:bg-brand disabled:opacity-50 text-white text-xs font-bold px-5 py-2.5 rounded-xl shadow-md shadow-brand/10 transition"
                                         >
                                             {saving ? 'Submitting...' : 'Submit Evaluation'}
                                         </button>

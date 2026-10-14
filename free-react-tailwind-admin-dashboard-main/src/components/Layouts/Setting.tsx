@@ -87,7 +87,7 @@ const Setting = () => {
                                 <input
                                     type="checkbox"
                                     className="form-checkbox"
-                                    checked={themeConfig.semidark === true || themeConfig.semidark === 'true'}
+                                    checked={false}
                                     onChange={(e) => dispatch(toggleSemidark(e.target.checked))}
                                 />
                                 <span>Semi Dark (Sidebar & Header)</span>

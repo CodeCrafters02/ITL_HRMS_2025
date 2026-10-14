@@ -5,6 +5,8 @@ import { setPageTitle } from '../../store/themeConfigSlice';
 import IconPlus from '../../components/Icon/IconPlus';
 import IconTrashLines from '../../components/Icon/IconTrashLines';
 
+import PageHeader from '../../components/Common/PageHeader';
+import Button from '../../components/Common/Button';
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000';
 const API_URL = `${API_BASE_URL}/app/break-config/`;
 
@@ -235,20 +237,19 @@ const AdminBreakConfig = () => {
     return (
         <div className="space-y-6">
             {/* Gradient Banner Header */}
-            <div className="bg-gradient-to-r from-[#1e1b4b] to-[#7c3aed] p-6 rounded-xl shadow-lg relative overflow-hidden">
-                <div className="relative z-10">
-                    <h1 className="text-3xl font-extrabold text-white tracking-tight">Break Configuration</h1>
-                    <p className="text-white/80 mt-1 text-sm font-medium">Set which breaks appear for employees, and control default durations.</p>
-                </div>
-                <div className="absolute top-0 right-0 -mt-10 -mr-10 w-48 h-48 bg-white opacity-10 rounded-full blur-2xl"></div>
-            </div>
+            <PageHeader
+                icon={<IconCoffee />}
+                title="Break Configuration"
+                subtitle="Set which breaks appear for employees, and control default durations."
+                variant="indigo"
+            />
 
             <div className="panel">
                 <div className="flex flex-wrap items-center justify-between gap-3">
                     <div className="flex items-center gap-2">
-                        <button type="button" className="btn btn-outline-primary" onClick={fetchAll}>
+                        <Button variant="outline" type="button"  onClick={fetchAll}>
                             Refresh
-                        </button>
+                        </Button>
                     </div>
                 </div>
             </div>
@@ -261,9 +262,9 @@ const AdminBreakConfig = () => {
                         </div>
                         <div className="text-sm text-white-dark">You can add multiple short breaks with different durations and one daily total cap.</div>
                     </div>
-                    <button type="button" className="btn btn-primary gap-2" onClick={addShortBreak}>
+                    <Button type="button"  onClick={addShortBreak}>
                         <IconPlus /> Add Short Break
-                    </button>
+                    </Button>
                 </div>
                 {!shortBreaks.length ? (
                     <div className="p-6 rounded-lg border border-dashed border-[#e0e6ed] dark:border-[#1b2e4b] text-white-dark">
@@ -312,9 +313,9 @@ const AdminBreakConfig = () => {
                                 <div className="flex-1" />
                                 <div className="flex items-center gap-2">
                                     {savingId === b.id && <span className="text-xs text-white-dark">Saving…</span>}
-                                    <button type="button" className="btn btn-outline-danger gap-2" onClick={() => remove(b.id)}>
+                                    <Button variant="outline-danger" type="button"  onClick={() => remove(b.id)}>
                                         <IconTrashLines /> Remove
-                                    </button>
+                                    </Button>
                                 </div>
                             </div>
                         ))}
@@ -330,9 +331,9 @@ const AdminBreakConfig = () => {
                         </div>
                         <div className="text-sm text-white-dark">Add multiple meal breaks — only <strong>one</strong> can be enabled at a time.</div>
                     </div>
-                    <button type="button" className="btn btn-primary gap-2" onClick={addMealBreak}>
+                    <Button type="button"  onClick={addMealBreak}>
                         <IconPlus /> Add Meal Break
-                    </button>
+                    </Button>
                 </div>
                 {!mealBreaks.length ? (
                     <div className="p-6 rounded-lg border border-dashed border-[#e0e6ed] dark:border-[#1b2e4b] text-white-dark">
@@ -367,9 +368,9 @@ const AdminBreakConfig = () => {
                                 <div className="flex-1" />
                                 <div className="flex items-center gap-2">
                                     {savingId === b.id && <span className="text-xs text-white-dark">Saving…</span>}
-                                    <button type="button" className="btn btn-outline-danger gap-2" onClick={() => remove(b.id)}>
+                                    <Button variant="outline-danger" type="button"  onClick={() => remove(b.id)}>
                                         <IconTrashLines /> Remove
-                                    </button>
+                                    </Button>
                                 </div>
                             </div>
                         ))}

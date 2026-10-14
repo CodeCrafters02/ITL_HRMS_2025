@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
 
+import PageHeader from '../../../components/Common/PageHeader';
 interface Cycle {
     id: number;
     name: string;
@@ -23,7 +24,7 @@ const EMPTY_FORM: FormState = { min_rating: '', max_rating: '', recommended_hike
 const bandMeta = (hike: number): { label: string; color: string; bar: string; bg: string } => {
     if (hike >= 15) return { label: 'Outstanding',         color: 'text-violet-600 dark:text-violet-400', bar: 'bg-violet-500', bg: 'bg-violet-500/10' };
     if (hike >= 10) return { label: 'Exceeds Expectations', color: 'text-emerald-600 dark:text-emerald-400', bar: 'bg-emerald-500', bg: 'bg-emerald-500/10' };
-    if (hike >= 7)  return { label: 'Meets Expectations',  color: 'text-teal-600 dark:text-teal-400',    bar: 'bg-teal-500',    bg: 'bg-teal-500/10' };
+    if (hike >= 7)  return { label: 'Meets Expectations',  color: 'text-brand dark:text-brand-400',    bar: 'bg-brand',    bg: 'bg-brand/10' };
     if (hike >= 4)  return { label: 'Needs Improvement',   color: 'text-amber-600 dark:text-amber-400',  bar: 'bg-amber-400',   bg: 'bg-amber-500/10' };
     return            { label: 'Below Expectations',        color: 'text-rose-600 dark:text-rose-400',    bar: 'bg-rose-400',    bg: 'bg-rose-500/10' };
 };
@@ -176,10 +177,10 @@ const SalaryHike = () => {
     return (
         <div className="space-y-5 py-2 animate__animated animate__fadeIn">
             {/* Header */}
-            <div className="bg-white dark:bg-gray-900 p-5 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm">
-                <h2 className="text-xl font-bold text-gray-800 dark:text-white">Configure Salary Hikes</h2>
-                <p className="text-xs text-gray-400 mt-0.5">Map appraisal score ranges to recommended salary hike percentages per cycle.</p>
-            </div>
+            <PageHeader
+                title="Configure Salary Hikes"
+                subtitle="Map appraisal score ranges to recommended salary hike percentages per cycle."
+            />
 
             {errorMsg && <div className="bg-rose-500/10 border border-rose-500/20 text-rose-700 dark:text-rose-400 p-3 rounded-xl text-xs font-bold">⚠️ {errorMsg}</div>}
             {successMsg && <div className="bg-emerald-500/10 border border-emerald-500/20 text-emerald-700 dark:text-emerald-400 p-3 rounded-xl text-xs font-bold">✓ {successMsg}</div>}
@@ -197,8 +198,8 @@ const SalaryHike = () => {
                             <button key={c.id} onClick={() => { setSelectedCycleId(c.id); resetForm(); }}
                                 className={`flex items-center gap-2 px-3 py-2 rounded-xl border text-xs font-bold transition ${
                                     selectedCycleId === c.id
-                                        ? 'bg-teal-500 border-teal-500 text-white shadow-md shadow-teal-500/20'
-                                        : 'border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 hover:border-teal-400'
+                                        ? 'bg-brand border-brand text-white shadow-md shadow-brand/20'
+                                        : 'border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 hover:border-brand-400'
                                 }`}>
                                 <span>{c.name}</span>
                                 <span className={`text-[8px] font-black uppercase px-1.5 py-0.5 rounded-full ${selectedCycleId === c.id ? 'bg-white/20 text-white' : STATUS_STYLE[c.status]}`}>{c.status}</span>
@@ -252,7 +253,7 @@ const SalaryHike = () => {
                                         const barPct = maxHike > 0 ? Math.round((hike / maxHike) * 100) : 0;
                                         const isEditing = editId === b.id;
                                         return (
-                                            <div key={b.id} className={`rounded-2xl border p-4 transition ${isEditing ? 'border-teal-400 bg-teal-500/5' : 'border-gray-100 dark:border-gray-800 hover:border-gray-200 dark:hover:border-gray-700'}`}>
+                                            <div key={b.id} className={`rounded-2xl border p-4 transition ${isEditing ? 'border-brand-400 bg-brand/5' : 'border-gray-100 dark:border-gray-800 hover:border-gray-200 dark:hover:border-gray-700'}`}>
                                                 {isEditing ? (
                                                     <form onSubmit={handleSave} className="space-y-3">
                                                         <div className="grid grid-cols-3 gap-3">
@@ -274,7 +275,7 @@ const SalaryHike = () => {
                                                         </div>
                                                         <div className="flex justify-end gap-2">
                                                             <button type="button" onClick={resetForm} className="px-3 py-1.5 bg-gray-100 dark:bg-gray-800 text-gray-500 rounded-lg text-[10px] font-bold">Cancel</button>
-                                                            <button type="submit" disabled={saving} className="px-3 py-1.5 bg-teal-500 hover:bg-teal-600 text-white rounded-lg text-[10px] font-bold">
+                                                            <button type="submit" disabled={saving} className="px-3 py-1.5 bg-brand hover:bg-brand text-white rounded-lg text-[10px] font-bold">
                                                                 {saving ? 'Saving...' : 'Update Band'}
                                                             </button>
                                                         </div>
@@ -300,7 +301,7 @@ const SalaryHike = () => {
                                                         </div>
 
                                                         <div className="flex gap-2 shrink-0">
-                                                            <button onClick={() => startEdit(b)} className="text-[9px] font-bold text-teal-600 dark:text-teal-400 hover:underline">Edit</button>
+                                                            <button onClick={() => startEdit(b)} className="text-[9px] font-bold text-brand dark:text-brand-400 hover:underline">Edit</button>
                                                             <button onClick={() => handleDelete(b.id)} className="text-[9px] font-bold text-rose-500 hover:underline">Remove</button>
                                                         </div>
                                                     </div>
@@ -355,7 +356,7 @@ const SalaryHike = () => {
                                 <div className="flex gap-2 pt-1">
                                     {editId && <button type="button" onClick={resetForm} className="flex-1 py-2 bg-gray-100 dark:bg-gray-800 text-gray-500 rounded-xl text-[10px] font-bold">Cancel</button>}
                                     <button type="submit" disabled={saving}
-                                        className="flex-1 py-2 bg-teal-500 hover:bg-teal-600 disabled:bg-gray-300 text-white rounded-xl text-[10px] font-bold">
+                                        className="flex-1 py-2 bg-brand hover:bg-brand disabled:bg-gray-300 text-white rounded-xl text-[10px] font-bold">
                                         {saving ? 'Saving...' : editId ? 'Update Band' : 'Add Band'}
                                     </button>
                                 </div>
@@ -374,7 +375,7 @@ const SalaryHike = () => {
                                                 <div className="text-[9px] text-gray-400 mt-0.5">{preset.desc} · {preset.bands.length} bands</div>
                                             </div>
                                             <button onClick={() => applyPreset(preset)} disabled={applyingPreset}
-                                                className="px-2.5 py-1 bg-teal-500/10 hover:bg-teal-500 hover:text-white text-teal-600 dark:text-teal-400 rounded-lg text-[9px] font-black transition disabled:opacity-50">
+                                                className="px-2.5 py-1 bg-brand/10 hover:bg-brand hover:text-white text-brand dark:text-brand-400 rounded-lg text-[9px] font-black transition disabled:opacity-50">
                                                 Apply
                                             </button>
                                         </div>

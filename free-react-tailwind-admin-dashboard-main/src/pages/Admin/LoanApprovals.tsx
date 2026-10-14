@@ -2,12 +2,18 @@ import { useEffect, useState, Fragment } from 'react';
 import { useDispatch } from 'react-redux';
 import { setPageTitle } from '../../store/themeConfigSlice';
 import Swal from 'sweetalert2';
-import { Dialog, Transition, Tab } from '@headlessui/react';
 import IconX from '../../components/Icon/IconX';
 import IconChecks from '../../components/Icon/IconChecks';
 import IconTrashLines from '../../components/Icon/IconTrashLines';
 import IconInfoCircle from '../../components/Icon/IconInfoCircle';
+import DataTable, { Column } from '../../components/Common/DataTable';
 
+import PageHeader from '../../components/Common/PageHeader';
+import IconCreditCard from '../../components/Icon/IconCreditCard';
+import Modal from '../../components/Common/Modal';
+import { Tab } from '@headlessui/react';
+import Button from '../../components/Common/Button';
+import CardGrid from '../../components/Common/CardGrid';
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000';
 
 type LoanApplication = {
@@ -27,8 +33,21 @@ type LoanApplication = {
 
 const LoanApprovals = () => {
     const dispatch = useDispatch();
-    const [applications, setApplications] = useState<LoanApplication[]>([]);
-    const [loading, setLoading] = useState(false);
+    const [pendingApps, setPendingApps] = useState<LoanApplication[]>([]);
+    const [pendingPage, setPendingPage] = useState(1);
+    const [pendingPageSize, setPendingPageSize] = useState(9);
+    const [pendingTotalCount, setPendingTotalCount] = useState(0);
+    const [pendingSearch, setPendingSearch] = useState('');
+    const [pendingLoading, setPendingLoading] = useState(false);
+
+    // History tab backend pagination & search
+    const [historyApps, setHistoryApps] = useState<LoanApplication[]>([]);
+    const [historyLoading, setHistoryLoading] = useState(false);
+    const [historyPage, setHistoryPage] = useState(1);
+    const [historyPageSize, setHistoryPageSize] = useState(10);
+    const [historyTotalCount, setHistoryTotalCount] = useState(0);
+    const [historySearch, setHistorySearch] = useState('');
+
     const [modal, setModal] = useState(false);
     const [selectedApp, setSelectedApp] = useState<LoanApplication | null>(null);
     const [remarks, setRemarks] = useState('');
@@ -46,19 +65,63 @@ const LoanApprovals = () => {
 
     useEffect(() => {
         dispatch(setPageTitle('Loan Approvals'));
-        fetchData();
     }, [dispatch]);
 
-    const fetchData = async () => {
-        setLoading(true);
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            fetchHistory();
+        }, 300);
+        return () => clearTimeout(timer);
+    }, [historyPage, historyPageSize, historySearch]);
+
+    const fetchPending = async () => {
+        setPendingLoading(true);
         try {
-            const res = await fetch(`${API_BASE_URL}/app/loan-applications/`, { headers: hdr() });
+            const url = new URL(`${API_BASE_URL}/app/loan-applications/`);
+            url.searchParams.set('pending', 'true');
+            url.searchParams.set('page', String(pendingPage));
+            url.searchParams.set('page_size', String(pendingPageSize));
+            if (pendingSearch.trim()) url.searchParams.set('search', pendingSearch.trim());
+            const res = await fetch(url.toString(), { headers: hdr() });
             if (res.ok) {
                 const data = await res.json();
-                setApplications(data.results || data);
+                const list = Array.isArray(data) ? data : (data.results || []);
+                setPendingApps(list);
+                setPendingTotalCount(data.count !== undefined ? data.count : list.length);
             }
         } catch (e) { console.error(e); }
-        finally { setLoading(false); }
+        finally { setPendingLoading(false); }
+    };
+
+    useEffect(() => {
+        const timer = setTimeout(fetchPending, 300);
+        return () => clearTimeout(timer);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [pendingPage, pendingPageSize, pendingSearch]);
+
+    const fetchHistory = async () => {
+        setHistoryLoading(true);
+        try {
+            const url = new URL(`${API_BASE_URL}/app/loan-applications/`);
+            url.searchParams.set('history', 'true');
+            url.searchParams.set('page', String(historyPage));
+            url.searchParams.set('page_size', String(historyPageSize));
+            if (historySearch.trim()) url.searchParams.set('search', historySearch.trim());
+
+            const res = await fetch(url.toString(), { headers: hdr() });
+            if (res.ok) {
+                const data = await res.json();
+                const list = data.results || (Array.isArray(data) ? data : []);
+                setHistoryApps(list);
+                setHistoryTotalCount(data.count !== undefined ? data.count : list.length);
+            }
+        } catch (e) { console.error(e); }
+        finally { setHistoryLoading(false); }
+    };
+
+    const refreshAll = () => {
+        fetchPending();
+        fetchHistory();
     };
 
     const handleAction = (app: LoanApplication) => {
@@ -80,7 +143,7 @@ const LoanApprovals = () => {
                 const data = await res.json();
                 Swal.fire('Success', data.message, 'success');
                 setModal(false);
-                fetchData();
+                refreshAll();
             } else {
                 const data = await res.json();
                 Swal.fire('Error', data.error || 'Failed to process approval', 'error');
@@ -106,7 +169,7 @@ const LoanApprovals = () => {
                 });
                 if (res.ok) {
                     Swal.fire('Cleared', 'Loan has been marked as cleared.', 'success');
-                    fetchData();
+                    refreshAll();
                 }
             } catch (e) {
                 console.error(e);
@@ -136,7 +199,7 @@ const LoanApprovals = () => {
                 });
                 if (res.ok) {
                     Swal.fire('Deleted!', 'Loan record has been deleted.', 'success');
-                    fetchData();
+                    refreshAll();
                 } else {
                     Swal.fire('Error', 'Failed to delete record.', 'error');
                 }
@@ -157,19 +220,107 @@ const LoanApprovals = () => {
         }
     };
 
-    const pendingApps = applications.filter(a => a.status === 'PENDING' || a.status === 'MANAGER_APPROVED');
-    const historyApps = applications.filter(a => a.status === 'APPROVED' || a.status === 'REJECTED' || a.status === 'CLEARED');
+    const historyColumns: Column<LoanApplication>[] = [
+        {
+            key: 'index',
+            title: '#',
+            width: '60px',
+            align: 'center',
+            render: (_val, _app, idx) => (
+                <span className="font-semibold text-gray-500">{(historyPage - 1) * historyPageSize + (idx ?? 0) + 1}</span>
+            ),
+        },
+        {
+            key: 'employee',
+            title: 'Employee',
+            sortable: true,
+            render: (_val, app) => (
+                <div className="font-bold text-gray-700 dark:text-white-light">
+                    <p>{app.employee_details.full_name}</p>
+                    <p className="text-[10px] font-normal text-gray-400 font-mono">{app.employee_details.employee_id}</p>
+                </div>
+            ),
+        },
+        {
+            key: 'category_name',
+            title: 'Loan Type',
+            sortable: true,
+            render: (val) => <span className="text-xs font-bold text-indigo-600 uppercase">{val}</span>,
+        },
+        {
+            key: 'requested_amount',
+            title: 'Amount',
+            sortable: true,
+            align: 'right',
+            render: (val) => <span className="font-black text-emerald-600">₹{Number(val).toLocaleString()}</span>,
+        },
+        {
+            key: 'status',
+            title: 'Status',
+            align: 'center',
+            render: (val) => getStatusBadge(val),
+        },
+        {
+            key: 'payment_status',
+            title: 'Payment Status',
+            align: 'center',
+            render: (_val, app) => (
+                app.status === 'CLEARED' ? (
+                    <span className="badge badge-outline-success font-bold text-[10px]">Fully Repaid</span>
+                ) : app.status === 'APPROVED' ? (
+                    <span className="badge badge-outline-primary font-bold text-[10px]">In Progress</span>
+                ) : (
+                    <span className="text-xs text-gray-400">—</span>
+                )
+            ),
+        },
+        {
+            key: 'repayment_end_month',
+            title: 'Ends On',
+            render: (val) => <span className="text-xs font-semibold text-indigo-500 uppercase">{val || '—'}</span>,
+        },
+        {
+            key: 'created_at',
+            title: 'Date',
+            sortable: true,
+            render: (val) => <span className="text-xs text-gray-400">{new Date(val).toLocaleDateString()}</span>,
+        },
+        {
+            key: 'action',
+            title: 'Action',
+            align: 'center',
+            render: (_val, app) => (
+                <div className="flex items-center justify-center gap-2">
+                    {app.status === 'APPROVED' && (
+                        <Button variant="outline-success" size="sm" className="!px-2 !py-1"
+                            type="button"
+                            onClick={() => handleClear(app.id)}
+                            
+                        >
+                            Mark Cleared
+                        </Button>
+                    )}
+                    <Button variant="outline-danger" size="sm" className="!px-2 !py-1"
+                        type="button"
+                        onClick={() => handleDelete(app.id)}
+                        
+                    >
+                        Delete
+                    </Button>
+                </div>
+            ),
+        },
+    ];
 
     return (
         <div className="pb-10">
             {/* Header Banner */}
-            <div className="bg-gradient-to-r from-[#4f46e5] to-[#7c3aed] p-10 rounded-2xl shadow-xl mb-8 relative overflow-hidden">
-                <div className="relative z-10">
-                    <h1 className="text-4xl font-black text-white tracking-tight uppercase italic drop-shadow-md">Loan Approval Center</h1>
-                    <p className="text-indigo-100 mt-2 text-lg font-medium opacity-90">Review and manage employee loan requests. Ensure financial compliance and support.</p>
-                </div>
-                <div className="absolute top-0 right-0 -mt-20 -mr-20 w-80 h-80 bg-white/10 rounded-full blur-3xl"></div>
-            </div>
+            <PageHeader
+                icon={<IconCreditCard />}
+                title="Loan Approval Center"
+                subtitle="Review and manage employee loan requests. Ensure financial compliance and support."
+                variant="amber"
+            />
 
             <Tab.Group>
                 <Tab.List className="flex gap-4 mb-8 border-b border-gray-100 dark:border-gray-800 pb-1">
@@ -177,7 +328,7 @@ const LoanApprovals = () => {
                         <Tab key={t} as={Fragment}>
                             {({ selected }) => (
                                 <button className={`px-6 py-3 text-xs font-black uppercase tracking-[0.2em] transition-all outline-none border-b-4 ${selected ? 'text-indigo-600 border-indigo-600' : 'text-gray-400 border-transparent hover:text-gray-600'}`}>
-                                    {t} {t === 'Active Requests' && pendingApps.length > 0 && <span className="ml-2 bg-indigo-600 text-white px-2 py-0.5 rounded-full text-[9px]">{pendingApps.length}</span>}
+                                    {t} {t === 'Active Requests' && pendingTotalCount > 0 && <span className="ml-2 bg-indigo-600 text-white px-2 py-0.5 rounded-full text-[9px]">{pendingTotalCount}</span>}
                                 </button>
                             )}
                         </Tab>
@@ -186,17 +337,24 @@ const LoanApprovals = () => {
                 <Tab.Panels>
                     {/* Panel 1: Active Requests */}
                     <Tab.Panel className="animate-fade-in-up">
-                        {loading ? (
-                            <div className="flex justify-center py-20"><span className="animate-spin border-4 border-primary border-l-transparent rounded-full w-12 h-12"></span></div>
-                        ) : pendingApps.length === 0 ? (
-                            <div className="panel flex flex-col items-center justify-center py-20 text-center bg-gray-50/50">
-                                <IconChecks className="w-16 h-16 text-gray-200 mb-4" />
-                                <h3 className="text-lg font-bold text-gray-400">All clear! No pending loan requests.</h3>
-                            </div>
-                        ) : (
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                                {pendingApps.map(app => (
-                                    <div key={app.id} className="panel group hover:shadow-2xl transition-all duration-300 border-t-4 border-amber-500 flex flex-col h-full bg-white dark:bg-[#0e1726]">
+                        <CardGrid
+                            items={pendingApps}
+                            loading={pendingLoading}
+                            page={pendingPage}
+                            pageSize={pendingPageSize}
+                            totalCount={pendingTotalCount}
+                            pageSizeOptions={[6, 9, 12, 24]}
+                            onPageChange={setPendingPage}
+                            onPageSizeChange={(sz) => { setPendingPageSize(sz); setPendingPage(1); }}
+                            searchValue={pendingSearch}
+                            onSearchChange={(v) => { setPendingSearch(v); setPendingPage(1); }}
+                            searchPlaceholder="Search by employee or loan type..."
+                            emptyMessage="All clear! No pending loan requests"
+                            entityLabel="requests"
+                            cols={3}
+                            onRefresh={fetchPending}
+                            renderCard={(app) => (
+                                    <div className="panel group hover:shadow-2xl transition-all duration-300 border-t-4 border-amber-500 flex flex-col h-full bg-white dark:bg-[#0e1726]">
                                         <div className="flex justify-between items-start mb-4">
                                             <div>
                                                 <h3 className="text-lg font-black text-gray-800 dark:text-white-light leading-tight">{app.employee_details.full_name}</h3>
@@ -215,184 +373,128 @@ const LoanApprovals = () => {
                                         </div>
 
                                         <div className="mt-auto flex flex-col gap-2">
-                                            <button 
+                                            <Button className="w-full font-black !py-3 shadow-indigo-500/20" 
                                                 onClick={() => handleAction(app)}
-                                                className="w-full btn btn-primary font-black uppercase tracking-widest text-[10px] py-3 rounded-xl shadow-lg shadow-indigo-500/20"
+
                                             >
                                                 Review & Action
-                                            </button>
-                                            <button 
+                                            </Button>
+                                            <Button variant="outline-danger" className="w-full font-black !py-2 border-dashed opacity-70 hover:opacity-100" 
                                                 onClick={() => handleDelete(app.id)}
-                                                className="w-full btn btn-outline-danger font-black uppercase tracking-widest text-[10px] py-2 rounded-xl border-dashed opacity-70 hover:opacity-100"
+
                                             >
                                                 Delete Request
-                                            </button>
+                                            </Button>
                                         </div>
                                     </div>
-                                ))}
-                            </div>
-                        )}
+
+                                )}
+                        />
                     </Tab.Panel>
 
                     {/* Panel 2: History */}
                     <Tab.Panel className="animate-fade-in-up">
-                        <div className="panel table-responsive border rounded-xl overflow-hidden p-0">
-                            <table className="table-hover">
-                                <thead className="bg-gray-50 dark:bg-gray-900/50">
-                                    <tr>
-                                        <th className="text-[10px] font-black uppercase">Employee</th>
-                                        <th className="text-[10px] font-black uppercase">Loan Type</th>
-                                        <th className="text-[10px] font-black uppercase text-right">Amount</th>
-                                        <th className="text-[10px] font-black uppercase text-center">Status</th>
-                                        <th className="text-[10px] font-black uppercase text-center">Payment Status</th>
-                                        <th className="text-[10px] font-black uppercase">Ends On</th>
-                                        <th className="text-[10px] font-black uppercase">Date</th>
-                                        <th className="text-[10px] font-black uppercase text-center">Action</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {historyApps.map(app => (
-                                        <tr key={app.id}>
-                                            <td className="font-bold text-gray-700 dark:text-white-light">
-                                                <p>{app.employee_details.full_name}</p>
-                                                <p className="text-[9px] font-normal text-gray-400">{app.employee_details.employee_id}</p>
-                                            </td>
-                                            <td className="text-xs font-bold text-indigo-600 uppercase">{app.category_name}</td>
-                                            <td className="font-black text-emerald-600 text-right">₹{Number(app.requested_amount).toLocaleString()}</td>
-                                            <td className="text-center">{getStatusBadge(app.status)}</td>
-                                            <td className="text-center">
-                                                {app.status === 'CLEARED' ? (
-                                                    <span className="text-[10px] font-black text-emerald-600 uppercase tracking-tighter">Fully Repaid</span>
-                                                ) : app.status === 'APPROVED' ? (
-                                                    <span className="text-[10px] font-black text-indigo-500 uppercase tracking-tighter">In Progress</span>
-                                                ) : (
-                                                    <span className="text-[10px] font-bold text-gray-400 uppercase">—</span>
-                                                )}
-                                            </td>
-                                            <td className="text-[10px] font-black text-indigo-500 uppercase tracking-tighter">
-                                                {app.repayment_end_month || '—'}
-                                            </td>
-                                            <td className="text-[10px] font-bold text-gray-400">{new Date(app.created_at).toLocaleDateString()}</td>
-                                            <td className="text-center">
-                                                <div className="flex items-center justify-center gap-2">
-                                                    {app.status === 'APPROVED' && (
-                                                        <button
-                                                            onClick={() => handleClear(app.id)}
-                                                            className="btn btn-sm btn-outline-success text-[9px] font-black uppercase px-2 py-1"
-                                                        >
-                                                            Mark Cleared
-                                                        </button>
-                                                    )}
-                                                    <button
-                                                        onClick={() => handleDelete(app.id)}
-                                                        className="btn btn-sm btn-outline-danger text-[9px] font-black uppercase px-2 py-1"
-                                                    >
-                                                        Delete
-                                                    </button>
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                        </div>
+                        <DataTable
+                            title="Approval History Records"
+                            columns={historyColumns}
+                            data={historyApps}
+                            loading={historyLoading}
+                            page={historyPage}
+                            pageSize={historyPageSize}
+                            totalCount={historyTotalCount}
+                            onPageChange={(p) => setHistoryPage(p)}
+                            onPageSizeChange={(sz) => {
+                                setHistoryPageSize(sz);
+                                setHistoryPage(1);
+                            }}
+                            searchValue={historySearch}
+                            onSearchChange={(val) => {
+                                setHistorySearch(val);
+                                setHistoryPage(1);
+                            }}
+                            onRefresh={fetchHistory}
+                            searchPlaceholder="Search history by employee, loan type..."
+                            emptyMessage="No loan approval history records found."
+                        />
                     </Tab.Panel>
                 </Tab.Panels>
             </Tab.Group>
 
             {/* Action Modal */}
-            <Transition appear show={modal} as={Fragment}>
-                <Dialog as="div" open={modal} onClose={() => setModal(false)} className="relative z-50">
-                    <Transition.Child as={Fragment} enter="ease-out duration-300" enterFrom="opacity-0" enterTo="opacity-100" leave="ease-in duration-200" leaveFrom="opacity-100" leaveTo="opacity-0">
-                        <div className="fixed inset-0 bg-[black]/60" />
-                    </Transition.Child>
-                    <div className="fixed inset-0 overflow-y-auto">
-                        <div className="flex min-h-full items-center justify-center px-4 py-8">
-                            <Transition.Child as={Fragment} enter="ease-out duration-300" enterFrom="opacity-0 scale-95" enterTo="opacity-100 scale-100" leave="ease-in duration-200" leaveFrom="opacity-100 scale-100" leaveTo="opacity-0 scale-95">
-                                <Dialog.Panel className="panel border-0 p-0 rounded-2xl overflow-hidden w-full max-w-lg bg-white dark:bg-[#0e1726] shadow-2xl">
-                                    <div className="flex bg-[#fbfbfb] dark:bg-[#121c2c] items-center justify-between px-6 py-4 border-b border-gray-100 dark:border-gray-800">
-                                        <h5 className="text-xl font-black text-indigo-600 uppercase tracking-tight italic">Review Loan Request</h5>
-                                        <button onClick={() => setModal(false)} className="text-gray-400 hover:text-red-500 transition-colors"><IconX /></button>
-                                    </div>
+            <Modal open={modal} onClose={() => setModal(false)} title="Review Loan Request" size="lg">
+                <div className="space-y-6">
+                                                        <div className="flex items-center gap-4 p-4 bg-indigo-50/50 dark:bg-indigo-900/10 rounded-2xl">
+                                                            <div className="bg-indigo-600 text-white p-3 rounded-xl font-black text-xl">
+                                                                {selectedApp?.employee_details.full_name.charAt(0)}
+                                                            </div>
+                                                            <div>
+                                                                <p className="text-sm font-black text-gray-800 dark:text-white-light">{selectedApp?.employee_details.full_name}</p>
+                                                                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">{selectedApp?.employee_details.employee_id}</p>
+                                                            </div>
+                                                        </div>
 
-                                    <div className="p-6 space-y-6">
-                                        <div className="flex items-center gap-4 p-4 bg-indigo-50/50 dark:bg-indigo-900/10 rounded-2xl">
-                                            <div className="bg-indigo-600 text-white p-3 rounded-xl font-black text-xl">
-                                                {selectedApp?.employee_details.full_name.charAt(0)}
-                                            </div>
-                                            <div>
-                                                <p className="text-sm font-black text-gray-800 dark:text-white-light">{selectedApp?.employee_details.full_name}</p>
-                                                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">{selectedApp?.employee_details.employee_id}</p>
-                                            </div>
-                                        </div>
+                                                        <div className="grid grid-cols-2 gap-4">
+                                                            <div className="panel border-gray-100 dark:border-gray-800 p-4">
+                                                                <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Loan Amount</p>
+                                                                <p className="text-lg font-black text-emerald-600">₹{Number(selectedApp?.requested_amount).toLocaleString()}</p>
+                                                            </div>
+                                                            <div className="panel border-gray-100 dark:border-gray-800 p-4">
+                                                                <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Duration</p>
+                                                                <p className="text-lg font-black text-indigo-600">{selectedApp?.repayment_months} Months</p>
+                                                            </div>
+                                                        </div>
 
-                                        <div className="grid grid-cols-2 gap-4">
-                                            <div className="panel border-gray-100 dark:border-gray-800 p-4">
-                                                <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Loan Amount</p>
-                                                <p className="text-lg font-black text-emerald-600">₹{Number(selectedApp?.requested_amount).toLocaleString()}</p>
-                                            </div>
-                                            <div className="panel border-gray-100 dark:border-gray-800 p-4">
-                                                <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Duration</p>
-                                                <p className="text-lg font-black text-indigo-600">{selectedApp?.repayment_months} Months</p>
-                                            </div>
-                                        </div>
+                                                        {selectedApp?.reason && (
+                                                            <div className="panel border-gray-100 dark:border-gray-800 p-4 bg-gray-50/30">
+                                                                <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">Employee's Reason</p>
+                                                                <p className="text-sm text-gray-600 dark:text-gray-300 italic">"{selectedApp.reason}"</p>
+                                                            </div>
+                                                        )}
 
-                                        {selectedApp?.reason && (
-                                            <div className="panel border-gray-100 dark:border-gray-800 p-4 bg-gray-50/30">
-                                                <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">Employee's Reason</p>
-                                                <p className="text-sm text-gray-600 dark:text-gray-300 italic">"{selectedApp.reason}"</p>
-                                            </div>
-                                        )}
+                                                        {selectedApp?.supporting_document && (
+                                                            <div className="panel border-gray-100 dark:border-gray-800 p-4">
+                                                                <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">Supporting Document</p>
+                                                                <a
+                                                                    href={`${selectedApp.supporting_document}`}
+                                                                    target="_blank"
+                                                                    rel="noopener noreferrer"
+                                                                    className="inline-flex items-center gap-2 text-indigo-600 hover:text-indigo-700 font-bold text-sm"
+                                                                >
+                                                                    <IconInfoCircle className="w-4 h-4" />
+                                                                    View Attachment
+                                                                </a>
+                                                            </div>
+                                                        )}
 
-                                        {selectedApp?.supporting_document && (
-                                            <div className="panel border-gray-100 dark:border-gray-800 p-4">
-                                                <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">Supporting Document</p>
-                                                <a
-                                                    href={`${selectedApp.supporting_document}`}
-                                                    target="_blank"
-                                                    rel="noopener noreferrer"
-                                                    className="inline-flex items-center gap-2 text-indigo-600 hover:text-indigo-700 font-bold text-sm"
-                                                >
-                                                    <IconInfoCircle className="w-4 h-4" />
-                                                    View Attachment
-                                                </a>
-                                            </div>
-                                        )}
+                                                        <div>
+                                                            <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1 block">Decision Remarks</label>
+                                                            <textarea
+                                                                className="form-textarea min-h-[100px] border-gray-200 focus:border-indigo-500"
+                                                                placeholder="Add any internal remarks or reason for rejection..."
+                                                                value={remarks}
+                                                                onChange={e => setRemarks(e.target.value)}
+                                                            ></textarea>
+                                                        </div>
+                                                    </div>
 
-                                        <div>
-                                            <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1 block">Decision Remarks</label>
-                                            <textarea
-                                                className="form-textarea min-h-[100px] border-gray-200 focus:border-indigo-500"
-                                                placeholder="Add any internal remarks or reason for rejection..."
-                                                value={remarks}
-                                                onChange={e => setRemarks(e.target.value)}
-                                            ></textarea>
-                                        </div>
-                                    </div>
-
-                                    <div className="flex items-center justify-end px-6 py-4 bg-gray-50/50 dark:bg-gray-900/20 gap-3 border-t border-gray-100 dark:border-gray-800">
-                                        <button
-                                            onClick={() => processApproval('REJECTED')}
-                                            disabled={processing}
-                                            className="btn btn-outline-danger font-bold uppercase tracking-widest text-[10px] px-6"
-                                        >
-                                            Reject Request
-                                        </button>
-                                        <button
-                                            onClick={() => processApproval('APPROVED')}
-                                            disabled={processing}
-                                            className="btn btn-success font-bold uppercase tracking-widest text-[10px] px-8 shadow-emerald-500/20 shadow-lg"
-                                        >
-                                            {processing ? <span className="animate-spin border-2 border-white border-l-transparent rounded-full w-3 h-3 mr-2"></span> : <IconChecks className="w-4 h-4 mr-2" />}
-                                            Approve Loan
-                                        </button>
-                                    </div>
-                                </Dialog.Panel>
-                            </Transition.Child>
-                        </div>
-                    </div>
-                </Dialog>
-            </Transition>
+                                                    <div className="flex items-center justify-end px-6 py-4 bg-gray-50/50 dark:bg-gray-900/20 gap-3 border-t border-gray-100 dark:border-gray-800">
+                                                        <Button variant="outline-danger" className="!px-6"
+                                                            onClick={() => processApproval('REJECTED')}
+                                                            disabled={processing}
+                                                            
+                                                        >
+                                                            Reject Request
+                                                        </Button>
+                                                        <Button variant="success" className="!px-8"
+                                                            onClick={() => processApproval('APPROVED')}
+                                                            disabled={processing}
+                                                            
+                                                        >
+                                                            {processing ? <span className="animate-spin border-2 border-white border-l-transparent rounded-full w-3 h-3 mr-2"></span> : <IconChecks className="w-4 h-4 mr-2" />}
+                                                            Approve Loan
+                                                        </Button>
+                                                    </div>
+            </Modal>
         </div>
     );
 };

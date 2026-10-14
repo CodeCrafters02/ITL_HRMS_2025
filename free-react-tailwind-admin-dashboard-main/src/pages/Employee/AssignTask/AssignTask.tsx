@@ -6,6 +6,7 @@ import { setPageTitle } from '../../../store/themeConfigSlice';
 import IconListCheck from '../../../components/Icon/IconListCheck';
 import IconSearch from '../../../components/Icon/IconSearch';
 import IconTrashLines from '../../../components/Icon/IconTrashLines';
+import PageHeader from '../../../components/Common/PageHeader';
 import { fetchMyReportees, Reportee } from '../Reportees/api';
 import {
     createManagerSubtask,
@@ -508,20 +509,16 @@ const AssignTask = () => {
 
     return (
         <div className="space-y-6 animate__animated animate__fadeIn">
-            <div className="panel bg-gradient-to-r from-[#220fb6] via-[#4f6be5] to-[#0f52af] text-white border-0">
-                <div className="flex items-start justify-between gap-4">
-                    <div className="flex items-start gap-4">
-                    <div className="w-10 h-10 rounded-lg bg-white/15 flex items-center justify-center shrink-0">
-                        <IconListCheck className="w-5 h-5" />
-                    </div>
-                    <div>
-                        <h1 className="text-2xl md:text-3xl font-bold">Assign Task</h1>
-                        <p className="mt-1 text-white/75 text-sm md:text-base">Create tasks for your reportees and track team execution in one place.</p>
-                    </div>
-                    </div>
+            <PageHeader
+                title="Assign Task"
+                subtitle="Create tasks for your reportees, set milestones and deadlines, and monitor team execution in one place."
+                icon={<IconListCheck />}
+                badge="Task Delegation"
+                variant="primary"
+                actions={
                     <button
                         type="button"
-                        className={`btn ${showCreateForm ? 'btn-outline-danger border-white text-white hover:bg-white/10' : 'btn-primary'}`}
+                        className={`btn ${showCreateForm ? 'btn-outline-danger border-white text-white hover:bg-white/10' : 'btn-primary shadow-lg shadow-primary/20 backdrop-blur-sm'}`}
                         onClick={() => {
                             if (showCreateForm) {
                                 setEditingTaskId(null);
@@ -539,8 +536,8 @@ const AssignTask = () => {
                     >
                         {showCreateForm ? (editingTaskId ? 'Cancel Edit' : 'Close') : '+ New Task'}
                     </button>
-                </div>
-            </div>
+                }
+            />
 
             {showCreateForm && (
             <div className="panel">

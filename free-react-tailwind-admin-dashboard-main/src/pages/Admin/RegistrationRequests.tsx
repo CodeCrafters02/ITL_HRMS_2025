@@ -12,7 +12,10 @@ import IconSearch from '../../components/Icon/IconSearch';
 import IconCircleCheck from '../../components/Icon/IconCircleCheck';
 import IconMail from '../../components/Icon/IconMail';
 import IconPhone from '../../components/Icon/IconPhone';
+import DataTable, { Column } from '../../components/Common/DataTable';
 
+import PageHeader from '../../components/Common/PageHeader';
+import Button, { IconButton } from '../../components/Common/Button';
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000';
 const API = `${API_BASE_URL}/employee/registration-requests/`;
 
@@ -58,6 +61,9 @@ const RegistrationRequests = () => {
     const [tab, setTab] = useState<'pending' | 'approved'>('pending');
     const [rows, setRows] = useState<RegistrationRequest[]>([]);
     const [loading, setLoading] = useState(true);
+    const [page, setPage] = useState(1);
+    const [pageSize, setPageSize] = useState(10);
+    const [totalCount, setTotalCount] = useState(0);
     const [search, setSearch] = useState('');
     const [selected, setSelected] = useState<RegistrationRequest | null>(null);
     const [busyId, setBusyId] = useState<number | null>(null);
@@ -66,15 +72,32 @@ const RegistrationRequests = () => {
         dispatch(setPageTitle('Registration Requests'));
     }, [dispatch]);
 
-    const load = async () => {
+    const load = async (query?: string) => {
         setLoading(true);
         try {
-            const res = await authFetch(`${API}?status=${tab}`);
+            const currentSearch = query !== undefined ? query : search;
+            const url = new URL(API);
+            url.searchParams.append('status', tab);
+            url.searchParams.append('page', String(page));
+            url.searchParams.append('page_size', String(pageSize));
+            if (currentSearch.trim()) {
+                url.searchParams.append('search', currentSearch.trim());
+            }
+            const res = await authFetch(url.toString());
             if (res.ok) {
-                setRows(await res.json());
+                const data = await res.json();
+                if (data.results) {
+                    setRows(data.results);
+                    setTotalCount(data.count ?? 0);
+                } else {
+                    const arr = Array.isArray(data) ? data : [];
+                    setRows(arr);
+                    setTotalCount(arr.length);
+                }
             } else {
                 const err = await res.json().catch(() => ({}));
                 setRows([]);
+                setTotalCount(0);
                 if (res.status === 403) Swal.fire('Access denied', err.detail || 'Only company admins can review registrations.', 'warning');
             }
         } catch {
@@ -85,17 +108,13 @@ const RegistrationRequests = () => {
     };
 
     useEffect(() => {
-        load();
+        setLoading(true);
+        const handler = setTimeout(() => {
+            load();
+        }, 300);
+        return () => clearTimeout(handler);
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [tab]);
-
-    const filtered = useMemo(() => {
-        const q = search.trim().toLowerCase();
-        if (!q) return rows;
-        return rows.filter((r) =>
-            [r.full_name, r.email, r.mobile, r.desired_designation, r.desired_department].some((v) => (v || '').toLowerCase().includes(q)),
-        );
-    }, [rows, search]);
+    }, [tab, page, pageSize, search]);
 
     const approve = async (r: RegistrationRequest) => {
         const ok = await Swal.fire({
@@ -159,165 +178,180 @@ const RegistrationRequests = () => {
         </div>
     );
 
-    return (
-        <div className="flex flex-col h-[calc(var(--app-vh)_-_90px)] space-y-4">
-            {/* Header Banner */}
-            <div className="bg-gradient-to-r from-indigo-500 to-violet-600 rounded-xl p-4 text-white shadow-lg overflow-hidden relative">
-                <div className="relative z-10">
-                    <h2 className="text-3xl font-extrabold mb-0.5">Registration Requests</h2>
-                    <p className="text-white/80 text-sm font-medium">
-                        People who registered from the mobile app. The first company admin to accept a request adds that person to their company.
+    const columns: Column<RegistrationRequest>[] = [
+        {
+            key: 'full_name',
+            title: 'Applicant',
+            sortable: true,
+            render: (_val, r) => (
+                <div className="flex items-center gap-3">
+                    <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-brand to-brand-accent text-white flex items-center justify-center font-bold text-xs shadow-sm">
+                        {r.first_name.charAt(0).toUpperCase()}
+                        {(r.last_name || '').charAt(0).toUpperCase()}
+                    </div>
+                    <div>
+                        <p className="font-bold text-gray-900 dark:text-white-light">{r.full_name}</p>
+                        <p className="text-xs text-gray-400 capitalize">
+                            {r.gender || '—'}
+                            {r.date_of_birth ? ` · ${fmt(r.date_of_birth)}` : ''}
+                        </p>
+                    </div>
+                </div>
+            ),
+        },
+        {
+            key: 'email',
+            title: 'Contact',
+            render: (_val, r) => (
+                <div>
+                    <p className="text-xs font-semibold flex items-center gap-1.5 text-gray-800 dark:text-gray-300">
+                        <IconMail className="w-3.5 h-3.5 text-brand" />
+                        {r.email}
+                    </p>
+                    <p className="text-xs text-gray-500 flex items-center gap-1.5 mt-1">
+                        <IconPhone className="w-3.5 h-3.5 text-emerald-500" />
+                        {r.mobile}
                     </p>
                 </div>
-                <div className="absolute right-[-20px] top-[-20px] opacity-10">
-                    <IconUserPlus className="w-48 h-48" />
+            ),
+        },
+        {
+            key: 'desired_designation',
+            title: 'Requested Role',
+            sortable: true,
+            render: (_val, r) => (
+                <div>
+                    <p className="font-bold text-xs text-gray-800 dark:text-gray-200">{r.desired_designation || '—'}</p>
+                    <span className="inline-block px-1.5 py-0.5 rounded text-[10px] uppercase font-bold bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 mt-0.5">
+                        {r.desired_department || '—'}
+                    </span>
                 </div>
-            </div>
+            ),
+        },
+        {
+            key: 'total_experience_years',
+            title: 'Experience',
+            render: (_val, r) => (
+                <div>
+                    <p className="text-xs font-bold text-gray-800 dark:text-gray-300">
+                        {r.total_experience_years ? `${Number(r.total_experience_years)} yrs` : 'Fresher'}
+                    </p>
+                    {r.previous_employer && <p className="text-xs text-gray-400">{r.previous_employer}</p>}
+                </div>
+            ),
+        },
+        {
+            key: 'created_at',
+            title: tab === 'pending' ? 'Submitted' : 'Accepted',
+            sortable: true,
+            render: (_val, r) =>
+                tab === 'pending' ? (
+                    <span className="badge badge-outline-warning font-bold" title={fmt(r.created_at, true)}>
+                        {ago(r.created_at)}
+                    </span>
+                ) : (
+                    <div className="text-xs">
+                        <p className="font-bold text-gray-800 dark:text-gray-300">{fmt(r.approved_at, true)}</p>
+                        <p className="text-gray-400">by {r.approved_by_name || '—'}</p>
+                    </div>
+                ),
+        },
+        {
+            key: 'actions',
+            title: 'Actions',
+            align: 'center',
+            width: '120px',
+            render: (_val, r) => (
+                <div className="flex items-center justify-center gap-2">
+                    <IconButton tone="primary"
+                        onClick={() => setSelected(r)}
+                        
+                        title="View details"
+                    >
+                        <IconEye className="w-4 h-4" />
+                    </IconButton>
+                    {tab === 'pending' && (
+                        <>
+                            <button
+                                onClick={() => approve(r)}
+                                disabled={busyId === r.id}
+                                className="p-1.5 bg-success/10 text-success rounded-lg hover:bg-success hover:text-white transition-all shadow-sm disabled:opacity-50"
+                                title="Accept into my company"
+                            >
+                                <IconChecks className="w-4 h-4" />
+                            </button>
+                            <IconButton tone="danger"
+                                onClick={() => dismiss(r)}
+                                disabled={busyId === r.id}
+                                
+                                title="Dismiss for my company"
+                            >
+                                <IconX className="w-4 h-4" />
+                            </IconButton>
+                        </>
+                    )}
+                </div>
+            ),
+        },
+    ];
 
-            <div className="panel flex flex-1 flex-col overflow-hidden">
-                <div className="flex flex-wrap items-center justify-between gap-3 mb-5">
-                    <div className="flex items-center gap-1 rounded-lg bg-gray-100 dark:bg-gray-800 p-1">
+    return (
+        <div className="flex flex-col space-y-4">
+            {/* Header Banner */}
+            <PageHeader
+                icon={<IconUserPlus />}
+                title="Registration Requests"
+                subtitle="People who registered from the mobile app. The first company admin to accept a request adds that person to their company."
+                variant="rose"
+            />
+
+            {/* Reusable Data Table */}
+            <DataTable
+                columns={columns}
+                data={rows}
+                loading={loading}
+                page={page}
+                pageSize={pageSize}
+                totalCount={totalCount}
+                onPageChange={(p) => setPage(p)}
+                onPageSizeChange={(sz) => {
+                    setPageSize(sz);
+                    setPage(1);
+                }}
+                search={search}
+                searchPlaceholder="Search name, email, role…"
+                onSearchChange={(val) => {
+                    setSearch(val);
+                    setPage(1);
+                }}
+                onRefresh={load}
+                filters={
+                    <div className="flex items-center gap-1 rounded-xl bg-gray-100 dark:bg-gray-800/80 p-1 h-10 border border-gray-200 dark:border-gray-700">
                         {(['pending', 'approved'] as const).map((t) => (
                             <button
                                 key={t}
-                                onClick={() => setTab(t)}
-                                className={`px-4 py-1.5 rounded-md text-sm font-bold transition ${tab === t ? 'bg-white dark:bg-gray-900 text-primary shadow' : 'text-gray-500 hover:text-gray-700'}`}
+                                type="button"
+                                onClick={() => {
+                                    setTab(t);
+                                    setLoading(true);
+                                }}
+                                className={`h-8 px-3.5 rounded-lg text-xs font-bold transition-all flex items-center ${
+                                    tab === t
+                                        ? 'bg-brand text-white shadow-sm'
+                                        : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
+                                }`}
                             >
                                 {t === 'pending' ? 'Pending' : 'Accepted by us'}
-                                {t === tab && !loading && <span className="ml-2 badge bg-primary/10 text-primary rounded-full px-2 py-0.5 text-[10px]">{rows.length}</span>}
+                                {t === tab && !loading && (
+                                    <span className="ml-1.5 bg-white/20 text-white rounded-full px-1.5 py-0.2 text-[10px]">
+                                        {rows.length}
+                                    </span>
+                                )}
                             </button>
                         ))}
                     </div>
-                    <div className="flex items-center gap-2">
-                        <div className="relative">
-                            <input
-                                value={search}
-                                onChange={(e) => setSearch(e.target.value)}
-                                placeholder="Search name, email, role…"
-                                className="form-input pl-9 py-2 text-sm w-64"
-                            />
-                            <IconSearch className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                        </div>
-                        <button onClick={load} className="btn btn-outline-primary btn-sm flex items-center gap-2">
-                            <IconRefresh className="w-4 h-4" />
-                            Refresh
-                        </button>
-                    </div>
-                </div>
-
-                <div className="flex-1 overflow-auto">
-                    {loading ? (
-                        <div className="flex items-center justify-center h-full">
-                            <span className="animate-spin border-4 border-primary border-t-transparent rounded-full w-10 h-10"></span>
-                        </div>
-                    ) : filtered.length === 0 ? (
-                        <div className="flex flex-col items-center justify-center h-full opacity-50">
-                            <div className="w-20 h-20 bg-gray-100 dark:bg-gray-800 rounded-full flex items-center justify-center mb-4">
-                                <IconCircleCheck className="w-10 h-10 text-gray-400" />
-                            </div>
-                            <p className="font-bold text-lg">{tab === 'pending' ? 'No pending registrations' : 'No accepted registrations yet'}</p>
-                            <p className="text-sm">{search ? 'Try a different search.' : 'All caught up!'}</p>
-                        </div>
-                    ) : (
-                        <div className="table-responsive">
-                            <table className="table-hover table-striped">
-                                <thead>
-                                    <tr>
-                                        <th>Applicant</th>
-                                        <th>Contact</th>
-                                        <th>Requested role</th>
-                                        <th>Experience</th>
-                                        <th>{tab === 'pending' ? 'Submitted' : 'Accepted'}</th>
-                                        <th className="text-center">Actions</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {filtered.map((r) => (
-                                        <tr key={r.id}>
-                                            <td>
-                                                <div className="flex items-center gap-3">
-                                                    <div className="w-10 h-10 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold">
-                                                        {r.first_name.charAt(0).toUpperCase()}
-                                                        {(r.last_name || '').charAt(0).toUpperCase()}
-                                                    </div>
-                                                    <div>
-                                                        <p className="font-bold">{r.full_name}</p>
-                                                        <p className="text-xs text-gray-400 capitalize">
-                                                            {r.gender || '—'}
-                                                            {r.date_of_birth ? ` · ${fmt(r.date_of_birth)}` : ''}
-                                                        </p>
-                                                    </div>
-                                                </div>
-                                            </td>
-                                            <td>
-                                                <p className="text-sm font-semibold flex items-center gap-1.5">
-                                                    <IconMail className="w-3.5 h-3.5 text-gray-400" />
-                                                    {r.email}
-                                                </p>
-                                                <p className="text-xs text-gray-500 flex items-center gap-1.5 mt-1">
-                                                    <IconPhone className="w-3.5 h-3.5 text-gray-400" />
-                                                    {r.mobile}
-                                                </p>
-                                            </td>
-                                            <td>
-                                                <p className="font-bold text-sm">{r.desired_designation || '—'}</p>
-                                                <p className="text-[10px] uppercase text-gray-400 font-bold">{r.desired_department || '—'}</p>
-                                            </td>
-                                            <td>
-                                                <p className="text-sm font-bold">{r.total_experience_years ? `${Number(r.total_experience_years)} yrs` : 'Fresher'}</p>
-                                                {r.previous_employer && <p className="text-xs text-gray-400">{r.previous_employer}</p>}
-                                            </td>
-                                            <td>
-                                                {tab === 'pending' ? (
-                                                    <span className="badge badge-outline-warning font-bold" title={fmt(r.created_at, true)}>
-                                                        {ago(r.created_at)}
-                                                    </span>
-                                                ) : (
-                                                    <div className="text-xs">
-                                                        <p className="font-bold">{fmt(r.approved_at, true)}</p>
-                                                        <p className="text-gray-400">by {r.approved_by_name || '—'}</p>
-                                                    </div>
-                                                )}
-                                            </td>
-                                            <td className="text-center">
-                                                <div className="flex items-center justify-center gap-2">
-                                                    <button
-                                                        onClick={() => setSelected(r)}
-                                                        className="p-2 bg-primary/10 text-primary rounded-lg hover:bg-primary hover:text-white transition-all shadow-sm"
-                                                        title="View details"
-                                                    >
-                                                        <IconEye className="w-4 h-4" />
-                                                    </button>
-                                                    {tab === 'pending' && (
-                                                        <>
-                                                            <button
-                                                                onClick={() => approve(r)}
-                                                                disabled={busyId === r.id}
-                                                                className="p-2 bg-success/10 text-success rounded-lg hover:bg-success hover:text-white transition-all shadow-sm disabled:opacity-50"
-                                                                title="Accept into my company"
-                                                            >
-                                                                <IconChecks className="w-4 h-4" />
-                                                            </button>
-                                                            <button
-                                                                onClick={() => dismiss(r)}
-                                                                disabled={busyId === r.id}
-                                                                className="p-2 bg-danger/10 text-danger rounded-lg hover:bg-danger hover:text-white transition-all shadow-sm disabled:opacity-50"
-                                                                title="Dismiss for my company"
-                                                            >
-                                                                <IconX className="w-4 h-4" />
-                                                            </button>
-                                                        </>
-                                                    )}
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                        </div>
-                    )}
-                </div>
-            </div>
+                }
+            />
 
             {/* Details modal */}
             {selected && (
@@ -391,13 +425,13 @@ const RegistrationRequests = () => {
 
                         {selected.status === 'pending' && (
                             <div className="flex justify-end gap-3 border-t border-gray-100 dark:border-gray-800 p-4">
-                                <button onClick={() => dismiss(selected)} disabled={busyId === selected.id} className="btn btn-outline-danger">
+                                <Button variant="outline-danger" onClick={() => dismiss(selected)} disabled={busyId === selected.id} >
                                     Dismiss
-                                </button>
-                                <button onClick={() => approve(selected)} disabled={busyId === selected.id} className="btn btn-success flex items-center gap-2">
+                                </Button>
+                                <Button variant="success" onClick={() => approve(selected)} disabled={busyId === selected.id} >
                                     <IconChecks className="w-4 h-4" />
                                     Accept into my company
-                                </button>
+                                </Button>
                             </div>
                         )}
                     </div>

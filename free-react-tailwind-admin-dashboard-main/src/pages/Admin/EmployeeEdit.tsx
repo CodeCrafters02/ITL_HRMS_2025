@@ -4,6 +4,9 @@ import { useNavigate, useParams } from 'react-router-dom';
 import Swal from 'sweetalert2';
 import { setPageTitle } from '../../store/themeConfigSlice';
 
+import IconUser from '../../components/Icon/IconUser';
+import PageHeader from '../../components/Common/PageHeader';
+import Button from '../../components/Common/Button';
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000';
 const EMP_API_URL = `${API_BASE_URL}/app/employee/`;
 const DEPT_URL = `${API_BASE_URL}/app/departments/?page_size=1000`;
@@ -202,24 +205,23 @@ const AdminEmployeeEdit = () => {
 
     return (
         <div>
-            <div className="panel mb-6">
-                <div className="flex flex-wrap items-center justify-between gap-3">
-                    <div>
-                        <div className="text-2xl font-extrabold">Edit Employee</div>
-                        <div className="text-sm text-gray-500">{title}</div>
-                    </div>
-                    <div className="flex gap-2">
-                        <button type="button" className="btn btn-outline-primary" onClick={() => navigate(-1)}>
+            <PageHeader
+                title="Edit Employee"
+                subtitle={title}
+                icon={<IconUser />}
+                actions={
+                    <>
+                        <Button variant="outline" type="button"  onClick={() => navigate(-1)}>
                             Back
-                        </button>
+                        </Button>
                         {employeeId && (
-                            <button type="button" className="btn btn-outline-info" onClick={() => navigate(`/admin/employee-register/${employeeId}`)}>
+                            <Button type="button"  onClick={() => navigate(`/admin/employee-register/${employeeId}`)}>
                                 View Profile
-                            </button>
+                            </Button>
                         )}
-                    </div>
-                </div>
-            </div>
+                    </>
+                }
+            />
 
             <div className="panel">
                 {loading ? (
@@ -343,12 +345,12 @@ const AdminEmployeeEdit = () => {
                         </div>
 
                         <div className="flex justify-end gap-3 pt-2">
-                            <button type="button" className="btn btn-outline-danger" onClick={() => navigate(-1)}>
+                            <Button variant="outline-danger" type="button"  onClick={() => navigate(-1)}>
                                 Cancel
-                            </button>
-                            <button type="submit" className="btn btn-primary">
+                            </Button>
+                            <Button type="submit">
                                 Save Changes
-                            </button>
+                            </Button>
                         </div>
                     </form>
                 )}

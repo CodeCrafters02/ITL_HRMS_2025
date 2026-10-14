@@ -2,7 +2,9 @@ import { useEffect, useState } from 'react';
 import { useDispatch } from 'react-redux';
 import Swal from 'sweetalert2';
 import { setPageTitle } from '../../store/themeConfigSlice';
-import IconSearch from '../../components/Icon/IconSearch';
+import IconLogout from '../../components/Icon/IconLogout';
+import DataTable, { Column } from '../../components/Common/DataTable';
+import PageHeader from '../../components/Common/PageHeader';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000';
 const RELIEVED_API_URL = `${API_BASE_URL}/app/relieved-employees/`;
@@ -157,15 +159,59 @@ const AdminRelievedEmployees = () => {
         }
     };
 
+    const columns: Column<RelievedRecord>[] = [
+        {
+            key: 'index',
+            title: '#',
+            width: '60px',
+            align: 'center',
+            render: (_val, _row, index) => (
+                <span className="font-semibold text-gray-500">{(page - 1) * pageSize + (index ?? 0) + 1}</span>
+            ),
+        },
+        {
+            key: 'employee_id',
+            title: 'Employee ID',
+            sortable: true,
+            render: (val) => <span className="font-mono font-bold text-primary">{val || '-'}</span>,
+        },
+        {
+            key: 'employee_name',
+            title: 'Name',
+            sortable: true,
+            render: (val, row) => (
+                <div className="flex items-center gap-2">
+                    <span className="font-semibold text-gray-800 dark:text-white-light">{val || '-'}</span>
+                    {row.employee_details?.department_name && (
+                        <span className="badge badge-outline-primary text-xs">
+                            {row.employee_details.department_name}
+                        </span>
+                    )}
+                </div>
+            ),
+        },
+        {
+            key: 'relieving_date',
+            title: 'Relieving Date',
+            sortable: true,
+            render: (val) => <span className="text-gray-500 dark:text-gray-400">{val || '-'}</span>,
+        },
+        {
+            key: 'remarks',
+            title: 'Remarks',
+            render: (val) => <span className="text-gray-600 dark:text-gray-300">{val || '-'}</span>,
+        },
+    ];
+
     return (
         <div>
-            <div className="bg-gradient-to-r from-[#0e1726] to-[#ef4444] p-6 rounded-xl shadow-lg mb-6 relative overflow-hidden">
-                <div className="relative z-10">
-                    <h1 className="text-3xl font-extrabold text-white tracking-tight">Relieved Employees</h1>
-                    <p className="text-white/80 mt-1 text-sm font-medium">Search an active employee and relieve them. View relieved list below.</p>
-                </div>
-                <div className="absolute top-0 right-0 -mt-10 -mr-10 w-48 h-48 bg-white opacity-5 rounded-full blur-2xl"></div>
-            </div>
+            <PageHeader
+                title="Relieved Employees"
+                subtitle="Search active employees for formal relieving, process exit formalities, and audit historical offboarding records."
+                icon={<IconLogout />}
+                badge="Offboarding & Relieving"
+                variant="rose"
+            />
 
             <div className="panel mb-6">
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
@@ -213,121 +259,34 @@ const AdminRelievedEmployees = () => {
                     </button>
                 </div>
             </div>
-
-            <div className="flex flex-wrap items-center justify-between gap-4 mb-5">
-                <div className="relative">
-                    <input
-                        type="text"
-                        className="form-input pr-10 w-72"
-                        placeholder="Search relieved list..."
-                        value={listSearch}
-                        onChange={(e) => {
-                            setListSearch(e.target.value);
-                            setPage(1);
-                        }}
-                    />
-                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400">
-                        <IconSearch className="w-4 h-4" />
-                    </span>
-                </div>
-            </div>
-
-            <div className="panel p-0 border-0 overflow-hidden">
-                <div className="table-responsive">
-                    <table className="table-hover">
-                        <thead>
-                            <tr>
-                                <th>#</th>
-                                <th>Employee ID</th>
-                                <th>Name</th>
-                                <th>Relieving Date</th>
-                                <th>Remarks</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {loading ? (
-                                <tr>
-                                    <td colSpan={5} className="text-center py-5">
-                                        <span className="animate-pulse text-gray-400">Loading relieved employees...</span>
-                                    </td>
-                                </tr>
-                            ) : rows.length > 0 ? (
-                                rows.map((r, idx) => (
-                                    <tr key={r.id}>
-                                        <td>{(page - 1) * pageSize + idx + 1}</td>
-                                        <td className="font-mono">{r.employee_id || '-'}</td>
-                                        <td className="font-semibold">{r.employee_name || '-'}</td>
-                                        <td className="text-gray-500">{r.relieving_date || '-'}</td>
-                                        <td className="text-gray-500">{r.remarks || '-'}</td>
-                                    </tr>
-                                ))
-                            ) : (
-                                <tr>
-                                    <td colSpan={5} className="text-center py-5 text-gray-400">No relieved employees found.</td>
-                                </tr>
-                            )}
-                        </tbody>
-                    </table>
-                </div>
-
-                {totalCount > 0 && (
-                    <div className="flex justify-between items-center p-4 border-t border-[#e0e6ed] dark:border-[#1b2e4b]">
-                        <div className="flex items-center gap-4">
-                            <div className="text-sm text-gray-500 font-semibold dark:text-gray-400">
-                                Showing <span className="text-primary">{(page - 1) * pageSize + 1}</span> to <span className="text-primary">{Math.min(page * pageSize, totalCount)}</span> of <span className="text-primary">{totalCount}</span> entries
-                            </div>
-                            <div className="flex items-center gap-2">
-                                <span className="text-sm font-semibold">Per page:</span>
-                                <select
-                                    className="form-select w-20 text-sm font-semibold py-1"
-                                    value={pageSize}
-                                    onChange={(e) => {
-                                        setPageSize(Number(e.target.value));
-                                        setPage(1);
-                                    }}
-                                >
-                                    <option value="10">10</option>
-                                    <option value="20">20</option>
-                                    <option value="50">50</option>
-                                </select>
-                            </div>
-                        </div>
-                        <ul className="inline-flex items-center space-x-1 font-semibold">
-                            <li>
-                                <button
-                                    type="button"
-                                    className="flex justify-center font-semibold p-2 rounded-full transition bg-white-light text-dark hover:text-white hover:bg-primary dark:text-white-light dark:bg-[#191e3a] dark:hover:bg-primary disabled:opacity-50 disabled:cursor-not-allowed"
-                                    onClick={() => setPage(page > 1 ? page - 1 : 1)}
-                                    disabled={page === 1}
-                                >
-                                    Prev
-                                </button>
-                            </li>
-                            {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
-                                <li key={p}>
-                                    <button
-                                        type="button"
-                                        className={`flex justify-center font-semibold px-3.5 py-2 rounded-full transition ${page === p ? 'bg-primary text-white shadow-[0_10px_20px_-10px_rgba(67,97,238,0.44)]' : 'bg-white-light text-dark hover:text-white hover:bg-primary dark:text-white-light dark:bg-[#191e3a] dark:hover:bg-primary'}`}
-                                        onClick={() => setPage(p)}
-                                    >
-                                        {p}
-                                    </button>
-                                </li>
-                            ))}
-                            <li>
-                                <button
-                                    type="button"
-                                    className="flex justify-center font-semibold p-2 rounded-full transition bg-white-light text-dark hover:text-white hover:bg-primary dark:text-white-light dark:bg-[#191e3a] dark:hover:bg-primary disabled:opacity-50 disabled:cursor-not-allowed"
-                                    onClick={() => setPage(page < totalPages ? page + 1 : totalPages)}
-                                    disabled={page === totalPages || totalPages === 0}
-                                >
-                                    Next
-                                </button>
-                            </li>
-                        </ul>
-                    </div>
-                )}
-            </div>
+            {/* Reusable Data Table */}
+            <DataTable
+                title="Relieved Employees Archive"
+                columns={columns}
+                data={rows}
+                totalCount={totalCount}
+                page={page}
+                pageSize={pageSize}
+                loading={loading}
+                searchValue={listSearch}
+                searchPlaceholder="Search by employee ID, name, remarks..."
+                onSearchChange={(val) => {
+                    setListSearch(val);
+                    setLoading(true);
+                    setPage(1);
+                }}
+                onPageChange={(p) => {
+                    setPage(p);
+                    setLoading(true);
+                }}
+                onPageSizeChange={(sz) => {
+                    setPageSize(sz);
+                    setLoading(true);
+                    setPage(1);
+                }}
+                onRefresh={fetchRelieved}
+                emptyMessage="No relieved employees found."
+            />
         </div>
     );
 };

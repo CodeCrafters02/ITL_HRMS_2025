@@ -11,6 +11,7 @@ import IconSave from '../../components/Icon/IconSave';
 import IconTrash from '../../components/Icon/IconTrash';
 import Swal from 'sweetalert2';
 
+import PageHeader from '../../components/Common/PageHeader';
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000';
 
 const ConferenceRoomOverview = () => {
@@ -247,17 +248,12 @@ const ConferenceRoomOverview = () => {
 
     return (
         <div className="flex flex-col h-[calc(var(--app-vh)_-_90px)] space-y-4">
-            <div className="bg-gradient-to-r from-blue-700 to-indigo-800 rounded-xl p-4 text-white shadow-lg overflow-hidden relative">
-                <div className="relative z-10 flex items-center justify-between">
-                    <div>
-                        <h2 className="text-3xl font-extrabold mb-0.5">Conference Room Overview</h2>
-                        <p className="text-white/80 text-sm font-medium">Monitor room occupancy and manage booking policies.</p>
-                    </div>
-                </div>
-                <div className="absolute right-[-20px] top-[-20px] opacity-10">
-                    <IconUsers className="w-48 h-48" />
-                </div>
-            </div>
+            <PageHeader
+                icon={<IconUsers />}
+                title="Conference Room Overview"
+                subtitle="Monitor room occupancy and manage booking policies."
+                variant="cyan"
+            />
 
             <div className="flex flex-col md:flex-row gap-4">
                 {/* Map Filters */}

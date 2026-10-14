@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { useDispatch } from 'react-redux';
 import { setPageTitle } from '../../store/themeConfigSlice';
 import { fetchPayrollBatches, fetchRolloutDashboard, rolloutPayslips, publishPayslip, bulkPublishPayslips, PayrollBatch, RolloutDashboardItem, generatePayslip, bulkGeneratePayslips } from '../Payroll/payslipApi';
@@ -10,9 +10,12 @@ import IconEye from '../../components/Icon/IconEye';
 import IconDownload from '../../components/Icon/IconDownload';
 import IconRefresh from '../../components/Icon/IconRefresh';
 import IconPlus from '../../components/Icon/IconPlus';
+import DataTable, { Column } from '../../components/Common/DataTable';
 import Flatpickr from 'react-flatpickr';
 import 'flatpickr/dist/flatpickr.css';
 
+import PageHeader from '../../components/Common/PageHeader';
+import Button from '../../components/Common/Button';
 const PayslipRollout = () => {
     const dispatch = useDispatch();
     useEffect(() => {
@@ -215,11 +218,215 @@ const PayslipRollout = () => {
         }
     };
 
-    const filteredData = dashboardData.filter(d => 
-        d.employee_name.toLowerCase().includes(search.toLowerCase()) ||
-        d.employee_id_str.toLowerCase().includes(search.toLowerCase()) ||
-        (d.payslip_id && d.payslip_id.toLowerCase().includes(search.toLowerCase()))
-    );
+    const [page, setPage] = useState(1);
+    const [pageSize, setPageSize] = useState(10);
+
+    const filteredData = useMemo(() => {
+        return dashboardData.filter((d) =>
+            d.employee_name.toLowerCase().includes(search.toLowerCase()) ||
+            d.employee_id_str.toLowerCase().includes(search.toLowerCase()) ||
+            (d.payslip_id && d.payslip_id.toLowerCase().includes(search.toLowerCase())) ||
+            (d.payslip_status && d.payslip_status.toLowerCase().includes(search.toLowerCase()))
+        );
+    }, [dashboardData, search]);
+
+    const paginatedData = useMemo(() => {
+        const start = (page - 1) * pageSize;
+        return filteredData.slice(start, start + pageSize);
+    }, [filteredData, page, pageSize]);
+
+    const columns: Column<RolloutDashboardItem>[] = [
+        {
+            key: 'employee_name',
+            title: 'Employee',
+            sortable: true,
+            render: (_val, item: RolloutDashboardItem) => (
+                <div className="flex items-center gap-3">
+                    <div className="w-9 h-9 rounded-lg bg-gray-100 dark:bg-gray-800 flex items-center justify-center text-sm font-black text-gray-400 group-hover:bg-blue-500 group-hover:text-white transition-all flex-shrink-0">
+                        {item.employee_name.charAt(0)}
+                    </div>
+                    <div className="flex flex-col min-w-0">
+                        <span className="font-black text-sm text-gray-800 dark:text-white group-hover:text-blue-600 transition-colors truncate">
+                            {item.employee_name}
+                        </span>
+                        <span className="text-[10px] font-bold text-gray-400 tracking-wider">ID: {item.employee_id_str}</span>
+                    </div>
+                </div>
+            ),
+        },
+        {
+            key: 'attendance',
+            title: 'Attendance',
+            align: 'center',
+            render: (_val, item: RolloutDashboardItem) => (
+                <div className="flex flex-col items-center gap-1.5">
+                    <div className="flex items-center gap-3">
+                        <div className="flex flex-col items-center">
+                            <span className="text-lg font-black text-emerald-600 dark:text-emerald-400 leading-none">{item.details.present_days}</span>
+                            <span className="text-[8px] font-bold text-gray-400 uppercase tracking-wider">Present</span>
+                        </div>
+                        <div className="text-gray-300 dark:text-gray-700 font-light">/</div>
+                        <div className="flex flex-col items-center">
+                            <span className="text-lg font-black text-blue-600 dark:text-blue-400 leading-none">{item.details.expected_working_days}</span>
+                            <span className="text-[8px] font-bold text-gray-400 uppercase tracking-wider">Working</span>
+                        </div>
+                    </div>
+                    <div className="flex items-center gap-2 flex-wrap justify-center">
+                        {item.details.half_days > 0 && (
+                            <span className="text-[8px] font-bold bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400 px-1.5 py-0.5 rounded-full">½ Day: {item.details.half_days}</span>
+                        )}
+                        {item.details.paid_leaves > 0 && (
+                            <span className="text-[8px] font-bold bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 px-1.5 py-0.5 rounded-full">PL: {item.details.paid_leaves}</span>
+                        )}
+                        {item.details.absent_days > 0 && (
+                            <span className="text-[8px] font-bold bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 px-1.5 py-0.5 rounded-full">Absent: {item.details.absent_days}</span>
+                        )}
+                        {item.details.overtime_hours > 0 && (
+                            <span className="text-[8px] font-bold bg-purple-50 dark:bg-purple-900/20 text-purple-600 dark:text-purple-400 px-1.5 py-0.5 rounded-full">OT: {item.details.overtime_hours}h</span>
+                        )}
+                    </div>
+                </div>
+            ),
+        },
+        {
+            key: 'salary_breakdown',
+            title: 'Salary Breakdown',
+            render: (_val, item: RolloutDashboardItem) => (
+                <div className="flex flex-col gap-1 min-w-[140px]">
+                    <div className="flex items-center justify-between gap-4 text-[10px]">
+                        <span className="text-gray-400 font-bold">Earned Basic</span>
+                        <span className="font-mono font-bold text-gray-600 dark:text-gray-400">₹{item.details.earned_basic.toLocaleString()}</span>
+                    </div>
+                    <div className="flex items-center justify-between gap-4 text-[10px]">
+                        <span className="text-emerald-500 font-bold">Gross</span>
+                        <span className="font-mono font-bold text-emerald-600 dark:text-emerald-400">₹{item.details.gross.toLocaleString()}</span>
+                    </div>
+                    <div className="flex items-center justify-between gap-4 text-[10px]">
+                        <span className="text-rose-500 font-bold">Deductions</span>
+                        <span className="font-mono font-bold text-rose-600 dark:text-rose-400">−₹{item.details.deductions.toLocaleString()}</span>
+                    </div>
+                    {item.details.ot_pay > 0 && (
+                        <div className="flex items-center justify-between gap-4 text-[10px]">
+                            <span className="text-purple-500 font-bold">OT Pay</span>
+                            <span className="font-mono font-bold text-purple-600">₹{item.details.ot_pay.toLocaleString()}</span>
+                        </div>
+                    )}
+                    <div className="flex items-center gap-1 mt-0.5">
+                        <span className="text-[8px] font-bold text-gray-300 dark:text-gray-600">Days Paid: {item.details.days_paid}</span>
+                    </div>
+                </div>
+            ),
+        },
+        {
+            key: 'net_pay',
+            title: 'Net Pay',
+            sortable: true,
+            render: (_val, item: RolloutDashboardItem) => (
+                <span className="font-mono text-base font-black text-gray-800 dark:text-white">₹{item.net_pay.toLocaleString()}</span>
+            ),
+        },
+        {
+            key: 'payslip',
+            title: 'Payslip',
+            render: (_val, item: RolloutDashboardItem) => (
+                <div className="flex flex-col gap-1.5">
+                    {item.payslip_id ? (
+                        <span className="font-mono text-[10px] font-bold p-1 bg-gray-50 dark:bg-gray-900 rounded border border-gray-100 dark:border-gray-800 text-gray-500 inline-block">
+                            {item.payslip_id}
+                        </span>
+                    ) : (
+                        <span className="text-[9px] font-black text-gray-300 uppercase tracking-widest italic">Pending</span>
+                    )}
+                    <div className="flex items-center gap-1.5">
+                        <span
+                            className={`w-1.5 h-1.5 rounded-full ${
+                                item.payslip_status === 'Published'
+                                    ? 'bg-green-500 animate-pulse'
+                                    : item.payslip_status === 'Draft'
+                                    ? 'bg-amber-500'
+                                    : 'bg-gray-300'
+                            }`}
+                        ></span>
+                        <span
+                            className={`text-[9px] font-black uppercase tracking-widest ${
+                                item.payslip_status === 'Published'
+                                    ? 'text-green-600'
+                                    : item.payslip_status === 'Draft'
+                                    ? 'text-amber-600'
+                                    : 'text-gray-400'
+                            }`}
+                        >
+                            {item.payslip_status}
+                        </span>
+                    </div>
+                </div>
+            ),
+        },
+        {
+            key: 'actions',
+            title: 'Actions',
+            align: 'center',
+            width: '140px',
+            render: (_val, item: RolloutDashboardItem) => (
+                <div className="flex items-center justify-center gap-2">
+                    {!item.payslip_id ? (
+                        <button
+                            onClick={() => handleGenerate(item.batch_id, item.payroll_id, item.is_report)}
+                            disabled={!!actionLoading || !item.payroll_id}
+                            className={`btn btn-sm flex items-center gap-2 py-2 px-4 rounded-lg font-black uppercase text-[10px] tracking-widest ${
+                                !item.payroll_id
+                                    ? 'bg-gray-100 text-gray-400 cursor-not-allowed border-gray-200'
+                                    : 'btn-outline-primary'
+                            }`}
+                        >
+                            {actionLoading === `gen-${item.payroll_id}` ? (
+                                <span className="animate-spin border-2 border-primary border-l-transparent rounded-full w-3 h-3"></span>
+                            ) : (
+                                <IconPlus className="w-3 h-3" />
+                            )}
+                            {item.payroll_id ? 'Generate' : 'No Payroll'}
+                        </button>
+                    ) : (
+                        <>
+                            <button
+                                onClick={() => handleView(item.id!, item.file!)}
+                                className="btn btn-sm bg-gray-100 dark:bg-gray-800 hover:bg-blue-500 hover:text-white text-gray-600 dark:text-gray-400 transition-all p-2 rounded-lg"
+                                title="View & Verify"
+                            >
+                                <IconEye className={`w-4 h-4 ${viewedIds.has(item.id!) ? 'text-green-500 group-hover:text-white' : ''}`} />
+                            </button>
+                            {item.payslip_status === 'Draft' && (
+                                <button
+                                    onClick={() => handleSend(item.id!)}
+                                    disabled={!!actionLoading}
+                                    className="btn btn-sm py-2 px-4 rounded-lg font-black uppercase text-[10px] tracking-widest transition-all bg-blue-600 text-white hover:bg-blue-700 shadow-md"
+                                >
+                                    {actionLoading === `send-${item.id}` ? (
+                                        <span className="animate-spin border-2 border-white border-l-transparent rounded-full w-3 h-3"></span>
+                                    ) : (
+                                        <IconSend className="w-3 h-3" />
+                                    )}
+                                    Send
+                                </button>
+                            )}
+                            <button
+                                onClick={() => handleGenerate(item.batch_id, item.payroll_id, item.is_report, true)}
+                                disabled={!!actionLoading}
+                                className="p-2 rounded-lg bg-amber-50 text-amber-600 hover:bg-amber-100 dark:bg-amber-900/20 dark:text-amber-400 transition-colors"
+                                title="Regenerate Payslip"
+                            >
+                                {actionLoading === `gen-${item.payroll_id}` ? (
+                                    <span className="animate-spin border-2 border-amber-600 border-l-transparent rounded-full w-4 h-4 inline-block"></span>
+                                ) : (
+                                    <IconRefresh className="w-4 h-4" />
+                                )}
+                            </button>
+                        </>
+                    )}
+                </div>
+            ),
+        },
+    ];
 
     const months = [
         'January', 'February', 'March', 'April', 'May', 'June',
@@ -228,263 +435,61 @@ const PayslipRollout = () => {
 
     return (
         <div className="space-y-6">
-            <div className="bg-gradient-to-r from-[#0f172a] via-[#1e293b] to-[#334155] p-8 rounded-2xl shadow-2xl relative overflow-hidden">
-                <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-6">
-                    <div className="flex items-center gap-5">
-                        <div className="bg-white/10 p-3 rounded-xl backdrop-blur-md border border-white/20">
-                            <IconFile className="w-10 h-10 text-blue-400" />
-                        </div>
-                        <div>
-                            <h1 className="text-3xl font-black text-white tracking-tight uppercase">Payslip Rollout</h1>
-                            <p className="text-blue-200/80 mt-1 text-sm font-bold tracking-wide">Review and distribute salary statements with precision.</p>
-                        </div>
-                    </div>
-                    <div className="flex flex-wrap items-center gap-4 bg-white/5 p-2 rounded-2xl backdrop-blur-sm border border-white/10">
-                        <div className="flex items-center gap-3 px-4 py-2">
-                            <span className="text-white/60 text-xs font-black uppercase tracking-widest">Period</span>
+            <PageHeader
+                title="Payslip Rollout"
+                subtitle="Review and distribute salary statements with precision."
+                variant="amber"
+                icon={<IconFile />}
+                actions={
+                    <>
+                        <div className="flex items-center gap-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-[#121e32] px-3 h-10">
+                            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Period</span>
                             <Flatpickr
                                 value={dateRange}
-                                options={{
-                                    mode: 'range',
-                                    dateFormat: 'Y-m-d',
-                                }}
-                                className="form-input bg-transparent border-none text-white font-black text-xs focus:ring-0 w-64 cursor-pointer p-0"
+                                options={{ mode: 'range', dateFormat: 'Y-m-d' }}
+                                className="form-input border-0 bg-transparent p-0 h-auto w-56 text-xs font-bold focus:ring-0 cursor-pointer"
                                 onChange={(date) => setDateRange(date)}
                             />
                         </div>
-                        <div className="h-10 w-[1px] bg-white/10 hidden md:block"></div>
-                        <button 
+                        <Button 
                             onClick={handleGenerateAll}
-                            disabled={!!actionLoading || loading}
-                            className="btn bg-emerald-600 hover:bg-emerald-500 text-white font-black px-8 py-3 rounded-xl shadow-xl shadow-emerald-900/20 transition-all active:scale-95 flex items-center gap-3"
-                        >
+                            disabled={!!actionLoading || loading}>
                             {actionLoading === 'generate-all' ? <span className="animate-spin border-2 border-white border-l-transparent rounded-full w-5 h-5"></span> : <IconFile className="w-5 h-5" />}
                             Generate All
-                        </button>
-                        <button 
-                            onClick={handleBulkSend}
-                            className="btn bg-blue-600 hover:bg-blue-500 text-white font-black px-8 py-3 rounded-xl shadow-xl shadow-blue-900/20 transition-all active:scale-95 flex items-center gap-3"
-                        >
+                        </Button>
+                        <Button variant="outline" 
+                            onClick={handleBulkSend}>
                             <IconSend className="w-5 h-5" />
                             Send Verified
-                        </button>
-                    </div>
-                </div>
-                {/* Decorative Elements */}
-                <div className="absolute top-0 right-0 -mt-20 -mr-20 w-64 h-64 bg-blue-500 opacity-10 rounded-full blur-3xl"></div>
-                <div className="absolute bottom-0 left-0 -mb-20 -ml-20 w-64 h-64 bg-purple-500 opacity-10 rounded-full blur-3xl"></div>
-            </div>
+                        </Button>
+                    </>
+                }
+            />
 
-            <div className="panel border-none shadow-xl rounded-2xl overflow-hidden bg-white dark:bg-black">
-                <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8 p-2">
-                    <div className="flex flex-col">
-                        <h5 className="font-black text-xl text-gray-800 dark:text-white uppercase tracking-tight">Employees Dashboard</h5>
-                        <p className="text-xs font-bold text-gray-400">
-                            {dateRange[0]?.toLocaleDateString()} - {dateRange[1]?.toLocaleDateString()} Statistics
-                        </p>
-                    </div>
-                    <div className="flex items-center gap-3 w-full md:w-auto">
-                        <div className="relative group w-full md:w-72">
-                            <input 
-                                type="text" 
-                                placeholder="Search Name or ID..." 
-                                className="form-input py-3 ltr:pl-12 rtl:pr-12 rounded-xl border-gray-200 dark:border-gray-800 focus:border-blue-500 transition-all shadow-sm" 
-                                value={search} 
-                                onChange={(e) => setSearch(e.target.value)} 
-                            />
-                            <IconSearch className="absolute ltr:left-4 rtl:right-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-blue-500 transition-colors w-5 h-5" />
-                        </div>
-                    </div>
-                </div>
-
-                <div className="table-responsive rounded-xl border border-gray-100 dark:border-gray-800">
-                    <table className="min-w-full divide-y divide-gray-100 dark:divide-gray-800">
-                        <thead>
-                            <tr className="bg-gray-50/50 dark:bg-gray-900/50">
-                                <th className="px-4 py-4 text-left text-[10px] font-black text-gray-400 uppercase tracking-widest">Employee</th>
-                                <th className="px-4 py-4 text-center text-[10px] font-black text-gray-400 uppercase tracking-widest">Attendance</th>
-                                <th className="px-4 py-4 text-left text-[10px] font-black text-gray-400 uppercase tracking-widest">Salary Breakdown</th>
-                                <th className="px-4 py-4 text-left text-[10px] font-black text-gray-400 uppercase tracking-widest">Net Pay</th>
-                                <th className="px-4 py-4 text-left text-[10px] font-black text-gray-400 uppercase tracking-widest">Payslip</th>
-                                <th className="px-4 py-4 text-center text-[10px] font-black text-gray-400 uppercase tracking-widest">Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y divide-gray-50 dark:divide-gray-900">
-                            {loading ? (
-                                <tr>
-                                    <td colSpan={6} className="py-20 text-center">
-                                        <div className="flex flex-col items-center gap-3">
-                                            <span className="animate-spin border-4 border-blue-500 border-l-transparent rounded-full w-12 h-12"></span>
-                                            <span className="text-xs font-bold text-gray-400 uppercase tracking-widest animate-pulse">Syncing Payroll Data...</span>
-                                        </div>
-                                    </td>
-                                </tr>
-                            ) : filteredData.length === 0 ? (
-                                <tr>
-                                    <td colSpan={6} className="py-20 text-center">
-                                        <div className="flex flex-col items-center justify-center opacity-40">
-                                            <IconFile className="w-16 h-16 mb-4" />
-                                            <p className="text-lg font-black uppercase tracking-tight">No Employees Found</p>
-                                            <p className="text-xs font-bold text-center max-w-md">No active employees found for this company.</p>
-                                        </div>
-                                    </td>
-                                </tr>
-                            ) : filteredData.map((item, idx) => (
-                                <tr key={idx} className="hover:bg-blue-50/30 dark:hover:bg-blue-900/10 transition-colors group">
-                                    {/* Employee Info */}
-                                    <td className="px-4 py-4">
-                                        <div className="flex items-center gap-3">
-                                            <div className="w-9 h-9 rounded-lg bg-gray-100 dark:bg-gray-800 flex items-center justify-center text-sm font-black text-gray-400 group-hover:bg-blue-500 group-hover:text-white transition-all flex-shrink-0">
-                                                {item.employee_name.charAt(0)}
-                                            </div>
-                                            <div className="flex flex-col min-w-0">
-                                                <span className="font-black text-sm text-gray-800 dark:text-white group-hover:text-blue-600 transition-colors truncate">{item.employee_name}</span>
-                                                <span className="text-[10px] font-bold text-gray-400 tracking-wider">ID: {item.employee_id_str}</span>
-                                            </div>
-                                        </div>
-                                    </td>
-
-                                    {/* Attendance Breakdown */}
-                                    <td className="px-4 py-4">
-                                        <div className="flex flex-col items-center gap-1.5">
-                                            <div className="flex items-center gap-3">
-                                                <div className="flex flex-col items-center">
-                                                    <span className="text-lg font-black text-emerald-600 dark:text-emerald-400 leading-none">{item.details.present_days}</span>
-                                                    <span className="text-[8px] font-bold text-gray-400 uppercase tracking-wider">Present</span>
-                                                </div>
-                                                <div className="text-gray-300 dark:text-gray-700 font-light">/</div>
-                                                <div className="flex flex-col items-center">
-                                                    <span className="text-lg font-black text-blue-600 dark:text-blue-400 leading-none">{item.details.expected_working_days}</span>
-                                                    <span className="text-[8px] font-bold text-gray-400 uppercase tracking-wider">Working</span>
-                                                </div>
-                                            </div>
-                                            <div className="flex items-center gap-2 flex-wrap justify-center">
-                                                {item.details.half_days > 0 && (
-                                                    <span className="text-[8px] font-bold bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400 px-1.5 py-0.5 rounded-full">½ Day: {item.details.half_days}</span>
-                                                )}
-                                                {item.details.paid_leaves > 0 && (
-                                                    <span className="text-[8px] font-bold bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 px-1.5 py-0.5 rounded-full">PL: {item.details.paid_leaves}</span>
-                                                )}
-                                                {item.details.absent_days > 0 && (
-                                                    <span className="text-[8px] font-bold bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 px-1.5 py-0.5 rounded-full">Absent: {item.details.absent_days}</span>
-                                                )}
-                                                {item.details.overtime_hours > 0 && (
-                                                    <span className="text-[8px] font-bold bg-purple-50 dark:bg-purple-900/20 text-purple-600 dark:text-purple-400 px-1.5 py-0.5 rounded-full">OT: {item.details.overtime_hours}h</span>
-                                                )}
-                                            </div>
-                                        </div>
-                                    </td>
-
-                                    {/* Salary Breakdown */}
-                                    <td className="px-4 py-4">
-                                        <div className="flex flex-col gap-1">
-                                            <div className="flex items-center justify-between gap-4 text-[10px]">
-                                                <span className="text-gray-400 font-bold">Earned Basic</span>
-                                                <span className="font-mono font-bold text-gray-600 dark:text-gray-400">₹{item.details.earned_basic.toLocaleString()}</span>
-                                            </div>
-                                            <div className="flex items-center justify-between gap-4 text-[10px]">
-                                                <span className="text-emerald-500 font-bold">Gross</span>
-                                                <span className="font-mono font-bold text-emerald-600 dark:text-emerald-400">₹{item.details.gross.toLocaleString()}</span>
-                                            </div>
-                                            <div className="flex items-center justify-between gap-4 text-[10px]">
-                                                <span className="text-rose-500 font-bold">Deductions</span>
-                                                <span className="font-mono font-bold text-rose-600 dark:text-rose-400">−₹{item.details.deductions.toLocaleString()}</span>
-                                            </div>
-                                            {item.details.ot_pay > 0 && (
-                                                <div className="flex items-center justify-between gap-4 text-[10px]">
-                                                    <span className="text-purple-500 font-bold">OT Pay</span>
-                                                    <span className="font-mono font-bold text-purple-600">₹{item.details.ot_pay.toLocaleString()}</span>
-                                                </div>
-                                            )}
-                                            <div className="flex items-center gap-1 mt-0.5">
-                                                <span className="text-[8px] font-bold text-gray-300 dark:text-gray-600">Days Paid: {item.details.days_paid}</span>
-                                            </div>
-                                        </div>
-                                    </td>
-
-                                    {/* Net Pay */}
-                                    <td className="px-4 py-4">
-                                        <span className="font-mono text-base font-black text-gray-800 dark:text-white">₹{item.net_pay.toLocaleString()}</span>
-                                    </td>
-
-                                    {/* Payslip ID & Status */}
-                                    <td className="px-4 py-4">
-                                        <div className="flex flex-col gap-1.5">
-                                            {item.payslip_id ? (
-                                                <span className="font-mono text-[10px] font-bold p-1 bg-gray-50 dark:bg-gray-900 rounded border border-gray-100 dark:border-gray-800 text-gray-500 inline-block">
-                                                    {item.payslip_id}
-                                                </span>
-                                            ) : (
-                                                <span className="text-[9px] font-black text-gray-300 uppercase tracking-widest italic">Pending</span>
-                                            )}
-                                            <div className="flex items-center gap-1.5">
-                                                <span className={`w-1.5 h-1.5 rounded-full ${
-                                                    item.payslip_status === 'Published' ? 'bg-green-500 animate-pulse' : 
-                                                    item.payslip_status === 'Draft' ? 'bg-amber-500' : 'bg-gray-300'
-                                                }`}></span>
-                                                <span className={`text-[9px] font-black uppercase tracking-widest ${
-                                                    item.payslip_status === 'Published' ? 'text-green-600' : 
-                                                    item.payslip_status === 'Draft' ? 'text-amber-600' : 'text-gray-400'
-                                                }`}>
-                                                    {item.payslip_status}
-                                                </span>
-                                            </div>
-                                        </div>
-                                    </td>
-
-                                    {/* Actions */}
-                                    <td className="px-4 py-4">
-                                        <div className="flex items-center justify-center gap-2">
-                                            {!item.payslip_id ? (
-                                                <button 
-                                                    onClick={() => handleGenerate(item.batch_id, item.payroll_id, item.is_report)}
-                                                    disabled={!!actionLoading || !item.payroll_id}
-                                                    className={`btn btn-sm flex items-center gap-2 py-2 px-4 rounded-lg font-black uppercase text-[10px] tracking-widest ${
-                                                        !item.payroll_id 
-                                                            ? 'bg-gray-100 text-gray-400 cursor-not-allowed border-gray-200' 
-                                                            : 'btn-outline-primary'
-                                                    }`}
-                                                >
-                                                    {actionLoading === `gen-${item.payroll_id}` ? <span className="animate-spin border-2 border-primary border-l-transparent rounded-full w-3 h-3"></span> : <IconPlus className="w-3 h-3" />}
-                                                    {item.payroll_id ? 'Generate' : 'No Payroll'}
-                                                </button>
-                                            ) : (
-                                                <>
-                                                    <button 
-                                                        onClick={() => handleView(item.id!, item.file!)}
-                                                        className="btn btn-sm bg-gray-100 dark:bg-gray-800 hover:bg-blue-500 hover:text-white text-gray-600 dark:text-gray-400 transition-all p-2 rounded-lg"
-                                                        title="View & Verify"
-                                                    >
-                                                        <IconEye className={`w-4 h-4 ${viewedIds.has(item.id!) ? 'text-green-500 group-hover:text-white' : ''}`} />
-                                                    </button>
-                                                    {item.payslip_status === 'Draft' && (
-                                                        <button 
-                                                            onClick={() => handleSend(item.id!)}
-                                                            disabled={!!actionLoading}
-                                                            className={`btn btn-sm py-2 px-4 rounded-lg font-black uppercase text-[10px] tracking-widest transition-all bg-blue-600 text-white hover:bg-blue-700 shadow-md`}
-                                                        >
-                                                            {actionLoading === `send-${item.id}` ? <span className="animate-spin border-2 border-white border-l-transparent rounded-full w-3 h-3"></span> : <IconSend className="w-3 h-3" />}
-                                                            Send
-                                                        </button>
-                                                    )}
-                                                    <button 
-                                                        onClick={() => handleGenerate(item.batch_id, item.payroll_id, item.is_report, true)}
-                                                        disabled={!!actionLoading}
-                                                        className="p-2 rounded-lg bg-amber-50 text-amber-600 hover:bg-amber-100 dark:bg-amber-900/20 dark:text-amber-400 transition-colors"
-                                                        title="Regenerate Payslip"
-                                                    >
-                                                        {actionLoading === `gen-${item.payroll_id}` ? <span className="animate-spin border-2 border-amber-600 border-l-transparent rounded-full w-4 h-4 inline-block"></span> : <IconRefresh className="w-4 h-4" />}
-                                                    </button>
-                                                </>
-                                            )}
-                                        </div>
-                                    </td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
-                </div>
-            </div>
+            <DataTable
+                title="Employees Dashboard"
+                subtitle={`${dateRange[0]?.toLocaleDateString() || ''} - ${dateRange[1]?.toLocaleDateString() || ''} Statistics`}
+                columns={columns}
+                data={paginatedData}
+                loading={loading}
+                page={page}
+                pageSize={pageSize}
+                totalCount={filteredData.length}
+                onPageChange={(p) => setPage(p)}
+                onPageSizeChange={(sz) => {
+                    setPageSize(sz);
+                    setPage(1);
+                }}
+                searchValue={search}
+                onSearchChange={(val) => {
+                    setSearch(val);
+                    setPage(1);
+                }}
+                searchPlaceholder="Search Name or ID..."
+                onRefresh={loadDashboard}
+                emptyMessage="No Employees Found"
+                emptySubtitle="No active employees found for this company or date range."
+            />
         </div>
     );
 };

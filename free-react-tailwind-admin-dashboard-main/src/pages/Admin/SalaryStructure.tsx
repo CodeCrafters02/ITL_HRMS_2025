@@ -6,6 +6,9 @@ import IconSave from '../../components/Icon/IconSave';
 import IconTrashLines from '../../components/Icon/IconTrashLines';
 import IconPlus from '../../components/Icon/IconPlus';
 
+import PageHeader from '../../components/Common/PageHeader';
+import IconCashBanknotes from '../../components/Icon/IconCashBanknotes';
+import Button from '../../components/Common/Button';
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000';
 const GROSS_API = `${API_BASE_URL}/app/gross-components/`;
 const DEDUCTION_API = `${API_BASE_URL}/app/deduction-components/`;
@@ -198,14 +201,12 @@ const SalaryStructure = () => {
     return (
         <div>
             {/* Header */}
-            <div className="bg-gradient-to-r from-[#1e3a5f] via-[#2563eb] to-[#14b8a6] p-6 rounded-xl shadow-lg mb-6 relative overflow-hidden">
-                <div className="relative z-10">
-                    <h1 className="text-3xl font-extrabold text-white tracking-tight">Salary Structure</h1>
-                    <p className="text-white/80 mt-1 text-sm font-medium">Configure gross salary components and deduction rules for all employees.</p>
-                </div>
-                <div className="absolute top-0 right-0 -mt-10 -mr-10 w-48 h-48 bg-white opacity-5 rounded-full blur-2xl"></div>
-                <div className="absolute bottom-0 left-0 -mb-8 -ml-8 w-32 h-32 bg-white opacity-5 rounded-full blur-2xl"></div>
-            </div>
+            <PageHeader
+                icon={<IconCashBanknotes />}
+                title="Salary Structure"
+                subtitle="Configure gross salary components and deduction rules for all employees."
+                variant="amber"
+            />
 
             {/* Tabs */}
             <div className="panel mb-6 p-0 overflow-hidden">
@@ -303,18 +304,18 @@ const SalaryStructure = () => {
                                                                 {saving === `g-${idx}` ? <span className="animate-spin border-2 border-white border-l-transparent rounded-full w-3.5 h-3.5"></span> : <IconSave className="w-4 h-4" />}
                                                                 Save
                                                             </button>
-                                                            <button className="btn btn-danger btn-sm gap-1" onClick={() => deleteGross(idx)}>
+                                                            <Button variant="danger" size="sm"  onClick={() => deleteGross(idx)}>
                                                                 <IconTrashLines className="w-4 h-4" />
-                                                            </button>
+                                                            </Button>
                                                         </div>
                                                     </div>
                                                 </div>
                                             ))}
                                         </div>
-                                        <button className="btn btn-outline-primary mt-4 gap-2" onClick={addGrossComponent}>
+                                        <Button variant="outline" className="mt-4"  onClick={addGrossComponent}>
                                             <IconPlus className="w-4 h-4" />
                                             Add Gross Component
-                                        </button>
+                                        </Button>
                                     </div>
                                 </div>
                             )}
@@ -362,9 +363,9 @@ const SalaryStructure = () => {
                                                             {saving === `d-${idx}` ? <span className="animate-spin border-2 border-white border-l-transparent rounded-full w-3.5 h-3.5"></span> : <IconSave className="w-4 h-4" />}
                                                             Save
                                                         </button>
-                                                        <button className="btn btn-danger btn-sm gap-1" onClick={() => deleteDeduction(idx)}>
+                                                        <Button variant="danger" size="sm"  onClick={() => deleteDeduction(idx)}>
                                                             <IconTrashLines className="w-4 h-4" />
-                                                        </button>
+                                                        </Button>
                                                     </div>
                                                 </div>
 
@@ -390,10 +391,10 @@ const SalaryStructure = () => {
                                             </div>
                                         ))}
                                     </div>
-                                    <button className="btn btn-outline-primary mt-4 gap-2" onClick={addDeduction}>
+                                    <Button variant="outline" className="mt-4"  onClick={addDeduction}>
                                         <IconPlus className="w-4 h-4" />
                                         Add Deduction Component
-                                    </button>
+                                    </Button>
                                 </div>
                             )}
 
