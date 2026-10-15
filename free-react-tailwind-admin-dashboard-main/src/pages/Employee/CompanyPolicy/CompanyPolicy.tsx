@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import PdfCanvasViewer from '../../../components/Common/PdfCanvasViewer';
 import { useDispatch } from 'react-redux';
 import { setPageTitle } from '../../../store/themeConfigSlice';
 import IconDownload from '../../../components/Icon/IconDownload';
@@ -198,7 +199,7 @@ const CompanyPolicyPage = () => {
                     ) : !preview && viewing?.file_name?.toLowerCase().endsWith('.docx') ? null : !preview ? (
                         <div className="p-10 text-center text-sm text-slate-400">Loading document...</div>
                     ) : preview.kind === 'pdf' ? (
-                        <iframe title={viewing?.name} src={preview.url} className="h-full w-full border-0" />
+                        <PdfCanvasViewer blob={preview.blob} />
                     ) : preview.kind === 'text' ? (
                         <pre className="whitespace-pre-wrap break-words p-5 font-mono text-sm">{preview.text}</pre>
                     ) : preview.kind === 'none' ? (

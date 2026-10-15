@@ -14,6 +14,7 @@ import DataTable, { Column } from '../../components/Common/DataTable';
 import PageHeader from '../../components/Common/PageHeader';
 import IconTxtFile from '../../components/Icon/IconTxtFile';
 import Modal from '../../components/Common/Modal';
+import PdfCanvasViewer from '../../components/Common/PdfCanvasViewer';
 import Button, { IconButton } from '../../components/Common/Button';
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000';
 const API_URL = `${API_BASE_URL}/app/policies/`;
@@ -508,7 +509,11 @@ const AdminCompanyPolicies = () => {
                                                     ) : !preview ? (
                                                         <div className="p-10 text-center text-white-dark">Loading document...</div>
                                                     ) : preview.kind === 'pdf' ? (
+                                                        preview.blob ? (
+                                                        <PdfCanvasViewer blob={preview.blob} />
+                                                    ) : (
                                                         <iframe title={viewingFileName} src={preview.url} className="w-full h-full border-0" />
+                                                    )
                                                     ) : preview.kind === 'text' ? (
                                                         <pre className="p-5 whitespace-pre-wrap break-words text-sm font-mono">{preview.text}</pre>
                                                     ) : preview.kind === 'none' ? (
