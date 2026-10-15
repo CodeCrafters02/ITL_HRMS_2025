@@ -15,6 +15,7 @@ export interface AttendanceDayRecord {
     total_hours: number | '-';
     overtime_hours: number | '-';
     break_time: string;
+    source?: 'teams' | 'manual';
 }
 
 export interface AttendanceSummary {

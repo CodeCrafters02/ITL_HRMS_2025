@@ -70,6 +70,36 @@ class EmployeeConfig(AppConfig):
                 except Exception as exc:
                     logger.error('[Scheduler] entra_auto_sync failed: %s', exc)
 
+            def _presence_poll():
+                try:
+                    from notifications.teams import claim
+                    if not claim('lock:presence_poll', 45):
+                        return
+                    from employee.presence_engine import poll_once
+                    acts = poll_once()
+                    if acts:
+                        logger.info('[Scheduler] presence_poll actions: %s', acts)
+                except Exception as exc:
+                    logger.error('[Scheduler] presence_poll failed: %s', exc)
+
+            def _midnight_sweep():
+                try:
+                    from notifications.teams import claim
+                    if not claim('lock:presence_midnight', 300):
+                        return
+                    from employee.presence_engine import midnight_sweep
+                    r = midnight_sweep()
+                    if r:
+                        logger.info('[Scheduler] midnight auto check-out: %s', r)
+                except Exception as exc:
+                    logger.error('[Scheduler] midnight_sweep failed: %s', exc)
+
+            scheduler.add_job(_midnight_sweep, CronTrigger(hour=0, minute=0, timezone='Asia/Kolkata'),
+                              id='presence_midnight', replace_existing=True, misfire_grace_time=1800)
+            scheduler.add_job(_midnight_sweep, CronTrigger(hour=0, minute=10, timezone='Asia/Kolkata'),
+                              id='presence_midnight_retry', replace_existing=True, misfire_grace_time=1800)
+            scheduler.add_job(_presence_poll, IntervalTrigger(minutes=1),
+                              id='presence_poll', replace_existing=True, max_instances=1, misfire_grace_time=30)
             scheduler.add_job(_entra_auto_sync, IntervalTrigger(minutes=5),
                               id='entra_auto_sync', replace_existing=True, max_instances=1, misfire_grace_time=120)
             scheduler.add_job(_teams_job('teams_birthday_digest', 3600), CronTrigger(hour=9, minute=0, timezone='Asia/Kolkata'),

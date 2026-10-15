@@ -16,6 +16,7 @@ import IconListCheck from '../../components/Icon/IconListCheck';
 import IconTrendingUp from '../../components/Icon/IconTrendingUp';
 import IconSun from '../../components/Icon/IconSun';
 import CountUp from 'react-countup';
+import PresenceCard, { type Summary as PresenceSummary } from './PresenceCard';
 import Dropdown from '../../components/Dropdown';
 import IconXCircle from '../../components/Icon/IconXCircle';
 import { fetchMyLeaveRequests, type LeaveRequest } from './LeaveApplication/api';
@@ -222,6 +223,13 @@ const EmployeeDashboard = () => {
         Authorization: `Bearer ${localStorage.getItem('access_token')}`,
         'Content-Type': 'application/json',
     }), []);
+    const [presence, setPresence] = useState<PresenceSummary | null>(null);
+    const [presenceAt, setPresenceAt] = useState(0);
+    const [, setClockTick] = useState(0);
+    useEffect(() => {
+        const t = setInterval(() => setClockTick((x) => x + 1), 1000);
+        return () => clearInterval(t);
+    }, []);
 
     useEffect(() => {
         const bump = () => setIntroBump((x) => x + 1);
@@ -751,10 +759,14 @@ const EmployeeDashboard = () => {
     }
 
     const { checkin_time, checkout_time, active_break } = data;
+    const teamsWorkSecs = presence?.working
+        ? presence.working.seconds + (presence.punch?.live ? Math.floor((Date.now() - presenceAt) / 1000) : 0)
+        : null;
+    const liveTimeShown = teamsWorkSecs !== null ? `${Math.floor(teamsWorkSecs / 3600)}h ${Math.floor((teamsWorkSecs % 3600) / 60)}m` : liveTime;
     const weeklyTargetHours = 40;
     const weeklyProgress = Math.min(100, Math.round((Number(data.weekly_hours || 0) / weeklyTargetHours) * 100));
     const overtimeTotalMinutes = data.overtime ? data.overtime.hours * 60 + data.overtime.minutes : 0;
-    const productiveMinutes = Math.max(0, parseDurationToMinutes(liveTime));
+    const productiveMinutes = Math.max(0, parseDurationToMinutes(liveTimeShown));
     const breakMinutes = Math.max(0, data.total_break_minutes_live ?? data.total_break_minutes ?? 0);
     const focusScore = productiveMinutes + breakMinutes > 0 ? Math.round((productiveMinutes / (productiveMinutes + breakMinutes)) * 100) : 100;
     const isCheckedIn = Boolean(checkin_time && !checkout_time);
@@ -913,7 +925,7 @@ const EmployeeDashboard = () => {
                                     {isInOffice ? 'At Office' : 'Outside Office'}
                                 </span>
                             )}
-                            {!checkin_time && (
+                            {!checkin_time && !presence?.locked?.checkin && (
                                 <button 
                                     type="button" 
                                     className={`btn btn-primary shadow-md rounded-xl disabled:opacity-50 disabled:cursor-not-allowed disabled:animate-none ${
@@ -926,7 +938,7 @@ const EmployeeDashboard = () => {
                                     Check In
                                 </button>
                             )}
-                            {checkin_time && !checkout_time && (
+                            {checkin_time && !checkout_time && !presence?.locked?.checkout && (
                                 <Button variant="danger" className="disabled:opacity-50 disabled:cursor-not-allowed" 
                                     type="button" 
                                      
@@ -942,7 +954,12 @@ const EmployeeDashboard = () => {
                     <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-2.5">
                         <div className="rounded-xl border border-white/30 bg-white/10 px-3 py-2.5">
                             <p className="text-[10px] uppercase tracking-wide text-brand-100">Status</p>
-                            <p className="text-base font-bold mt-1 text-white">{attendanceStatusLabel}</p>
+                            <p className="text-base font-bold mt-1 text-white">
+                                {presence?.current?.availability ? `${presence.current.availability} (Teams)` : attendanceStatusLabel}
+                            </p>
+                            {(presence?.locked?.checkin || presence?.locked?.checkout) && (
+                                <p className="text-[10px] text-brand-100 mt-0.5">Controlled by Teams · {attendanceStatusLabel}</p>
+                            )}
                         </div>
                         <div className="rounded-xl border border-white/30 bg-white/10 px-3 py-2.5">
                             <p className="text-[10px] uppercase tracking-wide text-brand-100">Weekly Target</p>
@@ -958,13 +975,23 @@ const EmployeeDashboard = () => {
                         </div>
                         <div className="rounded-xl border border-white/20 bg-white/10 px-3 py-2.5">
                             <p className="text-[10px] uppercase tracking-wide text-brand-100">Punch Time</p>
-                            <p className="text-sm font-bold text-white mt-1">{checkin_time || '--:--'} / {checkout_time || '--:--'}</p>
+                            <p className="text-sm font-bold text-white mt-1">{presence?.punch ? `${presence.punch.in || '--:--'} / ${presence.punch.live ? 'Live' : presence.punch.out || '--:--'}` : `${checkin_time || '--:--'} / ${checkout_time || '--:--'}`}</p>
                         </div>
                         <div className="rounded-xl border border-white/20 bg-white/10 px-3 py-2.5">
-                            <p className="text-[10px] uppercase tracking-wide text-brand-100">Live Clock</p>
-                            <p className="text-sm font-black text-brand-100 mt-1 animate-pulse">{liveRawSeconds}</p>
+                            <p className="text-[10px] uppercase tracking-wide text-brand-100">{presence?.working ? 'Active Time (Teams)' : 'Live Clock'}</p>
+                            <p className="text-sm font-black text-brand-100 mt-1 animate-pulse">
+                                {presence?.working
+                                    ? (() => {
+                                          const t = presence.working.seconds + (presence.punch?.live ? Math.floor((Date.now() - presenceAt) / 1000) : 0);
+                                          const p2 = (n: number) => String(n).padStart(2, '0');
+                                          return `${p2(Math.floor(t / 3600))}:${p2(Math.floor((t % 3600) / 60))}:${p2(t % 60)}`;
+                                      })()
+                                    : liveRawSeconds}
+                            </p>
                         </div>
                     </div>
+
+                    <PresenceCard apiBase={API_BASE_URL} headers={authHeaders as Record<string, string>} onLoad={(p) => { setPresence(p); setPresenceAt(Date.now()); }} />
 
                     {checkin_time && !checkout_time && (
                         <div className="flex flex-wrap items-center gap-2 border-t border-dashed border-white/20 pt-3">
@@ -1087,7 +1114,7 @@ const EmployeeDashboard = () => {
                     tone="info"
                     to="/employee/leave-application"
                 />
-                <StatCard label="Effective time" value={liveTime} hint="Net hours after breaks" icon={<IconClock />} tone="primary" />
+                <StatCard label="Effective time" value={liveTimeShown} hint={teamsWorkSecs !== null ? 'Teams working time' : 'Net hours after breaks'} icon={<IconClock />} tone="primary" />
                 <StatCard label="Weekly hours" value={data.total_work_duration_week} hint="Current week accumulation" icon={<IconTrendingUp />} tone="success" />
                 <StatCard label="Overtime" value={data.overtime ? `${data.overtime.hours}h ${data.overtime.minutes}m` : '0h 0m'} hint="Extra contribution" icon={<IconClock />} tone="warning" />
                 <StatCard label="Latest payroll" value={data.latest_payroll ? `$ ${data.latest_payroll.amount.toLocaleString()}` : 'Pending'} hint="Most recent payout" icon={<IconTrendingUp />} tone="purple" />

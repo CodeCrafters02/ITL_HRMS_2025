@@ -46,6 +46,20 @@ const strTime = (v: any) => {
     return String(v);
 };
 
+// Duration from the API arrives as "H:MM:SS" or as seconds (e.g. "3474.35"); show decimal hours.
+const toHours = (v: any): string => {
+    if (v === null || v === undefined || v === '' || v === '--') return '--';
+    const str = String(v);
+    if (str.includes(':')) {
+        const m = str.match(/(?:(\d+) days?, )?(\d+):(\d+)(?::(\d+))?/);
+        if (!m) return str;
+        const secs = Number(m[1] || 0) * 86400 + Number(m[2]) * 3600 + Number(m[3]) * 60 + Number(m[4] || 0);
+        return (secs / 3600).toFixed(2);
+    }
+    const n = Number(str);
+    return Number.isFinite(n) ? (n / 3600).toFixed(2) : str;
+};
+
 const toCsv = (rows: AttendanceRow[]) => {
     const headers = ['Employee ID', 'Employee Name', 'Date', 'Check-In', 'Check-Out', 'Break Time', 'Total Hours', 'Overtime', 'Status', 'Late'];
     const escape = (s: string) => `"${String(s ?? '').replace(/"/g, '""')}"`;
@@ -133,9 +147,9 @@ const AdminAttendanceDetails = () => {
                 date: x.date || '',
                 check_in: x.check_in ? new Date(x.check_in).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : null,
                 check_out: x.check_out ? new Date(x.check_out).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : null,
-                break_time: strTime(x.total_break_time || '--'),
-                total_hours: strTime(x.total_work_duration || '--'),
-                overtime: strTime(x.overtime_duration || '--'),
+                break_time: toHours(x.total_break_time),
+                total_hours: toHours(x.total_work_duration),
+                overtime: toHours(x.overtime_duration),
                 is_late: Boolean(x.is_late),
                 status: x.status || 'Unknown',
             }));

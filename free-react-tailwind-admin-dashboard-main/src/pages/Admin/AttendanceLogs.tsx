@@ -34,6 +34,7 @@ type DailyRecord = {
     half_day: boolean;
     remarks: string;
     shift_type: string | null;
+    source?: 'teams' | 'manual' | 'admin';
 };
 
 type AttendanceRecord = {
@@ -97,6 +98,7 @@ const AdminAttendanceLogs = () => {
         status: 'Present',
         check_in: '',
         check_out: '',
+        working_hours: '',
         remarks: '',
     });
     const [saving, setSaving] = useState(false);
@@ -251,6 +253,7 @@ const AdminAttendanceLogs = () => {
             status: record?.status || 'Present',
             check_in: record?.check_in || '09:00',
             check_out: record?.check_out || '18:00',
+            working_hours: record && record.worked_hours ? String(record.worked_hours) : '',
             remarks: record?.remarks || '',
         });
         setEditModalOpen(true);
@@ -272,6 +275,7 @@ const AdminAttendanceLogs = () => {
                     status: editForm.status,
                     check_in: editForm.status === 'Present' ? editForm.check_in : null,
                     check_out: editForm.status === 'Present' ? (editForm.check_out || null) : null,
+                    working_hours: editForm.status === 'Present' && editForm.working_hours !== '' ? Number(editForm.working_hours) : undefined,
                     remarks: editForm.remarks,
                 }),
             });
@@ -289,6 +293,26 @@ const AdminAttendanceLogs = () => {
                 showConfirmButton: false,
                 customClass: { popup: 'sweet-alerts' },
             });
+        } catch (e: any) {
+            Swal.fire('Error', e.message, 'error');
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    const handleResetToTeams = async () => {
+        if (!editingData) return;
+        setSaving(true);
+        try {
+            const resp = await fetch(`${API_BASE_URL}/app/attendance-logs/`, {
+                method: 'POST',
+                headers: { ...headers(), 'Content-Type': 'application/json' },
+                body: JSON.stringify({ employee_id: editingData.employee.employee_id, date: editingData.date, reset: true }),
+            });
+            const data = await resp.json();
+            if (!resp.ok) throw new Error(data.error || 'Failed to reset');
+            setEditModalOpen(false);
+            await fetchMonth();
         } catch (e: any) {
             Swal.fire('Error', e.message, 'error');
         } finally {
@@ -332,7 +356,7 @@ const AdminAttendanceLogs = () => {
                     onFocus={(ev) => showTip(ev as any, tipParts.join('\n'))}
                     onBlur={hideTip}
                     onClick={() => {
-                        const canEdit = (day.iso === lastWorkingDayISO || day.iso === todayISO);
+                        const canEdit = day.iso <= todayISO;
                         if (canEdit) {
                             openEditModal(r, d, day.iso);
                         } else {
@@ -349,6 +373,11 @@ const AdminAttendanceLogs = () => {
                 >
                     {chip.label}
                 </div>
+                {!isFuture && typeof d?.worked_hours === 'number' && d.worked_hours > 0 && (
+                    <p className="text-[10px] font-semibold text-center text-gray-500 dark:text-gray-400 mt-0.5" title={d.source === 'admin' ? 'Edited by admin' : d.source === 'teams' ? 'From Microsoft Teams' : 'From punches'}>
+                        {d.worked_hours}h{d.source === 'admin' ? ' ✎' : ''}
+                    </p>
+                )}
             </div>
         );
     };
@@ -547,6 +576,26 @@ const AdminAttendanceLogs = () => {
                                                                             />
                                                                         </div>
                                                                     </div>
+                                                                    <div>
+                                                                        <label className="text-sm font-bold mb-2 block text-gray-700 dark:text-gray-300">Working Hours (hrs)</label>
+                                                                        <input
+                                                                            type="number"
+                                                                            min="0"
+                                                                            max="24"
+                                                                            step="0.25"
+                                                                            className="form-input"
+                                                                            placeholder="e.g. 7.5"
+                                                                            value={editForm.working_hours}
+                                                                            onChange={(e) => setEditForm({ ...editForm, working_hours: e.target.value })}
+                                                                        />
+                                                                        <p className="text-[11px] text-white-dark mt-1">
+                                                                            {editingData?.record?.source === 'admin'
+                                                                                ? 'Edited by admin — overrides Teams data for this day.'
+                                                                                : editingData?.record?.source === 'teams'
+                                                                                ? 'Currently from Microsoft Teams status. Saving will override it for this day.'
+                                                                                : 'Leave blank to use login/logout difference.'}
+                                                                        </p>
+                                                                    </div>
                                                                     <div className="text-[11px] text-white-dark bg-gray-50 dark:bg-gray-800/50 p-2 rounded-lg border border-dashed border-gray-200 dark:border-gray-700">
                                                                         Standard Shift: <span className="font-bold">{editingData?.employee?.shift_info?.checkin} - {editingData?.employee?.shift_info?.checkout}</span>
                                                                     </div>
@@ -565,6 +614,11 @@ const AdminAttendanceLogs = () => {
                                                             </div>
                                                         </div>
                                                     <div className="flex items-center justify-end p-5 border-t border-[#ebedf2] dark:border-[#1b2e4b] gap-3">
+                                                        {editingData?.record?.source === 'admin' && (
+                                                            <Button variant="outline-danger" type="button" onClick={handleResetToTeams} disabled={saving}>
+                                                                Reset to Teams
+                                                            </Button>
+                                                        )}
                                                         <Button variant="outline-danger" type="button"  onClick={() => setEditModalOpen(false)}>
                                                             Cancel
                                                         </Button>

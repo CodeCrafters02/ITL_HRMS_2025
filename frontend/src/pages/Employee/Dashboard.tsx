@@ -14,6 +14,7 @@ import IconListCheck from '../../components/Icon/IconListCheck';
 import IconTrendingUp from '../../components/Icon/IconTrendingUp';
 import IconSun from '../../components/Icon/IconSun';
 import CountUp from 'react-countup';
+import PresenceCard, { type Summary as PresenceSummary } from './PresenceCard';
 import { fetchMyLeaveRequests, type LeaveRequest } from './LeaveApplication/api';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000';
@@ -316,6 +317,8 @@ const EmployeeDashboard = () => {
         return () => clearInterval(interval);
     }, [chartRange, navOffset, data?.checkin_time, data?.checkout_time]);
 
+    const [presence, setPresence] = useState<PresenceSummary | null>(null);
+
     const handleCheckIn = async () => {
         try {
             const res = await fetch(`${API_BASE_URL}/employee/checkin/`, {
@@ -458,12 +461,12 @@ const EmployeeDashboard = () => {
 
                         <div className="flex flex-wrap items-center gap-2">
                             <span className="text-[11px] px-2.5 py-1 rounded-full bg-[#58b8df]/20 text-cyan-100 border border-cyan-200/40 font-semibold">Realtime</span>
-                            {!checkin_time && (
+                            {!checkin_time && !presence?.locked?.checkin && (
                                 <button type="button" className="btn btn-primary shadow-md rounded-xl" onClick={handleCheckIn}>
                                     Check In
                                 </button>
                             )}
-                            {checkin_time && !checkout_time && (
+                            {checkin_time && !checkout_time && !presence?.locked?.checkout && (
                                 <button type="button" className="btn btn-danger shadow-md rounded-xl" onClick={handleCheckOut}>
                                     Check Out
                                 </button>
@@ -474,7 +477,12 @@ const EmployeeDashboard = () => {
                     <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-2.5">
                         <div className="rounded-xl border border-white/30 bg-white/10 px-3 py-2.5">
                             <p className="text-[10px] uppercase tracking-wide text-blue-100">Status</p>
-                            <p className="text-base font-bold mt-1 text-white">{attendanceStatusLabel}</p>
+                            <p className="text-base font-bold mt-1 text-white">
+                                {presence?.current?.availability ? `${presence.current.availability} (Teams)` : attendanceStatusLabel}
+                            </p>
+                            {(presence?.locked?.checkin || presence?.locked?.checkout) && (
+                                <p className="text-[10px] text-blue-100 mt-0.5">Controlled by Teams · {attendanceStatusLabel}</p>
+                            )}
                         </div>
                         <div className="rounded-xl border border-white/30 bg-white/10 px-3 py-2.5">
                             <p className="text-[10px] uppercase tracking-wide text-blue-100">Weekly Target</p>
@@ -490,13 +498,15 @@ const EmployeeDashboard = () => {
                         </div>
                         <div className="rounded-xl border border-white/20 bg-white/10 px-3 py-2.5">
                             <p className="text-[10px] uppercase tracking-wide text-blue-100">Punch Time</p>
-                            <p className="text-sm font-bold text-white mt-1">{checkin_time || '--:--'} / {checkout_time || '--:--'}</p>
+                            <p className="text-sm font-bold text-white mt-1">{presence?.punch ? `${presence.punch.in || '--:--'} / ${presence.punch.live ? 'Live' : presence.punch.out || '--:--'}` : `${checkin_time || '--:--'} / ${checkout_time || '--:--'}`}</p>
                         </div>
                         <div className="rounded-xl border border-white/20 bg-white/10 px-3 py-2.5">
                             <p className="text-[10px] uppercase tracking-wide text-cyan-100">Live Clock</p>
                             <p className="text-sm font-black text-cyan-100 mt-1 animate-pulse">{liveRawSeconds}</p>
                         </div>
                     </div>
+
+                    <PresenceCard apiBase={API_BASE_URL} headers={authHeaders as Record<string, string>} onLoad={setPresence} />
 
                     {checkin_time && !checkout_time && (breakConfigs.length > 0 || active_break) && (
                         <div className="flex flex-wrap items-center gap-2 border-t border-dashed border-white/20 pt-3">

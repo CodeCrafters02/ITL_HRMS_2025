@@ -285,6 +285,12 @@ const AttendanceHistory = () => {
                                                     <span className="shrink-0 font-semibold">Out</span>
                                                     <span className="min-w-0 truncate font-bold" title={row?.check_out || undefined}>{row?.check_out || '-'}</span>
                                                 </p>
+                                                <p className="flex items-center justify-between gap-1">
+                                                    <span className="shrink-0 font-semibold">Hrs</span>
+                                                    <span className="min-w-0 truncate font-bold text-primary" title="Working hours">
+                                                        {typeof row?.total_hours === 'number' ? `${row.total_hours}h` : '-'}
+                                                    </span>
+                                                </p>
                                             </div>
                                         )}
                                         {row?.is_late && row.late_duration && <p className="w-full truncate text-[11px] font-semibold text-danger mt-auto" title={`Late: ${row.late_duration}`}>Late: {row.late_duration}</p>}
@@ -323,6 +329,10 @@ const AttendanceHistory = () => {
                                     <div><span className="text-white-dark">In:</span> <span className="font-semibold">{selectedDayRow?.check_in || '-'}</span></div>
                                     <div><span className="text-white-dark">Out:</span> <span className="font-semibold">{selectedDayRow?.check_out || '-'}</span></div>
                                     <div><span className="text-white-dark">Working Hours:</span> <span className="font-semibold">{selectedDayRow?.total_hours ?? '-'}</span></div>
+                                    <div>
+                                        <span className="text-white-dark">Tracked by:</span>{' '}
+                                        <span className="font-semibold">{selectedDayRow?.source === 'teams' ? 'Microsoft Teams status' : 'Manual punch'}</span>
+                                    </div>
                                     <div><span className="text-white-dark">Total Break:</span> <span className="font-semibold">{selectedDayRow?.break_time || '-'}</span></div>
                                     <div><span className="text-white-dark">Shift:</span> <span className="font-semibold">{selectedDayRow?.shift || '-'}</span></div>
                                     <div><span className="text-white-dark">Overtime:</span> <span className="font-semibold">{selectedDayRow?.overtime_hours ?? '-'}</span></div>

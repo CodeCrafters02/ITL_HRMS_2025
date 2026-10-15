@@ -269,6 +269,10 @@ class CheckInAPIView(APIView):
         except Employee.DoesNotExist:
             return Response({"detail": "Employee record not found."}, status=404)
 
+        from employee.presence_engine import manual_locked
+        if manual_locked(employee)[0]:
+            return Response({"detail": "Attendance is controlled by Microsoft Teams status and cannot be changed from HRMS."}, status=403)
+
         # GPS Security Check (Backend validation)
         lat = request.data.get('lat')
         lon = request.data.get('lon')
@@ -398,6 +402,10 @@ class CheckOutAPIView(APIView):
             employee = Employee.objects.get(email=user.email)
         except Employee.DoesNotExist:
             return Response({"detail": "Employee not found."}, status=404)
+
+        from employee.presence_engine import manual_locked
+        if manual_locked(employee)[1]:
+            return Response({"detail": "Attendance is controlled by Microsoft Teams status and cannot be changed from HRMS."}, status=403)
 
         # GPS Security Check (Backend validation)
         lat = request.data.get('lat')
@@ -749,11 +757,48 @@ class DashboardAPIView(APIView):
             _mc_att, missing_checkout_date_val = get_missing_checkout(employee, today)
             missing_checkout_yesterday = _mc_att is not None
 
+            # Teams-managed company: punch, hours, overtime and lateness come from Teams presence
+            from employee import presence_engine as _pe
+            _status_override = None
+            if _pe.teams_managed(employee):
+                _now = timezone.now()
+                _t = _pe.day_summary(employee, today, _now)
+                punch_in = _t['first']
+                punch_out = None if _t['live'] or not _t['last'] else _t['last']
+                _status_override = 'online' if _t['live'] else 'offline'
+                _w = int(_t['worked'].total_seconds() // 60)
+                today_work_duration = f"{_w // 60}h {_w % 60}m" if punch_in else None
+                _since = _pe.teams_since(employee)
+                _wk = 0.0
+                for _i in range((today - week_start).days + 1):
+                    _d = week_start + timedelta(days=_i)
+                    if _since and _d >= _since:
+                        _wk += _pe.day_summary(employee, _d, _now)['worked'].total_seconds() / 60
+                    else:
+                        _wk += sum(
+                            ((a.check_out - a.check_in).total_seconds() // 60)
+                            for a in weekly_attendances if a.date == _d and a.check_out
+                        )
+                total_weekly_minutes = _wk
+                weekly_hours = round(_wk / 60, 2)
+                total_work_duration_week = f"{int(_wk // 60)}h {int(_wk % 60)}m"
+                _sh = getattr(employee, 'shift_assigned', None)
+                if _sh:
+                    _std = int(_sh.full_day_hours() * 60)
+                    _ot = max(0, _w - _std)
+                    overtime = {'hours': _ot // 60, 'minutes': _ot % 60, 'total': round(_ot / 60, 2)} if _ot else None
+                    is_late = bool(punch_in and timezone.localtime(punch_in, tz) >
+                                   tz.localize(datetime.combine(today, _sh.checkin)) + (_sh.grace_period or timedelta(minutes=15)))
+                else:
+                    overtime = None
+                    is_late = False
+
             # Dashboard response
             dashboard_data = {
                 'employee_name': f"{employee.first_name} {employee.last_name}",
                 'employee_photo': request.build_absolute_uri(employee.photo.url) if employee.photo else None,
-                'status': employee.status,
+                'status': _status_override or employee.status,
+                'weekly_hours': weekly_hours,
                 'checkin_time': timezone.localtime(punch_in, tz).strftime('%H:%M:%S') if punch_in else None,
                 'checkout_time': timezone.localtime(punch_out, tz).strftime('%H:%M:%S') if punch_out else None,
                 'is_late': is_late,
@@ -885,7 +930,7 @@ class AttendanceHistoryAPIView(APIView):
         attendances = Attendance.objects.filter(
             employee=employee,
             date__range=(start_date, end_date)
-        ).select_related('employee__shift_assigned').prefetch_related('break_logs')
+        ).select_related('employee__shift_assigned', 'teams_info').prefetch_related('break_logs')
 
         # Approved leaves
         approved_leaves = EmpLeave.objects.filter(
@@ -902,6 +947,24 @@ class AttendanceHistoryAPIView(APIView):
 
         # Index by date
         att_map = {att.date: att for att in attendances}
+
+        # Teams presence per day (punch times + working hours) when the company is Teams-managed
+        from types import SimpleNamespace
+        from employee import presence_engine as _pe
+        teams_days = {}
+        if _pe.teams_managed(employee):
+            _since = _pe.teams_since(employee)
+            from employee.models import WorkingHoursOverride as _WO
+            _ov_dates = set(_WO.objects.filter(employee=employee, date__range=(start_date, end_date)).values_list('date', flat=True))
+            if _since or _ov_dates:
+                _now = timezone.now()
+                _d = start_date
+                while _d <= min(end_date, today):
+                    if (_since and _d >= _since) or _d in _ov_dates:
+                        _ts = _pe.day_summary(employee, _d, _now)
+                        if _ts['first']:
+                            teams_days[_d] = _ts
+                    _d += timedelta(days=1)
 
         # Monthly stats
         monthly_data = []
@@ -936,6 +999,18 @@ class AttendanceHistoryAPIView(APIView):
             total_break = 0
 
             att = att_map.get(day)
+            row_source = 'manual'
+            _tday = teams_days.get(day)
+            if _tday:
+                _real = att
+                att = SimpleNamespace(
+                    check_in=_tday['first'],
+                    check_out=None if _tday['live'] else _tday['last'],
+                    overtime_duration=None,
+                    _teams_seconds=_tday['worked'].total_seconds(),
+                    _edited=bool(_tday.get('edited')),
+                    remarks=getattr(_real, 'remarks', None),
+                )
 
             # Get shift from employee
             shift = getattr(employee, 'shift_assigned', None)
@@ -963,9 +1038,17 @@ class AttendanceHistoryAPIView(APIView):
                 check_out = att.check_out
 
                 # Calculate work hours and breaks
+                from employee import presence_engine as _pe
+                _tsec = getattr(att, '_teams_seconds', None)
+                if _tsec is None:
+                    _tsec = _pe.teams_worked_seconds(att)
+                if _tsec is not None:
+                    row_source = 'teams'
                 if check_out:
                     work_duration = (check_out - check_in).total_seconds() / 3600
                     work_duration -= total_break / 3600
+                    if _tsec is not None:
+                        work_duration = _tsec / 3600
                     total_hours = round(work_duration, 2)
 
                     if shift:
@@ -1007,7 +1090,9 @@ class AttendanceHistoryAPIView(APIView):
                             status = 'absent'
                             stats['absent'] += 1
 
-                    if att.overtime_duration:
+                    if _tsec is not None and shift and day in teams_days:
+                        overtime_hours = round(max(0, _tsec / 3600 - shift.full_day_hours()), 2) or None
+                    elif att.overtime_duration:
                         overtime_hours = round(att.overtime_duration.total_seconds() / 3600, 2)
 
                 else:
@@ -1019,6 +1104,8 @@ class AttendanceHistoryAPIView(APIView):
                         stats['missing_checkout'] += 1
                     else:
                         status = 'checked_in'
+                        if _tsec is not None:
+                            total_hours = round(_tsec / 3600, 2)
                         if shift:
                             grace = shift.grace_period or timedelta(minutes=15)
                             shift_start_naive = datetime.combine(day, shift.checkin)
@@ -1055,6 +1142,7 @@ class AttendanceHistoryAPIView(APIView):
                 'total_hours': total_hours if total_hours is not None else '-',
                 'overtime_hours': overtime_hours if overtime_hours is not None else '-',
                 'break_time': break_time,
+                'source': ('admin' if getattr(att, '_edited', False) else row_source),
             })
 
             if not is_weekend:
@@ -2216,6 +2304,8 @@ class AttendanceChartDataAPIView(APIView):
         weekend_days = working_days_config.weekend_days if working_days_config else ['Saturday', 'Sunday']
 
         period_label = ""
+        from employee import presence_engine as _pe
+        _tsince = _pe.teams_since(employee) if _pe.teams_managed(employee) else None
 
         if range_type == 'week':
             # Offset shifts the 7-day window
@@ -2248,6 +2338,9 @@ class AttendanceChartDataAPIView(APIView):
                 day_name = d.strftime('%a')
                 day_full_name = d.strftime('%A')
                 
+                if _tsince and d >= _tsince:
+                    hours = round(_pe.day_summary(employee, d)['worked'].total_seconds() / 3600, 2)
+
                 series_data.append(hours)
                 labels.append(day_name)
                 holidays_flags.append(d in holidays or day_full_name in weekend_days)
@@ -2278,6 +2371,9 @@ class AttendanceChartDataAPIView(APIView):
                         
                         live_secs = (now_dt - att.check_in).total_seconds() - total_breaks_secs
                         hours = round(max(0, live_secs) / 3600, 2)
+
+                if _tsince and d >= _tsince:
+                    hours = round(_pe.day_summary(employee, d)['worked'].total_seconds() / 3600, 2)
 
                 series_data.append(hours)
                 labels.append(str(d.day))
@@ -2311,6 +2407,8 @@ class AttendanceChartDataAPIView(APIView):
                 
                 total_seconds = 0
                 for a in monthly_atts:
+                    if _tsince and a.date >= _tsince:
+                        continue
                     if a.total_work_duration:
                         total_seconds += a.total_work_duration.total_seconds()
                     elif a.date == today and a.check_in and not a.check_out:
@@ -2321,6 +2419,13 @@ class AttendanceChartDataAPIView(APIView):
                             brk_secs += (now_dt - active_b.start).total_seconds()
                         total_seconds += max(0, (now_dt - a.check_in).total_seconds() - brk_secs)
                 
+                if _tsince:
+                    _m0 = _pe.day_bounds(date(y, m, 1))[0]
+                    _m1 = _pe.day_bounds(date(y + (m == 12), m % 12 + 1, 1))[0]
+                    _from = max(_m0, _pe.day_bounds(_tsince)[0])
+                    if _m1 > _from:
+                        total_seconds += _pe.worked_range(employee, _from, _m1).total_seconds()
+
                 series_data.append(round(total_seconds / 3600, 2))
                 labels.append(month_name[m][:3])
                 holidays_flags.append(False)
@@ -4811,3 +4916,83 @@ class LMSDashboardAPIView(APIView):
 
 
 
+
+
+class PresenceSummaryAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        from datetime import date as _date
+        from employee import presence_engine as pe
+        from employee.models import PresenceState
+        user = request.user
+        if _employee_access_denied(user):
+            return Response({"detail": "Unauthorized."}, status=403)
+        try:
+            employee = Employee.objects.get(email=user.email)
+        except Employee.DoesNotExist:
+            return Response({"detail": "Employee not found."}, status=404)
+
+        tz, now = pe.TZ, timezone.now()
+        raw = request.query_params.get('date')
+        try:
+            day = _date.fromisoformat(raw) if raw else timezone.localdate()
+        except ValueError:
+            return Response({"detail": "Invalid date."}, status=400)
+        att = Attendance.objects.filter(employee=employee, date=day, check_in__isnull=False).order_by('-check_in').first()
+        st = pe.refresh_one(employee) or PresenceState.objects.filter(employee=employee).first()
+        fmt = lambda d: d.astimezone(tz).strftime('%H:%M') if d else None
+        hm = lambda td: {"seconds": int(td.total_seconds()), "label": f"{int(td.total_seconds()//3600)}h {int(td.total_seconds()%3600//60):02d}m"}
+        ci, co = pe.manual_locked(employee)
+        data = {
+            "locked": {"checkin": ci, "checkout": co},
+            "date": str(day),
+            "current": {"availability": st.availability, "activity": st.activity,
+                        "since": fmt(st.since)} if st else None,
+        }
+        from employee.models import PresenceLog
+        d0 = tz.localize(datetime.combine(day, datetime.min.time()))
+        d1 = d0 + timedelta(days=1)
+        segs = []
+        for l in PresenceLog.objects.filter(employee=employee, started_at__lt=d1).exclude(ended_at__lt=d0).order_by('started_at'):
+            a_, b_ = max(l.started_at, d0), min(l.ended_at or now, d1)
+            if b_ > a_:
+                segs.append({"status": l.availability, "start": fmt(a_), "end": fmt(b_) if l.ended_at else "now",
+                             **hm(b_ - a_)})
+        data["timeline"] = segs
+        sess = pe.merged_sessions(employee, d0, d1, now)
+        worked = pe.worked_range(employee, d0, d1, now)
+        _ov = pe.get_override(employee, day)
+        if _ov and _ov.status == 'Present':
+            worked = timedelta(seconds=_ov.worked_seconds)
+            data["edited_by_admin"] = True
+        info = getattr(att, 'teams_info', None) if att else None
+        shift = (info.shift if info else None) or employee.shift_assigned
+        std = timedelta(hours=shift.full_day_hours()) if shift else timedelta(hours=8)
+        live = bool(sess and sess[-1][1] >= now - timedelta(seconds=90))
+        _sh = employee.shift_assigned
+        if _sh:
+            _lt = now.astimezone(tz)
+            _ws, _we = pe._window(_sh, _lt.date())
+            _ys, _ye = pe._window(_sh, _lt.date() - timedelta(days=1))
+            if _ys <= _lt < _ye:
+                _ws, _we = _ys, _ye
+            _in = pe.worked_range(employee, _ws, min(_we, now), now) if now > _ws else timedelta()
+            data["shift"] = {"assigned": True, "type": _sh.shift_type,
+                             "start": _ws.strftime('%H:%M'), "end": _we.strftime('%H:%M'),
+                             "working": hm(_in), "outside": hm(max(worked - _in, timedelta())),
+                             "full_day": hm(timedelta(hours=_sh.full_day_hours()))}
+        else:
+            data["shift"] = {"assigned": False}
+        data.update({
+            "punch": {"in": fmt(sess[0][0]) if sess else None,
+                      "out": fmt(sess[-1][1]) if sess and not live else None,
+                      "live": live},
+            "attendance": {"check_in": fmt(att.check_in), "check_out": fmt(att.check_out),
+                           "source": info.source if info else "manual"} if att else None,
+            "working": hm(worked),
+            "overtime": hm(max(worked - std, timedelta())),
+            "statuses": [{"status": k, **hm(v)} for k, v in sorted(pe.status_totals(employee, d0, d1, now).items(), key=lambda kv: -kv[1])],
+            "sessions": [{"start": fmt(a), "end": fmt(b) if b < now - timedelta(seconds=90) else "now"} for a, b in sess],
+        })
+        return Response(data)

@@ -897,3 +897,78 @@ class RegistrationRequest(models.Model):
 
     def __str__(self):
         return f"{self.first_name} {self.last_name} <{self.email}> ({self.status})"
+
+
+# ---------------------------------------------------------------------------
+# Teams presence -> attendance
+# ---------------------------------------------------------------------------
+
+class TeamsAttendanceConfig(models.Model):
+    company = models.OneToOneField('app.Company', on_delete=models.CASCADE, related_name='teams_attendance_config')
+    enabled = models.BooleanField(default=False)
+    dry_run = models.BooleanField(default=True)
+    auto_checkin = models.BooleanField(default=False)
+    auto_checkout = models.BooleanField(default=False)
+    offline_grace_minutes = models.PositiveIntegerField(default=20)
+    merge_gap_minutes = models.PositiveIntegerField(default=5)
+
+
+class PresenceState(models.Model):
+    employee = models.OneToOneField(Employee, on_delete=models.CASCADE, related_name='presence_state')
+    entra_id = models.CharField(max_length=64, blank=True, default='')
+    availability = models.CharField(max_length=32, blank=True, default='')
+    activity = models.CharField(max_length=32, blank=True, default='')
+    since = models.DateTimeField(null=True, blank=True)
+    last_active_at = models.DateTimeField(null=True, blank=True)
+    last_polled_at = models.DateTimeField(null=True, blank=True)
+
+
+class PresenceLog(models.Model):
+    employee = models.ForeignKey(Employee, on_delete=models.CASCADE, related_name='presence_logs')
+    availability = models.CharField(max_length=32)
+    activity = models.CharField(max_length=32, blank=True, default='')
+    started_at = models.DateTimeField()
+    ended_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        indexes = [models.Index(fields=['employee', 'started_at'])]
+
+
+class PresenceSession(models.Model):
+    employee = models.ForeignKey(Employee, on_delete=models.CASCADE, related_name='presence_sessions')
+    start = models.DateTimeField()
+    end = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        indexes = [models.Index(fields=['employee', 'start'])]
+
+
+class AttendanceTeamsInfo(models.Model):
+    attendance = models.OneToOneField('app.Attendance', on_delete=models.CASCADE, related_name='teams_info')
+    shift = models.ForeignKey('app.ShiftPolicy', on_delete=models.SET_NULL, null=True, blank=True)
+    source = models.CharField(max_length=10, default='manual')
+
+
+class PresenceActionLog(models.Model):
+    employee = models.ForeignKey(Employee, on_delete=models.CASCADE, related_name='presence_actions')
+    action = models.CharField(max_length=24)
+    at = models.DateTimeField()
+    dry_run = models.BooleanField(default=True)
+    detail = models.CharField(max_length=255, blank=True, default='')
+    created_at = models.DateTimeField(auto_now_add=True)
+
+
+class WorkingHoursOverride(models.Model):
+    """Admin-set attendance for a day; wins over Teams-derived data for that employee/date."""
+    employee = models.ForeignKey(Employee, on_delete=models.CASCADE, related_name='hours_overrides')
+    date = models.DateField()
+    status = models.CharField(max_length=10, default='Present')  # Present | Absent
+    check_in = models.DateTimeField(null=True, blank=True)
+    check_out = models.DateTimeField(null=True, blank=True)
+    worked_seconds = models.PositiveIntegerField(default=0)
+    reason = models.CharField(max_length=255, blank=True, default='')
+    edited_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name='+')
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        unique_together = ('employee', 'date')

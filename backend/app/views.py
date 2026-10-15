@@ -3396,6 +3396,16 @@ class AttendanceViewSet(viewsets.ModelViewSet):
         att_map = { (att.employee_id, att.date): att for att in attendance_records }
         holiday_map = { h.date: h.name for h in holidays }
 
+        # Teams presence: punch times + working hours per employee/day (when company is Teams-managed)
+        teams_map = {}
+        try:
+            from employee import presence_engine as _pe
+            from employee.models import TeamsAttendanceConfig
+            if TeamsAttendanceConfig.objects.filter(company=company, enabled=True, dry_run=False).exists():
+                teams_map = _pe.bulk_day_summaries([e.id for e in employee_qs], from_date, min(to_date, timezone.localdate()))
+        except Exception:
+            teams_map = {}
+
         # Generate the combined list
         results = []
         curr_date = from_date
@@ -3441,6 +3451,19 @@ class AttendanceViewSet(viewsets.ModelViewSet):
                         row['status'] = 'holiday'
                     else:
                         row['status'] = 'absent'
+
+                t = teams_map.get((emp.id, curr_date))
+                if t:
+                    row['check_in'] = t['first']
+                    row['check_out'] = None if t['live'] else t['last']
+                    row['total_work_duration'] = t['worked']
+                    sh = emp.shift_assigned
+                    row['overtime_duration'] = max(t['worked'] - timedelta(hours=sh.full_day_hours()), timedelta()) if sh else timedelta()
+                    row['source'] = 'admin' if t.get('edited') else 'teams'
+                    if row['status'] in ('absent', 'holiday', ''):
+                        row['status'] = 'present'
+                else:
+                    row['source'] = 'manual' if att else None
 
                 # Filtering by calculated status
                 if status_filter != 'all' and status_filter != 'all statuses':
@@ -3736,6 +3759,20 @@ class AttendanceLogView(APIView):
         except Exception:
             return Response({'error': 'Invalid date format. Use YYYY-MM-DD.'}, status=status.HTTP_400_BAD_REQUEST)
 
+        from employee import presence_engine as _pe
+        from employee.models import WorkingHoursOverride
+        teams_managed = _pe.teams_managed(emp)
+        if teams_managed and request.data.get('reset'):
+            WorkingHoursOverride.objects.filter(employee=emp, date=date_obj).delete()
+            _ts = _pe.day_summary(emp, date_obj)
+            _row = Attendance.objects.filter(employee=emp, date=date_obj).order_by('-check_in', 'id').first()
+            if _row and _ts['first']:
+                _row.check_in, _row.check_out = _ts['first'], (None if _ts['live'] else _ts['last'])
+                _row.total_work_duration = _ts['worked']
+                _row.is_present = True
+                _row.save(update_fields=['check_in', 'check_out', 'total_work_duration', 'is_present', 'updated_at'])
+            return Response({'message': 'Reset to Microsoft Teams data.', 'employee_id': emp.employee_id, 'date': date_str})
+
         # Prefer the record that has real check-in data (the "live" attendance row).
         # Falls back to oldest record, then creates if none exist at all.
         # Uses filter+first throughout to safely handle duplicate rows.
@@ -3812,6 +3849,35 @@ class AttendanceLogView(APIView):
             'remarks', 'updated_at',
         ])
 
+        # Teams-managed company: store the admin's values as an override that wins over Teams data
+        if teams_managed and status_val and status_val.lower() in ('present', 'absent'):
+            wh = request.data.get('working_hours')
+            if status_val.lower() == 'present':
+                if wh not in (None, ''):
+                    try:
+                        worked_s = max(0, int(float(wh) * 3600))
+                    except (TypeError, ValueError):
+                        return Response({'error': 'working_hours must be a number of hours.'}, status=400)
+                elif att.check_in and att.check_out:
+                    worked_s = max(0, int((att.check_out - att.check_in).total_seconds()))
+                else:
+                    worked_s = 0
+                WorkingHoursOverride.objects.update_or_create(
+                    employee=emp, date=date_obj,
+                    defaults={'status': 'Present', 'check_in': att.check_in, 'check_out': att.check_out,
+                              'worked_seconds': worked_s, 'reason': (remarks or '')[:255], 'edited_by': request.user},
+                )
+                att.total_work_duration = timedelta(seconds=worked_s)
+                sh = emp.shift_assigned
+                att.overtime_duration = max(att.total_work_duration - timedelta(hours=sh.full_day_hours()), timedelta()) if sh else timedelta()
+                att.save(update_fields=['total_work_duration', 'overtime_duration'])
+            else:
+                WorkingHoursOverride.objects.update_or_create(
+                    employee=emp, date=date_obj,
+                    defaults={'status': 'Absent', 'check_in': None, 'check_out': None, 'worked_seconds': 0,
+                              'reason': (remarks or '')[:255], 'edited_by': request.user},
+                )
+
         # Silence all other duplicate rows for this (employee, date) so the
         # GET deduplication always returns this record's data, not a stale duplicate.
         Attendance.objects.filter(
@@ -3881,6 +3947,18 @@ class AttendanceLogView(APIView):
 
         employees = employees.order_by('first_name', 'last_name')
 
+        # Teams presence per employee/day (punch times + working hours) for Teams-managed companies
+        teams_map = {}
+        try:
+            from employee import presence_engine as _pe
+            from employee.models import TeamsAttendanceConfig
+            if TeamsAttendanceConfig.objects.filter(company=request.user.company, enabled=True, dry_run=False).exists():
+                teams_map = _pe.bulk_day_summaries(
+                    list(employees.values_list('id', flat=True)), start_date, effective_end_date
+                )
+        except Exception:
+            teams_map = {}
+
         result = []
         
         for emp in employees:
@@ -3920,6 +3998,17 @@ class AttendanceLogView(APIView):
                 if d not in best_by_date or (not best_by_date[d].check_in and att.check_in):
                     best_by_date[d] = att
 
+            # Days with Teams presence but no attendance row: synthesize one from Teams data
+            if teams_map:
+                from types import SimpleNamespace as _NS
+                for (_eid, _d), _t in teams_map.items():
+                    if _eid == emp.id and _d not in best_by_date:
+                        best_by_date[_d] = _NS(
+                            date=_d, leave=None, employee=emp, check_in=_t['first'],
+                            check_out=None if _t['live'] else _t['last'],
+                            break_logs=_NS(all=lambda: []), remarks='',
+                        )
+
             # Process one record per date (only working days for this department)
             for att in sorted(best_by_date.values(), key=lambda x: x.date):
                 ad = att.date
@@ -3927,7 +4016,7 @@ class AttendanceLogView(APIView):
                     continue
                 if ad.strftime('%A').lower() not in valid_weekday_names:
                     continue
-                daily_record = self._process_attendance_record(att, emp.company)
+                daily_record = self._process_attendance_record(att, emp.company, teams_map.get((emp.id, att.date)))
                 daily_data.append(daily_record)
                 
                 # Count status types
@@ -4243,7 +4332,7 @@ class AttendanceLogView(APIView):
 
         return working_days
 
-    def _process_attendance_record(self, attendance, company):
+    def _process_attendance_record(self, attendance, company, teams=None):
         """Process a single attendance record and return comprehensive data"""
         # shift_policy = attendance.shift
         shift_policy = attendance.employee.shift_assigned  
@@ -4259,7 +4348,15 @@ class AttendanceLogView(APIView):
         break_time = 0.0
         overtime_hours = 0.0
         
-        if attendance.check_in and attendance.check_out:
+        check_in_src = teams['first'] if teams else attendance.check_in
+        check_out_src = (None if teams['live'] else teams['last']) if teams else attendance.check_out
+
+        if teams:
+            worked_hours = round(teams['worked'].total_seconds() / 3600, 2)
+            break_time = 0.0
+            if worked_hours > scheduled_hours:
+                overtime_hours = round(worked_hours - scheduled_hours, 2)
+        elif attendance.check_in and attendance.check_out:
             # Calculate total time between check-in and check-out
             check_in_dt = attendance.check_in
             check_out_dt = attendance.check_out
@@ -4293,6 +4390,8 @@ class AttendanceLogView(APIView):
         
         if attendance.leave:
             status = "Leave"
+        elif teams and teams['live']:
+            status = "Present"
         elif worked_hours > 0 and shift_policy:
             if worked_hours >= shift_policy.full_day_hours():
                 status = "Present"
@@ -4314,9 +4413,9 @@ class AttendanceLogView(APIView):
         # Check if late
         is_late = False
         late_minutes = 0
-        if shift_policy and attendance.check_in:
+        if shift_policy and check_in_src:
             scheduled_checkin = datetime.combine(attendance.date, shift_policy.checkin)
-            actual_checkin = datetime.combine(attendance.date, localtime(attendance.check_in).time())
+            actual_checkin = datetime.combine(attendance.date, localtime(check_in_src).time())
             grace_period = shift_policy.grace()
             
             if actual_checkin > (scheduled_checkin + grace_period):
@@ -4326,9 +4425,9 @@ class AttendanceLogView(APIView):
         # Check for early departure
         early_departure = False
         early_departure_minutes = 0
-        if shift_policy and attendance.check_out:
+        if shift_policy and check_out_src:
             scheduled_checkout = datetime.combine(attendance.date, shift_policy.checkout)
-            actual_checkout = datetime.combine(attendance.date, localtime(attendance.check_out).time())
+            actual_checkout = datetime.combine(attendance.date, localtime(check_out_src).time())
             
             if actual_checkout < scheduled_checkout:
                 early_departure = True
@@ -4344,8 +4443,9 @@ class AttendanceLogView(APIView):
         return {
             "date": str(attendance.date),
             "status": status,
-            "check_in": localtime(attendance.check_in).strftime("%H:%M") if attendance.check_in else None,
-            "check_out": localtime(attendance.check_out).strftime("%H:%M") if attendance.check_out else None,
+            "check_in": localtime(check_in_src).strftime("%H:%M") if check_in_src else None,
+            "check_out": localtime(check_out_src).strftime("%H:%M") if check_out_src else None,
+            "source": ("admin" if teams and teams.get("edited") else "teams") if teams else "manual",
             "worked_hours": worked_hours,
             "scheduled_hours": scheduled_hours,
             "break_time": break_time,

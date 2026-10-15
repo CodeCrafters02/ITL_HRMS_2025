@@ -942,10 +942,17 @@ class Attendance(models.Model):
 
         # Total worked time minus breaks
         work_time = (self.check_out - self.check_in) - total_breaks
+        active_shift = getattr(self.employee, 'shift_assigned', None)
+
+        # Teams-presence attendance: hours = sum of presence sessions (gaps excluded)
+        info = getattr(self, 'teams_info', None) if self.pk else None
+        if info and info.source == 'teams':
+            from employee.presence_engine import worked_time
+            work_time = worked_time(self.employee, self)
+            active_shift = info.shift or active_shift
         self.total_work_duration = work_time
 
         # Overtime
-        active_shift = getattr(self.employee, 'shift_assigned', None)
         if active_shift:
             standard_hours = timedelta(hours=active_shift.full_day_hours())
             self.overtime_duration = max(work_time - standard_hours, timedelta())
